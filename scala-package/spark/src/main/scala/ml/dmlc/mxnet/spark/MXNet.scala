@@ -29,7 +29,7 @@ import org.apache.spark.SparkContext
 
 class MXNet extends Serializable {
 
-  class MxNetControllingThread(
+  class MXNetControllingThread(
       schedulerIP: String,
       schedulerPort: Int,
       sparkContext: SparkContext,
@@ -42,8 +42,8 @@ class MXNet extends Serializable {
   private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
   private val params: MXNetParams = new MXNetParams
 
-  @transient private var psServerThread: MxNetControllingThread = _
-  @transient private var psSchedulerThread: MxNetControllingThread = _
+  @transient private var psServerThread: MXNetControllingThread = _
+  @transient private var psSchedulerThread: MXNetControllingThread = _
 
   def setBatchSize(batchSize: Int): this.type = {
     params.batchSize = batchSize
@@ -136,7 +136,7 @@ class MXNet extends Serializable {
           require(exitCode == 0, s"ps server process quit with exit code $exitCode")
         }
     }
-    psServerThread = new MxNetControllingThread(schedulerIP, schedulerPort, sc, startPSServersInner)
+    psServerThread = new MXNetControllingThread(schedulerIP, schedulerPort, sc, startPSServersInner)
     psServerThread.start()
   }
 
@@ -157,7 +157,7 @@ class MXNet extends Serializable {
       val exitCode = scheduler.startProcess()
       require(exitCode == 0, s"Failed to start ps scheduler process with exit code $exitCode")
     }
-    psSchedulerThread = new MxNetControllingThread(schedulerIP, schedulerPort, sc,
+    psSchedulerThread = new MXNetControllingThread(schedulerIP, schedulerPort, sc,
       startPSSchedulerInner)
     psSchedulerThread.start()
   }
