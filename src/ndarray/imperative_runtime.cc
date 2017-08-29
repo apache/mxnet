@@ -80,8 +80,7 @@ Context GetContext(const nnvm::NodeAttrs& attrs,
 void SetShapeType(const Context& ctx,
                   const nnvm::NodeAttrs& attrs,
                   const std::vector<NDArray*>& inputs,
-                  const std::vector<NDArray*>& outputs,
-                  int* dispatch_stype) {
+                  const std::vector<NDArray*>& outputs) {
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
@@ -140,10 +139,6 @@ void SetShapeType(const Context& ctx,
     CHECK_EQ(out_storage_types.size(), outputs.size());
   }
 
-  bool contains_non_default = common::ContainsNonDefaultStorage(in_storage_types);
-  contains_non_default |= common::ContainsNonDefaultStorage(out_storage_types);
-  int kNonDefaultStorage = -2;
-  *dispatch_stype = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (outputs[i]->is_none()) {
@@ -434,68 +429,68 @@ void PushOperator(const OpStatePtr& state,
   }
 }
 
-void ImperativeRuntime::Invoke(
-    const Context& default_ctx,
-    nnvm::NodeAttrs&& attrs,
+OpStatePtr ImperativeRuntime::InvokeOp(
+    const Context& ctx,
+    const nnvm::NodeAttrs& attrs,
     const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs,
-    std::vector<bool>* p_save_inputs,
-    std::vector<bool>* p_save_outputs) {
-  static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
+    const std::vector<NDArray*>& outputs) {
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   const nnvm::Op *op = attrs.op;
+  OpStatePtr state;
 
-  if (ndfunc.count(op)) {
+  std::vector<engine::VarHandle> read_vars, write_vars;
+  std::vector<Resource> requested;
+  std::vector<uint32_t> mutate_idx;
+  SetDependency(attrs, ctx, inputs, outputs,
+      &read_vars, &write_vars, &requested, &mutate_idx);
+
+  FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
+  FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
+
+  bool has_non_default = common::ContainsNonDefaultStorage(inputs) ||
+                         common::ContainsNonDefaultStorage(outputs);
+  if (fn && !has_non_default) {
+    PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
+        requested, inputs, outputs, mutate_idx);
+  } else if (fn_ex) {
+    PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
+        requested, inputs, outputs);
+  } else if (createop.count(op)) {
+    state = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
+    write_vars.push_back(state.get_var());
+    PushOperator(state, op, attrs, ctx, read_vars, write_vars,
+        requested, inputs, outputs, mutate_idx);
+  } else {
+    LOG(FATAL)
+      << "Operator " << op->name << " is not implemented for "
+      << (ctx.dev_mask() == gpu::kDevMask ? "GPU." : "CPU.");
+  }
+
+  return state;
+}
+
+OpStatePtr ImperativeRuntime::Invoke(
+    const Context& default_ctx,
+    const nnvm::NodeAttrs& attrs,
+    const std::vector<NDArray*>& inputs,
+    const std::vector<NDArray*>& outputs) {
+  static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
+
+  if (ndfunc.count(attrs.op)) {
     std::vector<NDArray> p_inputs, p_outputs;
     DerefInputOutput(inputs, outputs, &p_inputs, &p_outputs);
-    ndfunc[op](attrs, p_inputs, &p_outputs);
+    ndfunc[attrs.op](attrs, p_inputs, &p_outputs);
     for (size_t i = 0; i < outputs.size(); ++i) *outputs[i] = std::move(p_outputs[i]);
-  } else {
-    // TODO(piiswrong): infer ctx
-    Context ctx = GetContext(attrs, inputs, outputs, default_ctx);
-    int stype;
-    SetShapeType(ctx, attrs, inputs, outputs, &stype);
-
-    std::vector<engine::VarHandle> read_vars, write_vars;
-    std::vector<Resource> requested;
-    std::vector<uint32_t> mutate_idx;
-    SetDependency(attrs, ctx, inputs, outputs,
-        &read_vars, &write_vars, &requested, &mutate_idx);
-
-    FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
-    FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
-    if (fn_ex && stype != kDefaultStorage) {
-      PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
-          requested, inputs, outputs);
-      if (is_recording()) {
-        RecordOp(std::move(attrs), inputs, outputs, OpStatePtr(),
-            p_save_inputs, p_save_outputs);
-      }
-    } else if (fn) {
-      PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
-          requested, inputs, outputs, mutate_idx);
-      if (is_recording()) {
-        RecordOp(std::move(attrs), inputs, outputs, OpStatePtr(),
-            p_save_inputs, p_save_outputs);
-      }
-    } else if (createop.count(op)) {
-      auto state =
-          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
-      write_vars.push_back(state.get_var());
-      PushOperator(state, op, attrs, ctx, read_vars, write_vars,
-          requested, inputs, outputs, mutate_idx);
-      if (is_recording()) {
-        RecordOp(std::move(attrs), inputs, outputs, state,
-            p_save_inputs, p_save_outputs);
-      }
-    } else {
-      LOG(FATAL)
-        << "Operator " << op->name << " is not implemented for "
-        << (ctx.dev_mask() == gpu::kDevMask ? "GPU." : "CPU.");
-    }
+    return OpStatePtr();
   }
+
+  // TODO(piiswrong): infer ctx
+  Context ctx = GetContext(attrs, inputs, outputs, default_ctx);
+  SetShapeType(ctx, attrs, inputs, outputs);
+
+  return InvokeOp(ctx, attrs, inputs, outputs);
 }
 
 void ImperativeRuntime::MarkVariables(
@@ -573,6 +568,8 @@ void ImperativeRuntime::RecordOp(
     const OpStatePtr& state,
     std::vector<bool>* p_save_inputs,
     std::vector<bool>* p_save_outputs) {
+  if (!is_recording()) return;
+
   MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
@@ -620,9 +617,7 @@ void ImperativeRuntime::RecordOp(
         input_info.outputs.emplace_back(*inputs[i]);
       } else {
         // Put a dummy array here since it will not be used.
-        input_info.outputs.emplace_back(
-            TBlob(nullptr, inputs[i]->shape(), inputs[i]->ctx().dev_mask(),
-                  inputs[i]->dtype()), inputs[i]->ctx().dev_id);
+        input_info.outputs.emplace_back();
       }
       input_info.out_grads.emplace_back();
       inputs[i]->entry_ = std::move(entry);  // assign last to prevent cyclic reference
@@ -637,121 +632,138 @@ void ImperativeRuntime::RecordOp(
       info.outputs.emplace_back(outputs[i]->Detach());
     } else {
       // Put a dummy array here since it will not be used.
-      info.outputs.emplace_back(
-          TBlob(nullptr, outputs[i]->shape(), outputs[i]->ctx().dev_mask(),
-                outputs[i]->dtype()), outputs[i]->ctx().dev_id);
+      info.outputs.emplace_back();
     }
     outputs[i]->entry_ = nnvm::NodeEntry{node, i, 0};
   }
 }
 
-void ImperativeRuntime::Backward(const std::vector<NDArray>& outputs,
-                                 const std::vector<NDArray>& ograds,
+void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
+                                 const std::vector<NDArray*>& ograds,
                                  bool is_train, bool retain_graph) {
-  static auto& fmutate_inputs = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
-  nnvm::Symbol sym;
-  nnvm::NodeEntryMap<NDArray> feed_dict;
+  using namespace nnvm;
+  static auto& fmutate_inputs = Op::GetAttr<FMutateInputs>("FMutateInputs");
+
+  // Construct forward graph
+  Graph graph;
+  graph.outputs.reserve(outputs.size());
   for (const auto& i : outputs) {
-    CHECK(!AGInfo::IsNone(i))
+    CHECK(!AGInfo::IsNone(*i))
       << "Cannot differentiate node because it is not in a computational graph. "
       << "You need to set is_recording to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
-    sym.outputs.emplace_back(i.entry_);
+    graph.outputs.emplace_back(i->entry_);
   }
+  size_t num_forward_outputs = graph.outputs.size();
 
-
-  std::unordered_set<nnvm::Node*> mutable_set;
-  std::vector<nnvm::NodePtr> vlist;
-  std::vector<NDArray> args, args_grad;
-  std::vector<NDArray> aux_states;
-  std::vector<OpReqType> grad_reqs;
-  std::unordered_map<const nnvm::Node*, OpStatePtr> saved_states;
-  nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
-      CHECK(!n->info.empty())
-          << "Node is differentiated twice without retaining graph the first time. "
-          << "This usually happens when you want to differentiate a graph twice but "
-          << "forgot to set retain_graph=True the first time. If you are training "
-          << "recurrent model (like LSTMs) maybe you forgot to detach the hidden "
-          << "state from the previous iteration before feeding it to the next iteration.";
-      AGInfo& info = AGInfo::Get(n);
-      if (n->is_variable()) {
-        vlist.push_back(n);
-      } else {
-        if (info.state) {
-          saved_states.insert({n.get(), info.state});
-        }
-        if (fmutate_inputs.count(n->op())) {
-          for (uint32_t i : fmutate_inputs[n->op()](n->attrs)) {
-            mutable_set.insert(n->inputs[i].node.get());
-          }
-        }
-      }
-      for (uint32_t i = 0; i < info.outputs.size(); ++i) {
-        feed_dict.insert({nnvm::NodeEntry{n, i, 0}, info.outputs[i]});
-      }
-    });
-
-  bool has_writeto = false;
-  for (const auto& n : vlist) {
-    AGInfo& info = AGInfo::Get(n);
-    if (mutable_set.count(n.get())) {
-      aux_states.push_back(info.outputs[0]);
+  // Prepare head gradients
+  std::vector<NodeEntry> ograd_entries;
+  ograd_entries.reserve(ograds.size());
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+    AGInfo& info = AGInfo::Create(ograd_entries.back().node);
+    if (ograds[i] != nullptr) {
+      info.outputs.emplace_back(*ograds[i]);
     } else {
-      if (info.grad_req != kNullOp) {
-        info.fresh_out_grad = true;
-      }
-      args.push_back(info.outputs[0]);
-      args_grad.push_back(info.out_grads[0]);
-      grad_reqs.push_back(info.grad_req);
-      has_writeto = has_writeto || info.grad_req == kWriteTo;
+      info.outputs.emplace_back(outputs[i]->shape(), outputs[i]->ctx(),
+                                true, outputs[i]->dtype());
+      info.outputs.back() = static_cast<real_t>(1.0);
     }
   }
 
-  if (args.size()) {
-    std::map<std::string, Context> ctx_map;
-    auto exec = new exec::GraphExecutor();
-    // (TODO) too hack here
-    exec->saved_states_ = saved_states;
-    exec->Init(sym, args[0].ctx(), ctx_map,
-               args, args_grad, grad_reqs,
-               aux_states, nullptr, feed_dict);
-
-    std::vector<NDArray> head_grads;
-    head_grads.reserve(exec->head_grad_array_.size());
-    CHECK_EQ(ograds.size(), exec->output_arrays_.size());
-
-    for (size_t i = 0; i < ograds.size(); ++i) {
-      if (ograds[i].is_none()) {
-        head_grads.emplace_back(
-          exec->output_arrays_[i].shape(), exec->output_arrays_[i].ctx(),
-          false, exec->output_arrays_[i].dtype());
-        head_grads.back() = static_cast<real_t>(1.0);
-      } else {
-        head_grads.emplace_back(ograds[i]);
-      }
+  // Get gradient graph
+  Symbol sym;
+  sym.outputs = graph.outputs;
+  std::vector<NodePtr> args = sym.ListInputs(Symbol::kReadOnlyArgs);
+  std::vector<NodeEntry> xs;
+  std::vector<NDArray*> nd_xs;
+  for (const auto& i : args) {
+    AGInfo& info = AGInfo::Get(i);
+    if (info.grad_req != kNullOp) {
+      CHECK_EQ(info.grad_req, kWriteTo);
+      xs.emplace_back(NodeEntry{i, 0, 0});
+      nd_xs.push_back(&info.out_grads[0]);
     }
-
-    // std::stringstream os;
-    // exec->Print(os);
-    // LOG(INFO) << os.str();
-
-    exec->Backward(head_grads, is_train);
-    delete exec;
   }
 
+  std::vector<const Op*> zero_ops;
+  zero_ops.push_back(Op::Get("zeros_like"));
+  zero_ops.push_back(Op::Get("_zeros"));
+
+  Graph g_graph = pass::Gradient(
+      graph, graph.outputs, xs, ograd_entries,
+      exec::AggregateGradient, false, nullptr,
+      zero_ops, "_copy");
+  CHECK_EQ(g_graph.outputs.size(), xs.size());
+  for (const auto &e : g_graph.outputs) {
+    graph.outputs.push_back(e);
+  }
+  const auto& idx = graph.indexed_graph();
+
+  // get number of nodes used in forward pass
+  size_t num_forward_nodes = 0;
+  for (size_t i = 0; i < num_forward_outputs; ++i) {
+    num_forward_nodes = std::max(
+        num_forward_nodes, static_cast<size_t>(idx.outputs()[i].node_id + 1));
+  }
+
+  // Allocate buffer
+  std::vector<NDArray> buff(idx.num_node_entries());
+  std::vector<NDArray*> arrays;
+  arrays.reserve(buff.size());
+  for (size_t i = 0; i < buff.size(); ++i) arrays.push_back(&buff[i]);
+  for (size_t i = 0; i < num_forward_nodes; ++i) {
+    const AGInfo& info = dmlc::get<AGInfo>(idx[i].source->info);
+    for (size_t j = 0; j < info.outputs.size(); ++j) {
+      arrays[idx.entry_id(i, j)] = const_cast<NDArray*>(&(info.outputs[j]));
+    }
+  }
+  for (size_t i = 0; i < ograd_entries.size(); ++i) {
+    AGInfo& info = AGInfo::Get(ograd_entries[i].node);
+    arrays[idx.entry_id(ograd_entries[i])] = &info.outputs[0];
+  }
+  for (size_t i = 0; i < xs.size(); ++i) {
+    arrays[idx.entry_id(xs[i])] = nd_xs[i];
+  }
+
+  // Infer shape type
+
+
+
+  // Execution
+  Context default_ctx = outputs[0]->ctx();
+  std::vector<NDArray*> ndinputs, ndoutputs;
+
+  bool prev_recording = set_is_recording(false);
+  bool prev_training = set_is_training(is_train);
+
+  for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
+    const nnvm::IndexedGraph::Node& node = idx[i];
+    if (node.source->attrs.op == nullptr) continue;
+    ndinputs.clear();
+    ndinputs.reserve(node.inputs.size());
+    for (const auto& j : node.inputs) {
+      ndinputs.emplace_back(arrays[idx.entry_id(j)]);
+    }
+    ndoutputs.clear();
+    ndoutputs.reserve(node.source->num_outputs());
+    for (size_t j = 0; j < node.source->num_outputs(); ++j) {
+      ndoutputs.emplace_back(arrays[idx.entry_id(i, j)]);
+    }
+
+    ImperativeRuntime::Get()->InvokeOp(
+        default_ctx, node.source->attrs, ndinputs, ndoutputs);
+  }
+
+  set_is_recording(prev_recording);
+  set_is_training(prev_training);
+
+  // Clear history
   if (!retain_graph) {
     nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
-      if (AGInfo::Get(n).out_grads.size()) return;
-      n->info.clear();
+      AGInfo::Get(n).clear();
     });
-  } else if (has_writeto) {
-    LOG(INFO)
-        << "Warning: when calling backward with retain_graph=True, grad_req for "
-        << "Parameters should be set to 'add'. Otherwise the second backward "
-        << "will over-write gradients from the first backward. Also remember "
-        << "to manually set gradients to zero with zero_grad before starting the "
-        << "next iteration.";
   }
 }
 

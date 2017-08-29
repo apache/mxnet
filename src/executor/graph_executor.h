@@ -49,6 +49,8 @@ namespace exec {
 
 using nnvm::Graph;
 
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v);
+
 // graph executors
 class GraphExecutor : public Executor {
  public:
