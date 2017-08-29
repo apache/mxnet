@@ -22,3 +22,5 @@ from . import _internal, contrib, linalg, random, sparse
 from .op import *
 from .symbol import *
 # pylint: enable=wildcard-import
+
+__all__ = op.__all__ + symbol.__all__ + ['contrib', 'linalg', 'random', 'sparse']
