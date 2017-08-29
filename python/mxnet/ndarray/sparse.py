@@ -139,6 +139,11 @@ class BaseSparseNDArray(NDArray):
     def reshape(self, shape):
         raise NotSupportedForSparseNDArray(self.reshape, None, shape)
 
+    @property
+    def size(self):
+        # the `size` for a sparse ndarray is ambiguous, therefore disabled.
+        raise NotImplementedError()
+
     def _aux_type(self, i):
         """Data-type of the array's ith aux data.
 
@@ -240,12 +245,12 @@ class BaseSparseNDArray(NDArray):
 
 # pylint: disable=abstract-method
 class CSRNDArray(BaseSparseNDArray):
-    """A sparse representation of 2D NDArray in the standard CSR format.
+    """A sparse representation of 2D NDArray in the Compressed Sparse Row format.
 
     A CSRNDArray represents an NDArray as three separate arrays: `data`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
-    row i are stored in indices[indptr[i]:indptr[i+1]] and their corresponding values are stored
-    in values[indptr[i]:indptr[i+1]].
+    row i are stored in ``indices[indptr[i]:indptr[i+1]]`` and their corresponding values are stored
+    in ``data[indptr[i]:indptr[i+1]]``.
 
     The column indices for a given row are expected to be sorted in ascending order.
     Duplicate column entries for the same row are not allowed.
