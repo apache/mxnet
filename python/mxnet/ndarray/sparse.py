@@ -993,6 +993,6 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         return arr
     elif isinstance(source_array, (np.ndarray, np.generic)):
         raise ValueError("Please use mx.nd.array to create an NDArray with source_array of type ",
-                          type(source_array))
+                         type(source_array))
     else:
         raise ValueError("Unexpected source_array type: ", type(source_array))
