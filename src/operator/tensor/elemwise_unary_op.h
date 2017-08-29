@@ -258,7 +258,8 @@ class UnaryOp : public OpBase {
         DCHECK_EQ(output->storage_shape(), input.storage_shape());
       }
       return true;
-    } else if (isshape.ndim() > 0 && !isshape.Size()
+    }
+    if (isshape.ndim() > 0 && !isshape.Size()
       && inputs[0].storage_type() != kDefaultStorage) {
       return true;  // 0% density
     } else {
