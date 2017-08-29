@@ -236,8 +236,9 @@ enum KernelComplexity {
 };
 
 template<typename OP, typename xpu> class KernelEx;
+
 template<typename OP>
-class KernelEx<OP, cpu> {
+class KernelEx<OP, cpu> : public mxnet_op::Kernel<OP, cpu> {
  public:
   /*! \brief For relatively small number of iterations, don't use OMP, since it incurs
    * a significant amount of overhead relative to a low number of iterations
@@ -257,29 +258,16 @@ class KernelEx<OP, cpu> {
         OP::Map(i, args...);
       }
     } else {
-#pragma omp parallel for
+      #pragma omp parallel for
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     }
   }
-  template<typename ...Args>
-  MSHADOW_CINLINE static void Launch(mshadow::Stream<cpu> *s, int N, Args... args) {
-    mxnet_op::Kernel<OP, cpu>::Launch(s, N, args...);
-  }
 };
 
 template<typename OP>
-class KernelEx<OP, gpu> {
- public:
-  template<KernelComplexity CountForOMP = kComplexityLow, typename ...Args>
-  MSHADOW_CINLINE static void LaunchTrivial(mshadow::Stream<gpu> *s, int N, Args... args) {
-    mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
-  }
-  template<typename ...Args>
-  MSHADOW_CINLINE static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
-    mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
-  }
+class KernelEx<OP, gpu> : public mxnet_op::Kernel<OP, cpu> {
 };
 
 }  // namespace op
