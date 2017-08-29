@@ -48,19 +48,19 @@ def seed(seed_state):
 
     Example
     -------
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.36481571 -0.62203991]
      [-1.4962182  -0.08511394]]
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.09544981 -0.20014545]
      [-0.20808885  0.2527658 ]]
     >>>
     >>> mx.random.seed(128)
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     >>> mx.random.seed(128)
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     """

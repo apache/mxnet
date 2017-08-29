@@ -103,11 +103,11 @@ void SampleNormal_<gpu>(const nnvm::NodeAttrs& attrs,
   SampleNormalDnsImpl<gpu>(attrs, ctx, req[0], &out);
 }
 
-NNVM_REGISTER_OP(random_uniform)
+NNVM_REGISTER_OP(_random_uniform)
 .set_attr<FCompute>("FCompute<gpu>", SampleUniform_<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", SampleUniformEx_<gpu>);
 
-NNVM_REGISTER_OP(random_normal)
+NNVM_REGISTER_OP(_random_normal)
 .set_attr<FCompute>("FCompute<gpu>", SampleNormal_<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", SampleNormalEx_<gpu>);
 

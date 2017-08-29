@@ -459,7 +459,7 @@ class SymbolBlock(HybridBlock):
                    internals['model_dense1_relu_fwd_output']]
     >>> # Create SymbolBlock that shares parameters with alexnet
     >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
-    >>> x = mx.nd.random_normal(shape=(16, 3, 224, 224))
+    >>> x = mx.nd.random.normal(shape=(16, 3, 224, 224))
     >>> print(feat_model(x))
     """
     def __init__(self, outputs, inputs, params=None):
