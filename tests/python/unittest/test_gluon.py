@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import unittest
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -367,6 +368,25 @@ def test_trainer():
     trainer.step(1)
 
     assert (x.data(mx.cpu(1)).asnumpy() == -3).all()
+
+class TestBlock(unittest.TestCase):
+    def test_block_attr(self):
+        b = gluon.Block()
+
+        # hidden variables can change types
+        b._a = None
+        b._a = 1
+
+        # regular variables can't change types
+        with self.assertRaises(TypeError) as context:
+            b.b = 1
+            b.b = (2,)
+
+        # set block attribute also sets _children
+        b.c = gluon.Block()
+        c2 = gluon.Block()
+        b.c = c2
+        assert b.c is c2 and b._children[0] is c2
 
 
 if __name__ == '__main__':
