@@ -19,6 +19,7 @@ from mxnet.test_utils import *
 import time
 import argparse
 import os
+import multiprocessing
 
 parser = argparse.ArgumentParser(description="Run sparse linear regression " \
                                              "with distributed kvstore",
@@ -168,6 +169,7 @@ if __name__ == '__main__':
     io_only = args.io_only
     compute_only = args.compute_only
     communication_only = args.communication_only
+    num_cores = multiprocessing.cpu_count()
     assert (compute_only + io_only + communication_only <= 1), "Only one of compute_only, io_only, communication_only can be set"
     if compute_only or io_only:
         assert not kvstore, "when compute_only or io_only is set, kvstore should be None"
@@ -306,7 +308,7 @@ if __name__ == '__main__':
             sum_cost_epoch = sum_cost_epoch + time_cost_epoch
             average_cost_epoch = float(sum_cost_epoch) / epoch
         logging.info('num_worker = {}, time cost per epoch = {}',format(str(num_worker), str(time_cost_epoch)))
-        logging.info('|cpu/32 cores| {} | {} | {} |'.format(str(num_worker), str(average_cost_epoch), rank))
+        logging.info('|cpu/{} cores| {} | {} | {} |'.format(str(num_cores), str(num_worker), str(average_cost_epoch), rank))
     if profiler:
         mx.profiler.profiler_set_state('stop')
     end = time.time()
