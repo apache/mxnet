@@ -169,7 +169,7 @@ if __name__ == '__main__':
     compute_only = args.compute_only
     communication_only = args.communication_only
     if (compute_only and io_only) or (compute_only and communication_only) or (io_only and communication_only):
-        raise Exception("Only one of compute_only, io_only, communication_only can be set")
+        assert False, "Only one of compute_only, io_only, communication_only can be set"
     if compute_only or io_only:
         assert not kvstore, "when compute_only or io_only is set, kvstore should be None"
         num_batch = datasets[dataset]['lc'] / batch_size if num_batch == 99999999 else num_batch
@@ -297,7 +297,7 @@ if __name__ == '__main__':
                 mod.update_metric(metric, batch.label)
             else:  # call waitall to replace update_metric as sync point
                 mx.nd.waitall()  # sync point for the current minibatch
-        logging.info('epoch %d, %s' % (epoch, metric.get()))
+        logging.info('epoch {}, {}'.format(epoch, metric.get()))
         end_time_epoch = time.time()
         if epoch == 0:
             logging.debug("num_batches = {}".format(nbatch))
@@ -306,10 +306,10 @@ if __name__ == '__main__':
         if epoch > 0:
             sum_cost_epoch = sum_cost_epoch + time_cost_epoch
             average_cost_epoch = float(sum_cost_epoch) / epoch
-        logging.info('num_worker = ' + str(num_worker) + ', time cost per epoch = ' + str(time_cost_epoch))
+        logging.info('num_worker = {}, time cost per epoch = {}',format(str(num_worker), str(time_cost_epoch)))
         logging.info('|cpu/32 cores| {} | {} | {} |'.format(str(num_worker), str(average_cost_epoch), rank))
     if profiler:
         mx.profiler.profiler_set_state('stop')
     end = time.time()
     time_cost = end - start
-    logging.info('num_worker = ' + str(num_worker) + ', time cost = ' + str(time_cost))
+    logging.info('num_worker = {}, time cost = {}'.format(str(num_worker), str(time_cost)))
