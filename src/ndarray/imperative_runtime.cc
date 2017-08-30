@@ -214,19 +214,19 @@ void SetDependency(const nnvm::NodeAttrs& attrs,
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
 }
 
-inline void SetWriteInplaceReq(const std::vector<NDArray>& inputs,
-                               const std::vector<NDArray>& outputs,
+inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
+                               const std::vector<NDArray*>& outputs,
                                std::vector<OpReqType> *req) {
   std::unordered_set<engine::VarHandle> in_vars;
   in_vars.reserve(inputs.size());
   for (auto &i : inputs) {
-    in_vars.insert(i.var());
+    in_vars.insert(i->var());
   }
   req->clear();
   req->resize(outputs.size(), kWriteTo);
   for (size_t i = 0; i < outputs.size(); i++) {
     // output NDArray shares the memory with the input NDArray
-    if (in_vars.find(outputs[i].var()) != in_vars.end()) {
+    if (in_vars.find(outputs[i]->var()) != in_vars.end()) {
       req->at(i) = kWriteInplace;
     }
   }
@@ -251,13 +251,14 @@ void PushFCompute(const FCompute& fn,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray*>& p_inputs,
                   const std::vector<NDArray*>& p_outputs,
-                  const std::vector<uint32_t>& mutate_idx) {
+                  const std::vector<uint32_t>& mutate_idx,
+                  const std::vector<OpReqType>& req) {
   using namespace common;
   bool is_train = ImperativeRuntime::Get()->is_training();
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
   Engine::Get()->PushAsync(
-    [ctx, attrs, fn, inputs, outputs, requested, is_train, mutate_idx](
+    [ctx, attrs, fn, inputs, outputs, requested, is_train, mutate_idx, req](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, output_blobs;
@@ -279,8 +280,6 @@ void PushFCompute(const FCompute& fn,
       OpContext opctx{is_train, rctx,
                       engine::CallbackOnComplete(),
                       requested};
-      std::vector<OpReqType> req;
-      SetWriteInplaceReq(inputs, outputs, &req);
       if (ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
         CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
@@ -310,20 +309,18 @@ void PushFComputeEx(const FComputeEx& fn,
                     const std::vector<engine::VarHandle>& write_vars,
                     const std::vector<Resource>& requested,
                     const std::vector<NDArray*>& p_inputs,
-                    const std::vector<NDArray*>& p_outputs) {
+                    const std::vector<NDArray*>& p_outputs,
+                    const std::vector<OpReqType>& req) {
   bool is_train = ImperativeRuntime::Get()->is_training();
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushAsync(
-    [ctx, is_train, attrs, fn, inputs, outputs, requested](
+  Engine::Get()->PushAsync([ctx, is_train, attrs, fn, inputs, outputs, requested, req](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, output_blobs;
       OpContext opctx{is_train, rctx,
                       engine::CallbackOnComplete(),
                       requested};
-      std::vector<OpReqType> req;
-      SetWriteInplaceReq(inputs, outputs, &req);
       fn(attrs, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask) {
         rctx.get_stream<gpu>()->Wait();
@@ -342,7 +339,8 @@ void PushOperator(const OpStatePtr& state,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray*>& p_inputs,
                   const std::vector<NDArray*>& p_outputs,
-                  const std::vector<uint32_t>& mutate_idx) {
+                  const std::vector<uint32_t>& mutate_idx,
+                  const std::vector<OpReqType>& req) {
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
@@ -358,7 +356,7 @@ void PushOperator(const OpStatePtr& state,
   if (fcompute != nullptr) {
     CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
     Engine::Get()->PushAsync(
-      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx](
+      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx, req](
           RunContext rctx,
           engine::CallbackOnComplete on_complete) {
         OpContext opctx{is_train, rctx, on_complete, requested};
@@ -378,8 +376,6 @@ void PushOperator(const OpStatePtr& state,
             post_temp_dst.push_back(inputs[idx]);
           }
         }
-        std::vector<OpReqType> req;
-        SetWriteInplaceReq(inputs, outputs, &req);
         if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
           CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
@@ -407,12 +403,11 @@ void PushOperator(const OpStatePtr& state,
     CHECK(fcompute_ex != nullptr)
         << "One of FStatefulCompute and FStatefulComputeEx must be registered "
         << "for stateful operator " << op->name;
-    const auto& run = [state, fcompute_ex, inputs, outputs, requested, is_train, exec_type](
+    const auto& run = [state, fcompute_ex, inputs, outputs, requested, is_train,
+                       exec_type, req](
           RunContext rctx,
           engine::CallbackOnComplete on_complete) {
         OpContext opctx{is_train, rctx, on_complete, requested};
-        std::vector<OpReqType> req;
-        SetWriteInplaceReq(inputs, outputs, &req);
         fcompute_ex(state, opctx, inputs, req, outputs);
         if (exec_type == ExecType::kSync) {
           if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
@@ -435,6 +430,7 @@ OpStatePtr ImperativeRuntime::InvokeOp(
     const nnvm::NodeAttrs& attrs,
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs,
+    const std::vector<OpReqType>& req,
     OpStatePtr state) {
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
@@ -455,17 +451,17 @@ OpStatePtr ImperativeRuntime::InvokeOp(
                          common::ContainsNonDefaultStorage(outputs);
   if (fn && (!has_non_default || !fn_ex)) {
     PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs, mutate_idx);
+        requested, inputs, outputs, mutate_idx, req);
   } else if (fn_ex) {
     PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs);
+        requested, inputs, outputs, req);
   } else if (createop.count(op) || is_layer_backward.get(op, false)) {
     if (!state) {
       state = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
     }
     write_vars.push_back(state.get_var());
     PushOperator(state, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs, mutate_idx);
+        requested, inputs, outputs, mutate_idx, req);
   } else {
     LOG(FATAL)
       << "Operator " << op->name << " is not implemented for "
@@ -493,8 +489,10 @@ OpStatePtr ImperativeRuntime::Invoke(
   // TODO(piiswrong): infer ctx
   Context ctx = GetContext(attrs, inputs, outputs, default_ctx);
   SetShapeType(ctx, attrs, inputs, outputs);
+  std::vector<OpReqType> req;
+  SetWriteInplaceReq(inputs, outputs, &req);
 
-  return InvokeOp(ctx, attrs, inputs, outputs);
+  return InvokeOp(ctx, attrs, inputs, outputs, req);
 }
 
 void ImperativeRuntime::MarkVariables(
@@ -691,7 +689,6 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   for (const auto& i : args) {
     AGInfo& info = AGInfo::Get(i);
     if (info.grad_req != kNullOp) {
-      CHECK_EQ(info.grad_req, kWriteTo);
       xs.emplace_back(NodeEntry{i, 0, 0});
       x_grads.push_back(&info.out_grads[0]);
       info.fresh_out_grad = true;
@@ -714,9 +711,12 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
 
   // get number of nodes used in forward pass
   size_t num_forward_nodes = 0;
+  size_t num_forward_entries = 0;
   for (size_t i = 0; i < num_forward_outputs; ++i) {
     num_forward_nodes = std::max(
         num_forward_nodes, static_cast<size_t>(idx.outputs()[i].node_id + 1));
+    num_forward_entries = std::max(
+        num_forward_entries, static_cast<size_t>(idx.entry_id(idx.outputs()[i])) + 1);
   }
 
   // Allocate buffer
@@ -730,7 +730,7 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
     for (size_t j = 0; j < info.outputs.size(); ++j) {
       size_t eid = idx.entry_id(i, j);
       arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
-      if (info.grad_req != kNullOp) {
+      if (retain_graph || info.grad_req != kNullOp) {
         ref_count[eid] = 1;
       }
     }
@@ -777,8 +777,9 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   const auto& shapes = graph.GetAttr<ShapeVector>("shape");
   const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = 0; i < arrays.size(); ++i) {
+  for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
     if (!arrays[i]->is_none()) continue;
+    CHECK_EQ(ref_count[i], 0);
     if (stypes[i] == kDefaultStorage) {
       *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
     } else {
@@ -794,8 +795,17 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
     }
   }
 
+  // Assign reqs
+  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
+    size_t eid = idx.entry_id(idx.outputs()[i]);
+    AGInfo& info = AGInfo::Get(xs[i - num_forward_outputs].node);
+    array_reqs[eid] = info.grad_req;
+  }
+
   // Execution
   std::vector<NDArray*> ndinputs, ndoutputs;
+  std::vector<OpReqType> req;
 
   bool prev_recording = set_is_recording(false);
   bool prev_training = set_is_training(is_train);
@@ -807,21 +817,27 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
     ndinputs.reserve(node.inputs.size());
     for (const auto& j : node.inputs) {
       ndinputs.emplace_back(arrays[idx.entry_id(j)]);
+      CHECK(!ndinputs.back()->is_none());
     }
     ndoutputs.clear();
     ndoutputs.reserve(node.source->num_outputs());
+    req.clear();
+    req.reserve(node.source->num_outputs());
     for (size_t j = 0; j < node.source->num_outputs(); ++j) {
-      ndoutputs.emplace_back(arrays[idx.entry_id(i, j)]);
+      size_t eid = idx.entry_id(i, j);
+      ndoutputs.emplace_back(arrays[eid]);
+      CHECK(!ndoutputs.back()->is_none());
+      req.push_back(array_reqs[eid]);
     }
 
     if (is_layer_backward.get(node.source->attrs.op, false)) {
       CHECK_GE(node.source->control_deps.size(), 1);
       auto& state = AGInfo::Get(node.source->control_deps[0]).state;
       ImperativeRuntime::Get()->InvokeOp(
-          default_ctx, node.source->attrs, ndinputs, ndoutputs, state);
+          default_ctx, node.source->attrs, ndinputs, ndoutputs, req, state);
     } else {
       ImperativeRuntime::Get()->InvokeOp(
-          default_ctx, node.source->attrs, ndinputs, ndoutputs);
+          default_ctx, node.source->attrs, ndinputs, ndoutputs, req);
     }
 
     for (const auto& j : node.inputs) {
@@ -841,7 +857,7 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   // Clear history
   if (!retain_graph) {
     nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
-      AGInfo::Get(n).clear();
+      AGInfo::Clear(n);
       n->inputs.clear();
     });
   }
