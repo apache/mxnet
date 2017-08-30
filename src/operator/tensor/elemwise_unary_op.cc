@@ -422,7 +422,7 @@ MXNET_OPERATOR_REGISTER_UNARY(exp)
 
 Example::
 
-   exp([0, 1, 2]) = [inf, 1, 0.707]
+   exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::exp>)

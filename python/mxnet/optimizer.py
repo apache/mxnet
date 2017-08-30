@@ -21,6 +21,7 @@ import pickle
 import logging
 import warnings
 import numpy
+from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update)
@@ -949,6 +950,9 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
+        # convert ctypes.char_p.value back to python str if needed
+        if isinstance(index, bytes):
+            index = py_str(index)
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
             self.states_synced[index] = True

@@ -51,7 +51,6 @@ from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
 from . import op
 
-# Use different verison of SymbolBase
 # When possible, use cython to speedup part of computation.
 # pylint: disable=unused-import
 try:
@@ -67,6 +66,10 @@ except ImportError:
     from .._ctypes.ndarray import _set_ndarray_class
 # pylint: enable=unused-import
 
+try:
+    import scipy.sparse as spsp
+except ImportError:
+    spsp = None
 
 _STORAGE_AUX_TYPES = {
     'row_sparse': [np.int64],
@@ -111,6 +114,13 @@ class BaseSparseNDArray(NDArray):
 
     See CSRNDArray and RowSparseNDArray for more details.
     """
+
+    def __repr__(self):
+        """Returns a string representation of the sparse array."""
+        shape_info = 'x'.join(['%d' % x for x in self.shape])
+        # The data content is not displayed since the array usually has big shape
+        return '\n<%s %s @%s>' % (self.__class__.__name__,
+                                  shape_info, self.context)
 
     def __iadd__(self, other):
         raise NotImplementedError()
@@ -417,6 +427,19 @@ class CSRNDArray(BaseSparseNDArray):
         """
         return self._data()
 
+    @indices.setter
+    def indices(self, indices):
+        raise NotImplementedError()
+
+    @indptr.setter
+    def indptr(self, indptr):
+        raise NotImplementedError()
+
+    @data.setter
+    def data(self, data):
+        raise NotImplementedError()
+
+
     def tostype(self, stype):
         """Return a copy of the array with chosen storage type.
 
@@ -460,7 +483,6 @@ class CSRNDArray(BaseSparseNDArray):
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
-
 
 # pylint: disable=abstract-method
 class RowSparseNDArray(BaseSparseNDArray):
@@ -629,6 +651,14 @@ class RowSparseNDArray(BaseSparseNDArray):
             This RowSparseNDArray's data array.
         """
         return self._data()
+
+    @indices.setter
+    def indices(self, indices):
+        raise NotImplementedError()
+
+    @data.setter
+    def data(self, data):
+        raise NotImplementedError()
 
     def tostype(self, stype):
         """Return a copy of the array with chosen storage type.
@@ -908,16 +938,61 @@ def empty(stype, shape, ctx=None, dtype=None, aux_types=None):
 
 def array(source_array, ctx=None, dtype=None, aux_types=None):
     """Creates a sparse array from any object exposing the array interface.
+
+    Parameters
+    ----------
+    source_array : RowSparseNDArray, CSRNDArray or scipy.sparse.csr.csr_matrix
+        The source sparse array
+    ctx : Context, optional
+        Device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        The data type of the output array. The default dtype is ``source_array.dtype``
+        if `source_array` is an `NDArray`, `float32` otherwise.
+    aux_types: list of numpy.dtype, optional
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
+        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
+        The default value for RowSparseNDArray is [`int64`] for `indices`.
+
+    Returns
+    -------
+    RowSparseNDArray or CSRNDArray
+        An array with the same contents as the `source_array`.
+
+    Examples
+    --------
+    >>> import scipy.sparse as sp
+    >>> csr = sp.csr_matrix((2, 100))
+    >>> mx.nd.sparse.array(csr)
+    <CSRNDArray 2x100 @cpu(0)>
+    >>> mx.nd.sparse.array(mx.nd.zeros((3, 2), stype='csr'))
+    <CSRNDArray 3x2 @cpu(0)>
+    >>> mx.nd.sparse.array(mx.nd.zeros((3, 2), stype='row_sparse'))
+    <RowSparseNDArray 3x2 @cpu(0)>
     """
     if isinstance(source_array, NDArray):
-        assert(source_array.stype != 'default'),\
-            "Please use `cast_storage` to create BaseSparseNDArray from an NDArray"
+        assert(source_array.stype != 'default'), \
+               "Please use `cast_storage` to create RowSparseNDArray or CSRNDArray from an NDArray"
         dtype = source_array.dtype if dtype is None else dtype
         aux_types = source_array._aux_types if aux_types is None else aux_types
+        arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
+        arr[:] = source_array
+        return arr
+    if spsp is not None and isinstance(source_array, spsp.csr.csr_matrix):
+        # TODO(haibin) implement `_sync_copy_from` with scipy csr object to reduce a copy
+        indptr_type = None
+        indices_type = None
+        if aux_types is not None:
+            assert(len(aux_types) == 2), "Expected types for both indices and indptr"
+            indptr_type = aux_types[0]
+            indices_type = aux_types[1]
+        # preprocess scipy csr to canonical form
+        csr = source_array.sorted_indices()
+        csr.sum_duplicates()
+        arr = csr_matrix(csr.data, csr.indptr, csr.indices, csr.shape, dtype=dtype,
+                         indptr_type=indptr_type, indices_type=indices_type)
+        return arr
+    elif isinstance(source_array, (np.ndarray, np.generic)):
+        raise ValueError("Please use mx.nd.array to create an NDArray with source_array of type ",
+                         type(source_array))
     else:
-        # TODO(haibin/anisub) support creation from scipy object when `_sync_copy_from` is ready
-        raise NotImplementedError('creating BaseSparseNDArray from '
-                                  ' a non-NDArray object is not implemented.')
-    arr = empty(source_array.stype, source_array.shape, ctx, dtype, aux_types)
-    arr[:] = source_array
-    return arr
+        raise ValueError("Unexpected source_array type: ", type(source_array))
