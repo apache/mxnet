@@ -129,22 +129,13 @@ class Trainer(object):
             return self._optimizer.learning_rate
 
 
-    def set_learning_rate(self, lr):
-        """Mutate the learning rate.
-
-        Mutate the learning rate of the optimizer only if the LRScheduler of
-        the optimizer is undefined.
-
-        Parameters
-        ----------
-        lr : float
-            The new learning rate of the optimizer.
-        """
+    @learning_rate.setter
+    def learning_rate(self, lr):
         if not isinstance(self._optimizer, opt.Optimizer):
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate is mutated.")
         else:
-            self._optimizer.set_learning_rate(lr)
+            self._optimizer.learning_rate = lr
 
 
     def step(self, batch_size, ignore_stale_grad=False):

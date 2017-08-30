@@ -204,17 +204,8 @@ class Optimizer(object):
         """
         raise NotImplementedError()
 
-    def set_learning_rate(self, lr):
-        """Mutate the learning rate.
-
-        Mutate the learning rate of the optimizer only if the LRScheduler of
-        the optimizer is undefined.
-
-        Parameters
-        ----------
-        lr : float
-            The new learning rate of the optimizer.
-        """
+    @learning_rate.setter
+    def learning_rate(self, lr):
         if self.lr_scheduler is not None:
             raise UserWarning("set_learning_rate mutates the value of the "
                               "learning rate of the optimizer only when the "
