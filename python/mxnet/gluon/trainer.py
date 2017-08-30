@@ -46,9 +46,9 @@ class Trainer(object):
 
     Properties
     ----------
-    learning_rate: float
-        The learning rate of the optimizer or the LRScheduler (if LRScheduler is
-        defined).
+    Learning_rate: float
+        The learning rate of the optimizer or the learning rate of the
+        LRScheduler of the optimizer if the LRScheduler is defined.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):
@@ -125,29 +125,26 @@ class Trainer(object):
         if not isinstance(self._optimizer, opt.Optimizer):
             raise UserWarning("Optimizer has to be defined before its learning"
                               "rate can be accessed.")
-        elif self._optimizer.lr_scheduler is not None:
-            return self._optimizer.lr_scheduler.base_lr
         else:
-            return self._optimizer.lr
+            return self._optimizer.learning_rate
 
 
     def set_learning_rate(self, lr):
         """Mutate the learning rate.
 
+        Mutate the learning rate of the optimizer only if the LRScheduler of
+        the optimizer is undefined.
+
         Parameters
         ----------
         lr : float
-            The new learning rate.
+            The new learning rate of the optimizer.
         """
         if not isinstance(self._optimizer, opt.Optimizer):
             raise UserWarning("Optimizer has to be defined before its learning"
                               "rate is mutated.")
-        elif self._optimizer.lr_scheduler is not None:
-            raise UserWarning("set_learning_rate mutates the value of the"
-                              "learning rate only when the LRScheduler of"
-                              "the optimizer is undefined.")
         else:
-            self._optimizer.lr = lr
+            self._optimizer.set_learning_rate(lr)
 
 
     def step(self, batch_size, ignore_stale_grad=False):
