@@ -216,8 +216,8 @@ class Optimizer(object):
             The new learning rate of the optimizer.
         """
         if self.lr_scheduler is not None:
-            raise UserWarning("set_learning_rate mutates the value of the"
-                              "learning rate of the optimizer only when the"
+            raise UserWarning("set_learning_rate mutates the value of the "
+                              "learning rate of the optimizer only when the "
                               "LRScheduler of the optimizer is undefined.")
         else:
             self.lr = lr
