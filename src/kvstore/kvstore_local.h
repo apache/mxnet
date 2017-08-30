@@ -36,6 +36,13 @@
 
 namespace mxnet {
 namespace kvstore {
+
+enum KeyType {
+  kUndefinedKey = -1,
+  kStringKey,
+  kIntKey
+};
+
 /**
  * \brief store data in local machine
  */
@@ -59,6 +66,78 @@ class KVStoreLocal : public KVStore {
 
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
+    SetKeyType(kIntKey);
+    Init_(keys, values);
+  }
+
+  void Init(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values) override {
+    SetKeyType(kStringKey);
+    std::vector<int> keys(str_keys.size());
+    for (size_t i = 0; i < str_keys.size(); ++i) {
+      auto &str_key = str_keys[i];
+      CHECK(str_key_dict_.find(str_key) == str_key_dict_.end())
+            << "duplicate init of key " << str_key;
+      auto key = next_str_key_++;
+      str_key_dict_[str_key] = key;
+      // record reverse mapping from int to string
+      reverse_str_key_dict_[key] = str_key;
+      keys[i] = key;
+    }
+    Init_(keys, values);
+  }
+
+  void Push(const std::vector<int>& keys,
+            const std::vector<NDArray>& values,
+            int priority) override {
+    SetKeyType(kIntKey);
+    Push_(keys, values, priority);
+  }
+
+  void Pull(const std::vector<int>& keys,
+            const std::vector<NDArray*>& values,
+            int priority) override {
+    SetKeyType(kIntKey);
+    Pull_(keys, values, priority);
+  }
+
+  void PullRowSparse(const std::vector<int>& keys,
+                     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                     int priority = 0) override {
+    SetKeyType(kIntKey);
+    PullRowSparse_(keys, val_rowids, priority);
+  }
+
+  void Push(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray>& values,
+            int priority) override {
+    SetKeyType(kStringKey);
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Push_(keys, values, priority);
+  }
+
+  void Pull(const std::vector<std::string>& str_keys,
+            const std::vector<NDArray*>& values,
+            int priority) override {
+    SetKeyType(kStringKey);
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    Pull_(keys, values, priority);
+  }
+
+  void PullRowSparse(const std::vector<std::string>& str_keys,
+                     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                     const int priority = 0) override {
+    SetKeyType(kStringKey);
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    PullRowSparse_(keys, val_rowids, priority);
+  }
+
+ private:
+  void Init_(const std::vector<int>& keys,
+             const std::vector<NDArray>& values) {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
@@ -67,27 +146,12 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void Init(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray>& values) override {
-    std::vector<int> keys(str_keys.size());
-    for (size_t i = 0; i < str_keys.size(); ++i) {
-      auto &str_key = str_keys[i];
-      CHECK(str_key_dict_.find(str_key) == str_key_dict_.end())
-            << "duplicate init of key " << str_key;
-      auto key = next_str_key_++;
-      str_key_dict_[str_key] = key;
-      keys[i] = key;
-    }
-    Init(keys, values);
-  }
-
-  void Push(const std::vector<int>& keys,
-            const std::vector<NDArray>& values,
-            int priority) override {
+  void Push_(const std::vector<int>& keys,
+             const std::vector<NDArray>& values,
+             int priority) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
@@ -99,7 +163,18 @@ class KVStoreLocal : public KVStore {
             local.ctx().dev_mask() == cpu::kDevMask) {
           local = local.Copy(merged.ctx());
         }
-        updater_(key, merged,  &local);
+        // call the updater with string keys
+        // if string keys are used and str_updater_ is available
+        // otherwise fallback to updater_ which uses int key interface
+        if (key_type_ == kStringKey && str_updater_ != nullptr) {
+          // TODO(haibin) CHECK(str_updater_ != nullptr) if use_str_key
+          // after all language bindings picks up string interface changes
+          const std::string &str_key = reverse_str_key_dict_[key];
+          // TODO(haibin) avoid reverse key lookup if use_str_key
+          str_updater_(str_key, merged,  &local);
+        } else {
+          updater_(key, merged,  &local);
+        }
       } else {
         if (merged.storage_type() != local.storage_type()) {
           local = merged.Copy(local.ctx());
@@ -110,9 +185,9 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
-            int priority) override {
+  void Pull_(const std::vector<int>& keys,
+             const std::vector<NDArray*>& values,
+             int priority) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
@@ -125,9 +200,9 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void PullRowSparse(const std::vector<int>& keys,
-                     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                     int priority = 0) override {
+  void PullRowSparse_(const std::vector<int>& keys,
+                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                      int priority = 0) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
     GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
@@ -149,31 +224,16 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void Push(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray>& values,
-            int priority) override {
-    std::vector<int> keys(str_keys.size());
-    LookupKeys(str_keys, &keys);
-    Push(keys, values, priority);
-  }
-
-  void Pull(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray*>& values,
-            int priority) override {
-    std::vector<int> keys(str_keys.size());
-    LookupKeys(str_keys, &keys);
-    Pull(keys, values, priority);
-  }
-
-  void PullRowSparse(const std::vector<std::string>& str_keys,
-                     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                     const int priority = 0) override {
-    std::vector<int> keys(str_keys.size());
-    LookupKeys(str_keys, &keys);
-    PullRowSparse(keys, val_rowids, priority);
-  }
-
  protected:
+  /**
+   * \brief set the key type of the kvstore if haven't already.
+   * If the key type is already defined, check if it matches the provided key type
+   */
+  void SetKeyType(const KeyType key_type) {
+    if (key_type_ == kUndefinedKey) key_type_ = key_type;
+    CHECK_EQ(key_type_, key_type) << "Mixed key types are not allowed";
+  }
+
   /**
    * \brief group values on keys for push
    */
@@ -309,10 +369,14 @@ class KVStoreLocal : public KVStore {
   std::unordered_map<int, NDArray> local_;
   /// key mapping for string -> integer
   std::unordered_map<std::string, int> str_key_dict_;
+  /// reverse key mapping for integer -> string
+  std::unordered_map<int, std::string> reverse_str_key_dict_;
   /// the next available integer for string->int key mapping
   int next_str_key_ = 0;
   /// whether printed warning due to mismatch stype in each key
   std::unordered_set<int> warnings_printed_;
+  /// whether int or string is used for keys
+  KeyType key_type_ = kUndefinedKey;
 };
 }  // namespace kvstore
 }  // namespace mxnet
