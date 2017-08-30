@@ -97,7 +97,6 @@ try:
     # create a CSRNDArray from a scipy csr object
     d = mx.nd.sparse.array(c)
     {'d':d}
-
 except ImportError:
     print("scipy package is required")
 ```
