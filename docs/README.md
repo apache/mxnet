@@ -2,13 +2,13 @@
 
 A built version of document is available at http://mxnet.io
 
-To build the documents locally, we need to first install [docker](docker.com).
+To build the documents locally, we need to first install [docker](https://docker.com).
 Then use the following commands to clone and
 build the documents.
 
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git
-cd mxnet && make docs
+cd incubator-mxnet && make docs
 ```
 
 The results will be available at `docs/_build/html/`.
