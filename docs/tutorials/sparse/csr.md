@@ -18,8 +18,8 @@ the existing ``NDArray`` is that
 - memory consumption is reduced significantly
 - certain operations (e.g. matrix-vector multiplication) are much faster
 
-Meanwhile, ``CSRNDArray`` inherits competitve features from ``NDArray`` such as
-lazy evaluation and automatic parallelization, which is not available in the
+Meanwhile, ``CSRNDArray`` inherits competitive features from ``NDArray`` such as
+lazy evaluation and automatic parallelization, which are not available in the
 scientific computing python package [SciPy](https://www.scipy.org/).
 
 Apart from often queried attributes such as **ndarray.shape**, **ndarray.dtype** and **ndarray.context**,
@@ -35,6 +35,11 @@ To complete this tutorial, we need:
     ```
     pip install jupyter
     ```
+- Scipy - A section of this tutorial uses Scipy package in python. If you don't have Scipy,
+the example in that section will be ignored.
+- GPUs - A section of this tutorial uses GPUs. If you don't have GPUs on your
+machine, simply set the variable gpu_device (set in the GPUs section of this
+tutorial) to mx.cpu().
 
 ## Compressed Sparse Row Format
 
@@ -85,12 +90,16 @@ b = mx.nd.sparse.csr_matrix(data_np, indptr_np, indices_np, shape)
 * We can also create an MXNet CSRNDArray from a `scipy.sparse.csr.csr_matrix` object by using the `array` function:
 
 ```python
-import scipy.sparse as spsp
-# generate a csr matrix in scipy
-c = spsp.csr.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
-# create a CSRNDArray from a scipy csr object
-d = mx.nd.sparse.array(c)
-{'d':d}
+try:
+    import scipy.sparse as spsp
+    # generate a csr matrix in scipy
+    c = spsp.csr.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
+    # create a CSRNDArray from a scipy csr object
+    d = mx.nd.sparse.array(c)
+    {'d':d}
+
+except ImportError:
+    print("scipy package is required")
 ```
 
 We can specify the element data type with the option `dtype`, which accepts a numpy
@@ -153,7 +162,7 @@ dense = mx.nd.sparse.cast_storage(csr, 'default')
 
 ## Copies
 
-The `copy` method makes a deep copy of the array and its data, and `copyto` method or the slice
+* The `copy` method makes a deep copy of the array and its data, and `copyto` method or the slice
 operator `[]` to copy to an existing array.
 
 ```python
@@ -166,7 +175,7 @@ a.copyto(d)
 {'b is a': b is a, 'b.asnumpy()':b.asnumpy(), 'c.asnumpy()':c.asnumpy(), 'd.asnumpy()':d.asnumpy()}
 ```
 
-If the storage types of source array and destination array doesn't match,
+* If the storage types of source array and destination array doesn't match,
 the storage type of destination array won't change when copying with `copyto` or
 the slice operator `[]`.
 
@@ -192,7 +201,7 @@ c = a[:].asnumpy()
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``.
+* Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``.
 You can read the [mxnet.ndarray.sparse API documentation](mxnet.io/api/python/ndarray.html) to find
 what sparse operators are available.
 
@@ -207,7 +216,7 @@ out = mx.nd.sparse.dot(a, rhs)  # invoke sparse dot operator specialized for dot
 {'out':out}
 ```
 
-For any sparse operator, the storage type of output array is inferred based on inputs. You can either read
+* For any sparse operator, the storage type of output array is inferred based on inputs. You can either read
 the documentation or inspect the `stype` attribute of output array to know what storage type is inferred:
 
 ```python
@@ -216,7 +225,7 @@ c = a + 1  # c will be a dense NDArray
 {'b.stype':b.stype, 'c.stype':c.stype}
 ```
 
-For operators that don't specialize in sparse arrays, we can still use them with sparse inputs with some performance penalty.
+* For operators that don't specialize in sparse arrays, we can still use them with sparse inputs with some performance penalty.
 What happens is that MXNet will generate temporary dense inputs from sparse inputs so that the dense operators can be used.
 Warning messages will be printed when such storage fallback event happens.
 
