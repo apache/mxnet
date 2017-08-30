@@ -31,7 +31,18 @@
 
 namespace tf {
 namespace depthwise_conv {
-struct DepthwiseArgs {
+
+#define FULL_WARP_MASK 0xFFFFFFFF
+#if CUDA_VERSION >= 9000
+#define CREATE_SHFL_MASK(mask, predicate) \
+    unsigned mask = __ballot_sync(__activemask(), (predicate))
+#else
+// shuffle masks not used before CUDA 9.
+#define CREATE_SHFL_MASK(mask, predicate)
+#define __shfl_down_sync(mask, ...) __shfl_down(__VA_ARGS__)
+#endif
+
+    struct DepthwiseArgs {
   // Input layer dimensions
   int batch;
   int in_height;
@@ -464,6 +475,8 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
     // Note: the condition to reach this is uniform across the entire block.
     __syncthreads();
 
+    // The 'slice_in_range' test condition is the same for the entire block,
+    // enabling use of the full-warp shuffle mask below.
     if (slice_in_range) {
       const DType* const out_ptr = inout_offset + output;
       const DType out1 = ldg(out_ptr);
@@ -476,7 +489,7 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
           DType val = out1 * tile_ptr[0] + out2 * tile_ptr[tile_offset];
           // Warp-accumulate pixels of the same depth and write to accumulator.
           for (int delta = 16 / kBlockSlices; delta > 0; delta /= 2) {
-            val += __shfl_down(val, delta);
+            val += __shfl_down_sync(FULL_WARP_MASK, val, delta);
           }
           if (!(thread_idx & 32 / kBlockSlices - 1)) {
             *accum_ptr = val;
@@ -500,11 +513,15 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
       const int filter_offset = filter_channel * filter_pixels +
           (filter_pix/filter_width) * filter_height + filter_pix % filter_width;
 
-      if (filter_channel < in_channel) {
+      // Calculate the shuffle mask, keeping in mind that threads may be inactive within
+      // the 'if' below because of the above 'for' loop, or the test condition.
+      bool perform_reduction = filter_channel < in_channel;
+      CREATE_SHFL_MASK(shflmask, perform_reduction);
+      if (perform_reduction) {
         DType val = accum_data[i];
         // Warp-accumulate pixels of the same depth from the accumulator.
         for (int delta = kAccumPixels / 2; delta > 0; delta /= 2) {
-          val += __shfl_down(val, delta);
+          val += __shfl_down_sync(shflmask, val, delta);
         }
         if (!(thread_idx & kAccumPixels - 1)) {
           atomicAdd(filter_offset + filter, val);
