@@ -36,6 +36,11 @@ namespace depthwise_conv {
 #if CUDA_VERSION < 9000
 #define __shfl_xor_sync(mask, ...) __shfl_xor(__VA_ARGS__)
 #define __shfl_down_sync(mask, ...) __shfl_down(__VA_ARGS__)
+// shuffle masks not used before CUDA 9.
+#define CREATE_SHFL_MASK(mask, predicate)
+#else
+#define CREATE_SHFL_MASK(mask, predicate) \
+    unsigned mask = __ballot_sync(FULL_WARP_MASK, (predicate))
 #endif
 
 struct DepthwiseArgs {
@@ -471,6 +476,8 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
     // Note: the condition to reach this is uniform across the entire block.
     __syncthreads();
 
+    CREATE_SHFL_MASK(active_threads, slice_in_range);
+
     // The 'slice_in_range' test condition is the same for the entire block,
     // enabling use of the full-warp shuffle mask below.
     if (slice_in_range) {
@@ -485,7 +492,7 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
           DType val = out1 * tile_ptr[0] + out2 * tile_ptr[tile_offset];
           // Warp-accumulate pixels of the same depth and write to accumulator.
           for (int delta = 16 / kBlockSlices; delta > 0; delta /= 2) {
-            val += __shfl_down_sync(FULL_WARP_MASK, val, delta);
+            val += __shfl_down_sync(active_threads, val, delta);
           }
           if (!(thread_idx & 32 / kBlockSlices - 1)) {
             *accum_ptr = val;

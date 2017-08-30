@@ -137,7 +137,7 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
           if (in_h >= 0 && in_h < in_height && in_w >= 0 && in_w < in_width) {
             const int input_offset = input_offset_temp + in_w;
             // Set partial_grad to 0 if the thread would normally not have entered the loop.
-            partial_grad = out_id < out_pixels? ldg(input + input_offset) * out_g : DType(0);
+            partial_grad = out_id < out_pixels ? ldg(input + input_offset) * out_g : DType(0);
           }
           // reduce all valid partial grad in a block
           typedef cub::BlockReduce<DType, mshadow::cuda::kBaseThreadNum> BlockReduceT;
