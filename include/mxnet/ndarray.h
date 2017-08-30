@@ -84,7 +84,8 @@ class NDArray {
   NDArray(const TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
-        shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
+        shape_(shape), dtype_(dtype), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -95,7 +96,8 @@ class NDArray {
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
           std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
           TShape storage_shape = TShape(mshadow::Shape1(0)))
-      : shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
+      : shape_(shape), dtype_(dtype), storage_type_(stype),
+        entry_({nullptr, 0, 0}) {
       // Assign default aux types if not given
       if (aux_types.size() == 0) {
         if (stype == kRowSparseStorage) {
@@ -143,7 +145,8 @@ class NDArray {
    */
   NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
-        dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
+        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -162,7 +165,7 @@ class NDArray {
   NDArray(const NDArrayStorageType stype, const TShape &shape,
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
-        dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
+        dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -259,6 +262,7 @@ class NDArray {
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
    */
   inline Context ctx() const {
+    CHECK(!is_none());
     return ptr_->shandle.ctx;
   }
   /*!
@@ -273,8 +277,7 @@ class NDArray {
   }
 
   inline NDArrayStorageType storage_type() const {
-    if (is_none()) return kUndefinedStorage;
-    return ptr_->storage_type;
+    return storage_type_;
   }
   /*! \return whether this ndarray is not initialized */
   inline bool is_none() const {
@@ -857,6 +860,8 @@ class NDArray {
   size_t byte_offset_ = 0;
   /*! \brief type of data */
   int dtype_ = -1;
+  /*! \brief storage type of data */
+  NDArrayStorageType storage_type_ = kUndefinedStorage;
   /*! \brief node entry for autograd */
   nnvm::NodeEntry entry_;
   /*!

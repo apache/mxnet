@@ -621,9 +621,10 @@ void ImperativeRuntime::RecordOp(
         input_info.outputs.emplace_back(*inputs[i]);
       } else {
         // Put a dummy array here since it will not be used.
-        input_info.outputs.emplace_back(
-            TBlob(nullptr, inputs[i]->shape(), inputs[i]->ctx().dev_mask(),
-                  inputs[i]->dtype()), inputs[i]->ctx().dev_id);
+        input_info.outputs.emplace_back();
+        input_info.outputs.back().shape_ = inputs[i]->shape();
+        input_info.outputs.back().dtype_ = inputs[i]->dtype();
+        input_info.outputs.back().storage_type_ = inputs[i]->storage_type();
       }
       inputs[i]->entry_ = std::move(entry);  // assign last to prevent cyclic reference
     } else if (save_inputs[i]) {
@@ -637,9 +638,10 @@ void ImperativeRuntime::RecordOp(
       info.outputs.emplace_back(outputs[i]->Detach());
     } else {
       // Put a dummy array here since it will not be used.
-      info.outputs.emplace_back(
-          TBlob(nullptr, outputs[i]->shape(), outputs[i]->ctx().dev_mask(),
-                outputs[i]->dtype()), outputs[i]->ctx().dev_id);
+      info.outputs.emplace_back();
+      info.outputs.back().shape_ = outputs[i]->shape();
+      info.outputs.back().dtype_ = outputs[i]->dtype();
+      info.outputs.back().storage_type_ = outputs[i]->storage_type();
     }
     outputs[i]->entry_ = nnvm::NodeEntry{node, i, 0};
   }
