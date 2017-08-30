@@ -16,14 +16,15 @@
 # under the License.
 
 """Register backend ops in mxnet.symbol namespace."""
+__all__ = []
 
 import sys as _sys
 import os as _os
 import ctypes
 import numpy as _numpy  # pylint: disable=unused-import
 
-from mxnet.base import mx_uint, check_call, _LIB, py_str, OpHandle, c_str
-from mxnet.symbol_doc import _build_doc
+from ..base import mx_uint, check_call, _LIB, py_str
+from ..symbol_doc import _build_doc
 
 # Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
@@ -44,7 +45,7 @@ except ImportError:
     from .._ctypes.symbol import SymbolBase, _set_symbol_class
     from .._ctypes.symbol import _symbol_creator
 
-from ..base import _Null
+from ..base import _Null, _init_op_module
 from ..name import NameManager
 from ..attribute import AttrScope
 # pylint: enable=unused-import
@@ -203,40 +204,4 @@ def %s(%s):
     return symbol_function
 
 
-def _init_symbol_module(root_namespace):
-    """List and add all the atomic symbol functions to current module."""
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
-
-    module_obj = _sys.modules["%s.symbol" % root_namespace]
-    module_sparse = _sys.modules["%s.symbol.sparse" % root_namespace]
-    module_internal = _sys.modules["%s.symbol._internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.symbol" % root_namespace]
-    for name in op_names:
-        hdl = OpHandle()
-        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_atomic_symbol_function(hdl, name)
-        if function.__name__.startswith('_contrib_'):
-            function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.symbol'
-            setattr(module_contrib, function.__name__, function)
-        elif function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            setattr(module_obj, function.__name__, function)
-
-        # register sparse ops under mxnet.symbol.sparse
-        if function.__name__.startswith('_sparse_'):
-            function.__name__ = function.__name__[8:]
-            function.__module__ = 'mxnet.symbol.sparse'
-            setattr(module_sparse, function.__name__, function)
-
-
-# Initialize the atomic symbol in startups
-_init_symbol_module("mxnet")
+_init_op_module('mxnet', 'symbol', _make_atomic_symbol_function)
