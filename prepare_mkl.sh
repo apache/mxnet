@@ -75,10 +75,16 @@ MXNET_ROOT=`dirname $0`
 USE_MKLML=0
 # NOTE: if you update the following line, please also update the dockerfile at
 # tests/ci_build/Dockerfile.mkl
-VERSION_MATCH=20170425
-ARCHIVE_BASENAME=mklml_lnx_2018.0.20170425.tgz
+VERSION_MATCH=20170720
+PLATFORM=$(uname)
+if [ $PLATFORM == "Darwin" ]; then
+    INFIX=mac
+elif [ $PLATFORM == "Linux" ]; then
+    INFIX=lnx
+fi
+ARCHIVE_BASENAME=mklml_${INFIX}_2018.0.20170720.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
-MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.7/$ARCHIVE_BASENAME"
+MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.10/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC
 reg='^[0-9]+$'
 VERSION_LINE=`GetVersionName $MKLROOT`
@@ -90,18 +96,26 @@ if [ -z $MKLROOT ]; then
     #echo $VERSION_LINE
     if [ $VERSION_LINE -lt $VERSION_MATCH ] ; then
       #...If it is not then downloaded and unpacked
-      wget --quiet --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
+      if [ $PLATFORM == "Darwin" ]; then
+        curl -L -o $MXNET_ROOT/$ARCHIVE_BASENAME $MKLURL
+      elif [ $PLATFORM == "Linux" ]; then
+        wget --quiet --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
+      fi
       tar -xzf $MXNET_ROOT/$ARCHIVE_BASENAME -C $MXNET_ROOT
       #echo $HOME_MKL
       yes | cp -rf $MXNET_ROOT/$MKL_CONTENT_DIR/* $HOME_MKL
       rm -rf $MXNET_ROOT/$MKL_CONTENT_DIR
     fi
-  MKLLIB=`find $HOME_MKL -name libmklml_gnu.so`
+  if [ $PLATFORM == "Darwin" ]; then
+    MKLLIB=`find $HOME_MKL -name libmklml.dylib`
+  elif [ $PLATFORM == "Linux" ]; then
+    MKLLIB=`find $HOME_MKL -name libmklml_gnu.so`
+  fi
   MKLROOT=`echo $MKLLIB | sed -e 's/lib.*$//'`
 fi
 
 # Check what MKL lib we have in MKLROOT
-if [ -z `find $MKLROOT -name libmklml_gnu.so -print -quit` ]; then
+if [ -z `find $MKLROOT -name libmklml_gnu.so -o -name libmklml.dylib -print -quit` ]; then
   USE_MKLML=0
 elif [ -z `find $MKLROOT -name libmkl_core.so -print -quit` ]; then
   USE_MKLML=1

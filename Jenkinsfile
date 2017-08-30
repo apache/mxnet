@@ -76,11 +76,18 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 // Python unittest for CPU
-def python_ut(docker_type) {
+// Python 2
+def python2_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
+  }
+}
+
+// Python 3
+def python3_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/unittest"
   }
@@ -88,10 +95,17 @@ def python_ut(docker_type) {
 
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
-def python_gpu_ut(docker_type) {
+// Python 2
+def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+  }
+}
+
+// Python 3
+def python3_gpu_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/gpu"
   }
@@ -250,31 +264,75 @@ try {
     }
 
     stage('Unit Test') {
-      parallel 'Python2/3: CPU': {
+      parallel 'Python2: CPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python-cpu') {
+          ws('workspace/ut-python2-cpu') {
             init_git()
             unpack_lib('cpu')
-            python_ut('cpu')
+            python2_ut('cpu')
           }
         }
       },
-      'Python2/3: GPU': {
+      'Python3: CPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python-gpu') {
+          ws('workspace/ut-python3-cpu') {
+            init_git()
+            unpack_lib('cpu')
+            python3_ut('cpu')
+          }
+        }
+      },
+      'Python2: GPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python2-gpu') {
             init_git()
             unpack_lib('gpu', mx_lib)
-            python_gpu_ut('gpu')
+            python2_gpu_ut('gpu')
           }
         }
       },
-      'Python2/3: MKLML': {
+      'Python3: GPU': {
         node('mxnetlinux') {
-          ws('workspace/ut-python-mklml') {
+          ws('workspace/ut-python3-gpu') {
+            init_git()
+            unpack_lib('gpu', mx_lib)
+            python3_gpu_ut('gpu')
+          }
+        }
+      },
+      'Python2: MKLML-CPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python2-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python_ut('mklml_gpu')
-            python_gpu_ut('mklml_gpu')
+            python2_ut('mklml_gpu')
+          }
+        }
+      },
+      'Python2: MKLML-GPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python2-mklml-gpu') {
+            init_git()
+            unpack_lib('mklml')
+            python2_gpu_ut('mklml_gpu')
+          }
+        }
+      },
+      'Python3: MKLML-CPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python3-mklml-cpu') {
+            init_git()
+            unpack_lib('mklml')
+            python3_ut('mklml_gpu')
+          }
+        }
+      },
+      'Python3: MKLML-GPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-python3-mklml-gpu') {
+            init_git()
+            unpack_lib('mklml')
+            python3_gpu_ut('mklml_gpu')
           }
         }
       },
