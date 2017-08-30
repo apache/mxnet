@@ -46,9 +46,11 @@ class Trainer(object):
 
     Properties
     ----------
-    Learning_rate: float
+    learning_rate: float
         The learning rate of the optimizer or the learning rate of the
-        LRScheduler of the optimizer if the LRScheduler is defined.
+        LRScheduler of the optimizer if the LRScheduler is defined. Given a
+        Trainer object trainer, the learning rate can be accessed as
+        trainer.learning_rate and can be set as trainer.learning_rate = val.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):

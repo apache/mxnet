@@ -65,7 +65,9 @@ class Optimizer(object):
     ----------
     learning_rate: float
         The learning rate of the optimizer or the learning rate of the
-        LRScheduler of the optimizer if the LRScheduler is defined.
+        LRScheduler of the optimizer if the LRScheduler is defined. Given an
+        Optimizer object optimizer, the learning rate can be accessed as
+        optimizer.learning_rate and can be set as optimizer.learning_rate = val.
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
