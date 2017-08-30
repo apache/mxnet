@@ -13,6 +13,15 @@ This repo provides MXNet Implementation of **[Neural Style Transfer](#neural-sty
 
 [A Neural Algorithm of Artistic Style](https://arxiv.org/abs/1508.06576) by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge.
 
+
+**Download the images**
+
+```bash
+python download_images.py 
+```
+
+**Neural style transfer**
+
 ```bash
 python main.py optim --content-image images/content/venice-boat.jpg --style-image images/styles/candy.jpg
 ```
@@ -23,14 +32,14 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 * `--style-size`: the style image size to test on.
 * `--cuda`: set it to 1 for running on GPU, 0 for CPU.
 
-<img src ="images/g1.jpg" width="260px" /> <img src ="images/g2.jpg" width="260px" />
-<img src ="images/g3.jpg" width="260px" />
-<img src ="images/g4.jpg" width="260px" />
-<img src ="images/g5.jpg" width="260px" />
-<img src ="images/g6.jpg" width="260px" />
-<img src ="images/g7.jpg" width="260px" />
-<img src ="images/g8.jpg" width="260px" />
-<img src ="images/g9.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g1.jpg" width="260px" /> <img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g2.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g3.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g4.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g5.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g6.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g7.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g8.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/g9.jpg" width="260px" />
 
 ## Real-time Style Transfer
 <table width="100%" border="0" cellspacing="15" cellpadding="0">
@@ -55,8 +64,9 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 
 
 ### Stylize Images Using Pre-trained MSG-Net
-0. Download the pre-trained model
+0. Download the images and pre-trained model
 	```bash
+    python download_images.py 
 	python models/download_model.py
 	```
 0. Test the model
@@ -74,18 +84,19 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 	* `--content-size`: the content image size to test on.
 	* `--cuda`: set it to 1 for running on GPU, 0 for CPU.
 
-<img src ="images/1.jpg" width="260px" /> <img src ="images/2.jpg" width="260px" />
-<img src ="images/3.jpg" width="260px" />
-<img src ="images/4.jpg" width="260px" />
-<img src ="images/5.jpg" width="260px" />
-<img src ="images/6.jpg" width="260px" />
-<img src ="images/7.jpg" width="260px" />
-<img src ="images/8.jpg" width="260px" />
-<img src ="images/9.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/1.jpg" width="260px" /> <img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/2.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/3.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/4.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/5.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/6.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/7.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/8.jpg" width="260px" />
+<img src ="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/style_transfer/images/9.jpg" width="260px" />
 
 ### Train Your Own MSG-Net Model
-0. Download the COCO dataset
+0. Download the style images and COCO dataset
 	```bash
+    python download_images.py 
 	python dataset/download_dataset.py
 	```
 0. Train the model
