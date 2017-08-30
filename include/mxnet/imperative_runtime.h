@@ -71,6 +71,7 @@ class ImperativeRuntime {
                       const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray*>& inputs,
                       const std::vector<NDArray*>& outputs,
+                      const std::vector<OpReqType>& req,
                       OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
@@ -96,10 +97,11 @@ class ImperativeRuntime {
     explicit AGInfo() :
       grad_req(kNullOp), fresh_out_grad(false) {}
 
-    void clear() {
-      if (grad_req != kNullOp) return;
-      outputs.clear();
-      state.reset();
+    static void Clear(const nnvm::NodePtr& node) {
+      if (node == nullptr || node->info.empty()) return;
+      AGInfo& info = Get(node);
+      if (info.grad_req != kNullOp) return;
+      node->info.clear();
     }
 
     static AGInfo& Get(const nnvm::NodePtr& node) {
