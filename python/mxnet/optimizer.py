@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=too-many-lines
+
 """Weight updating functions."""
 import math
 import pickle
