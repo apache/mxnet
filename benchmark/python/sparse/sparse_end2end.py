@@ -33,9 +33,11 @@ parser.add_argument('--num-batch', type=int, default=99999999,
                     help='number of batches per epoch')
 parser.add_argument('--dummy-iter', type=int, default=0,
                     help='whether to use dummy iterator to exclude io cost')
-parser.add_argument('--kvstore', type=str, default='local',
+parser.add_argument('--kvstore', type=str, default=None,
                     help='what kvstore to use [local, dist_sync, etc]')
-parser.add_argument('--sparse-log-level', type=str, default='INFO',
+parser.add_argument('--log-level', type=str, default='debug',
+                    help='logging level [debug, info, error]')
+parser.add_argument('--sparse-log-level', type=str, default='DEBUG',
                     help='logging level [DEBUG, INFO, ERROR]')
 parser.add_argument('--dataset', type=str, default='avazu',
                     help='what test dataset to use')
@@ -48,6 +50,12 @@ parser.add_argument('--dummy-metric', type=int, default=0,
                     help='whether to call update_metric')
 parser.add_argument('--enable-logging-for', default="0",
                     help="Enable logging for the specified list of workers")
+parser.add_argument('--io-only', action='store_true',
+                    help="Measure only io")
+parser.add_argument('--compute-only', action='store_true',
+                    help="Measure only compute")
+parser.add_argument('--communication-only', action='store_true',
+                    help="Measure only communication costs")
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
@@ -87,6 +95,7 @@ avazu = {
     'data_origin_name': 'avazu-app.t.bz2',
     'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/avazu-app.t.bz2",
     'feature_dim': 1000000,
+    'lc': 1719304,
 }
 
 kdda = {
@@ -94,9 +103,18 @@ kdda = {
     'data_origin_name': 'kdda.t.bz2',
     'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
     'feature_dim': 20216830,
+    'lc': 510302,
 }
 
-datasets = { 'kdda' : kdda, 'avazu' : avazu }
+criteo = {
+    'data_name': 'criteo.t',
+    'data_origin_name': 'criteo.t.bz2',
+    'url': "https://s3-us-west-2.amazonaws.com/sparse-dataset/criteo.t.bz2",
+    'feature_dim': 8388621,
+    'lc': 548787,
+}
+
+datasets = { 'kdda' : kdda, 'avazu' : avazu , 'criteo': criteo }
 
 
 def get_sym(feature_dim):
@@ -107,6 +125,15 @@ def get_sym(feature_dim):
      y = mx.symbol.Variable("softmax_label")
      model = mx.symbol.SoftmaxOutput(data=embed, label=y, name="out")
      return model
+
+
+def row_sparse_push(kv, param_arrays, grad_arrays, param_names):
+    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+        arg_list, grad_list = pair
+        if grad_list[0] is None:
+            continue
+        name = param_names[index]
+        kv.push(name, grad_list, priority=-index)
 
 
 def row_sparse_pull(kv, key, data, slices, weight_array, priority):
@@ -140,11 +167,24 @@ if __name__ == '__main__':
     dummy_iter = args.dummy_iter
     dataset = args.dataset
     log_level = args.sparse_log_level
+    io_only = args.io_only
+    compute_only = args.compute_only
+    communication_only = args.communication_only
+    if (compute_only and io_only) or (compute_only and communication_only) or (io_only and communication_only):
+        raise Exception("Only one of compute_only, io_only, communication_only can be set")
+    if compute_only or io_only:
+        assert not kvstore, "when compute_only or io_only is set, kvstore should be None"
+        num_batch = datasets[dataset]['lc'] / batch_size if num_batch == 99999999 else num_batch
+    if communication_only:
+        assert (kvstore == "dist_async"), "when communication_only is set kvstore should be dist_async"
+        num_batch = datasets[dataset]['lc'] / batch_size if num_batch == 99999999 else num_batch
+
+
     contexts = mx.context.cpu(0) if args.num_gpu < 1\
         else [mx.context.gpu(i) for i in range(args.num_gpu)]
 
     # create kvstore when there are gpus
-    kv = mx.kvstore.create(kvstore) if args.num_gpu >= 1 else None
+    kv = mx.kvstore.create(kvstore) if kvstore else None
     rank = kv.rank if kv is not None else 0
     num_worker = kv.num_workers if kv is not None else 1
 
@@ -160,6 +200,7 @@ if __name__ == '__main__':
     # Only log if it is in the list of workers to be logged
     logging_workers_list = [int(i) for i in args.enable_logging_for.split(",")]
     log_level = log_level if rank in logging_workers_list else logging.CRITICAL
+
 
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=log_level, format=head)
@@ -181,7 +222,7 @@ if __name__ == '__main__':
     train_data = mx.io.LibSVMIter(data_libsvm=path, data_shape=(feature_dim,),
                                   batch_size=batch_size, num_parts=num_worker,
                                   part_index=rank)
-    if dummy_iter:
+    if dummy_iter or compute_only:
         train_data = DummyIter(train_data)
 
     # model
@@ -216,7 +257,12 @@ if __name__ == '__main__':
     logging.debug('start training ...')
     start = time.time()
     data_iter = iter(train_data)
+    time_cost_epoch = 0.
+    sum_cost_epoch = 0.
+    average_cost_epoch = 0.
+
     for epoch in range(num_epoch):
+        start_time_epoch = time.time()
         nbatch = 0
         end_of_batch = False
         data_iter.reset()
@@ -228,9 +274,17 @@ if __name__ == '__main__':
             nbatch += 1
             batch = next_batch
 
-            mod.forward_backward(batch)
-            # update parameters
-            mod.update()
+            if not io_only and not communication_only:
+                mod.forward_backward(batch)
+                # update parameters
+                mod.update()
+            if communication_only:
+                if nbatch == 1:
+                    mod.forward_backward(batch)
+                    mod.update()
+                else:
+                    row_sparse_push(kv, mod._exec_group.param_arrays, mod._exec_group.grad_arrays, mod._exec_group.param_names)
+
 
             try:
                 # pre fetch next batch
@@ -247,8 +301,15 @@ if __name__ == '__main__':
             else:  # call waitall to replace update_metric as sync point
                 mx.nd.waitall()  # sync point for the current minibatch
         logging.info('epoch %d, %s' % (epoch, metric.get()))
+        end_time_epoch = time.time()
         if epoch == 0:
             print "num_batches = ", nbatch
+        time_cost_epoch = end_time_epoch - start_time_epoch
+        if epoch > 0:
+            sum_cost_epoch = sum_cost_epoch + time_cost_epoch
+            average_cost_epoch = float(sum_cost_epoch) / epoch
+        logging.info('num_worker = ' + str(num_worker) + ', time cost per epoch = ' + str(time_cost_epoch))
+        logging.info('|cpu/32 cores| {} | {} | {} |'.format(str(num_worker), str(average_cost_epoch), rank))
     if profiler:
         mx.profiler.profiler_set_state('stop')
     end = time.time()
