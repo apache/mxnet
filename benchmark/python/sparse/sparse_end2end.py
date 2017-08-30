@@ -168,8 +168,7 @@ if __name__ == '__main__':
     io_only = args.io_only
     compute_only = args.compute_only
     communication_only = args.communication_only
-    if (compute_only and io_only) or (compute_only and communication_only) or (io_only and communication_only):
-        assert False, "Only one of compute_only, io_only, communication_only can be set"
+    assert (compute_only + io_only + communication_only <= 1), "Only one of compute_only, io_only, communication_only can be set"
     if compute_only or io_only:
         assert not kvstore, "when compute_only or io_only is set, kvstore should be None"
         num_batch = datasets[dataset]['lc'] / batch_size if num_batch == 99999999 else num_batch
