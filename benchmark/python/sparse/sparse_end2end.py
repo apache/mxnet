@@ -314,4 +314,4 @@ if __name__ == '__main__':
         mx.profiler.profiler_set_state('stop')
     end = time.time()
     time_cost = end - start
-    logging.info('num_worker = {}, time cost = {}'.format(str(num_worker), str(time_cost)))
+    logging.info('num_worker = {}, rank = {}, time cost = {}'.format(str(num_worker), str(rank), str(time_cost)))
