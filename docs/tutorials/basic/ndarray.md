@@ -81,7 +81,7 @@ We can specify the element type with the option `dtype`, which accepts a numpy
 type. By default, `float32` is used:
 
 ```python
-# float32 is used in default
+# float32 is used by default
 a = mx.nd.array([1,2,3])
 # create an int32 array
 b = mx.nd.array([1,2,3], dtype=np.int32)
