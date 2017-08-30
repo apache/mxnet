@@ -323,7 +323,7 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
 
 
 def test_split_data():
-    x = mx.nd.random_uniform(shape=(128, 33, 64))
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
 
     check_split_data(x, 8, 0)
     check_split_data(x, 3, 1)

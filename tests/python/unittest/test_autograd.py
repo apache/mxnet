@@ -344,9 +344,9 @@ def test_function():
             return dx, dy
 
     f = func()
-    x = mx.nd.random_uniform(shape=(10,))
+    x = mx.nd.random.uniform(shape=(10,))
     x.attach_grad()
-    y = mx.nd.random_uniform(shape=(10,))
+    y = mx.nd.random.uniform(shape=(10,))
     y.attach_grad()
     with record():
         m, n = f(x, y)

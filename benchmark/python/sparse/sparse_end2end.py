@@ -35,8 +35,6 @@ parser.add_argument('--dummy-iter', type=int, default=0,
                     help='whether to use dummy iterator to exclude io cost')
 parser.add_argument('--kvstore', type=str, default=None,
                     help='what kvstore to use [local, dist_sync, etc]')
-parser.add_argument('--log-level', type=str, default='debug',
-                    help='logging level [debug, info, error]')
 parser.add_argument('--sparse-log-level', type=str, default='DEBUG',
                     help='logging level [DEBUG, INFO, ERROR]')
 parser.add_argument('--dataset', type=str, default='avazu',
@@ -201,7 +199,6 @@ if __name__ == '__main__':
     logging_workers_list = [int(i) for i in args.enable_logging_for.split(",")]
     log_level = log_level if rank in logging_workers_list else logging.CRITICAL
 
-
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=log_level, format=head)
 
@@ -274,7 +271,7 @@ if __name__ == '__main__':
             nbatch += 1
             batch = next_batch
 
-            if not io_only and not communication_only:
+            if not (io_only or communication_only):
                 mod.forward_backward(batch)
                 # update parameters
                 mod.update()
@@ -303,7 +300,8 @@ if __name__ == '__main__':
         logging.info('epoch %d, %s' % (epoch, metric.get()))
         end_time_epoch = time.time()
         if epoch == 0:
-            print "num_batches = ", nbatch
+            logging.debug("num_batches = {}".format(nbatch))
+            logging.info('|device|num_worker|average_cost_epoch|rank|')
         time_cost_epoch = end_time_epoch - start_time_epoch
         if epoch > 0:
             sum_cost_epoch = sum_cost_epoch + time_cost_epoch
