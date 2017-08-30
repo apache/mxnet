@@ -502,11 +502,8 @@ def test_factorization_machine_module():
     num_batches = 5
     batch_size = 64
     num_samples = batch_size * num_batches
-    import scipy.sparse as sp
-    # generate some random scipy csr data
-    csr_sp = sp.rand(num_samples, feature_dim, density=0.1, format='csr')
-    csr_nd = mx.nd.sparse.csr_matrix(csr_sp.data, csr_sp.indptr, csr_sp.indices,
-                              (num_samples, feature_dim))
+    # generate some random csr data
+    csr_nd = rand_ndarray((num_samples, feature_dim), 'csr', 0.1)
     label = mx.nd.ones((num_samples,1))
     # the alternative is to use LibSVMIter
     train_iter = mx.io.NDArrayIter(data=csr_nd,
