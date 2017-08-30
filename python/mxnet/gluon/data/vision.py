@@ -105,7 +105,7 @@ class MNIST(_DownloadedDataset):
             data = np.fromstring(fin.read(), dtype=np.uint8)
             data = data.reshape(len(label), 28, 28, 1)
 
-        self._data = [nd.array(x, dtype=x.dtype) for x in data]
+        self._data = nd.array(data)
         self._label = label
 
 
@@ -195,7 +195,7 @@ class CIFAR10(_DownloadedDataset):
             filename = os.path.join(self._root, 'cifar-10-batches-bin/test_batch.bin')
             data, label = self._read_batch(filename)
 
-        self._data = [nd.array(x, dtype=x.dtype) for x in data]
+        self._data = nd.array(data, dtype=data.dtype)
         self._label = label
 
 
