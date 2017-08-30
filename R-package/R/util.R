@@ -1,6 +1,6 @@
 # filter out null, keep the names
 mx.util.filter.null <- function(lst) {
-  lst[!sapply(lst, is.null)]
+  lst[!vapply(lst, is.null, logical(1))]
 }
 
 #' Internal function to generate mxnet_generated.R

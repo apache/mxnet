@@ -15,7 +15,7 @@ mx.model.init.iter.rnn <- function(X, y, batch.size, is.train) {
   }
   if (is.null(y)) {
     if (is.train) stop("Need to provide parameter y for training with R arrays.")
-    y <- c(1:num.data) * 0
+    y <- rep.int(0, times = num.data)
   }
 
   batch.size <- min(num.data, batch.size)
@@ -33,19 +33,18 @@ setup.rnn.model <- function(rnn.sym, ctx,
                             dropout=0) {
 
     arg.names <- rnn.sym$arguments
-    input.shapes <- list()
-    for (name in arg.names) {
-        if (name %in% init.states.name) {
-            input.shapes[[name]] <- c(num.hidden, batch.size)
-        }
-        else if (grepl('data$', name) || grepl('label$', name) ) {
-            if (seq.len == 1) {
-                input.shapes[[name]] <- c(batch.size)
-            } else {
-            input.shapes[[name]] <- c(seq.len, batch.size)
-            }
-        }
+   
+    f <- function(nm) {
+      if (nm %in% init.states.name) {
+        c(num.hidden, batch.size)
+      } else if (grepl('data$', nm) || grepl('label$', nm)) {
+        if (seq.len == 1) batch.size
+        else c(seq.len, batch.size)
+      }
     }
+    
+    input.shapes <- lapply(arg.names, f) 
+    
     params <- mx.model.init.params(rnn.sym, input.shapes, NULL, initializer, mx.cpu())
     args <- input.shapes
     args$symbol <- rnn.sym
@@ -56,11 +55,9 @@ setup.rnn.model <- function(rnn.sym, ctx,
     mx.exec.update.arg.arrays(rnn.exec, params$arg.params, match.name=TRUE)
     mx.exec.update.aux.arrays(rnn.exec, params$aux.params, match.name=TRUE)
 
-    grad.arrays <- list()
-    for (name in names(rnn.exec$ref.grad.arrays)) {
-        if (is.param.name(name))
-            grad.arrays[[name]] <- rnn.exec$ref.arg.arrays[[name]]*0
-    }
+    grad.arrays <- lapply(Reduce(is.param.name, names(rnn.exec$ref.grad.arrays)),
+                          function(nm) rnn.exec$ref.arg.arrays[[nm]] * 0)
+    
     mx.exec.update.grad.arrays(rnn.exec, grad.arrays, match.name=TRUE)
 
     return (list(rnn.exec=rnn.exec, symbol=rnn.sym,
@@ -81,7 +78,7 @@ get.label <- function(label, ctx) {
     seq.len <- dim(label)[[1]]
     batch.size <- dim(label)[[2]]
     sm.label <- array(0, dim=c(seq.len*batch.size))
-    for (seqidx in 1:seq.len) {
+    for (seqidx in seq_len(seq.len)) {
         sm.label[((seqidx-1)*batch.size+1) : (seqidx*batch.size)] <- label[seqidx,]
     }
     return (mx.nd.array(sm.label, ctx))
@@ -114,15 +111,13 @@ train.rnn <- function (model, train.data, eval.data,
     log.period <- max(as.integer(1000 / seq.len), 1)
     last.perp <- 10000000.0
 
-    for (iteration in 1:num.round) {
+    for (iteration in seq_len(num.round)) {
         nbatch <- 0
         train.nll <- 0
         # reset states
-        init.states <- list()
-        for (name in init.states.name) {
-            init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
-        }
-
+        
+        init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
+        
         mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
 
         tic <- Sys.time()
@@ -138,32 +133,26 @@ train.rnn <- function (model, train.data, eval.data,
             seq.label.probs <- mx.nd.choose.element.0index(m$rnn.exec$ref.outputs[["sm_output"]], get.label(m$rnn.exec$ref.arg.arrays[["label"]], ctx))
 
             mx.exec.backward(m$rnn.exec)
-            init.states <- list()
-            for (name in init.states.name) {
-                init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
-            }
-
+            
+            init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
+            
             mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
             # update epoch counter
             epoch.counter <- epoch.counter + 1
             if (epoch.counter %% update.period == 0) {
                 # the gradient of initial c and inital h should be zero
-                init.grad <- list()
-                for (name in init.states.name) {
-                    init.grad[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
-                }
-
+                
+                init.grad <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
+              
                 mx.exec.update.grad.arrays(m$rnn.exec, init.grad, match.name=TRUE)
 
                 arg.blocks <- updater(m$rnn.exec$ref.arg.arrays, m$rnn.exec$ref.grad.arrays)
 
                 mx.exec.update.arg.arrays(m$rnn.exec, arg.blocks, skip.null=TRUE)
 
-                grad.arrays <- list()
-                for (name in names(m$rnn.exec$ref.grad.arrays)) {
-                    if (is.param.name(name))
-                        grad.arrays[[name]] <- m$rnn.exec$ref.grad.arrays[[name]]*0
-                }
+                grad.arrays <- lapply(Reduce(is.param.name, names(m$rnn.exec$ref.grad.arrays)),
+                                      function(nm) m$rnn.exec$ref.grad.arrays[[name]]*0)
+                
                 mx.exec.update.grad.arrays(m$rnn.exec, grad.arrays, match.name=TRUE)
 
             }
@@ -176,27 +165,19 @@ train.rnn <- function (model, train.data, eval.data,
               batch.end.callback(iteration, nbatch, environment())
             }
             
-            if ((epoch.counter %% log.period) == 0) {
-                message(paste0("Epoch [", epoch.counter,
-                           "] Train: NLL=", train.nll / nbatch,
-                           ", Perp=", exp(train.nll / nbatch)))
+            if (epoch.counter %% log.period == 0) {
+                message("Epoch [", epoch.counter, "] Train: NLL=", train.nll / nbatch, ", Perp=", exp(train.nll / nbatch))
             }
         }
         train.data$reset()
         # end of training loop
         toc <- Sys.time()
-        message(paste0("Iter [", iteration,
-                   "] Train: Time: ", as.numeric(toc - tic, units="secs"),
-                   " sec, NLL=", train.nll / nbatch,
-                   ", Perp=", exp(train.nll / nbatch)))
+        message("Iter [", iteration, "] Train: Time: ", as.numeric(toc - tic, units="secs"), " sec, NLL=", train.nll / nbatch, ", Perp=", exp(train.nll / nbatch))
 
         if (!is.null(eval.data)) {
             val.nll <- 0.0
             # validation set, reset states
-            init.states <- list()
-            for (name in init.states.name) {
-                init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
-            }
+            init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
             mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
 
             eval.data$reset()
@@ -209,19 +190,15 @@ train.rnn <- function (model, train.data, eval.data,
                 # probability of each label class, used to evaluate nll
                 seq.label.probs <- mx.nd.choose.element.0index(m$rnn.exec$ref.outputs[["sm_output"]], get.label(m$rnn.exec$ref.arg.arrays[["label"]], ctx))
                 # transfer the states
-                init.states <- list()
-                for (name in init.states.name) {
-                    init.states[[name]] <- m$rnn.exec$ref.arg.arrays[[name]]*0
-                }
+                init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
+                
                 mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
                 val.nll <- val.nll + calc.nll(as.array(seq.label.probs), batch.size)
                 nbatch <- nbatch + seq.len
             }
             eval.data$reset()
             perp <- exp(val.nll / nbatch)
-            message(paste0("Iter [", iteration,
-                       "] Val: NLL=", val.nll / nbatch,
-                       ", Perp=", exp(val.nll / nbatch)))
+            message("Iter [", iteration, "] Val: NLL=", val.nll / nbatch, ", Perp=", exp(val.nll / nbatch))
         }
         # get the model out
 

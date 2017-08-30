@@ -39,7 +39,7 @@ mx.metric.top_k_accuracy <- mx.metric.custom("top_k_accuracy", function(label, p
   if(top_k == 1){
     return(mx.metric.accuracy(label,pred))
   } else{
-    ypred <- apply(pred,2,function(x) order(x, decreasing=TRUE)[1:top_k])
+    ypred <- apply(pred,2,function(x) order(x, decreasing=TRUE)[seq_len(top_k)])
     ans <- apply(ypred, 2, is.num.in.vect, num = as.array(label + 1))
     acc <- sum(ans)/length(label)  
     return(acc)

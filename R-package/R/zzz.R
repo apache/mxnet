@@ -15,8 +15,6 @@ NULL
 .MXNetEnv <- new.env()
 
 .onLoad <- function(libname, pkgname) {
-  # Require methods for older versions of R
-  require(methods)
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)

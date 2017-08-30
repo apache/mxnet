@@ -27,16 +27,15 @@ rnn.unroll <- function(num.rnn.layer, seq.len, input.size, num.hidden,
     embed.weight <- mx.symbol.Variable("embed.weight")
     cls.weight <- mx.symbol.Variable("cls.weight")
     cls.bias <- mx.symbol.Variable("cls.bias")
-    param.cells <- lapply(1:num.rnn.layer, function(i) {
+    param.cells <- lapply(seq_len(num.rnn.layer), function(i) {
         cell <- list(i2h.weight = mx.symbol.Variable(paste0("l", i, ".i2h.weight")),
                      i2h.bias = mx.symbol.Variable(paste0("l", i, ".i2h.bias")),
                      h2h.weight = mx.symbol.Variable(paste0("l", i, ".h2h.weight")),
                      h2h.bias = mx.symbol.Variable(paste0("l", i, ".h2h.bias")))
         return (cell)
     })
-    last.states <- lapply(1:num.rnn.layer, function(i) {
-        state <- list(h=mx.symbol.Variable(paste0("l", i, ".init.h")))
-        return (state)
+    last.states <- lapply(seq_len(num.rnn.layer), function(i) {
+        list(h=mx.symbol.Variable(paste0("l", i, ".init.h")))
     })
 
     # embeding layer
@@ -46,25 +45,29 @@ rnn.unroll <- function(num.rnn.layer, seq.len, input.size, num.hidden,
                                  weight=embed.weight, output_dim=num.embed, name="embed")
     wordvec <- mx.symbol.SliceChannel(data=embed, num_outputs=seq.len, squeeze_axis=1)
 
-    last.hidden <- list()
-    for (seqidx in 1:seq.len) { 
-        hidden <- wordvec[[seqidx]]
-        # stack RNN
-        for (i in 1:num.rnn.layer) {
-            dp <- ifelse(i==1, 0, dropout)
-            next.state <- rnn(num.hidden, indata=hidden,
-                              prev.state=last.states[[i]],
-                              param=param.cells[[i]],
-                              seqidx=seqidx, layeridx=i, 
-                              dropout=dp, batch.norm=batch.norm)
-            hidden <- next.state$h
-            last.states[[i]] <- next.state
-        }
-        # decoder
-        if (dropout > 0.)
-            hidden <- mx.symbol.Dropout(data=hidden, p=dropout)
-        last.hidden <- c(last.hidden, hidden)
-    }
+    last.hidden <- lapply(seq_len(seq.len),
+                          function(seqidx) {
+                            hidden <- wordvec[[seqidx]]
+                            # stack RNN
+                            for (i in seq_len(num.rnn.layer)) {
+                              dp <- if (i == 1) 0 else dropout
+                              next.state <- rnn(num.hidden,
+                                                indata=hidden,
+                                                prev.state=last.states[[i]],
+                                                param=param.cells[[i]],
+                                                seqidx=seqidx,
+                                                layeridx=i,
+                                                dropout=dp,
+                                                batch.norm=batch.norm)
+                              hidden <- next.state$h
+                              last.states[[i]] <- next.state
+                            }
+                            # decoder
+                            if (dropout > 0.)  mx.symbol.Dropout(data=hidden, p=dropout) else hidden
+                          })
+    
+    
+    
     last.hidden$dim <- 0
     last.hidden$num.args <- seq.len
     concat <-mxnet:::mx.varg.symbol.Concat(last.hidden)
@@ -93,9 +96,8 @@ rnn.inference.symbol <- function(num.rnn.layer, seq.len, input.size, num.hidden,
                      h2h.bias = mx.symbol.Variable(paste0("l", i, ".h2h.bias")))
         return (cell)
     })
-    last.states <- lapply(1:num.rnn.layer, function(i) {
-        state <- list(h=mx.symbol.Variable(paste0("l", i, ".init.h")))
-        return (state)
+    last.states <- lapply(seq_len(num.rnn.layer), function(i) {
+        list(h=mx.symbol.Variable(paste0("l", i, ".init.h")))
     })
 
     # embeding layer
@@ -103,8 +105,8 @@ rnn.inference.symbol <- function(num.rnn.layer, seq.len, input.size, num.hidden,
     hidden <- mx.symbol.Embedding(data=data, input_dim=input.size,
                                  weight=embed.weight, output_dim=num.embed, name="embed")
     # stack RNN        
-    for (i in 1:num.rnn.layer) {
-        dp <- ifelse(i==1, 0, dropout)
+    for (i in seq_len(num.rnn.layer)) {
+        dp <- if (i == 1) 0 else dropout
         next.state <- rnn(num.hidden, indata=hidden,
                           prev.state=last.states[[i]],
                           param=param.cells[[i]],
@@ -122,10 +124,9 @@ rnn.inference.symbol <- function(num.rnn.layer, seq.len, input.size, num.hidden,
                                    bias=cls.bias,
                                    num_hidden=num.label)
     sm <- mx.symbol.SoftmaxOutput(data=fc, name='sm')
-    unpack.h <- lapply(1:num.rnn.layer, function(i) {
+    unpack.h <- lapply(seq_len(num.rnn.layer), function(i) {
         state <- last.states[[i]]
-        state.h <- mx.symbol.BlockGrad(state$h, name=paste0("l", i, ".last.h"))
-        return (state.h)
+        mx.symbol.BlockGrad(state$h, name=paste0("l", i, ".last.h"))
     })
     list.all <- c(sm, unpack.h)
     return (mx.symbol.Group(list.all))
@@ -192,10 +193,7 @@ mx.rnn <- function( train.data, eval.data=NULL,
                            num.label=num.label,
                            dropout=dropout,
                            batch.norm=batch.norm)
-    init.states.name <- lapply(1:num.rnn.layer, function(i) {
-        state <- paste0("l", i, ".init.h")
-        return (state)
-    })
+    init.states.name <- as.list(paste0("l", seq_len(num.rnn.layer), ".init.h"))
     # set up rnn model
     model <- setup.rnn.model(rnn.sym=rnn.sym,
                              ctx=ctx,
@@ -269,10 +267,7 @@ mx.rnn.inference <- function( num.rnn.layer,
     #     init.states.name <- c(init.states.name, paste0("l", i, ".init.c"))
     #     init.states.name <- c(init.states.name, paste0("l", i, ".init.h"))
     # }
-    init.states.name <- lapply(1:num.rnn.layer, function(i) {
-        state <- paste0("l", i, ".init.h")
-        return (state)
-    })
+    init.states.name <- as.list(paste0("l", seq_len(num.rnn.layer), ".init.h"))
     
     seq.len <- 1
     # set up rnn model
@@ -296,10 +291,10 @@ mx.rnn.inference <- function( num.rnn.layer,
             mx.exec.update.arg.arrays(model$rnn.exec, rnn.input, match.name=TRUE)
         }
     }
-    init.states <- list()
-    for (i in 1:num.rnn.layer) {
-        init.states[[paste0("l", i, ".init.h")]] <- model$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-    }
+    
+    init.states <- lapply(paste0("l", seq_len(num.rnn.layer), ".init.h"),
+                          function(nm) model$rnn.exec$ref.arg.arrays[[nm]] * 0)
+    
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
 
     return (model)
@@ -318,21 +313,24 @@ mx.rnn.inference <- function( num.rnn.layer,
 #'
 #' @export
 mx.rnn.forward <- function(model, input.data, new.seq=FALSE) {
-    if (new.seq == TRUE) {
-        init.states <- list()
-        for (i in 1:model$num.rnn.layer) {
-            init.states[[paste0("l", i, ".init.h")]] <- model$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-        }
+    if (new.seq) {
+      
+        init.states <- lapply(paste0("l", seq_len(num.rnn.layer), ".init.h"),
+                              function(nm) model$rnn.exec$ref.arg.arrays[[nm]] * 0)
+      
         mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
+        
     }
-    dim(input.data) <- c(model$batch.size)
+    dim(input.data) <- model$batch.size
     data <- list(data=mx.nd.array(input.data))
     mx.exec.update.arg.arrays(model$rnn.exec, data, match.name=TRUE)
     mx.exec.forward(model$rnn.exec, is.train=FALSE)
-    init.states <- list()
-    for (i in 1:model$num.rnn.layer) {
-        init.states[[paste0("l", i, ".init.h")]] <- model$rnn.exec$ref.outputs[[paste0("l", i, ".last.h_output")]]
-    }
+    
+    
+    init.states <- lapply(seq_len(num.rnn.layer),
+                          function(i) model$rnn.exec$ref.outputs[[paste0("l", i, ".last.h_output")]])
+    names(init.states) <- paste0("l", seq_len(num.rnn.layer), ".init.h")
+
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     #print (model$rnn.exec$ref)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]
