@@ -29,7 +29,7 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    python/predict_image
    vision/large_scale_classification
 ```
-<br>
+
 More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
 
 ## Contributing Tutorials
