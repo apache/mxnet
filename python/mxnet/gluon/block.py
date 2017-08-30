@@ -182,7 +182,7 @@ class Block(object):
                                                          type2=type(value)))
             if isinstance(existing, Block):
                 for i, c in enumerate(self._children):
-                    if c == existing:
+                    if c is existing:
                         self._children[i] = value
         else:
             if isinstance(value, Block):
