@@ -308,7 +308,8 @@ if __name__ == '__main__':
             sum_cost_epoch = sum_cost_epoch + time_cost_epoch
             average_cost_epoch = float(sum_cost_epoch) / epoch
         logging.info('num_worker = {}, time cost per epoch = {}',format(str(num_worker), str(time_cost_epoch)))
-        logging.info('|cpu/{} cores| {} | {} | {} |'.format(str(num_cores), str(num_worker), str(average_cost_epoch), rank))
+        if args.num_gpu < 1:
+            logging.info('|cpu/{} cores| {} | {} | {} |'.format(str(num_cores), str(num_worker), str(average_cost_epoch), rank))
     if profiler:
         mx.profiler.profiler_set_state('stop')
     end = time.time()
