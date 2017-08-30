@@ -43,8 +43,8 @@ from .op import NDArrayBase
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "maximum", "minimum", "moveaxis", "modulo",
-           "multiply", "negative", "not_equal", "onehot_encode", "power", "subtract",
-           "true_divide", "waitall", "_new_empty_handle"]
+           "multiply", "not_equal", "onehot_encode", "power", "subtract", "true_divide",
+           "waitall", "_new_empty_handle"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -2570,31 +2570,6 @@ def true_divide(lhs, rhs):
     """This function is similar to :meth:`divide`.
     """
     return divide(lhs, rhs)
-
-
-def negative(arr):
-    """Numerical negative, element-wise.
-
-    Equals ``-arr``
-
-    Parameters
-    ----------
-    arr : NDArray
-        The input array
-
-    Returns
-    -------
-    NDArray
-        ``-arr``
-
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> (-x).asnumpy()
-    array([[-1., -1., -1.],
-           [-1., -1., -1.]], dtype=float32)
-    """
-    return multiply(arr, -1.0)
 
 
 def concatenate(arrays, axis=0, always_copy=True):

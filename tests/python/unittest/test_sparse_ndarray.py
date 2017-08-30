@@ -444,11 +444,7 @@ def test_sparse_nd_unsupported():
             pass
 
 def test_create_csr():
-    dim0 = 50
-    dim1 = 50
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
-    for density in densities:
-        shape = rand_shape_2d(dim0, dim1)
+    def check_create_csr_from_nd(shape, density):
         matrix = rand_ndarray(shape, 'csr', density)
         data = matrix.data
         indptr = matrix.indptr
@@ -461,6 +457,40 @@ def test_create_csr():
         assert same(csr_created.indices.asnumpy(), indices.asnumpy())
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+
+    def check_create_csr_from_scipy(shape, density, f):
+        def assert_csr_almost_equal(nd, sp):
+            assert_almost_equal(nd.data.asnumpy(), sp.data)
+            assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
+            assert_almost_equal(nd.indices.asnumpy(), sp.indices)
+
+        try:
+            import scipy.sparse as sp
+            # random canonical csr
+            csr_sp = sp.rand(shape[0], shape[1], density, format="csr")
+            csr_nd = f(csr_sp)
+            assert_csr_almost_equal(csr_nd, csr_sp)
+            # non-canonical csr which contains duplicates and unsorted indices
+            indptr = np.array([0, 2, 3, 7])
+            indices = np.array([0, 2, 2, 0, 1, 2, 1])
+            data = np.array([1, 2, 3, 4, 5, 6, 1])
+            non_canonical_csr = sp.csr_matrix((data, indices, indptr), shape=(3, 3))
+            canonical_csr_nd = f(non_canonical_csr)
+            canonical_csr_sp = non_canonical_csr.copy()
+            canonical_csr_sp.sum_duplicates()
+            canonical_csr_sp.sort_indices()
+            assert_csr_almost_equal(canonical_csr_nd, canonical_csr_sp)
+        except ImportError:
+            print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
+
+    dim0 = 50
+    dim1 = 50
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        check_create_csr_from_nd(shape, density)
+        check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
+        check_create_csr_from_scipy(shape, density, mx.nd.array)
 
 
 def test_create_row_sparse():
