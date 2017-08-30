@@ -107,7 +107,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   id_dic<- nodes_df$id_graph
   names(id_dic)<- as.character(nodes_df$id)
   
-  keepers <- ! vapply(model_nodes$inputs, length, numeric(1)) == 0 & ! op_null
+  keepers <- ! lengths(model_nodes$inputs) == 0 & ! op_null
   
   edges_id<- model_nodes$id[keepers]
   edges_id<- id_dic[as.character(edges_id)]

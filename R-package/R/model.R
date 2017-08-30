@@ -350,8 +350,8 @@ mx.model.select.layout.predict <- function(X, model) {
   # try row major
   ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[2]], 1))
   if (!is.null(ret)) {
-    
-    if (any(vapply(seq_along(names(model$arg.params)),
+    names = names(model$arg.params)
+    if (any(vapply(seq_along(names),
                    function(i) any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]])),
                    logical(1)))) rowmajor <- 0
     
@@ -360,7 +360,7 @@ mx.model.select.layout.predict <- function(X, model) {
   ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[1]], 1))
   if (!is.null(ret)) {
     
-    if (any(vapply(seq_along(names(model$arg.params)),
+    if (any(vapply(seq_along(names),
                    function(i) any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]])),
                    logical(1)))) colmajor <- 0
     
@@ -599,13 +599,13 @@ mx.model.load <- function(prefix, iteration) {
 
   if (length(arg.index) != 0) {
     arg.params <- save.dict[arg.index]
-    names(arg.params) <- vapply(names[arg.index], function(nm) substr(nm, 5, nchar(nm)), character(1))
+    names(arg.params) <- substr(names[arg.index], 5, nchar(names[arg.index]))
   } else {
     arg.params <- list()
   }
   if (length(aux.index) != 0) {
     aux.params <- save.dict[aux.index]
-    names(aux.params) <- vapply(names[aux.index], function(nm) substr(nm, 5, nchar(nm)), character(1))
+    names(aux.params) <- substr(names[aux.index], 5, nchar(names[aux.index]))
   } else {
     aux.params <- list()
   }
@@ -623,8 +623,8 @@ mx.model.load <- function(prefix, iteration) {
 mx.model.save <- function(model, prefix, iteration) {
   arg.params <- model$arg.params
   aux.params <- model$aux.params
-  names(arg.params) <- vapply(names(arg.params), function(nm) paste0("arg:", nm), character(1))
-  names(aux.params) <- vapply(names(aux.params), function(nm) paste0("aux:", nm), character(1))
+  names(arg.params) <- paste0("arg:", names(arg.params))
+  names(aux.params) <- paste0("aux:", names(aux.params))
   save.dict <- append(arg.params, aux.params)
   mx.symbol.save(model$symbol, path.expand(paste0(prefix, "-symbol.json")))
   mx.nd.save(save.dict, path.expand(sprintf("%s-%04d.params", prefix, iteration)))

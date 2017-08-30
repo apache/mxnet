@@ -61,7 +61,7 @@ lstm.unroll <- function(num.lstm.layer, seq.len, input.size,
         next.state <- lstm(num.hidden, indata=hidden,
                            prev.state=last.states[[i]],
                            param=param.cells[[i]],
-                           seqidx=seqidx, layeridx=i,
+                           seqidx=j, layeridx=i,
                            dropout=dp)
         hidden <- next.state$h
         last.states[[i]] <- next.state
@@ -361,8 +361,8 @@ mx.lstm.forward <- function(model, input.data, new.seq=FALSE) {
     mx.exec.forward(model$rnn.exec, is.train=FALSE)
     
     init.states <-  
-      c(lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.arg.arrays[[paste0("l", gsub("[^0-9]", "", x), ".last.c_output")]]*0),
-        lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.arg.arrays[[paste0("l", gsub("[^0-9]", "", x), ".last.h_output")]]*0))
+      c(lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.outputs[[paste0("l", gsub("[^0-9]", "", x), ".last.c_output")]]*0),
+        lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.outputs[[paste0("l", gsub("[^0-9]", "", x), ".last.h_output")]]*0))
     
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]
