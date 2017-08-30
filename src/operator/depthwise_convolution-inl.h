@@ -114,8 +114,9 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
         (local_channel * out_pixels);
 
     // Make sure all threads enter the loop so they get to the enclosed __syncthreads()
-    for (int out_id = threadIdx.x; out_id < ROUND_TO_MULTIPLE(out_pixels, blockDim.x); out_id += blockDim.x) {
-
+    for (int out_id = threadIdx.x;
+         out_id < ROUND_TO_MULTIPLE(out_pixels,
+         blockDim.x); out_id += blockDim.x) {
       const int out_w = out_id % out_width;
       const int out_h = (out_id / out_width) % out_height;
       const int out_grad_offset = out_grad_offset_temp + (out_h * out_width) + (out_w);
