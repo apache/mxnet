@@ -43,8 +43,10 @@ class Trainer(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
         :any:`mxnet.kvstore.create` for more information.
+    compress : str
+        whether using low-bit compression. The argument can be 'none', '2bit', and '1bit'.
     """
-    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
+    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device', compress='none'):
         if isinstance(params, (dict, ParameterDict)):
             params = list(params.values())
         if not isinstance(params, (list, tuple)):
@@ -58,13 +60,17 @@ class Trainer(object):
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
             self._params.append(param)
-
+        if (compress != 'none' and
+            compress != '2bit' and compress != '1bit'):
+           raise ValueError("The compress argument can only be 'none', "  \
+                            "'2bit', or '1bit'.")
         optimizer_params = optimizer_params if optimizer_params else {}
         self._scale = optimizer_params.get('rescale_grad', 1.0)
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
         self._kv_initialized = False
         self._kvstore = kvstore
+        self._compress = compress
 
     def _check_contexts(self):
         contexts = None
@@ -94,7 +100,9 @@ class Trainer(object):
 
     def _init_kvstore(self):
         arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
-        kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
+        kvstore, update_on_kvstore = _create_kvstore(self._kvstore,
+                                                     self._compress,
+                                                     len(self._contexts),
                                                      arg_arrays)
         if kvstore:
             if 'dist' in kvstore.type:
