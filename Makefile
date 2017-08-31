@@ -40,6 +40,8 @@ ifeq ($(USE_MKLDNN), 1)
 	MKLROOT := $(firstword $(RETURN_STRING))
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 	USE_MKL2017 := 0
+	out := $(shell export MKLROOT=$(MKLROOT))
+	RETURN_STRING := $(shell ./prepare_mkldnn.sh)
 endif
 ifeq ($(USE_MKL2017), 1)
 	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
@@ -110,7 +112,6 @@ ifeq ($(USE_NNPACK), 1)
 	LDFLAGS += -lnnpack
 endif
 
-# include Makefile.mkldnn
 ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMKL_EXPERIMENTAL=1
 	CFLAGS += -DUSE_MKL=1
