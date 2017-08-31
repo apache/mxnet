@@ -175,7 +175,7 @@ class Block(object):
 
         if hasattr(self, name):
             existing = getattr(self, name)
-            if not name.startswith('_') and not isinstance(value, type(existing)):
+            if isinstance(existing, (Parameter, Block)) and not isinstance(value, type(existing)):
                 raise TypeError('Changing attribute type for {name} from {type1} to {type2}' \
                                 'is not allowed.'.format(name=name,
                                                          type1=type(existing),

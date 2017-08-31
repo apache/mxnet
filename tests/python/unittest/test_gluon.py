@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import unittest
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 import numpy as np
+from nose.tools import raises
 
 
 def test_parameter():
@@ -369,24 +369,37 @@ def test_trainer():
 
     assert (x.data(mx.cpu(1)).asnumpy() == -3).all()
 
-class TestBlock(unittest.TestCase):
-    def test_block_attr(self):
-        b = gluon.Block()
+def test_block_attr_hidden():
+    b = gluon.Block()
 
-        # hidden variables can change types
-        b._a = None
-        b._a = 1
+    # regular attributes can change types
+    b.a = None
+    b.a = 1
 
-        # regular variables can't change types
-        with self.assertRaises(TypeError) as context:
-            b.b = 1
-            b.b = (2,)
+@raises(TypeError)
+def test_block_attr_block():
+    b = gluon.Block()
 
-        # set block attribute also sets _children
-        b.c = gluon.Block()
-        c2 = gluon.Block()
-        b.c = c2
-        assert b.c is c2 and b._children[0] is c2
+    # regular variables can't change types
+    b.b = gluon.Block()
+    b.b = (2,)
+
+@raises(TypeError)
+def test_block_attr_param():
+    b = gluon.Block()
+
+    # regular variables can't change types
+    b.b = gluon.Parameter()
+    b.b = (2,)
+
+def test_block_attr_regular():
+    b = gluon.Block()
+
+    # set block attribute also sets _children
+    b.c = gluon.Block()
+    c2 = gluon.Block()
+    b.c = c2
+    assert b.c is c2 and b._children[0] is c2
 
 
 if __name__ == '__main__':
