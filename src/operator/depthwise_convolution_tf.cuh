@@ -476,10 +476,10 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
     // Note: the condition to reach this is uniform across the entire block.
     __syncthreads();
 
+    // Not all threads of a warp may reach the __shfl_down_sync instruction
+    // so we cannot use the FULL_WARP_MASK there
     CREATE_SHFL_MASK(active_threads, slice_in_range);
 
-    // The 'slice_in_range' test condition is the same for the entire block,
-    // enabling use of the full-warp shuffle mask below.
     if (slice_in_range) {
       const DType* const out_ptr = inout_offset + output;
       const DType out1 = ldg(out_ptr);
