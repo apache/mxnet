@@ -24,7 +24,7 @@
 tag_list="0.11.0.rc3 master"
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
-mxnet_folder="apache_mxnet"
+mxnet_folder="mxnet"
 built="VersionedWeb"
 mkdir $built
 mkdir "$built/versions"

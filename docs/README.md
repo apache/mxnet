@@ -7,8 +7,8 @@ Then use the following commands to clone and
 build the documents.
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git
-cd incubator-mxnet && make docs
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet && make docs
 ```
 
 The results will be available at `docs/_build/html/`.
