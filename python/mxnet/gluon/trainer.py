@@ -104,6 +104,7 @@ class Trainer(object):
                                                      len(self._contexts),
                                                      arg_arrays)
         if kvstore:
+            kvstore.set_compress(self._compress)
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
             for i, param in enumerate(self._params):

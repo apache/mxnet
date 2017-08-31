@@ -236,6 +236,16 @@ class KVStore(object):
             self.handle, mx_uint(len(ckeys)), ckeys, cvals,
             ctypes.c_int(priority)))
 
+    def set_compress(self, compress='none'):
+        """ Set to use low-bit compression
+
+        compress can be 'none', '2bit', or '1bit'.
+        """
+        if not isinstance(compress, string_types):
+            raise TypeError('compress must be a string')
+        check_call(_LIB.MXKVStoreSetCompress(self.handle,
+                                             c_str(compress)))
+
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
 

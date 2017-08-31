@@ -1380,6 +1380,16 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Delete a KVStore handle.
+ * \param handle handle to the kvstore
+ * \param compress set to use low-bit compression
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetCompress(KVStoreHandle handle,
+                                  const char *compress);
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore

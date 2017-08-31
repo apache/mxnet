@@ -635,6 +635,13 @@ int MXKVStoreCreate(const char *type,
   API_END();
 }
 
+int MXKVStoreSetCompress(KVStoreHandle handle,
+                         const char *compress) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->SetCompress(compress);
+  API_END();
+}
+
 int MXKVStoreFree(KVStoreHandle handle) {
   API_BEGIN();
   delete static_cast<KVStore*>(handle);
