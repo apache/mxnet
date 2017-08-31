@@ -21,6 +21,11 @@ import argparse
 import os
 import multiprocessing
 
+MAX_NUM_BATCH = 99999999
+COMP = "compute"
+COMM = "communication"
+IO = "io"
+
 parser = argparse.ArgumentParser(description="Run sparse linear regression " \
                                              "with distributed kvstore",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -30,7 +35,7 @@ parser.add_argument('--num-epoch', type=int, default=1,
                     help='number of epochs to train')
 parser.add_argument('--batch-size', type=int, default=512,
                     help='number of examples per batch')
-parser.add_argument('--num-batch', type=int, default=99999999,
+parser.add_argument('--num-batch', type=int, default=MAX_NUM_BATCH,
                     help='number of batches per epoch')
 parser.add_argument('--dummy-iter', type=int, default=0,
                     help='whether to use dummy iterator to exclude io cost')
@@ -49,12 +54,9 @@ parser.add_argument('--dummy-metric', type=int, default=0,
                     help='whether to call update_metric')
 parser.add_argument('--enable-logging-for', default="0",
                     help="Enable logging for the specified list of workers")
-parser.add_argument('--io-only', action='store_true',
-                    help="Measure only io")
-parser.add_argument('--compute-only', action='store_true',
-                    help="Measure only compute")
-parser.add_argument('--communication-only', action='store_true',
-                    help="Measure only communication costs")
+parser.add_argument('--measure-only', default=None,
+                    help="Measure only",
+                    choices=[IO, COMPUTE, COMM])
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
@@ -166,17 +168,14 @@ if __name__ == '__main__':
     dummy_iter = args.dummy_iter
     dataset = args.dataset
     log_level = args.sparse_log_level
-    io_only = args.io_only
-    compute_only = args.compute_only
-    communication_only = args.communication_only
+    measure_only = args.measure_only
     num_cores = multiprocessing.cpu_count()
-    assert (compute_only + io_only + communication_only <= 1), "Only one of compute_only, io_only, communication_only can be set"
-    if compute_only or io_only:
+    if measure_only == COMP or measure_only == IO:
         assert not kvstore, "when compute_only or io_only is set, kvstore should be None"
-        num_batch = datasets[dataset]['lc'] / batch_size if num_batch == 99999999 else num_batch
-    if communication_only:
+        num_batch = datasets[dataset]['lc'] / batch_size if num_batch == MAX_NUM_BATCH else num_batch
+    if measure_only == COMM:
         assert (kvstore == "dist_async"), "when communication_only is set kvstore should be dist_async"
-        num_batch = datasets[dataset]['lc'] / batch_size if num_batch == 99999999 else num_batch
+        num_batch = datasets[dataset]['lc'] / batch_size if num_batch == MAX_NUM_BATCH else num_batch
 
 
     contexts = mx.context.cpu(0) if args.num_gpu < 1\
@@ -220,7 +219,7 @@ if __name__ == '__main__':
     train_data = mx.io.LibSVMIter(data_libsvm=path, data_shape=(feature_dim,),
                                   batch_size=batch_size, num_parts=num_worker,
                                   part_index=rank)
-    if dummy_iter or compute_only:
+    if dummy_iter or measure_only == COMP or measure_only  == COMM:
         train_data = DummyIter(train_data)
 
     # model
@@ -272,11 +271,11 @@ if __name__ == '__main__':
             nbatch += 1
             batch = next_batch
 
-            if not (io_only or communication_only):
+            if measure_only != IO and measure_only != COMM:
                 mod.forward_backward(batch)
                 # update parameters
                 mod.update()
-            if communication_only:
+            if measure_only == COMM:
                 if nbatch == 1:
                     mod.forward_backward(batch)
                     mod.update()
