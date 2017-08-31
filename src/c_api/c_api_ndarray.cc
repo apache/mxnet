@@ -550,14 +550,14 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   }
 }
 
-void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
-                           int num_inputs,
-                           NDArrayHandle *inputs,
-                           int *num_outputs,
-                           NDArrayHandle **outputs,
-                           int num_params,
-                           const char **param_keys,
-                           const char **param_vals) {
+inline void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
+                                   int num_inputs,
+                                   NDArrayHandle *inputs,
+                                   int *num_outputs,
+                                   NDArrayHandle **outputs,
+                                   int num_params,
+                                   const char **param_keys,
+                                   const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
