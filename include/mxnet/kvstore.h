@@ -63,6 +63,13 @@ class KVStore {
    */
   inline const std::string& type() { return type_; }
 
+  /**
+   * \brief set to use low-bit compression
+   */
+  inline void SetCompress(const std::string& compress) {
+    compress_ = compress;
+  }
+
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
@@ -340,6 +347,11 @@ class KVStore {
    * \brief the kvstore type
    */
   std::string type_;
+
+  /**
+   * \brief whether using low-bit compression
+   */
+  std::string compress_ = "none";
 
   /**
    * \brief whether to do barrier when finalize
