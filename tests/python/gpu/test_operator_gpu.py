@@ -33,9 +33,9 @@ from test_gluon import *
 from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_operator import test_cast_storage_ex, test_sparse_dot
-from test_sparse_operator import test_sparse_nd_zeros, test_sparse_retain
 from test_sparse_ndarray import test_create_csr, test_create_row_sparse
+from test_sparse_operator import *
+from test_ndarray import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm
