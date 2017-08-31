@@ -56,7 +56,7 @@ parser.add_argument('--enable-logging-for', default="0",
                     help="Enable logging for the specified list of workers")
 parser.add_argument('--measure-only', default=None,
                     help="Measure only",
-                    choices=[IO, COMPUTE, COMM])
+                    choices=[IO, COMP, COMM])
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
