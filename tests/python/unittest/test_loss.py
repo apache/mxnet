@@ -155,8 +155,8 @@ def test_l1_loss():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=3), eval_metric=mx.metric.Loss())
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.1},
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
