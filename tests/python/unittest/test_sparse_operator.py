@@ -101,7 +101,7 @@ def test_cast_storage_ex():
         grad_stypes = {'x': to_stype}
         check_symbolic_backward(test, location, [out_np], [out_np], grad_stypes=grad_stypes)
 
-    density = [1.00, 0.50, 0.10, 0.05, 0.01]
+    density = [1.00, 0.50, 0.05, 0.01]
     for d in density:
         shape_2d = rand_shape_2d()
         shape_3d = rand_shape_3d()
