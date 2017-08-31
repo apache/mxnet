@@ -705,7 +705,7 @@ def test_ndarray_fluent():
                     'clip', 'abs' 'sign'])
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1)):
         with mx.name.NameManager():
-            data = mx.nd.random_uniform(shape=shape)
+            data = mx.nd.random_uniform(shape=shape, ctx=default_context())
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
