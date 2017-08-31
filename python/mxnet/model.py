@@ -54,7 +54,7 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'eval_metric',
                             'locals'])
 
-def _create_kvstore(kvstore, compress, num_device, arg_params):
+def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
     This function select and create a proper kvstore if given the kvstore type.
 
@@ -62,8 +62,6 @@ def _create_kvstore(kvstore, compress, num_device, arg_params):
     ----------
     kvstore : KVStore or str
         The kvstore.
-    compress : str
-        Whether using low-bit compression.
     num_device : int
         The number of devices
     arg_params : dict of str to `NDArray`.
@@ -80,7 +78,7 @@ def _create_kvstore(kvstore, compress, num_device, arg_params):
             # no need to use kv for single device and single machine
             kv = None
         else:
-            kv = kvs.create(kvstore, compress)
+            kv = kvs.create(kvstore)
             if kvstore == 'local':
             # automatically select a proper local
                 max_size = max(np.prod(param.shape) for param in

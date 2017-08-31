@@ -1375,12 +1375,10 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
 /*!
  * \brief Create a kvstore
  * \param type the type of KVStore
-*  \param compress whether using low-bit compression
  * \param out The output type of KVStore
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
-                              const char *compress,
                               KVStoreHandle *out);
 /*!
  * \brief Delete a KVStore handle.

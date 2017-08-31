@@ -408,7 +408,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
-def create(name='local', compress='none'):
+def create(name='local'):
     """Creates a new KVStore.
 
     For single machine training, there are two commonly used types:
@@ -438,8 +438,6 @@ def create(name='local', compress='none'):
     ----------
     name : {'local', 'device', 'dist_sync', 'dist_device_sync', 'dist_async'}
         The type of KVStore.
-    compress : {'none', '2bit', '1bit'}
-        Whether using low-bit compression.
     Returns
     -------
     kv : KVStore
@@ -447,10 +445,7 @@ def create(name='local', compress='none'):
     """
     if not isinstance(name, string_types):
         raise TypeError('name must be a string')
-    if not isinstance(compress, string_types):
-        raise TypeError('compress must be a string')
     handle = KVStoreHandle()
     check_call(_LIB.MXKVStoreCreate(c_str(name),
-                                    c_str(compress),
                                     ctypes.byref(handle)))
     return KVStore(handle)

@@ -101,7 +101,6 @@ class Trainer(object):
     def _init_kvstore(self):
         arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore,
-                                                     self._compress,
                                                      len(self._contexts),
                                                      arg_arrays)
         if kvstore:
