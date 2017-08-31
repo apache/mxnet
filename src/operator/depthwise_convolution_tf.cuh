@@ -523,7 +523,7 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
         asm volatile ("mov.u32 %0, %laneid;" : "=r"(lane_id));
         int sub_warp = lane_id / kAccumPixels;
         int zeros = sub_warp * kAccumPixels;
-        unsigned mask = ((1U << kAccumPixels) - 1) << zeros;
+        unsigned mask = (kAccumPixels == 32) ? FULL_WARP_MASK : (((1U << kAccumPixels) - 1) << zeros);
         for (int delta = kAccumPixels / 2; delta > 0; delta /= 2) {
           val += __shfl_xor_sync(mask, val, delta);
         }
