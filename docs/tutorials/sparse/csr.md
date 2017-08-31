@@ -245,10 +245,47 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 {'a.stype':a.stype, 'd':d, 'e':e} # stypes of a and e will be not changed
 ```
 
-## Loading LibSVM Data
+## Data Loading
 
-Sparse data stored in libsvm file format can be loaded with [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter).
-Note that the indices are expected to be zero-based instead of one-based.
+* We can load data in batches from a CSRNDArray using ``mx.io.NDArrayIter``:
+
+```python
+# create the source CSRNDArray
+data = mx.nd.array(np.arange(40).reshape((10,4))).tostype('csr')
+labels = np.ones([10, 1])
+batch_size = 3
+dataiter = mx.io.NDArrayIter(data, labels, batch_size, last_batch_handle='discard')
+# inspect the data batches
+[batch.data[0] for batch in dataiter]
+```
+
+* We can also load data stored in the libsvm file format using ``mx.io.LibSVMIter``:
+
+```python
+# create a sample libsvm file in current working directory
+import os
+cwd = os.getcwd()
+data_path = os.path.join(cwd, 'data.t')
+with open(data_path, 'w') as fout:
+    fout.write('1.0 0:1 2:2\n')
+    fout.write('1.0 0:3 5:4\n')
+    fout.write('1.0 2:5 8:6 9:7\n')
+    fout.write('1.0 3:8\n')
+    fout.write('-1 0:0.5 9:1.5\n')
+    fout.write('-2.0\n')
+    fout.write('-3.0 0:-0.6 1:2.25 2:1.25\n')
+    fout.write('-3.0 1:2 2:-1.25\n')
+    fout.write('4 2:-1.2\n')
+
+# load CSRNDArrays from the file
+data_train = mx.io.LibSVMIter(data_libsvm=data_path, data_shape=(10,), label_shape=(1,), batch_size=3)
+for batch in data_train:
+    print(data_train.getdata())
+    print(data_train.getlabel())
+
+```
+
+Note that in the file the column indices are expected to be sorted in ascending order per row, and be zero-based instead of one-based.
 
 ## Advanced Topics
 
