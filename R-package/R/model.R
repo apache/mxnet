@@ -126,9 +126,9 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     arg_lst <- list(symbol = symbol,
                     ctx = ctx[[i]],
                     grad.req = "write",
+                    fixed.param = fixed.param,
                     input_slice[[i]]$shape,
-                    output_slice[[i]]$shape,
-                    fixed.param = fixed.param)
+                    output_slice[[i]]$shape)
     do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors

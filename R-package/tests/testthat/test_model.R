@@ -194,7 +194,7 @@ test_that("Matrix Factorization", {
 
   mx.set.seed(123)
   
-  CustomIter <- setRefClass( "CustomIter", fields = c("iter1", "iter2"),
+  CustomIter <- methods::setRefClass( "CustomIter", fields = c("iter1", "iter2"),
                              contains = "Rcpp_MXArrayDataIter",
       methods = list(
         initialize = function(iter1, iter2) {
@@ -280,7 +280,7 @@ test_that("Captcha", {
   fc22 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
   fc23 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
   fc24 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
-  fc2 <- mx.symbol.Concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
+  fc2 <- mx.symbol.concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
   label <- mx.symbol.transpose(data = label)
   label <- mx.symbol.Reshape(data = label, target_shape = c(0))
   captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")
