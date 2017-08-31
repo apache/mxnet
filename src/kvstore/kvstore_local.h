@@ -216,7 +216,8 @@ class KVStoreLocal : public KVStore {
       const size_t num_vals = target_val_rowids.size();
       for (size_t i = 0; i < num_vals; i++) {
         auto &row_id = target_val_rowids[i].second;
-        NDArray indices = row_id.Copy(pinned_ctx_);
+        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
+        CopyFromTo(row_id, &indices, 0);
         Unique(&indices, priority);
         target_val_rowids[i].second = indices;
       }
