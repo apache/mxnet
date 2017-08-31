@@ -208,7 +208,8 @@ class FFTOp : public Operator {
 
  private:
   FFTParam param_;
-  int dim_, stride_, num_compute, n_ffts;
+  int dim_, stride_, n_ffts;
+  size_t num_compute;
   bool init_cufft_;
 };  // class FFTOp
 #endif  // MXNET_USE_CUDA
