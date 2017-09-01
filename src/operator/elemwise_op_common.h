@@ -252,7 +252,7 @@ class KernelEx<OP, cpu> : public mxnet_op::Kernel<OP, cpu> {
    * @param args Arguments to pass to Map function
    */
   template<KernelComplexity CountForOMP = kComplexityLow, typename ...Args>
-  inline static void LaunchEx(mshadow::Stream<cpu> *s, int N, Args... args) {
+  static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
     if (N < CountForOMP) {
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
@@ -268,6 +268,10 @@ class KernelEx<OP, cpu> : public mxnet_op::Kernel<OP, cpu> {
 
 template<typename OP>
 class KernelEx<OP, gpu> : public mxnet_op::Kernel<OP, cpu> {
+  template<KernelComplexity CountForOMP = kComplexityLow, typename ...Args>
+  MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    mxnet_op::Kernel<OP, cpu>::Launch(s, N, args...);
+  }
 };
 
 }  // namespace op
