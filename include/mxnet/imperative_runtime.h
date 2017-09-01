@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 #ifndef MXNET_IMPERATIVE_RUNTIME_H_
 #define MXNET_IMPERATIVE_RUNTIME_H_
 
@@ -94,7 +95,7 @@ class ImperativeRuntime {
     std::vector<NDArray> out_grads;
     bool fresh_out_grad;
 
-    explicit AGInfo() :
+    AGInfo() :
       grad_req(kNullOp), fresh_out_grad(false) {}
 
     static void Clear(const nnvm::NodePtr& node) {
@@ -118,7 +119,7 @@ class ImperativeRuntime {
     }
   };
   /*! \brief make constructor protected. */
-  ImperativeRuntime() {};
+  ImperativeRuntime() {}
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
       const nnvm::NodePtr& node,
