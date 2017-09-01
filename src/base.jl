@@ -16,14 +16,15 @@ const char_pp = Ptr{char_p}
 ################################################################################
 # Initialization and library API entrance
 ################################################################################
-const MXNET_LIB = Libdl.find_library(["libmxnet.so","libmxnet.dll"],
-                                     [joinpath("$(get(ENV,"MXNET_HOME",""))","lib"),
-                                      Pkg.dir("MXNet","deps","usr","lib")])
+const MXNET_LIB = Libdl.find_library("libmxnet.$(Libdl.dlext)",
+                                     [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
+                                      Pkg.dir("MXNet", "deps", "usr", "lib")])
 if isempty(MXNET_LIB)
   # touch this file, so that after the user properly build libmxnet, the precompiled
   # MXNet.ji will be re-compiled to get MXNET_LIB properly.
   touch(@__FILE__)
-  error("Cannot find or load libmxnet.so. Please see the document on how to build it.")
+  error("Cannot find or load libmxnet.$(Libdl.dlext). " *
+        "Please see the document on how to build it.")
 else
   include_dependency(MXNET_LIB)
 end

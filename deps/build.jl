@@ -11,7 +11,8 @@ curr_win = "20170819"
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
   info("Trying to load existing libmxnet...")
-  lib = Libdl.find_library(["libmxnet", "libmxnet.so"], ["$(ENV["MXNET_HOME"])/lib"])
+  lib = Libdl.find_library("libmxnet.$(Libdl.dlext)",
+                           ["$(ENV["MXNET_HOME"])/lib"])
   if !isempty(lib)
     info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true
@@ -130,7 +131,7 @@ if !libmxnet_detected
   _libdir = joinpath(_prefix, "lib")
   # We have do eagerly delete the installed libmxnet.so
   # Otherwise we won't rebuild on an update.
-  run(`rm -f $_libdir/libmxnet.so`)
+  run(`rm -f $_libdir/libmxnet.$(Libdl.dlext)`)
   provides(BuildProcess,
     (@build_steps begin
       CreateDirectory(_srcdir)
@@ -174,8 +175,10 @@ if !libmxnet_detected
             `make -j$(min(Sys.CPU_CORES,8))`
           end
         end
-        FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
-          `cp $_mxdir/lib/libmxnet.so $_libdir/`
+        FileRule(joinpath(_libdir, "libmxnet.$(Libdl.dlext)"), @build_steps begin
+          # the output file on macos is still in `.so` suffix
+          # so we rename it
+          `cp $_mxdir/lib/libmxnet.so $_libdir/libmxnet.$(Libdl.dlext)`
         end)
       end
     end), mxnet, installed_libpath=_libdir)
