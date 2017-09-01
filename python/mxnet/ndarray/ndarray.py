@@ -1404,7 +1404,7 @@ fixed-size items.
             - 'write': gradient will be overwritten on every backward.
             - 'add': gradient will be added to existing value on every backward.
             - 'null': do not compute gradient for this NDArray.
-        stype : {'row_sparse', 'default', 'csr'}
+        stype : str, optional
             The storage type of the gradient array. Defaults to the same stype of this NDArray.
         """
         from . import zeros as _zeros
