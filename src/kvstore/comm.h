@@ -287,14 +287,15 @@ class CommDevice : public Comm {
     }
 
     for (size_t i = 0; i < src.size(); ++i) {
-      // TODO: New code:
-      // CompressNDArray(src[i], &(buf.small_send_buf[i]));
-      // CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
-      // DeCompressNDArray(buf.small_recv_buf[i], &(buf.copy_buf[i]));
-
-      // TODO: Delete this line
-      CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
-
+      // compress before copy
+      if (compress_.compare("none") != 0) {
+        // TODO: New code: wrapper for NDArray op
+        // Compress(src[i], &(buf.small_send_buf[i]), compress_, priority);
+        // CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
+        // DeCompress(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
+      } else {
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+      }
       reduce[i] = buf.copy_buf[i];
     }
 
