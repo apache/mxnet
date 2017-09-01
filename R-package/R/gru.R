@@ -66,11 +66,12 @@ gru.unroll <- function(num.gru.layer, seq.len, input.size,
         hidden <- wordvec[[seqidx]]
         # stack GRU
         for (i in seq_len(num.gru.layer)) {
+            dp <- if (i == 1) 0 else dropout
             next.state <- gru(num.hidden, indata=hidden,
                               prev.state=last.states[[i]],
                               param=param.cells[[i]],
                               seqidx=seqidx, layeridx=i, 
-                              dropout=if (i == 1) 0 else dropout)
+                              dropout=dp)
             hidden <- next.state$h
             last.states[[i]] <- next.state
         }
@@ -298,8 +299,9 @@ mx.gru.inference <- function(num.gru.layer,
         }
     }
 
-    init.states <- lapply(paste0("l", seq_len(num.gru.layer), ".init.h"),
-                          function(x) model$rnn.exec$ref.arg.arrays[[x]] * 0)
+    s <- paste0("l", seq_len(num.gru.layer), ".init.h")
+    names(s) <- s
+    init.states <- lapply(s, function(x) model$rnn.exec$ref.arg.arrays[[x]] * 0)
 
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
 
@@ -320,10 +322,9 @@ mx.gru.inference <- function(num.gru.layer,
 #' @export
 mx.gru.forward <- function(model, input.data, new.seq=FALSE) {
     if (new.seq) {
-      
-        init.states <- lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.h"),
-                              function(x) model$rnn.exec$ref.arg.arrays[[x]] * 0)
-        
+        s <- paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+        names(s) <- s
+        init.states <- lapply(s, function(x) model$rnn.exec$ref.arg.arrays[[x]] * 0)
         mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     }
     dim(input.data) <- model$batch.size
@@ -331,8 +332,9 @@ mx.gru.forward <- function(model, input.data, new.seq=FALSE) {
     mx.exec.update.arg.arrays(model$rnn.exec, data, match.name=TRUE)
     mx.exec.forward(model$rnn.exec, is.train=FALSE)
     
-   init.states <- lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.h"),
-                          function(x) model$rnn.exec$ref.outputs[[sub(".init.h$", ".last.h_output", x)]])
+    s <- paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+    names(s) <- s
+    init.states <- lapply(s, function(x) model$rnn.exec$ref.arg.arrays[[sub(".init.h$", ".last.h_output", x)]])
     
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]

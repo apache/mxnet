@@ -42,9 +42,7 @@ setup.rnn.model <- function(rnn.sym, ctx,
         else c(seq.len, batch.size)
       }
     }
-    
-    input.shapes <- lapply(arg.names, f) 
-    
+    input.shapes <- lapply(setNames(arg.names, arg.names), f) 
     params <- mx.model.init.params(rnn.sym, input.shapes, NULL, initializer, mx.cpu())
     args <- input.shapes
     args$symbol <- rnn.sym
@@ -55,7 +53,9 @@ setup.rnn.model <- function(rnn.sym, ctx,
     mx.exec.update.arg.arrays(rnn.exec, params$arg.params, match.name=TRUE)
     mx.exec.update.aux.arrays(rnn.exec, params$aux.params, match.name=TRUE)
 
-    grad.arrays <- lapply(Reduce(is.param.name, names(rnn.exec$ref.grad.arrays)),
+    param.nms <- Reduce(is.param.name, names(rnn.exec$ref.grad.arrays))
+    names(param.nms) <- param.nms
+    grad.arrays <- lapply(param.nms,
                           function(nm) rnn.exec$ref.arg.arrays[[nm]] * 0)
     
     mx.exec.update.grad.arrays(rnn.exec, grad.arrays, match.name=TRUE)
@@ -115,9 +115,8 @@ train.rnn <- function (model, train.data, eval.data,
         nbatch <- 0
         train.nll <- 0
         # reset states
-        
-        init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
-        
+        init.states <- lapply(setNames(init.states.name),
+                              function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
         mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
 
         tic <- Sys.time()
@@ -134,25 +133,25 @@ train.rnn <- function (model, train.data, eval.data,
 
             mx.exec.backward(m$rnn.exec)
             
-            init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
+            init.states <- lapply(setNames(init.states.name, init.states.name),
+                                  function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
             
             mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
             # update epoch counter
             epoch.counter <- epoch.counter + 1
             if (epoch.counter %% update.period == 0) {
                 # the gradient of initial c and inital h should be zero
-                
-                init.grad <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
-              
+                init.grad <- lapply(setNames(init.states.name, init.states.name),
+                                    function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
                 mx.exec.update.grad.arrays(m$rnn.exec, init.grad, match.name=TRUE)
 
                 arg.blocks <- updater(m$rnn.exec$ref.arg.arrays, m$rnn.exec$ref.grad.arrays)
 
                 mx.exec.update.arg.arrays(m$rnn.exec, arg.blocks, skip.null=TRUE)
 
-                grad.arrays <- lapply(Reduce(is.param.name, names(m$rnn.exec$ref.grad.arrays)),
+                param.nms <- Reduce(is.param.name, names(m$rnn.exec$ref.grad.arrays))
+                grad.arrays <- lapply(setNames(param.nms, param.nms),
                                       function(nm) m$rnn.exec$ref.grad.arrays[[name]]*0)
-                
                 mx.exec.update.grad.arrays(m$rnn.exec, grad.arrays, match.name=TRUE)
 
             }
@@ -177,7 +176,8 @@ train.rnn <- function (model, train.data, eval.data,
         if (!is.null(eval.data)) {
             val.nll <- 0.0
             # validation set, reset states
-            init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
+            init.states <- lapply(setNames(init.states.name, init.states.name),
+                                  function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
             mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
 
             eval.data$reset()
@@ -190,8 +190,8 @@ train.rnn <- function (model, train.data, eval.data,
                 # probability of each label class, used to evaluate nll
                 seq.label.probs <- mx.nd.choose.element.0index(m$rnn.exec$ref.outputs[["sm_output"]], get.label(m$rnn.exec$ref.arg.arrays[["label"]], ctx))
                 # transfer the states
-                init.states <- lapply(init.states.name, function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
-                
+                init.states <- lapply(setNames(init.states.name, init.states.name),
+                                      function(nm) m$rnn.exec$ref.arg.arrays[[nm]]*0)
                 mx.exec.update.arg.arrays(m$rnn.exec, init.states, match.name=TRUE)
                 val.nll <- val.nll + calc.nll(as.array(seq.label.probs), batch.size)
                 nbatch <- nbatch + seq.len

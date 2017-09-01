@@ -91,7 +91,8 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
 mx.init.create <- function(initializer, shape.array, ctx, skip.unknown=TRUE) {
   if (length(shape.array) == 0) return(list())
   names = names(shape.array)
-  ret <- lapply(names, function(i) initializer(i, shape.array[[i]], ctx, allow.unknown=skip.unknown))
+  ret <- lapply(seq_along(names), function(i) initializer(names[[i]], shape.array[[i]], ctx, allow.unknown=skip.unknown))
+  names(ret) <- names
   if (skip.unknown) {
     ret <- mx.util.filter.null(ret)
   }

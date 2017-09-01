@@ -131,9 +131,6 @@ lstm.inference.symbol <- function(num.lstm.layer, input.size,
     fc <- mx.symbol.FullyConnected(data=hidden, num_hidden=num.label,
                                    weight=cls.weight, bias=cls.bias, name='pred')
     sm <- mx.symbol.SoftmaxOutput(data=fc, name='sm')
-    
-    
-    
     unpack.c <- lapply(seq_len(num.lstm.layer), function(i) {
         mx.symbol.BlockGrad(last.states[[i]]$c, name=paste0("l", i, ".last.c"))
     })
@@ -328,9 +325,10 @@ mx.lstm.inference <- function(num.lstm.layer,
             mx.exec.update.arg.arrays(model$rnn.exec, rnn.input, match.name=TRUE)
         }
     }
-    init.states <- 
-      c(lapply(paste0("l", seq_len(num.lstm.layer), ".init.c"), function(x) model$rnn.exec$ref.arg.arrays[[x]]*0),
-        lapply(paste0("l", seq_len(num.lstm.layer), ".init.c"), function(x) model$rnn.exec$ref.arg.arrays[[x]]*0))
+    c.h.names <- c(paste0("l", seq_len(num.lstm.layer), ".init.c"),
+                   paste0("l", seq_len(num.lstm.layer), ".init.h")
+    names(c.h.names) <- c.h.names
+    init.states <- lapply(c.h.names, function(x) model$rnn.exec$ref.arg.arrays[[x]]*0)
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
 
     return (model)
@@ -350,9 +348,10 @@ mx.lstm.inference <- function(num.lstm.layer,
 #' @export
 mx.lstm.forward <- function(model, input.data, new.seq=FALSE) {
     if (new.seq) {
-        init.states <-  
-          c(lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.arg.arrays[[x]]*0),
-            lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.arg.arrays[[x]]*0))
+        c.h.names <- c(paste0("l", seq_len(model$num.rnn.layer), ".init.c"),
+                       paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+        names(c.h.names) <- c.h.names
+        init.states <- lapply(c.h.names, function(x) model$rnn.exec$ref.arg.arrays[[x]]*0)
         mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     }
     dim(input.data) <- c(model$batch.size)
@@ -360,10 +359,11 @@ mx.lstm.forward <- function(model, input.data, new.seq=FALSE) {
     mx.exec.update.arg.arrays(model$rnn.exec, data, match.name=TRUE)
     mx.exec.forward(model$rnn.exec, is.train=FALSE)
     
-    init.states <-  
-      c(lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.outputs[[paste0("l", gsub("[^0-9]", "", x), ".last.c_output")]]*0),
-        lapply(paste0("l", seq_len(model$num.rnn.layer), ".init.c"), function(x) model$rnn.exec$ref.outputs[[paste0("l", gsub("[^0-9]", "", x), ".last.h_output")]]*0))
-    
+    c.h.names <- c(paste0("l", seq_len(model$num.rnn.layer), ".init.c"),
+                   paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+    names(c.h.names) <- c.h.names
+    init.states <- lapply(c.h.names,
+                          function(x) model$rnn.exec$ref.outputs[[paste0(gsub(".init*$", "", x), ".last.", substr(x, nchar(x), nchar(x)), "_output")]]*0)
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]
     return (list(prob=prob, model=model))

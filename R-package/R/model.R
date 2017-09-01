@@ -123,11 +123,11 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   output.names <- names(output.shape)
   #label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(seq_len(ndevice), function(i) {
-        arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
-        arg_lst <- append(arg_lst, input_slice[[i]]$shape)
-        arg_lst <- append(arg_lst, output_slice[[i]]$shape)
-        arg_lst[["fixed.param"]] = fixed.param
-        do.call(mx.simple.bind, arg_lst)
+    arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
+    arg_lst <- append(arg_lst, input_slice[[i]]$shape)
+    arg_lst <- append(arg_lst, output_slice[[i]]$shape)
+    arg_lst[["fixed.param"]] = fixed.param
+    do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
   for (texec in train.execs) {

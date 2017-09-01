@@ -15,8 +15,9 @@ NULL
 .MXNetEnv <- new.env()
 
 .onLoad <- function(libname, pkgname) {
+  # Require methods for older versions of R
   if (! is.element("package:methods", search())) {
-    message("Attaching package 'methods'.")
+    packageStartupMessage("Attaching package 'methods'.")
     library(methods)
   }
   library.dynam("libmxnet", pkgname, libname, local=FALSE)

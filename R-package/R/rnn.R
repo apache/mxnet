@@ -291,10 +291,10 @@ mx.rnn.inference <- function( num.rnn.layer,
             mx.exec.update.arg.arrays(model$rnn.exec, rnn.input, match.name=TRUE)
         }
     }
-    
-    init.states <- lapply(paste0("l", seq_len(num.rnn.layer), ".init.h"),
+    h.names <- paste0("l", seq_len(num.rnn.layer), ".init.h")
+    names(h.names) <- h.names
+    init.states <- lapply(h.names,
                           function(nm) model$rnn.exec$ref.arg.arrays[[nm]] * 0)
-    
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
 
     return (model)
@@ -314,10 +314,10 @@ mx.rnn.inference <- function( num.rnn.layer,
 #' @export
 mx.rnn.forward <- function(model, input.data, new.seq=FALSE) {
     if (new.seq) {
-      
-        init.states <- lapply(paste0("l", seq_len(num.rnn.layer), ".init.h"),
-                              function(nm) model$rnn.exec$ref.arg.arrays[[nm]] * 0)
-      
+        h.names <- paste0("l", seq_len(num.rnn.layer), ".init.h")
+        names(h.names) <- h.names
+        init.states <- lapply(h.names,
+                            function(nm) model$rnn.exec$ref.arg.arrays[[nm]] * 0)
         mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
         
     }
