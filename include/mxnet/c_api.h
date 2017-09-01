@@ -1382,7 +1382,7 @@ MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
 
 /*!
- * \brief Delete a KVStore handle.
+ * \brief Set to use low-bit compression
  * \param handle handle to the kvstore
  * \param compress set to use low-bit compression
  * \return 0 when success, -1 when failure happens
