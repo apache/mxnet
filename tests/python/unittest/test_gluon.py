@@ -420,6 +420,17 @@ def test_block_attr_regular():
     assert b.c is c2 and b._children[0] is c2
 
 
+def test_embedding():
+    layer = gluon.nn.Embedding(10, 100)
+    layer.initialize()
+    x = mx.nd.array([3,4,2,0,1])
+    with mx.autograd.record():
+        y = layer(x)
+        y.backward()
+    assert (layer.weight.grad()[:5] == 1).asnumpy().all()
+    assert (layer.weight.grad()[5:] == 0).asnumpy().all()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

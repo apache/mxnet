@@ -797,6 +797,9 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
 
   // Assign reqs
   std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  for (size_t i = num_forward_entries; i < idx.num_node_entries(); ++i) {
+    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+  }
   for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
     size_t eid = idx.entry_id(idx.outputs()[i]);
     AGInfo& info = AGInfo::Get(xs[i - num_forward_outputs].node);
