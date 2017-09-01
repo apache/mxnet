@@ -15,14 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
-
 """Weight updating functions."""
 import math
 import pickle
 import logging
 import warnings
 import numpy
+from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update)
@@ -59,15 +58,6 @@ class Optimizer(object):
 
     begin_num_update : int, optional
         The initial number of updates.
-
-
-    Properties
-    ----------
-    learning_rate: float
-        The learning rate of the optimizer or the learning rate of the
-        LRScheduler of the optimizer if the LRScheduler is defined. Given an
-        Optimizer object optimizer, the learning rate can be accessed as
-        optimizer.learning_rate and can be set as optimizer.learning_rate = val.
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
@@ -162,12 +152,6 @@ class Optimizer(object):
         else:
             raise ValueError('Cannot find optimizer %s' % name)
 
-    @property
-    def learning_rate(self):
-        if self.lr_scheduler is not None:
-            return self.lr_scheduler.base_lr
-        else:
-            return self.lr
 
     def create_state(self, index, weight):
         """Creates auxiliary state for a given weight.
@@ -207,15 +191,6 @@ class Optimizer(object):
             The state returned by `create_state()`.
         """
         raise NotImplementedError()
-
-    @learning_rate.setter
-    def learning_rate(self, lr):
-        if self.lr_scheduler is not None:
-            raise UserWarning("set_learning_rate mutates the value of the "
-                              "learning rate of the optimizer only when the "
-                              "LRScheduler of the optimizer is undefined.")
-        else:
-            self.lr = lr
 
     def set_lr_scale(self, args_lrscale): # pylint: disable=unused-argument
         """[DEPRECATED] Sets lr scale. Use set_lr_mult instead."""
@@ -975,6 +950,9 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
+        # convert ctypes.char_p.value back to python str if needed
+        if isinstance(index, bytes):
+            index = py_str(index)
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
             self.states_synced[index] = True
