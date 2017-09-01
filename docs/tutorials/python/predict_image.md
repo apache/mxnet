@@ -12,7 +12,7 @@ To complete this tutorial, we need:
 - [Python Requests](http://docs.python-requests.org/en/master/), [Matplotlib](https://matplotlib.org/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
 ```
-$ pip install requests matplotlib jupyter
+$ pip install requests matplotlib jupyter opencv-python
 ```
 
 ## Loading
