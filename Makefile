@@ -412,10 +412,8 @@ rpkg:
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
-	R CMD build --no-build-vignettes R-package
-	rm -rf mxnet_current_r.tar.gz
+	R CMD INSTALL R-package
 	rm -rf R-package/src/image_recordio.h
-	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 rpkgtest:
 	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"

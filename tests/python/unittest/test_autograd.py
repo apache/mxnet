@@ -375,6 +375,45 @@ def test_get_symbol():
         y = x*x + 2*z - 1
     assert len(get_symbol(y).list_arguments()) == 2
 
+def test_grad_with_stype():
+    def check_grad_with_stype(array_stype, grad_stype, expected_stype):
+        x = mx.nd.zeros((1,), stype=array_stype)
+        x.attach_grad(stype=grad_stype)
+        # check grad attached
+        assert x.grad.stype == expected_stype
+        y = x.detach()
+        # check array detached
+        assert y.stype == array_stype
+
+    stypes = ['csr', 'default', 'row_sparse']
+    for stype in stypes:
+        # check the default stype of the gradient (same as the array stype)
+        check_grad_with_stype(stype, None, stype)
+        for grad_stype in stypes:
+            # check the stype of the gradient when provided
+            check_grad_with_stype(stype, grad_stype, grad_stype)
+
+def test_sparse_dot_grad():
+    def check_sparse_dot_grad(rhs):
+        lhs = rand_ndarray((2, 8), 'csr')
+        with mx.autograd.record():
+            y = mx.nd.dot(lhs, rhs)
+        y.backward()
+        grad = rhs.grad
+        grad_np = np.dot(lhs.asnumpy().T, np.ones((lhs.shape[0], rhs.shape[1])))
+        assert grad.stype == 'row_sparse'
+        assert_almost_equal(grad.asnumpy(), grad_np)
+
+    # check grad with row_sparse weight
+    shape = (8, 3)
+    rsp = mx.nd.ones(shape).tostype('row_sparse')
+    rsp.attach_grad()
+    check_sparse_dot_grad(rsp)
+
+    # check grad with dense weight
+    dns = mx.nd.ones(shape)
+    dns.attach_grad(stype='row_sparse')
+    check_sparse_dot_grad(dns)
 
 if __name__ == "__main__":
     import nose

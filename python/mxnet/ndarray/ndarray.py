@@ -599,8 +599,25 @@ fixed-size items.
         array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
-        start = mx_uint(start) if start else mx_uint(0)
-        stop = mx_uint(stop) if stop else mx_uint(self.shape[0])
+        if start is None:
+            start = mx_uint(0)
+        elif start < 0:
+            length = self.shape[0]
+            start += length
+            assert start >= 0, "Slicing start %d exceeds limit of %d"%(start-length, length)
+            start = mx_uint(start)
+        else:
+            start = mx_uint(start)
+        if stop is None:
+            stop = mx_uint(self.shape[0])
+        elif stop < 0:
+            length = self.shape[0]
+            stop += length
+            assert stop >= 0, "Slicing end %d exceeds limit of %d"%(stop-length, length)
+            stop = mx_uint(stop)
+        else:
+            stop = mx_uint(stop)
+
         check_call(_LIB.MXNDArraySlice(
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
@@ -1376,7 +1393,7 @@ fixed-size items.
             return self
         return self.copyto(context)
 
-    def attach_grad(self, grad_req='write'):
+    def attach_grad(self, grad_req='write', stype=None):
         """Attach a gradient buffer to this NDArray, so that `backward`
         can compute gradient with respect to it.
 
@@ -1387,8 +1404,14 @@ fixed-size items.
             - 'write': gradient will be overwritten on every backward.
             - 'add': gradient will be added to existing value on every backward.
             - 'null': do not compute gradient for this NDArray.
+        stype : str, optional
+            The storage type of the gradient array. Defaults to the same stype of this NDArray.
         """
-        grad = op.zeros_like(self)  # pylint: disable=undefined-variable
+        from . import zeros as _zeros
+        if stype is not None:
+            grad = _zeros(self.shape, stype=stype)
+        else:
+            grad = op.zeros_like(self)  # pylint: disable=undefined-variable
         grad_req = _GRAD_REQ_MAP[grad_req]
         check_call(_LIB.MXAutogradMarkVariables(
             1, ctypes.pointer(self.handle),
@@ -1398,17 +1421,19 @@ fixed-size items.
     @property
     def grad(self):
         """Returns gradient buffer attached to this NDArray."""
+        from . import _ndarray_cls
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayGetGrad(self.handle, ctypes.byref(hdl)))
         if hdl.value is None:
             return None
-        return NDArray(hdl)
+        return _ndarray_cls(hdl)
 
     def detach(self):
         """Returns a new NDArray, detached from the current graph."""
+        from . import _ndarray_cls
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
-        return NDArray(hdl)
+        return _ndarray_cls(hdl)
 
     def backward(self, out_grad=None, retain_graph=False, train_mode=True):
         """Compute the gradients of this NDArray w.r.t variables.

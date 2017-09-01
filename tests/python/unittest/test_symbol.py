@@ -286,6 +286,31 @@ def test_zero_prop2():
     assert False
 
 
+def test_simple_bind_special_case():
+    """This is a special case that results in shape inference
+    failure after moving simple_bind logic from frontend to backend.
+    Added here for testing against the network similar to the following one.
+
+    Network diagram:
+    weight --> abs_op --> sum_op --
+                                   |--> add_op
+    data   --> fc_op  --> sum_op --
+
+    Given data's shape, if the shape inference starts from weight node,
+    then the node entries of negative_op and sum_op are unknown in the
+    forward pass. Therefore, there are several unknown shapes after the
+    first forward pass is done. Now the backward inference pass starts with
+    the assumption that there are no unknown-shape node entries in the forward
+    pass, and consequently, leads to CHECK_EQ failure.
+    """
+    data_shape = (5, 13)
+    data = mx.sym.Variable('data')
+    fc = mx.sym.FullyConnected(data=data, num_hidden=1, no_bias=True, name='fc')
+    modified_weight = mx.sym.abs(fc.get_internals()['fc_weight'])
+    net = mx.sym.sum(modified_weight) + mx.sym.sum(fc)
+    net.simple_bind(ctx=mx.cpu(), data=data_shape)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
