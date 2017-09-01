@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
  * \brief Function definition of elementwise unary operators
  */
@@ -34,7 +52,9 @@ struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
       specified in the tuple.
 
       If `exclude` is true, reduction will be performed on the axes that are
-      NOT in axis instead.)code");
+      NOT in axis instead.
+
+      Negative values means indexing from right to left.)code");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
@@ -119,28 +139,28 @@ inline TShape AxisShapeCompact(TShape shape, int *axis, bool allow_2d) {
   return mshadow::Shape3(leading, M, trailing);
 }
 
-inline TShape ReduceAxisShapeImpl(const ReduceAxisParam& param, const TShape& ishape) {
-  if (!param.axis || ishape.ndim() == 1) {
-    if (param.keepdims) {
+inline TShape ReduceAxisShapeImpl(const TShape& ishape, const dmlc::optional<int>& axis,
+                                  bool keepdims) {
+  if (!axis || ishape.ndim() == 1) {
+    if (keepdims) {
       return TShape(ishape.ndim());
-    } else {
-      return mshadow::Shape1(1);
     }
-  } else {
-    int axis = CheckAxis(param.axis.value(), ishape.ndim());
-    if (param.keepdims) {
-      TShape oshape = ishape;
-      oshape[axis] = 1;
-      return oshape;
-    } else {
-      TShape oshape(ishape.ndim() - 1);
-      for (int i = 0; i < axis; ++i) oshape[i] = ishape[i];
-      for (int i = axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
-        oshape[i-1] = ishape[i];
-      }
-      return oshape;
-    }
+    return mshadow::Shape1(1);
   }
+
+  int new_axis = CheckAxis(axis.value(), ishape.ndim());
+  if (keepdims) {
+    TShape oshape = ishape;
+    oshape[new_axis] = 1;
+    return oshape;
+  }
+
+  TShape oshape(ishape.ndim() - 1);
+  for (int i = 0; i < new_axis; ++i) oshape[i] = ishape[i];
+  for (int i = new_axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
+    oshape[i-1] = ishape[i];
+  }
+  return oshape;
 }
 
 inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
@@ -152,7 +172,8 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   if (ishape.ndim() == 0) return false;
 
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ReduceAxisShapeImpl(param, ishape));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxisShapeImpl(ishape, param.axis, param.keepdims));
   return true;
 }
 
@@ -166,44 +187,59 @@ inline TShape ReduceAxesShapeImpl(const TShape& ishape, const TShape& axis,
     }
   }
 
-  CHECK_LT(axis[axis.ndim()-1], ishape.ndim())
-    << "Reduction axis " << axis[axis.ndim()-1]
+  TShape axes(axis);
+  for (index_t i = 0; i < axes.ndim(); i++) {
+    if (axes[i] < 0) {
+      axes[i] += ishape.ndim();
+    }
+  }
+  std::sort(axes.begin(), axes.end());
+
+  for (index_t i = 1; i < axes.ndim(); i++) {
+    CHECK_LT(axes[i-1], axes[i])
+      << "Reduction axes have duplicates "
+      << axes;
+  }
+  CHECK_LT(axes[axes.ndim()-1], ishape.ndim())
+    << "Reduction axis " << axes[axes.ndim()-1]
+    << " Exceeds input dimensions " << ishape;
+  CHECK_GE(axes[0], 0)
+    << "Reduction axis " << axis
     << " Exceeds input dimensions " << ishape;
 
+  TShape oshape;
   if (keepdims) {
-    TShape oshape(ishape);
-    if (exclude) {
-      for (index_t i = 0, j = 0; i < ishape.ndim(); ++i) {
-        if (j < axis.ndim() && i == axis[j]) {
-          ++j;
-          continue;
-        }
-        oshape[i] = 1;
+    oshape = TShape(ishape);
+  } else if (exclude) {
+    oshape = TShape(axes.ndim());
+  } else {
+    oshape = TShape(std::max<index_t>(1, ishape.ndim() - axes.ndim()));
+  }
+
+  if (keepdims && exclude) {
+    for (index_t i = 0, j = 0; i < ishape.ndim(); ++i) {
+      if (j < axes.ndim() && i == axes[j]) {
+        ++j;
+        continue;
       }
-      return oshape;
+      oshape[i] = 1;
     }
-
-    for (index_t i = 0; i < axis.ndim(); ++i) {
-      oshape[axis[i]] = 1;
+  } else if (keepdims) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      oshape[axes[i]] = 1;
     }
-    return oshape;
-  }
-
-  if (exclude) {
-    TShape oshape = TShape(axis.ndim());
-    for (index_t i = 0; i < axis.ndim(); ++i) {
-      oshape[i] = ishape[axis[i]];
+  } else if (exclude) {
+    for (index_t i = 0; i < axes.ndim(); ++i) {
+      oshape[i] = ishape[axes[i]];
     }
-    return oshape;
-  }
-
-  TShape oshape = TShape(std::max<index_t>(1, ishape.ndim() - axis.ndim()));
-  for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
-    if (j < axis.ndim() && i == axis[j]) {
-      ++j;
-      continue;
+  } else {
+    for (index_t i = 0, j = 0, k = 0; i < ishape.ndim(); ++i) {
+      if (j < axes.ndim() && i == axes[j]) {
+        ++j;
+        continue;
+      }
+      oshape[k++] = ishape[i];
     }
-    oshape[k++] = ishape[i];
   }
   return oshape;
 }
@@ -494,7 +530,6 @@ template<typename PType>
 inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
   PType param;
   param.Init(attrs->dict);
-  std::sort(&param.axis[0], &param.axis[param.axis.ndim()]);
   attrs->parsed = std::move(param);
 }
 
@@ -569,12 +604,16 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
-  ReduceAxisParam tmp_param;
-  tmp_param.axis = param.axis;
-  tmp_param.keepdims = param.keepdims;
-  TShape oshape = ReduceAxisShapeImpl(tmp_param, ishape);
+  TShape oshape = ReduceAxisShapeImpl(ishape, param.axis, param.keepdims);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, oshape);
+  if (!(*in_attrs)[1].ndim()) return false;
+  if ((*in_attrs)[1].ndim() == ishape.ndim()) {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, true));
+  } else {
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1,
+                       ReduceAxisShapeImpl(ishape, param.axis, false));
+  }
   return true;
 }
 
@@ -602,7 +641,7 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
 
   const TShape& ishape = inputs[0].shape_;
-  int axis = CheckAxis(param.axis.value(), ishape.ndim());
+  index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
   int leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];

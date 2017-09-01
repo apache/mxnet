@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Weight initializer."""
 from __future__ import absolute_import, print_function
 
@@ -564,9 +581,12 @@ class Xavier(Initializer):
         self.magnitude = float(magnitude)
 
 
-    def _init_weight(self, _, arr):
+    def _init_weight(self, name, arr):
         shape = arr.shape
         hw_scale = 1.
+        if len(shape) < 2:
+            raise ValueError('Xavier initializer cannot be applied to vector {0}. It requires at'
+                             ' least 2D.'.format(name))
         if len(shape) > 2:
             hw_scale = np.prod(shape[2:])
         fan_in, fan_out = shape[1] * hw_scale, shape[0] * hw_scale
@@ -636,10 +656,11 @@ class LSTMBias(Initializer):
 
     Parameters
     ----------
-    forget_bias: float, bias for the forget gate.
-        Jozefowicz et al. 2015 recommends setting this to 1.0.
+    forget_bias: float, default 1.0
+        bias for the forget gate. Jozefowicz et al. 2015 recommends
+        setting this to 1.0.
     """
-    def __init__(self, forget_bias):
+    def __init__(self, forget_bias=1.0):
         super(LSTMBias, self).__init__(forget_bias=forget_bias)
         self.forget_bias = forget_bias
 

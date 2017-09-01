@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file kvstore.h
  * \brief key-value store interface for mxnet
  */
@@ -7,6 +25,7 @@
 #define MXNET_KVSTORE_H_
 #include <dmlc/io.h>
 #include <vector>
+#include <utility>
 #include <unordered_map>
 #include <string>
 #include <functional>
@@ -48,7 +67,7 @@ class KVStore {
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
-   * One must initalize the key before \ref Push and \ref Pull, and a key
+   * One must initialize the key before \ref Push and \ref Pull, and a key
    * should be only initialized once
    *
    * It returns after data have been initialized successfully.
@@ -155,6 +174,29 @@ class KVStore {
                     const std::vector<NDArray*>& values,
                     int priority = 0) = 0;
 
+  /*!
+   * \brief pull a list of key-value pairs from the store.
+   *        The NDArray pulled back will be in row_sparse storage with only the
+   *        specified row_ids present (others rows are zeros).
+   * \param keys the list of keys
+   * \param values the list of buffers - row_id pairs
+   * \param priority the priority of the action.
+   */
+  virtual void PullRowSparse(const std::vector<int>& str_keys,
+                             const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                             const int priority = 0) = 0;
+
+  /*!
+   * \brief pull a list of key-value pairs from the store, where each key is a string.
+   *        The NDArray pulled back will be in row_sparse storage with only the
+   *        specified row_ids present (others rows are zeros).
+   * \param keys the list of keys in string format
+   * \param values the list of buffers - row_id pairs
+   * \param priority the priority of the action.
+   */
+  virtual void PullRowSparse(const std::vector<std::string>& str_keys,
+                             const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                             const int priority = 0) = 0;
 
   /**
    * \brief the prototype of user-defined updater

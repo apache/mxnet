@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 
 #############################################################
 ## Please read the README.md document for better reference ##
@@ -41,8 +58,7 @@ X = mnist_pca[p]
 Y = mnist.target[p]
 X_show = mnist.data[p]
 
-# This is just to normalize the input to a value inside [0,1],
-# and separate train set and test set
+# This is just to normalize the input and separate train set and test set
 X = X.astype(np.float32)/255
 X_train = X[:60000]
 X_test = X[60000:]
@@ -52,12 +68,8 @@ Y_test = Y[60000:]
 
 # Article's suggestion on batch size
 batch_size = 200
-train_iter = mx.io.NDArrayIter(X_train, Y_train, batch_size=batch_size)
-test_iter = mx.io.NDArrayIter(X_test, Y_test, batch_size=batch_size)
-
-# A quick work around to prevent mxnet complaining the lack of a softmax_label
-train_iter.label =  mx.io._init_data(Y_train, allow_empty=True, default_name='svm_label')
-test_iter.label =  mx.io._init_data(Y_test, allow_empty=True, default_name='svm_label')
+train_iter = mx.io.NDArrayIter(X_train, Y_train, batch_size=batch_size, label_name='svm_label')
+test_iter = mx.io.NDArrayIter(X_test, Y_test, batch_size=batch_size, label_name='svm_label')
 
 # Here we instatiate and fit the model for our data
 # The article actually suggests using 400 epochs,

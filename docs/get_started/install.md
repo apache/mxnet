@@ -2,7 +2,7 @@
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
-<script type="text/javascript" src='../../_static/js/options.js'></script>
+<script type="text/javascript" src='../_static/js/options.js'></script>
 
 <!-- START - OS Menu -->
 
@@ -150,6 +150,11 @@ pip install graphviz
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl
+```
+
 </div>
 
 <div class="docker">
@@ -235,10 +240,10 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 
 **Build the MXNet Python binding**
 
-**Step 1** Install prerequisites - python setup tools and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy
+$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
 ```
 
 **Step 2** Install the MXNet Python binding.
@@ -312,6 +317,11 @@ pip install graphviz
 ```
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu80mkl
+```
 
 </div>
 
@@ -458,10 +468,10 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 
 **Install the MXNet Python binding**
 
-**Step 1** Install prerequisites - python setup tools and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy
+$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
 ```
 
 **Step 2** Install the MXNet Python binding.
@@ -498,7 +508,7 @@ The following installation instructions have been tested on OSX Sierra and El Ca
 
 **Prerequisites**
 
-If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
+If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) (or [insall it from the App Store](https://itunes.apple.com/us/app/xcode/id497799835)) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
 
 <div class="virtualenv">
 <br/>
@@ -1462,3 +1472,5 @@ Will be available soon.
 
 </div>
 </div>
+
+# Download Source Package

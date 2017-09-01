@@ -388,6 +388,27 @@ object NDArray {
   }
 
   /**
+   * Returns evenly spaced values within a given interval.
+   * Values are generated within the half-open interval [`start`, `stop`). In other
+   * words, the interval includes `start` but excludes `stop`.
+   * @param start Start of interval. The default start value is 0.
+   * @param stop End of interval.
+   * @param step Spacing between values. The default step size is 1.
+   * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param ctx Device context. Default context is the current default context.
+   * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
+   * @return NDArray of evenly spaced values in the specified range.
+   */
+  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
+    repeat: Int = 1, ctx: Context = Context.defaultCtx,
+    dType: DType = Base.MX_REAL_TYPE): NDArray = {
+    val params = Map("start" -> start, "step" -> step,
+      "repeat" -> repeat, "ctx" -> ctx.toString, "dtype" -> dType.toString())
+    val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
+    NDArray.genericNDArrayFunctionInvoke("_arange", Seq(), fParams)(0)
+  }
+
+  /**
    * Concatenate a list of NDArrays along the specified dimension.
    * @param arrays Arrays to be concatenate.
    *               They must have identical shape except the first dimension.

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=invalid-name, exec-used
 """Setup mxnet package."""
 from __future__ import absolute_import
@@ -12,6 +29,7 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
     kwargs = {'install_requires': ['numpy', 'requests', 'graphviz'], 'zip_safe': False}
+from setuptools import find_packages
 
 with_cython = False
 if '--with-cython' in sys.argv:
@@ -73,10 +91,7 @@ def config_cython():
 setup(name='mxnet',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
-      packages=[
-          'mxnet', 'mxnet.module', 'mxnet._ctypes', 'mxnet.rnn',
-          'mxnet._cy2', 'mxnet._cy3', 'mxnet.notebook', 'mxnet.contrib'
-          ],
+      packages=find_packages(),
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet',
       ext_modules=config_cython(),

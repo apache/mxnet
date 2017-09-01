@@ -42,7 +42,15 @@ function render_lefttoc() {
         for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
             var path = TITLE_WITH_LANG[i];
             if (url.indexOf(path) != -1) {
-                var urlPath = 'http://' + window.location.host + path;
+                urlElem = url.split('/');
+                version = '';
+                for (var j = 0; j < urlElem.length; ++j) {
+                    if(urlElem[j] == 'versions') {
+                        version = '/versions/' + urlElem[j + 1];
+                        break;
+                    }
+                }
+                var urlPath = 'https://' + window.location.host + version +  path;
                 $.get(urlPath + indexTrailing, null, function(data) {
                     var currentText = $($.parseHTML(data)).find('.leftsidebar >  .sphinxsidebarwrapper > ul.current > li.current > a').html();
                     if (isAPI) {

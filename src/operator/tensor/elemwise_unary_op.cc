@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file elemwise_unary_op.cc
  * \brief CPU Implementation of unary function.
  */
@@ -48,7 +66,13 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_sigmoid)
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")
 .add_alias("identity")
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", IdentityComputeEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 NNVM_REGISTER_OP(_backward_copy)
@@ -59,7 +83,13 @@ NNVM_REGISTER_OP(_backward_copy)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>);
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", IdentityComputeEx<cpu>);
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 .add_alias("stop_gradient")
@@ -89,6 +119,10 @@ Example::
   [ 1.  1.]
 
 )code" ADD_FILELINE)
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
@@ -99,6 +133,10 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"loss"};
+  })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
   })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -121,10 +159,16 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     "FInplaceOption", [](const NodeAttrs& attrs) {
       return std::vector<std::pair<int, int> >{{0, 0}};
     })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+    [](const NodeAttrs& attrs){
+      return std::vector<bool>{true};
+    })
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", IdentityLikeRhsComputeEx<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
@@ -160,6 +204,10 @@ Example::
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
 .add_argument("data", "NDArray-or-Symbol", "The input.")
@@ -167,13 +215,40 @@ Example::
 
 NNVM_REGISTER_OP(_backward_cast)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
+  })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>);
+
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY(negative)
-.MXNET_DESCRIBE("Negate src")
+.MXNET_DESCRIBE("Numerical negative of the argument, element-wise.")
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::negation>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
+
+// reciprocal
+MXNET_OPERATOR_REGISTER_UNARY(reciprocal)
+.describe(R"code(Returns the reciprocal of the argument, element-wise.
+
+Calculates 1/x.
+
+Example::
+
+    reciprocal([-2, 1, 3, 1.6, 0.2]) = [-0.5, 1.0, 0.33333334, 0.625, 5.0]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::reciprocal>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_reciprocal"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
+.set_attr<FCompute>("FCompute<cpu>",
+  BinaryCompute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >);
 
 // abs
 MXNET_OPERATOR_REGISTER_UNARY(abs)
@@ -262,7 +337,7 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(trunc)
 .describe(R"code(Return the element-wise truncated value of the input.
 
-The truncated value of the scalar x is the nearest integer i which is closer to 
+The truncated value of the scalar x is the nearest integer i which is closer to
 zero than x is. In short, the fractional part of the signed number x is discarded.
 
 Example::
@@ -292,7 +367,7 @@ MXNET_OPERATOR_REGISTER_UNARY(square)
 
 Example::
 
-   square([2, 3, 4]) = [3, 9, 16]
+   square([2, 3, 4]) = [4, 9, 16]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::square>)

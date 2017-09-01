@@ -1,6 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file c_api_symbolic.cc
+ * \file c_api_ndarray.cc
  * \brief C API of mxnet
  */
 
@@ -86,9 +105,6 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     *num_outputs = num_visible_outputs;
     ndoutputs.resize(infered_num_outputs);
   } else {
-    CHECK(!AutogradRuntime::Get()->IsTraining())
-      << "Inplace operations (+=, -=, op(..., out=x) etc.) and assignment are "
-      << "not supported when you are inside a train_section using autograd.";
     CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
       << "Expecting " << infered_num_outputs << " (all) or "
       << num_visible_outputs << " (visible only) outputs, got "
@@ -113,9 +129,8 @@ void SetContext(Context* p_ctx,
       CHECK_EQ(ndinputs[i].ctx().dev_mask(), ctx.dev_mask())
           << "All inputs must live on the same context. "
           << "But the first argument is on "
-          << (ctx.dev_mask() == gpu::kDevMask ? "GPU" : "CPU")
-          << " while the " << i+1 << "-th argument is on "
-          << (ndinputs[i].ctx().dev_mask() == gpu::kDevMask ? "GPU" : "CPU");
+          << ctx << " while the " << i+1 << "-th argument is on "
+          << ndinputs[i].ctx();
     }
   } else if (ndoutputs.size() && !ndoutputs[0].is_none()) {
     ctx = ndoutputs[0].ctx();
@@ -136,14 +151,17 @@ void SetContext(Context* p_ctx,
 #endif  // MXNET_USE_CUDA
 }
 
+// Set the shape, dtype and storage type
 void SetShapeType(const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<NDArray>& ndinputs,
-                  std::vector<NDArray>* p_ndoutputs) {
+                  std::vector<NDArray>* p_ndoutputs,
+                  int* dispatch_stype) {
   std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
+  static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   // infer shape
   std::vector<TShape>& in_shapes  = ret->arg_shapes;
@@ -179,9 +197,35 @@ void SetShapeType(const nnvm::Op* op,
   CHECK(infertype[op](attrs, &in_types, &out_types));
   CHECK_EQ(out_types.size(), ndoutputs.size());
 
+  // infer storage type
+  auto& in_storage_types = ret->arg_storage_types;
+  auto& out_storage_types = ret->out_storage_types;
+  in_storage_types.clear();
+  out_storage_types.clear();
+  for (auto& i : ndinputs) {
+    in_storage_types.push_back(i.storage_type());
+  }
+  for (auto& i : ndoutputs) {
+    out_storage_types.push_back(i.storage_type());
+  }
+  if (inferstorage.count(op)) {
+    CHECK(inferstorage[op](attrs, ctx, &in_storage_types, &out_storage_types));
+    CHECK_EQ(out_storage_types.size(), ndoutputs.size());
+  }
+
+  bool contains_non_default = common::ContainsNonDefaultStorage(in_storage_types);
+  contains_non_default |= common::ContainsNonDefaultStorage(out_storage_types);
+  int kNonDefaultStorage = -2;
+  *dispatch_stype = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
   for (size_t i = 0; i < ndoutputs.size(); ++i) {
+    NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (ndoutputs[i].is_none()) {
-      ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+      // if failed to infer the storage type, assume the output storage is dense
+      if (storage_type == kDefaultStorage || out_storage_types[i] == kUndefinedStorage) {
+        ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+      } else {
+        ndoutputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
+      }
     } else {
       CHECK_EQ(ndoutputs[i].shape(), out_shapes[i])
         << i << "th output has invalid shape. "
@@ -198,7 +242,7 @@ void SetShapeType(const nnvm::Op* op,
 void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
                    std::vector<engine::VarHandle> *p_write_vars,
                    std::vector<Resource> *p_requested,
-                   std::vector<uint32_t> *p_auxidx,
+                   std::vector<uint32_t> *p_mutate_idx,
                    const nnvm::Op* op,
                    const nnvm::NodeAttrs& attrs,
                    const Context& ctx,
@@ -210,7 +254,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
   std::vector<engine::VarHandle>& read_vars  = *p_read_vars;
   std::vector<engine::VarHandle>& write_vars = *p_write_vars;
   std::vector<Resource>& requested = *p_requested;
-  std::vector<uint32_t>& auxidx = *p_auxidx;
+  std::vector<uint32_t>& mutate_idx = *p_mutate_idx;
 
   if (tmp_resource.count(op)) {
     int ntmp = 0;
@@ -236,13 +280,28 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
     write_vars.push_back(i.var());
   }
   if (mutate.count(op)) {
-    auxidx = mutate[op](attrs);
-    std::sort(auxidx.begin(), auxidx.end());
-    for (auto & i : auxidx) {
+    mutate_idx = mutate[op](attrs);
+    std::sort(mutate_idx.begin(), mutate_idx.end());
+    for (auto & i : mutate_idx) {
       write_vars.push_back(ndinputs[i].var());
     }
   }
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
+}
+
+inline void SetWriteInplaceReq(const std::vector<NDArray> &ndinputs,
+                               const std::vector<NDArray> &ndoutputs,
+                               std::vector<OpReqType> *req) {
+  std::unordered_set<engine::VarHandle> in_vars;
+  for (auto &nd : ndinputs) {
+    in_vars.insert(nd.var());
+  }
+  for (size_t i = 0; i < ndoutputs.size(); i++) {
+    // output NDArray shares the memory with the input NDArray
+    if (in_vars.find(ndoutputs[i].var()) != in_vars.end()) {
+      req->at(i) = kWriteInplace;
+    }
+  }
 }
 
 void PushFCompute(const FCompute& fn,
@@ -253,24 +312,75 @@ void PushFCompute(const FCompute& fn,
                   const std::vector<engine::VarHandle>& write_vars,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray>& ndinputs,
-                  const std::vector<NDArray>& ndoutputs) {
+                  const std::vector<NDArray>& ndoutputs,
+                  const std::vector<uint32_t>& mutate_idx) {
+  using namespace common;
   bool is_train = AutogradRuntime::Get()->IsTraining();
   Engine::Get()->PushAsync(
-    [ctx, attrs, fn, ndinputs, ndoutputs, requested, is_train](
+    [ctx, attrs, fn, ndinputs, ndoutputs, requested, is_train, mutate_idx](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
       std::vector<TBlob> input_blobs, output_blobs;
-      for (auto& i : ndinputs) {
-        input_blobs.push_back(i.data());
-      }
-      for (auto& i : ndoutputs) {
-        output_blobs.push_back(i.data());
+      // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
+      std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
+      // mapping from index in input_blobs to index in pre_temp_dst
+      std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+      // populate input blobs and output blobs
+      SetupDefaultBlobs(ndinputs, &input_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
+      SetupDefaultBlobs(ndoutputs, &output_blobs, &post_temp_dst, &post_temp_src);
+      // add mutable inputs to post temp list
+      for (const auto idx : mutate_idx) {
+        auto map_iter = in_temp_idx_map.find(idx);
+        if (map_iter != in_temp_idx_map.end()) {
+          post_temp_src.push_back(pre_temp_dst[map_iter->second]);
+          post_temp_dst.push_back(ndinputs[idx]);
+        }
       }
       OpContext opctx{is_train, rctx,
                       engine::CallbackOnComplete(),
                       requested};
       std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      fn(attrs, opctx, input_blobs, req, output_blobs);
+      if (ctx.dev_mask() == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+        CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
+        fn(attrs, opctx, input_blobs, req, output_blobs);
+        // cast to original storage type, if necessary
+        CastNonDefaultStorage<gpu>(post_temp_src, post_temp_dst, opctx);
+        rctx.get_stream<gpu>()->Wait();
+#else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+      } else {
+        CastNonDefaultStorage<cpu>(pre_temp_src, pre_temp_dst, opctx);
+        fn(attrs, opctx, input_blobs, req, output_blobs);
+        // cast to original storage type, if necessary
+        CastNonDefaultStorage<cpu>(post_temp_src, post_temp_dst, opctx);
+      }
+      on_complete();
+    }, ctx, read_vars, write_vars, FnProperty::kNormal,
+    0, PROFILER_MESSAGE(op->name.c_str()));
+}
+
+void PushFComputeEx(const FComputeEx& fn,
+                    const nnvm::Op* op,
+                    const nnvm::NodeAttrs& attrs,
+                    const Context& ctx,
+                    const std::vector<engine::VarHandle>& read_vars,
+                    const std::vector<engine::VarHandle>& write_vars,
+                    const std::vector<Resource>& requested,
+                    const std::vector<NDArray>& ndinputs,
+                    const std::vector<NDArray>& ndoutputs) {
+  Engine::Get()->PushAsync(
+    [ctx, attrs, fn, ndinputs, ndoutputs, requested](
+        RunContext rctx,
+        engine::CallbackOnComplete on_complete) {
+      std::vector<TBlob> input_blobs, output_blobs;
+      OpContext opctx{false, rctx,
+                      engine::CallbackOnComplete(),
+                      requested};
+      std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
+      SetWriteInplaceReq(ndinputs, ndoutputs, &req);
+      fn(attrs, opctx, ndinputs, req, ndoutputs);
       if (ctx.dev_mask() == gpu::kDevMask) {
         rctx.get_stream<gpu>()->Wait();
       }
@@ -279,69 +389,106 @@ void PushFCompute(const FCompute& fn,
     0, PROFILER_MESSAGE(op->name.c_str()));
 }
 
-void PushOperator(std::shared_ptr<Operator> opr,
+void PushOperator(const OpStatePtr& state,
                   const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<engine::VarHandle>& read_vars,
                   const std::vector<engine::VarHandle>& write_vars,
                   const std::vector<Resource>& requested,
-                  const std::vector<uint32_t>& auxidx,
                   const std::vector<NDArray>& ndinputs,
-                  const std::vector<NDArray>& ndoutputs) {
-  struct Capture {
-    engine::CallbackOnComplete on_complete;
-    std::shared_ptr<Operator> opr;
-  };
+                  const std::vector<NDArray>& ndoutputs,
+                  const std::vector<uint32_t>& mutate_idx) {
+  using namespace common;
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = AutogradRuntime::Get()->IsTraining();
-  Engine::Get()->PushAsync(
-    [ctx, opr, auxidx, ndinputs, ndoutputs, requested, is_train](
-        RunContext rctx,
-        engine::CallbackOnComplete on_complete) {
-      std::vector<TBlob> input_blobs, aux_blobs, output_blobs;
-      auto atop = auxidx.begin();
-      for (size_t i = 0; i < ndinputs.size(); ++i) {
-        if (atop != auxidx.end() && i == *atop) {
-          aux_blobs.push_back(ndinputs[i].data());
-          ++atop;
+  ExecType exec_type = ExecType::kSync;
+  if (fexec_type.count(op)) {
+    exec_type = fexec_type[op](attrs);
+  }
+
+  auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
+  if (fcompute != nullptr) {
+    CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
+    Engine::Get()->PushAsync(
+      [state, fcompute, ndinputs, ndoutputs, requested, is_train, exec_type, mutate_idx](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+
+        std::vector<TBlob> input_blobs, output_blobs;
+        // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
+        std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
+        // mapping from index in input_blobs to index in pre_temp_dst
+        std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+        // populate input blobs and output blobs
+        SetupDefaultBlobs(ndinputs, &input_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
+        SetupDefaultBlobs(ndoutputs, &output_blobs, &post_temp_dst, &post_temp_src);
+        // add mutable inputs to post temp list
+        for (const auto idx : mutate_idx) {
+          if (in_temp_idx_map.find(idx) != in_temp_idx_map.end()) {
+            post_temp_src.push_back(pre_temp_dst[in_temp_idx_map[idx]]);
+            post_temp_dst.push_back(ndinputs[idx]);
+          }
+        }
+        std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
+        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+          CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
+          fcompute(state, opctx, input_blobs, req, output_blobs);
+          CastNonDefaultStorage<gpu>(post_temp_src, post_temp_dst, opctx);
+#else
+          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
         } else {
-          input_blobs.push_back(ndinputs[i].data());
+          CastNonDefaultStorage<cpu>(pre_temp_src, pre_temp_dst, opctx);
+          fcompute(state, opctx, input_blobs, req, output_blobs);
+          CastNonDefaultStorage<cpu>(post_temp_src, post_temp_dst, opctx);
         }
-      }
-      for (auto& i : ndoutputs) {
-        output_blobs.push_back(i.data());
-      }
-      Capture* capture = new Capture({on_complete, opr});
-      OpContext opctx{is_train, rctx,
-                      Engine::Get()->CreateCallback(
-                        [](Engine* engine, void *cpt_handle) {
-                            Capture* cpt = static_cast<Capture*>(cpt_handle);
-                            cpt->on_complete();
-                            delete cpt;
-                          }, static_cast<void*>(capture)),
-                      requested};
-      std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      opr->Forward(opctx, input_blobs, req, output_blobs, aux_blobs);
-      if (opr->exec_type() != Operator::kAsync) {
-        if (ctx.dev_mask() == gpu::kDevMask) {
-          rctx.get_stream<gpu>()->Wait();
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
         }
-        delete capture;
-        on_complete();
-      }
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+      }, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
+  } else {
+    auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+        op, "FStatefulComputeEx", ctx);
+    CHECK(fcompute_ex != nullptr)
+        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+        << "for stateful operator " << op->name;
+    const auto& run = [state, fcompute_ex, ndinputs, ndoutputs, requested, is_train, exec_type](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
+        SetWriteInplaceReq(ndinputs, ndoutputs, &req);
+        fcompute_ex(state, opctx, ndinputs, req, ndoutputs);
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
+        }
+      };
+    if (exec_type == ExecType::kLocal) {
+      run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+    } else {
+      Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+                               0, PROFILER_MESSAGE(op->name.c_str()));
+    }
+  }
 }
 
 void ImperativeInvokeImpl(const Context& default_ctx,
                           const nnvm::NodeAttrs& attrs,
                           std::vector<NDArray>* p_ndinputs,
                           std::vector<NDArray>* p_ndoutputs) {
-  static auto& fcpu = nnvm::Op::GetAttr<FCompute>("FCompute<cpu>");
-  static auto& fgpu = nnvm::Op::GetAttr<FCompute>("FCompute<gpu>");
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
-  static auto& createop = nnvm::Op::GetAttr<FCreateLayerOp>("FCreateLayerOp");
+  static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   const nnvm::Op *op = attrs.op;
@@ -354,38 +501,42 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   } else {
     // TODO(piiswrong): infer ctx
     Context ctx;
+    int stype;
     SetContext(&ctx, attrs, ndinputs, ndoutputs, default_ctx);
-    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs);
+    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs, &stype);
 
     std::vector<engine::VarHandle> read_vars, write_vars;
     std::vector<Resource> requested;
-    std::vector<uint32_t> auxidx;
-    SetDependency(&read_vars, &write_vars, &requested, &auxidx,
+    std::vector<uint32_t> mutate_idx;
+    SetDependency(&read_vars, &write_vars, &requested, &mutate_idx,
         op, attrs, ctx, ndinputs, ndoutputs);
 
-    FCompute fn;
-    if (ctx.dev_mask() == cpu::kDevMask && fcpu.count(op)) {
-      fn = fcpu[op];
-    } else if (ctx.dev_mask() == gpu::kDevMask && fgpu.count(op)) {
-      fn = fgpu[op];
-    }
-
-    if (fn) {
-      if (AutogradRuntime::Get()->IsTraining()) {
+    FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
+    FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
+    if (fn_ex && stype != kDefaultStorage) {
+      if (AutogradRuntime::Get()->IsRecording()) {
+        AutogradRuntime::Get()->RecordImperativeFCompute(op,
+            attrs, &ndinputs, &ndoutputs);
+      }
+      PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
+          requested, ndinputs, ndoutputs);
+    } else if (fn) {
+      if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordImperativeFCompute(op,
             attrs, &ndinputs, &ndoutputs);
       }
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
-          requested, ndinputs, ndoutputs);
+          requested, ndinputs, ndoutputs, mutate_idx);
     } else if (createop.count(op)) {
-      std::shared_ptr<Operator> opr(
-          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types));
-      if (AutogradRuntime::Get()->IsTraining()) {
-        AutogradRuntime::Get()->RecordImperativeOperator(opr, op,
+      auto state =
+          createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
+      if (AutogradRuntime::Get()->IsRecording()) {
+        AutogradRuntime::Get()->RecordImperativeOperator(state, op,
             attrs, &ndinputs, &ndoutputs);
       }
-      PushOperator(opr, op, attrs, ctx, read_vars, write_vars,
-          requested, auxidx, ndinputs, ndoutputs);
+      write_vars.push_back(state.get_var());
+      PushOperator(state, op, attrs, ctx, read_vars, write_vars,
+          requested, ndinputs, ndoutputs, mutate_idx);
     } else {
       LOG(FATAL)
         << "Operator " << op->name << " is not implemented for "
@@ -432,6 +583,28 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+  API_END();
+}
+
+int MXImperativeInvokeEx(AtomicSymbolCreator creator,
+                         int num_inputs,
+                         NDArrayHandle *inputs,
+                         int *num_outputs,
+                         NDArrayHandle **outputs,
+                         int num_params,
+                         const char **param_keys,
+                         const char **param_vals,
+                         const int **out_stypes) {  // outputs storage types
+  API_BEGIN();
+  MXImperativeInvoke(creator, num_inputs, inputs, num_outputs, outputs,
+                     num_params, param_keys, param_vals);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
+  ret->out_types.resize(*num_outputs);
+  for (int i = 0; i < *num_outputs; ++i) {
+    ret->out_types[i] = output_nds[i]->storage_type();
+  }
+  *out_stypes = dmlc::BeginPtr(ret->out_types);
   API_END();
 }
 
@@ -500,7 +673,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     for (const auto& i : idx.outputs()) {
       ret->ret_handles.push_back(
         reinterpret_cast<NDArrayHandle>(
-          new NDArray(std::move(buff[idx.entry_id(i)]))));
+          new NDArray(buff[idx.entry_id(i)])));
     }
     *num_outputs = idx.outputs().size();
     *outputs = dmlc::BeginPtr(ret->ret_handles);
@@ -508,15 +681,51 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     CHECK_EQ(static_cast<size_t>(*num_outputs), idx.outputs().size())
         << "Specifed number of output differs from expected number of outputs";
     for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      *outarray[i] = std::move(buff[idx.entry_id(idx.outputs()[i])]);
+      *outarray[i] = buff[idx.entry_id(idx.outputs()[i])];
     }
   }
+  API_END();
+}
+
+int MXInvokeCachedOpEx(CachedOpHandle handle,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       const int **out_stypes) {  // outputs storage types
+  API_BEGIN();
+  MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
+  ret->out_types.resize(*num_outputs);
+  for (int i = 0; i < *num_outputs; ++i) {
+    ret->out_types[i] = output_nds[i]->storage_type();
+  }
+  *out_stypes = dmlc::BeginPtr(ret->out_types);
+  API_END();
+}
+
+int MXAutogradIsTraining(bool* curr) {
+  API_BEGIN();
+  *curr = AutogradRuntime::Get()->IsTraining();
   API_END();
 }
 
 int MXAutogradSetIsTraining(int is_training, int* prev) {
   API_BEGIN();
   *prev = AutogradRuntime::Get()->SetIsTraining(static_cast<bool>(is_training));
+  API_END();
+}
+
+int MXAutogradIsRecording(bool* curr) {
+  API_BEGIN();
+  *curr = AutogradRuntime::Get()->IsRecording();
+  API_END();
+}
+
+int MXAutogradSetIsRecording(int is_recording, int* prev) {
+  API_BEGIN();
+  *prev = AutogradRuntime::Get()->SetIsRecording(static_cast<bool>(is_recording));
   API_END();
 }
 
@@ -548,6 +757,14 @@ int MXAutogradBackward(mx_uint num_output,
                        NDArrayHandle *output_handles,
                        NDArrayHandle *ograd_handles,
                        int retain_graph) {
+  return MXAutogradBackwardEx(num_output, output_handles, ograd_handles, retain_graph, true);
+}
+
+int MXAutogradBackwardEx(mx_uint num_output,
+                         NDArrayHandle *output_handles,
+                         NDArrayHandle *ograd_handles,
+                         int retain_graph,
+                         int is_train) {
   API_BEGIN();
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
@@ -566,6 +783,14 @@ int MXAutogradBackward(mx_uint num_output,
     }
   }
 
-  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph);
+  AutogradRuntime::Get()->ComputeGradient(outputs, ograds, retain_graph, is_train);
+  API_END();
+}
+
+int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out) {
+  API_BEGIN();
+  NDArray *head = reinterpret_cast<NDArray*>(handle);
+  auto sym = new nnvm::Symbol(head->get_autograd_symbol());
+  *out = reinterpret_cast<SymbolHandle>(sym);
   API_END();
 }

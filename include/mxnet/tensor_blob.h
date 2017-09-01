@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2014 by Contributors
  * \file tensor_blob.h
  * \brief TBlob class that holds common representation of
  *  arbirary dimension tensor, can be used to transformed
@@ -17,7 +35,7 @@
 #include <utility>
 #include <algorithm>
 #include "./base.h"
-#if MXNET_USE_MKL2017 == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
 #endif
 namespace mxnet {
@@ -48,14 +66,14 @@ class TBlob {
   int type_flag_;
 
   /*! \brief storing mkl chunk buffer blob, use for experimental only */
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
   std::shared_ptr<MKLMemHolder> Mkl_mem_;
 #endif
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
       : dptr_(NULL),
         type_flag_(mshadow::DataType<real_t>::kFlag) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
     Mkl_mem_ = NULL;
 #endif
     SetDLTensor(cpu::kDevMask, 0);
@@ -71,7 +89,7 @@ class TBlob {
   TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
         type_flag_(mshadow::DataType<DType>::kFlag) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
     Mkl_mem_ = NULL;
 #endif
     SetDLTensor(dev_mask, dev_id);
@@ -86,7 +104,7 @@ class TBlob {
    */
   TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
     Mkl_mem_ = NULL;
 #endif
     SetDLTensor(dev_mask, dev_id);
@@ -116,7 +134,7 @@ class TBlob {
     shape_ = src.shape_;
     type_flag_ = mshadow::DataType<DType>::kFlag;
     SetDLTensor(Device::kDevMask, -1);
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
     Mkl_mem_ = NULL;
 #endif
     return *this;
@@ -153,7 +171,7 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
     if (Mkl_mem_ != nullptr) {
       Mkl_mem_->check_and_prv_to_cpu(dptr_);
     }
@@ -198,7 +216,7 @@ class TBlob {
     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
       << "TBlob.get_with_shape: data type do not match specified type."
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1 || MXNET_USE_MKL2017 == 1
     if (Mkl_mem_ != nullptr) {
       Mkl_mem_->check_and_prv_to_cpu(dptr_);
     }

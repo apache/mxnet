@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::BatchEndParam;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -677,6 +694,10 @@ method get_params() { confess("NotImplemented") }
         called to fill those missing params.
     :$force_init=0 : Bool
         If true, will force re-initialize even if already initialized.
+    :$allow_extra=0 : Boolean, optional
+        Whether allow extra parameters that are not needed by symbol.
+        If this is True, no error will be thrown when arg_params or aux_params
+        contain extra parameters that is not needed by the executor.
 =cut
 
 method init_params(
@@ -684,7 +705,8 @@ method init_params(
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     confess("NotImplemented");
@@ -705,13 +727,18 @@ method init_params(
         called to fill those missing params.
     :$force_init=0 : Bool
         If true, will force re-initialize even if already initialized.
+    :$allow_extra=0 : Bool
+        Whether allow extra parameters that are not needed by symbol.
+        If this is True, no error will be thrown when arg_params or aux_params
+        contain extra parameters that is not needed by the executor.
 =cut
 
 method set_params(
     Maybe[HashRef[AI::MXNet::NDArray]]  $arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]]  $aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     $self->init_params(
@@ -719,7 +746,8 @@ method set_params(
         arg_params    => $arg_params,
         aux_params    => $aux_params,
         allow_missing => $allow_missing,
-        force_init    => $force_init
+        force_init    => $force_init,
+        allow_extra   => $allow_extra
     );
 }
 
@@ -865,7 +893,11 @@ method prepare(AI::MXNet::DataBatch $data_batch){}
 
 =head2 forward
 
-    Forward computation.
+    Forward computation. It supports data batches with different shapes, such as
+    different batch sizes or different image sizes.
+    If reshaping of data batch relates to modification of symbol or module, such as
+    changing image layout ordering or switching from training to predicting, module
+    rebinding is required.
 
     Parameters
     ----------

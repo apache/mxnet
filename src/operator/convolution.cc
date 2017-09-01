@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file convolution.cc
  * \brief
  * \author Bing Xu, Jun Wu
@@ -11,6 +29,11 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_convolution-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkldnn_convolution-inl.h"
+#endif  // MXNET_USE_MKLDNN
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_convolution-inl.h"
 #endif  // MXNET_USE_NNPACK
@@ -32,6 +55,19 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
     })
     return op;
   }
+#if MXNET_USE_MKLDNN == 1
+    if ((param.dilate[0] == 1 && param.dilate[1] == 1)
+        && param.kernel.ndim() == 2) {
+        switch (dtype) {
+        case mshadow::kFloat32:
+            return new MKLDNNConvolutionOp<cpu, float>(param);
+        default:
+            break;
+        }
+    }
+    if (enableMKLDNNWarnGenerated())
+      LOG(INFO) << "MKLDNNConvolutionOp Skip MKL DNN optimization";
+#endif
 #if MXNET_USE_MKL2017 == 1
   if ((param.dilate[0] == 1 && param.dilate[1] == 1)
       && param.kernel.ndim() == 2) {
@@ -44,7 +80,6 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
       break;
     }
   }
-  LOG(INFO) << MKLConvolutionOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   const size_t batch_size = (*in_shape)[0][0];
@@ -72,8 +107,6 @@ Operator *ConvolutionProp::CreateOperatorEx(Context ctx,
                                             std::vector<TShape> *in_shape,
                                             std::vector<int> *in_type) const {
   std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
 }
@@ -86,7 +119,7 @@ channel, height, width)*, the output is computed by
 
 .. math::
 
-   out[n,i,:,:] = bias[i] + \sum_{j=0}^{num\_filter} data[n,j,:,:] \star
+   out[n,i,:,:] = bias[i] + \sum_{j=0}^{channel} data[n,j,:,:] \star
    weight[i,j,:,:]
 
 where :math:`\star` is the 2-D cross-correlation operator.

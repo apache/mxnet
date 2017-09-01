@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  * \file spatial_transformer.cc
  * \brief
  * \author Wei Wu
@@ -8,6 +26,10 @@
 #include "./spatial_transformer-inl.h"
 
 namespace mshadow {
+template<typename DType>
+bool between(DType value, int lowerBound, int upperBound) {
+  return (value >= lowerBound && value <= upperBound);
+}
 template<typename DType>
 inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
                                     const Tensor<cpu, 4, DType> &input,
@@ -20,24 +42,33 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
   for (index_t n = 0; n < static_cast<index_t>(o_n); ++n) {
     for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
       for (index_t h = 0; h < static_cast<index_t>(o_h); ++h) {
-        for (index_t w = 0; w < o_w; ++w) {
+        for (index_t w = 0; w < static_cast<index_t>(o_w); ++w) {
           index_t out_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
           index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           DType x_real = (*(grid + grid_index) + 1) * (i_w - 1) / 2;
-          index_t top_left_y = std::min(i_h, std::max(0, static_cast<int>(floor(y_real))));
-          index_t top_left_x = std::min(i_w, std::max(0, static_cast<int>(floor(x_real))));
+          int top_left_y = static_cast<int>(floor(y_real));
+          int top_left_x = static_cast<int>(floor(x_real));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
-          index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
-          DType top_left_v = *(data + data_index);
-          DType top_right_v = *(data + data_index + 1);
-          DType bottom_left_v = *(data + data_index + i_w);
-          DType bottom_right_v = *(data + data_index + i_w + 1);
+          int data_index = n * i_c * i_h * i_w + c * i_h * i_w +
+                           top_left_y * i_w + top_left_x;
+          DType top_left_v = 0;
+          DType top_right_v = 0;
+          DType bottom_left_v = 0;
+          DType bottom_right_v = 0;
+          if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1))
+            top_left_v = *(data + data_index);
+          if (between(top_left_x + 1, 0, i_w-1) && between(top_left_y, 0, i_h-1))
+            top_right_v = *(data + data_index + 1);
+          if (between(top_left_x, 0, i_w-1) && between(top_left_y + 1, 0, i_h-1))
+            bottom_left_v = *(data + data_index + i_w);
+          if (between(top_left_x+1, 0, i_w-1) && between(top_left_y + 1, 0, i_h-1))
+            bottom_right_v = *(data + data_index + i_w + 1);
           *(out+out_index) = top_left_v * top_left_y_w * top_left_x_w +
-                             top_right_v * top_left_y_w * (1.0 - top_left_x_w) +
-                             bottom_left_v * (1.0 - top_left_y_w) * top_left_x_w +
-                             bottom_right_v * (1.0 - top_left_y_w) * (1.0 - top_left_x_w);
+                              top_right_v * top_left_y_w * (1.0 - top_left_x_w) +
+                              bottom_left_v * (1.0 - top_left_y_w) * top_left_x_w +
+                              bottom_right_v * (1.0 - top_left_y_w) * (1.0 - top_left_x_w);
         }
       }
     }
@@ -64,27 +95,38 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
           index_t grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
           DType y_real = (*(grid_src + grid_src_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           DType x_real = (*(grid_src + grid_src_index) + 1) * (i_w - 1) / 2;
-          index_t top_left_y = std::min(i_h, std::max(0, static_cast<int>(floor(y_real))));
-          index_t top_left_x = std::min(i_w, std::max(0, static_cast<int>(floor(x_real))));
+          index_t top_left_y = static_cast<int>(floor(y_real));
+          index_t top_left_x = static_cast<int>(floor(x_real));
           DType top_left_y_w = 1.0 - (y_real - top_left_y);
           DType top_left_x_w = 1.0 - (x_real - top_left_x);
-          for (index_t c = 0; c < o_c; ++c) {
+          for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
             index_t grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
             index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w
                                  + top_left_x;
             // calc 4 vertex value in input data
-            DType top_left_v = *(data + data_index);
-            DType top_right_v = *(data + data_index + 1);
-            DType bottom_left_v = *(data + data_index + i_w);
-            DType bottom_right_v = *(data + data_index + i_w + 1);
-            // calc input grad
-            *(g_input + data_index) += *(grad + grad_index) * top_left_y_w * top_left_x_w;
-            *(g_input + data_index + 1) += *(grad + grad_index) * top_left_y_w
-                                           * (1.0 - top_left_x_w);
-            *(g_input + data_index+ i_w) += *(grad + grad_index) * (1.0 - top_left_y_w)
-                                            * top_left_x_w;
-            *(g_input + data_index+ i_w + 1) += *(grad + grad_index) * (1.0 - top_left_y_w)
-                                                * (1.0 - top_left_x_w);
+            DType top_left_v = 0;
+            DType top_right_v = 0;
+            DType bottom_left_v = 0;
+            DType bottom_right_v = 0;
+            if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
+              *(g_input + data_index) += *(grad + grad_index) * top_left_y_w * top_left_x_w;
+              top_left_v = *(data + data_index);
+            }
+            if (between(top_left_x+1, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
+              *(g_input + data_index + 1) += *(grad + grad_index) * top_left_y_w
+                                             * (1.0 - top_left_x_w);
+              top_right_v = *(data + data_index + 1);
+            }
+            if (between(top_left_x, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
+              *(g_input + data_index+ i_w) += *(grad + grad_index) * (1.0 - top_left_y_w)
+                                              * top_left_x_w;
+              bottom_left_v = *(data + data_index + i_w);
+            }
+            if (between(top_left_x+1, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
+              *(g_input + data_index+ i_w + 1) += *(grad + grad_index) * (1.0 - top_left_y_w)
+                                                  * (1.0 - top_left_x_w);
+              bottom_right_v = *(data + data_index + i_w + 1);
+            }
             // calc weight grad of top_left_w, then multiple -1 is the grad of grid_src
             top_left_y_gw -= *(grad + grad_index) * (top_right_v - bottom_right_v +
                              (top_left_v - top_right_v - bottom_left_v + bottom_right_v)
@@ -116,10 +158,6 @@ Operator* CreateOp<cpu>(SpatialTransformerParam param, int dtype) {
 
 Operator *SpatialTransformerProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 

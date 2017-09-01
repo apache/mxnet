@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file deconvolution-inl.h
  * \brief
  * \author Wei Wu
@@ -16,6 +34,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./linalg.h"
 
 
 namespace mxnet {
@@ -96,7 +115,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     // Use tag to control the calculation of pad
     bool bCal = false;
     if (target_shape.ndim() != 0) {
-      for (int i = 0; i < target_shape.ndim(); i++) {
+      for (index_t i = 0; i < target_shape.ndim(); i++) {
         if (target_shape[i] != 0) bCal = true;
       }
     }
@@ -104,7 +123,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     if (bCal) {
       size_t input_ndim = input.ndim();
 
-      for (unsigned int i = 0; i < ndim; i++) {
+      for (index_t i = 0; i < ndim; i++) {
         // input.ndim() can be larger than ndim, in case that the complete input
         // shape was passed and not only the ndim last ones
         o_pad[i] = stride[i] * (input[(input_ndim - ndim) + i] - 1) + DilatedKernelSize(i);
@@ -114,7 +133,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         o_pad[i] = (o_pad[i] + 1) / 2;
       }
     } else {
-      for (unsigned int i = 0; i < ndim; i++) {
+      for (index_t i = 0; i < ndim; i++) {
         o_pad[i] = pad[i];
         o_adj[i] = adj[i];
       }
@@ -209,7 +228,9 @@ class DeconvolutionOp : public Operator {
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
                                               gstride * (gid + 1));
-        tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        // Legacy approach shown here for comparison:
+        //   tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
       if (o_pad[0] == 0 && o_pad[1] == 0) {
         out.Slice(i, i + step) = pack_col2patch(temp_col,
@@ -238,7 +259,7 @@ class DeconvolutionOp : public Operator {
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
       Tensor<xpu, 1, DType> bias = in_data[deconv::kBias].get<xpu, 1, DType>(s);
-      out += broadcast<1>(bias, out.shape_);
+      out += mshadow::expr::broadcast<1>(bias, out.shape_);
     }
   }
 
@@ -317,16 +338,23 @@ class DeconvolutionOp : public Operator {
         Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         if (i == 0) {
           Tensor<xpu, 2, DType> tmp_gwmat = gwmat[gid];
-          Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          // Legacy approach shown here for comparison:
+          //   Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          linalg_gemm(temp_dst[gid], tmpc, tmp_gwmat, false, true, s, req[deconv::kWeight]);
         } else {
-          gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          // Legacy approach shown here for comparison:
+          //   gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          linalg_gemm(temp_dst[gid], tmpc, gwmat[gid], false, true, s, kAddTo);
         }
       }
-      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace
-                                         || req[deconv::kData] == kAddTo) {
+      if (req[deconv::kData] == kWriteTo ||
+          req[deconv::kData] == kWriteInplace ||
+          req[deconv::kData] == kAddTo) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
-          temp_dst[gid] = dot(wmat[gid], tmpc);
+          // Legacy approach shown here for comparison:
+          //   temp_dst[gid] = dot(wmat[gid], tmpc);
+          linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
         }
         Assign(gdata.Slice(i, i + step),
                req[deconv::kData],
