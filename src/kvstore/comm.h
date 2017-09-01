@@ -267,7 +267,8 @@ class CommDevice : public Comm {
       // NDArray.Slice or gpu direct memory access. for the latter, we need to
       // remove some ctx check, and also it reduces 20% perf
       buf.copy_buf.resize(src.size());
-      buf.small_buf.resize(src.size());
+      buf.small_recv_buf.resize(src.size());
+      buf.small_send_buf.resize(src.size());
       for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
@@ -277,14 +278,23 @@ class CommDevice : public Comm {
           long int small_size = buf.merged.shape().Size() % bits == 0 ?
                                  buf.merged.shape().Size() / bits + 2 :
                                  buf.merged.shape().Size() / bits + 3;
-          buf.small_buf[i] = NDArray(
+          buf.small_recv_buf[i] = NDArray(
             TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
+          buf.small_send_buf[i] = NDArray(
+            TShape{small_size}, src[i].ctx(), false, buf.merged.dtype());
         }
       }
     }
 
     for (size_t i = 0; i < src.size(); ++i) {
+      // TODO: New code:
+      // CompressNDArray(src[i], &(buf.small_send_buf[i]));
+      // CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
+      // DeCompressNDArray(buf.small_recv_buf[i], &(buf.copy_buf[i]));
+
+      // TODO: Delete this line
       CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+
       reduce[i] = buf.copy_buf[i];
     }
 
@@ -395,8 +405,10 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
-    /// \brief the small buffer for compressed data
-    std::vector<NDArray> small_buf;
+    /// \brief the small buffer for compressed data in sender
+    std::vector<NDArray> small_send_buf;
+    /// \brief the small buffer for compressed data in receiver
+    std::vector<NDArray> small_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   bool inited_;
