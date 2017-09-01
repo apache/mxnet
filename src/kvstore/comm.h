@@ -260,23 +260,32 @@ class CommDevice : public Comm {
 
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
-    CopyFromTo(src[0], &(buf.merged), priority);
-    reduce[0] = buf.merged;
 
     if (buf.copy_buf.empty()) {
       // TODO(mli) this results in large device memory usage for huge ndarray,
       // such as the largest fullc in VGG. consider to do segment reduce with
       // NDArray.Slice or gpu direct memory access. for the latter, we need to
       // remove some ctx check, and also it reduces 20% perf
-      buf.copy_buf.resize(src.size()-1);
-      for (size_t i = 0; i < src.size()-1; ++i) {
+      buf.copy_buf.resize(src.size());
+      buf.small_buf.resize(src.size());
+      for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        // allocation small buffer for compressed data
+        if (compress_.compare("none") != 0) {
+          int bits = compress_ == "2bit" ? 16 : 32;
+          long int small_size = buf.merged.shape().Size() % bits == 0 ?
+                                 buf.merged.shape().Size() / bits + 2 :
+                                 buf.merged.shape().Size() / bits + 3;
+          buf.small_buf[i] = NDArray(
+            TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
+        }
       }
     }
-    for (size_t i = 0; i < src.size()-1; ++i) {
-      CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
-      reduce[i+1] = buf.copy_buf[i];
+
+    for (size_t i = 0; i < src.size(); ++i) {
+      CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+      reduce[i] = buf.copy_buf[i];
     }
 
     ElementwiseSum(reduce, &buf.merged);
@@ -386,6 +395,8 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
+    /// \brief the small buffer for compressed data
+    std::vector<NDArray> small_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   bool inited_;
