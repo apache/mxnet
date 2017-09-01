@@ -194,7 +194,7 @@ test_that("Matrix Factorization", {
 
   mx.set.seed(123)
   
-  CustomIter <- methods::setRefClass( "CustomIter", fields = c("iter1", "iter2"),
+  CustomIter <- setRefClass( "CustomIter", fields = c("iter1", "iter2"),
                              contains = "Rcpp_MXArrayDataIter",
       methods = list(
         initialize = function(iter1, iter2) {
@@ -232,7 +232,7 @@ test_that("Matrix Factorization", {
   
   item_iter = mx.io.arrayiter(data = DF[, 2], label = DF[, 3], batch.size = k)
   
-  train_iter <- CustomIter$methods::new(user_iter, item_iter)
+  train_iter <- CustomIter$new(user_iter, item_iter)
   
   model <- mx.model.FeedForward.create(pred3, X = train_iter, ctx = mx.ctx.default(),
                                        num.round = 5, initializer = mx.init.uniform(0.07),

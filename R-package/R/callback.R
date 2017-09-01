@@ -1,5 +1,5 @@
 #' @export mx.metric.logger
-mx.metric.logger <- methods::setRefClass("mx.metric.logger", fields = list(train = "numeric", eval="numeric"))
+mx.metric.logger <- setRefClass("mx.metric.logger", fields = list(train = "numeric", eval="numeric"))
 
 #' Log training metric each period
 #'

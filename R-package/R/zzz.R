@@ -15,6 +15,10 @@ NULL
 .MXNetEnv <- new.env()
 
 .onLoad <- function(libname, pkgname) {
+  if (! is.element("package:methods", search())) {
+    message("Attaching package 'methods'.")
+    library(methods)
+  }
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)
