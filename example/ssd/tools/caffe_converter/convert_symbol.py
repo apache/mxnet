@@ -265,7 +265,7 @@ def proto2script(proto_file):
             finput_dim = float(input_dim[2])
             step = '(%f, %f)' % (step_h / finput_dim, step_w / finput_dim)
             assert param.offset == 0.5, "currently only support offset = 0.5"
-            symbol_string += '%s = mx.contrib.symbol.MultiBoxPrior(%s, sizes=%s, ratios=%s, clip=%s, steps=%s, name="%s")\n' % \
+            symbol_string += '%s = mx.symbol.contrib.MultiBoxPrior(%s, sizes=%s, ratios=%s, clip=%s, steps=%s, name="%s")\n' % \
                 (name, mapping[layer[i].bottom[0]], sizes, ratios_string, clip, step, name)
             symbol_string += '%s = mx.symbol.Flatten(data=%s)\n' % (name, name)
             type_string = 'split'
@@ -281,7 +281,7 @@ def proto2script(proto_file):
             assert param.share_location == True
             assert param.background_label_id == 0
             nms_param = param.nms_param
-            type_string = 'mx.contrib.symbol.MultiBoxDetection'
+            type_string = 'mx.symbol.contrib.MultiBoxDetection'
             param_string = "nms_threshold=%f, nms_topk=%d" % \
                 (nms_param.nms_threshold, nms_param.top_k)
         if type_string == '':

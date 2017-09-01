@@ -550,19 +550,18 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   }
 }
 
-int MXImperativeInvoke(AtomicSymbolCreator creator,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       int num_params,
-                       const char **param_keys,
-                       const char **param_vals) {
+inline void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
+                                   int num_inputs,
+                                   NDArrayHandle *inputs,
+                                   int *num_outputs,
+                                   NDArrayHandle **outputs,
+                                   int num_params,
+                                   const char **param_keys,
+                                   const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
 
-  API_BEGIN();
   nnvm::NodeAttrs attrs;
   SetOpAttrs(op, &attrs, num_inputs, num_params, param_keys, param_vals);
 
@@ -588,6 +587,19 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+}
+
+int MXImperativeInvoke(AtomicSymbolCreator creator,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       int num_params,
+                       const char **param_keys,
+                       const char **param_vals) {
+  API_BEGIN();
+  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs,
+                         outputs, num_params, param_keys, param_vals);
   API_END();
 }
 
@@ -601,8 +613,8 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                          const char **param_vals,
                          const int **out_stypes) {  // outputs storage types
   API_BEGIN();
-  MXImperativeInvoke(creator, num_inputs, inputs, num_outputs, outputs,
-                     num_params, param_keys, param_vals);
+  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
+                         num_params, param_keys, param_vals);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
   ret->out_types.resize(*num_outputs);

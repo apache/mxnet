@@ -1260,7 +1260,7 @@ def test_broadcast_binary_op():
         c = mx.sym.broadcast_power(a, b)
         check_binary_op_forward(c, lambda a, b: a ** b, gen_broadcast_data, mx_nd_func=mx.nd.power)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out * a **(b - 1) * b,
-                                        g_out * a ** b * np.log(a)), gen_broadcast_data)
+                                                         g_out * a ** b * np.log(a)), gen_broadcast_data)
 
     def test_bequal(a, b):
         c = mx.sym.broadcast_equal(a, b)
@@ -3354,7 +3354,7 @@ def test_pick():
 def check_ctc_loss(acts, labels, loss_truth):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
-    ctc = mx.contrib.sym.ctc_loss(in_var, labels_var)
+    ctc = mx.sym.contrib.ctc_loss(in_var, labels_var)
     acts_nd = mx.nd.array(acts, ctx=default_context())
     labels_nd = mx.nd.array(labels, ctx=default_context())
     exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
@@ -3397,8 +3397,8 @@ def test_quantization_op():
     min0 = mx.nd.array([0.0])
     max0 = mx.nd.array([1.0])
     a  = mx.nd.array([[0.1392, 0.5928], [0.6027, 0.8579]])
-    qa, min1, max1 = mx.contrib.nd.quantize(a, min0, max0, out_type='uint8')
-    a_ = mx.contrib.nd.dequantize(qa, min1, max1, out_type='float32')
+    qa, min1, max1 = mx.nd.contrib.quantize(a, min0, max0, out_type='uint8')
+    a_ = mx.nd.contrib.dequantize(qa, min1, max1, out_type='float32')
 
     qa_real = mx.nd.array([[35, 151], [154, 219]])
     a_real  = mx.nd.array([[0.13725491, 0.59215689], [0.60392159, 0.8588236]])
@@ -3480,7 +3480,7 @@ def test_psroipooling():
 
                     im_data_var = mx.symbol.Variable(name="im_data")
                     rois_data_var = mx.symbol.Variable(name="rois_data")
-                    op = mx.contrib.sym.PSROIPooling(data=im_data_var, rois=rois_data_var, spatial_scale=spatial_scale,
+                    op = mx.sym.contrib.PSROIPooling(data=im_data_var, rois=rois_data_var, spatial_scale=spatial_scale,
                                                      group_size=num_group, pooled_size=num_group,
                                                      output_dim=num_classes, name='test_op')
                     rtol, atol = 1e-2, 1e-3
@@ -3510,7 +3510,7 @@ def test_deformable_convolution():
                         offset_data_var = mx.symbol.Variable(name="offset_data")
                         weight_var = mx.symbol.Variable(name="weight")
                         bias_var = mx.symbol.Variable(name="bias")
-                        op = mx.contrib.sym.DeformableConvolution(name='test_op', data=im_data_var,
+                        op = mx.sym.contrib.DeformableConvolution(name='test_op', data=im_data_var,
                                                                   offset=offset_data_var,
                                                                   weight=weight_var, bias=bias_var,
                                                                   num_filter=num_channel_data, pad=dilate,
@@ -3544,7 +3544,7 @@ def test_deformable_psroipooling():
                     im_data_var = mx.symbol.Variable(name="im_data")
                     rois_data_var = mx.symbol.Variable(name="rois_data")
                     offset_data_var = mx.symbol.Variable(name="offset_data")
-                    op = mx.contrib.sym.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var,
+                    op = mx.sym.contrib.DeformablePSROIPooling(data=im_data_var, rois=rois_data_var,
                                                                trans=offset_data_var, spatial_scale=spatial_scale,
                                                                sample_per_part=4, group_size=num_group,
                                                                pooled_size=num_group, output_dim=num_classes,
@@ -3585,22 +3585,22 @@ def test_laop():
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
     res_gemm = 4*np.dot(data_in1,data_in2)+7*data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7)
     check_symbolic_forward(test_gemm, [data_in1, data_in2, data_in4], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2, data_in4], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t,data_in2_t)+7*data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1, transpose_b = 1)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in2, data_in3], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2, data_in3], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t,data_in1)+7*data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1, data_in3], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1, data_in3], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1,data_in1_t)+7*data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_b = 1)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1, data_in4], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1, data_in4], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
@@ -3615,29 +3615,29 @@ def test_laop():
     r = 4*np.dot(data_in1,data_in2)+7*data_in4
     r = np.tile(r.flatten(),3)
     r = np.reshape(r,(3,1,2,2))
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha = 4, beta = 7)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7)
     check_symbolic_forward(test_gemm, [a, b, c], [r])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [a, b, c], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
 
     # Check gemm2 operator same way as gemm.
     res_gemm = 4*np.dot(data_in1,data_in2)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4)
     check_symbolic_forward(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t, data_in2_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_a = 1, transpose_b = 1)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4, transpose_a = 1, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in2], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1_t,data_in1)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_a = 1)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4, transpose_a = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
     res_gemm = 4*np.dot(data_in1,data_in1_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4, transpose_b = 1)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4, transpose_b = 1)
     check_symbolic_forward(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [data_in1, data_in1], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
@@ -3650,7 +3650,7 @@ def test_laop():
     r = 4*np.dot(data_in1,data_in2)
     r = np.tile(r.flatten(),3)
     r = np.reshape(r,(3,1,2,2))
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha = 4)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4)
     check_symbolic_forward(test_gemm, [a, b], [r])
     if grad_check == 1:
       check_numeric_gradient(test_gemm, [a, b], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
@@ -3662,32 +3662,32 @@ def test_laop():
     data_in = np.random.uniform(1, 10, shape)
     # test potrf
     res_potrf = np.sqrt(data_in)
-    test_potrf = mx.sym.linalg_potrf(data1)
+    test_potrf = mx.sym.linalg.potrf(data1)
     check_symbolic_forward(test_potrf, [data_in], [res_potrf])
     if grad_check == 1:
       check_numeric_gradient(test_potrf, [data_in])
     # test potri
     ones = mx.nd.ones(shape).asnumpy()
     res_potri = np.divide(ones,data_in*data_in)
-    test_potri = mx.sym.linalg_potri(data1)
+    test_potri = mx.sym.linalg.potri(data1)
     check_symbolic_forward(test_potri, [data_in], [res_potri])
     if grad_check == 1:
       check_numeric_gradient(test_potri, [data_in], atol = 0.01, rtol = 1.5)
     # test trsm
     trian_in = data_in *7
-    test_trsm = mx.sym.linalg_trsm(data1,data2,alpha = 7)
+    test_trsm = mx.sym.linalg.trsm(data1,data2,alpha = 7)
     check_symbolic_forward(test_trsm, [trian_in,data_in], [ones])
     if grad_check == 1:
       check_numeric_gradient(test_trsm, [trian_in,data_in], atol = 0.02, rtol = 2.0)
     # test trmm
     trian_in = np.divide(ones,trian_in)
-    test_trmm = mx.sym.linalg_trmm(data1,data2,alpha = 7, transpose = 1, rightside = 1)
+    test_trmm = mx.sym.linalg.trmm(data1,data2,alpha = 7, transpose = 1, rightside = 1)
     check_symbolic_forward(test_trmm, [trian_in,data_in], [ones])
     if grad_check == 1:
       check_numeric_gradient(test_trmm, [trian_in,data_in], atol = 0.02, rtol = 2.0)
     # test sumlogdiag
     res_sumlogdiag = np.reshape(np.log(data_in),(4,4))
-    test_sumlogdiag = mx.sym.linalg_sumlogdiag(data1)
+    test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
     check_symbolic_forward(test_sumlogdiag, [data_in], [res_sumlogdiag])
     if grad_check == 1:
       check_numeric_gradient(test_sumlogdiag, [data_in], atol = 0.01, rtol = 2.0)
@@ -3733,14 +3733,14 @@ def test_laop():
     if grad_check == 1:
       check_numeric_gradient(test_trsm, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
 
-    test_trsm2 = mx.sym.linalg_trsm(data1,data2,alpha = -2, rightside = 1, transpose = 1)
+    test_trsm2 = mx.sym.linalg.trsm(data1,data2,alpha = -2, rightside = 1, transpose = 1)
     r = -2*np.reshape(np.array(trian),(4,4))
     r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
     check_symbolic_forward(test_trsm2, [a,b], [r])
     if grad_check == 1:
       check_numeric_gradient(test_trsm2, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
 
-    test_trsm3 = mx.sym.linalg_trsm(data1,data2,alpha = 0.50, transpose = 1)
+    test_trsm3 = mx.sym.linalg.trsm(data1,data2,alpha = 0.50, transpose = 1)
     b = np.transpose(np.reshape(np.array(trian),(4,4)))
     b = np.reshape(np.tile(np.reshape(b,(16)),3),(3,1,4,4))
     r = 0.5*np.reshape(np.array(ident),(4,4))
@@ -3749,7 +3749,7 @@ def test_laop():
     if grad_check == 1:
       check_numeric_gradient(test_trsm3, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
 
-    test_trsm4 = mx.sym.linalg_trsm(data1,data2,alpha = -0.5, rightside = 1)
+    test_trsm4 = mx.sym.linalg.trsm(data1,data2,alpha = -0.5, rightside = 1)
     b = np.tile(np.array(trian),3)
     b = np.reshape(b,(3,1,4,4))
     r = -0.5*np.reshape(np.array(ident),(4,4))
@@ -3769,21 +3769,21 @@ def test_laop():
     if grad_check == 1:
       check_numeric_gradient(test_trmm, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
 
-    test_trmm2 = mx.sym.linalg_trmm(data1,data2,alpha = -2)
+    test_trmm2 = mx.sym.linalg.trmm(data1,data2,alpha = -2)
     r = -2*np.dot(np.reshape(np.array(trian),(4,4)),np.reshape(np.array(matrix),(4,4)))
     r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
     check_symbolic_forward(test_trmm2, [a,b], [r])
     if grad_check == 1:
       check_numeric_gradient(test_trmm2, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
 
-    test_trmm3 = mx.sym.linalg_trmm(data1,data2,rightside = 1)
+    test_trmm3 = mx.sym.linalg.trmm(data1,data2,rightside = 1)
     r = np.dot(np.reshape(np.array(matrix),(4,4)),np.reshape(np.array(trian),(4,4)))
     r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
     check_symbolic_forward(test_trmm3, [a,b], [r])
     if grad_check == 1:
       check_numeric_gradient(test_trmm3, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
 
-    test_trmm4 = mx.sym.linalg_trmm(data1,data2,alpha = 1.2,transpose = 1)
+    test_trmm4 = mx.sym.linalg.trmm(data1,data2,alpha = 1.2,transpose = 1)
     r = 1.2*np.dot(np.transpose(np.reshape(np.array(trian),(4,4))),np.reshape(np.array(matrix),(4,4)))
     r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
     check_symbolic_forward(test_trmm4, [a,b], [r])
