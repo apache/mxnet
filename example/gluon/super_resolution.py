@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import argparse, tarfile
 import math
@@ -125,7 +142,8 @@ def test(ctx):
 def train(epoch, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.collect_params().initialize(mx.init.Orthogonal(), ctx=ctx)
+    net.initialize(mx.init.Orthogonal(), ctx=ctx)
+    # re-initialize conv4's weight to be Orthogonal
     net.conv4.collect_params().initialize(mx.init.Orthogonal(scale=1), ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': opt.lr})
     loss = gluon.loss.L2Loss()
@@ -150,13 +168,13 @@ def train(epoch, ctx):
         print('training mse at epoch %d: %s=%f'%(i, name, acc))
         test(ctx)
 
-    net.collect_params().save('superres.params')
+    net.save_params('superres.params')
 
 def resolve(ctx):
     from PIL import Image
     if isinstance(ctx, list):
         ctx = [ctx[0]]
-    net.collect_params().load('superres.params', ctx=ctx)
+    net.load_params('superres.params', ctx=ctx)
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
     data = mx.nd.expand_dims(mx.nd.expand_dims(mx.nd.array(y), axis=0), axis=0)

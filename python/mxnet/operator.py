@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except
 """numpy interface for operators."""
@@ -9,7 +26,7 @@ from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call
+from .base import _LIB, check_call, MXCallbackList
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
@@ -577,15 +594,6 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-
-        class MXCallbackList(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp."""
-            _fields_ = [
-                ('num_callbacks', c_int),
-                ('callbacks', POINTER(CFUNCTYPE(c_int))),
-                ('contexts', POINTER(c_void_p))
-                ]
-
         fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
                                 POINTER(c_int), c_int, c_void_p)
         del_functype = CFUNCTYPE(c_int, c_void_p)
@@ -626,9 +634,15 @@ def register(reg_name):
                         ishape, oshape, ashape = ret
                     else:
                         raise AssertionError("infer_shape must return 2 or 3 lists")
-                    assert len(oshape) == n_out
-                    assert len(ishape) == n_in
-                    assert len(ashape) == n_aux
+                    assert len(oshape) == n_out, \
+                        "InferShape Error: expecting %d entries in returned output " \
+                        "shapes, got %d."%(n_out, len(oshape))
+                    assert len(ishape) == n_in, \
+                        "InferShape Error: expecting %d entries in returned input " \
+                        "shapes, got %d."%(n_in, len(ishape))
+                    assert len(ashape) == n_aux, \
+                        "InferShape Error: expecting %d entries in returned aux state " \
+                        "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
                         tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
@@ -657,9 +671,15 @@ def register(reg_name):
                         itype, otype, atype = ret
                     else:
                         raise AssertionError("infer_type must return 2 or 3 lists")
-                    assert len(otype) == n_out
-                    assert len(itype) == n_in
-                    assert len(atype) == n_aux
+                    assert len(otype) == n_out, \
+                        "InferType Error: expecting %d entries in returned output " \
+                        "shapes, got %d."%(n_out, len(otype))
+                    assert len(itype) == n_in, \
+                        "InferType Error: expecting %d entries in returned input " \
+                        "shapes, got %d."%(n_in, len(itype))
+                    assert len(atype) == n_aux, \
+                        "InferType Error: expecting %d entries in returned aux state " \
+                        "shapes, got %d."%(n_aux, len(atype))
                     rtype = list(itype) + list(otype) + list(atype)
                     for i, dtype in enumerate(rtype):
                         tensor_types[i] = _DTYPE_NP_TO_MX[dtype]

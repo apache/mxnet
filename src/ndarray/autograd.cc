@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2017 by Contributors
  * \file autograd.cc
  * \brief Implementation of AutogradRuntime module.
  */
@@ -11,6 +29,7 @@
 #include <iostream>
 #include "../executor/graph_executor.h"
 #include "./autograd.h"
+#include "../c_api/c_api_common.h"
 
 namespace mxnet {
 namespace autograd {
@@ -23,9 +42,11 @@ using nnvm::NodeEntryMap;
 using exec::GraphExecutor;
 
 #if DMLC_CXX11_THREAD_LOCAL
-thread_local bool AutogradRuntime::is_train_;
+thread_local bool AutogradRuntime::is_train_ = false;
+thread_local bool AutogradRuntime::is_recording_ = false;
 #else
-MX_THREAD_LOCAL bool AutogradRuntime::is_train_;
+MX_THREAD_LOCAL bool AutogradRuntime::is_train_ = false;
+MX_THREAD_LOCAL bool AutogradRuntime::is_recording_ = false;
 #endif
 
 template<typename FVisit>
@@ -62,36 +83,23 @@ void AutogradRuntime::MarkVariables(
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
 
-    AGNodeEntry e{AGNode::Create(Node::Create()), 0, 0};
+    AGNodeEntry e{
+      AGNode::Create(
+        nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node), 0, 0};
     variables[i]->entry_.clear();
     e.ag_node->outputs.emplace_back(*variables[i]);
 
-    AGNodeEntry ge{AGNode::Create(Node::Create()), 0, 0};
+    AGNodeEntry ge{
+      AGNode::Create(
+        nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node), 0, 0};
     gradients[i]->entry_.clear();
     ge.ag_node->outputs.emplace_back(*gradients[i]);
-    ge.ag_node->nn_node->attrs.name = "grad" + str_c;
     gradients[i]->entry_ = std::move(ge);
     e.ag_node->out_grads.emplace_back(*gradients[i]);
 
     e.ag_node->grad_req = static_cast<OpReqType>(grad_reqs[i]);
-    e.ag_node->nn_node->attrs.name = "var" + str_c;
     variables[i]->entry_ = std::move(e);  // assign last to prevent cyclic reference
   }
-}
-
-void AutogradRuntime::RecordImperativeFCompute(const nnvm::Op* op,
-                                               const nnvm::NodeAttrs& attrs,
-                                               std::vector<NDArray> *p_inputs,
-                                               std::vector<NDArray> *p_outputs) {
-  RecordOp(op, attrs, p_inputs, p_outputs, OpStatePtr());
-}
-
-void AutogradRuntime::RecordImperativeOperator(const OpStatePtr& state,
-                                               const nnvm::Op* op,
-                                               const nnvm::NodeAttrs& attrs,
-                                               std::vector<NDArray> *p_inputs,
-                                               std::vector<NDArray> *p_outputs) {
-  RecordOp(op, attrs, p_inputs, p_outputs, state);
 }
 
 std::shared_ptr<AutogradRuntime> AutogradRuntime::_GetSharedRef() {
@@ -104,51 +112,138 @@ AutogradRuntime* AutogradRuntime::Get() {
   return ptr;
 }
 
-AGNodePtr AutogradRuntime::RecordOp(const nnvm::Op* op,
-                                    const nnvm::NodeAttrs& attrs,
-                                    std::vector<NDArray> *p_inputs,
-                                    std::vector<NDArray> *p_outputs,
-                                    const OpStatePtr& state) {
+void AutogradRuntime::GetBackwardDependency(const nnvm::NodePtr& node,
+                                            uint32_t num_inputs, uint32_t num_outputs,
+                                            std::vector<bool> *p_save_inputs,
+                                            std::vector<bool> *p_save_outputs) {
+  static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
+  std::vector<bool>& save_inputs = *p_save_inputs;
+  std::vector<bool>& save_outputs = *p_save_outputs;
+  save_inputs.resize(num_inputs);
+  save_outputs.resize(num_outputs);
+  std::fill(save_inputs.begin(), save_inputs.end(), false);
+  std::fill(save_outputs.begin(), save_outputs.end(), false);
+
+  node->inputs.clear();
+  node->inputs.reserve(num_inputs);
+  for (uint32_t i = 0; i < num_inputs; ++i) {
+    node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
+  }
+
+  if (fgradient.count(node->op())) {
+    std::vector<NodeEntry> ograd_entries;
+    ograd_entries.reserve(num_outputs);
+    for (uint32_t i = 0; i < num_outputs; ++i) {
+      ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
+    }
+    auto igrad_entries = fgradient[node->op()](node, ograd_entries);
+    for (const auto& i : igrad_entries) {
+      if (i.node == nullptr && i.version == 0) {
+        save_inputs[i.index] = true;
+      } else if (i.node == node) {
+        save_outputs[i.index] = true;
+      }
+    }
+    DFSVisit(igrad_entries, [&](const NodePtr& gnode) {
+        if (!gnode || gnode == node) return;
+        for (const auto& i : gnode->inputs) {
+          if (i.node == nullptr && i.version == 0) {
+            save_inputs[i.index] = true;
+          } else if (i.node == node) {
+            save_outputs[i.index] = true;
+          }
+        }
+      });
+  }
+}
+
+void AutogradRuntime::RecordOp(nnvm::NodeAttrs&& attrs,
+                               std::vector<NDArray> *p_inputs,
+                               std::vector<NDArray> *p_outputs,
+                               const OpStatePtr& state,
+                               std::vector<bool>* p_save_inputs,
+                               std::vector<bool>* p_save_outputs) {
+  MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
   std::vector<NDArray>& inputs  = *p_inputs;
   std::vector<NDArray>& outputs = *p_outputs;
 
+  for (uint32_t i = 0; i < outputs.size(); ++i) {
+    CHECK(outputs[i].entry_.is_none())
+      << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
+      << "recording with autograd. "
+      << "Assigning to NDArrays that are already in a computational graph "
+      << "will cause undefined behavior when evaluating gradients. "
+      << "Please call backward first to clear the graph or do this out side of "
+      << "a record section. ";
+  }
+  bool need_grad = false;
+  for (const auto& i : inputs) {
+    if (!i.entry_.is_none()) {
+      need_grad = true;
+      break;
+    }
+  }
+  if (!need_grad) return;
+
   NodePtr nn_node = Node::Create();
-  nn_node->attrs = attrs;
+  nn_node->attrs = std::move(attrs);
   nn_node->attrs.name = "node_" + std::to_string(node_count_++);
+
+  if (p_save_inputs == nullptr) {
+    p_save_inputs = &(local_buff->save_inputs);
+    p_save_outputs = &(local_buff->save_outputs);
+    GetBackwardDependency(
+        nn_node, inputs.size(), outputs.size(), p_save_inputs, p_save_outputs);
+  } else {
+    nn_node->inputs.resize(inputs.size());
+  }
+
+  std::vector<bool>& save_inputs = *p_save_inputs;
+  std::vector<bool>& save_outputs = *p_save_outputs;
 
   AGNodePtr ag_node = AGNode::Create(nn_node);
   ag_node->state = state;
 
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (inputs[i].entry_.is_none()) {
-      AGNodeEntry e{AGNode::Create(Node::Create()), 0, 0};
-      e.ag_node->outputs.emplace_back(inputs[i]);
+      AGNodeEntry e{
+        AGNode::Create(
+          nnvm::Symbol::CreateVariable(
+            "null" + std::to_string(variable_count_++)).outputs[0].node), 0, 0};
+      if (save_inputs[i]) {
+        e.ag_node->outputs.emplace_back(inputs[i]);
+      } else {
+        // Put a dummy array here since it will not be used.
+        e.ag_node->outputs.emplace_back(
+            TBlob(nullptr, inputs[i].shape(), inputs[i].ctx().dev_mask(),
+                  inputs[i].dtype()), inputs[i].ctx().dev_id);
+      }
       e.ag_node->out_grads.emplace_back();
-      e.ag_node->nn_node->attrs.name = "var_" + std::to_string(variable_count_++);
       inputs[i].entry_ = std::move(e);  // assign last to prevent cyclic reference
     }
-    nn_node->inputs.push_back(inputs[i].entry_.nn_entry());
+    nn_node->inputs[i] = inputs[i].entry_.nn_entry();
     ag_node->inputs.push_back(inputs[i].entry_);
+    if (save_inputs[i]) {
+      inputs[i].entry_.ag_node->outputs[inputs[i].entry_.index] = inputs[i].Detach();
+    }
   }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
-    CHECK(outputs[i].entry_.is_none())
-      << "Inplace operation is not supported when recording with autograd. "
-      << "Assigning to NDArrays that are already in a computational graph "
-      << "will cause undefined behavior when evaluating gradients. "
-      << "Please call backward first to clear the graph or do this out side of "
-      << "a record section. ";
-    outputs[i].entry_.clear();
-    ag_node->outputs.push_back(outputs[i]);
+    if (save_outputs[i]) {
+      ag_node->outputs.emplace_back(outputs[i].Detach());
+    } else {
+      // Put a dummy array here since it will not be used.
+      ag_node->outputs.emplace_back(
+          TBlob(nullptr, outputs[i].shape(), outputs[i].ctx().dev_mask(),
+                outputs[i].dtype()), outputs[i].ctx().dev_id);
+    }
     outputs[i].entry_ = AGNodeEntry{ag_node, i, 0};
   }
-
-  return ag_node;
 }
 
 void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
                                       const std::vector<NDArray>& ograds,
-                                      bool retain_graph) {
+                                      bool retain_graph, bool is_train) {
   static auto& fmutate_inputs = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   std::vector<AGNodeEntry> heads;
   Symbol sym;
@@ -156,7 +251,7 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
   for (const auto& i : outputs) {
     CHECK(!i.entry_.is_none())
       << "Cannot differentiate node because it is not in a computational graph. "
-      << "You need to set is_training to true or use autograd.record() to save "
+      << "You need to set is_recording to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
     heads.emplace_back(i.entry_);
@@ -232,7 +327,11 @@ void AutogradRuntime::ComputeGradient(const std::vector<NDArray>& outputs,
       }
     }
 
-    exec->Backward(head_grads);
+    // std::stringstream os;
+    // exec->Print(os);
+    // LOG(INFO) << os.str();
+
+    exec->Backward(head_grads, is_train);
     delete exec;
   }
 

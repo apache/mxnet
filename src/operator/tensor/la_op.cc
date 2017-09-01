@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file la_op.cc
  * \brief CPU-Operators for advanced linear algebra.
  */
@@ -13,7 +31,8 @@ DMLC_REGISTER_PARAMETER(LaMatrixMacParam);
 DMLC_REGISTER_PARAMETER(LaMatrixMultParam);
 DMLC_REGISTER_PARAMETER(LaTriangMatrixMultParam);
 
-NNVM_REGISTER_OP(linalg_gemm)
+NNVM_REGISTER_OP(_linalg_gemm)
+.add_alias("linalg_gemm")
 .describe(R"code(Performs general matrix multiplication and accumulation.
 Input are three tensors *A*, *B*, *C* each of dimension *n >= 2* and each
 having the same shape on the leading *n-2* dimensions. For every *n-2* dimensional index *i* let
@@ -36,14 +55,14 @@ Examples::
    A = [[1.0, 1.0], [1.0, 1.0]]
    B = [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]
    C = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
-   linalg_gemm(A, B, C, transpose_b = 1, alpha = 2.0 , beta = 10.0)
+   gemm(A, B, C, transpose_b = 1, alpha = 2.0 , beta = 10.0)
            = [[14.0, 14.0, 14.0], [14.0, 14.0, 14.0]]
 
    // Batch matrix multiply-add
    A = [[[1.0, 1.0]], [[0.1, 0.1]]]
    B = [[[1.0, 1.0]], [[0.1, 0.1]]]
    C = [[[10.0]], [[0.01]]]
-   linalg_gemm(A, B, C, transpose_b = 1, alpha = 2.0 , beta = 10.0)
+   gemm(A, B, C, transpose_b = 1, alpha = 2.0 , beta = 10.0)
            = [[[104.0]], [[0.14]]]
 )code" ADD_FILELINE)
 .set_num_inputs(3)
@@ -67,13 +86,14 @@ NNVM_REGISTER_OP(_backward_linalg_gemm)
 .set_num_outputs(3)
 .set_attr_parser(ParamParser<LaMatrixMacParam>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{1, 0}, {2, 1}, {3, 2}}; })
+  { return std::vector<std::pair<int, int> >{{2, 1}, {3, 2}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 3, gemm_backward>);
 
-NNVM_REGISTER_OP(linalg_gemm2)
+NNVM_REGISTER_OP(_linalg_gemm2)
+.add_alias("linalg_gemm2")
 .describe(R"code(Performs general matrix multiplication.
 Input are two tensors *A*, *B* each of dimension *n >= 2* and each
 having the same shape on the leading *n-2* dimensions. For every *n-2* dimensional index *i* let
@@ -95,13 +115,13 @@ Examples::
    // Single matrix multiply
    A = [[1.0, 1.0], [1.0, 1.0]]
    B = [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]
-   linalg_gemm2(A, B, transpose_b = 1, alpha = 2.0)
+   gemm2(A, B, transpose_b = 1, alpha = 2.0)
             = [[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]]
 
    // Batch matrix multiply
    A = [[[1.0, 1.0]], [[0.1, 0.1]]]
    B = [[[1.0, 1.0]], [[0.1, 0.1]]]
-   linalg_gemm2(A, B, transpose_b = 1, alpha = 2.0 )
+   gemm2(A, B, transpose_b = 1, alpha = 2.0 )
            = [[[4.0]], [[0.04 ]]]
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -122,13 +142,14 @@ NNVM_REGISTER_OP(_backward_linalg_gemm2)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<LaMatrixMultParam>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{1, 0}, {2, 1}}; })
+  { return std::vector<std::pair<int, int> >{{2, 1}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 2, gemm2_backward>);
 
-NNVM_REGISTER_OP(linalg_potrf)
+NNVM_REGISTER_OP(_linalg_potrf)
+.add_alias("linalg_potrf")
 .describe(R"code(Performs Cholesky factorization of a symmetric positive-definite matrix.
 Input is a tensor *A* of dimension *n >= 2*. For every *n-2* dimensional index *i* let
 *A*\ :sub:`i`\  be the matrix given by the last *2* dimensions.
@@ -151,11 +172,11 @@ Examples::
 
    // Single matrix factorization
    A = [[4.0, 1.0], [1.0, 4.25]]
-   linalg_potrf(A) = [[2.0, 0], [0.5, 2.0]]
+   potrf(A) = [[2.0, 0], [0.5, 2.0]]
 
    // Batch matrix factorization
    A = [[[4.0, 1.0], [1.0, 4.25]], [[16.0, 4.0], [4.0, 17.0]]]
-   linalg_potrf(A) = [[[2.0, 0], [0.5, 2.0]], [[4.0, 0], [1.0, 4.0]]]
+   potrf(A) = [[[2.0, 0], [0.5, 2.0]], [[4.0, 0], [1.0, 4.0]]]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -180,7 +201,8 @@ NNVM_REGISTER_OP(_backward_linalg_potrf)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, potrf_backward>);
 
 
-NNVM_REGISTER_OP(linalg_potri)
+NNVM_REGISTER_OP(_linalg_potri)
+.add_alias("linalg_potri")
 .describe(R"code(Performs matrix inversion from a Cholesky factorization.
 Input is a tensor *A* of dimension *n >= 2*. For every *n-2* dimensional index *i* let
 *A*\ :sub:`i`\  be the matrix given by the last *2* dimensions.
@@ -202,11 +224,11 @@ Examples::
 
    // Single matrix inverse
    A = [[2.0, 0], [0.5, 2.0]]
-   linalg_potri(A) = [[0.26563, -0.0625], [-0.0625, 0.25]]
+   potri(A) = [[0.26563, -0.0625], [-0.0625, 0.25]]
 
    // Batch matrix inverse
    A = [[[2.0, 0], [0.5, 2.0]], [[4.0, 0], [1.0, 4.0]]]
-   linalg_potri(A) = [[[0.26563, -0.0625], [-0.0625, 0.25]],
+   potri(A) = [[[0.26563, -0.0625], [-0.0625, 0.25]],
                   [[0.06641, -0.01562], [-0.01562, 0,0625]]]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -229,7 +251,8 @@ NNVM_REGISTER_OP(_backward_linalg_potri)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 1, potri_backward>);
 
-NNVM_REGISTER_OP(linalg_trmm)
+NNVM_REGISTER_OP(_linalg_trmm)
+.add_alias("linalg_trmm")
 .describe(R"code(Performs multiplication with a triangular matrix.
 Input are two tensors *A*, *B* each of dimension *n >= 2* and each
 having the same shape on the leading *n-2* dimensions. For every *n-2* dimensional index *i* let
@@ -257,12 +280,12 @@ Examples::
    // Single matrix multiply
    A = [[1.0, 0], [1.0, 1.0]]
    B = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
-   linalg_trmm(A, B, alpha = 2.0) = [[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]]
+   trmm(A, B, alpha = 2.0) = [[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]]
 
    // Batch matrix multiply
    A = [[[1.0, 0], [1.0, 1.0]], [[1.0, 0], [1.0, 1.0]]]
    B = [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]], [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]]
-   linalg_trmm(A, B, alpha = 2.0 ) = [[[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]],
+   trmm(A, B, alpha = 2.0 ) = [[[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]],
                                   [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0]]]
 
 )code" ADD_FILELINE)
@@ -292,8 +315,9 @@ NNVM_REGISTER_OP(_backward_linalg_trmm)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 2, trmm_backward>);
 
-NNVM_REGISTER_OP(linalg_trsm)
-.describe(R"code(Solves matrix equations involving a triangular matrix. 
+NNVM_REGISTER_OP(_linalg_trsm)
+.add_alias("linalg_trsm")
+.describe(R"code(Solves matrix equations involving a triangular matrix.
 Input are two tensors *A*, *B* each of dimension *n >= 2* and each
 having the same shape on the leading *n-2* dimensions. For every *n-2* dimensional index *i* let
 *A*\ :sub:`i`\ , *B*\ :sub:`i`\  be the matrices given by the last *2* dimensions.
@@ -320,13 +344,13 @@ Examples::
    // Single matrix solve
    A = [[1.0, 0], [1.0, 1.0]]
    B = [[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]]
-   linalg_trsm(A, B, alpha = 0.5) = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
+   trsm(A, B, alpha = 0.5) = [[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]
 
    // Batch matrix solve
    A = [[[1.0, 0], [1.0, 1.0]], [[1.0, 0], [1.0, 1.0]]]
    B = [[[2.0, 2.0, 2.0], [4.0, 4.0, 4.0]],
         [[4.0, 4.0, 4.0], [8.0, 8.0, 8.0]]]
-   linalg_trsm(A, B, alpha = 0.5 ) = [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
+   trsm(A, B, alpha = 0.5 ) = [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]],
                                   [[2.0, 2.0, 2.0 ], [2.0, 2.0, 2.0]]]
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -349,13 +373,14 @@ NNVM_REGISTER_OP(_backward_linalg_trsm)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
-  { return std::vector<std::pair<int, int> >{{0, 1}}; })
+  { return std::vector<std::pair<int, int> >{{0, 1}, {1, 0}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 2, trsm_backward>);
 
-NNVM_REGISTER_OP(linalg_sumlogdiag)
+NNVM_REGISTER_OP(_linalg_sumlogdiag)
+.add_alias("linalg_sumlogdiag")
 .describe(R"code(Computes the sum of the logarithms of all diagonal elements in a matrix.
 Input is a tensor *A* of dimension *n >= 2*. For every *n-2* dimensional index *i* let
 *A*\ :sub:`i`\  be the matrix given by the last *2* dimensions.
@@ -371,11 +396,11 @@ Examples::
 
    // Single matrix reduction
    A = [[1.0, 1.0], [1.0, 7.0]]
-   linalg_sumlogdiag(A) = [1.9459]
+   sumlogdiag(A) = [1.9459]
 
    // Batch matrix reduction
    A = [[[1.0, 1.0], [1.0, 7.0]], [[3.0, 0], [0, 17.0]]]
-   linalg_sumlogdiag(A) = [1.9459, 3.9318]
+   sumlogdiag(A) = [1.9459, 3.9318]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -383,7 +408,7 @@ Examples::
   { return std::vector<std::string>{"A"}; } )
 .set_attr<nnvm::FInferShape>("FInferShape", LaReduceShape<2>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", LaReduceForward<cpu, 2, sumlogdiag>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, sumlogdiag>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_sumlogdiag"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrices");
 
@@ -393,7 +418,7 @@ NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", LaReduceBackward<cpu, 2, sumlogdiag_backward>);
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
 }  // namespace op
 }  // namespace mxnet

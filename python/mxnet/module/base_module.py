@@ -1,5 +1,21 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
-# pylint: disable=too-many-lines
 """`BaseModule` defines an API for modules."""
 
 import time
@@ -13,23 +29,7 @@ from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
 from ..io import DataDesc
-
-
-def _as_list(obj):
-    """A utility function that treat the argument as a list.
-
-    Parameters
-    ----------
-    obj : object
-
-    Returns
-    -------
-    If `obj` is a list, return it. Otherwise, return `[obj]` as a single-element list.
-    """
-    if isinstance(obj, list):
-        return obj
-    else:
-        return [obj]
+from ..base import _as_list
 
 
 def _check_input_names(symbol, names, typename, throw):
@@ -75,43 +75,6 @@ def _parse_data_desc(data_names, label_names, data_shapes, label_shapes):
     else:
         _check_names_match(label_names, [], 'label', False)
     return data_shapes, label_shapes
-
-
-def _parse_metric(sym, metrics):
-    output_names = []
-    if not metrics:
-        metrics = []
-    elif isinstance(metrics, (str, metric.EvalMetric)):
-        metrics = [metric.create(metrics)]
-    else:
-        metrics = [metric.create(i) for i in metrics]
-
-    sym_metrics = []
-    loss_metrics = []
-    for i in sym:
-        tag = i.attr('__output__')
-        if tag is None or tag == 'pred':
-            output_names.append(i.list_outputs()[0])
-        elif tag == 'loss':
-            name = i.list_outputs()[0]
-            loss_metrics.append(
-                metric.Loss(name=name, output_names=[name],
-                            label_names=[]))
-
-        str_metric = i.attr('__metric__')
-        if str_metric:
-            sym_metrics.append(metric.create(str_metric))
-
-    for m in metrics:
-        m.output_names = output_names
-    metrics += sym_metrics
-    metrics += loss_metrics
-    if len(metrics) > 1:
-        return metric.CompositeEvalMetric(metrics)
-    elif len(metrics) == 1:
-        return metrics[0]
-    else:
-        return None
 
 
 class BaseModule(object):
@@ -228,7 +191,7 @@ class BaseModule(object):
         self.forward(data_batch, is_train=True)
         self.backward()
 
-    def score(self, eval_data, eval_metric=None, num_batch=None, batch_end_callback=None,
+    def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
               score_end_callback=None,
               reset=True, epoch=0):
         """Runs prediction on ``eval_data`` and evaluates the performance according to
@@ -268,7 +231,8 @@ class BaseModule(object):
         if reset:
             eval_data.reset()
 
-        eval_metric = _parse_metric(self.symbol, eval_metric)
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
 
         eval_metric.reset()
         actual_num_batch = 0
@@ -409,7 +373,7 @@ class BaseModule(object):
 
         return output_list
 
-    def fit(self, train_data, eval_data=None, eval_metric=None,
+    def fit(self, train_data, eval_data=None, eval_metric='acc',
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_end_callback=None,
@@ -503,10 +467,8 @@ class BaseModule(object):
 
         if validation_metric is None:
             validation_metric = eval_metric
-        eval_metric = _parse_metric(self.symbol, eval_metric)
-        if eval_metric is None:
-            eval_metric = metric.create('acc')
-            validation_metric = 'acc'
+        if not isinstance(eval_metric, metric.EvalMetric):
+            eval_metric = metric.create(eval_metric)
 
         ################################################################################
         # training loop
@@ -995,7 +957,8 @@ class BaseModule(object):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Installs and initializes optimizers.
+        """Installs and initializes optimizers, as well as initialize kvstore for
+           distributed training
 
         Parameters
         ----------

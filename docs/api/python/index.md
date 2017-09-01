@@ -28,10 +28,12 @@ imported by running:
    ndarray
    symbol
    module
+   autograd
    gluon
    rnn
    kvstore
    io
+   image
    optimization
    callback
    metric

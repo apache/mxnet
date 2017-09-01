@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  * Hua Zhang mz24cn@hotmail.com
  * The code implements C++ version charRNN for mxnet\example\rnn\char-rnn.ipynb with MXNet.cpp API.
  * The generated params file is compatiable with python version.
@@ -451,6 +469,8 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
   mx_float learning_rate = 0.0002;
   mx_float weight_decay = 0.000002;
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  opt->SetParam("lr", learning_rate)
+     ->SetParam("wd", weight_decay);
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)
 //  ->SetParam("clip_gradient", 10);
 
@@ -470,7 +490,10 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
+
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();
@@ -547,7 +570,9 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
 
       exe->Forward(true);
       exe->Backward();
-      exe->UpdateAll(opt, learning_rate, weight_decay);
+      for (size_t i = 0; i < exe->arg_arrays.size(); ++i) {
+        opt->Update(i, exe->arg_arrays[i], exe->grad_arrays[i]);
+      }
       NDArray::WaitAll();
     }
     auto toc = chrono::system_clock::now();

@@ -929,16 +929,77 @@ object Symbol {
   }
 
   /**
+   * Returns a new symbol of given shape and type, filled with zeros.
+   */
+  def zeros(shape: Shape, dType: DType = Base.MX_REAL_TYPE, ctx: Context = null): Symbol = {
+    val params = Map("shape" -> shape.toString, "dtype" -> dType.toString())
+    val fParams = if (ctx == null) params else params ++ Map("ctx" -> ctx.toString)
+    createSymbolGeneral("_zeros", null, null, Array.empty[Symbol], fParams)
+  }
+
+  /**
+   * Returns a new symbol of given shape and type, filled with ones.
+   */
+  def ones(shape: Shape, dType: DType = Base.MX_REAL_TYPE, ctx: Context = null): Symbol = {
+    val params = Map("shape" -> shape.toString, "dtype" -> dType.toString())
+    val fParams = if (ctx == null) params else params ++ Map("ctx" -> ctx.toString)
+    createSymbolGeneral("_ones", null, null, Array.empty[Symbol], fParams)
+  }
+
+  /**
+   * Returns evenly spaced values within a given interval.
+   * @param start Start of interval. The default start value is 0.
+   * @param stop End of interval.
+   * @param step Spacing between values. The default step size is 1.
+   * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
+   * @return Symbol The created Symbol.
+   */
+  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
+    repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
+    val params = Map("start" -> start, "step" -> step,
+      "repeat" -> repeat, "dtype" -> dType.toString())
+    val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
+    createSymbolGeneral("_arange", name, null, Array.empty[Symbol], fParams)
+  }
+
+  // TODO(depeng) support setting initialization pattern
+  /**
    * Create a symbolic variable with specified name.
    * @param name Name of the variable.
    * @param attr Additional attributes to set on the variable.
-   * @return The created variable symbol.
+   * @param shape
+   *          The shape of a variable. If specified, this will be used during the shape inference.
+   *          If one has specified a different shape for this variable using a keyword argument
+   *          when calling shape inference, this shape information will be ignored.
+   * @param lrMult The learning rate multiplier for input variable.
+   * @param wdMult Weight decay multiplier for input variable.
+   * @param dType The dtype for input variable. If not specified, this value will be inferred.
+   * @param init Initializer for this variable to (optionally) override the default initializer.
+   * @param kwargs Additional attributes which must start and end with double underscores.
+   * @return A symbol corresponding to an input to the computation graph.
    */
-  def Variable(name: String, attr: Map[String, String] = null): Symbol = {
+  def Variable(name: String, attr: Map[String, String] = null, shape: Shape = null,
+      lrMult: Option[Float] = None, wdMult: Option[Float] = None, dType: DType = null,
+      kwargs: Map[String, String] = Map.empty[String, String]): Symbol = {
     val handle = new SymbolHandleRef
     checkCall(_LIB.mxSymbolCreateVariable(name, handle))
     val sym = new Symbol(handle.value)
-    sym.setAttr(AttrScope.current.get(Option(attr)))
+    val tmpAttr = scala.collection.mutable.Map[String, String]()
+    if (shape != null) tmpAttr += "__shape__" -> shape.toString
+    if (lrMult != None) tmpAttr += "__lr_mult__" -> lrMult.get.toString
+    if (wdMult != None) tmpAttr += "__wd_mult__" -> wdMult.get.toString
+    if (dType != null) tmpAttr += "__dtype__" -> dType.id.toString
+    for ((k, v) <- kwargs) {
+      require(k.startsWith("__") && k.endsWith("__"),
+        s"Attribute name=$k is not supported. " +
+        "Additional attributes must start and end with double underscores, e.g, __yourattr__")
+      tmpAttr += k -> v
+    }
+    if (attr != null) {
+      attr.foreach { case (k, v) => tmpAttr += k -> v }
+    }
+    sym.setAttr(AttrScope.current.get(Option(tmpAttr.toMap)))
     sym
   }
 

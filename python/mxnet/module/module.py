@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
 # pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
@@ -8,8 +25,6 @@ import logging
 import warnings
 
 from .. import context as ctx
-from .. import ndarray as nd
-from .. import symbol as _sym
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
@@ -17,6 +32,7 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 from ..io import DataDesc
+from ..ndarray import zeros
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -58,7 +74,6 @@ class Module(BaseModule):
         self._work_load_list = work_load_list
 
         self._symbol = symbol
-        self._pred_symbol = _sym.Group([i for i in symbol if i.attr('__output__') != 'loss'])
 
         data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
@@ -373,23 +388,26 @@ class Module(BaseModule):
         self.binded = True
         self._grad_req = grad_req
 
-        if not for_training and self._label_names and not label_shapes:
-            symbol = self._pred_symbol
-            self._data_shapes, self._label_shapes = _parse_data_desc(
-                self.data_names, [], data_shapes, [])
+        if not for_training:
+            assert not inputs_need_grad
         else:
-            symbol = self._symbol
-            self._data_shapes, self._label_shapes = _parse_data_desc(
-                self.data_names, self.label_names, data_shapes, label_shapes)
+            pass
+            # this is not True, as some module might not contains a loss function
+            # that consumes the labels
+            # assert label_shapes is not None
+
+        self._data_shapes, self._label_shapes = _parse_data_desc(
+            self.data_names, self.label_names, data_shapes, label_shapes)
 
         if shared_module is not None:
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
+            assert len(shared_group.execs) == len(self._context)
         else:
             shared_group = None
 
-        self._exec_group = DataParallelExecutorGroup(symbol, self._context,
+        self._exec_group = DataParallelExecutorGroup(self._symbol, self._context,
                                                      self._work_load_list, self._data_shapes,
                                                      self._label_shapes, self._param_names,
                                                      for_training, inputs_need_grad,
@@ -409,20 +427,19 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(shape=x[0].shape, dtype=x[0].dtype, stype=x[0].stype)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
             aux_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(x[0].shape, dtype=x[0].dtype)
                 for x in self._exec_group.aux_arrays
             ]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
-
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshapes the module for new input shapes.
@@ -465,6 +482,7 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
+
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
 
@@ -554,11 +572,6 @@ class Module(BaseModule):
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
         """
         assert self.binded and self.params_initialized
-
-        # If start to inference, force rebind module.
-        if self._label_shapes and not data_batch.label:
-            raise RuntimeError("If you are trying to do inference, rebind module "
-                               "with 'force_rebind=True' and 'for_training=False'")
 
         curr_data_shapes = tuple(i.shape for i in self._data_shapes)
         new_data_shapes = tuple(i.shape for i in data_batch.data)

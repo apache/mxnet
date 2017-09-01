@@ -297,6 +297,7 @@ class DataParallelExecutorGroup private[module](
 
   private var batchSize: Int = -1
   private var slices: Array[(Int, Int)] = null
+  private var _defaultExecs: Array[Executor] = null
   private var execs: Array[Executor] = null
   private var dataArrays: Seq[Array[((Int, Int), NDArray)]] = null
   private var labelArrays: Option[Seq[Array[((Int, Int), NDArray)]]] = None
@@ -305,8 +306,8 @@ class DataParallelExecutorGroup private[module](
   private[module] var auxArrays: IndexedSeq[Array[NDArray]] = null
   private var inputGradArrays: IndexedSeq[Array[NDArray]] = null
 
-  private val dataLayouts = decideSlices(dataShapes)
-  private val labelLayouts =
+  private var dataLayouts = decideSlices(dataShapes)
+  private var labelLayouts =
     // call it to make sure labels has the same batch size as data
     if (labelShapes != None) decideSlices(labelShapes.get)
     else null
@@ -349,12 +350,30 @@ class DataParallelExecutorGroup private[module](
    * @param dataShapes DataDesc for input data.
    * @param labelShapes DataDesc for input labels.
    * @param sharedGroup
+   * @param reshape
    */
   def bindExec(dataShapes: Seq[DataDesc], labelShapes: Option[Seq[DataDesc]],
-               sharedGroup: Option[DataParallelExecutorGroup]): Unit = {
-    execs = (0 until contexts.length).map(i =>
-      bindIthExec(i, dataShapes, labelShapes, sharedGroup)
-    ).toArray
+               sharedGroup: Option[DataParallelExecutorGroup], reshape: Boolean = false): Unit = {
+    this.batchSize = -1
+    dataLayouts = decideSlices(dataShapes)
+    labelLayouts = {
+      // call it to make sure labels has the same batch size as data
+      if (labelShapes != None) decideSlices(labelShapes.get)
+      else null
+    }
+    if (reshape) {
+      (0 until contexts.length).foreach { i =>
+        val dataShapesSliced = slicedShape(dataShapes, i, dataLayouts)
+        val labelShapesSliced = labelShapes.map(slicedShape(_, i, labelLayouts))
+        val inputShapes
+          = dataShapesSliced.toMap ++ labelShapesSliced.getOrElse(Map.empty[String, Shape])
+        execs(i) = _defaultExecs(i).reshape(allowUpSizing = true, kwargs = inputShapes)
+      }
+    } else {
+      execs = (0 until contexts.length).map(i =>
+        bindIthExec(i, dataShapes, labelShapes, sharedGroup)
+      ).toArray
+    }
 
     // convenient data structures
     dataArrays = dataShapes.map(dataDesc =>
@@ -400,12 +419,30 @@ class DataParallelExecutorGroup private[module](
   }
 
   /**
+   * Reshape executors.
+   * @param dataShapes
+   * @param labelShapes
+   */
+  def reshape(dataShapes: Seq[DataDesc], labelShapes: Option[Seq[DataDesc]]): Unit = {
+    if (!(dataShapes == this.dataShapes && labelShapes == this.labelShapes)) {
+      if (this._defaultExecs == null) {
+        this._defaultExecs = this.execs.map(x => x)
+      }
+      this.bindExec(dataShapes, labelShapes, None, reshape = true)
+    }
+  }
+
+  /**
    * Assign, i.e. copy parameters to all the executors.
    * @param argParams A dictionary of name to `NDArray` parameter mapping.
    * @param auxParams A dictionary of name to `NDArray` auxiliary variable mapping.
+   * @param allowExtra hether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
    */
-  def setParams(argParams: Map[String, NDArray], auxParams: Map[String, NDArray]): Unit = {
-    execs.foreach(_.copyParamsFrom(argParams, auxParams))
+  def setParams(argParams: Map[String, NDArray], auxParams: Map[String, NDArray],
+    allowExtra: Boolean = false): Unit = {
+    execs.foreach(_.copyParamsFrom(argParams, auxParams, allowExtraParams = allowExtra))
   }
 
   /**

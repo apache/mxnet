@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 from common import multi_layer_feature, multibox_layer
 
@@ -70,7 +87,7 @@ def get_symbol_train(network, num_classes, from_layers, num_filters, strides, pa
         num_classes, sizes=sizes, ratios=ratios, normalization=normalizations, \
         num_channels=num_filters, clip=False, interm_layer=0, steps=steps)
 
-    tmp = mx.contrib.symbol.MultiBoxTarget(
+    tmp = mx.symbol.contrib.MultiBoxTarget(
         *[anchor_boxes, label, cls_preds], overlap_threshold=.5, \
         ignore_label=-1, negative_mining_ratio=3, minimum_negative_samples=0, \
         negative_mining_thresh=.5, variances=(0.1, 0.1, 0.2, 0.2),
@@ -89,7 +106,7 @@ def get_symbol_train(network, num_classes, from_layers, num_filters, strides, pa
 
     # monitoring training status
     cls_label = mx.symbol.MakeLoss(data=cls_target, grad_scale=0, name="cls_label")
-    det = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
+    det = mx.symbol.contrib.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
         variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
     det = mx.symbol.MakeLoss(data=det, grad_scale=0, name="det_out")
@@ -160,7 +177,7 @@ def get_symbol(network, num_classes, from_layers, num_filters, sizes, ratios,
 
     cls_prob = mx.symbol.SoftmaxActivation(data=cls_preds, mode='channel', \
         name='cls_prob')
-    out = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
+    out = mx.symbol.contrib.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
         variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
     return out

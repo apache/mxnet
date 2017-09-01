@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  */
 #ifndef MXNET_ENGINE_STREAM_MANAGER_H_
 #define MXNET_ENGINE_STREAM_MANAGER_H_
@@ -59,7 +77,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
-            i = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
+            i = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
           }
           counter = 0;
         }
@@ -90,7 +108,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
       {
         std::lock_guard<std::mutex> lock{m_};
         if (gpu_io_streams_.at(ctx.dev_id) == nullptr) {
-          gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false);
+          gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
         }
       }
       ret = RunContext{ctx, gpu_io_streams_.at(ctx.dev_id)};

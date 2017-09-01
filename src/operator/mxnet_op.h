@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file mxnet_op.h
  * \brief
  * \author Junyuan Xie
@@ -7,8 +25,12 @@
 #ifndef MXNET_OPERATOR_MXNET_OP_H_
 #define MXNET_OPERATOR_MXNET_OP_H_
 
+#include <dmlc/omp.h>
 #include <mxnet/base.h>
 #include <algorithm>
+#ifdef __CUDACC__
+#include "../common/cuda_utils.h"
+#endif  // __CUDACC__
 
 namespace mxnet {
 namespace op {
@@ -22,6 +44,8 @@ const float PI = 3.14159265358979323846;
 using std::isnan;
 #endif
 
+template<typename xpu>
+int get_num_threads(const int N);
 
 #ifdef __CUDACC__
 #define CUDA_KERNEL_LOOP(i, n) \
@@ -29,6 +53,13 @@ using std::isnan;
       i < (n); \
       i += blockDim.x * gridDim.x)
 
+inline cudaDeviceProp cuda_get_device_prop() {
+  int device;
+  CUDA_CALL(cudaGetDevice(&device));
+  cudaDeviceProp deviceProp;
+  CUDA_CALL(cudaGetDeviceProperties(&deviceProp, device));
+  return deviceProp;
+}
 
 /*!
  * \brief Get the number of blocks for cuda kernel given N
@@ -37,8 +68,18 @@ inline int cuda_get_num_blocks(const int N) {
   using namespace mshadow::cuda;
   return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
 }
+
+template<>
+inline int get_num_threads<gpu>(const int N) {
+  using namespace mshadow::cuda;
+  return kBaseThreadNum * cuda_get_num_blocks(N);
+}
 #endif  // __CUDACC__
 
+template<>
+inline int get_num_threads<cpu>(const int N) {
+  return omp_get_max_threads();
+}
 
 /*! \brief operator request type switch */
 #define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \
@@ -197,7 +238,6 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
     OP::Map(i, args...);
   }
 }
-
 
 template<typename OP>
 struct Kernel<OP, gpu> {

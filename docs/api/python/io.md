@@ -35,7 +35,7 @@ Let's see a complete example of how to use data iterator in model training.
 >>> data = mx.sym.Variable('data')
 >>> label = mx.sym.Variable('softmax_label')
 >>> fullc = mx.sym.FullyConnected(data=data, num_hidden=1)
->>> loss = mx.sym.SoftmaxOutput(data=data, label=label)
+>>> loss = mx.sym.SoftmaxOutput(data=fullc, label=label)
 >>> mod = mx.mod.Module(loss, data_names=['data'], label_names=['softmax_label'])
 >>> mod.bind(data_shapes=nd_iter.provide_data, label_shapes=nd_iter.provide_label)
 >>> mod.fit(nd_iter, num_epoch=2)
@@ -56,12 +56,14 @@ A detailed tutorial is available at
 
     io.NDArrayIter
     io.CSVIter
+    io.LibSVMIter
     io.ImageRecordIter
     io.ImageRecordUInt8Iter
     io.MNISTIter
     recordio.MXRecordIO
     recordio.MXIndexedRecordIO
     image.ImageIter
+    image.ImageDetIter
 ```
 
 ## Helper classes and functions
@@ -79,33 +81,6 @@ Data structures and other iterators provided in the ``mxnet.io`` packages.
     io.ResizeIter
     io.PrefetchingIter
     io.MXDataIter
-```
-
-A list of image modification functions provided by ``mxnet.image``.
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    image.imdecode
-    image.scale_down
-    image.resize_short
-    image.fixed_crop
-    image.random_crop
-    image.center_crop
-    image.color_normalize
-    image.random_size_crop
-    image.ResizeAug
-    image.RandomCropAug
-    image.RandomSizedCropAug
-    image.CenterCropAug
-    image.RandomOrderAug
-    image.ColorJitterAug
-    image.LightingAug
-    image.ColorNormalizeAug
-    image.HorizontalFlipAug
-    image.CastAug
-    image.CreateAugmenter
 ```
 
 Functions to read and write RecordIO files.
@@ -178,8 +153,6 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 
 ```eval_rst
 .. automodule:: mxnet.io
-    :members:
-.. automodule:: mxnet.image
     :members:
 .. automodule:: mxnet.recordio
     :members:

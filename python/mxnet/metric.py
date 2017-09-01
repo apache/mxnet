@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=no-member, too-many-lines
 
@@ -13,19 +30,15 @@ from . import ndarray
 from . import registry
 
 
-def _check_shapes_equal(labels, preds):
-    label_shape, pred_shape = labels.shape, preds.shape
+def check_label_shapes(labels, preds, shape=0):
+    if shape == 0:
+        label_shape, pred_shape = len(labels), len(preds)
+    else:
+        label_shape, pred_shape = labels.shape, preds.shape
 
     if label_shape != pred_shape:
         raise ValueError("Shape of labels {} does not match shape of "
                          "predictions {}".format(label_shape, pred_shape))
-
-def _check_lengths_equal(labels, preds):
-    label_len, pred_len = len(labels), len(preds)
-
-    if label_len != pred_len:
-        raise ValueError("Length of labels {} does not match length of "
-                         "predictions {}".format(label_len, pred_len))
 
 
 class EvalMetric(object):
@@ -372,18 +385,18 @@ class Accuracy(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred_label in zip(labels, preds):
             if pred_label.shape != label.shape:
                 pred_label = ndarray.argmax(pred_label, axis=self.axis)
-            pred_label = pred_label.asnumpy().astype('int32')
-            label = label.asnumpy().astype('int32')
+            label = label.astype('int32')
+            pred_label = pred_label.astype('int32').as_in_context(label.context)
 
-            _check_lengths_equal(label, pred_label)
+            check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label.flat == label.flat).sum()
-            self.num_inst += len(pred_label.flat)
+            self.sum_metric += ndarray.sum(label == pred_label).asscalar()
+            self.num_inst += label.size
 
 
 @register
@@ -442,13 +455,13 @@ class TopKAccuracy(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred_label in zip(labels, preds):
             assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
             pred_label = numpy.argsort(pred_label.asnumpy().astype('float32'), axis=1)
             label = label.asnumpy().astype('int32')
-            _check_lengths_equal(label, pred_label)
+            check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
             if num_dims == 1:
@@ -516,14 +529,14 @@ class F1(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
             pred = pred.asnumpy()
             label = label.asnumpy().astype('int32')
             pred_label = numpy.argmax(pred, axis=1)
 
-            _check_lengths_equal(label, pred)
+            check_label_shapes(label, pred)
             if len(numpy.unique(label)) > 2:
                 raise ValueError("F1 currently only supports binary classification.")
 
@@ -629,7 +642,7 @@ class Perplexity(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        assert len(labels) == len(preds)
         loss = 0.
         num = 0
         for label, pred in zip(labels, preds):
@@ -707,10 +720,9 @@ class MAE(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
-            _check_shapes_equal(label, pred)
             label = label.asnumpy()
             pred = pred.asnumpy()
 
@@ -766,10 +778,9 @@ class MSE(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
-            _check_shapes_equal(label, pred)
             label = label.asnumpy()
             pred = pred.asnumpy()
 
@@ -825,10 +836,9 @@ class RMSE(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
-            _check_shapes_equal(label, pred)
             label = label.asnumpy()
             pred = pred.asnumpy()
 
@@ -844,10 +854,14 @@ class RMSE(EvalMetric):
 class CrossEntropy(EvalMetric):
     """Computes Cross Entropy loss.
 
-    The cross entropy is given by
+    The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
-        -y\\log \\hat{y} + (1-y)\\log (1-\\hat{y})
+       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
+
+    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
+    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
+    class :math:`k`.
 
     Parameters
     ----------
@@ -872,7 +886,7 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-8, name='cross-entropy',
+    def __init__(self, eps=1e-12, name='cross-entropy',
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, eps=eps,
@@ -890,10 +904,9 @@ class CrossEntropy(EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
-            _check_lengths_equal(label, pred)
             label = label.asnumpy()
             pred = pred.asnumpy()
 
@@ -903,6 +916,7 @@ class CrossEntropy(EvalMetric):
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
             self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += label.shape[0]
+
 
 @register
 @alias('pearsonr')
@@ -946,13 +960,12 @@ class PearsonCorrelation(EvalMetric):
         ----------
         labels : list of `NDArray`
             The labels of the data.
-
         preds : list of `NDArray`
             Predicted values.
         """
-        _check_lengths_equal(labels, preds)
+        check_label_shapes(labels, preds)
         for label, pred in zip(labels, preds):
-            _check_shapes_equal(label, pred)
+            check_label_shapes(label, pred, 1)
             label = label.asnumpy()
             pred = pred.asnumpy()
             self.sum_metric += numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
@@ -1064,7 +1077,7 @@ class CustomMetric(EvalMetric):
             Predicted values.
         """
         if not self._allow_extra_outputs:
-            _check_lengths_equal(labels, preds)
+            check_label_shapes(labels, preds)
 
         for pred, label in zip(preds, labels):
             label = label.asnumpy()

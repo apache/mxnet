@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
  * \brief Function definition of elementwise unary operators
  */
@@ -623,7 +641,7 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
 
   const TShape& ishape = inputs[0].shape_;
-  int axis = CheckAxis(param.axis.value(), ishape.ndim());
+  index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
   int leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];

@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file correlation.cc
  * \brief correlation op
  * \author Xu Dong
@@ -33,22 +51,23 @@ inline void CorrelationForward(const Tensor<cpu, 4, Dtype> &out,
   const int bchannels = data1.size(1);
   const int sumelems = kernel_size_ * kernel_size_ * bchannels;
   AddPad<Dtype>(data1, tmp1, pad_size_);
+  index_t top_channels_unsigned_ = static_cast<index_t>(top_channels_);
   AddPad<Dtype>(data2, tmp2, pad_size_);
   for (index_t i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
       for (index_t j = 0 ; j < static_cast<index_t>(top_width_); j++)
         for (index_t nbatch = 0 ; nbatch < bnum ; nbatch++) {
             int x1 = j*stride1_+max_displacement_;
             int y1 = i*stride1_+max_displacement_;
-            for (index_t top_channel = 0 ; top_channel < top_channels_ ; top_channel++) {
+            for (index_t top_channel = 0 ; top_channel < top_channels_unsigned_ ; top_channel++) {
               int s2o = (top_channel % neighborhood_grid_width_ -\
                          neighborhood_grid_radius_) * stride2_;
               int s2p = (top_channel / neighborhood_grid_width_ -\
                          neighborhood_grid_radius_) * stride2_;
               int x2 = x1 + s2o;
               int y2 = y1 + s2p;
-              for (index_t h = 0; h < kernel_size_; h++)
-                for (index_t w = 0; w < kernel_size_; w++)
-                  for (index_t channel = 0; channel < bchannels; channel++) {
+              for (index_t h = 0; h < static_cast<index_t>(kernel_size_); h++)
+                for (index_t w = 0; w < static_cast<index_t>(kernel_size_); w++)
+                  for (index_t channel = 0; channel < static_cast<index_t>(bchannels); channel++) {
                     if (is_multiply == true)
                         out[nbatch][top_channel][i][j] += \
                         tmp1[nbatch][y1+h][x1+w][channel]*tmp2[nbatch][y2+h][x2+w][channel];
@@ -76,9 +95,9 @@ inline void CorrelationBackward(const Tensor<cpu, 4, Dtype> &out_grad,
                                 int channels, int height, int width
                             ) {
   const float sumelems = kernel_size_ * kernel_size_ * channels;
-  for (int i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
-     for (int j = 0 ; j < static_cast<index_t>(top_width_); j++)
-        for (int nbatch = 0 ; nbatch < static_cast<index_t>(num) ; nbatch++) {
+  for (index_t i = 0 ; i < static_cast<index_t>(top_height_) ; i++)
+     for (index_t j = 0 ; j < static_cast<index_t>(top_width_); j++)
+        for (index_t nbatch = 0 ; nbatch < static_cast<index_t>(num) ; nbatch++) {
             int x1 = j*stride1_+max_displacement_;
             int y1 = i*stride1_+max_displacement_;
             for (int top_channel = 0 ; top_channel < top_channels_ ; top_channel++) {
@@ -136,9 +155,39 @@ Operator* CorrelationProp::CreateOperator(Context ctx) const {
 }
 DMLC_REGISTER_PARAMETER(CorrelationParam);
 MXNET_REGISTER_OP_PROPERTY(Correlation, CorrelationProp)
-.describe("Applies correlation to inputs.")
 .add_argument("data1", "NDArray-or-Symbol", "Input data1 to the correlation.")
 .add_argument("data2", "NDArray-or-Symbol", "Input data2 to the correlation.")
-.add_arguments(CorrelationParam::__FIELDS__());
+.add_arguments(CorrelationParam::__FIELDS__())
+.describe(R"code(Applies correlation to inputs.
+
+The correlation layer performs multiplicative patch comparisons between two feature maps.
+
+Given two multi-channel feature maps :math:`f_{1}, f_{2}`, with :math:`w`, :math:`h`, and :math:`c` being their width, height, and number of channels,
+the correlation layer lets the network compare each patch from :math:`f_{1}` with each patch from :math:`f_{2}`.
+
+For now we consider only a single comparison of two patches. The 'correlation' of two patches centered at :math:`x_{1}` in the first map and
+:math:`x_{2}` in the second map is then defined as:
+
+.. math::
+   c(x_{1}, x_{2}) = \sum_{o \in [-k,k] \times [-k,k]} <f_{1}(x_{1} + o), f_{2}(x_{2} + o)>
+
+for a square patch of size :math:`K:=2k+1`.
+
+Note that the equation above is identical to one step of a convolution in neural networks, but instead of convolving data with a filter, it convolves data with other
+data. For this reason, it has no training weights.
+
+Computing :math:`c(x_{1}, x_{2})` involves :math:`c * K^{2}` multiplications. Comparing all patch combinations involves :math:`w^{2}*h^{2}` such computations.
+
+Given a maximum displacement :math:`d`, for each location :math:`x_{1}` it computes correlations :math:`c(x_{1}, x_{2})` only in a neighborhood of size :math:`D:=2d+1`,
+by limiting the range of :math:`x_{2}`. We use strides :math:`s_{1}, s_{2}`, to quantize :math:`x_{1}` globally and to quantize :math:`x_{2}` within the neighborhood
+centered around :math:`x_{1}`.
+
+The final output is defined by the following expression:
+
+.. math::
+  out[n, q, i, j] = c(x_{i, j}, x_{q})
+
+where :math:`i` and :math:`j` enumerate spatial locations in :math:`f_{1}`, and :math:`q` denotes the :math:`q^{th}` neighborhood of :math:`x_{i,j}`.
+)code" ADD_FILELINE);
 }  // namespace op
 }  // namespace mxnet
