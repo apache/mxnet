@@ -266,6 +266,7 @@ class KernelEx<OP, cpu> : public mxnet_op::Kernel<OP, cpu> {
   }
 };
 
+#if MXNET_USE_CUDA == 1
 template<typename OP>
 class KernelEx<OP, gpu> : public mxnet_op::Kernel<OP, cpu> {
   template<KernelComplexity CountForOMP = kComplexityLow, typename ...Args>
@@ -273,6 +274,7 @@ class KernelEx<OP, gpu> : public mxnet_op::Kernel<OP, cpu> {
     mxnet_op::Kernel<OP, cpu>::Launch(s, N, args...);
   }
 };
+#endif  // MXNET_USE_CUDA == 1
 
 }  // namespace op
 }  // namespace mxnet
