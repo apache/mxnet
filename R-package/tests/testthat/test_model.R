@@ -4,7 +4,7 @@ source("get_data.R")
 
 context("models")
 
-if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+if (Sys.getenv("R_GPU_ENABLE") != "" && as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
   mx.ctx.default(new = mx.gpu())
   message("Using GPU for testing.")
 }
@@ -173,7 +173,7 @@ test_that("Fine-tune", {
 
 test_that("Matrix Factorization", {
   GetMovieLens()
-  DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
+  DF <- read.table("./data/ml-100k/u.data", header = FALSE, sep = "\t")
   names(DF) <- c("user", "item", "score", "time")
   max_user <- max(DF$user)
   max_item <- max(DF$item)
@@ -232,7 +232,7 @@ test_that("Matrix Factorization", {
   
   item_iter = mx.io.arrayiter(data = DF[, 2], label = DF[, 3], batch.size = k)
   
-  train_iter <- CustomIter$new(user_iter, item_iter)
+  train_iter <- CustomIter$methods::new(user_iter, item_iter)
   
   model <- mx.model.FeedForward.create(pred3, X = train_iter, ctx = mx.ctx.default(),
                                        num.round = 5, initializer = mx.init.uniform(0.07),

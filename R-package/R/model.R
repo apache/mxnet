@@ -123,13 +123,11 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
   output.names <- names(output.shape)
   #label_name <- arg_names[endsWith(arg_names, "label")]
   train.execs <- lapply(seq_len(ndevice), function(i) {
-    arg_lst <- list(symbol = symbol,
-                    ctx = ctx[[i]],
-                    grad.req = "write",
-                    fixed.param = fixed.param,
-                    input_slice[[i]]$shape,
-                    output_slice[[i]]$shape)
-    do.call(mx.simple.bind, arg_lst)
+        arg_lst <- list(symbol = symbol, ctx = ctx[[i]], grad.req = "write")
+        arg_lst <- append(arg_lst, input_slice[[i]]$shape)
+        arg_lst <- append(arg_lst, output_slice[[i]]$shape)
+        arg_lst[["fixed.param"]] = fixed.param
+        do.call(mx.simple.bind, arg_lst)
   })
   # set the parameters into executors
   for (texec in train.execs) {
@@ -589,23 +587,20 @@ predict.MXFeedForwardModel <- function(model, X, ctx = NULL, array.batch.size = 
 mx.model.load <- function(prefix, iteration) {
   symbol <- mx.symbol.load(path.expand(paste0(prefix, "-symbol.json")))
   save.dict <- mx.nd.load(path.expand(sprintf("%s-%04d.params", prefix, iteration)))
+  nms <- names(save.dict)
   
-  arg.index <- as.integer(mx.util.filter.null(lapply(seq_along(names(save.dict)), function(i) {
-    if (startsWith(names(save.dict)[[i]], "arg:")) i else NULL
-  })))
-  aux.index <- as.integer(mx.util.filter.null(lapply(seq_along(names(save.dict)), function(i) {
-    if (startsWith(names(save.dict)[[i]], "aux:")) i else NULL
-  })))
+  arg.index <- startsWith(nms, "arg:")
+  aux.index <- startsWith(nms, "aux:")
 
-  if (length(arg.index) != 0) {
+  if (any(arg.index)) {
     arg.params <- save.dict[arg.index]
-    names(arg.params) <- substr(names[arg.index], 5, nchar(names[arg.index]))
+    names(arg.params) <- substr(nms[arg.index], 5, nchar(nms[arg.index]))
   } else {
     arg.params <- list()
   }
-  if (length(aux.index) != 0) {
+  if (any(aux.index)) {
     aux.params <- save.dict[aux.index]
-    names(aux.params) <- substr(names[aux.index], 5, nchar(names[aux.index]))
+    names(aux.params) <- substr(nms[aux.index], 5, nchar(nms[aux.index]))
   } else {
     aux.params <- list()
   }
