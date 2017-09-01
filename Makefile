@@ -117,7 +117,7 @@ ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
-	CFLAGS += -I$(ROOTDIR)/eternal/mkldnn/install/include
+	CFLAGS += -I$(ROOTDIR)/external/mkldnn/install/include
 	CFLAGS += -DMXNET_USE_MKLDNN=1
 	LDFLAGS += -L$(MKLML_ROOT)/lib
 	LDFLAGS += -lmkldnn -L$(ROOTDIR)/eternal/mkldnn/install/lib
