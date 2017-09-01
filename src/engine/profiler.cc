@@ -24,11 +24,6 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <mxnet/base.h>
-#include <set>
-#include <map>
-#include <mutex>
-#include <chrono>
-#include <iostream>
 #include <fstream>
 #include "./profiler.h"
 
@@ -54,15 +49,15 @@ Profiler::Profiler()
   this->gpu_num_ = 0;
 #endif
 
-  this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
-  this->profile_stat->opr_exec_stats.reserve(INITIAL_SIZE);
+  this->profile_stat_.reset(new DevStat[cpu_num_ + gpu_num_ + 1]);
+  this->profile_stat_->opr_exec_stats.reserve(INITIAL_SIZE);
   for (unsigned int i = 0; i < cpu_num_; ++i) {
-    profile_stat[i].dev_name = "cpu/" + std::to_string(i);
+    profile_stat_.get()[i].dev_name = "cpu/" + std::to_string(i);
   }
   for (unsigned int i = 0; i < gpu_num_; ++i) {
-    profile_stat[cpu_num_ + i].dev_name = "gpu/" + std::to_string(i);
+    profile_stat_.get()[cpu_num_ + i].dev_name = "gpu/" + std::to_string(i);
   }
-  profile_stat[cpu_num_ + gpu_num_].dev_name = "cpu pinned/";
+  profile_stat_.get()[cpu_num_ + gpu_num_].dev_name = "cpu pinned/";
 
   mode_ = (ProfilerMode)dmlc::GetEnv("MXNET_PROFILER_MODE", static_cast<int>(kOnlySymbolic));
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
@@ -116,10 +111,13 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
       return NULL;
   }
 
-  DevStat& dev_stat = profile_stat[idx];
-  {
-    std::lock_guard<std::mutex> lock{dev_stat.m_};
-    dev_stat.opr_exec_stats.push_back(opr_stat);
+  std::shared_ptr<DevStat> pstat = profile_stat_;  // hold a ref count
+  if (pstat.get()) {
+    DevStat &dev_stat = pstat.get()[idx];
+    {
+      std::lock_guard<std::mutex> lock{dev_stat.m_};
+      dev_stat.opr_exec_stats.push_back(opr_stat);
+    }
   }
   return opr_stat;
 }
@@ -161,44 +159,47 @@ void Profiler::DumpProfile() {
 
   uint32_t dev_num = cpu_num_ + gpu_num_ + 1;
 
-  for (uint32_t i = 0; i < dev_num; ++i) {
-    const DevStat &d = profile_stat[i];
-    this->EmitPid(&file, d.dev_name, i);
-    file << ",\n";
-  }
-
-  bool first_flag = true;
-  for (uint32_t i = 0; i < dev_num; ++i) {
-    DevStat &d = profile_stat[i];
-    std::lock_guard<std::mutex> lock(d.m_);
-    uint32_t opr_num = d.opr_exec_stats.size();
-
-    for (uint32_t j = 0; j < opr_num; ++j) {
-      const OprExecStat* opr_stat = d.opr_exec_stats[j];
-
-      uint32_t pid = i;
-      uint32_t tid = opr_stat->thread_id;
-
-      if (first_flag) {
-        first_flag = false;
-      } else {
-        file << ",";
-      }
-      file << std::endl;
-      this->EmitEvent(&file, opr_stat->opr_name, "category", "B",
-            opr_stat->opr_start_rel_micros, pid, tid);
+  std::shared_ptr<DevStat> pstat = profile_stat_;  // hold a ref count
+  if (pstat.get()) {
+    for (uint32_t i = 0; i < dev_num; ++i) {
+      const DevStat &d = pstat.get()[i];
+      this->EmitPid(&file, d.dev_name, i);
       file << ",\n";
-      this->EmitEvent(&file, opr_stat->opr_name, "category", "E",
-            opr_stat->opr_end_rel_micros, pid, tid);
     }
+
+    bool first_flag = true;
+    for (uint32_t i = 0; i < dev_num; ++i) {
+      DevStat &d = pstat.get()[i];
+      std::lock_guard<std::mutex> lock(d.m_);
+      uint32_t opr_num = d.opr_exec_stats.size();
+
+      for (uint32_t j = 0; j < opr_num; ++j) {
+        const OprExecStat *opr_stat = d.opr_exec_stats[j];
+
+        uint32_t pid = i;
+        uint32_t tid = opr_stat->thread_id;
+
+        if (first_flag) {
+          first_flag = false;
+        } else {
+          file << ",";
+        }
+        file << std::endl;
+        this->EmitEvent(&file, opr_stat->opr_name, "category", "B",
+                        opr_stat->opr_start_rel_micros, pid, tid);
+        file << ",\n";
+        this->EmitEvent(&file, opr_stat->opr_name, "category", "E",
+                        opr_stat->opr_end_rel_micros, pid, tid);
+      }
+    }
+
+    file << "\n" << std::endl;
+    file << "    ]," << std::endl;
+    file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
+    file << "}" << std::endl;
+
+    enable_output_ = false;
   }
-
-  file << "\n" << std::endl;
-  file << "    ]," << std::endl;
-  file << "    \"displayTimeUnit\": \"ms\"" << std::endl;
-  file << "}" << std::endl;
-
-  enable_output_ = false;
 }
 
 
