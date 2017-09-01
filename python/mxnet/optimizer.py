@@ -572,7 +572,7 @@ class Adam(Optimizer):
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
-    For details of the update algorithm, see :class:`ndarray.adam_update`.
+    For details of the update algorithm, see :class:`~mxnet.ndarray.adam_update`.
 
     Parameters
     ----------
