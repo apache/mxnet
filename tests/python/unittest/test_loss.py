@@ -70,15 +70,14 @@ def test_ce_loss():
     label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(nclass)
-    fc2 = output.get_internals()['fc2_output']
     l = mx.symbol.Variable('label')
     Loss = gluon.loss.SoftmaxCrossEntropyLoss()
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+            eval_metric=mx.metric.Loss(), optimizer='adam')
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_bce_loss():
@@ -88,14 +87,14 @@ def test_bce_loss():
     label = mx.nd.array(np.random.randint(2, size=(N,)), dtype='float32')
     data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
     output = get_net(1)
-    fc2 = output.get_internals()['fc2_output']
     l = mx.symbol.Variable('label')
     Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+            eval_metric=mx.metric.Loss(), optimizer='adam',
+            initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
 
 def test_bce_equal_ce2():
@@ -120,8 +119,8 @@ def test_kl_loss():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+            eval_metric=mx.metric.Loss(), optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
@@ -138,8 +137,9 @@ def test_l2_loss():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.1, 'wd': 0.00045},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss())
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
@@ -156,7 +156,8 @@ def test_l1_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=3), eval_metric=mx.metric.Loss())
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
@@ -205,8 +206,8 @@ def test_sample_weight_loss():
     loss = Loss(output, l, w)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'w'))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+            eval_metric=mx.metric.Loss(), optimizer='adam')
     data_iter = mx.io.NDArrayIter(data[10:], {'label': label, 'w': weight}, batch_size=10)
     score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
     assert score > 1
@@ -242,3 +243,4 @@ def test_saveload():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
+
