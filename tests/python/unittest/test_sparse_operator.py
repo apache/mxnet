@@ -231,6 +231,16 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('csr', shape)
     check_sparse_nd_zeros('default', shape)
 
+def test_sparse_nd_zeros_like():
+    def check_sparse_nd_zeros_like(stype, shape):
+        zero = mx.nd.zeros(shape, stype=stype)
+        zero_like = mx.nd.sparse.zeros_like(zero)
+        assert_almost_equal(zero.asnumpy(), zero_like.asnumpy())
+
+    shape = rand_shape_2d()
+    check_sparse_nd_zeros_like('row_sparse', shape)
+    check_sparse_nd_zeros_like('csr', shape)
+
 
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':
