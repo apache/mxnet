@@ -886,7 +886,7 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-8, name='cross-entropy',
+    def __init__(self, eps=1e-12, name='cross-entropy',
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, eps=eps,

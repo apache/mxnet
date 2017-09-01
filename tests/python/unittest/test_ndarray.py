@@ -705,7 +705,7 @@ def test_ndarray_fluent():
                     'clip', 'abs' 'sign'])
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1)):
         with mx.name.NameManager():
-            data = mx.nd.random_uniform(shape=shape)
+            data = mx.nd.random_uniform(shape=shape, ctx=default_context())
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
@@ -729,7 +729,7 @@ def test_ndarray_fluent():
     check_fluent_regular('slice', {'begin': (2, 5, 1), 'end': (4, 7, 6)}, shape=(5, 17, 6))
     check_fluent_regular('slice_axis', {'axis': 1, 'begin': 5, 'end': 7})
     check_fluent_regular('take', {'indices': mx.nd.array([2, 3])})
-    check_fluent_regular('pick', {'axis': 1, 'begin': 5, 'end': 7})
+    check_fluent_regular('pick', {'axis': 1, 'index': mx.nd.array([[2], [3], [5], [6], [11]])})
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
