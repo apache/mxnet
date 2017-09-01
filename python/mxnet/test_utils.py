@@ -139,7 +139,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as sp
+    from scipy import sparse as spsp
     csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
     if data_init is not None:
         csr.data.fill(data_init)
