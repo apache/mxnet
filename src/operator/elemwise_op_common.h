@@ -231,50 +231,6 @@ struct CloneGradient {
   }
 };
 
-#define KernelEx mxnet_op::Kernel
-#define LaunchEx Launch
-
-//template<typename OP, typename xpu> class KernelEx;
-//
-//template<typename OP>
-//class KernelEx<OP, cpu> : public mxnet_op::Kernel<OP, cpu> {
-// public:
-//  /*! \brief For relatively small number of iterations, don't use OMP, since it incurs
-//   * a significant amount of overhead relative to a low number of iterations
-//   * of trivial operations
-//   * Assumption is that the OP::Map() function is trivial
-//   *
-//   * @tparam CountForOMP Number of iterations before OMP will be used
-//   * @tparam Args Argument types to pass to Map function
-//   * @param s Stream
-//   * @param N Number of iterations
-//   * @param args Arguments to pass to Map function
-//   */
-//  template<typename ...Args>
-//  static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
-//    if (N < (2 << 16)) {
-//      for (int i = 0; i < N; ++i) {
-//        OP::Map(i, args...);
-//      }
-//    } else {
-//      #pragma omp parallel for
-//      for (int i = 0; i < N; ++i) {
-//        OP::Map(i, args...);
-//      }
-//    }
-//  }
-//};
-//
-//#if MXNET_USE_CUDA == 1
-//template<typename OP>
-//class KernelEx<OP, gpu> : public mxnet_op::Kernel<OP, gpu> {
-//  template<typename ...Args>
-//  MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
-//    mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
-//  }
-//};
-//#endif  // MXNET_USE_CUDA == 1
-
 }  // namespace op
 }  // namespace mxnet
 
