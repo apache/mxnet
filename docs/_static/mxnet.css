@@ -29,8 +29,7 @@ body {
     display: block;
     visibility: hidden;
     background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
+    background-attachment: fixed;
 }
 
 body, div {
@@ -40,7 +39,7 @@ body, div {
 }
 
 p {
-    font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+    font-family: AmazonEmber;
     color: #000;
     font-size: 16px;
     line-height: 1.5em;
@@ -56,6 +55,11 @@ li, dt a, dt span {
     line-height: 1.5em;
 }
 
+.footer {
+    z-index: 10;
+    position: relative;
+}
+
 /* /\*Content paragraph space*\/ */
 /* div.content p { */
 /*     margin-top: 20px; */
@@ -63,7 +67,7 @@ li, dt a, dt span {
 
 /*------------------ Headings -------------------*/
 h1, h2, h3 {
-    font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+    font-family: AmazonEmber;
     margin-top: 18px;
     margin-bottom: 18px;
     color: #444;
@@ -73,6 +77,7 @@ h1 {
     margin-top: 0px;
     margin-bottom: 25px;
     font-size: 28px;
+    font-weight: bold;
 }
 
 h2 {
@@ -117,6 +122,9 @@ img {
     height: 60px;
     margin-bottom: 0px;
     border-bottom: 0.01em solid #fff;
+    background-image: url("redesign-resource/mxnet-navbar.png");
+    background-size: cover;
+    background-attachment: scroll;
 }
 
 .navbar .container {
@@ -173,11 +181,13 @@ img {
 }
 
 #logo {
+    color: #fff;
     width: 150px;
     display: block;
     float: left;
     height: 60px;
-    padding: 10px 0 0 0;
+    padding: 15px 0 0 0;
+    text-decoration: none;
 }
 
 #logo > img {
@@ -211,18 +221,19 @@ img {
 }
 
 #dropdown-menu-position-anchor, 
+#dropdown-menu-position-anchor-docs, 
 #dropdown-menu-position-anchor-version, 
 #dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
 
-#package-dropdown-menu {
+.navbar-menu {
     top: 36px;
     border-radius: 4px;
     padding: 0;
 }
 
-#package-dropdown-menu > li > a {
+.navbar-menu > li > a {
     color: #0079b2;
     padding: 6px 16px;
 
@@ -234,6 +245,8 @@ img {
     top: 15px;
     right: 20px;
     width: 200px;
+    -webkit-transition: width 0.5s;
+    transition: width 0.5s;
 }
 
 #search-input-wrap ul {
@@ -244,7 +257,7 @@ img {
     display: none;
     position: fixed;
     top: 20px;
-    right: 20px;
+    right: 35px;
     color: white;
 }
 
@@ -255,6 +268,8 @@ img {
     width: 200px;
     background: transparent;
     border-radius: 5px;
+    -webkit-transition: width 0.5s;
+    transition: width 0.5s;
 }
 
 .searchBox input {
@@ -283,20 +298,12 @@ img {
 
 @media screen and (max-width: 510px) {
     #search-input-wrap {
-        display: none;
-        right: 40;
-        top: 60px;
-        margin-left: -100px;
+        width: 140px;
+        margin-right: 10px;
     }
-
-    #searchIcon {
-        display: block;
-    }
-}
-
-@media screen and (min-width: 511px) {
-    #search-input-wrap {
-        display: block !important;
+    
+    .searchBox {
+        width: 140px;
     }
 }
 
@@ -310,7 +317,7 @@ img {
 #lang-select-label {
     color: #fff;
     opacity: .7;
-    font-family: Lato, Helvetica Neue, Helvetica, Arial, sans-serif;
+    font-family: AmazonEmber;
     line-height: 50px
 }
 
@@ -756,6 +763,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 .section-inst .row div {
     text-align: center;
     margin-bottom: 30px;
+    height: 80px;
 }
 
 .section-inst p {
@@ -828,39 +836,61 @@ div.navbar + div.container {
 }
 
 div.content {
-    position: absolute;
-    left: 320px;
-    right: 200px;
-    margin-right: 5%;
-    padding: 40px 0 0 0;
+    padding: 80px 40px 40px 40px;
+    background: #fff;
+    width: calc(100% - 300px);
+    float: right;
     overflow-x: hidden;
     z-index: -1;
 }
 
 @media (max-width: 999px) {
     div.content {
-        left: 0;
-        margin-left: 5%;
-        right: 0;
         overflow-x: auto;
+        width: 100%;
     }
+}
+
+div.page-tracker {
+    margin-bottom: 30px;
+    font-family: AmazonEmber;
+    font-weight: 300;
+}
+
+div.page-tracker ul {
+    padding-left: 0;
+}
+
+div.page-tracker ul li {
+    display: inline;
+}
+
+div.page-tracker a {
+    color: #337ab7;
+}
+
+div.page-tracker a.last-tracker {
+    color: #aab7b8;
+}
+
+div.page-tracker i {
+    margin: 0 10px;
 }
 
 /*------------------sidebar-----------------------*/
 div.sphinxsidebar {
     position: fixed;
-    background-color: white;
-    height: calc(100% - 80px);
+    padding-top: 40px;
+    height: 100%;
     display: none;
     visibility: hidden;
     overflow: auto;
 }
 
 div.leftsidebar {
-    left: 30px;
-    width: 250px;
-    padding: 40px 0 15px 0;
+    width: 300px;
     margin: 0;
+    background: #f2f2f2;
 }
 
 div.rightsidebar {
@@ -875,7 +905,8 @@ div.sphinxsidebar ul {
 }
 
 div.sphinxsidebar a {
-    color: black;
+    font-family: AmazonEmber;
+    font-size: 13px;
 }
 
 div.rightsidebar div.sphinxsidebarwrapper > ul {
@@ -886,11 +917,10 @@ div.sphinxsidebar li {
     padding-top: 5px;
     margin-bottom: 5px;
     margin-left: -10px;
-    font: normal 12px "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
 }
 
 div.leftsidebar > div.sphinxsidebarwrapper {
-    padding: 10px 10px 10px 10px;
+    padding: 40px 20px 10px 20px;
     background: #f2f2f2;
 }
 
@@ -909,26 +939,26 @@ div.rightsidebar > div.sphinxsidebarwrapper > ul > li {
 
 div.sphinxsidebar li.opened .tocToggle:before {
     font-family: 'FontAwesome';
-    content: "\f146";
+    content: "\f0d7";
     margin: 0 5px 0 -15px;
-    color: #337ab7;
+    color: #999999;
 }
 
 div.sphinxsidebar li.closed .tocToggle:before {
     font-family: 'FontAwesome';
-    content: "\f0fe";
+    content: "\f0da";
     margin: 0 5px 0 -15px;
-    color: #337ab7;
+    color: #999999;
 }
 
 div.sphinxsidebar li.leaf .tocToggle:before {
-    font-family: 'FontAwesome';
-    content: "\f096";
+    /*font-family: 'FontAwesome';*/
+    content: " ";
     margin: 0 5px 0 -15px;
-    color: #337ab7;
+    color: #f2f2f2;
 }
 
-@media (min-width:1000px) {
+@media (min-width:1015px) {
     div.sphinxsidebar {display: block}
 }
 
@@ -1067,6 +1097,15 @@ code {
     background-color: #f5f5f5;
 }
 
+code.docutils.literal {
+    color: #111;
+    font-weight: bold;
+}
+
+a code.docutils.literal {
+    color: #337ab7;
+}
+
 dt code {
     color: #555;
 }
@@ -1202,7 +1241,6 @@ table.docutils tr:nth-child(even) {
     height: 38px;
 }
 
-
 /*----------------Search function style------------------*/
 #searchPage {
     width: 60%;
@@ -1309,9 +1347,9 @@ button.download {
 }
 
 /*----------------------Download button------------------------*/
-div.download_btn {
+div.download-btn {
 
-    border: solid 1px lightgray;
+    border: solid 1px #000;
     border-radius: 3px;
     font-size: 90%;
     height: 40px;
@@ -1319,16 +1357,27 @@ div.download_btn {
     float: left;
 }
 
-div.download_btn a {
+div.download-btn a {
     padding: 0 10px;
     display: table-cell;
     vertical-align: middle;
+    color: #000;
 }
 
-div.download_btn a:hover {
+div.download-btn a:hover {
     background-color: #0079b2;
     color: white;
     text-decoration: none;
+}
+
+div.download-btn.download-btn-top {
+    border-color: #ec7211;
+    background: #ec7211;
+    float: right;
+}
+
+div.download-btn.download-btn-top a {
+    color: #fff;
 }
 
 /*-------------output blocks----------------*/

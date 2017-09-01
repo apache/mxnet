@@ -18,13 +18,12 @@ function render_left_helper(toc, currentText) {
     lefttoc.addClass('current');
     $('.leftsidebar > .sphinxsidebarwrapper').children().remove();
     $('.leftsidebar > .sphinxsidebarwrapper').append(lefttoc);
-    
-    $('.leftsidebar > .sphinxsidebarwrapper').prepend('<h3>Contents</h3>');
+
     addToggle('.leftsidebar');
     
     $('.leftsidebar li a').click(function () {
-        $('.leftsidebar li a').css('color', 'black');
-        $(this).css('color', '#337ab7');
+        $('.leftsidebar li a').css('color', '#337ab7');
+        $(this).css('color', 'black');
     });
 }
 
@@ -50,7 +49,8 @@ function render_lefttoc() {
                         break;
                     }
                 }
-                var urlPath = 'https://' + window.location.host + version +  path;
+                var protocol = location.protocol.concat("//");
+                var urlPath = protocol + window.location.host + version +  path;
                 $.get(urlPath + indexTrailing, null, function(data) {
                     var currentText = $($.parseHTML(data)).find('.leftsidebar >  .sphinxsidebarwrapper > ul.current > li.current > a').html();
                     if (isAPI) {
@@ -68,6 +68,8 @@ function render_lefttoc() {
                     }
                     keepExpand();
                     $('.sphinxsidebar').css("visibility", "visible");
+                    if ($('div.sphinxsidebar').css('display') != 'none') $('.content').css('width', 'calc(100% - 300px)');
+                    else $('.content').css('width', '100%');
                 })
             }
         }
@@ -91,8 +93,8 @@ function render_righttoc() {
     addToggle('.rightsidebar');
     
     $('.rightsidebar li a').click(function () {
-        $('.rightsidebar li a').css('color', 'black');
-        $(this).css('color', '#337ab7');
+        $('.rightsidebar li a').css('color', '#337ab7');
+        $(this).css('color', 'black');
     });
     
     if (url.indexOf(indexTrailing) != -1 || isAPI) {
@@ -107,8 +109,8 @@ function scroll_righttoc() {
     for(var i = 1; i < links.length; ++i) {
         var divID = links.eq(i).attr('href');
         if ($(divID).offset().top - $(window).scrollTop() > navbarHeight) {
-            $('.rightsidebar a').css('color', 'black');
-            links.eq(i - 1).css('color', '#337ab7');
+            $('.rightsidebar a').css('color', '#337ab7');
+            links.eq(i - 1).css('color', 'black');
             if (!links.eq(i - 1).parent().hasClass('leaf')) {
                 links.eq(i - 1).parent().removeClass('closed');
                 links.eq(i - 1).parent().addClass('opened');
@@ -201,8 +203,8 @@ function keepExpand() {
             }
         });
         $('.leftsidebar li a').click(function () {
-            $('.leftsidebar li a').css('color', 'black');
-            $(this).css('color', '#337ab7');
+            $('.leftsidebar li a').css('color', '#337ab7');
+            $(this).css('color', 'black');
         });
     }
     currentEntry.find('a').first().css('color', '#337ab7');
@@ -218,9 +220,9 @@ function keepExpand() {
 
 $(document).ready(function () {
     var url = window.location.href, searchFlag = 'search.html';
+    var showRightToc = false;
     try {
-        if(url.indexOf('/get_started/') != -1) return;
-        if (url.indexOf(searchFlag) == -1) {
+        if (url.indexOf('/get_started/') == -1 && url.indexOf(searchFlag) == -1) {
             for(var i = 0; i < API_PAGE.length; ++i) {
                 if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
                     isAPI = true;
@@ -230,11 +232,16 @@ $(document).ready(function () {
             render_righttoc();
             if ($('.leftsidebar').length) render_lefttoc();
         }
-        
-        if(url.indexOf('/api/') != -1) return;
-        $(window).scroll(function () {
-            scroll_righttoc();
-        });
+        if ($('div.sphinxsidebar').css('visibility') == 'hidden') $('.content').css('width', '100%');
+        if (url.indexOf('/api/') != -1) return;
+        if (showRightToc) {
+            $(window).scroll(function () {
+                scroll_righttoc();
+            });
+        }
+        else {
+            $('.rightsidebar').hide();
+        }
     }
     catch(err) {
         return;
