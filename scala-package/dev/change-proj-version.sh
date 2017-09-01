@@ -21,7 +21,6 @@
 #
 
 set -e
-set -x
 
 if [[ ($# -ne 2) || ( $1 == "--help") ||  $1 == "-h" ]]; then
   echo "Usage: $(basename $0) [-h|--help] <from_version> <to_version>" 1>&2
@@ -40,4 +39,4 @@ export -f sed_i
 BASEDIR=$(dirname $0)/..
 find "$BASEDIR" -name 'pom.xml' -not -path '*target*' -print \
   -exec bash -c \
-  "sed_i 's/(<artifactId>.*mxnet-.*<\/artifactId>\s+<version)>$FROM_VERSION(<\/version>)/\1>$TO_VERSION\2/g' {}" \;
+  "sed_i 's/(<artifactId>.*mxnet-.*<\/artifactId>\s+<version)>'$FROM_VERSION'(<\/version>)/\1>'$TO_VERSION'\2/g' {}" \;
