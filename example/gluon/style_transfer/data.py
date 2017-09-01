@@ -63,23 +63,6 @@ def pil_loader(path):
             return img.convert('RGB')
 
 
-def accimage_loader(path):
-    import accimage
-    try:
-        return accimage.Image(path)
-    except IOError:
-        # Potentially a decoding problem, fall back to PIL.Image
-        return pil_loader(path)
-
-
-def default_loader(path):
-    from torchvision import get_image_backend
-    if get_image_backend() == 'accimage':
-        return accimage_loader(path)
-    else:
-        return pil_loader(path)
-
-
 class ImageFolder(data.Dataset):
     """A generic data loader where the images are arranged in this way: ::
 
@@ -106,7 +89,7 @@ class ImageFolder(data.Dataset):
     """
 
     def __init__(self, root, transform=None, target_transform=None,
-                 loader=default_loader):
+                 loader=pil_loader):
         classes, class_to_idx = find_classes(root)
         imgs = make_dataset(root, class_to_idx)
         if len(imgs) == 0:
