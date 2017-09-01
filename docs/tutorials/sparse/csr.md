@@ -24,7 +24,7 @@ scientific computing python package [SciPy](https://www.scipy.org/).
 
 Apart from often queried attributes such as **ndarray.shape**, **ndarray.dtype** and **ndarray.context**,
 you’ll also want to query **ndarray.stype**: the storage type of the NDArray. For a usual dense NDArray,
-the value of stype is **"default"**. For an CSRNDArray, the value of stype is **"csr"**.
+the value of stype is **"default"**. For a CSRNDArray, the value of stype is **"csr"**.
 
 ## Prerequisites
 
@@ -95,7 +95,7 @@ b = mx.nd.sparse.csr_matrix(data_np, indptr_np, indices_np, shape)
 {'a':a, 'b':b}
 ```
 
-* We can also create an MXNet CSRNDArray from a `scipy.sparse.csr.csr_matrix` object by using the `array` function:
+* We can create an MXNet CSRNDArray from a `scipy.sparse.csr.csr_matrix` object by using the `array` function:
 
 ```python
 try:
@@ -109,8 +109,8 @@ except ImportError:
     print("scipy package is required")
 ```
 
-We can specify the element data type with the option `dtype`, which accepts a numpy
-type. By default, `float32` is used.
+* We can also create a CSRNDArray from another using the `array` function specifying the element data type with the option `dtype`,
+which accepts a numpy type. By default, `float32` is used.
 
 ```python
 # float32 is used by default
@@ -122,7 +122,7 @@ f = mx.nd.array(a, dtype=np.float16)
 
 ## Inspecting Arrays
 
-* We can inspect the contents of an `CSRNDArray` by filling
+* We can inspect the contents of a `CSRNDArray` by filling
 its contents into a dense `numpy.ndarray` using the `asnumpy` function.
 
 ```python
@@ -148,9 +148,9 @@ indptr = a.indptr
 ```python
 # create a dense NDArray
 ones = mx.nd.ones((2,2))
-# cast the storage type from default to csr
+# cast the storage type from `default` to `csr`
 csr = ones.tostype('csr')
-# cast the storage type from csr to default
+# cast the storage type from `csr` to `default`
 dense = csr.tostype('default')
 {'csr':csr, 'dense':dense}
 ```
@@ -160,9 +160,9 @@ dense = csr.tostype('default')
 ```python
 # create a dense NDArray
 ones = mx.nd.ones((2,2))
-# cast the storage type to csr
+# cast the storage type to `csr`
 csr = mx.nd.sparse.cast_storage(ones, 'csr')
-# cast the storage type to default
+# cast the storage type to `default`
 dense = mx.nd.sparse.cast_storage(csr, 'default')
 {'csr':csr, 'dense':dense}
 ```
