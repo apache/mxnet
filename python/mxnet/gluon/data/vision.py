@@ -138,7 +138,7 @@ class FashionMNIST(MNIST):
                            '626ed6a7c06dd17c0eec72fa3be1740f146a2863')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '17f9ab60e7257a1620f4ad76bbbaf857c3920701')
-        super(FashionMNIST, self).__init__(root, train, transform)
+        super(MNIST, self).__init__(root, train, transform) # pylint: disable=bad-super-call
 
 
 class CIFAR10(_DownloadedDataset):

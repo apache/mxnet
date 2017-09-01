@@ -247,6 +247,7 @@ will return a new array with shape ``(2,1,3,4)``.
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice)
+.add_alias("_sparse_slice")
 .add_alias("crop")
 .describe(R"code(Slices a contiguous region of the array.
 

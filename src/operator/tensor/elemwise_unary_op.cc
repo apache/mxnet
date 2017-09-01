@@ -512,7 +512,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(exp)
 
 Example::
 
-   exp([0, 1, 2]) = [inf, 1, 0.707]
+   exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
 
 The storage type of ``exp`` output is always dense
 

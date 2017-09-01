@@ -191,7 +191,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
             max_val = F.maximum(-output, 0)
             loss = output - output*label + max_val + F.log(F.exp(-max_val)+F.exp(-output-max_val))
         else:
-            loss = -(F.log(output+1e-8)*label + F.log(1.-output+1e-8)*(1.-label))
+            loss = -(F.log(output+1e-12)*label + F.log(1.-output+1e-12)*(1.-label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -294,7 +294,7 @@ class KLDivLoss(Loss):
     def hybrid_forward(self, F, output, label, sample_weight=None):
         if not self._from_logits:
             output = F.log_softmax(output)
-        loss = label * (F.log(label+1e-8) - output)
+        loss = label * (F.log(label+1e-12) - output)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 

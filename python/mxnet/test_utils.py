@@ -140,7 +140,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
     from scipy import sparse as sp
-    csr = sp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
     if data_init is not None:
         csr.data.fill(data_init)
     if shuffle_csr_indices is True:
@@ -376,8 +376,8 @@ def rand_shape_3d(dim0=10, dim1=10, dim2=10):
     return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
 
 
-def rand_shape_nd(n, dim=10):
-    return rnd.randint(1, dim+1, size=n)
+def rand_shape_nd(num_dim, dim=10):
+    return tuple(rnd.randint(1, dim+1, size=num_dim))
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):

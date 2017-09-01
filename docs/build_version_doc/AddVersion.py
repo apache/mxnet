@@ -90,7 +90,7 @@ if __name__ == '__main__':
             pip_pattern = ['', '-cu80', '-cu75', '-cu80mkl', '-cu75mkl', '-mkl']
             if args.current_version == 'master':
                 outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
-                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git')
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet')
                 for trail in pip_pattern:
                     outstr = outstr.replace('pip install mxnet%s<' % (trail),
                                             'pip install mxnet%s --pre<' % (trail))
@@ -98,7 +98,7 @@ if __name__ == '__main__':
                                             'pip install mxnet%s --pre\n<' % (trail))
             else:
                 outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
-                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git '
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet '
                                         '--branch %s' % (args.current_version))
                 for trail in pip_pattern:
                     outstr = outstr.replace('pip install mxnet%s<' % (trail),
