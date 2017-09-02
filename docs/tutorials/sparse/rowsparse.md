@@ -18,8 +18,8 @@ X = mx.nd.sparse.csr_matrix(data, indptr, indices, shape)
 X.asnumpy()
 ```
 
-The gradients for the weight ``W`` will have many row slices of all zeros, since ``X`` doesn't have non-zero values for
-their corresponding columns.
+For some columns in ``X``, they do not have any non-zero value, therefore the gradient for the weight ``W``
+will have many row slices of all zeros corresponding to the zero columns in ``X``.
 
 ```python
 W = mx.nd.random_uniform(shape=(10, 2))
