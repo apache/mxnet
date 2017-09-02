@@ -23,9 +23,14 @@ imported by running:
 
 ```eval_rst
 .. toctree::
+   :maxdepth: 3
+   :titlesonly:
+
+   ndarray/index.md
+
+.. toctree::
    :maxdepth: 2
 
-   ndarray
    symbol
    module
    autograd
