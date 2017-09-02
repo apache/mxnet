@@ -36,10 +36,6 @@ namespace op {
 
 class OpBase {
  protected:
-  enum KernelComplexity {
-    kComplexityLow  = 2 << 16
-  };
-
   template<typename OP, typename xpu> class KernelEx;
 
   template<typename OP>
@@ -56,9 +52,9 @@ class OpBase {
      * @param N Number of iterations
      * @param args Arguments to pass to Map function
      */
-    template<KernelComplexity CountForOMP = kComplexityLow, typename ...Args>
+    template<typename ...Args>
     static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
-      if (N < CountForOMP) {
+      if (N < (2 << 16)) {
         for (int i = 0; i < N; ++i) {
           OP::Map(i, args...);
         }
@@ -71,7 +67,7 @@ class OpBase {
   #if MXNET_USE_CUDA == 1
   template<typename OP>
   class KernelEx<OP, gpu> : public mxnet_op::Kernel<OP, gpu> {
-    template<KernelComplexity CountForOMP = kComplexityLow, typename ...Args>
+    template<typename ...Args>
     MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
       mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
     }
