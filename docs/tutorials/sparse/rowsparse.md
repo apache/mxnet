@@ -24,6 +24,7 @@ their corresponding columns.
 ```python
 W = mx.nd.random_uniform(shape=(10, 2))
 b = mx.nd.zeros((3, 1))
+# attach a gradient placeholder for W
 W.attach_grad(stype='row_sparse')
 with mx.autograd.record():
     Y = mx.nd.dot(X, W) + b
@@ -33,11 +34,12 @@ Y.backward()
 {'W.grad': W.grad, 'W.grad.asnumpy()': W.grad.asnumpy()}
 ```
 
-Storing and manipulating such sparse matrices in the default dense structure results
-in wasted memory and processing on the zeros.
-To take advantage of the such sparse matrices with many row slices of all zeros, the ``RowSparseNDArray`` in MXNet
-stores the matrix in ``row sparse`` format and uses specialized algorithms in operators. In this tutorial, we will
-describe what the row sparse format is and how to use RowSparseNDArray in MXNet.
+Storing and manipulating such sparse matrices with many row slices of all zeros in the default dense structure results
+in wasted memory and processing on the zeros. More importantly, many gradient based optimization methods such as
+SGD, [AdaGrad](https://stanford.edu/~jduchi/projects/DuchiHaSi10_colt.pdf) and [Adam](https://arxiv.org/pdf/1412.6980.pdf)
+take advantage of sparse gradients and prove to be efficient and effective.
+In MXNet, the ``RowSparseNDArray`` stores the matrix in ``row sparse`` format and provides optimizers and operators with specialized implementations.
+In this tutorial, we will describe what the row sparse format is and how to use RowSparseNDArray in MXNet.
 
 ## Prerequisites
 
@@ -219,8 +221,8 @@ g.copyto(f)
 We can retain a subset of rows from a RowSparseNDArray specified by their row indices.
 
 ```python
-data = [[1, 2], [4, 0]]
-indices = [0, 2]
+data = [[1, 2], [3, 4], [5, 6]]
+indices = [0, 2, 3]
 rsp = mx.nd.sparse.row_sparse_array(data, indices, (5, 2))
 # retain row 0 and row 1
 rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
@@ -242,7 +244,7 @@ indices = [0, 2, 1]
 lhs = mx.nd.sparse.csr_matrix(data, indptr, indices, shape)
 # a dense matrix as rhs
 rhs = mx.nd.ones((3, 2))
-# invoke sparse dot operator specialized for dot(csr.T, dense) = row_sparse
+# row_sparse result is inferred from sparse operator dot(csr.T, dense) based on input stypes
 transpose_dot = mx.nd.sparse.dot(lhs, rhs, transpose_a=True)
 {'transpose_dot': transpose_dot, 'transpose_dot.asnumpy()': transpose_dot.asnumpy()}
 ```
@@ -272,10 +274,45 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 
 ## Sparse Optimizers
 
+In MXNet, sparse gradient updates are applied when weight, state and gradient are all in the `row_sparse` storage type.
+The sparse optimizers only update the row slices of weight and state whose indices appear
+in the ``gradient.indices``. For example, the default update rule for SGD optimizer is:
+```
+rescaled_grad = learning_rate * rescale_grad * clip(grad, clip_gradient) + weight_decay * weight
+state = momentum * state + rescaled_grad
+weight = weight - state
+```
+while the sparse update rule for SGD optimizer is:
+```
+for row in grad.indices:
+    rescaled_grad[row] = learning_rate * rescale_grad * clip(grad[row], clip_gradient) + weight_decay * weight[row]
+    state[row] = momentum[row] * state[row] + rescaled_grad[row]
+    weight[row] = weight[row] - state[row]
+```
 
+```python
+# create weight
+shape = (4, 2)
+weight = mx.nd.ones(shape).tostype('row_sparse')
+# create gradient
+data = [[1, 2], [4, 5]]
+indices = [1, 2]
+grad = mx.nd.sparse.row_sparse_array(data, indices, shape)
+sgd = mx.optimizer.SGD(learning_rate=0.01, momentum=0.01)
+# create momentum
+momentum = sgd.create_state(0, weight)
+# before the update
+{"grad.asnumpy()":grad.asnumpy(), "weight.asnumpy()":weight.asnumpy(), "momentum.asnumpy()":momentum.asnumpy()}
+```
 
+```python
+sgd.update(0, weight, grad, momentum)
+# only row 0 and row 2 are updated for both weight and momentum
+{"weight.asnumpy()":weight.asnumpy(), "momentum.asnumpy()":momentum.asnumpy()}
+```
 
-
+Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.SGD)
+and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.Adam) support sparse update in MXNet.
 
 ## Advanced Topics
 
