@@ -105,7 +105,7 @@ class MNIST(_DownloadedDataset):
             data = np.fromstring(fin.read(), dtype=np.uint8)
             data = data.reshape(len(label), 28, 28, 1)
 
-        self._data = nd.array(data)
+        self._data = nd.array(data, dtype=data.dtype)
         self._label = label
 
 
