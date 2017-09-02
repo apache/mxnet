@@ -513,7 +513,7 @@ class RowSparseNDArray(BaseSparseNDArray):
         array([[ 1.,  2., 3.],
                [ 4.,  0., 5.]], dtype=float32)
 
-    A RowSparseNDArray is typically used to represent non-zero row-slices of a large NDArray
+    A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray
     of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
 
     RowSparseNDArray is used principally in the definition of gradients for operations

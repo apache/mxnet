@@ -39,7 +39,7 @@ in wasted memory and processing on the zeros. More importantly, many gradient ba
 SGD, [AdaGrad](https://stanford.edu/~jduchi/projects/DuchiHaSi10_colt.pdf) and [Adam](https://arxiv.org/pdf/1412.6980.pdf)
 take advantage of sparse gradients and prove to be efficient and effective.
 In MXNet, the ``RowSparseNDArray`` stores the matrix in ``row sparse`` format and provides optimizers and operators with specialized implementations.
-In this tutorial, we will describe what the row sparse format is and how to use RowSparseNDArray in MXNet.
+In this tutorial, we will describe what the row sparse format is and how to use RowSparseNDArray for sparse gradient updates in MXNet.
 
 ## Prerequisites
 
@@ -56,22 +56,22 @@ tutorial) to mx.cpu().
 
 ## Row Sparse Format
 
-A RowSparseNDArray represents a multidimensional NDArray using two separate arrays:
+A RowSparseNDArray represents a multidimensional NDArray using two separate 1D arrays:
 `data` and `indices`.
 
 - data: an NDArray of any dtype with shape `[D0, D1, ..., Dn]`.
 - indices: a 1D int64 NDArray with shape `[D0]` with values sorted in ascending order.
 
-The `indices` stores the indices of the row slices with non-zeros,
-while the values are stored in `data`. The corresponding NDArray ``dense``
-represented by RowSparseNDArray ``rsp`` has
+The ``indices`` array stores the indices of the row slices with non-zeros,
+while the values are stored in ``data`` array. The corresponding NDArray `dense`
+represented by RowSparseNDArray `rsp` has
 
 ``dense[rsp.indices[i], :, :, :, ...] = rsp.data[i, :, :, :, ...]``
 
-A RowSparseNDArray is typically used to represent non-zero row-slices of a large NDArray
+A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray
 of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
 
-For example, the row sparse representation for this two dimension matrix
+For example, the row sparse representation for this two-dimension matrix
 ```python
 [[ 1, 2, 3],
  [ 0, 0, 0],
@@ -83,7 +83,7 @@ is:
 ```python
 # `data` array holds all the non-zero row slices of the array.
 data = [[1, 2, 3], [4, 0, 5]]
-# `indices` array stores the row index for each row slices with non-zero elements.
+# `indices` array stores the row index for each row slice with non-zero elements.
 indices = [0, 2]
 ```
 
@@ -101,12 +101,11 @@ RowSparseNDArray supports multidimensional arrays. The row sparse representation
   [0, 0],
   [0, 0]]]
 ```
-
 is:
 ```python
 # `data` array holds all the non-zero row slices of the array.
 data = [[[1, 0], [0, 2], [3, 4]], [[5, 0], [6, 0], [0, 0]]]
-# `indices` array stores the row index for each row slices with non-zero elements.
+# `indices` array stores the row index for each row slice with non-zero elements.
 indices = [0, 1]
 ```
 
@@ -218,7 +217,7 @@ g.copyto(f)
 
 # Retain Row Slices
 
-We can retain a subset of rows from a RowSparseNDArray specified by their row indices.
+We can retain a subset of row slices from a RowSparseNDArray specified by their row indices.
 
 ```python
 data = [[1, 2], [3, 4], [5, 6]]
@@ -274,9 +273,9 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 
 ## Sparse Optimizers
 
-In MXNet, sparse gradient updates are applied when weight, state and gradient are all in the `row_sparse` storage type.
-The sparse optimizers only update the row slices of weight and state whose indices appear
-in the ``gradient.indices``. For example, the default update rule for SGD optimizer is:
+In MXNet, sparse gradient updates are applied when weight, state and gradient are all in `row_sparse` storage.
+The sparse optimizers only update the row slices of the weight and the states whose indices appear
+in ``gradient.indices``. For example, the default update rule for SGD optimizer is:
 ```
 rescaled_grad = learning_rate * rescale_grad * clip(grad, clip_gradient) + weight_decay * weight
 state = momentum * state + rescaled_grad
