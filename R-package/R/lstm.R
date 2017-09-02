@@ -326,7 +326,7 @@ mx.lstm.inference <- function(num.lstm.layer,
         }
     }
     c.h.names <- c(paste0("l", seq_len(num.lstm.layer), ".init.c"),
-                   paste0("l", seq_len(num.lstm.layer), ".init.h")
+                   paste0("l", seq_len(num.lstm.layer), ".init.h"))
     names(c.h.names) <- c.h.names
     init.states <- lapply(c.h.names, function(x) model$rnn.exec$ref.arg.arrays[[x]]*0)
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
@@ -349,7 +349,7 @@ mx.lstm.inference <- function(num.lstm.layer,
 mx.lstm.forward <- function(model, input.data, new.seq=FALSE) {
     if (new.seq) {
         c.h.names <- c(paste0("l", seq_len(model$num.rnn.layer), ".init.c"),
-                       paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+                       paste0("l", seq_len(model$num.rnn.layer), ".init.h"))
         names(c.h.names) <- c.h.names
         init.states <- lapply(c.h.names, function(x) model$rnn.exec$ref.arg.arrays[[x]]*0)
         mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
@@ -360,7 +360,7 @@ mx.lstm.forward <- function(model, input.data, new.seq=FALSE) {
     mx.exec.forward(model$rnn.exec, is.train=FALSE)
     
     c.h.names <- c(paste0("l", seq_len(model$num.rnn.layer), ".init.c"),
-                   paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+                   paste0("l", seq_len(model$num.rnn.layer), ".init.h"))
     names(c.h.names) <- c.h.names
     init.states <- lapply(c.h.names,
                           function(x) model$rnn.exec$ref.outputs[[paste0(gsub(".init*$", "", x), ".last.", substr(x, nchar(x), nchar(x)), "_output")]]*0)
