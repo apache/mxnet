@@ -79,9 +79,11 @@ class ImperativeRuntime {
                      const std::vector<mx_uint>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief compute the gradient of outputs w.r.t variables. */
-  void Backward(const std::vector<NDArray*>& outputs,
-                const std::vector<NDArray*>& ograds,
-                bool is_train, bool retain_graph);
+  std::vector<NDArray*> Backward(const std::vector<NDArray*>& outputs,
+                                 const std::vector<NDArray*>& ograds,
+                                 const std::vector<NDArray*>& variables,
+                                 bool is_train, bool retain_graph,
+                                 bool create_graph);
   /*! \return AutogradRuntime singleton */
   static ImperativeRuntime* Get();
 
@@ -116,6 +118,12 @@ class ImperativeRuntime {
 
     static bool IsNone(const NDArray& arr) {
       return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
+    }
+
+    static bool IsVariable(const nnvm::NodePtr& node) {
+      AGInfo& info = Get(node);
+      return info.grad_req != kNullOp && info.outputs.size() == 1
+             && info.out_grads.size() == 1;
     }
   };
   /*! \brief make constructor protected. */

@@ -375,17 +375,25 @@ int MXAutogradBackward(mx_uint num_output,
                        NDArrayHandle *output_handles,
                        NDArrayHandle *ograd_handles,
                        int retain_graph) {
-  return MXAutogradBackwardEx(num_output, output_handles, ograd_handles, retain_graph, true);
+  return MXAutogradBackwardEx(num_output, output_handles, ograd_handles,
+                              0, nullptr, retain_graph, false, true,
+                              nullptr, nullptr);
 }
 
 int MXAutogradBackwardEx(mx_uint num_output,
                          NDArrayHandle *output_handles,
                          NDArrayHandle *ograd_handles,
+                         mx_uint num_variables,
+                         NDArrayHandle *var_handles,
                          int retain_graph,
-                         int is_train) {
+                         int create_graph,
+                         int is_train,
+                         NDArrayHandle **grad_handles,
+                         int **grad_stypes) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
 
-  std::vector<NDArray*> outputs, ograds;
+  std::vector<NDArray*> outputs, ograds, variables;
   outputs.reserve(num_output);
   for (mx_uint i = 0; i < num_output; ++i) {
     outputs.emplace_back(reinterpret_cast<NDArray*>(output_handles[i]));
@@ -400,7 +408,25 @@ int MXAutogradBackwardEx(mx_uint num_output,
     }
   }
 
-  ImperativeRuntime::Get()->Backward(outputs, ograds, is_train, retain_graph);
+  variables.reserve(num_variables);
+  for (mx_uint i = 0; i < num_variables; ++i) {
+    variables.emplace_back(reinterpret_cast<NDArray*>(var_handles[i]));
+  }
+
+  auto grads = ImperativeRuntime::Get()->Backward(outputs, ograds, variables, is_train,
+                                                  retain_graph, create_graph);
+  if (num_variables != 0) {
+    ret->ret_handles.clear();
+    ret->out_types.clear();
+    ret->ret_handles.reserve(grads.size());
+    ret->out_types.reserve(grads.size());
+    for (const auto& i : grads) {
+      ret->ret_handles.push_back(i);
+      ret->out_types.push_back(i->storage_type());
+    }
+    *grad_handles = dmlc::BeginPtr(ret->ret_handles);
+    *grad_stypes = dmlc::BeginPtr(ret->out_types);
+  }
   API_END();
 }
 
