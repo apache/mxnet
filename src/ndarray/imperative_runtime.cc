@@ -571,7 +571,6 @@ void ImperativeRuntime::RecordOp(
     std::vector<bool>* p_save_inputs,
     std::vector<bool>* p_save_outputs) {
   if (!is_recording()) return;
-
   MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
@@ -645,9 +644,12 @@ void ImperativeRuntime::RecordOp(
   }
 }
 
-void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
-                                 const std::vector<NDArray*>& ograds,
-                                 bool is_train, bool retain_graph) {
+std::vector<NDArray*> ImperativeRuntime::Backward(
+    const std::vector<NDArray*>& outputs,
+    const std::vector<NDArray*>& ograds,
+    const std::vector<NDArray*>& variables,
+    bool is_train, bool retain_graph,
+    bool create_graph) {
   using namespace nnvm;
   static auto& fmutate_inputs = Op::GetAttr<FMutateInputs>("FMutateInputs");
   static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
@@ -683,16 +685,37 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   // Get gradient graph
   Symbol sym;
   sym.outputs = graph.outputs;
-  std::vector<NodePtr> args = sym.ListInputs(Symbol::kReadOnlyArgs);
   std::vector<NodeEntry> xs;
   std::vector<NDArray*> x_grads;
-  for (const auto& i : args) {
-    AGInfo& info = AGInfo::Get(i);
-    if (info.grad_req != kNullOp) {
+  std::vector<OpReqType> x_reqs;
+  if (variables.size()) {
+    xs.reserve(variables.size());
+    x_grads.reserve(variables.size());
+    x_reqs.reserve(variables.size());
+    for (size_t i = 0; i < variables.size(); ++i) {
+      CHECK(!AGInfo::IsNone(*variables[i]) &&
+            AGInfo::IsVariable(variables[i]->entry_.node))
+          << "Cannot differentiate with respect to the " << i+1 << "-th variable"
+          << " because it does not require gradient.";
+      xs.emplace_back(variables[i]->entry_);
+      x_grads.push_back(new NDArray());
+      x_reqs.push_back(kWriteTo);
+    }
+  } else {
+    std::vector<NodePtr> args = sym.ListInputs(Symbol::kReadOnlyArgs);
+    xs.reserve(args.size());
+    x_grads.reserve(args.size());
+    x_reqs.reserve(args.size());
+    for (const auto& i : args) {
+      AGInfo& info = AGInfo::Get(i);
+      if (info.grad_req == kNullOp) continue;
       xs.emplace_back(NodeEntry{i, 0, 0});
       x_grads.push_back(&info.out_grads[0]);
+      x_reqs.push_back(info.grad_req);
       info.fresh_out_grad = true;
     }
+    CHECK_GT(xs.size(), 0)
+        << "There are no inputs in computation graph that require gradients.";
   }
 
   std::vector<const Op*> zero_ops;
@@ -708,7 +731,6 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
     graph.outputs.push_back(e);
   }
   const auto& idx = graph.indexed_graph();
-
   // get number of nodes used in forward pass
   size_t num_forward_nodes = 0;
   size_t num_forward_entries = 0;
@@ -725,19 +747,39 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
   for (size_t i = 0; i < buff.size(); ++i) arrays.push_back(&buff[i]);
-  for (size_t i = 0; i < num_forward_nodes; ++i) {
-    const AGInfo& info = dmlc::get<AGInfo>(idx[i].source->info);
-    for (size_t j = 0; j < info.outputs.size(); ++j) {
-      size_t eid = idx.entry_id(i, j);
-      arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
-      if (retain_graph || info.grad_req != kNullOp) {
+  if (create_graph) {
+    nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
+      AGInfo& info = AGInfo::Get(n);
+      for (uint32_t i = 0; i < info.outputs.size(); ++i) {
+        CHECK(idx.exist(n.get()));
+        size_t nid = idx.node_id(n.get());
+        size_t eid = idx.entry_id(nid, i);
+        buff[eid] = info.outputs[i];
+        buff[eid].entry_ = NodeEntry{n, i, 0};
         ref_count[eid] = 1;
       }
+    });
+    for (size_t i = 0; i < ograd_entries.size(); ++i) {
+      AGInfo& info = AGInfo::Get(ograd_entries[i].node);
+      if (!idx.exist(ograd_entries[i].node.get())) continue;
+      size_t eid = idx.entry_id(ograd_entries[i]);
+      buff[eid] = info.outputs[0];
+      buff[eid].entry_ = ograd_entries[i];
     }
-  }
-  for (size_t i = 0; i < ograd_entries.size(); ++i) {
-    AGInfo& info = AGInfo::Get(ograd_entries[i].node);
-    arrays[idx.entry_id(ograd_entries[i])] = &info.outputs[0];
+  } else {
+    for (size_t i = 0; i < num_forward_nodes; ++i) {
+      const AGInfo& info = dmlc::get<AGInfo>(idx[i].source->info);
+      for (size_t j = 0; j < info.outputs.size(); ++j) {
+        size_t eid = idx.entry_id(i, j);
+        arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
+        if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
+      }
+    }
+    for (size_t i = 0; i < ograd_entries.size(); ++i) {
+      if (!idx.exist(ograd_entries[i].node.get())) continue;
+      AGInfo& info = AGInfo::Get(ograd_entries[i].node);
+      arrays[idx.entry_id(ograd_entries[i])] = &info.outputs[0];
+    }
   }
   for (size_t i = num_forward_outputs; i < graph.outputs.size(); ++i) {
     size_t eid = idx.entry_id(graph.outputs[i]);
@@ -779,7 +821,6 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
   for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
     if (!arrays[i]->is_none()) continue;
-    CHECK_EQ(ref_count[i], 0);
     if (stypes[i] == kDefaultStorage) {
       *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
     } else {
@@ -802,15 +843,14 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
   }
   for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
     size_t eid = idx.entry_id(idx.outputs()[i]);
-    AGInfo& info = AGInfo::Get(xs[i - num_forward_outputs].node);
-    array_reqs[eid] = info.grad_req;
+    array_reqs[eid] = x_reqs[i - num_forward_outputs];
   }
 
   // Execution
   std::vector<NDArray*> ndinputs, ndoutputs;
   std::vector<OpReqType> req;
 
-  bool prev_recording = set_is_recording(false);
+  bool prev_recording = set_is_recording(create_graph);
   bool prev_training = set_is_training(is_train);
 
   for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
@@ -829,18 +869,18 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
     for (size_t j = 0; j < node.source->num_outputs(); ++j) {
       size_t eid = idx.entry_id(i, j);
       ndoutputs.emplace_back(arrays[eid]);
-      CHECK(!ndoutputs.back()->is_none());
       req.push_back(array_reqs[eid]);
+      CHECK(!ndoutputs.back()->is_none());
     }
 
     if (is_layer_backward.get(node.source->attrs.op, false)) {
       CHECK_GE(node.source->control_deps.size(), 1);
       auto& state = AGInfo::Get(node.source->control_deps[0]).state;
-      ImperativeRuntime::Get()->InvokeOp(
-          default_ctx, node.source->attrs, ndinputs, ndoutputs, req, state);
+      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, state);
+      RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, state);
     } else {
-      ImperativeRuntime::Get()->InvokeOp(
-          default_ctx, node.source->attrs, ndinputs, ndoutputs, req);
+      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req);
+      RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs);
     }
 
     for (const auto& j : node.inputs) {
@@ -864,6 +904,11 @@ void ImperativeRuntime::Backward(const std::vector<NDArray*>& outputs,
       n->inputs.clear();
     });
   }
+
+  if (variables.size()) {
+    return x_grads;
+  }
+  return {};
 }
 
 }  // namespace mxnet

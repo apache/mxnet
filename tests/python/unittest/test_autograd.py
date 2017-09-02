@@ -415,6 +415,18 @@ def test_sparse_dot_grad():
     dns.attach_grad(stype='row_sparse')
     check_sparse_dot_grad(dns)
 
+def test_gradient():
+    x = mx.nd.ones((1,))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        z = mx.nd.elemwise_add(mx.nd.exp(x), x)
+    dx = mx.autograd.grad(z, [x], create_graph=True)
+    assert abs(dx.asscalar() - 3.71828175) < 1e-7
+    dx.backward()
+    assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()
