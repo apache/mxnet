@@ -40,11 +40,12 @@
 #include "../operator_common.h"
 #include "../sequence_op_common.h"
 #include "../mshadow_op.h"
+#include "../nn/sequence_mask-inl.h"
 
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
 #define CUDNN_LABEL_LENGTH_LIMIT 256
 #include "../nn/softmax-inl.h"
-#endif
+#endif  // CUDNN
 
 namespace mxnet {
 namespace op {
@@ -204,7 +205,7 @@ struct CTCLossParam : public dmlc::Parameter<CTCLossParam> {
                 "`label_lengths`, or derived from `padding_mask`. "
                 "If false, the lengths are derived from the "
                 "first occurrence of the value of `padding_mask`.");
-    DMLC_DECLARE_FIELD(padding_mask).set_default(dmlc::optional<int>(0))
+    DMLC_DECLARE_FIELD(padding_mask).set_default(dmlc::optional<int>(-1))
       .describe("int or None. This is the label value to be considered padding. "
                 "Only required when `use_label_lengths` is false. "
                 "Labels before the first occurrence of `padding_mask` are included "
@@ -279,22 +280,32 @@ class CTCLossOp : public Operator {
                                                      &packed_labels, &label_lengths);
     }
 
-#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
-    if (!param_.use_data_lengths && !exceed_cudnn_limit) {
-      cudnn_forward(ctx, s, data, costs, grad,
-                    &data_lengths, &label_lengths, &packed_labels,
-                    max_seq_len, batch_size, alphabet_size,
-                    req[ctc_loss::kGrad] != mxnet::kNullOp);
-    } else {
-      baidu_forward(ctx, s, data, costs, grad,
-                    &data_lengths, &label_lengths, &packed_labels,
-                    batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp);
-    }
-#else
+// CUDNN is disabled due to lack of support for input lengths
+/* #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7 */
+/*     if (!exceed_cudnn_limit) { */
+/*       cudnn_forward(ctx, s, data, costs, grad, */
+/*                     &data_lengths, &label_lengths, &packed_labels, */
+/*                     max_seq_len, batch_size, alphabet_size, */
+/*                     req[ctc_loss::kGrad] != mxnet::kNullOp); */
+/*     } else { */
+/*       baidu_forward(ctx, s, data, costs, grad, */
+/*                     &data_lengths, &label_lengths, &packed_labels, */
+/*                     batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp); */
+/*     } */
+/* #else */
+
     baidu_forward(ctx, s, data, costs, grad,
                   &data_lengths, &label_lengths, &packed_labels,
                   batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp);
-#endif  // __CUDACC__ && CUDNN
+
+    if (param_.use_data_lengths) {
+      // baidu warp CTC implementation sometimes includes undefined gradients
+      // for data outside of length mask. Setting to 0 to make it consistent
+      // with CPU implementation.
+      int kInputLength = 2;
+      mxnet_op::SequenceMask(grad, in_data[kInputLength].get<xpu, 1, real_t>(s),
+                             static_cast<real_t>(0));
+    }
   }
 
   virtual void Backward(const OpContext &ctx,

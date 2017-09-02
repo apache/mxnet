@@ -3377,19 +3377,19 @@ def check_ctc_loss(acts, labels, loss_truth):
 def test_ctc_loss():
     # Test 1: check that batches are same + check against Torch WarpCTC
     acts = np.array([
-        [[1.2, 3.4, 1.2, -0.1, -2.34], [1.2, 3.4, 1.2, -0.1, -2.34]],
-        [[0.1, 0.2, 0.3, 0.22, 0.123], [0.1, 0.2, 0.3, 0.22, 0.123]],
-        [[-15, -14, -13, -12, -11], [-15, -14, -13, -12, -11]]],
+        [[3.4, 1.2, -0.1, -2.34, 1.2], [3.4, 1.2, -0.1, -2.34, 1.2]],
+        [[0.2, 0.3, 0.22, 0.123 ,0.1], [0.2, 0.3, 0.22, 0.123, 0.1]],
+        [[-14, -13, -12, -11, -15], [-14, -13, -12, -11, -15]]],
                     dtype=np.float32)
-    labels = np.array([[2, 3, 0], [2, 3, 0]])
+    labels = np.array([[1, 2, -1], [1, 2, -1]])
     true_loss = np.array([4.04789, 4.04789], dtype=np.float32) # from Torch
     check_ctc_loss(acts, labels, true_loss)
     # Test 2:
     acts2 = np.array([
-        [[-5, -4, -3, -2, -1], [1.2, 3.4, 1.2, -0.1, -2.34]],
-        [[-10, -9, -8, -7, -6], [0.1, 0.2, 0.3, 0.22, 0.123]],
-        [[-15, -14, -13, -12, -11], [-15, -14.2, -13.5, -12.2, -11.22]]], dtype=np.float32)
-    labels2 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.float32)
+        [[-4, -3, -2, -1, -5], [3.4, 1.2, -0.1, -2.34, 1.2]],
+        [[-9, -8, -7, -6, -10], [0.2, 0.3, 0.22, 0.123, 0.1]],
+        [[-14, -13, -12, -11, -15], [-14.2, -13.5, -12.2, -11.22, -15]]], dtype=np.float32)
+    labels2 = np.array([[1, 2, 0], [1, -1, -1]], dtype=np.float32)
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 

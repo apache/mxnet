@@ -35,7 +35,7 @@ ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              void *workspace, int train) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
-  int blank_label = 0;
+  int blank_label = alphabet_size-1;
   mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
   if (train)
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
@@ -76,8 +76,9 @@ The shapes of the inputs and outputs:
 - **label**: *(batch_size, label_sequence_length)*
 - **out**: *(batch_size)*.
 
-``label`` is a tensor of integers between 1 and *alphabet_size*. If a
-sequence of labels is shorter than *label_sequence_length*, use the special
+``label`` is a tensor of integers between 0 and *alphabet_size-1*. The label value
+which is equal to *alphabet_size* is reserved for special blank label.
+If a sequence of labels is shorter than *label_sequence_length*, use the special
 padding character 0 at the end of the sequence to conform it to the correct
 length. For example, if *label_sequence_length* = 4, and one has two sequences
 of labels [2, 1] and [3, 2, 2], the resulting ```label``` tensor should be
@@ -85,10 +86,8 @@ padded to be::
 
   [[2, 1, 0, 0], [3, 2, 2, 0]]
 
-The ``data`` tensor consists of sequences of activation vectors. The layer
-applies a softmax to each vector, which then becomes a vector of probabilities
-over the alphabet. Note that the 0th element of this vector is reserved for the
-special blank character.
+The ``data`` tensor consists of sequences of activation vectors. Note that
+the last element of each vector is reserved for the special blank character.
 
 ``out`` is a list of CTC loss values, one per example in the batch.
 

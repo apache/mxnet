@@ -325,21 +325,23 @@ class CTCLoss(Loss):
         This should be used as the fifth argument when calling this loss.
 
     Input shapes:
-        `data` is an activation tensor without softmax.
+        `data` is an activation tensor (i.e. before softmax).
         Its shape depends on `layout`. For `layout='TNC'`, this
-        input has shape `(sequence_length, batch_size, alphabet_size)`
+        input has shape `(sequence_length, batch_size, alphabet_size+1)`
+        Note that the last dimension with index `alphabet_size` is reserved for special
+        blank character.
 
-        `label` is the label index matrix.
+        `label` is the label index matrix with zero-indexed labels.
         Its shape depends on `label_layout`. For `label_layout='TN'`, this
         input has shape `(label_sequence_length, batch_size)`
         When `label_lengths` is not specified, the first occurrence of `padding_mask`
         in each sample marks the end of the label sequence of that sample.
         For example, suppose there are two samples, with *label_sequence_length* = 4.
         The two sequences of labels are [2, 1] and [3, 2, 2], and their actual lengths
-        are smaller than 4. Thus, given *padding_mask* = 0, the resulting ```label```
+        are smaller than 4. Thus, given *padding_mask* = -1, the resulting ```label```
         tensor should be padded to be::
 
-          [[2, 1, 0, 0], [3, 2, 2, 0]]
+          [[2, 1, -1, -1], [3, 2, 2, -1]]
 
         `data_lengths` is optional and defaults to None.
         When specified, it represents the actual lengths of data.
