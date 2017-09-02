@@ -386,6 +386,7 @@ def test_trainer():
             dict_equ(updater.states, states)
         assert trainer._optimizer == trainer._updaters[0].optimizer
 
+
 def test_block_attr_hidden():
     b = gluon.Block()
 
