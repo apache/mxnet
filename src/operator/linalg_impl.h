@@ -400,6 +400,7 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                              bool tA, bool tB, Stream<cpu> *s, \
                              mxnet::OpReqType req) { \
   using namespace mxnet; \
+  using mshadow::cpu; \
   switch (req) { \
     case kNullOp: \
       break; \
