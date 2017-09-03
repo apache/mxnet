@@ -228,7 +228,7 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
 /*!
  * \brief Resiger an NDArray compute function for simple stateless forward only operator
  *
- * \note Register under "FComputeEx<xpu, default>" and "FComputeEx<xpu, non-default>" 
+ * \note Register under "FComputeEx<xpu, default>" and "FComputeEx<xpu, non-default>"
  *       Dispatched only when operators process non-default storage inputs or outputs
  */
 using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
@@ -242,6 +242,8 @@ using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
 
+using FQuantizedOp = std::function<nnvm::NodePtr (nnvm::NodePtr n)>;
+using TQuantizationNeedShrink = bool;
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_
