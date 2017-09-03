@@ -420,7 +420,7 @@ abstract class BaseModule {
 
       // one epoch of training is finished
       val (name, value) = fitParams.evalMetric.get
-      logger.info(s"Epoch[$epoch] Train-$name=$value")
+      logger.info(s"Epoch[$epoch] Train-${name.head}=${value.head}")
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -438,7 +438,7 @@ abstract class BaseModule {
           scoreEndCallback = fitParams.evalEndCallback,
           batchEndCallback = fitParams.evalBatchEndCallback, epoch = epoch)
         val (name, value) = res.get
-        logger.info(s"Epoch[$epoch] Validation-$name=$value")
+        logger.info(s"Epoch[$epoch] Validation-${name.head}=${value.head}")
       })
 
       // end of 1 epoch, reset the data-iter for another epoch
