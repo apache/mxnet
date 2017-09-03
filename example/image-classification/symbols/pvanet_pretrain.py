@@ -133,7 +133,7 @@ def Conv(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None
     act = mx.sym.Activation(data=scale, act_type='relu', name='%s%s_relu' %(name, suffix))
     return act
 def fullconnection(data, num_hidden, name, suffix):
-    fc = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, name='%s_fc' %(name))
+    fc = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, name='%s' %(name))
     bn = mx.sym.BatchNorm(data=fc, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
     scale = scale_and_shift(data=bn, name='%s%s_scaleshift' %(name, suffix))
     dropout = mx.sym.Dropout(data=scale, name= '%s_dropout' %(name))
