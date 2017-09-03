@@ -22,8 +22,31 @@ import java.io.IOException
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet._
 import org.slf4j.LoggerFactory
-
+import org.slf4j.Logger
 import scala.collection.mutable.ArrayBuffer
+
+object BaseModule {
+  /**
+   * Check that all input names are in symbol's arguments.
+   */
+  @throws(classOf[IllegalArgumentException])
+  def _checkInputNames(symbol: Symbol, names: IndexedSeq[String],
+    typeName: String, throws: Boolean, logger: Logger): Unit = {
+    val args = symbol.listArguments()
+    for (name <- names) {
+      if (!args.contains(name)) {
+        val candidates = args.filter ( arg =>
+          !arg.endsWith("_weight") && !arg.endsWith("_bias")
+          && !arg.endsWith("_gamma") && !arg.endsWith("_beta"))
+        val msg = s"You created Module with Module(..., ${typeName}_names=${names.mkString})" +
+          s" but input with name \'${name}\' is not found in symbol.listArguments(). " +
+          s"Did you mean one of:\n${candidates.mkString("\n\t")}"
+        if (throws) throw new IllegalArgumentException(msg)
+        else logger.warn(msg)
+      }
+    }
+  }
+}
 
 /**
  * The base class of a modules. A module represents a computation component. The design
