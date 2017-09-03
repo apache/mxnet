@@ -49,31 +49,16 @@ array([[ 1.  0.],
 array([0, 2])
 ```
 
-<br><br>
-
 ```eval_rst
 
-.. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the differences are not negligible. For instance:
+.. note:: ``mxnet.ndarray.sparse`` is similar to ``mxnet.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
-   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied 
-     array, instead of returning a view of the input array.
-   - ``mxnet.ndarray.dot`` performs dot product between the last axis of the
-     first input array and the first axis of the second input, while `numpy.dot`
-     uses the second last axis of the input array.
+   - Only a subset of operators in ``mxnet.ndarray`` have specialized implementations in ``mxnet.ndarray.sparse``.
+     Operators such as reduction and broadcasting do not have sparse implementations yet.
+   - The storage types of sparse operators' outputs depend on the storage types of inputs.
+     By default the operators in ``mxnet.ndarray`` infers "default" (dense) storage type for outputs.
+   - GPU support for ``mxnet.ndarray.sparse`` is experimental.
 
-   In addition, ``mxnet.ndarray.NDArray`` supports GPU computation and various neural
-   network layers.
-
-.. note:: ``ndarray`` provides almost the same routines as ``symbol``. Most
-  routines between these two packages share the source code. But ``ndarray``
-  differs from ``symbol`` in few aspects:
-
-  - ``ndarray`` adopts imperative programming, namely sentences are executed
-    step-by-step so that the results can be obtained immediately whereas 
-    ``symbol`` adopts declarative programming.
-
-  - Most binary operators in ``ndarray`` such as ``+`` and ``>`` have
-    broadcasting enabled by default.
 ```
 
 In the rest of this document, we first overview the methods provided by the
@@ -277,9 +262,13 @@ We summarize the interface for each class in the following sections.
     :special-members:
 
 .. automodule:: mxnet.ndarray.sparse
-    :members: array, empty, zeros
+    :members:
     :special-members:
     :exclude-members: BaseSparseNDArray, RowSparseNDArray, CSRNDArray
+
+.. automodule:: mxnet.ndarray.sparse
+    :annotation:
+    :members: array, zeros, empty
 
 ```
 
