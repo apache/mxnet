@@ -13,8 +13,10 @@ Dataset: caltech 101 silhouettes dataset from https://people.cs.umass.edu/~marli
 Usage
 
 Using existing models
-python vaegan_mxnet.py --train --training_data_path [your dataset image path] [options]
+
+python vaegan_mxnet.py --test --testing_data_path [your dataset image path] --pretrained_encoder_path [pretrained encoder model path] --pretrained_generator_path [pretrained generator model path] [options]
 
 Train a new model
 
-python vaegan_mxnet.py --test --testing_data_path [your dataset image path] --pretrained_encoder_path [pretrained encoder model path] --pretrained_generator_path [pretrained generator model path] [options]
+python vaegan_mxnet.py --train --training_data_path [your dataset image path] [options]
+
