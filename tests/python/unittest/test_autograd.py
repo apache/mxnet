@@ -421,7 +421,7 @@ def test_gradient():
 
     with mx.autograd.record():
         z = mx.nd.elemwise_add(mx.nd.exp(x), x)
-    dx = mx.autograd.grad(z, [x], create_graph=True)
+    dx, = mx.autograd.grad(z, [x], create_graph=True)
     assert abs(dx.asscalar() - 3.71828175) < 1e-7
     dx.backward()
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
