@@ -93,6 +93,15 @@ def train_net(args, ctx, pretrained, epoch, prefix, begin_epoch, end_epoch,
         arg_params['bbox_pred_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['bbox_pred_weight'])
         arg_params['bbox_pred_bias'] = mx.nd.zeros(shape=arg_shape_dict['bbox_pred_bias'])
 
+    if args.network == 'pvanet':
+        arg_params['deconv_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['deconv_weight'])
+        arg_params['fc6_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['fc6_weight'])
+        arg_params['fc6_bias'] = mx.nd.zeros(shape=arg_shape_dict['fc6_bias'])
+        arg_params['fc7_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['fc7_weight'])
+        arg_params['fc7_bias'] = mx.nd.zeros(shape=arg_shape_dict['fc7_bias'])
+        arg_params['convf_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['convf_weight'])
+        arg_params['convf_bias'] = mx.nd.zeros(shape=arg_shape_dict['convf_bias'])
+
     # check parameter shapes
     for k in sym.list_arguments():
         if k in data_shape_dict:
