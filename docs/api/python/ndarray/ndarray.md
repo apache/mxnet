@@ -1,4 +1,4 @@
-# ndarray API
+# NDArray API
 
 ```eval_rst
 .. currentmodule:: mxnet.ndarray
@@ -607,7 +607,7 @@ The `ndarray` package provides several classes:
     :members:
     :imported-members:
     :special-members:
-    :exclude-members: CachedOp, BaseSparseNDArray, NDArray, CSRNDArray, RowSparseNDArray
+    :exclude-members: CachedOp, NDArray
 
 ```
 

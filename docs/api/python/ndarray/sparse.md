@@ -1,4 +1,4 @@
-# ndarray.sparse API
+# Sparse NDArray API
 
 ```eval_rst
 .. currentmodule:: mxnet.ndarray.sparse
@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document lists the routines of the *n*-dimensional array package:
+This document lists the routines of the *n*-dimensional sparse array package:
 
 ```eval_rst
 .. autosummary::
@@ -15,27 +15,40 @@ This document lists the routines of the *n*-dimensional array package:
     mxnet.ndarray.sparse
 ```
 
-The `NDArray` API, defined in the `ndarray` (or simply `nd`) package, provides
-imperative tensor operations on CPU/GPU.
-An `NDArray` represents a multi-dimensional, fixed-size homogenous array.
+The `CSRNDArray` and `RowSparseNDArray` API, defined in the `ndarray.sparse` package, provides
+imperative sparse tensor operations on CPU.
+
+An `CSRNDArray` represents a two-dimensional, fixed-size array in compressed sparse row format.
 
 ```python
->>> x = mx.nd.array([[1, 2, 3], [4, 5, 6]])
->>> type(x)
-<class 'mxnet.ndarray.NDArray'>
->>> x.shape
-(2, 3)
->>> y = x + mx.nd.ones(x.shape)*3
->>> print(y.asnumpy())
-[[ 4.  5.  6.]
- [ 7.  8.  9.]]
->>> z = y.as_in_context(mx.gpu(0))
->>> print(z)
-<NDArray 2x3 @gpu(0)>
+>>> x = mx.nd.array([[1, 0], [0, 0], [2, 3]])
+>>> csr = x.tostype('csr')
+>>> type(csr)
+<class 'mxnet.ndarray.sparse.CSRNDArray'>
+>>> csr.shape
+(3, 2)
+>>> csr.data.asnumpy()
+array([ 1.  2.  3.], dtype=float32)
+>>> csr.indices.asnumpy()
+array([0, 0, 1])
+>>> csr.indptr.asnumpy()
+array([0, 1, 1, 3])
 ```
 
-A detailed tutorial is available at
-[NDArray - Imperative tensor operations on CPU/GPU](http://mxnet.io/tutorials/basic/ndarray.html).
+An `RowSparseNDArray` represents a multi-dimensional, fixed-size array in row sparse format.
+
+```python
+>>> x = mx.nd.array([[1, 0], [0, 0], [2, 3]])
+>>> row_sparse = x.tostype('row_sparse')
+>>> type(row_sparse)
+<class 'mxnet.ndarray.sparse.RowSparseNDArray'>
+>>> row_sparse.data.asnumpy()
+array([[ 1.  0.],
+       [ 2.  3.]], dtype=float32)
+>>> row_sparse.indices.asnumpy()
+array([0, 2])
+```
+
 <br><br>
 
 ```eval_rst
@@ -64,22 +77,22 @@ A detailed tutorial is available at
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`ndarray.NDArray` class and its subclasses, and then list other routines
-provided by the `ndarray` package.
+`ndarray.sparse.CSRNDArray` class and the `ndarray.sparse.RowSparseNDArray` class,
+and then list other routines provided by the `ndarray.sparse` package.
 
-The `ndarray` package provides several classes:
+The `ndarray.sparse` package provides several classes:
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    sparse.CSRNDArray
-    sparse.RowSparseNDArray
+    CSRNDArray
+    RowSparseNDArray
 ```
 
 We summarize the interface for each class in the following sections.
 
-## The `NDArray` class
+## The `CSRNDArray` class
 
 ### Array attributes
 
@@ -87,11 +100,14 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    NDArray.shape
-    NDArray.size
-    NDArray.context
-    NDArray.dtype
-    NDArray.stype
+    CSRNDArray.shape
+    CSRNDArray.size
+    CSRNDArray.context
+    CSRNDArray.dtype
+    CSRNDArray.stype
+    CSRNDArray.data
+    CSRNDArray.indices
+    CSRNDArray.indptr
 ```
 
 ### Array conversion
@@ -100,13 +116,13 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    NDArray.copy
-    NDArray.copyto
-    NDArray.as_in_context
-    NDArray.asnumpy
-    NDArray.asscalar
-    NDArray.astype
-    NDArray.tostype
+    CSRNDArray.copy
+    CSRNDArray.copyto
+    CSRNDArray.as_in_context
+    CSRNDArray.asnumpy
+    CSRNDArray.asscalar
+    CSRNDArray.astype
+    CSRNDArray.tostype
 ```
 
 ### Array creation
@@ -115,132 +131,7 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    NDArray.zeros_like
-    NDArray.ones_like
-```
-
-### Array change shape
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.T
-    NDArray.reshape
-    NDArray.flatten
-    NDArray.expand_dims
-    NDArray.split
-```
-
-### Array expand elements
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.broadcast_to
-    NDArray.broadcast_axes
-    NDArray.tile
-    NDArray.pad
-```
-
-### Array rearrange elements
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.transpose
-    NDArray.swapaxes
-    NDArray.flip
-```
-
-### Array reduction
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.sum
-    NDArray.nansum
-    NDArray.prod
-    NDArray.nanprod
-    NDArray.mean
-    NDArray.max
-    NDArray.min
-    NDArray.norm
-```
-
-### Array rounding
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.round
-    NDArray.rint
-    NDArray.fix
-    NDArray.floor
-    NDArray.ceil
-    NDArray.trunc
-```
-
-### Array sorting and searching
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.sort
-    NDArray.argsort
-    NDArray.topk
-    NDArray.argmax
-    NDArray.argmin
-```
-
-### Arithmetic operations
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.__add__
-    NDArray.__sub__
-    NDArray.__rsub__
-    NDArray.__neg__
-    NDArray.__mul__
-    NDArray.__div__
-    NDArray.__rdiv__
-    NDArray.__mod__
-    NDArray.__rmod__
-    NDArray.__pow__
-```
-
-### In-place arithmetic operations
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.__iadd__
-    NDArray.__isub__
-    NDArray.__imul__
-    NDArray.__idiv__
-    NDArray.__imod__
-```
-
-### Comparison operators
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    NDArray.__lt__
-    NDArray.__le__
-    NDArray.__gt__
-    NDArray.__ge__
-    NDArray.__eq__
-    NDArray.__ne__
+    CSRNDArray.zeros_like
 ```
 
 ### Indexing
@@ -249,13 +140,9 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    NDArray.__getitem__
-    NDArray.__setitem__
-    NDArray.slice
-    NDArray.slice_axis
-    NDArray.take
-    NDArray.one_hot
-    NDArray.pick
+    CSRNDArray.__getitem__
+    CSRNDArray.__setitem__
+    CSRNDArray.slice
 ```
 
 ### Lazy evaluation
@@ -264,46 +151,67 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    NDArray.wait_to_read
+    CSRNDArray.wait_to_read
 ```
 
-### Miscellaneous
+## The `RowSparseNDArray` class
+
+### Array attributes
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    NDArray.clip
-    NDArray.sign
+    RowSparseNDArray.shape
+    RowSparseNDArray.size
+    RowSparseNDArray.context
+    RowSparseNDArray.dtype
+    RowSparseNDArray.stype
+    RowSparseNDArray.data
+    RowSparseNDArray.indices
 ```
 
-## The `sparse.RowSparseNDArray` Class
+### Array conversion
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    sparse.RowSparseNDArray.copyto
-    sparse.RowSparseNDArray.tostype
-    sparse.RowSparseNDArray.__setitem__
-    sparse.RowSparseNDArray.__getitem__
-    sparse.RowSparseNDArray.data
-    sparse.RowSparseNDArray.indices
+    RowSparseNDArray.copy
+    RowSparseNDArray.copyto
+    RowSparseNDArray.as_in_context
+    RowSparseNDArray.asnumpy
+    RowSparseNDArray.asscalar
+    RowSparseNDArray.astype
+    RowSparseNDArray.tostype
 ```
 
-## The `sparse.CSRNDArray` Class
+### Array creation
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    sparse.CSRNDArray.copyto
-    sparse.CSRNDArray.tostype
-    sparse.CSRNDArray.__setitem__
-    sparse.CSRNDArray.__getitem__
-    sparse.CSRNDArray.data
-    sparse.CSRNDArray.indices
-    sparse.CSRNDArray.indptr
+    RowSparseNDArray.zeros_like
+```
+
+### Indexing
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.__getitem__
+    RowSparseNDArray.__setitem__
+```
+
+### Lazy evaluation
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.wait_to_read
 ```
 
 ## Array creation routines
@@ -316,60 +224,19 @@ We summarize the interface for each class in the following sections.
     empty
     zeros
     zeros_like
-    ones
-    ones_like
-    full
-    arange
-    load
-    save
+    csr_matrix
+    row_sparse_array
 ```
 
 ## Array manipulation routines
 
-### Changing array shape and type
+### Changing array storage type
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    cast
-    reshape
-    flatten
-    expand_dims
-```
-
-### Expanding array elements
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    broadcast_to
-    broadcast_axes
-    repeat
-    tile
-    pad
-```
-
-### Rearranging elements
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    transpose
-    swapaxes
-    flip
-```
-
-### Joining and splitting arrays
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    concat
-    split
+    cast_storage
 ```
 
 ### Indexing routines
@@ -379,12 +246,7 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     slice
-    slice_axis
-    take
-    batch_take
-    one_hot
-    pick
-    where
+    retain
 ```
 
 ## Mathematical functions
@@ -395,233 +257,9 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    add
-    subtract
-    negative
-    multiply
-    divide
-    modulo
+    elemwise_add
     dot
-    batch_dot
     add_n
-```
-
-### Trigonometric functions
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sin
-    cos
-    tan
-    arcsin
-    arccos
-    arctan
-    broadcast_hypot
-    degrees
-    radians
-```
-
-### Hyperbolic functions
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sinh
-    cosh
-    tanh
-    arcsinh
-    arccosh
-    arctanh
-```
-
-### Reduce functions
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sum
-    nansum
-    prod
-    nanprod
-    mean
-    max
-    min
-    norm
-```
-
-### Rounding
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    round
-    rint
-    fix
-    floor
-    ceil
-    trunc
-```
-
-
-### Exponents and logarithms
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    exp
-    expm1
-    log
-    log10
-    log2
-    log1p
-```
-
-### Powers
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    power
-    sqrt
-    rsqrt
-    square
-```
-
-### Logic functions
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    equal
-    not_equal
-    greater
-    greater_equal
-    lesser
-    lesser_equal
-```
-### Random sampling
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    random_uniform
-    random_normal
-    random_gamma
-    random_exponential
-    random_poisson
-    random_negative_binomial
-    random_generalized_negative_binomial
-    sample_uniform
-    sample_normal
-    sample_gamma
-    sample_exponential
-    sample_poisson
-    sample_negative_binomial
-    sample_generalized_negative_binomial
-    mxnet.random.seed
-```
-
-### Sorting and searching
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sort
-    topk
-    argsort
-    argmax
-    argmin
-```
-
-### Linear Algebra
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    linalg_gemm
-    linalg_gemm2
-    linalg_potrf
-    linalg_potri
-    linalg_trmm
-    linalg_trsm
-    linalg_sumlogdiag
-```
-
-### Miscellaneous
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    maximum
-    minimum
-    clip
-    abs
-    sign
-    gamma
-    gammaln
-```
-
-## Neural network
-
-### Basic
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    FullyConnected
-    Convolution
-    Activation
-    BatchNorm
-    Pooling
-    SoftmaxOutput
-    softmax
-    log_softmax
-```
-
-### More
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    Correlation
-    Deconvolution
-    RNN
-    Embedding
-    LeakyReLU
-    InstanceNorm
-    L2Normalization
-    LRN
-    ROIPooling
-    SoftmaxActivation
-    Dropout
-    BilinearSampler
-    GridGenerator
-    UpSampling
-    SpatialTransformer
-    LinearRegressionOutput
-    LogisticRegressionOutput
-    MAERegressionOutput
-    SVMOutput
-    softmax_cross_entropy
-    smooth_l1
-    IdentityAttachKLSparseReg
-    MakeLoss
-    BlockGrad
-    Custom
 ```
 
 ## API Reference
@@ -639,9 +277,9 @@ We summarize the interface for each class in the following sections.
     :special-members:
 
 .. automodule:: mxnet.ndarray.sparse
-    :members:
-    :imported-members:
+    :members: array, empty, zeros
     :special-members:
+    :exclude-members: BaseSparseNDArray, RowSparseNDArray, CSRNDArray
 
 ```
 
