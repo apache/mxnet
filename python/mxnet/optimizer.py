@@ -383,9 +383,9 @@ class SGD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -445,9 +445,9 @@ class DCASGD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -482,9 +482,9 @@ class NAG(SGD):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -519,9 +519,9 @@ class SGLD(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -573,9 +573,9 @@ class Adam(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         t = self._index_update_count[index]
         coef1 = 1. - self.beta1**t
@@ -617,9 +617,9 @@ class AdaGrad(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
@@ -682,9 +682,9 @@ class RMSProp(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         kwargs = {'gamma1': self.gamma1, 'epsilon': self.epsilon,
                   'rescale_grad': self.rescale_grad}
@@ -835,9 +835,9 @@ class Adamax(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         t = self._index_update_count[index]
         lr /= (1. - self.beta1**t)
@@ -893,9 +893,9 @@ class Nadam(Optimizer):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        self._update_count(index)
 
         t = self._index_update_count[index]
 
