@@ -2,7 +2,7 @@ import mxnet as mx
 import proposal
 import proposal_target
 from rcnn.config import config
-
+555
 def get_pvanet_conv(data):
     conv1_1 = crelu(data=data, num_filter=16, kernel=(7, 7), pad=(3, 3), stride=(2, 2), name='conv1_1')  # (1056*640)x3/(528*320)x32
     pool1_1 = mx.sym.Pooling(data=conv1_1, kernel=(3, 3), stride=(2, 2), pad=(1, 1), pool_type='max', name='pool1_1')  # (528*320)x32/(264*160)x32
