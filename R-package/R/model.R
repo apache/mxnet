@@ -618,8 +618,12 @@ mx.model.load <- function(prefix, iteration) {
 mx.model.save <- function(model, prefix, iteration) {
   arg.params <- model$arg.params
   aux.params <- model$aux.params
-  names(arg.params) <- paste0("arg:", names(arg.params))
-  names(aux.params) <- paste0("aux:", names(aux.params))
+  names(arg.params) <- as.character(lapply(names(arg.params), function(nm) {
+    paste0("arg:", nm)
+  }))
+  names(aux.params) <- as.character(lapply(names(aux.params), function(nm) {
+    paste0("aux:", nm)
+  }))
   save.dict <- append(arg.params, aux.params)
   mx.symbol.save(model$symbol, path.expand(paste0(prefix, "-symbol.json")))
   mx.nd.save(save.dict, path.expand(sprintf("%s-%04d.params", prefix, iteration)))
