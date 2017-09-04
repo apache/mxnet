@@ -68,6 +68,9 @@ lstm.unroll <- function(num.lstm.layer, seq.len, input.size,
       }
       # decoder
       if (dropout > 0) hidden <- mx.symbol.Dropout(data=hidden, p=dropout)
+      
+      hidden
+      
     }
     
     last.hidden <- lapply(seq_len(seq.len), f)
@@ -363,7 +366,7 @@ mx.lstm.forward <- function(model, input.data, new.seq=FALSE) {
                    paste0("l", seq_len(model$num.rnn.layer), ".init.h"))
     names(c.h.names) <- c.h.names
     init.states <- lapply(c.h.names,
-                          function(x) model$rnn.exec$ref.outputs[[paste0(gsub(".init*$", "", x), ".last.", substr(x, nchar(x), nchar(x)), "_output")]]*0)
+                          function(x) model$rnn.exec$ref.outputs[[paste0(sub(".init*$", "", x), ".last.", substr(x, nchar(x), nchar(x)), "_output")]])
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]
     return (list(prob=prob, model=model))

@@ -63,7 +63,7 @@ rnn.unroll <- function(num.rnn.layer, seq.len, input.size, num.hidden,
                               last.states[[i]] <- next.state
                             }
                             # decoder
-                            if (dropout > 0.)  mx.symbol.Dropout(data=hidden, p=dropout) else hidden
+                            if (dropout > 0)  mx.symbol.Dropout(data=hidden, p=dropout) else hidden
                           })
     
     

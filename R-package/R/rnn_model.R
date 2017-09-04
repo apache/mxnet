@@ -151,7 +151,7 @@ train.rnn <- function (model, train.data, eval.data,
 
                 param.nms <- Reduce(is.param.name, names(m$rnn.exec$ref.grad.arrays))
                 grad.arrays <- lapply(setNames(param.nms, param.nms),
-                                      function(nm) m$rnn.exec$ref.grad.arrays[[name]]*0)
+                                      function(nm) m$rnn.exec$ref.grad.arrays[[nm]]*0)
                 mx.exec.update.grad.arrays(m$rnn.exec, grad.arrays, match.name=TRUE)
 
             }

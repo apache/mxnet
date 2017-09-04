@@ -334,7 +334,7 @@ mx.gru.forward <- function(model, input.data, new.seq=FALSE) {
     
     s <- paste0("l", seq_len(model$num.rnn.layer), ".init.h")
     names(s) <- s
-    init.states <- lapply(s, function(x) model$rnn.exec$ref.arg.arrays[[sub(".init.h$", ".last.h_output", x)]])
+    init.states <- lapply(s, function(x) model$rnn.exec$ref.outputs[[sub(".init.h$", ".last.h_output", x)]])
     
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]
