@@ -158,3 +158,38 @@ class Trainer(object):
                 if not ignore_stale_grad or arr._fresh_grad:
                     upd(i, grad, arr)
                     arr._fresh_grad = False
+
+    def save_states(self, fname):
+        """Saves trainer states (e.g. optimizer, momentum) to a file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to output states file.
+        """
+        assert self._optimizer is not None
+
+        if self._update_on_kvstore:
+            self._kvstore.save_optimizer_states(fname, dump_optimizer=True)
+        else:
+            with open(fname, 'wb') as fout:
+                fout.write(self._updaters[0].get_states(dump_optimizer=True))
+
+    def load_states(self, fname):
+        """Loads trainer states (e.g. optimizer, momentum) from a file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
+        """
+        if self._update_on_kvstore:
+            self._kvstore.load_optimizer_states(fname)
+            self._optimizer = self._kvstore._updater.optimizer
+        else:
+            with open(fname, 'rb') as f:
+                states = f.read()
+            for updater in self._updaters:
+                updater.set_states(states)
+                updater.optimizer = self._updaters[0].optimizer
+            self._optimizer = self._updaters[0].optimizer
