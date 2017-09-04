@@ -24,10 +24,9 @@ import pickle
 import logging
 import warnings
 import numpy
-from .base import py_str
-from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
+from .ndarray import (NDArray, zeros, clip, sqrt, array, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update)
+                      mp_sgd_update, mp_sgd_mom_update, ftrl_update)
 from .random import normal
 
 
@@ -810,8 +809,8 @@ class Ftrl(Optimizer):
         self.lr = learning_rate
 
     def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context),  # dn
-                zeros(weight.shape, weight.context))  # n
+        return (zeros(weight.shape, weight.context, stype=weight.stype),  # dn
+                zeros(weight.shape, weight.context, stype=weight.stype))  # n
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -820,21 +819,14 @@ class Ftrl(Optimizer):
         wd = self._get_wd(index)
         lr = self._get_lr(index)
 
-        # preprocess grad
-        grad *= self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        kwargs = {'lamda1': self.lamda1, 'beta': self.beta, 'rescale_grad': self.rescale_grad}
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
 
         # accumulated g and delta initialization
         dn, n = state
-
-        #update dn, n
-        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / lr
-        n += grad * grad
-
-        # update weight
-        weight[:] = (sign(dn) * self.lamda1 - dn) / \
-                    ((self.beta + sqrt(n)) / lr + wd) * (NDabs(dn) > self.lamda1)
+        ftrl_update(weight, grad, dn, n, out=weight,
+                    lr=lr, wd=wd, **kwargs)
 
 @register
 class Adamax(Optimizer):
@@ -980,9 +972,6 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
-        # convert ctypes.char_p.value back to python str if needed
-        if isinstance(index, bytes):
-            index = py_str(index)
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
             self.states_synced[index] = True
