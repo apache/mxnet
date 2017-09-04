@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=too-many-lines
+
 """Weight updating functions."""
 import math
 import pickle
@@ -58,6 +60,15 @@ class Optimizer(object):
 
     begin_num_update : int, optional
         The initial number of updates.
+
+
+    Properties
+    ----------
+    learning_rate: float
+        The learning rate of the optimizer or the learning rate of the
+        LRScheduler of the optimizer if the LRScheduler is defined. Given an
+        Optimizer object optimizer, the learning rate can be accessed as
+        optimizer.learning_rate and can be set as optimizer.learning_rate = val.
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
@@ -152,6 +163,12 @@ class Optimizer(object):
         else:
             raise ValueError('Cannot find optimizer %s' % name)
 
+    @property
+    def learning_rate(self):
+        if self.lr_scheduler is not None:
+            return self.lr_scheduler.base_lr
+        else:
+            return self.lr
 
     def create_state(self, index, weight):
         """Creates auxiliary state for a given weight.
@@ -191,6 +208,15 @@ class Optimizer(object):
             The state returned by `create_state()`.
         """
         raise NotImplementedError()
+
+    @learning_rate.setter
+    def learning_rate(self, lr):
+        if self.lr_scheduler is not None:
+            raise UserWarning("set_learning_rate mutates the value of the "
+                              "learning rate of the optimizer only when the "
+                              "LRScheduler of the optimizer is undefined.")
+        else:
+            self.lr = lr
 
     def set_lr_scale(self, args_lrscale): # pylint: disable=unused-argument
         """[DEPRECATED] Sets lr scale. Use set_lr_mult instead."""
