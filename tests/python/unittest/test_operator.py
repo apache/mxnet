@@ -3417,6 +3417,23 @@ def test_reciprocal_op():
     check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
+def test_cbrt_op():
+    data_tmp = np.random.rand(3, 4) * 10 - 5
+    data = mx.symbol.Variable('data')
+    test = mx.sym.cbrt(data)
+
+    check_numeric_gradient(test, [data_tmp])
+    check_symbolic_forward(test, [data_tmp], [np.cbrt(data_tmp)])
+
+def test_rcbrt_op():
+    data_tmp = np.random.rand(3, 4) * 10 - 5
+    # Avoid possible division by 0 errors
+    data_tmp[data_tmp == 0] = 1.0
+    data = mx.symbol.Variable('data')
+    test = mx.sym.rcbrt(data)
+
+    check_numeric_gradient(test, [data_tmp])
+    check_symbolic_forward(test, [data_tmp], [1/np.cbrt(data_tmp)])
 
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
