@@ -16,6 +16,7 @@
 # under the License.
 
 import os
+import numpy as np
 import mxnet as mx
 
 def test_ctx_group():
@@ -49,5 +50,31 @@ def test_ctx_group():
         else:
             assert arr.context == group2ctx['stage2']
 
+def test_ctx_group_sparse():
+    with mx.AttrScope(ctx_group='stage1'):
+        lhs = mx.symbol.Variable('lhs', stype='csr')
+        rhs = mx.symbol.Variable('rhs', stype='row_sparse')
+        dot  = mx.symbol.dot(lhs, rhs, name='dot')
+
+    set_stage1 = set(dot.list_arguments())
+    with mx.AttrScope(ctx_group='stage2'):
+        softmax  = mx.symbol.SoftmaxOutput(data = dot, name = 'softmax')
+
+    set_stage2 = set(softmax.list_arguments()) - set_stage1
+
+    group2ctx = {
+        'stage1' : mx.cpu(1),
+        'stage2' : mx.cpu(2)
+    }
+    texec = softmax.simple_bind(mx.cpu(0), group2ctx=group2ctx,
+                                lhs=(32,200), rhs=(200, 5))
+
+    for arr, name in zip(texec.arg_arrays, softmax.list_arguments()):
+        if name in set_stage1:
+            assert arr.context == group2ctx['stage1']
+        else:
+            assert arr.context == group2ctx['stage2']
+
 if __name__ == '__main__':
     test_ctx_group()
+    test_ctx_group_sparse()

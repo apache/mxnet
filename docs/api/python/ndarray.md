@@ -64,9 +64,21 @@ A detailed tutorial is available at
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`ndarray.NDArray` class, and then list other routines provided by the
-`ndarray` package.
+`ndarray.NDArray` class and its subclasses, and then list other routines
+provided by the `ndarray` package.
 
+The `ndarray` package provides several classes:
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray
+    sparse.CSRNDArray
+    sparse.RowSparseNDArray
+```
+
+We summarize the interface for each class in the following sections.
 
 ## The `NDArray` class
 
@@ -80,6 +92,7 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.size
     NDArray.context
     NDArray.dtype
+    NDArray.stype
 ```
 
 ### Array conversion
@@ -94,6 +107,17 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.asnumpy
     NDArray.asscalar
     NDArray.astype
+    NDArray.tostype
+```
+
+### Array creation
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.zeros_like
+    NDArray.ones_like
 ```
 
 ### Array change shape
@@ -104,7 +128,75 @@ In the rest of this document, we first overview the methods provided by the
 
     NDArray.T
     NDArray.reshape
+    NDArray.flatten
+    NDArray.expand_dims
+    NDArray.split
+```
+
+### Array expand elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
     NDArray.broadcast_to
+    NDArray.broadcast_axes
+    NDArray.tile
+    NDArray.pad
+```
+
+### Array rearrange elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.transpose
+    NDArray.swapaxes
+    NDArray.flip
+```
+
+### Array reduction
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sum
+    NDArray.nansum
+    NDArray.prod
+    NDArray.nanprod
+    NDArray.mean
+    NDArray.max
+    NDArray.min
+    NDArray.norm
+```
+
+### Array rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.round
+    NDArray.rint
+    NDArray.fix
+    NDArray.floor
+    NDArray.ceil
+    NDArray.trunc
+```
+
+### Array sorting and searching
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sort
+    NDArray.argsort
+    NDArray.topk
+    NDArray.argmax
+    NDArray.argmin
 ```
 
 ### Arithmetic operations
@@ -160,6 +252,11 @@ In the rest of this document, we first overview the methods provided by the
 
     NDArray.__getitem__
     NDArray.__setitem__
+    NDArray.slice
+    NDArray.slice_axis
+    NDArray.take
+    NDArray.one_hot
+    NDArray.pick
 ```
 
 ### Lazy evaluation
@@ -171,6 +268,45 @@ In the rest of this document, we first overview the methods provided by the
     NDArray.wait_to_read
 ```
 
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.clip
+    NDArray.sign
+```
+
+## The `sparse.RowSparseNDArray` Class
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sparse.RowSparseNDArray.copyto
+    sparse.RowSparseNDArray.tostype
+    sparse.RowSparseNDArray.__setitem__
+    sparse.RowSparseNDArray.__getitem__
+    sparse.RowSparseNDArray.data
+    sparse.RowSparseNDArray.indices
+```
+
+## The `sparse.CSRNDArray` Class
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sparse.CSRNDArray.copyto
+    sparse.CSRNDArray.tostype
+    sparse.CSRNDArray.__setitem__
+    sparse.CSRNDArray.__getitem__
+    sparse.CSRNDArray.data
+    sparse.CSRNDArray.indices
+    sparse.CSRNDArray.indptr
+```
+
 ## Array creation routines
 
 ```eval_rst
@@ -180,7 +316,9 @@ In the rest of this document, we first overview the methods provided by the
     array
     empty
     zeros
+    zeros_like
     ones
+    ones_like
     full
     arange
     load
@@ -247,6 +385,7 @@ In the rest of this document, we first overview the methods provided by the
     batch_take
     one_hot
     pick
+    where
 ```
 
 ## Mathematical functions
@@ -280,6 +419,7 @@ In the rest of this document, we first overview the methods provided by the
     arcsin
     arccos
     arctan
+    broadcast_hypot
     degrees
     radians
 ```
@@ -381,6 +521,13 @@ In the rest of this document, we first overview the methods provided by the
     random_poisson
     random_negative_binomial
     random_generalized_negative_binomial
+    sample_uniform
+    sample_normal
+    sample_gamma
+    sample_exponential
+    sample_poisson
+    sample_negative_binomial
+    sample_generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -395,6 +542,21 @@ In the rest of this document, we first overview the methods provided by the
     argsort
     argmax
     argmin
+```
+
+### Linear Algebra
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    linalg_gemm
+    linalg_gemm2
+    linalg_potrf
+    linalg_potri
+    linalg_trmm
+    linalg_trsm
+    linalg_sumlogdiag
 ```
 
 ### Miscellaneous
@@ -499,8 +661,24 @@ The `contrib.ndarray` module contains many useful experimental APIs for new feat
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+
+.. autoclass:: mxnet.ndarray.NDArray
+    :members:
+    :special-members:
+
+.. autoclass:: mxnet.ndarray.sparse.CSRNDArray
+    :members:
+    :special-members:
+
+.. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
+    :members:
+    :special-members:
+
 .. automodule:: mxnet.ndarray
     :members:
+    :imported-members:
+    :special-members:
+    :exclude-members: CachedOp, BaseSparseNDArray, NDArray, CSRNDArray, RowSparseNDArray
 
 .. automodule:: mxnet.random
     :members:

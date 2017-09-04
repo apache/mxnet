@@ -105,8 +105,95 @@ Composite multiple symbols into a new one by an operator.
     Symbol.__ne__
 ```
 
-### Query information
+### Symbol creation
 
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.zeros_like
+    Symbol.ones_like
+```
+
+### Changing shape and type
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.astype
+    Symbol.reshape
+    Symbol.flatten
+    Symbol.expand_dims
+```
+
+### Expanding elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.broadcast_to
+    Symbol.broadcast_axes
+    Symbol.tile
+    Symbol.pad
+```
+
+### Rearranging elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.transpose
+    Symbol.swapaxes
+    Symbol.flip
+```
+
+### Reduce functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.sum
+    Symbol.nansum
+    Symbol.prod
+    Symbol.nanprod
+    Symbol.mean
+    Symbol.max
+    Symbol.min
+    Symbol.norm
+```
+
+### Rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.round
+    Symbol.rint
+    Symbol.fix
+    Symbol.floor
+    Symbol.ceil
+    Symbol.trunc
+```
+
+### Sorting and searching
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.sort
+    Symbol.argsort
+    Symbol.topk
+    Symbol.argmax
+    Symbol.argmin
+```
+
+### Query information
 
 ```eval_rst
 .. autosummary::
@@ -119,6 +206,19 @@ Composite multiple symbols into a new one by an operator.
     Symbol.list_attr
     Symbol.attr
     Symbol.attr_dict
+```
+
+### Indexing
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.slice
+    Symbol.slice_axis
+    Symbol.take
+    Symbol.one_hot
+    Symbol.pick
 ```
 
 ### Get internal and output symbol
@@ -166,6 +266,16 @@ Composite multiple symbols into a new one by an operator.
     Symbol.debug_str
 ```
 
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.clip
+    Symbol.sign
+```
+
 ## Symbol creation routines
 
 ```eval_rst
@@ -174,7 +284,9 @@ Composite multiple symbols into a new one by an operator.
 
     var
     zeros
+    zeros_like
     ones
+    ones_like
     arange
 ```
 
@@ -237,6 +349,8 @@ Composite multiple symbols into a new one by an operator.
     take
     batch_take
     one_hot
+    pick
+    where
 ```
 
 ## Mathematical functions
@@ -516,8 +630,16 @@ The `contrib.symbol` module contains many useful experimental APIs for new featu
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+
+.. autoclass:: mxnet.symbol.Symbol
+    :members:
+    :special-members:
+
 .. automodule:: mxnet.symbol
     :members:
+    :imported-members:
+    :special-members:
+    :exclude-members: Symbol
 
 .. automodule:: mxnet.contrib.symbol
     :members:

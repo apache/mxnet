@@ -27,37 +27,37 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(linalg_gemm)
+NNVM_REGISTER_OP(_linalg_gemm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 3, 1, gemm>);
 
 NNVM_REGISTER_OP(_backward_linalg_gemm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 3, gemm_backward>);
 
-NNVM_REGISTER_OP(linalg_gemm2)
+NNVM_REGISTER_OP(_linalg_gemm2)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 2, 1, gemm2>);
 
 NNVM_REGISTER_OP(_backward_linalg_gemm2)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 3, 2, gemm2_backward>);
 
-NNVM_REGISTER_OP(linalg_trmm)
+NNVM_REGISTER_OP(_linalg_trmm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 2, 1, trmm>);
 
 NNVM_REGISTER_OP(_backward_linalg_trmm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 2, trmm_backward>);
 
-NNVM_REGISTER_OP(linalg_trsm)
+NNVM_REGISTER_OP(_linalg_trsm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 2, 1, trsm>);
 
 NNVM_REGISTER_OP(_backward_linalg_trsm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 2, trsm_backward>);
 
-NNVM_REGISTER_OP(linalg_sumlogdiag)
+NNVM_REGISTER_OP(_linalg_sumlogdiag)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 0, 1, 1, sumlogdiag>);
 
 NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
-NNVM_REGISTER_OP(linalg_potri)
+NNVM_REGISTER_OP(_linalg_potri)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potri>);
 
 NNVM_REGISTER_OP(_backward_linalg_potri)
@@ -65,7 +65,7 @@ NNVM_REGISTER_OP(_backward_linalg_potri)
 
 #if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(linalg_potrf)
+NNVM_REGISTER_OP(_linalg_potrf)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potrf>);
 
 NNVM_REGISTER_OP(_backward_linalg_potrf)

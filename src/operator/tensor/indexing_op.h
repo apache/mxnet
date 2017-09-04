@@ -40,6 +40,9 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
+#include "./dot-inl.h"
+#include "./init_op.h"
+#include "./matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {

@@ -31,15 +31,17 @@ import logging
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
-import mxnet as mx
-from .context import Context
-from .ndarray import array
-from .symbol import Symbol
+import numpy.random as rnd
 try:
     import requests
 except ImportError:
     # in rare cases requests may be not installed
     pass
+import mxnet as mx
+from .context import Context
+from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from .ndarray import array
+from .symbol import Symbol
 
 _rng = np.random.RandomState(1234)
 
@@ -83,6 +85,184 @@ def random_arrays(*shapes):
     if len(arrays) == 1:
         return arrays[0]
     return arrays
+
+
+def random_sample(population, k):
+    """Return a k length list of the elements chosen from the population sequence."""
+    assert 0 <= k <= len(population)
+    population_copy = population[:]
+    np.random.shuffle(population_copy)
+    return population_copy[0:k]
+
+
+def _validate_csr_generation_inputs(num_rows, num_cols, density,
+                                    distribution="uniform"):
+    """Validates inputs for csr generation helper functions
+    """
+    total_nnz = int(num_rows * num_cols * density)
+    if density < 0 or density > 1:
+        raise ValueError("density has to be between 0 and 1")
+
+    if num_rows <= 0 or num_cols <= 0:
+        raise ValueError("num_rows or num_cols should be greater than 0")
+
+    if distribution == "powerlaw":
+        if total_nnz < 2 * num_rows:
+            raise ValueError("not supported for this density: %s"
+                             " for this shape (%s, %s)"
+                             " Please keep :"
+                             " num_rows * num_cols * density >= 2 * num_rows"
+                             % (density, num_rows, num_cols))
+
+
+def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
+    """Returns CSRNDArray with uniform distribution
+    This generates a csr matrix with totalnnz unique randomly chosen numbers
+    from num_rows*num_cols and arranges them in the 2d array in the
+    following way: row_index = (random_number_generated / num_rows)
+    col_index = random_number_generated - row_index * num_cols
+    """
+    _validate_csr_generation_inputs(num_rows, num_cols, density,
+                                    distribution="uniform")
+    from scipy import sparse as spsp
+    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+    result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
+                                     (num_rows, num_cols), dtype=dtype)
+    return result
+
+
+def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
+    """Returns CSRNDArray with powerlaw distribution
+    with exponentially increasing number of non zeros in each row.
+    Not supported for cases where total_nnz < 2*num_rows. This is because
+    the algorithm first tries to ensure that there are rows with no zeros by
+    putting non zeros at beginning of each row.
+    """
+
+    _validate_csr_generation_inputs(num_rows, num_cols, density,
+                                    distribution="powerlaw")
+
+    total_nnz = int(num_rows * num_cols * density)
+
+    unused_nnz = total_nnz
+    output_arr = np.zeros((num_rows, num_cols), dtype=dtype)
+    # Start with ones on each row so that no row is empty
+    for row in range(num_rows):
+        output_arr[row][0] = 1 + rnd.uniform(0.001, 2)
+        unused_nnz = unused_nnz - 1
+        if unused_nnz <= 0:
+            return mx.nd.array(output_arr).tostype("csr")
+
+    # Populate rest of matrix with 2^i items in ith row.
+    # if we have used all total nnz return the sparse matrix
+    # else if we reached max column size then fill up full columns until we use all nnz
+    col_max = 2
+    for row in range(num_rows):
+        col_limit = min(num_cols, col_max)
+        # In case col_limit reached assign same value to all elements, which is much faster
+        if col_limit == num_cols and unused_nnz > col_limit:
+            output_arr[row] = 1 + rnd.uniform(0.001, 2)
+            unused_nnz = unused_nnz - col_limit + 1
+            if unused_nnz <= 0:
+                return mx.nd.array(output_arr).tostype("csr")
+            else:
+                continue
+        for col_index in range(1, col_limit):
+            output_arr[row][col_index] = 1 + rnd.uniform(0.001, 2)
+            unused_nnz = unused_nnz - 1
+            if unused_nnz <= 0:
+                return mx.nd.array(output_arr).tostype("csr")
+        col_max = col_max * 2
+
+    if unused_nnz > 0:
+        raise ValueError("not supported for this density: %s"
+                         " for this shape (%s,%s)" % (density, num_rows, num_cols))
+    else:
+        return mx.nd.array(output_arr).tostype("csr")
+
+
+def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=None):
+    """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
+    Parameters
+    ----------
+    shape: list or tuple
+    stype: str, valid values: "csr" or "row_sparse"
+    density, optional: float, should be between 0 and 1
+    distribution, optional: str, valid values: "uniform" or "powerlaw"
+    dtype, optional: numpy.dtype, default value is None
+    Returns
+    -------
+    Result of type CSRNDArray or RowSparseNDArray
+    Examples
+    --------
+    Below is an example of the powerlaw distribution with csr as the stype.
+    It calculates the nnz using the shape and density.
+    It fills up the ndarray with exponentially increasing number of elements.
+    If there are enough unused_nnzs, n+1th row will have twice more nnzs compared to nth row.
+    else, remaining unused_nnzs will be used in n+1th row
+    If number of cols is too small and we have already reached column size it will fill up
+    all following columns in all followings rows until we reach the required density.
+
+    >>> csr_arr, _ = rand_sparse_ndarray(shape=(5, 16), stype="csr",
+                                         density=0.50, distribution="powerlaw")
+    >>> indptr = csr_arr.indptr.asnumpy()
+    >>> indices = csr_arr.indices.asnumpy()
+    >>> data = csr_arr.data.asnumpy()
+    >>> row2nnz = len(data[indptr[1]:indptr[2]])
+    >>> row3nnz = len(data[indptr[2]:indptr[3]])
+    >>> assert(row3nnz == 2*row2nnz)
+    >>> row4nnz = len(data[indptr[3]:indptr[4]])
+    >>> assert(row4nnz == 2*row3nnz)
+    """
+    density = rnd.rand() if density is None else density
+    dtype = default_dtype() if dtype is None else dtype
+    distribution = "uniform" if distribution is None else distribution
+    if stype == 'row_sparse':
+        assert (distribution == "uniform"), \
+               "Distribution %s not supported for row_sparse" % (distribution)
+        # sample index
+        idx_sample = rnd.rand(shape[0])
+        indices = np.argwhere(idx_sample < density).flatten()
+        if indices.shape[0] == 0:
+            result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
+            return result, (np.array([], dtype=dtype), np.array([], dtype='int64'))
+        # generate random values
+        val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
+        arr = mx.nd.sparse.row_sparse_array(val, indices, shape, indices_type=np.int64, dtype=dtype)
+        return arr, (val, indices)
+    elif stype == 'csr':
+        assert len(shape) == 2
+        if distribution == "uniform":
+            csr = _get_uniform_dataset_csr(shape[0], shape[1], density, dtype=dtype)
+            return csr, (csr.indptr, csr.indices, csr.data)
+        elif distribution == "powerlaw":
+            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density, dtype=dtype)
+            return csr, (csr.indptr, csr.indices, csr.data)
+        else:
+            assert(False), "Distribution not supported: %s" % (distribution)
+    else:
+        assert(False), "unknown storage type"
+
+
+def rand_ndarray(shape, stype, density=None, dtype=None, distribution=None):
+    if stype == 'default':
+        arr = mx.nd.array(random_arrays(shape), dtype=dtype)
+    else:
+        arr, _ = rand_sparse_ndarray(shape, stype, density=density, dtype=dtype,
+                                     distribution=distribution)
+    return arr
+
+
+def rand_shape_2d(dim0=10, dim1=10):
+    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1)
+
+
+def rand_shape_3d(dim0=10, dim1=10, dim2=10):
+    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
+
+
+def rand_shape_nd(num_dim, dim=10):
+    return tuple(rnd.randint(1, dim+1, size=num_dim))
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
@@ -316,7 +496,8 @@ def _parse_location(sym, location, ctx):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx) for k, v in location.items()}
+    location = {k: mx.nd.array(v, ctx=ctx) if isinstance(v, np.ndarray) \
+               else v for k, v in location.items()}
     return location
 
 
@@ -437,7 +618,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
 
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
-                           atol=None, grad_nodes=None, use_forward_train=True, ctx=None):
+                           atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
+                           grad_stype_dict=None):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -454,7 +636,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         - if type is dict of str -> numpy.ndarray
             maps the name of arguments to the corresponding numpy.ndarray.
         *In either case, value of all the arguments must be provided.*
-    aux_states : ist or tuple or dict, optional
+    aux_states : list or tuple or dict, optional
         The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient.
@@ -466,6 +648,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Whether to use is_train=True when computing the finite-difference.
     ctx : Context, optional
         Check the gradient computation on the specified device.
+    grad_stype_dict : dict of str->str, optional
+        Storage type dictionary for gradient ndarrays.
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
@@ -489,7 +673,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location_npy = {k:v.asnumpy() for k, v in location.items()}
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
     if aux_states is not None:
-        aux_states_npy = {k:v.asnumpy() for k, v in aux_states.items()}
+        aux_states_npy = {k: v.asnumpy() for k, v in aux_states.items()}
     else:
         aux_states_npy = None
     if grad_nodes is None:
@@ -516,6 +700,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                          + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+    if grad_stype_dict is not None:
+        assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
+        for k, v in grad_stype_dict.items():
+            if k in args_grad and v in _STORAGE_TYPE_STR_TO_ID and v != 'default':
+                # create an uninitialized sparse ndarray for executor
+                # if the symbolic grad is expected to be zero, it should not be initialized at all
+                args_grad[k] = mx.nd.zeros(args_grad[k].shape, args_grad[k].context,
+                                           args_grad[k].dtype, v)
 
     executor = out.bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
@@ -607,15 +799,15 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
         g[:] = 0
 
     executor.forward(is_train=False)
-    outputs = [x.asnumpy() for x in executor.outputs]
 
+    outputs = [x.asnumpy() for x in executor.outputs]
     for output_name, expect, output in zip(sym.list_outputs(), expected, outputs):
         assert_almost_equal(expect, output, rtol, atol,
                             ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name))
 
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
-                            aux_states=None, grad_req='write', ctx=None):
+                            aux_states=None, grad_req='write', ctx=None, grad_stypes=None):
     """Compares a symbol's backward results with the expected ones.
     Prints error messages if the backward results are not the same as the expected results.
 
@@ -651,6 +843,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         Gradient requirements. 'write', 'add' or 'null'.
     ctx : Context, optional
         Running context.
+    grad_stypes: dict of str->str
+        dictionary of mapping argument name to stype for the gradient
 
     Example
     -------
@@ -676,14 +870,23 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
-    args_grad_data = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+    args_grad_data = {}
+    for k, v in args_grad_npy.items():
+        nd = mx.nd.array(v, ctx=ctx)
+        if grad_stypes is not None and k in grad_stypes:
+            args_grad_data[k] = nd.tostype(grad_stypes[k])
+        else:
+            args_grad_data[k] = nd
+
     if isinstance(grad_req, str):
         grad_req = {k:grad_req for k in sym.list_arguments()}
     elif isinstance(grad_req, (list, tuple)):
         grad_req = {k:v for k, v in zip(sym.list_arguments(), grad_req)}
 
-    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
+    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data,
+                        aux_states=aux_states, grad_req=grad_req)
     executor.forward(is_train=True)
+
     if isinstance(out_grads, (tuple, list)):
         out_grads = [mx.nd.array(v, ctx=ctx) for v in out_grads]
     elif isinstance(out_grads, (dict)):

@@ -19,7 +19,7 @@
 
 /*!
  * \file batchnorm_test.cc
- * \brief operator unit test utility functions
+ * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
 */
 
@@ -892,8 +892,8 @@ TEST(BATCH_NORM, TestIterAll) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
         for (TShape shape : shapes) {
-          for (int g1 = 0; g1 < 2U; ++g1) {
-            for (int g2 = 0; g2 < 2U; ++g2) {
+          for (int g1 = 0; g1 < 2; ++g1) {
+            for (int g2 = 0; g2 < 2; ++g2) {
               for (int type : v2_types) {
                 MSHADOW_REAL_TYPE_SWITCH_EX(
                   type, DType, AccReal,
@@ -1357,7 +1357,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
 
 /*! \brief Insert the channel field `channelCount` into the shape at `channelAxis` position */
 static TShape MakeShape(const std::vector<index_t>& shape,
-                        signed int channelAxis,
+                        unsigned int channelAxis,
                         const size_t channelCount) {
   if (channelAxis < 0) {
     channelAxis += shape.size() + 1;
@@ -1369,7 +1369,7 @@ static TShape MakeShape(const std::vector<index_t>& shape,
     newShape[x] = index_t(shape[x]);
   }
   newShape[channelAxis] = index_t(channelCount);
-  for (int x = channelAxis + 1; x < dim; ++x) {
+  for (index_t x = channelAxis + 1; x < dim; ++x) {
     newShape[x] = shape[x - 1];
   }
   return newShape;
@@ -1470,7 +1470,7 @@ static void runChannelAxisTest(
   ChannelAxisTestData<DType>::print("blob 2 output grad", info_c2.data_->c_.blob_out_grad_[0]);
 
   // Run both operators forward and backwards several times
-  for (int x = 0; x < numberOfPasses; ++x) {
+  for (index_t x = 0; x < numberOfPasses; ++x) {
     info_c1.data_->forward();
     info_c2.data_->forward();
 
@@ -1539,8 +1539,8 @@ TEST(BATCH_NORM, TestChannelAxis) {
       kwargs.push_back({"use_global_stats", tof[x2]});
       for (size_t x3 = 0; x3 < 2U; ++x3) {
         kwargs.push_back({"cudnn_off", tof[x3]});
-        for (int g1 = 0; g1 < 2U; ++g1) {
-          for (int g2 = 0; g2 < 2U; ++g2) {
+        for (index_t g1 = 0; g1 < 2U; ++g1) {
+          for (index_t g2 = 0; g2 < 2U; ++g2) {
             for (const std::vector<index_t> &simpleShape : shapes) {
               const int dim = static_cast<int>(simpleShape.size());
               for (signed int channelAxis = -dim, shapeDim = dim;

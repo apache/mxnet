@@ -29,6 +29,7 @@
 #include <nnvm/symbolic.h>
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
+#include "../executor/exec_pass.h"
 
 namespace mxnet {
 namespace op {
@@ -459,7 +460,7 @@ int MXSymbolInferShape(SymbolHandle sym,
   }
 
   try {
-    g = nnvm::pass::InferShape(std::move(g), arg_shapes, "__shape__");
+    g = mxnet::exec::InferShape(std::move(g), arg_shapes, "__shape__");
   } catch (const mxnet::op::InferShapeError &err) {
     throw dmlc::Error(err.msg);
   }
@@ -544,7 +545,7 @@ int MXSymbolInferType(SymbolHandle sym,
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
   }
 
-  g = nnvm::pass::InferType(std::move(g), arg_types, "__dtype__");
+  g = mxnet::exec::InferType(std::move(g), arg_types, "__dtype__");
   // copy back
   CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::DTypeVector>("dtype"),
            &(ret->arg_types), &(ret->out_types), &(ret->aux_types));

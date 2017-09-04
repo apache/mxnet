@@ -29,39 +29,23 @@ import ctypes
 import warnings
 from numbers import Number
 
-import os as _os
-import sys as _sys
 import numpy as _numpy
 
-from .base import _LIB, numeric_types
-from .base import c_array, c_str, mx_uint, py_str, string_types
-from .base import NDArrayHandle, ExecutorHandle, SymbolHandle, OpHandle
-from .base import check_call, MXNetError, NotImplementedForSymbol, _Null  # pylint: disable=unused-import
-from .context import Context
-from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
-from .name import NameManager  # pylint: disable=unused-import
-from .executor import Executor
-from . import _symbol_internal as _internal
-from .attribute import AttrScope
-from .symbol_doc import _build_doc
+from ..base import _LIB, numeric_types
+from ..base import c_array, c_str, mx_uint, py_str, string_types
+from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
+from ..base import check_call, MXNetError, NotImplementedForSymbol
+from ..context import Context
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
+from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from ..ndarray import _ndarray_cls
+from ..executor import Executor
+from . import _internal
+from . import op
+from .op import SymbolBase, _set_symbol_class, AttrScope, _Null  # pylint: disable=unused-import
 
-# Use different version of SymbolBase
-# When possible, use cython to speedup part of computation.
-try:
-    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from ._ctypes.symbol import SymbolBase, _set_symbol_class
-        from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
-    elif _sys.version_info >= (3, 0):
-        from ._cy3.symbol import SymbolBase, _set_symbol_class
-        from ._cy3.symbol import _symbol_creator  # pylint: disable=unused-import
-    else:
-        from ._cy2.symbol import SymbolBase, _set_symbol_class
-        from ._cy2.symbol import _symbol_creator  # pylint: disable=unused-import
-except ImportError:
-    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
-        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from ._ctypes.symbol import SymbolBase, _set_symbol_class
-    from ._ctypes.symbol import _symbol_creator  # pylint: disable=unused-import
+__all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
+           "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
 
 
 class Symbol(SymbolBase):
@@ -84,8 +68,8 @@ class Symbol(SymbolBase):
 
         One can loop through the returned object list to get outputs.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
         >>> c = a+b
@@ -140,8 +124,8 @@ class Symbol(SymbolBase):
 
         Only `NDArray` is supported for now.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.nd.ones((2,3))*3
         >>> y = mx.nd.ones((2,3))
         >>> x.__rsub__(y).asnumpy()
@@ -188,8 +172,8 @@ class Symbol(SymbolBase):
 
         Only `NDArray` is supported for now.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.nd.ones((2,3))*3
         >>> y = mx.nd.ones((2,3))
         >>> x.__rdiv__(y).asnumpy()
@@ -218,8 +202,8 @@ class Symbol(SymbolBase):
 
         Only `NDArray` is supported for now.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.nd.ones((2,3))*3
         >>> y = mx.nd.ones((2,3))
         >>> x.__rmod__(y).asnumpy()
@@ -263,8 +247,8 @@ class Symbol(SymbolBase):
 
         Numerical negative, element-wise.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> a
         <Symbol a>
@@ -290,8 +274,8 @@ class Symbol(SymbolBase):
 
         Any changes made to the deep copy do not reflect in the original object.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> import copy
         >>> data = mx.sym.Variable('data')
         >>> data_1 = copy.deepcopy(data)
@@ -403,8 +387,8 @@ class Symbol(SymbolBase):
         This function internally calls `_compose` to compose the symbol and
         returns the composed symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.symbol.Variable('data')
         >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
         >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
@@ -438,8 +422,8 @@ class Symbol(SymbolBase):
 
         This function mutates the current symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.symbol.Variable('data')
         >>> net1 = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
         >>> net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
@@ -491,8 +475,8 @@ class Symbol(SymbolBase):
 
         Returns a sliced view of the input symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> a.__getitem__(0)
         <Symbol a>
@@ -556,8 +540,8 @@ class Symbol(SymbolBase):
 
         This function only works for non-grouped symbols.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
         >>> data.attr('mood')
         'angry'
@@ -584,8 +568,8 @@ class Symbol(SymbolBase):
     def list_attr(self, recursive=False):
         """Gets all attributes from the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.sym.Variable('data', attr={'mood': 'angry'})
         >>> data.list_attr()
         {'mood': 'angry'}
@@ -607,8 +591,8 @@ class Symbol(SymbolBase):
     def attr_dict(self):
         """Recursively gets all attributes from the symbol and its children.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a', attr={'a1':'a2'})
         >>> b = mx.sym.Variable('b', attr={'b1':'b2'})
         >>> c = a+b
@@ -658,8 +642,8 @@ class Symbol(SymbolBase):
 
         Consider the following code:
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -684,8 +668,8 @@ class Symbol(SymbolBase):
         """Gets a new grouped symbol whose output contains
         inputs to output nodes of the original symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.sym.Variable('x')
         >>> y = mx.sym.Variable('y')
         >>> z = mx.sym.Variable('z')
@@ -715,8 +699,8 @@ class Symbol(SymbolBase):
     def list_arguments(self):
         """Lists all the arguments in the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -737,8 +721,8 @@ class Symbol(SymbolBase):
     def list_outputs(self):
         """Lists all the outputs in the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -762,8 +746,8 @@ class Symbol(SymbolBase):
     def list_auxiliary_states(self):
         """Lists all the auxiliary states in the symbol.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -831,8 +815,8 @@ class Symbol(SymbolBase):
 
         Inconsistencies in the known types will cause an error to be raised.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -926,8 +910,8 @@ class Symbol(SymbolBase):
         or keyword argument way as input. It returns a tuple of `None` values
         if there is not enough information to deduce the missing shapes.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
@@ -1009,8 +993,8 @@ class Symbol(SymbolBase):
         In the following example, information about fc2 is not available. So, `infer_shape`
         will return a tuple of `None` values but `infer_shape_partial` will return partial values.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> data = mx.sym.Variable('data')
         >>> prev = mx.sym.Variable('prev')
         >>> fc1  = mx.sym.FullyConnected(data=data, name='fc1', num_hidden=128)
@@ -1263,8 +1247,9 @@ class Symbol(SymbolBase):
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
-    def simple_bind(self, ctx, grad_req='write', type_dict=None, group2ctx=None,
-                    shared_arg_names=None, shared_exec=None, shared_buffer=None, **kwargs):
+    def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
+                    group2ctx=None, shared_arg_names=None, shared_exec=None,
+                    shared_buffer=None, **kwargs):
         """Bind current symbol to get an executor, allocate all the arguments needed.
         Allows specifying data types.
 
@@ -1272,8 +1257,8 @@ class Symbol(SymbolBase):
         Before binding the executor, the function allocates arguments and auxiliary states
         that were not explicitly specified. Allows specifying data types.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> x = mx.sym.Variable('x')
         >>> y = mx.sym.FullyConnected(x, num_hidden=4)
         >>> exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req='null')
@@ -1306,6 +1291,9 @@ class Symbol(SymbolBase):
         type_dict  : Dict of str->numpy.dtype
             Input type dictionary, name->dtype
 
+        stype_dict  : Dict of str->str
+            Input storage type dictionary, name->storage_type
+
         group2ctx : Dict of string to mx.Context
             The dict mapping the `ctx_group` attribute to the context assignment.
 
@@ -1320,7 +1308,8 @@ class Symbol(SymbolBase):
         shared_buffer : Dict of string to `NDArray`
             The dict mapping argument names to the `NDArray` that can be reused for initializing
             the current executor. This buffer will be checked for reuse if one argument name
-            of the current executor is not found in `shared_arg_names`.
+            of the current executor is not found in `shared_arg_names`. The `NDArray`s are
+            expected have default storage type.
 
         kwargs : Dict of str->shape
             Input shape dictionary, name->shape
@@ -1330,6 +1319,7 @@ class Symbol(SymbolBase):
         executor : mxnet.Executor
             The generated executor
         """
+        # data types
         num_provided_arg_types = 0
         provided_arg_type_names = ctypes.POINTER(ctypes.c_char_p)()  # provided type argument names
         provided_arg_type_data = ctypes.POINTER(mx_uint)()  # provided types
@@ -1344,6 +1334,22 @@ class Symbol(SymbolBase):
             num_provided_arg_types = mx_uint(len(provided_arg_type_names))
             provided_arg_type_names = c_array(ctypes.c_char_p, provided_arg_type_names)
             provided_arg_type_data = c_array(ctypes.c_int, provided_arg_type_data)
+
+        # storage types
+        num_provided_arg_stypes = 0
+        # provided storage type argument names
+        provided_arg_stype_names = ctypes.POINTER(ctypes.c_char_p)()
+        provided_arg_stype_data = ctypes.POINTER(mx_uint)()  # provided storage types
+        if stype_dict is not None:
+            provided_arg_stype_names = []
+            provided_arg_stype_data = []
+            for k, v in stype_dict.items():
+                if v in _STORAGE_TYPE_STR_TO_ID:
+                    provided_arg_stype_names.append(c_str(k))
+                    provided_arg_stype_data.append(ctypes.c_int(_STORAGE_TYPE_STR_TO_ID[v]))
+            num_provided_arg_stypes = mx_uint(len(provided_arg_stype_names))
+            provided_arg_stype_names = c_array(ctypes.c_char_p, provided_arg_stype_names)
+            provided_arg_stype_data = c_array(ctypes.c_int, provided_arg_stype_data)
 
         provided_arg_shape_data = []  # shape data
         # argument shape index in sdata,
@@ -1418,6 +1424,8 @@ class Symbol(SymbolBase):
             shared_buffer_names = []
             shared_buffer_handles = []
             for k, v in shared_buffer.items():
+                assert(v.stype == 'default'), \
+                    "shared_buffer is expected to only contain NDArrays with default storage"
                 shared_buffer_names.append(c_str(k))
                 shared_buffer_handles.append(v.handle)
             shared_buffer_names = c_array(ctypes.c_char_p, shared_buffer_names)
@@ -1457,6 +1465,9 @@ class Symbol(SymbolBase):
                                                  num_provided_arg_types,
                                                  provided_arg_type_names,
                                                  provided_arg_type_data,
+                                                 num_provided_arg_stypes,
+                                                 provided_arg_stype_names,
+                                                 provided_arg_stype_data,
                                                  mx_uint(len(shared_arg_name_list)),
                                                  c_array(ctypes.c_char_p, shared_arg_name_list),
                                                  ctypes.byref(shared_buffer_len),
@@ -1486,11 +1497,12 @@ class Symbol(SymbolBase):
                 shared_buffer[k] = v
 
         # create in_args, arg_grads, and aux_states for the current executor
-        arg_arrays = [NDArray(NDArrayHandle(in_arg_handles[i])) for i in range(num_in_args.value)]
-        grad_arrays = [NDArray(NDArrayHandle(arg_grad_handles[i]))
+        arg_arrays = [_ndarray_cls(NDArrayHandle(in_arg_handles[i]))
+                      for i in range(num_in_args.value)]
+        grad_arrays = [_ndarray_cls(NDArrayHandle(arg_grad_handles[i]))
                        if arg_grad_handles[i] is not None
                        else None for i in range(num_in_args.value)]
-        aux_arrays = [NDArray(NDArrayHandle(aux_state_handles[i]))
+        aux_arrays = [_ndarray_cls(NDArrayHandle(aux_state_handles[i]))
                       for i in range(num_aux_states.value)]
 
         executor = Executor(exe_handle, self, ctx, grad_req, group2ctx)
@@ -1507,8 +1519,8 @@ class Symbol(SymbolBase):
         This function returns an executor which provides method `forward()` method for evaluation
         and a `outputs()` method to get all the results.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
         >>> c = a + b
@@ -1694,8 +1706,8 @@ class Symbol(SymbolBase):
         In that case, you should call `bind` once and then repeatedly call forward.
         This function allows simpler syntax for less cumbersome introspection.
 
-        Example usage:
-        ----------
+        Example
+        -------
         >>> a = mx.sym.Variable('a')
         >>> b = mx.sym.Variable('b')
         >>> c = a + b
@@ -1724,24 +1736,341 @@ class Symbol(SymbolBase):
             ctx = Context.default_ctx
         return self.bind(ctx, kwargs).forward()
 
-    def reshape(self, shape):
-        """Shorthand for mxnet.sym.reshape.
+    def reshape(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reshape`.
 
-        Parameters
-        ----------
-        shape : tuple of int
-            The new shape should not change the array size, namely
-            ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
-            One shape dimension can be -1. In this case, the value is inferred
-            from the length of the array and remaining dimensions.
-
-
-        Returns
-        -------
-        Symbol
-            A reshaped symbol.
+        The arguments are the same as for :py:func:`reshape`, with
+        this array as data.
         """
-        return reshape(self, shape=shape)
+        return op.reshape(self, *args, **kwargs)
+
+    def astype(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cast`.
+
+        The arguments are the same as for :py:func:`cast`, with
+        this array as data.
+        """
+        return op.cast(self, *args, **kwargs)
+
+    def zeros_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`zeros_like`.
+
+        The arguments are the same as for :py:func:`zeros_like`, with
+        this array as data.
+        """
+        return op.zeros_like(self, *args, **kwargs)
+
+    def ones_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`ones_like`.
+
+        The arguments are the same as for :py:func:`ones_like`, with
+        this array as data.
+        """
+        return op.ones_like(self, *args, **kwargs)
+
+    def broadcast_axes(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_axes`.
+
+        The arguments are the same as for :py:func:`broadcast_axes`, with
+        this array as data.
+        """
+        return op.broadcast_axes(self, *args, **kwargs)
+
+    def repeat(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`repeat`.
+
+        The arguments are the same as for :py:func:`repeat`, with
+        this array as data.
+        """
+        return op.repeat(self, *args, **kwargs)
+
+    def pad(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`pad`.
+
+        The arguments are the same as for :py:func:`pad`, with
+        this array as data.
+        """
+        return op.pad(self, *args, **kwargs)
+
+    def swapaxes(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`swapaxes`.
+
+        The arguments are the same as for :py:func:`swapaxes`, with
+        this array as data.
+        """
+        return op.swapaxes(self, *args, **kwargs)
+
+    def split(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split`.
+
+        The arguments are the same as for :py:func:`split`, with
+        this array as data.
+        """
+        return op.split(self, *args, **kwargs)
+
+    def slice(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice`.
+
+        The arguments are the same as for :py:func:`slice`, with
+        this array as data.
+        """
+        return op.slice(self, *args, **kwargs)
+
+    def slice_axis(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`slice_axis`.
+
+        The arguments are the same as for :py:func:`slice_axis`, with
+        this array as data.
+        """
+        return op.slice_axis(self, *args, **kwargs)
+
+    def take(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`take`.
+
+        The arguments are the same as for :py:func:`take`, with
+        this array as data.
+        """
+        return op.take(self, *args, **kwargs)
+
+    def one_hot(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`one_hot`.
+
+        The arguments are the same as for :py:func:`one_hot`, with
+        this array as data.
+        """
+        return op.one_hot(self, *args, **kwargs)
+
+    def pick(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`pick`.
+
+        The arguments are the same as for :py:func:`pick`, with
+        this array as data.
+        """
+        return op.pick(self, *args, **kwargs)
+
+    def sort(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sort`.
+
+        The arguments are the same as for :py:func:`sort`, with
+        this array as data.
+        """
+        return op.sort(self, *args, **kwargs)
+
+    def topk(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`topk`.
+
+        The arguments are the same as for :py:func:`topk`, with
+        this array as data.
+        """
+        return op.topk(self, *args, **kwargs)
+
+    def argsort(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argsort`.
+
+        The arguments are the same as for :py:func:`argsort`, with
+        this array as data.
+        """
+        return op.argsort(self, *args, **kwargs)
+
+    def argmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmax`.
+
+        The arguments are the same as for :py:func:`argmax`, with
+        this array as data.
+        """
+        return op.argmax(self, *args, **kwargs)
+
+    def argmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmin`.
+
+        The arguments are the same as for :py:func:`argmin`, with
+        this array as data.
+        """
+        return op.argmin(self, *args, **kwargs)
+
+    def clip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`clip`.
+
+        The arguments are the same as for :py:func:`clip`, with
+        this array as data.
+        """
+        return op.clip(self, *args, **kwargs)
+
+    def abs(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`abs`.
+
+        The arguments are the same as for :py:func:`abs`, with
+        this array as data.
+        """
+        return op.abs(self, *args, **kwargs)
+
+    def sign(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sign`.
+
+        The arguments are the same as for :py:func:`sign`, with
+        this array as data.
+        """
+        return op.sign(self, *args, **kwargs)
+
+    def flatten(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flatten`.
+
+        The arguments are the same as for :py:func:`flatten`, with
+        this array as data.
+        """
+        return op.flatten(self, *args, **kwargs)
+
+    def expand_dims(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`expand_dims`.
+
+        The arguments are the same as for :py:func:`expand_dims`, with
+        this array as data.
+        """
+        return op.expand_dims(self, *args, **kwargs)
+
+    def broadcast_to(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_to`.
+
+        The arguments are the same as for :py:func:`broadcast_to`, with
+        this array as data.
+        """
+        return op.broadcast_to(self, *args, **kwargs)
+
+    def tile(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`tile`.
+
+        The arguments are the same as for :py:func:`tile`, with
+        this array as data.
+        """
+        return op.tile(self, *args, **kwargs)
+
+    def transpose(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`transpose`.
+
+        The arguments are the same as for :py:func:`transpose`, with
+        this array as data.
+        """
+        return op.transpose(self, *args, **kwargs)
+
+    def flip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flip`.
+
+        The arguments are the same as for :py:func:`flip`, with
+        this array as data.
+        """
+        return op.flip(self, *args, **kwargs)
+
+    def sum(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sum`.
+
+        The arguments are the same as for :py:func:`sum`, with
+        this array as data.
+        """
+        return op.sum(self, *args, **kwargs)
+
+    def nansum(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`nansum`.
+
+        The arguments are the same as for :py:func:`nansum`, with
+        this array as data.
+        """
+        return op.nansum(self, *args, **kwargs)
+
+    def prod(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`prod`.
+
+        The arguments are the same as for :py:func:`prod`, with
+        this array as data.
+        """
+        return op.prod(self, *args, **kwargs)
+
+    def nanprod(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`nanprod`.
+
+        The arguments are the same as for :py:func:`nanprod`, with
+        this array as data.
+        """
+        return op.nanprod(self, *args, **kwargs)
+
+    def mean(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`mean`.
+
+        The arguments are the same as for :py:func:`mean`, with
+        this array as data.
+        """
+        return op.mean(self, *args, **kwargs)
+
+    def max(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`max`.
+
+        The arguments are the same as for :py:func:`max`, with
+        this array as data.
+        """
+        return op.max(self, *args, **kwargs)
+
+    def min(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`min`.
+
+        The arguments are the same as for :py:func:`min`, with
+        this array as data.
+        """
+        return op.min(self, *args, **kwargs)
+
+    def norm(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`norm`.
+
+        The arguments are the same as for :py:func:`norm`, with
+        this array as data.
+        """
+        return op.norm(self, *args, **kwargs)
+
+    def round(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`round`.
+
+        The arguments are the same as for :py:func:`round`, with
+        this array as data.
+        """
+        return op.round(self, *args, **kwargs)
+
+    def rint(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rint`.
+
+        The arguments are the same as for :py:func:`rint`, with
+        this array as data.
+        """
+        return op.rint(self, *args, **kwargs)
+
+    def fix(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`fix`.
+
+        The arguments are the same as for :py:func:`fix`, with
+        this array as data.
+        """
+        return op.fix(self, *args, **kwargs)
+
+    def floor(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`floor`.
+
+        The arguments are the same as for :py:func:`floor`, with
+        this array as data.
+        """
+        return op.floor(self, *args, **kwargs)
+
+    def ceil(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`ceil`.
+
+        The arguments are the same as for :py:func:`ceil`, with
+        this array as data.
+        """
+        return op.ceil(self, *args, **kwargs)
+
+    def trunc(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`trunc`.
+
+        The arguments are the same as for :py:func:`trunc`, with
+        this array as data.
+        """
+        return op.trunc(self, *args, **kwargs)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
@@ -1751,9 +2080,6 @@ class Symbol(SymbolBase):
 
     def asscalar(self):
         raise NotImplementedForSymbol(self.asscalar, None)
-
-    def astype(self):
-        raise NotImplementedForSymbol(self.astype, None)
 
     def copy(self):
         raise NotImplementedForSymbol(self.copy, None)
@@ -1767,11 +2093,12 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
-def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, init=None, **kwargs):
+def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
+        init=None, stype=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
-    Example usage:
-    ----------
+    Example
+    -------
     >>> data = mx.sym.Variable('data', attr={'a': 'b'})
     >>> data
     <Symbol data>
@@ -1794,6 +2121,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
         The dtype for input variable. If not specified, this value will be inferred.
     init : initializer (mxnet.init.*)
         Initializer for this variable to (optionally) override the default initializer.
+    stype : str
+        The storage type of the variable.
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 
@@ -1821,6 +2150,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None, ini
         if not isinstance(init, string_types):
             init = init.dumps()
         attr['__init__'] = init
+    if stype is not None:
+        attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[stype])
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)
@@ -1839,8 +2170,8 @@ Variable = var
 def Group(symbols):
     """Creates a symbol that contains a collection of other symbols, grouped together.
 
-    Example usage:
-    ----------
+    Example
+    -------
     >>> a = mx.sym.Variable('a')
     >>> b = mx.sym.Variable('b')
     >>> mx.sym.Group([a,b])
@@ -2167,7 +2498,7 @@ def full(shape, val, dtype=None, **kwargs):
         dtype = _numpy.float32
     return _internal._MulScalar(ones(shape=shape, dtype=dtype, **kwargs), scalar=val)
 
-
+# pylint: disable=redefined-outer-name
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
@@ -2195,188 +2526,4 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              name=name, dtype=dtype)
 
-
-def _make_atomic_symbol_function(handle, name):
-    """Create an atomic symbol function by handle and function name."""
-    real_name = ctypes.c_char_p()
-    desc = ctypes.c_char_p()
-    num_args = mx_uint()
-    arg_names = ctypes.POINTER(ctypes.c_char_p)()
-    arg_types = ctypes.POINTER(ctypes.c_char_p)()
-    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
-    key_var_num_args = ctypes.c_char_p()
-    ret_type = ctypes.c_char_p()
-
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-        handle, ctypes.byref(real_name), ctypes.byref(desc),
-        ctypes.byref(num_args),
-        ctypes.byref(arg_names),
-        ctypes.byref(arg_types),
-        ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args),
-        ctypes.byref(ret_type)))
-    narg = int(num_args.value)
-    arg_names = [py_str(arg_names[i]) for i in range(narg)]
-    arg_types = [py_str(arg_types[i]) for i in range(narg)]
-    func_name = name
-    key_var_num_args = py_str(key_var_num_args.value)
-    ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
-    doc_str = _build_doc(func_name,
-                         py_str(desc.value),
-                         arg_names,
-                         arg_types,
-                         [py_str(arg_descs[i]) for i in range(narg)],
-                         key_var_num_args,
-                         ret_type)
-
-    dtype_name = None
-    arr_name = None
-    ndsignature = []
-    signature = []
-    ndarg_names = []
-    kwarg_names = []
-    for i in range(narg):
-        name, atype = arg_names[i], arg_types[i]
-        if name == 'dtype':
-            dtype_name = name
-            signature.append('%s=_Null'%name)
-        elif atype.startswith('NDArray') or atype.startswith('Symbol'):
-            assert not arr_name, \
-                "Op can only have one argument with variable " \
-                "size and it must be the last argument."
-            if atype.endswith('[]'):
-                ndsignature.append('*%s'%name)
-                arr_name = name
-            else:
-                ndsignature.append('%s=None'%name)
-                ndarg_names.append(name)
-        else:
-            signature.append('%s=_Null'%name)
-            kwarg_names.append(name)
-    #signature.append('is_train=False')
-    signature.append('name=None')
-    signature.append('attr=None')
-    signature.append('out=None')
-    signature.append('**kwargs')
-    signature = ndsignature + signature
-
-    code = []
-    if arr_name:
-        code.append("""
-def %s(*%s, **kwargs):"""%(func_name, arr_name))
-        code.append("""
-    sym_args = []
-    for i in {}:
-        assert isinstance(i, SymbolBase), \\
-            "Positional arguments must be Symbol instances, " \\
-            "but got %s"%str(i)
-        sym_args.append(i)""".format(arr_name))
-        if dtype_name is not None:
-            code.append("""
-    if '%s' in kwargs:
-        kwargs['%s'] = _numpy.dtype(kwargs['%s']).name"""%(
-            dtype_name, dtype_name, dtype_name))
-        code.append("""
-    attr = kwargs.pop('attr', None)
-    kwargs.update(AttrScope.current.get(attr))
-    name = kwargs.pop('name', None)
-    name = NameManager.current.get(name, '%s')
-    _ = kwargs.pop('out', None)
-    keys = []
-    vals = []
-    sym_kwargs = dict()
-    for k, v in kwargs.items():
-        if isinstance(v, SymbolBase):
-            sym_kwargs[k] = v
-        else:
-            keys.append(k)
-            vals.append(v)"""%(func_name.lower()))
-        if key_var_num_args:
-            code.append("""
-    if '%s' not in kwargs:
-        keys.append('%s')
-        vals.append(len(sym_args) + len(sym_kwargs))"""%(
-            key_var_num_args, key_var_num_args))
-
-        code.append("""
-    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
-        handle.value))
-    else:
-        code.append("""
-def %s(%s):
-    kwargs.update(AttrScope.current.get(attr))
-    sym_kwargs = dict()
-    keys = []
-    vals = []"""%(func_name, ', '.join(signature)))
-        code.append("""
-    for k, v in kwargs.items():
-        if isinstance(v, SymbolBase):
-            sym_kwargs[k] = v
-        else:
-            keys.append(k)
-            vals.append(v)""")
-        # NDArray args
-        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
-            code.append("""
-    if {name} is not None:
-        assert isinstance({name}, SymbolBase), \\
-            "Argument {name} must be Symbol instances, but got %s"%str({name})
-        sym_kwargs['{name}'] = {name}""".format(name=name))
-        # kwargs
-        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
-            code.append("""
-    if %s is not _Null:
-        keys.append('%s')
-        vals.append(%s)"""%(name, name, name))
-        # dtype
-        if dtype_name is not None:
-            code.append("""
-    if %s is not _Null:
-        keys.append('%s')
-        vals.append(_numpy.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
-
-        code.append("""
-    name = NameManager.current.get(name, '%s')
-    return _symbol_creator(%d, None, sym_kwargs, keys, vals, name)"""%(
-        func_name.lower(), handle.value))
-
-    local = {}
-    exec(''.join(code), None, local)  # pylint: disable=exec-used
-    symbol_function = local[func_name]
-    symbol_function.__name__ = func_name
-    symbol_function.__doc__ = doc_str
-    symbol_function.__module__ = 'mxnet.symbol'
-    return symbol_function
-
-
-def _init_symbol_module(symbol_class, root_namespace):
-    """List and add all the atomic symbol functions to current module."""
-    _set_symbol_class(symbol_class)
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
-
-    module_obj = _sys.modules["%s.symbol" % root_namespace]
-    module_internal = _sys.modules["%s._symbol_internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.symbol" % root_namespace]
-    for name in op_names:
-        hdl = OpHandle()
-        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_atomic_symbol_function(hdl, name)
-        if function.__name__.startswith('_contrib_'):
-            function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.symbol'
-            setattr(module_contrib, function.__name__, function)
-        elif function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            setattr(module_obj, function.__name__, function)
-
-
-# Initialize the atomic symbol in startups
-_init_symbol_module(Symbol, "mxnet")
+_set_symbol_class(Symbol)

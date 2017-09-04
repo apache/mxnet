@@ -150,6 +150,11 @@ pip install graphviz
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl
+```
+
 </div>
 
 <div class="docker">
@@ -312,6 +317,11 @@ pip install graphviz
 ```
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu80mkl
+```
 
 </div>
 
@@ -496,10 +506,6 @@ pip install graphviz
 
 The following installation instructions have been tested on OSX Sierra and El Capitan.
 
-**Prerequisites**
-
-If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) (or [insall it from the App Store](https://itunes.apple.com/us/app/xcode/id497799835)) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
-
 <div class="virtualenv">
 <br/>
 
@@ -633,6 +639,12 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 </div>
 
 <div class="build-from-source">
+<br/>
+
+**Prerequisites**
+
+If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) (or [insall it from the App Store](https://itunes.apple.com/us/app/xcode/id497799835)) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
+
 <br/>
 
 Building *MXNet* from source is a 2 step process.

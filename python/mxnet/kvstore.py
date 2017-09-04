@@ -22,39 +22,53 @@ from __future__ import absolute_import
 import ctypes
 import pickle
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from .base import _LIB
 from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
 def _ctype_key_value(keys, vals):
+    """
+    Returns ctype arrays for the key-value args, and the whether string keys are used.
+    For internal use only.
+    """
     if isinstance(keys, (tuple, list)):
         assert(len(keys) == len(vals))
         c_keys = []
         c_vals = []
+        use_str_keys = None
         for key, val in zip(keys, vals):
-            c_key_i, c_val_i = _ctype_key_value(key, val)
+            c_key_i, c_val_i, str_keys_i = _ctype_key_value(key, val)
             c_keys += c_key_i
             c_vals += c_val_i
-        return (c_array(ctypes.c_char_p, c_keys), c_array(NDArrayHandle, c_vals))
-    names = []
-    keys = str(keys)
+            use_str_keys = str_keys_i if use_str_keys is None else use_str_keys
+            assert(use_str_keys == str_keys_i), "inconsistent types of keys detected."
+        c_keys_arr = c_array(ctypes.c_char_p, c_keys) if use_str_keys \
+                     else c_array(ctypes.c_int, c_keys)
+        c_vals_arr = c_array(NDArrayHandle, c_vals)
+        return (c_keys_arr, c_vals_arr, use_str_keys)
+
+    assert(isinstance(keys, (int,) + string_types)), \
+           "unexpected type for keys: " + str(type(keys))
+    use_str_keys = isinstance(keys, string_types)
     if isinstance(vals, NDArray):
-        names.append(c_str(keys))
-        return (c_array(ctypes.c_char_p, names),
-                c_array(NDArrayHandle, [vals.handle]))
+        c_keys = c_array(ctypes.c_char_p, [c_str(keys)]) if use_str_keys \
+                 else c_array(ctypes.c_int, [keys])
+        return (c_keys, c_array(NDArrayHandle, [vals.handle]), use_str_keys)
     else:
         for value in vals:
             assert(isinstance(value, NDArray))
-        return (c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)),
-                c_array(NDArrayHandle, [value.handle for value in vals]))
+        c_keys = c_array(ctypes.c_char_p, [c_str(keys)] * len(vals)) if use_str_keys \
+                 else c_array(ctypes.c_int, [keys] * len(vals))
+        return (c_keys, c_array(NDArrayHandle, [value.handle for value in vals]), use_str_keys)
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
     def updater_handle(key, lhs_handle, rhs_handle, _):
         """ ctypes function """
-        lhs = NDArray(NDArrayHandle(lhs_handle))
-        rhs = NDArray(NDArrayHandle(rhs_handle))
+        lhs = _ndarray_cls(NDArrayHandle(lhs_handle))
+        rhs = _ndarray_cls(NDArrayHandle(rhs_handle))
         updater(key, lhs, rhs)
     return updater_handle
 
@@ -73,6 +87,7 @@ class KVStore(object):
         self.handle = handle
         self._updater = None
         self._updater_func = None
+        self._str_updater_func = None
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
@@ -87,7 +102,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str or sequence of str
+        key : str, int, or sequence of str or int
             The keys.
         value : NDArray or sequence of NDArray
             Values corresponding to the keys.
@@ -105,11 +120,14 @@ class KVStore(object):
         [ 2.  2.  2.]]
 
         >>> # init a list of key-value pairs
-        >>> keys = ['5', '7', '9']
+        >>> keys = [5, 7, 9]
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
         """
-        ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        if use_str_keys:
+            check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+        else:
+            check_call(_LIB.MXKVStoreInit(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
 
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.
@@ -122,7 +140,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str or list of str
+        key : str, int, or sequence of str or int
             Keys.
 
         value : NDArray or list of NDArray or list of list of NDArray
@@ -153,6 +171,7 @@ class KVStore(object):
 
         >>> # push a list of keys.
         >>> # single device
+        >>> keys = [4, 5, 6]
         >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys))
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
@@ -161,6 +180,7 @@ class KVStore(object):
         [ 1.  1.  1.]]
 
         >>> # multiple devices:
+        >>> keys = ['7', '8', '9']
         >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
         >>> kv.push(keys, b)
         >>> kv.pull(keys, out=b)
@@ -168,10 +188,13 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
         """
-        ckeys, cvals = _ctype_key_value(key, value)
-        check_call(_LIB.MXKVStorePushEx(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
-            ctypes.c_int(priority)))
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        if use_str_keys:
+            check_call(_LIB.MXKVStorePushEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePush(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
 
 
     def pull(self, key, out=None, priority=0):
@@ -186,9 +209,11 @@ class KVStore(object):
 
         The returned values are gauranteed to be the latest values in the store.
 
+        For row_sparse values, please use `row_sparse_pull` instead.
+
         Parameters
         ----------
-        key : int or list of int
+        key : str, int, or sequence of str or int
             Keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
@@ -217,13 +242,14 @@ class KVStore(object):
 
         >>> # pull a list of key-value pairs.
         >>> # On single device
-        >>> keys = ['5', '7', '9']
+        >>> keys = [5, 7, 9]
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1].asnumpy()
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         >>> # On multiple devices
+        >>> keys = ['6', '8', '10']
         >>> b = [[mx.nd.ones(shape, gpu) for gpu in gpus]] * len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1][1].asnumpy()
@@ -231,10 +257,77 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        ckeys, cvals = _ctype_key_value(key, out)
-        check_call(_LIB.MXKVStorePullEx(
-            self.handle, mx_uint(len(ckeys)), ckeys, cvals,
-            ctypes.c_int(priority)))
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
+        if use_str_keys:
+            check_call(_LIB.MXKVStorePullEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePull(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
+
+    def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
+        """ Pulls a single row_sparse value or a sequence of row_sparse values from the store
+         with specified row_ids.
+
+        `row_sparse_pull` is executed asynchronously after all previous
+        `push`/`pull`/`row_sparse_pull` calls for the same input key(s) are finished.
+
+        The returned values are guaranteed to be the latest values in the store.
+
+        Parameters
+        ----------
+        key : str, int, or sequence of str or int
+            Keys.
+
+        out: NDArray or list of NDArray or list of list of NDArray
+            Values corresponding to the keys. The stype is expected to be row_sparse
+
+        priority : int, optional
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
+
+        row_ids : NDArray or list of NDArray
+            The row_ids for which to pull for each value. Each row_id is an 1D-NDArray \
+            whose values don't have to be unique nor sorted.
+
+        Examples
+        --------
+        >>> shape = (3, 3)
+        >>> kv.init('3', mx.nd.ones(shape).tostype('row_sparse'))
+        >>> a = mx.nd.zeros(shape, stype='row_sparse')
+        >>> row_ids = mx.nd.array([0, 2], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=row_ids)
+        >>> print a.asnumpy()
+        [[ 1.  1.  1.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> duplicate_row_ids = mx.nd.array([2, 2], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=duplicate_row_ids)
+        >>> print a.asnumpy()
+        [[ 0.  0.  0.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> unsorted_row_ids = mx.nd.array([1, 0], dtype='int64')
+        >>> kv.row_sparse_pull('3', out=a, row_ids=unsorted_row_ids)
+        >>> print a.asnumpy()
+        [[ 1.  1.  1.]
+        [ 1.  1.  1.]
+        [ 0.  0.  0.]]
+        """
+        assert(out is not None)
+        assert(row_ids is not None)
+        ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
+        _, crow_ids, _ = _ctype_key_value(key, row_ids)
+        assert(len(crow_ids) == len(cvals)), \
+               "the number of row_ids doesn't match the number of values"
+        if use_str_keys:
+            check_call(_LIB.MXKVStorePullRowSparseEx(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStorePullRowSparse(
+                self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
+
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
@@ -373,10 +466,16 @@ class KVStore(object):
         [ 6.  6.  6.]]
         """
         self._updater = updater
+        # set updater with int keys
         _updater_proto = ctypes.CFUNCTYPE(
             None, ctypes.c_int, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
         self._updater_func = _updater_proto(_updater_wrapper(updater))
-        check_call(_LIB.MXKVStoreSetUpdater(self.handle, self._updater_func, None))
+        # set updater with str keys
+        _str_updater_proto = ctypes.CFUNCTYPE(
+            None, ctypes.c_char_p, NDArrayHandle, NDArrayHandle, ctypes.c_void_p)
+        self._str_updater_func = _str_updater_proto(_updater_wrapper(updater))
+        check_call(_LIB.MXKVStoreSetUpdaterEx(self.handle, self._updater_func,
+                                              self._str_updater_func, None))
 
 
     def _barrier(self):

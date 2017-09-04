@@ -35,6 +35,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./linalg.h"
 
 
 namespace mxnet {
@@ -100,7 +101,9 @@ class SpatialTransformerOp : public Operator {
     Copy(grid_dst, workspace, grid_dst.stream_);
     for (index_t batch = 0; batch < data.size(0); batch++) {
         if (param_.transform_type == st::kAffine) {
-          grid_src[batch] = dot(loc[batch], grid_dst);
+          // Legacy approach shown here for comparison:
+          //    grid_src[batch] = dot(loc[batch], grid_dst);
+          linalg_gemm(loc[batch], grid_dst, grid_src[batch], false, false, s);
         }
     }
     if (param_.sampler_type == st::kBilinear) {
@@ -133,7 +136,9 @@ class SpatialTransformerOp : public Operator {
     }
     for (index_t batch = 0; batch < data.size(0); batch++) {
         if (param_.transform_type == st::kAffine) {
-          gloc[batch] = dot(grid_src[batch], grid_dst.T());
+          // Legacy approach shown here for comparison:
+          //   gloc[batch] = dot(grid_src[batch], grid_dst.T());
+          linalg_gemm(grid_src[batch], grid_dst, gloc[batch], false, true, s);
         }
     }
   }
