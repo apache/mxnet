@@ -972,6 +972,9 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
+        # convert ctypes.char_p.value back to python str if needed
+        if isinstance(index, bytes):
+            index = py_str(index)
         if index not in self.states:
             self.states[index] = self.optimizer.create_state(index, weight)
             self.states_synced[index] = True
