@@ -117,7 +117,7 @@ class OpBase {
           CHECK(shape_assign(&ashape, clone_from->aux_shape(i)));
           dest->CheckAndAllocAuxData(i, ashape);
         }
-        DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
+        CHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
       } else {
         for (size_t i = 0, n = dest->aux_shapes().size(); i < n; ++i) {
           dest->CheckAndAllocAuxData(i, dest->aux_shape(i));
@@ -150,8 +150,8 @@ class OpBase {
                                  const NDArray *dest,
                                  const OpReqType reqi,
                                  const NDArray& src) {
-    DCHECK_NE(dest->storage_type(), kDefaultStorage);
-    DCHECK_EQ(dest->storage_type(), src.storage_type());
+    CHECK_NE(dest->storage_type(), kDefaultStorage);
+    CHECK_EQ(dest->storage_type(), src.storage_type());
     AllocateGeometry(dest, reqi, &src);
     CopyGeometryBlobs(s, dest, reqi, src);
     CopyBlob(s, &dest->data(), reqi, src.data());
@@ -238,7 +238,7 @@ class UnaryOp : public OpBase {
           aux_shapes.emplace_back(input.aux_shape(j));
         }
         output->CheckAndAlloc(aux_shapes);
-        DCHECK_EQ(output->storage_shape(), input.storage_shape());
+        CHECK_EQ(output->storage_shape(), input.storage_shape());
       }
       return true;
     }
@@ -261,8 +261,8 @@ class UnaryOp : public OpBase {
                                    const std::vector<NDArray> &outputs,
                                    FComputer computer) {
     // Copy over geometry
-    DCHECK_EQ(inputs.size(), 1U);
-    DCHECK_EQ(outputs.size(), 1U);
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
     InitStorageGeometry<1, 1>(attrs, inputs, outputs);
     CHECK_EQ(inputs.size(), outputs.size());  // need to figure out what to do for binary type
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage);
