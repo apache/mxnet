@@ -45,7 +45,7 @@ def get_classifier(input_data, num_classes, **kwargs):
     fc8 = mx.sym.FullyConnected(data=drop7, num_hidden=num_classes, name="fc8")
     return fc8  
 
-def get_symbol(num_classes, num_layers, batch_norm=False, dtype='float32', **kwargs):
+def get_symbol(num_classes, num_layers=11, batch_norm=False, dtype='float32', **kwargs):
     """
     Parameters
     ----------
@@ -63,7 +63,7 @@ def get_symbol(num_classes, num_layers, batch_norm=False, dtype='float32', **kwa
                 16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
                 19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512])}
     if not vgg_spec.has_key(num_layers):        
-        raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
+        raise ValueError("Invalide num_layers {}. Possible choices are 11,13,16,19.".format(num_layers))
     layers, filters = vgg_spec[num_layers] 
     data = mx.sym.Variable(name="data")
     if dtype == 'float16':
