@@ -33,6 +33,8 @@ array([ 1.  2.  3.], dtype=float32)
 array([0, 0, 1])
 >>> csr.indptr.asnumpy()
 array([0, 1, 1, 3])
+>>> csr.stype
+'csr'
 ```
 
 An `RowSparseNDArray` represents a multi-dimensional, fixed-size array in row sparse format.
@@ -47,6 +49,8 @@ array([[ 1.  0.],
        [ 2.  3.]], dtype=float32)
 >>> row_sparse.indices.asnumpy()
 array([0, 2])
+>>> row_sparse.stype
+'row_sparse'
 ```
 
 ```eval_rst
@@ -55,8 +59,8 @@ array([0, 2])
 
    - Only a subset of operators in ``mxnet.ndarray`` have specialized implementations in ``mxnet.ndarray.sparse``.
      Operators such as reduction and broadcasting do not have sparse implementations yet.
-   - The storage types of sparse operators' outputs depend on the storage types of inputs.
-     By default the operators in ``mxnet.ndarray`` infers "default" (dense) storage type for outputs.
+   - The storage types (``stype``) of sparse operators' outputs depend on the storage types of inputs.
+     By default the operators not available in ``mxnet.ndarray.sparse`` infer "default" (dense) storage type for outputs.
    - GPU support for ``mxnet.ndarray.sparse`` is experimental.
 
 ```

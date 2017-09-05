@@ -7,4 +7,5 @@
    :maxdepth: 2
 
    symbol.md
+   sparse.md
 ```
