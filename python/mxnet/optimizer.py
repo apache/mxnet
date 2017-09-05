@@ -979,8 +979,9 @@ class Updater(object):
     def set_states(self, states):
         """Sets updater states."""
         states = pickle.loads(states)
-        if isinstance(states, tuple) and len(states) == 2:
-            self.states, self.optimizer = states
+        if isinstance(states, dict):
+            self.states = states.get('states', self.states)
+            self.optimizer = states.get('optimizer', self.optimizer)
         else:
             self.states = states
         self.states_synced = dict.fromkeys(self.states.keys(), False)
@@ -994,7 +995,9 @@ class Updater(object):
             Whether to also save the optimizer itself. This would also save optimizer
             information such as learning rate and weight decay schedules.
         """
-        return pickle.dumps((self.states, self.optimizer) if dump_optimizer else self.states)
+        return pickle.dumps({'states': self.states,
+                             'optimizer': self.optimizer} if dump_optimizer \
+                            else self.states)
 
 def get_updater(optimizer):
     """Returns a closure of the updater needed for kvstore.
