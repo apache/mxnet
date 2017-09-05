@@ -87,12 +87,12 @@ class ElemwiseBinaryOp : public OpBase {
                                  mshadow::Tensor<xpu, 2, DType> *out,
                                  const size_t iter_out) {
     using namespace mshadow::expr;
-    const size_t index_out_min = std::min(idx_l, idx_r);
-    if (index_out_min > iter_out) {
+    const int index_out_min = std::min(idx_l, idx_r);
+    if (static_cast<size_t>(index_out_min) > iter_out) {
       const size_t size = (*out)[iter_out].shape_.Size();
       const DType zero_input_val = OP::Map(DType(0), DType(0));
       #pragma omp parallel for
-      for (size_t i = iter_out; i < index_out_min; ++i) {
+      for (int i = iter_out; i < index_out_min; ++i) {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           KernelEx<SetToScalar<Req>, xpu>::LaunchEx(s, size, (*out)[i].dptr_,
                                                     zero_input_val);
