@@ -279,11 +279,23 @@ class CommDevice : public Comm {
       buf.copy_buf.resize(src.size());
       buf.small_recv_buf.resize(src.size());
       buf.small_send_buf.resize(src.size());
+      buf.residual.resize(src.size());
       for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
         // allocation small buffer for compressed data
         if (compress_.compare("none") != 0) {
+          // Residual
+          buf.residual[i] = NDArray(
+            buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
+          // positive and negative threshold
+          buf.pos_thre = NDArray(
+            TShape{1}, src[i].ctx(), false, buf.merged.dtype());
+          *(buf.pos_thre.data().dptr<float>()) = pos_threshold_;
+          buf.neg_thre = NDArray(
+            TShape{1}, src[i].ctx(), false, buf.merged.dtype());
+          *(buf.neg_thre.data().dptr<float>()) = neg_threshold_;
+          // recv buffer and send buffer
           int bits = compress_ == "2bit" ? 16 : 32;
           long int small_size = buf.merged.shape().Size() % bits == 0 ?
                                  buf.merged.shape().Size() / bits + 2 :
@@ -416,6 +428,12 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
+    /// \brief the residual buffer
+    std::vector<NDArray> residual;
+    /// \brief the positive threshold
+    NDArray pos_thre;
+    /// \brief the negative threshold
+    NDArray neg_thre;
     /// \brief the small buffer for compressed data in sender
     std::vector<NDArray> small_send_buf;
     /// \brief the small buffer for compressed data in receiver
