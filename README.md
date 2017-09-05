@@ -1,7 +1,7 @@
 Apache MXNet (incubating) for Deep Learning
 =====
 
-[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
+[![Build Status](https://travis-ci.org/apache/incubator-mxnet.svg?branch=master)](https://travis-ci.org/apache/incubator-mxnet)
 [![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.io/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
