@@ -170,6 +170,7 @@ def _parse_proto(prototxt_fname):
         if layer.type == 'ReLU' or layer.type == 18:
             type_string = 'mx.symbol.Activation'
             param_string = "act_type='relu'"
+            param = layer.relu_param
             if hasattr(param, 'negative_slope'):
                 if param.negative_slope > 0:
                     type_string = 'mx.symbol.LeakyReLU'
