@@ -279,6 +279,9 @@ class CommDevice : public Comm {
       buf.small_recv_buf.resize(src.size());
       buf.small_send_buf.resize(src.size());
       buf.residual.resize(src.size());
+      pos_thre.resize(src.size());
+      neg_thre.resize(src.size());
+
       for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
@@ -287,13 +290,7 @@ class CommDevice : public Comm {
           // Residual
           buf.residual[i] = NDArray(
             buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
-          // positive and negative threshold
-          buf.pos_thre = NDArray(
-            TShape{1}, src[i].ctx(), false, buf.merged.dtype());
-          *(buf.pos_thre.data().dptr<float>()) = pos_threshold_;
-          buf.neg_thre = NDArray(
-            TShape{1}, src[i].ctx(), false, buf.merged.dtype());
-          *(buf.neg_thre.data().dptr<float>()) = neg_threshold_;
+          // TODO set residual to zero
           // recv buffer and send buffer
           int bits = compress_ == "2bit" ? 16 : 32;
           long int small_size = buf.merged.shape().Size() % bits == 0 ?
@@ -303,6 +300,15 @@ class CommDevice : public Comm {
             TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
           buf.small_send_buf[i] = NDArray(
             TShape{small_size}, src[i].ctx(), false, buf.merged.dtype());
+          // The positive and negative threshold
+          if (compress_.compare("2bit") == 0) {
+            pos_thre[i] = NDArray(
+              TShape{1}, src[i].ctx(), false, buf.merged.dtype());
+            // TODO set pos_thre to pos_threshold_
+            neg_thre[i] = NDArray(
+              TShape{1}, src[i].ctx(), false, buf.merged.dtype());
+            // TODO set neg_thre to neg_threshold_
+          }
         }
       }
     }
@@ -313,7 +319,7 @@ class CommDevice : public Comm {
         // TODO: New code: wrapper for NDArray quantize_2bit op
         /*
         Compress2Bit(src[i], buf.residual[i],
-                     buf.pos_thre, buf.neg_thre,
+                     pos_thre[i], neg_thre[i],
                      &(buf.small_send_buf[i]), priority);
         CopyFromTo(buf.small_send_buf[i],
                    &(buf.small_recv_buf[i]),
@@ -322,6 +328,7 @@ class CommDevice : public Comm {
                        &(buf.copy_buf[i]),
                        priority);
         */
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       } else if (compress_.compare("1bit") == 0) {
         // TODO: New code: wrapper for NDArray quantize_1bit op
         /*
@@ -335,6 +342,7 @@ class CommDevice : public Comm {
                        &(buf.copy_buf[i]),
                        priority);
         */
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       } else {  // Do not compress
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       }
@@ -450,16 +458,16 @@ class CommDevice : public Comm {
     std::vector<NDArray> copy_buf;
     /// \brief the residual buffer
     std::vector<NDArray> residual;
-    /// \brief the positive threshold
-    NDArray pos_thre;
-    /// \brief the negative threshold
-    NDArray neg_thre;
     /// \brief the small buffer for compressed data in sender
     std::vector<NDArray> small_send_buf;
     /// \brief the small buffer for compressed data in receiver
     std::vector<NDArray> small_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
+
+  // \brief the positive and negative threshold
+  std::vector<NDArray> pos_thre;
+  std::vector<NDArray> neg_thre;
   bool inited_;
 };
 
