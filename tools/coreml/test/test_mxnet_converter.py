@@ -950,6 +950,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='zeros', input_name='data1')
 
     def test_really_tiny_conv_optional_params(self):
+        """
+        Verifying the behavior of a convolutional layer when stride and pad are not provided.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -957,7 +960,6 @@ class SingleLayerTest(unittest.TestCase):
 
         # Define a model
         net = mx.sym.Variable('data')
-        # Let's create a convolutional layer w/o stride and pad.
         net = mx.symbol.Convolution(
             data=net,
             num_filter=num_filter,
