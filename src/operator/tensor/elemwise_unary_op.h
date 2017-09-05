@@ -261,8 +261,6 @@ class UnaryOp : public OpBase {
                                    const std::vector<NDArray> &outputs,
                                    FComputer computer) {
     // Copy over geometry
-    CHECK_EQ(inputs.size(), 1U);
-    CHECK_EQ(outputs.size(), 1U);
     InitStorageGeometry<1, 1>(attrs, inputs, outputs);
     CHECK_EQ(inputs.size(), outputs.size());  // need to figure out what to do for binary type
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage);
