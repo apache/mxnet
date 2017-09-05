@@ -462,6 +462,7 @@ class InstanceNorm(HybridBlock):
     .. [1] Instance Normalization: The Missing Ingredient for Fast Stylization,
        D. Ulyanov, A. Vedaldi, V. Lempitsky, 2016 (arXiv:1607.08022v2).
     Examples::
+
       // Input of shape (2,1,2)
       x = mx.nd.array([[[ 1.1,  2.2]],
                       [[ 3.3,  4.4]]])
@@ -515,6 +516,7 @@ class ReflectionPad(HybridBlock):
           :math:`W_{out} = W_{in} + paddingLeft + paddingRight`
 
     Examples::
+
         m = nn.ReflectionPad(3)
         input = mx.nd.random_normal(shape=(16, 3, 224, 224))
         output = m(input)
