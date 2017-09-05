@@ -309,12 +309,33 @@ class CommDevice : public Comm {
 
     for (size_t i = 0; i < src.size(); ++i) {
       // compress before copy
-      if (compress_.compare("none") != 0) {
-        // TODO: New code: wrapper for NDArray op
-        // Compress(src[i], &(buf.small_send_buf[i]), compress_, priority);
-        // CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
-        // DeCompress(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
-      } else {
+      if (compress_.compare("2bit") == 0) {
+        // TODO: New code: wrapper for NDArray quantize_2bit op
+        /*
+        Compress2Bit(src[i], buf.residual[i],
+                     buf.pos_thre, buf.neg_thre,
+                     &(buf.small_send_buf[i]), priority);
+        CopyFromTo(buf.small_send_buf[i],
+                   &(buf.small_recv_buf[i]),
+                   priority);
+        DeCompress2Bit(buf.small_recv_buf[i],
+                       &(buf.copy_buf[i]),
+                       priority);
+        */
+      } else if (compress_.compare("1bit") == 0) {
+        // TODO: New code: wrapper for NDArray quantize_1bit op
+        /*
+        Compress1Bit(src[i], buf.residual[i],
+                     &(buf.small_send_buf[i]),
+                     priority);
+        CopyFromTo(buf.small_send_buf[i],
+                   &(buf.small_recv_buf[i]),
+                   priority);
+        DeCompress1Bit(buf.small_recv_buf[i],
+                       &(buf.copy_buf[i]),
+                       priority);
+        */
+      } else {  // Do not compress
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       }
       reduce[i] = buf.copy_buf[i];
