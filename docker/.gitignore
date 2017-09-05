@@ -1,2 +1,1 @@
-Dockerfile.*
-!Dockerfile.in.*
+mxnet/
