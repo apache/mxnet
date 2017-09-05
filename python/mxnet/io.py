@@ -618,10 +618,10 @@ class NDArrayIter(DataIter):
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
         if isinstance(data, CSRNDArray) or isinstance(label, CSRNDArray):
-            assert(last_batch_handle == 'discard'), \
+            assert(shuffle is False), \
                   "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
-            assert(shuffle is False), "`NDArrayIter` only supports ``CSRNDArray``" \
-                                      " with `last_batch_handle` set to `discard`."
+            assert(last_batch_handle == 'discard'), "`NDArrayIter` only supports ``CSRNDArray``" \
+                                                    " with `last_batch_handle` set to `discard`."
 
         self.idx = np.arange(self.data[0][1].shape[0])
         # shuffle data
