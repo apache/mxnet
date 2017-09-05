@@ -36,48 +36,6 @@ namespace op {
 
 class OpBase {
  protected:
-#if 0
-#define KernelEx mxnet_op::Kernel
-#define LaunchEx Launch
-#else
-  template<typename OP, typename xpu> class KernelEx;
-
-  template<typename OP>
-  class KernelEx<OP, cpu> {
-   public:
-    /*! \brief For relatively small number of iterations, don't use OMP, since it incurs
-     * a significant amount of overhead relative to a low number of iterations
-     * of trivial operations
-     * Assumption is that the OP::Map() function is trivial
-     *
-     * @tparam Args Argument types to pass to Map function
-     * @param s Stream
-     * @param N Number of iterations
-     * @param args Arguments to pass to Map function
-     */
-    template<typename ...Args>
-    static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
-      if (N < (2 << 16)) {
-        for (int i = 0; i < N; ++i) {
-          OP::Map(i, args...);
-        }
-      } else {
-        mxnet_op::template Kernel<OP, cpu>::template Launch(s, N, args...);
-      }
-    }
-  };
-
-#ifdef __CUDACC__
-  template<typename OP>
-  class KernelEx<OP, gpu> {
-    template<typename ...Args>
-    MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
-      mxnet_op::template Kernel<OP, gpu>::template Launch(s, N, args...);
-    }
-  };
-#endif  // __CUDACC__
-#endif
-
   template<int req>
   struct SetToScalar {
     template<typename DType>
@@ -206,7 +164,7 @@ class OpBase {
                                const OpReqType req,
                                DType *out) {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      KernelEx<SetToScalar<Req>, xpu>::LaunchEx(s, size, out, val);
+      mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, out, val);
     });
   }
 };  // OpBase

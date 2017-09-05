@@ -66,7 +66,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t dense_block_count = next_input_row - output_row;
         if (dense_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            KernelEx<OpBase::SetToScalar<Req>, cpu>::LaunchEx(
+            mxnet_op::Kernel<OpBase::SetToScalar<Req>, cpu>::Launch(
               stream,
               items_per_row * dense_block_count,
               output_data.dptr_ + items_per_row * output_row,
@@ -88,7 +88,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t sparse_block_count = next_non_contiguous_sparse - input_iter + 1;
         if (sparse_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            KernelEx<mxnet_op::op_with_req<OP, Req>, cpu>::LaunchEx(
+            mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
               stream,
               items_per_row * sparse_block_count,
               &output_data.dptr_[items_per_row * output_row],
@@ -104,7 +104,7 @@ class BinaryScalarOp : public UnaryOp {
       // All rows exist (eventually we don't have to do complex
       // things to call GPU kernels because we don't need to access row indices)
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        KernelEx<mxnet_op::op_with_req<OP, Req>, cpu>::LaunchEx(
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
           stream,
           items_per_row * row_count,
           output_data.dptr_,
