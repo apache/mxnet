@@ -481,13 +481,6 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
-    random_uniform
-    random_normal
-    random_gamma
-    random_exponential
-    random_poisson
-    random_negative_binomial
-    random_generalized_negative_binomial
     sample_uniform
     sample_normal
     sample_gamma
@@ -509,21 +502,6 @@ Composite multiple symbols into a new one by an operator.
     argsort
     argmax
     argmin
-```
-
-### Linear Algebra
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    linalg_gemm
-    linalg_gemm2
-    linalg_potrf
-    linalg_potri
-    linalg_trmm
-    linalg_trsm
-    linalg_sumlogdiag
 ```
 
 ### Miscellaneous
@@ -594,16 +572,54 @@ Composite multiple symbols into a new one by an operator.
     Custom
 ```
 
+## Linear Algebra
+
+The `symbol.linalg` module contains Symbol APIs for linear algebra routines.
+
+```eval_rst
+.. currentmodule:: mxnet.symbol.linalg
+
+.. autosummary::
+    :nosignatures:
+
+    gemm
+    gemm2
+    potrf
+    potri
+    trmm
+    trsm
+    sumlogdiag
+```
+
+## Random Distribution Generator
+
+The `symbol.random` module contains Symbol APIs for random distribution generator.
+
+```eval_rst
+.. currentmodule:: mxnet.symbol.random
+
+.. autosummary::
+    :nosignatures:
+
+    exponential
+    gamma
+    generalized_negative_binomial
+    negative_binomial
+    normal
+    poisson
+    uniform
+```
+
 ## Contrib
 
 ```eval_rst
 .. warning:: This package contains experimental APIs and may change in the near future.
 ```
 
-The `contrib.symbol` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
+The `symbol.contrib` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
 
 ```eval_rst
-.. currentmodule:: mxnet.contrib.symbol
+.. currentmodule:: mxnet.symbol.contrib
 
 .. autosummary::
     :nosignatures:
@@ -641,7 +657,13 @@ The `contrib.symbol` module contains many useful experimental APIs for new featu
     :special-members:
     :exclude-members: Symbol
 
-.. automodule:: mxnet.contrib.symbol
+.. automodule:: mxnet.symbol.linalg
+    :members:
+
+.. automodule:: mxnet.symbol.random
+    :members:
+
+.. automodule:: mxnet.symbol.contrib
     :members:
 
 ```

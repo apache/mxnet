@@ -55,6 +55,7 @@ Then the operator computs:
    out[h[i]] += data[i] * s[i]
 
 Example::
+
    out_dim = 5
    x = [[1.2, 2.5, 3.4],[3.2, 5.7, 6.6]]
    h = [0, 3, 4]
