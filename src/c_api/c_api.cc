@@ -636,9 +636,13 @@ int MXKVStoreCreate(const char *type,
 }
 
 int MXKVStoreSetCompress(KVStoreHandle handle,
-                         const char *compress) {
+                         const char *compress,
+                         const float pos_threshold,
+                         const float neg_threshold) {
   API_BEGIN();
-  static_cast<KVStore*>(handle)->SetCompress(compress);
+  static_cast<KVStore*>(handle)->SetCompress(compress,
+                                             pos_threshold,
+                                             neg_threshold);
   API_END();
 }
 

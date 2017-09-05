@@ -66,8 +66,12 @@ class KVStore {
   /**
    * \brief set to use low-bit compression
    */
-  inline void SetCompress(const std::string& compress) {
+  inline void SetCompress(const std::string& compress,
+                          const float pos_threshold,
+                          const float neg_threshold) {
     compress_ = compress;
+    pos_threshold_ = pos_threshold;
+    neg_threshold_ = neg_threshold;
   }
 
   /*!
@@ -352,6 +356,16 @@ class KVStore {
    * \brief whether using low-bit compression
    */
   std::string compress_ = "none";
+
+  /**
+   * \brief positive threshold
+   */
+  float pos_threshold_;
+
+  /**
+   * \brief negative threshold
+   */
+  float neg_threshold_;
 
   /**
    * \brief whether to do barrier when finalize

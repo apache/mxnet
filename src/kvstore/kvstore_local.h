@@ -64,6 +64,8 @@ class KVStoreLocal : public KVStore {
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].shape(),
                   compress_,
+                  pos_threshold_,
+                  neg_threshold_,
                   values[i].dtype());
     }
   }

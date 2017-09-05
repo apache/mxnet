@@ -44,6 +44,8 @@ class Comm {
    */
   virtual void Init(int key, const TShape& shape,
                     const std::string& compress,
+                    float const pos_threshold,
+                    float const neg_threshold,
                     int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
@@ -67,6 +69,8 @@ class Comm {
  protected:
   Context pinned_ctx_;
   std::string compress_;
+  float pos_threshold_;
+  float neg_threshold_;
 };
 
 /**
@@ -83,6 +87,8 @@ class CommCPU : public Comm {
 
   void Init(int key, const TShape& shape,
             const std::string& compress,
+            const float pos_threshold,
+            const float neg_threshold,
             int type = mshadow::kFloat32) override {
     merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
   }
@@ -234,9 +240,13 @@ class CommDevice : public Comm {
 
   void Init(int key, const TShape& shape,
             const std::string& compress,
+            const float pos_threshold,
+            const float neg_threshold,
             int dtype = mshadow::kFloat32) override {
     sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
     compress_ = compress;
+    pos_threshold_ = pos_threshold;
+    neg_threshold_ = neg_threshold;
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
