@@ -290,7 +290,7 @@ class CommDevice : public Comm {
           // Residual
           buf.residual[i] = NDArray(
             buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
-          // TODO set residual to zero
+          buf.residual[i] = 0;
           // recv buffer and send buffer
           int bits = compress_ == "2bit" ? 16 : 32;
           long int small_size = buf.merged.shape().Size() % bits == 0 ?
@@ -304,10 +304,10 @@ class CommDevice : public Comm {
           if (compress_.compare("2bit") == 0) {
             pos_thre[i] = NDArray(
               TShape{1}, src[i].ctx(), false, buf.merged.dtype());
-            // TODO set pos_thre to pos_threshold_
+            pos_thre[i] = pos_threshold_;
             neg_thre[i] = NDArray(
               TShape{1}, src[i].ctx(), false, buf.merged.dtype());
-            // TODO set neg_thre to neg_threshold_
+            neg_thre[i] = neg_threshold_;
           }
         }
       }
@@ -328,7 +328,6 @@ class CommDevice : public Comm {
                        &(buf.copy_buf[i]),
                        priority);
         */
-        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       } else if (compress_.compare("1bit") == 0) {
         // TODO: New code: wrapper for NDArray quantize_1bit op
         /*
@@ -342,7 +341,6 @@ class CommDevice : public Comm {
                        &(buf.copy_buf[i]),
                        priority);
         */
-        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       } else {  // Do not compress
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       }
