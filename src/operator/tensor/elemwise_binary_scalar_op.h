@@ -143,7 +143,7 @@ class BinaryScalarOp : public UnaryOp {
       const CType *row_starts_ptr = row_starts.dptr<CType>();
 
       #pragma omp parallel for
-      for (size_t i = 0; i < row_count; ++i) {
+      for (int i = 0; i < static_cast<int>(row_count); ++i) {
         const bool last_row = i == row_count - 1;
         // Split up into blocks of contiguous data and do those together
         const size_t row_item_start_iter = row_starts_ptr[i];
