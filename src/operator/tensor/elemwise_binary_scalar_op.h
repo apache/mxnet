@@ -143,7 +143,7 @@ class BinaryScalarOp : public UnaryOp {
       const CType *row_starts_ptr = row_starts.dptr<CType>();
 
       #pragma omp parallel for
-      for (int i = 0; i < row_count; ++i) {
+      for (size_t i = 0; i < row_count; ++i) {
         const bool last_row = i == row_count - 1;
         // Split up into blocks of contiguous data and do those together
         const size_t row_item_start_iter = row_starts_ptr[i];
@@ -158,13 +158,13 @@ class BinaryScalarOp : public UnaryOp {
           // More overhead to use OMP for small loops, so don't
           if (input_items_this_row > 1000) {
             #pragma omp parallel for
-            for (CType j = 0; j < input_items_this_row; ++j) {
+            for (CType j = 0; j < static_cast<CType>(input_items_this_row); ++j) {
               const IType col = this_row_column_indexes[j];
               const DType val = row_data_start[j];
               output_this_row[col] = OP::Map(val, DType(alpha));
             }
           } else {
-            for (CType j = 0; j < input_items_this_row; ++j) {
+            for (CType j = 0; j < static_cast<CType>(input_items_this_row); ++j) {
               const IType col = this_row_column_indexes[j];
               const DType val = row_data_start[j];
               output_this_row[col] = OP::Map(val, DType(alpha));

@@ -291,7 +291,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   IType nnz = 0;
   row_ptr_out[0] = 0;
 
-  for (IType i = 0; i < nr_rows; i++) {
+  for (IType i = 0; i < static_cast<IType>(nr_rows); i++) {
     IType head = -2;
     IType length = 0;
 
