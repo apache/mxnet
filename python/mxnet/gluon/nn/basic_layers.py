@@ -449,9 +449,11 @@ class InstanceNorm(HybridBlock):
     Applies instance normalization to the n-dimensional input array.
     This operator takes an n-dimensional input array where (n>2) and normalizes 
     the input using the following formula:
+
     .. math::
 
     out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
+
     This layer is similar to batch normalization layer (`BatchNorm`)
     with two differences: first, the normalization is
     carried out per example (instance), not over a batch. Second, the
