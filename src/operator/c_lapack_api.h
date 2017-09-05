@@ -73,8 +73,13 @@ using namespace mshadow;
 extern "C" {
 
   // Fortran signatures
-  #define MXNET_LAPACK_FSIGNATURE1(func, dtype) \
-    void func##_(char *uplo, int *n, dtype *a, int *lda, int *info);
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIGNATURE1(func, dtype) \
+      int func##_(char* uplo, int* n, dtype* a, int* lda, int *info);
+  #else
+    #define MXNET_LAPACK_FSIGNATURE1(func, dtype) \
+      void func##_(char* uplo, int* n, dtype* a, int* lda, int *info);
+  #endif
 
   MXNET_LAPACK_FSIGNATURE1(spotrf, float)
   MXNET_LAPACK_FSIGNATURE1(dpotrf, double)

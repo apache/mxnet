@@ -289,16 +289,12 @@ class BatchNormV1Prop : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype_param;
       } else {
-        CHECK_EQ((*in_type)[i], dtype_param) << "This layer requires uniform type. "
-                                             << "Expected " << dtype_param << " v.s. given "
-                                             << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, ListArguments()[i]);
       }
     }
     for (index_t i = 0; i < aux_type->size(); ++i) {
       if ((*aux_type)[i] != -1) {
-        CHECK_EQ((*aux_type)[i], dtype_param) << "This layer requires uniform type. "
-                                              << "Expected " << dtype_param << " v.s. given "
-                                              << (*aux_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*aux_type)[i], dtype_param, ListArguments()[i]);
       }
     }
     int n_aux = this->ListAuxiliaryStates().size();

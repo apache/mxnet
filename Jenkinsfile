@@ -164,7 +164,7 @@ try {
       },
       'Amalgamation MIN': {
         node('mxnetlinux') {
-          ws('workspace/amalgamation') {
+          ws('workspace/amalgamationmin') {
             init_git()
             make('cpu', '-C amalgamation/ clean')
             make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')

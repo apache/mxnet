@@ -48,7 +48,7 @@ __global__ void AssignPriors(DType *out, const float size,
   int c = index % in_width;
   float center_x = (c + center_offx) * step_x;
   float center_y = (r + center_offy) * step_y;
-  float w = size * sqrt_ratio / 2;  // half width
+  float w = size * in_height / in_width * sqrt_ratio / 2;  // half width
   float h = size / sqrt_ratio / 2;  // half height
   DType *ptr = out + index * stride + 4 * offset;
   *(ptr++) = center_x - w;  // xmin
