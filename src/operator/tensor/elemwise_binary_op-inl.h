@@ -53,12 +53,12 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   CHECK(!lhs_is_dense || !rhs_is_dense);
   if (rhs_is_dense) {
     // For right-side dense, lhs input zero should always output zero
-    CHECK(fabs(static_cast<float>(OP::Map(0, 99))) < 1e-4f);
+    CHECK(fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < 1e-4f);
     CHECK(!is_dense_result);  // Currently not handled
   }
   if (lhs_is_dense) {
     // For right-side dense, lhs input zero should always output zero
-    CHECK(fabs(static_cast<float>(OP::Map(99, 0))) < 1e-4f);
+    CHECK(fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < 1e-4f);
     CHECK(!is_dense_result);  // Currently not handled
   }
 

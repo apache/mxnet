@@ -503,7 +503,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_rsqrt,
                                              unary_bwd<mshadow_op::reciprocal_square_root_grad>);
 
 // cbrt
-MXNET_OPERATOR_REGISTER_UNARY(cbrt)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(cbrt, cpu, mshadow_op::cube_root)
 .describe(R"code(Returns element-wise cube-root value of the input.
 
 .. math::
@@ -514,11 +514,10 @@ Example::
    cbrt([1, 8, -125]) = [1, 2, -5]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::cube_root>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_cbrt"});
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_cbrt)
-.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::cube_root_grad> >);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
+                                                  unary_bwd<mshadow_op::cube_root_grad>);
 
 // rcbrt
 MXNET_OPERATOR_REGISTER_UNARY(rcbrt)
@@ -532,12 +531,12 @@ Example::
    rcbrt([1,8,-125]) = [1.0, 0.5, -0.2]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", UnaryCompute<cpu, mshadow_op::reciprocal_cube_root>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::reciprocal_cube_root>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rcbrt"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
 .set_attr<FCompute>("FCompute<cpu>",
-  BinaryCompute<cpu, unary_bwd<mshadow_op::reciprocal_cube_root_grad> >);
+  ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_cube_root_grad> >);
 
 // exp
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(exp, cpu, mshadow_op::exp)
