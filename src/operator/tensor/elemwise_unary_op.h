@@ -67,7 +67,7 @@ class OpBase {
     }
   };
 
- #ifdef __CUDACC__
+#ifdef __CUDACC__
   template<typename OP>
   class KernelEx<OP, gpu> {
     template<typename ...Args>
@@ -75,7 +75,7 @@ class OpBase {
       mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
     }
   };
-  #endif  // __CUDACC__
+#endif  // __CUDACC__
 #endif
 
   template<int req>
