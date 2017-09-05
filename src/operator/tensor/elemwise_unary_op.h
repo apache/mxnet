@@ -36,42 +36,46 @@ namespace op {
 
 class OpBase {
  protected:
-  template<typename OP, typename xpu> class KernelEx;
 
-  template<typename OP>
-  class KernelEx<OP, cpu> {
-   public:
-    /*! \brief For relatively small number of iterations, don't use OMP, since it incurs
-     * a significant amount of overhead relative to a low number of iterations
-     * of trivial operations
-     * Assumption is that the OP::Map() function is trivial
-     *
-     * @tparam Args Argument types to pass to Map function
-     * @param s Stream
-     * @param N Number of iterations
-     * @param args Arguments to pass to Map function
-     */
-    template<typename ...Args>
-    static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
-      if (N < (2 << 16)) {
-        for (int i = 0; i < N; ++i) {
-          OP::Map(i, args...);
-        }
-      } else {
-        mxnet_op::Kernel<OP, cpu>::Launch(s, N, args...);
-      }
-    }
-  };
+#define KernelEx mxnet_op::Kernel
+#define LaunchEx Launch
 
-  #if MXNET_USE_CUDA == 1
-  template<typename OP>
-  class KernelEx<OP, gpu> {
-    template<typename ...Args>
-    MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
-      mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
-    }
-  };
-  #endif  // MXNET_USE_CUDA == 1
+//  template<typename OP, typename xpu> class KernelEx;
+//
+//  template<typename OP>
+//  class KernelEx<OP, cpu> {
+//   public:
+//    /*! \brief For relatively small number of iterations, don't use OMP, since it incurs
+//     * a significant amount of overhead relative to a low number of iterations
+//     * of trivial operations
+//     * Assumption is that the OP::Map() function is trivial
+//     *
+//     * @tparam Args Argument types to pass to Map function
+//     * @param s Stream
+//     * @param N Number of iterations
+//     * @param args Arguments to pass to Map function
+//     */
+//    template<typename ...Args>
+//    static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
+//      if (N < (2 << 16)) {
+//        for (int i = 0; i < N; ++i) {
+//          OP::Map(i, args...);
+//        }
+//      } else {
+//        mxnet_op::Kernel<OP, cpu>::Launch(s, N, args...);
+//      }
+//    }
+//  };
+//
+// #ifdef __CUDACC__
+//  template<typename OP>
+//  class KernelEx<OP, gpu> {
+//    template<typename ...Args>
+//    MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
+//      mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
+//    }
+//  };
+//  #endif  // __CUDACC__
 
   template<int req>
   struct SetToScalar {
