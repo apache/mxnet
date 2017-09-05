@@ -32,7 +32,6 @@ imported by running:
 .. toctree::
    :maxdepth: 2
 
-   symbol
    module
    autograd
    gluon

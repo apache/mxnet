@@ -112,7 +112,6 @@ In the rest of this document, we list sparse related routines provided by the
     :annotation:
     :members: var
 
-
 ```
 
 <script>auto_index("api-reference");</script>
