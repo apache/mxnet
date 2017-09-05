@@ -36,7 +36,7 @@ namespace op {
 
 class OpBase {
  protected:
-#if 1
+#if 0
 #define KernelEx mxnet_op::Kernel
 #define LaunchEx Launch
 #else
@@ -62,7 +62,7 @@ class OpBase {
           OP::Map(i, args...);
         }
       } else {
-        mxnet_op::template Kernel<OP, cpu>::Launch(s, N, args...);
+        mxnet_op::template Kernel<OP, cpu>::template Launch(s, N, args...);
       }
     }
   };
@@ -72,7 +72,7 @@ class OpBase {
   class KernelEx<OP, gpu> {
     template<typename ...Args>
     MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
-      mxnet_op::template Kernel<OP, gpu>::Launch(s, N, args...);
+      mxnet_op::template Kernel<OP, gpu>::template Launch(s, N, args...);
     }
   };
 #endif  // __CUDACC__
