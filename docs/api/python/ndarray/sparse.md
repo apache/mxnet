@@ -61,6 +61,7 @@ array([0, 2])
      Operators such as reduction and broadcasting do not have sparse implementations yet.
    - The storage types (``stype``) of sparse operators' outputs depend on the storage types of inputs.
      By default the operators not available in ``mxnet.ndarray.sparse`` infer "default" (dense) storage type for outputs.
+     Please refer to the API reference section for further details on specific operators.
    - GPU support for ``mxnet.ndarray.sparse`` is experimental.
 
 ```

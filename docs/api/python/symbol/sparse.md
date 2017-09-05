@@ -47,6 +47,7 @@ array([ 1.,  1.],
      Operators such as reduction and broadcasting do not have sparse implementations yet.
    - The storage types (``stype``) of sparse operators' outputs depend on the storage types of inputs.
      By default the operators not available in ``mxnet.symbol.sparse`` infer "default" (dense) storage type for outputs.
+     Please refer to the API reference section for further details on specific operators.
    - GPU support for ``mxnet.symbol.sparse`` is experimental.
 
 ```
@@ -104,11 +105,13 @@ In the rest of this document, we list sparse related routines provided by the
 
 ```eval_rst
 
-.. automodule:: mxnet.symbol
-    :members: var
-
 .. automodule:: mxnet.symbol.sparse
     :members:
+
+.. automodule:: mxnet.symbol
+    :annotation:
+    :members: var
+
 
 ```
 
