@@ -482,13 +482,6 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
-    random_uniform
-    random_normal
-    random_gamma
-    random_exponential
-    random_poisson
-    random_negative_binomial
-    random_generalized_negative_binomial
     sample_uniform
     sample_normal
     sample_gamma
@@ -510,21 +503,6 @@ The `ndarray` package provides several classes:
     argsort
     argmax
     argmin
-```
-
-### Linear Algebra
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    linalg_gemm
-    linalg_gemm2
-    linalg_potrf
-    linalg_potri
-    linalg_trmm
-    linalg_trsm
-    linalg_sumlogdiag
 ```
 
 ### Miscellaneous
@@ -593,6 +571,76 @@ The `ndarray` package provides several classes:
     Custom
 ```
 
+## Linear Algebra
+
+The `ndarray.linalg` module contains NDArray APIs for linear algebra routines.
+
+```eval_rst
+.. currentmodule:: mxnet.ndarray.linalg
+
+.. autosummary::
+    :nosignatures:
+
+    gemm
+    gemm2
+    potrf
+    potri
+    trmm
+    trsm
+    sumlogdiag
+```
+
+
+## Random Distribution Generator
+
+The `ndarray.random` module contains NDArray APIs for random distribution generator.
+
+```eval_rst
+.. currentmodule:: mxnet.ndarray.random
+
+.. autosummary::
+    :nosignatures:
+
+    exponential
+    gamma
+    generalized_negative_binomial
+    negative_binomial
+    normal
+    poisson
+    uniform
+```
+
+## Contrib
+
+```eval_rst
+.. warning:: This package contains experimental APIs and may change in the near future.
+```
+
+The `ndarray.contrib` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
+
+```eval_rst
+.. currentmodule:: mxnet.ndarray.contrib
+
+.. autosummary::
+    :nosignatures:
+
+    CTCLoss
+    DeformableConvolution
+    DeformablePSROIPooling
+    MultiBoxDetection
+    MultiBoxPrior
+    MultiBoxTarget
+    MultiProposal
+    PSROIPooling
+    Proposal
+    count_sketch
+    ctc_loss
+    dequantize
+    fft
+    ifft
+    quantize
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -608,6 +656,15 @@ The `ndarray` package provides several classes:
     :imported-members:
     :special-members:
     :exclude-members: CachedOp, NDArray
+
+.. automodule:: mxnet.ndarray.linalg
+    :members:
+
+.. automodule:: mxnet.ndarray.random
+    :members:
+
+.. automodule:: mxnet.ndarray.contrib
+    :members:
 
 ```
 
