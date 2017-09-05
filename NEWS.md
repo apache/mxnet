@@ -1,6 +1,6 @@
 MXNet Change Log
 ================
-## 0.11.0-rc3
+## 0.11.0
 ### - Major Features
   - [Apple Core ML model converter](https://github.com/apache/incubator-mxnet/blob/master/tools/coreml/README.md)
   - Support for [Keras v1.2.2](https://github.com/dmlc/keras/wiki/Installation)
