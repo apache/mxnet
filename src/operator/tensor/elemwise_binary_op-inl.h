@@ -142,7 +142,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     }
     if (is_dense_result) {
       iter_out = FillDense<cpu, DType, OP>(s, idx_l, idx_r, req, &out, iter_out);
-      DCHECK_EQ(iter_out, std::min(idx_l, idx_r));
+      DCHECK_EQ(iter_out, static_cast<size_t>(std::min(idx_l, idx_r)));
     }
     if (idx_l == idx_r) {
       // Same row
