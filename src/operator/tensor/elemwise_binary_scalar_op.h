@@ -144,7 +144,7 @@ class BinaryScalarOp : public UnaryOp {
 
       #pragma omp parallel for
       for (int i = 0; i < static_cast<int>(row_count); ++i) {
-        const bool last_row = i == row_count - 1;
+        const bool last_row = i == static_cast<int>(row_count) - 1;
         // Split up into blocks of contiguous data and do those together
         const size_t row_item_start_iter = row_starts_ptr[i];
         const size_t input_items_this_row = !last_row

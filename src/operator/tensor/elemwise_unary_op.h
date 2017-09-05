@@ -62,7 +62,7 @@ class OpBase {
           OP::Map(i, args...);
         }
       } else {
-        mxnet_op::Kernel<OP, cpu>::Launch(s, N, args...);
+        mxnet_op::template Kernel<OP, cpu>::Launch(s, N, args...);
       }
     }
   };
@@ -72,7 +72,7 @@ class OpBase {
   class KernelEx<OP, gpu> {
     template<typename ...Args>
     MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
-      mxnet_op::Kernel<OP, gpu>::Launch(s, N, args...);
+      mxnet_op::template Kernel<OP, gpu>::Launch(s, N, args...);
     }
   };
 #endif  // __CUDACC__
@@ -265,8 +265,7 @@ class UnaryOp : public OpBase {
                                    const std::vector<OpReqType> &req,
                                    const std::vector<NDArray> &outputs,
                                    FComputer computer) {
-    // Copy over geometry
-    InitStorageGeometry<1, 1>(attrs, inputs, outputs);
+    UnaryOp::template InitStorageGeometry<1, 1>(attrs, inputs, outputs);
     CHECK_EQ(inputs.size(), outputs.size());  // need to figure out what to do for binary type
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage);
     CHECK_EQ(inputs[0].storage_type(), outputs[0].storage_type());
