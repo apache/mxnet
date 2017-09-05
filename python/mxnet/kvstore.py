@@ -413,7 +413,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreGetGroupSize(self.handle, ctypes.byref(size)))
         return size.value
 
-    def save_optimizer_states(self, fname):
+    def save_optimizer_states(self, fname, dump_optimizer=False):
         """Saves the optimizer (updater) state to a file. This is often used when checkpointing
         the model during training.
 
@@ -421,10 +421,13 @@ class KVStore(object):
         ----------
         fname : str
             Path to the output states file.
+        dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
         """
         assert self._updater is not None, "Cannot save states for distributed training"
         with open(fname, 'wb') as fout:
-            fout.write(self._updater.get_states())
+            fout.write(self._updater.get_states(dump_optimizer))
 
     def load_optimizer_states(self, fname):
         """Loads the optimizer (updater) state from the file.
@@ -434,7 +437,7 @@ class KVStore(object):
         fname : str
             Path to input states file.
         """
-        assert self._updater is not None, "Cannot save states for distributed training"
+        assert self._updater is not None, "Cannot load states for distributed training"
         self._updater.set_states(open(fname, 'rb').read())
 
     def _set_updater(self, updater):

@@ -172,9 +172,23 @@ class Block(object):
 
     def __setattr__(self, name, value):
         """Registers parameters."""
+
+        if hasattr(self, name):
+            existing = getattr(self, name)
+            if isinstance(existing, (Parameter, Block)) and not isinstance(value, type(existing)):
+                raise TypeError('Changing attribute type for {name} from {type1} to {type2}' \
+                                'is not allowed.'.format(name=name,
+                                                         type1=type(existing),
+                                                         type2=type(value)))
+            if isinstance(existing, Block):
+                for i, c in enumerate(self._children):
+                    if c is existing:
+                        self._children[i] = value
+        else:
+            if isinstance(value, Block):
+                self.register_child(value)
+
         super(Block, self).__setattr__(name, value)
-        if isinstance(value, Block):
-            self.register_child(value)
 
     def _alias(self):
         return self.__class__.__name__.lower()
