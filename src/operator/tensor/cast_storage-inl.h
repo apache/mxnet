@@ -26,6 +26,7 @@
 
 #include <dmlc/timer.h>
 #include <mxnet/ndarray.h>
+#include <algorithm>
 #include <vector>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
