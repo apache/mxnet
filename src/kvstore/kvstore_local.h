@@ -67,7 +67,7 @@ class KVStoreLocal : public KVStore {
   void Init(const std::vector<int>& keys,
             const std::vector<NDArray>& values) override {
     SetKeyType(kIntKey);
-    Init_(keys, values);
+    InitImpl(keys, values);
   }
 
   void Init(const std::vector<std::string>& str_keys,
@@ -84,28 +84,28 @@ class KVStoreLocal : public KVStore {
       reverse_str_key_dict_[key] = str_key;
       keys[i] = key;
     }
-    Init_(keys, values);
+    InitImpl(keys, values);
   }
 
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
             int priority) override {
     SetKeyType(kIntKey);
-    Push_(keys, values, priority);
+    PushImpl(keys, values, priority);
   }
 
   void Pull(const std::vector<int>& keys,
             const std::vector<NDArray*>& values,
             int priority) override {
     SetKeyType(kIntKey);
-    Pull_(keys, values, priority);
+    PullImpl(keys, values, priority);
   }
 
   void PullRowSparse(const std::vector<int>& keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority = 0) override {
     SetKeyType(kIntKey);
-    PullRowSparse_(keys, val_rowids, priority);
+    PullRowSparseImpl(keys, val_rowids, priority);
   }
 
   void Push(const std::vector<std::string>& str_keys,
@@ -114,7 +114,7 @@ class KVStoreLocal : public KVStore {
     SetKeyType(kStringKey);
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
-    Push_(keys, values, priority);
+    PushImpl(keys, values, priority);
   }
 
   void Pull(const std::vector<std::string>& str_keys,
@@ -123,21 +123,21 @@ class KVStoreLocal : public KVStore {
     SetKeyType(kStringKey);
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
-    Pull_(keys, values, priority);
+    PullImpl(keys, values, priority);
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                     const int priority = 0) override {
+                     int priority = 0) override {
     SetKeyType(kStringKey);
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
-    PullRowSparse_(keys, val_rowids, priority);
+    PullRowSparseImpl(keys, val_rowids, priority);
   }
 
  private:
-  void Init_(const std::vector<int>& keys,
-             const std::vector<NDArray>& values) {
+  virtual void InitImpl(const std::vector<int>& keys,
+                        const std::vector<NDArray>& values) {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
           << "duplicate init of key " << keys[i];
@@ -146,9 +146,9 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void Push_(const std::vector<int>& keys,
-             const std::vector<NDArray>& values,
-             int priority) {
+  virtual void PushImpl(const std::vector<int>& keys,
+                        const std::vector<NDArray>& values,
+                        int priority) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
@@ -185,9 +185,9 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void Pull_(const std::vector<int>& keys,
-             const std::vector<NDArray*>& values,
-             int priority) {
+  virtual void PullImpl(const std::vector<int>& keys,
+                        const std::vector<NDArray*>& values,
+                        int priority) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
@@ -200,9 +200,9 @@ class KVStoreLocal : public KVStore {
     }
   }
 
-  void PullRowSparse_(const std::vector<int>& keys,
-                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                      int priority = 0) {
+  virtual void PullRowSparseImpl(const std::vector<int>& keys,
+                                 const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                                 int priority = 0) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
     GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
