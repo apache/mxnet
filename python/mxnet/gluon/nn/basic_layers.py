@@ -448,7 +448,7 @@ class InstanceNorm(HybridBlock):
     .. math::
 
       out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
-      
+
     This layer is similar to batch normalization layer (`BatchNorm`)
     with two differences: first, the normalization is
     carried out per example (instance), not over a batch. Second, the
