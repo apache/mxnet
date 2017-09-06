@@ -35,6 +35,8 @@ In the rest of this document, we list routines provided by the `ndarray.linalg` 
     trmm
     trsm
     sumlogdiag
+    syrk
+    gelqf
 ```
 
 ## API Reference
