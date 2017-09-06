@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=too-many-lines
 """Weight updating functions."""
+# pylint: disable=too-many-lines
 import math
 import pickle
 import logging
@@ -333,16 +334,26 @@ class Optimizer(object):
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
 
+# pylint: disable=line-too-long
 @register
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
     The optimizer updates the weight by::
 
-        state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + rescaled_grad
         weight = weight - state
 
-    Sparse updating is supported. For details of the update algorithm see
+    If the storage types of weight, state and grad are all ``row_sparse``, \
+    sparse updates are applied by::
+
+        for row in grad.indices:
+            rescaled_grad[row] = lr * rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row]
+            state[row] = momentum[row] * state[row] + rescaled_grad[row]
+            weight[row] = weight[row] - state[row]
+
+    For details of the update algorithm see
     :class:`~mxnet.ndarray.sgd_update` and :class:`~mxnet.ndarray.sgd_mom_update`.
 
     This optimizer accepts the following parameters in addition to those accepted
@@ -411,6 +422,7 @@ class SGD(Optimizer):
                 mp_sgd_update(weight, grad, state[1], out=weight,
                               lr=lr, wd=wd, **kwargs)
 
+# pylint: enable=line-too-long
 @register
 class DCASGD(Optimizer):
     """The DCASGD optimizer.
@@ -545,10 +557,26 @@ class Adam(Optimizer):
     This class implements the optimizer described in *Adam: A Method for
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
+    The optimizer updates the weight by::
+
+        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        m = beta1 * m + (1 - beta1) * rescaled_grad
+        v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
+        w = w - learning_rate * m / (sqrt(v) + epsilon)
+
+    If the storage types of weight, state and grad are all ``row_sparse``, \
+    sparse updates are applied by::
+
+        for row in grad.indices:
+            rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
+            m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
+            v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
+            w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
-    For details of the update algorithm, see :class:`ndarray.adam_update`.
+    For details of the update algorithm, see :class:`~mxnet.ndarray.adam_update`.
 
     Parameters
     ----------

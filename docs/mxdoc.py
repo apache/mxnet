@@ -23,7 +23,8 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-import StringIO
+# import StringIO from io for python3 compatibility
+from io import StringIO
 import contextlib
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']

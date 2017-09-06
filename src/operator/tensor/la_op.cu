@@ -43,7 +43,7 @@ NNVM_REGISTER_OP(_linalg_trmm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 2, 1, trmm>);
 
 NNVM_REGISTER_OP(_backward_linalg_trmm)
-.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 2, trmm_backward>);
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 3, 2, trmm_backward>);
 
 NNVM_REGISTER_OP(_linalg_trsm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 2, 1, trsm>);

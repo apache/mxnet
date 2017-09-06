@@ -88,7 +88,7 @@ if __name__ == '__main__':
     input_shape = yaml.safe_load(args.input_shape)
     data_shapes = []
     for key in input_shape:
-        # We prepend 1 because the coreml model only accept 1 input data at a time.
+        # We prepend 1 because the coreml model only accept 1 input data at a time (=batch-size).
         shape = (1,)+literal_eval(input_shape[key])
         input_shape[key] = shape
         data_shapes.append((key, shape))
