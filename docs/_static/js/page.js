@@ -37,7 +37,8 @@ for (var i = 1; i < pathArr.length; ++i) {
             type: "GET",
             statusCode: {
                 404: function (response) {
-                    urlTracker += "<li>" + pathArr[i] + icon + "</li>";
+                    if (pathArr[i] == 'api') urlTracker += "<li>API" + icon + "</li>";
+                    else urlTracker += "<li>" + pathArr[i] + icon + "</li>";
                 }
             }, 
             success: function () {
@@ -55,4 +56,10 @@ if ($('div.download-btn').length > 0) {
     var topBtn = $('div.download-btn').clone();
     topBtn.addClass('download-btn-top');
     topBtn.insertAfter(".page-tracker");
+}
+
+/* Adjust footer position */
+var footerHeight = 252;
+if ($('div.content-block').height() > $(window).height() - footerHeight) {
+    $('div.footer').css('position', 'relative');
 }

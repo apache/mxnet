@@ -57,7 +57,9 @@ li, dt a, dt span {
 
 .footer {
     z-index: 10;
-    position: relative;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
 }
 
 /* /\*Content paragraph space*\/ */
@@ -174,12 +176,6 @@ img {
     width: 125px;
 }
 
-@media screen and (max-width: 405px) {
-    #logo-wrap {
-        margin-left: -25px;
-    }
-}
-
 #logo {
     color: #fff;
     width: 150px;
@@ -221,7 +217,8 @@ img {
 }
 
 #dropdown-menu-position-anchor, 
-#dropdown-menu-position-anchor-docs, 
+#dropdown-menu-position-anchor-docs,
+#dropdown-menu-position-anchor-community,
 #dropdown-menu-position-anchor-version, 
 #dropdown-menu-position-anchor-version-mobile {
     position: relative;
@@ -347,18 +344,13 @@ div .burgerIcon {
     font-size: 25px;
     position: fixed;
     right: 155px;
-    top: 10px;
-    display: none
+    top: 11px;
+    display: none;
+    width: 30px;
 }
 
 div .burgerIcon a {
     color: white;
-}
-
-@media screen and (max-width: 405px) {
-    div .burgerIcon {
-        margin-left: -25px;
-    }
 }
 
 /*burger menu*/
@@ -466,11 +458,40 @@ li.dropdown-submenu ul.dropdown-menu a {
         display: none !important;
     }
 
-    div .burgerIcon {
+    div.burgerIcon {
         display: block;
         position: fixed;
-        top: 10px;
-        left: 160px;
+        left: 45px;
+    }
+    
+    #burgerMenu {
+        position: fixed;
+        left: 0;
+        top: 49px;
+        width: 100%;
+        height: 100%;
+        background: url(redesign-resource/mxnet-background.png);
+        background-attachment: fixed;
+        background-size: cover;
+    }
+    
+    #burgerMenu a {
+        display: block;
+        font-size: 19px;
+        width: auto;
+        padding-left: 75px;
+        padding-top: 10px;
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    #burgerMenu li {
+        border-bottom: 1px solid lightgray;
+        height: 50px;
+    }
+    
+    #logo-wrap {
+        margin-left: 30px;
     }
 }
 /*--------------------------banner---------------------------*/
@@ -512,7 +533,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 #intro {
-    font-size: 14px;
+    font-size: 16px;
     color: #fff;
     font-family: AmazonEmber;
     font-weight: 300;
@@ -521,7 +542,8 @@ li.dropdown-submenu ul.dropdown-menu a {
 @media screen and (max-width:768px) {
     #banner-title {
         font-size: 30px;
-        padding: 60px 30px 10px 0;
+        padding: 60px 30px 10px 30px;
+        margin-left: 0;
     }
 }
 
@@ -660,6 +682,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 .section-util {
     padding:3em 0 3em;
     text-align: left;
+    margin-bottom: 50px;
 }
 
 .section-util .row > div {
@@ -753,7 +776,6 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-inst {
-    margin-top: 80px;
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
     text-align: left;
@@ -795,13 +817,13 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-inst img {
-    -webkit-filter: grayscale(0%); /* Chrome, Safari, Opera */
-    filter: grayscale(0%);
+    -webkit-filter: grayscale(90%); /* Chrome, Safari, Opera */
+    filter: grayscale(90%);
     margin-bottom:2em
 }
 .section-inst img:hover {
-    -webkit-filter: grayscale(90%); /* Chrome, Safari, Opera */
-    filter: grayscale(90%);
+    -webkit-filter: grayscale(0%); /* Chrome, Safari, Opera */
+    filter: grayscale(0%);
 }
 
 .section-disclaimer {
@@ -836,7 +858,7 @@ div.navbar + div.container {
 }
 
 div.content {
-    padding: 80px 40px 40px 40px;
+    padding: 80px 40px 40px 45px;
     background: #fff;
     width: calc(100% - 300px);
     float: right;
@@ -854,7 +876,6 @@ div.content {
 div.page-tracker {
     margin-bottom: 30px;
     font-family: AmazonEmber;
-    font-weight: 300;
 }
 
 div.page-tracker ul {
@@ -862,10 +883,12 @@ div.page-tracker ul {
 }
 
 div.page-tracker ul li {
+    text-transform: capitalize;
     display: inline;
 }
 
 div.page-tracker a {
+    text-transform: capitalize;
     color: #337ab7;
 }
 
@@ -889,7 +912,7 @@ div.sphinxsidebar {
 
 div.leftsidebar {
     width: 300px;
-    margin: 0;
+    margin-left: 25px;
     background: #f2f2f2;
 }
 
@@ -1326,13 +1349,6 @@ table.docutils tr:nth-child(even) {
     color: white;
 }
 
-@media screen and (max-width: 510px) {
-    .form-group .glyphicon-search {
-        color: #555;
-    }
-}
-
-
 /*----------------------Get started page----------------------------*/
 #why-mxnet img {
     position: relative;
@@ -1396,4 +1412,29 @@ div.download-btn.download-btn-top a {
 #download-source-package {
     display: none;
     padding-top: 40px;
+}
+
+/*------------Mobile dropdown menu smooth transition---------------*/
+@keyframes slide {
+    0% {
+        left: -100%;
+    }
+    25% {
+        left: -75%;
+    }
+    50% {
+        left: -50%;
+    }
+    75% {
+        left: -25%;
+    }
+    100% {
+        left: 0;
+    }
+}
+
+#burgerMenu {
+    animation-name: slide;
+    animation-duration: 0.3s;
+    animation-timing-function: ease-in-out;
 }
