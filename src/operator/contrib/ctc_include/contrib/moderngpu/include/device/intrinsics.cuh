@@ -104,32 +104,6 @@ MGPU_DEVICE uint prmt_ptx(uint a, uint b, uint index) {
 
 #endif // __CUDA_ARCH__ >= 200
 
-
-////////////////////////////////////////////////////////////////////////////////
-// shfl_up
-
-__device__ __forceinline__ float shfl_up(float var,
-	unsigned int delta, int width = 32) {
-
-#if __CUDA_ARCH__ >= 300
-	var = __shfl_up(var, delta, width);
-#endif
-	return var;
-}
-
-__device__ __forceinline__ double shfl_up(double var,
-	unsigned int delta, int width = 32) {
-
-#if __CUDA_ARCH__ >= 300
-	int2 p = mgpu::double_as_int2(var);
-	p.x = __shfl_up(p.x, delta, width);
-	p.y = __shfl_up(p.y, delta, width);
-	var = mgpu::int2_as_double(p);
-#endif
-
-	return var;
-}
-
 #if CUDA_VERSION >= 9000
 ////////////////////////////////////////////////////////////////////////////////
 // shfl_add
