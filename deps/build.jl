@@ -53,6 +53,14 @@ else
   info("Did not find a CUDA installation, using CPU-only version of MXNet.")
 end
 
+function get_cpucore()
+    if haskey(ENV, "TRAVIS")  # on travis-ci
+        4
+    else
+        min(Sys.CPU_CORES, 8)
+    end
+end
+
 using BinDeps
 @BinDeps.setup
 if !libmxnet_detected
@@ -169,9 +177,9 @@ if !libmxnet_detected
           ChangeDirectory(_mxdir)
           `cp ../../cblas.h include/cblas.h`
           if USE_JULIA_BLAS
-            `make -j$(min(Sys.CPU_CORES,8)) USE_BLAS=$blas_name $MSHADOW_LDFLAGS`
+            `make -j$(get_cpucore()) USE_BLAS=$blas_name $MSHADOW_LDFLAGS`
           else
-            `make -j$(min(Sys.CPU_CORES,8))`
+            `make -j$(get_cpucore())`
           end
         end
         FileRule(joinpath(_libdir, "libmxnet.so"), @build_steps begin
