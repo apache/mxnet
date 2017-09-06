@@ -108,10 +108,6 @@ In the rest of this document, we list sparse related routines provided by the
 .. automodule:: mxnet.symbol.sparse
     :members:
 
-.. automodule:: mxnet.symbol
-    :annotation:
-    :members: var
-
 ```
 
 <script>auto_index("api-reference");</script>

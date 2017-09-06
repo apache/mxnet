@@ -18,7 +18,7 @@ This document lists the routines of the *n*-dimensional sparse array package:
 The `CSRNDArray` and `RowSparseNDArray` API, defined in the `ndarray.sparse` package, provides
 imperative sparse tensor operations on CPU.
 
-An `CSRNDArray` represents a two-dimensional, fixed-size array in compressed sparse row format.
+An `CSRNDArray` inherits from `NDArray`, and represents a two-dimensional, fixed-size array in compressed sparse row format.
 
 ```python
 >>> x = mx.nd.array([[1, 0], [0, 0], [2, 3]])
@@ -37,7 +37,7 @@ array([0, 1, 1, 3])
 'csr'
 ```
 
-An `RowSparseNDArray` represents a multi-dimensional, fixed-size array in row sparse format.
+An `RowSparseNDArray` inherits from `NDArray`, and represents a multi-dimensional, fixed-size array in row sparse format.
 
 ```python
 >>> x = mx.nd.array([[1, 0], [0, 0], [2, 3]])
@@ -259,11 +259,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members:
-    :special-members:
+    :members: shape, size, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __getitem__, __setitem__
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members:
+    :members: shape, size, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, __getitem__, __setitem__
     :special-members:
 
 .. automodule:: mxnet.ndarray.sparse
@@ -272,7 +271,6 @@ We summarize the interface for each class in the following sections.
     :exclude-members: BaseSparseNDArray, RowSparseNDArray, CSRNDArray
 
 .. automodule:: mxnet.ndarray.sparse
-    :annotation:
     :members: array, zeros, empty
 
 ```
