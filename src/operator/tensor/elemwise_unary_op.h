@@ -230,7 +230,9 @@ class UnaryOp : public OpBase {
     AllocateGeometry(&outputs[0], req[0], &inputs[0]);
     CopyGeometryBlobs<xpu>(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     outputs[0].CheckAndAllocData(inputs[0].storage_shape());
-    OpBase::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, computer);
+    if(inputs[0].storage_shape().Size()) {
+      OpBase::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, computer);
+    }
   }
 
  public:
@@ -243,7 +245,7 @@ class UnaryOp : public OpBase {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::mshadow_to_kernel<OP, Req>, xpu>::Launch(
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
           s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
       });
     });
@@ -331,8 +333,10 @@ class UnaryOp : public OpBase {
       CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_); return;
     }
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(inputs[0].FlatTo1D<xpu, DType>(s)));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
+          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+      });
     });
   }
 

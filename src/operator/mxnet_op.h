@@ -213,28 +213,24 @@ struct set_zero {
   }
 };
 
-/*! \brief Select assignment operation based upon the req value */
+/*! \brief Select assignment operation based upon the req value
+ * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
+ */
 template<typename OP, int req>
 struct op_with_req {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out,
-                                  const DType *lhs,
-                                  const DType *rhs) {
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs, const DType *rhs) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
-  }
-};
-
-/*! \brief Old mshadow Compute (F<OP>) mapping to Kernel<OP>::Launch mapping */
-template<typename OP, int Req>
-struct mshadow_to_kernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
-    KERNEL_ASSIGN(out[i], Req, OP::Map(in[i]));
   }
 };
 
