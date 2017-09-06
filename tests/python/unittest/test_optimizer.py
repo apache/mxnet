@@ -15,15 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
 import numpy as np
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
+import common
 import math
 from mxnet.test_utils import *
 
-
 # Common
+def test_learning_rate_expect_user_warning():
+    lr_s = lr_scheduler.LRScheduler()
+    o = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
+    o.learning_rate = 0.5
+
 def test_learning_rate():
     o1 = mx.optimizer.Optimizer(learning_rate=0.01)
     o1.learning_rate = 0.2
@@ -34,6 +38,7 @@ def test_learning_rate():
     assert o2.learning_rate == 0.3
     o2.lr_scheduler.base_lr = 0.4
     assert o2.learning_rate == 0.4
+    common.assertRaises(UserWarning, test_learning_rate_expect_user_warning)
 
 
 def test_lr_wd_mult():
