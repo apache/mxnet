@@ -43,6 +43,7 @@ template<typename DType>
 __forceinline__ __device__ DType  __shfl_down_sync(unsigned, DType val, int delta) {
   return __shfl_down(val, delta);
 }
+
 #define __shfl_down_sync(mask, ...) __shfl_down(__VA_ARGS__)
 // shuffle masks not used before CUDA 9.
 #define CREATE_SHFL_MASK(mask, predicate) \
