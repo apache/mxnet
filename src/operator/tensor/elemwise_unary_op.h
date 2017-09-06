@@ -230,7 +230,7 @@ class UnaryOp : public OpBase {
     AllocateGeometry(&outputs[0], req[0], &inputs[0]);
     CopyGeometryBlobs<xpu>(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     outputs[0].CheckAndAllocData(inputs[0].storage_shape());
-    if(inputs[0].storage_shape().Size()) {
+    if (inputs[0].storage_shape().Size()) {
       OpBase::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, computer);
     }
   }
