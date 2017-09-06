@@ -121,6 +121,20 @@ def python3_gpu_ut(docker_container_name) {
   }
 }
 
+// Python 2 gpu quantization unittest
+def python2_gpu_qt(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "ci/build.py --nvidiadocker --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_quantization_gpu"
+  }
+}
+
+// Python 3 gpu quantization unittest
+def python3_gpu_qt(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "ci/build.py --nvidiadocker --build --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
+  }
+}
+
 try {
   stage("Sanity Check") {
     node('mxnetlinux-cpu') {
@@ -219,6 +233,26 @@ try {
           pack_lib('gpu')
           stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
+        }
+      }
+    },
+    'GPU: CUDA8.0+cuDNN7': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-gpu-cuda8-cudnn7') {
+          init_git()
+          def flag = """ \
+            DEV=1                         \
+            USE_PROFILER=1                \
+            USE_BLAS=openblas             \
+            USE_CUDA=1                    \
+            USE_CUDA_PATH=/usr/local/cuda \
+            USE_CUDNN=1                   \
+            USE_CPP_PACKAGE=1             \
+            -j\$(nproc)
+            """
+          make('build_cuda8_cudnn7', flag)
+          pack_lib('gpu_cuda8_cudnn7')
+          stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
         }
       }
     },
@@ -383,6 +417,24 @@ try {
           init_git()
           unpack_lib('gpu', mx_lib)
           python3_gpu_ut('ubuntu_gpu')
+        }
+      }
+    },
+    'Python2: Quantize GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/qt-python2-gpu') {
+          init_git()
+          unpack_lib('gpu_cuda8_cudnn7', mx_lib)
+          python2_gpu_qt('ubuntu_gpu')
+        }
+      }
+    },
+    'Python3: Quantize GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/qt-python3-gpu') {
+          init_git()
+          unpack_lib('gpu_cuda8_cudnn7', mx_lib)
+          python3_gpu_qt('ubuntu_gpu')
         }
       }
     },

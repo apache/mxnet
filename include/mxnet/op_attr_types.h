@@ -260,9 +260,20 @@ using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
 
-using FQuantizedOp = std::function<nnvm::NodePtr (nnvm::NodePtr n)>;
+/*!
+ * \brief Resiger an quantized node creation function based on the attrs of the node
+ * \note Register under "FQuantizedOp" for non-quantized operators
+ */
+using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
 
-using TQuantizationNeedShrink = bool;
+/*!
+ * \brief Resiger an function to determine if the output a quantized operator
+ * needs to be requantized. This is usually used for the operators
+ * taking int8 data types while accumulating in int32, e.g. quantized_conv.
+ * \note Register under "FNeedRequantize" for non-quantized operators
+ */
+using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

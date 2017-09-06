@@ -19,16 +19,16 @@
 
 /*!
  *  Copyright (c) 2017 by Contributors
- * \file quantized_flatten.cu
+ * \file quantize.cu
  * \brief
  */
-#include "./quantized_flatten-inl.h"
+#include "./requantize-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_contrib_quantized_flatten)
-.set_attr<FCompute>("FCompute<gpu>", QuantizedFlattenCompute<gpu>);
+NNVM_REGISTER_OP(_contrib_requantize)
+.set_attr<FCompute>("FCompute<gpu>", RequantizeForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

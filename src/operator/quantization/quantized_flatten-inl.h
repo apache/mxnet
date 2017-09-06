@@ -1,10 +1,29 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file quantized_flatten-inl.h
  * \brief implementation of quantized flatten operation
  */
-#ifndef MXNET_OPERATOR_CONTRIB_QUANTIZED_FLATTEN_INL_H_
-#define MXNET_OPERATOR_CONTRIB_QUANTIZED_FLATTEN_INL_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZED_FLATTEN_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_QUANTIZED_FLATTEN_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -31,10 +50,14 @@ struct quantized_flatten {
 
 template<typename xpu>
 void QuantizedFlattenCompute(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 3U);
+  CHECK_EQ(req.size(), 3U);
+  if (req[0] == kWriteInplace && req[1] == kWriteInplace && req[2] == kWriteInplace) return;
   using namespace mshadow;
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -53,16 +76,15 @@ inline bool QuantizedFlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 3U);
 
   const TShape &dshape = (*in_attrs)[0];
-  CHECK(!shape_is_none(dshape));
+  if (shape_is_none(dshape)) return false;
 
   uint32_t target_dim = 1;
   for (uint32_t i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }
 
-  for (size_t i = 1; i < 3; ++i) {
-    CHECK(shape_is_scalar(in_attrs->at(i)));
-  }
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, TShape{1});
+  SHAPE_ASSIGN_CHECK(*in_attrs, 2, TShape{1});
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(dshape[0], target_dim));
   SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape{1});
   SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape{1});
@@ -74,12 +96,9 @@ inline bool QuantizedFlattenType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
-  CHECK_EQ((*in_attrs)[0], mshadow::kInt8)
-    << "`quantize_flatten` only supports int8 input for now";
-  CHECK_EQ((*in_attrs)[1], mshadow::kFloat32)
-    << "the second input of `quantize` should be a tensor with type of float";
-  CHECK_EQ((*in_attrs)[2], mshadow::kFloat32)
-    << "the third input of `quantize` should be a tensor with type of float";
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt8);
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*in_attrs, 2, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
   TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kFloat32);
@@ -88,4 +107,4 @@ inline bool QuantizedFlattenType(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONTRIB_QUANTIZED_FLATTEN_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_FLATTEN_INL_H_

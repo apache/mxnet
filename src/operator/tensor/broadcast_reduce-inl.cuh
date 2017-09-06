@@ -348,21 +348,21 @@ static inline uint64_t calc_num_load(const int X, const int Y, const int* stride
 }
 
 template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big, const TBlob* lhs,
-  const TBlob* rhs) {
+ReduceImplConfig<ndim> ConfigureReduceImpl(const TShape& small, const TShape& big, const TShape* lhs,
+  const TShape* rhs) {
 
   ReduceImplConfig<ndim> config;
 
-  diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &config.rshape, &config.rstride);
-  config.N = small.shape_.Size();
+  diff(small.get<ndim>(), big.get<ndim>(), &config.rshape, &config.rstride);
+  config.N = small.Size();
   config.M = config.rshape.Size();
 
   bool multiOp = false;
   if (lhs != NULL) {
     CHECK_NOTNULL(rhs);
-    diff(small.shape_.get<ndim>(), lhs->shape_.get<ndim>(), &config.lhs_shape,
+    diff(small.get<ndim>(), lhs->get<ndim>(), &config.lhs_shape,
       &config.lhs_stride);
-    diff(small.shape_.get<ndim>(), rhs->shape_.get<ndim>(), &config.rhs_shape,
+    diff(small.get<ndim>(), rhs->get<ndim>(), &config.rhs_shape,
       &config.rhs_stride);
     multiOp = true;
   }
@@ -376,20 +376,20 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
   } else {
 
     int reduce_strides[3];
-    reduce_strides[0] = fastest_stride(small.shape_.get<ndim>(), big.shape_.get<ndim>(),
-      big.shape_.get<ndim>());
-    reduce_strides[1] = (multiOp) ? fastest_stride(small.shape_.get<ndim>(),
-      lhs->shape_.get<ndim>(), lhs->shape_.get<ndim>()) : 1;
-    reduce_strides[2] = (multiOp) ? fastest_stride(small.shape_.get<ndim>(),
-      rhs->shape_.get<ndim>(), rhs->shape_.get<ndim>()) : 1;
+    reduce_strides[0] = fastest_stride(small.get<ndim>(), big.get<ndim>(),
+      big.get<ndim>());
+    reduce_strides[1] = (multiOp) ? fastest_stride(small.get<ndim>(),
+      lhs->get<ndim>(), lhs->get<ndim>()) : 1;
+    reduce_strides[2] = (multiOp) ? fastest_stride(small.get<ndim>(),
+      rhs->get<ndim>(), rhs->get<ndim>()) : 1;
 
     int reduce_strides_transp[3];
-    reduce_strides_transp[0] = fastest_stride(small.shape_.get<ndim>(), config.rshape,
+    reduce_strides_transp[0] = fastest_stride(small.get<ndim>(), config.rshape,
       config.rstride);
     reduce_strides_transp[1] = (multiOp) ?
-      fastest_stride(small.shape_.get<ndim>(), config.lhs_shape, config.lhs_stride) : 1;
+      fastest_stride(small.get<ndim>(), config.lhs_shape, config.lhs_stride) : 1;
     reduce_strides_transp[2] = (multiOp) ?
-      fastest_stride(small.shape_.get<ndim>(), config.rhs_shape, config.rhs_stride) : 1;
+      fastest_stride(small.get<ndim>(), config.rhs_shape, config.rhs_stride) : 1;
 
     uint64_t num_load = calc_num_load(config.N, config.M, reduce_strides);
     uint64_t num_load_transp = calc_num_load(config.M, config.N, reduce_strides_transp);
@@ -597,7 +597,8 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
   ReduceImpl<Reducer, ndim, DType, OP>(stream, small, req, big, workspace, config);
 }
 
@@ -607,21 +608,22 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const TBlob& lhs, const TBlob& rhs) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_);
   ReduceImpl<Reducer, ndim, DType, OP1, OP2>(stream, small, lhs, rhs, req, big, workspace, config);
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const TShape& small, const OpReqType req,
+                           const TShape& big) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
   return config.workspace_size;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big, const TBlob& lhs, const TBlob& rhs) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const TShape& small, const OpReqType req,
+                           const TShape& big, const TShape& lhs, const TShape& rhs) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
   return config.workspace_size;

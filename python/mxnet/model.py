@@ -28,7 +28,7 @@ from collections import namedtuple
 import numpy as np
 
 from . import io
-from . import nd
+from . import ndarray as nd
 from . import symbol as sym
 from . import optimizer as opt
 from . import metric

@@ -1,46 +1,50 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2017 by Contributors
  * \file quantized_fully_connected.cu
  * \brief
- * \author Ziheng Jiang
+ * \author Ziheng Jiang, Jun Wu
 */
-#include "./quantized_fully_connected-inl.h"
+#if MSHADOW_USE_CUDNN == 1 && CUDNN_MAJOR >= 6
 #include "./quantization_utils.h"
 #include "../mxnet_op.h"
+#include "../nn/fully_connected-inl.h"
 
 namespace mxnet {
 namespace op {
 
 // value + bias_value * (range1 / limit_range1) * (limit_range2 / range2)
-struct QuantizedBiasAddStruct {
+struct QuantizedBiasAddKernel {
   MSHADOW_XINLINE static void Map(int i, size_t k, int32_t *out,
-    const int8_t *bias, const float *min_out, const float *max_out,
-    const float *min_bias, const float *max_bias) {
+                                  const int8_t *bias, const float *min_out,
+                                  const float *max_out, const float *min_bias,
+                                  const float *max_bias) {
     typedef int32_t T1;
     typedef int8_t  T2;
-    float float_for_one_out_quant = (max_out[0] - min_out[0]) /
-        (static_cast<double>(MaxValue<T1>()) -
-         static_cast<double>(MinValue<T1>()));
-    float float_for_one_bias_quant = (max_bias[0] - min_bias[0]) /
-        (static_cast<double>(MaxValue<T2>()) -
-         static_cast<double>(MinValue<T2>()));
-    out[i] = (out[i] * float_for_one_out_quant +
-              bias[i%k] * float_for_one_bias_quant) /
-             float_for_one_out_quant;
-  }
-};
-
-// value + bias_value * (range1 / limit_range1) * (limit_range2 / range2)
-struct QuantizedBiasAddStruct2 {
-  MSHADOW_XINLINE static void Map(int i, size_t k, int32_t *out,
-    const int8_t *bias, const float *min_out, const float *max_out,
-    const float *min_bias, const float *max_bias) {
-    typedef int32_t T1;
-    typedef int8_t  T2;
+    using mshadow::red::limits::MinValue;
+    using mshadow::red::limits::MaxValue;
     float float_for_one_out_quant  =
-      *max_out / static_cast<double>(MaxValue<T1>());
+      MaxAbs(*min_out, *max_out) / static_cast<double>(MaxValue<T1>());
     float float_for_one_bias_quant =
-      *max_bias / static_cast<double>(MaxValue<T2>());
+      MaxAbs(*min_bias, *max_bias) / static_cast<double>(MaxValue<T2>());
     out[i] = (out[i] * float_for_one_out_quant +
               bias[i%k] * float_for_one_bias_quant) /
              float_for_one_out_quant;
@@ -48,115 +52,73 @@ struct QuantizedBiasAddStruct2 {
 };
 
 template<typename SrcType, typename DstType, typename CmpType>
-class QuantizedFullyConnectedCublasOp : public Operator {
- public:
-  explicit QuantizedFullyConnectedCublasOp(const Context& ctx,
-                                   const std::vector<TShape>& in_shape,
-                                   const std::vector<TShape>& out_shape,
-                                   const QuantizedFullyConnectedParam& param) {
-    alpha_ = 1.0f;
-    beta_  = 0.0f;
-    src_type_ = mshadow::DataType<SrcType>::kCudaFlag;
-    dst_type_ = mshadow::DataType<DstType>::kCudaFlag;
-    cmp_type_ = mshadow::DataType<CmpType>::kCudaFlag;
-    param_ = param;
+void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
+                                       const OpContext &ctx,
+                                       const std::vector<TBlob> &inputs,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<TBlob> &outputs) {
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  using namespace mshadow;
+  using namespace mxnet_op;
+  size_t num_inputs = param.no_bias ? 2 : 3;
+  CHECK_EQ(inputs.size(),  num_inputs * 3);
+  CHECK_EQ(outputs.size(), 3U);
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+  CHECK_EQ(s->blas_handle_ownership_, Stream<gpu>::OwnHandle);
+  const TBlob& data   =  inputs[0];
+  const TBlob& weight =  inputs[1];
+  const TBlob& out    = outputs[0];
+  TShape dshape = data.shape_;
+  TShape wshape = weight.shape_;
+  TShape oshape = out.shape_;
+  // (m, n) * (k, n).T = (m, k)
+  // A * B.T = C
+
+  // row_C = col_C(T) = cublas(col_B * col_A(T)) = cublas(row_B(T), row_A)
+  // row_C = col_C(T) = cublas(col_B(T) * col_A(T)) = cublas(row_B, row_A)
+  const int m = dshape[0], n = dshape.ProdShape(1, dshape.ndim()), k = wshape[0];
+  CmpType alpha = 1.0f;
+  CmpType beta  = 0.0f;
+  const cudaDataType src_type = mshadow::DataType<SrcType>::kCudaFlag;
+  const cudaDataType dst_type = mshadow::DataType<DstType>::kCudaFlag;
+  const cudaDataType cmp_type = mshadow::DataType<CmpType>::kCudaFlag;
+  CUBLAS_CALL(cublasGemmEx(s->blas_handle_,
+                           CUBLAS_OP_T,
+                           CUBLAS_OP_N,
+                           k,
+                           m,
+                           n,
+                           &alpha,
+                           weight.dptr_,
+                           src_type,
+                           n,
+                           data.dptr_,
+                           src_type,
+                           n,
+                           &beta,
+                           out.dptr_,
+                           dst_type,
+                           k,
+                           cmp_type,
+                           CUBLAS_GEMM_DFALT));
+
+  Kernel<QuantizationRangeForMultiplicationStruct, gpu>::Launch(s, 1,
+    outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+     inputs[num_inputs].dptr<float>(),   inputs[num_inputs+1].dptr<float>(),
+     inputs[num_inputs+2].dptr<float>(), inputs[num_inputs+3].dptr<float>());
+
+  if (!param.no_bias) {
+    const TBlob& bias = inputs[2];
+    Kernel<QuantizedBiasAddKernel, gpu>::Launch(s, out.Size(),
+        k, out.dptr<int32_t>(), bias.dptr<int8_t>(),
+        outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+         inputs[7].dptr<float>(),  inputs[8].dptr<float>());
   }
-
-  ~QuantizedFullyConnectedCublasOp() {
-  }
-
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mxnet_op;
-    size_t num_inputs = param_.no_bias ? 2 : 3;
-    CHECK_EQ(in_data.size(),  num_inputs * 3);
-    CHECK_EQ(out_data.size(), 3U);
-    Stream<gpu> *s = ctx.get_stream<gpu>();
-    CHECK_EQ(s->blas_handle_ownership_, Stream<gpu>::OwnHandle);
-    const TBlob& data   =  in_data[0];
-    const TBlob& weight =  in_data[1];
-    const TBlob& out    = out_data[0];
-    TShape dshape = data.shape_;
-    TShape wshape = weight.shape_;
-    TShape oshape = out.shape_;
-    // (m, n) * (k, n).T = (m, k)
-    // A * B.T = C
-
-    // row_C = col_C(T) = cublas(col_B * col_A(T)) = cublas(row_B(T), row_A)
-    // row_C = col_C(T) = cublas(col_B(T) * col_A(T)) = cublas(row_B, row_A)
-    size_t m = dshape[0], n = dshape[1], k = wshape[0];
-    CUBLAS_CALL(cublasGemmEx(s->blas_handle_,
-                             CUBLAS_OP_T,
-                             CUBLAS_OP_N,
-                             k,
-                             m,
-                             n,
-                             &alpha_,
-                             weight.dptr_,
-                             src_type_,
-                             n,
-                             data.dptr_,
-                             src_type_,
-                             n,
-                             &beta_,
-                             out.dptr_,
-                             dst_type_,
-                             k,
-                             cmp_type_,
-                             CUBLAS_GEMM_DFALT));
-
-    Kernel<QuantizationRangeForMultiplicationStruct, gpu>::Launch(s, 1,
-      out_data[1].dptr<float>(), out_data[2].dptr<float>(),
-       in_data[num_inputs].dptr<float>(),   in_data[num_inputs+1].dptr<float>(),
-       in_data[num_inputs+2].dptr<float>(), in_data[num_inputs+3].dptr<float>());
-
-    if (!param_.no_bias) {
-      const TBlob& bias = in_data[2];
-      Kernel<QuantizedBiasAddStruct2, gpu>::Launch(s, out.Size(),
-          k, out.dptr<int32_t>(), bias.dptr<int8_t>(),
-          out_data[1].dptr<float>(), out_data[2].dptr<float>(),
-           in_data[7].dptr<float>(),  in_data[8].dptr<float>());
-    }
-  }
-
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
-    LOG(INFO) << "Not implemented";
-  }
-
-
- private:
-  CmpType alpha_;
-  CmpType beta_;
-  cudaDataType src_type_;
-  cudaDataType dst_type_;
-  cudaDataType cmp_type_;
-  QuantizedFullyConnectedParam param_;
-
-};  // class QuantizedFullyConnectedCublasOp
-
-
-template<>
-Operator* CreateOp<gpu>(int dtype,
-                        const Context& ctx,
-                        const std::vector<TShape>& in_shape,
-                        const std::vector<TShape>& out_shape,
-                        const QuantizedFullyConnectedParam& param) {
-  Operator *op = NULL;
-  op = new QuantizedFullyConnectedCublasOp<int8_t, int32_t, int32_t>(ctx,
-    in_shape, out_shape, param);
-  return op;
 }
+
+NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
+.set_attr<FCompute>("FCompute<gpu>", QuantizedFullyConnectedForwardGPU<int8_t, int32_t, int32_t>);
 
 }  // namespace op
 }  // namespace mxnet
-
+#endif
