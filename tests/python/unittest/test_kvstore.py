@@ -78,7 +78,7 @@ def test_row_sparse_pull():
         for i in range(count):
             vals.append(mx.nd.zeros(shape).tostype('row_sparse'))
             row_id = np.random.randint(num_rows, size=num_rows)
-            row_ids.append(mx.nd.array(row_id, dtype='int64'))
+            row_ids.append(mx.nd.array(row_id))
         row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
         vals_to_pull = vals[0] if len(vals) == 1 else vals
 
@@ -165,7 +165,7 @@ def test_sparse_aggregator():
         expected_sum += v.asnumpy()
 
     # prepare row_ids
-    all_rows = mx.nd.array(np.arange(shape[0]), dtype='int64')
+    all_rows = mx.nd.array(np.arange(shape[0]))
     kv.push('a', vals)
     kv.row_sparse_pull('a', out=vals, row_ids=[all_rows] * len(vals))
     result_sum = np.zeros(shape)
