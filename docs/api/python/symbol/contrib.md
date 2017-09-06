@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document lists the routines of the contrib symbolic expression package:
+This document lists the contrib routines of the symbolic expression package:
 
 ```eval_rst
 .. autosummary::

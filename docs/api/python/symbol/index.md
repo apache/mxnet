@@ -8,5 +8,7 @@
 
    symbol.md
    sparse.md
+   linalg.md
+   random.md
    contrib.md
 ```

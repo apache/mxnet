@@ -574,44 +574,6 @@ Composite multiple symbols into a new one by an operator.
     Custom
 ```
 
-## Linear Algebra
-
-The `symbol.linalg` module contains Symbol APIs for linear algebra routines.
-
-```eval_rst
-.. currentmodule:: mxnet.symbol.linalg
-
-.. autosummary::
-    :nosignatures:
-
-    gemm
-    gemm2
-    potrf
-    potri
-    trmm
-    trsm
-    sumlogdiag
-```
-
-## Random Distribution Generator
-
-The `symbol.random` module contains Symbol APIs for random distribution generator.
-
-```eval_rst
-.. currentmodule:: mxnet.symbol.random
-
-.. autosummary::
-    :nosignatures:
-
-    exponential
-    gamma
-    generalized_negative_binomial
-    negative_binomial
-    normal
-    poisson
-    uniform
-```
-
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -627,9 +589,6 @@ The `symbol.random` module contains Symbol APIs for random distribution generato
     :imported-members:
     :special-members:
     :exclude-members: Symbol
-
-.. automodule:: mxnet.symbol.linalg
-    :members:
 
 .. automodule:: mxnet.symbol.random
     :members:

@@ -571,44 +571,6 @@ The `ndarray` package provides several classes:
     Custom
 ```
 
-## Linear Algebra
-
-The `ndarray.linalg` module contains NDArray APIs for linear algebra routines.
-
-```eval_rst
-.. currentmodule:: mxnet.ndarray.linalg
-
-.. autosummary::
-    :nosignatures:
-
-    gemm
-    gemm2
-    potrf
-    potri
-    trmm
-    trsm
-    sumlogdiag
-```
-
-## Random Distribution Generator
-
-The `ndarray.random` module contains NDArray APIs for random distribution generator.
-
-```eval_rst
-.. currentmodule:: mxnet.ndarray.random
-
-.. autosummary::
-    :nosignatures:
-
-    exponential
-    gamma
-    generalized_negative_binomial
-    negative_binomial
-    normal
-    poisson
-    uniform
-```
-
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -624,12 +586,6 @@ The `ndarray.random` module contains NDArray APIs for random distribution genera
     :imported-members:
     :special-members:
     :exclude-members: CachedOp, NDArray
-
-.. automodule:: mxnet.ndarray.linalg
-    :members:
-
-.. automodule:: mxnet.ndarray.random
-    :members:
 
 .. automodule:: mxnet.random
     :members:

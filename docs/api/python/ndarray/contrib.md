@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document lists the routines of the contrib *n*-dimensional array package:
+This document lists the contrib routines of the *n*-dimensional array package:
 
 ```eval_rst
 .. autosummary::
