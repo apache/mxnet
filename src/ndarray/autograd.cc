@@ -29,6 +29,7 @@
 #include <iostream>
 #include "../executor/graph_executor.h"
 #include "./autograd.h"
+#include "../c_api/c_api_common.h"
 
 namespace mxnet {
 namespace autograd {
@@ -101,21 +102,6 @@ void AutogradRuntime::MarkVariables(
   }
 }
 
-void AutogradRuntime::RecordImperativeFCompute(const nnvm::Op* op,
-                                               const nnvm::NodeAttrs& attrs,
-                                               std::vector<NDArray> *p_inputs,
-                                               std::vector<NDArray> *p_outputs) {
-  RecordOp(op, attrs, p_inputs, p_outputs, OpStatePtr());
-}
-
-void AutogradRuntime::RecordImperativeOperator(const OpStatePtr& state,
-                                               const nnvm::Op* op,
-                                               const nnvm::NodeAttrs& attrs,
-                                               std::vector<NDArray> *p_inputs,
-                                               std::vector<NDArray> *p_outputs) {
-  RecordOp(op, attrs, p_inputs, p_outputs, state);
-}
-
 std::shared_ptr<AutogradRuntime> AutogradRuntime::_GetSharedRef() {
   static std::shared_ptr<AutogradRuntime> inst(new AutogradRuntime());
   return inst;
@@ -126,12 +112,58 @@ AutogradRuntime* AutogradRuntime::Get() {
   return ptr;
 }
 
-void AutogradRuntime::RecordOp(const nnvm::Op* op,
-                                    const nnvm::NodeAttrs& attrs,
-                                    std::vector<NDArray> *p_inputs,
-                                    std::vector<NDArray> *p_outputs,
-                                    const OpStatePtr& state) {
+void AutogradRuntime::GetBackwardDependency(const nnvm::NodePtr& node,
+                                            uint32_t num_inputs, uint32_t num_outputs,
+                                            std::vector<bool> *p_save_inputs,
+                                            std::vector<bool> *p_save_outputs) {
   static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
+  std::vector<bool>& save_inputs = *p_save_inputs;
+  std::vector<bool>& save_outputs = *p_save_outputs;
+  save_inputs.resize(num_inputs);
+  save_outputs.resize(num_outputs);
+  std::fill(save_inputs.begin(), save_inputs.end(), false);
+  std::fill(save_outputs.begin(), save_outputs.end(), false);
+
+  node->inputs.clear();
+  node->inputs.reserve(num_inputs);
+  for (uint32_t i = 0; i < num_inputs; ++i) {
+    node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
+  }
+
+  if (fgradient.count(node->op())) {
+    std::vector<NodeEntry> ograd_entries;
+    ograd_entries.reserve(num_outputs);
+    for (uint32_t i = 0; i < num_outputs; ++i) {
+      ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
+    }
+    auto igrad_entries = fgradient[node->op()](node, ograd_entries);
+    for (const auto& i : igrad_entries) {
+      if (i.node == nullptr && i.version == 0) {
+        save_inputs[i.index] = true;
+      } else if (i.node == node) {
+        save_outputs[i.index] = true;
+      }
+    }
+    DFSVisit(igrad_entries, [&](const NodePtr& gnode) {
+        if (!gnode || gnode == node) return;
+        for (const auto& i : gnode->inputs) {
+          if (i.node == nullptr && i.version == 0) {
+            save_inputs[i.index] = true;
+          } else if (i.node == node) {
+            save_outputs[i.index] = true;
+          }
+        }
+      });
+  }
+}
+
+void AutogradRuntime::RecordOp(nnvm::NodeAttrs&& attrs,
+                               std::vector<NDArray> *p_inputs,
+                               std::vector<NDArray> *p_outputs,
+                               const OpStatePtr& state,
+                               std::vector<bool>* p_save_inputs,
+                               std::vector<bool>* p_save_outputs) {
+  MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
   std::vector<NDArray>& inputs  = *p_inputs;
   std::vector<NDArray>& outputs = *p_outputs;
 
@@ -144,7 +176,6 @@ void AutogradRuntime::RecordOp(const nnvm::Op* op,
       << "Please call backward first to clear the graph or do this out side of "
       << "a record section. ";
   }
-  if (!fgradient.count(attrs.op)) return;
   bool need_grad = false;
   for (const auto& i : inputs) {
     if (!i.entry_.is_none()) {
@@ -155,36 +186,20 @@ void AutogradRuntime::RecordOp(const nnvm::Op* op,
   if (!need_grad) return;
 
   NodePtr nn_node = Node::Create();
-  nn_node->attrs = attrs;
+  nn_node->attrs = std::move(attrs);
   nn_node->attrs.name = "node_" + std::to_string(node_count_++);
 
-  // Get backward dependency
-  std::vector<bool> save_inputs(inputs.size()), save_outputs(outputs.size());
-  for (uint32_t i = 0; i < inputs.size(); ++i) {
-    nn_node->inputs.emplace_back(NodeEntry{nullptr, i, 0});
+  if (p_save_inputs == nullptr) {
+    p_save_inputs = &(local_buff->save_inputs);
+    p_save_outputs = &(local_buff->save_outputs);
+    GetBackwardDependency(
+        nn_node, inputs.size(), outputs.size(), p_save_inputs, p_save_outputs);
+  } else {
+    nn_node->inputs.resize(inputs.size());
   }
-  std::vector<NodeEntry> ograd_entries;
-  for (uint32_t i = 0; i < outputs.size(); ++i) {
-    ograd_entries.emplace_back(NodeEntry{nullptr, i, 1});
-  }
-  auto igrad_entries = fgradient[nn_node->op()](nn_node, ograd_entries);
-  for (const auto& i : igrad_entries) {
-    if (i.node == nullptr && i.version == 0) {
-      save_inputs[i.index] = true;
-    } else if (i.node == nn_node) {
-      save_outputs[i.index] = true;
-    }
-  }
-  DFSVisit(igrad_entries, [&](const NodePtr& node) {
-      if (!node || node == nn_node) return;
-      for (const auto& i : node->inputs) {
-        if (i.node == nullptr && i.version == 0) {
-          save_inputs[i.index] = true;
-        } else if (i.node == nn_node) {
-          save_outputs[i.index] = true;
-        }
-      }
-    });
+
+  std::vector<bool>& save_inputs = *p_save_inputs;
+  std::vector<bool>& save_outputs = *p_save_outputs;
 
   AGNodePtr ag_node = AGNode::Create(nn_node);
   ag_node->state = state;

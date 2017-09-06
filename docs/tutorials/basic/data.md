@@ -325,7 +325,7 @@ tar.close()
 **Note:** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
 
 ```python
-img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG').read())
+img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG', 'rb').read())
 plt.imshow(img.asnumpy()); plt.show()
 ```
 

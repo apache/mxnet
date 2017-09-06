@@ -35,6 +35,7 @@
 #include <string>
 #include "./mshadow_op.h"
 #include "./operator_common.h"
+#include "./linalg.h"
 
 namespace mxnet {
 namespace op {
@@ -101,7 +102,9 @@ class GridGeneratorOp : public Operator {
         grid_dst[1] = scalar<DType>(-1.0) + tcast<DType>(tcast<int>(grid_dst[1] /
           scalar<DType>(param_.target_shape[1]))) * scalar<DType>(2.0/(param_.target_shape[0] - 1));
         grid_dst[2] = scalar<DType>(1.0);
-        Assign(out, req[grid::kOut], dot(data, grid_dst));
+        // Legacy approach shown here for comparison:
+        //   Assign(out, req[grid::kOut], dot(data, grid_dst));
+        linalg_gemm(data, grid_dst, out, false, false, s, req[grid::kOut]);
         break;
       }
       // Warping transformation
@@ -150,8 +153,10 @@ class GridGeneratorOp : public Operator {
           param_.target_shape[0] * param_.target_shape[1]);
         Tensor<xpu, 2, DType> grad = out_grad[grid::kOut]
           .get_with_shape<xpu, 2, DType>(grad_shape, s);
+        // Legacy approach shown here for comparison:
+        //   Assign(gdata, req[grid::kData], dot(grad, grid_dst.T()));
         // grad : (batch * 2, H * W)   grid_dst.T : (H * W, 3)
-        Assign(gdata, req[grid::kData] , dot(grad, grid_dst.T()));
+        linalg_gemm(grad, grid_dst, gdata, false, true, s, req[grid::kData]);
         break;
       }
       case grid::kWarp: {

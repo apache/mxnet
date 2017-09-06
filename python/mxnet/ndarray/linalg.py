@@ -15,4 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NDArray namespace used to register internal functions."""
+"""Linear Algebra NDArray API of MXNet."""
+__all__ = []

@@ -62,6 +62,8 @@ Graph DetectInplaceAddTo(Graph g) {
     uint32_t eid_rhs  = idx.entry_id(inode.inputs[1]);
     if (ref_count[eid_rhs] != 1) continue;
     if (inode.inputs[0].node_id >= inode.inputs[1].node_id) continue;
+    // TODO(haibin) support inplace addto for Dynamic Storage
+    if (storage_id[eid_rhs] == kDynamicStorageID) continue;
     CHECK_NE(storage_id[eid_rhs], sid);
     storage_id[eid_rhs] = sid;
     addto_entry[eid_rhs] = 1;

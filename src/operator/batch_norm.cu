@@ -283,7 +283,7 @@ __global__ void BatchNormalizationUpdateOutputKernel(
   }
 
   // Write normalized and update the output
-  const AccReal gamma = weight.numElements() > 0
+  const AccReal gamma = ((flags & FIX_GAMMA_FLAG) == 0 && weight.numElements() > 0)
                         ? ScalarConvert<DType, AccReal>::to(weight[plane])
                         : ScalarConvert<int, AccReal>::to(1);
   const AccReal beta = bias.numElements() > 0 ? ScalarConvert<DType, AccReal>::to(bias[plane])
@@ -332,7 +332,7 @@ static __global__ void BatchNormalizationBackwardKernel(
     invstd = VARIANCE_TO_INVSTD(tensors.runningVar[plane], eps);
   }
 
-  const AccReal weightVal = tensors.weight.numElements() > 0 ?
+  const AccReal weightVal = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0) ?
                       ScalarConvert<DType, AccReal>::to(tensors.weight[plane]) : AccReal(1);
   const AccReal norm = AccReal(1) / N;
 

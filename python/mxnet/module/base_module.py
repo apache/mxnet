@@ -957,7 +957,8 @@ class BaseModule(object):
 
     def init_optimizer(self, kvstore='local', optimizer='sgd',
                        optimizer_params=(('learning_rate', 0.01),), force_init=False):
-        """Installs and initializes optimizers.
+        """Installs and initializes optimizers, as well as initialize kvstore for
+           distributed training
 
         Parameters
         ----------
