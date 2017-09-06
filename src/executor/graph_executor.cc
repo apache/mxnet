@@ -1362,7 +1362,7 @@ void GraphExecutor::InitOpSegs() {
       grad_vars.insert(kv.second.var());
     }
     auto &idx = graph_.indexed_graph();
-    size_t topo_start = num_forward_nodes_;
+    topo_start = num_forward_nodes_;
     for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
       auto &op_node = op_nodes_[nid];
       if (op_node.skip_exec_node || op_node.exec == nullptr) {
