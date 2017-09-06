@@ -134,7 +134,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
-        real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
+        real_t* data = recv_buf.data().dptr<real_t>();
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
@@ -297,7 +297,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-          real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+          real_t* data = send_buf.data().dptr<real_t>();
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -330,7 +330,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(recv_buf->data());
 #endif
-      real_t* data = static_cast<real_t*>(recv_buf->data().dptr_);
+      real_t* data = recv_buf->data().dptr<real_t>();
       auto indices_data = indices.data();
       const auto offsets = indices_data.dptr<int64_t>();
       const auto unit_len = recv_buf->shape().ProdShape(1, recv_buf->shape().ndim());
@@ -367,7 +367,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-      real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+      real_t* data = send_buf.data().dptr<real_t>();
       bool init = send_buf.storage_initialized();
       const int64_t num_rows = init ? send_buf.aux_shape(kIdx)[0] : 0;
       const auto offsets = init ? send_buf.aux_data(kIdx).dptr<int64_t>() : nullptr;
