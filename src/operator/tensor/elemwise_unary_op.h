@@ -80,7 +80,7 @@ class OpBase {
           CHECK(shape_assign(&ashape, clone_from->aux_shape(i)));
           dest->CheckAndAllocAuxData(i, ashape);
         }
-        CHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
+        DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
       } else {
         for (size_t i = 0, n = dest->aux_shapes().size(); i < n; ++i) {
           dest->CheckAndAllocAuxData(i, dest->aux_shape(i));
@@ -113,8 +113,8 @@ class OpBase {
                                  const NDArray *dest,
                                  const OpReqType reqi,
                                  const NDArray& src) {
-    CHECK_NE(dest->storage_type(), kDefaultStorage);
-    CHECK_EQ(dest->storage_type(), src.storage_type());
+    DCHECK_NE(dest->storage_type(), kDefaultStorage);
+    DCHECK_EQ(dest->storage_type(), src.storage_type());
     AllocateGeometry(dest, reqi, &src);
     CopyGeometryBlobs(s, dest, reqi, src);
     CopyBlob(s, &dest->data(), reqi, src.data());
@@ -201,7 +201,7 @@ class UnaryOp : public OpBase {
           aux_shapes.emplace_back(input.aux_shape(j));
         }
         output->CheckAndAlloc(aux_shapes);
-        CHECK_EQ(output->storage_shape(), input.storage_shape());
+        DCHECK_EQ(output->storage_shape(), input.storage_shape());
       }
       return true;
     }
