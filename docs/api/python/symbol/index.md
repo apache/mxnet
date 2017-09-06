@@ -7,8 +7,8 @@
    :maxdepth: 2
 
    symbol.md
-   sparse.md
-   linalg.md
    random.md
+   linalg.md
+   sparse.md
    contrib.md
 ```
