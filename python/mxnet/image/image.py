@@ -732,7 +732,7 @@ class HueJitterAug(Augmenter):
         bt = np.array([[1.0, 0.0, 0.0],
                        [0.0, vsu, -vsw],
                        [0.0, vsw, vsu]])
-        t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
+        t = np.dot(np.dot(self.ityiq, bt), self.tyiq).T
         src = nd.dot(src, nd.array(t))
         return src
 
