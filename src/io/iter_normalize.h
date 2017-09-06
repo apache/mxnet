@@ -47,7 +47,7 @@ namespace io {
 class ImageNormalizeIter : public IIterator<DataInst> {
  public:
   explicit ImageNormalizeIter(IIterator<DataInst> *base)
-      : base_(base), meanfile_ready_(false), stdimg_ready_(false) {
+      : base_(base), meanfile_ready_(false) {
   }
 
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -102,16 +102,12 @@ class ImageNormalizeIter : public IIterator<DataInst> {
   std::unique_ptr<IIterator<DataInst> > base_;
   /*! whether mean image is ready */
   bool meanfile_ready_;
-  /*! whether std image is ready */
-  bool stdimg_ready_;
   /*! \brief output data */
   DataInst out_;
   // normalize parameter.
   ImageNormalizeParam param_;
   /*! \brief mean image, if needed */
   mshadow::TensorContainer<cpu, 3> meanimg_;
-  /*! \brief std image */
-  mshadow::TensorContainer<cpu, 3> stdimg_;
   /*! \brief temp space for output image */
   mshadow::TensorContainer<cpu, 3> outimg_;
   /*! \brief random numeber engine */
@@ -147,76 +143,72 @@ class ImageNormalizeIter : public IIterator<DataInst> {
         rand_uniform(rnd_) * param_.max_random_contrast * 2 - param_.max_random_contrast + 1;
     float illumination =
         rand_uniform(rnd_) * param_.max_random_illumination * 2 - param_.max_random_illumination;
+    bool flip = (param_.rand_mirror && coin_flip(rnd_)) || param_.mirror;
 
-    // setup mean if not loaded from file, should happen only once
-    if (!meanfile_ready_ || (meanimg_.shape_ != data.shape_)) {
-      if (param_.mean_r > 0.0f || param_.mean_g > 0.0f ||
-          param_.mean_b > 0.0f || param_.mean_a > 0.0f) {
-        // setup meanimg using mean_r/g/b/a
-        meanimg_.Resize(data.shape_);
-        switch (static_cast<int>(data.shape_[0])) {
-          case 4: {
-            meanimg_[3] = param_.mean_a;
-          }
-          case 3: {
-            meanimg_[2] = param_.mean_b;
-          }
-          case 2: {
-            meanimg_[1] = param_.mean_g;
-          }
-          case 1: {
-            meanimg_[0] = param_.mean_r;
-            break;
-          }
-          default: {
-            LOG(FATAL) << "Invalid image channels: " << data.shape_[0]
-            << " expected in range [1, 4].";
-          }
+    // one-liner channel-wise normalization
+    switch (data.shape_[0]) {
+      case 4:
+        if (meanfile_ready_ && flip) {
+          outimg_[3] = mirror((data[3] - meanimg_[3]) * contrast + illumination)
+            * param_.scale / param_.std_a;
+        } else if (meanfile_ready_ && (!flip)) {
+          outimg_[3] = ((data[3] - meanimg_[3]) * contrast + illumination)
+            * param_.scale / param_.std_a;
+        } else if (!meanfile_ready_ && flip) {
+          outimg_[3] = mirror((data[3] - param_.mean_a) * contrast + illumination)
+            * param_.scale / param_.std_a;
+        } else {
+          outimg_[3] = ((data[3] - param_.mean_a) * contrast + illumination)
+            * param_.scale / param_.std_a;
         }
-        meanfile_ready_ = true;
-      }
-    }
-
-    // setup division buffer including std and scale, should happen only once
-    if (!stdimg_ready_ || (stdimg_.shape_ != data.shape_)) {
-      stdimg_.Resize(data.shape_);
-      switch (static_cast<int>(data.shape_[0])) {
-        case 4: {
-          stdimg_[3] = param_.scale / param_.std_a;
+      case 3:
+        if (meanfile_ready_ && flip) {
+          outimg_[2] = mirror((data[2] - meanimg_[2]) * contrast + illumination)
+            * param_.scale / param_.std_b;
+        } else if (meanfile_ready_ && (!flip)) {
+          outimg_[2] = ((data[2] - meanimg_[2]) * contrast + illumination)
+            * param_.scale / param_.std_b;
+        } else if (!meanfile_ready_ && flip) {
+          outimg_[2] = mirror((data[2] - param_.mean_b) * contrast + illumination)
+            * param_.scale / param_.std_b;
+        } else {
+          outimg_[2] = ((data[2] - param_.mean_b) * contrast + illumination)
+            * param_.scale / param_.std_b;
         }
-        case 3: {
-          stdimg_[2] = param_.scale / param_.std_b;
+      case 2:
+        if (meanfile_ready_ && flip) {
+          outimg_[1] = mirror((data[1] - meanimg_[1]) * contrast + illumination)
+            * param_.scale / param_.std_g;
+        } else if (meanfile_ready_ && (!flip)) {
+          outimg_[1] = ((data[1] - meanimg_[1]) * contrast + illumination)
+            * param_.scale / param_.std_g;
+        } else if (!meanfile_ready_ && flip) {
+          outimg_[1] = mirror((data[1] - param_.mean_g) * contrast + illumination)
+            * param_.scale / param_.std_g;
+        } else {
+          outimg_[1] = ((data[1] - param_.mean_g) * contrast + illumination)
+            * param_.scale / param_.std_g;
         }
-        case 2: {
-          stdimg_[1] = param_.scale / param_.std_g;
+      case 1:
+        if (meanfile_ready_ && flip) {
+          outimg_[0] = mirror((data[0] - meanimg_[0]) * contrast + illumination)
+            * param_.scale / param_.std_r;
+        } else if (meanfile_ready_ && (!flip)) {
+          outimg_[0] = ((data[0] - meanimg_[0]) * contrast + illumination)
+            * param_.scale / param_.std_r;
+        } else if (!meanfile_ready_ && flip) {
+          outimg_[0] = mirror((data[0] - param_.mean_r) * contrast + illumination)
+            * param_.scale / param_.std_r;
+        } else {
+          outimg_[0] = ((data[0] - param_.mean_r) * contrast + illumination)
+            * param_.scale / param_.std_r;
         }
-        case 1: {
-          stdimg_[0] = param_.scale / param_.std_r;
-          break;
-        }
-        default: {
-          LOG(FATAL) << "Invalid image channels: " << data.shape_[0]
-          << " expected in range [1, 4].";
-        }
-      }
-      stdimg_ready_ = true;
-    }
-
-    CHECK_EQ(stdimg_ready_, true);
-    if ((param_.rand_mirror && coin_flip(rnd_)) || param_.mirror) {
-      if (meanfile_ready_) {
-        outimg_ = mirror((data - meanimg_) * contrast + illumination) * stdimg_;
-      } else {
-        outimg_ = mirror(data * contrast + illumination) * stdimg_;
-      }
-    } else {
-      if (meanfile_ready_) {
-        outimg_ = ((data - meanimg_) * contrast + illumination) * stdimg_;
-      } else {
-        outimg_ = (data * contrast + illumination) * stdimg_;
-      }
+        break;
+      default:
+        LOG(FATAL) << "Expected image channels range 1-4, got " << data.shape_[0];
     }
   }
+
   // creat mean image.
   inline void CreateMeanImg(void) {
     if (param_.verbose) {
