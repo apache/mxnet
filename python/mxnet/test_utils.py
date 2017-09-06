@@ -447,7 +447,7 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
     return outputs
 
 
-def _parse_location(sym, location, ctx):
+def _parse_location(sym, location, ctx, dtype=default_dtype()):
     """Parses the given location to a dictionary.
 
     Arguments of the provided op `sym` are used as dictionary keys
@@ -468,6 +468,8 @@ def _parse_location(sym, location, ctx):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Returns
     -------
@@ -489,6 +491,7 @@ def _parse_location(sym, location, ctx):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
+    assert dtype == np.float32 or dtype == np.float64
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -496,12 +499,12 @@ def _parse_location(sym, location, ctx):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx) if isinstance(v, np.ndarray) \
+    location = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) if isinstance(v, np.ndarray) \
                else v for k, v in location.items()}
     return location
 
 
-def _parse_aux_states(sym, aux_states, ctx):
+def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     """Parses the given auxiliary states to a dictionary.
 
     Auxiliary states of the provided op `sym` are used as dictionary
@@ -520,6 +523,10 @@ def _parse_aux_states(sym, aux_states, ctx):
         - if type is dict of str -> `np.ndarray`
             maps the name of arguments to the corresponding `np.ndarray`.
         *In either case, all aux states of `sym` must be provided.*
+    ctx : Context
+        Device context.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Returns
     -------
@@ -543,6 +550,7 @@ def _parse_aux_states(sym, aux_states, ctx):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
+    assert dtype == np.float32 or dtype == np.float64
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -553,11 +561,12 @@ def _parse_aux_states(sym, aux_states, ctx):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=ctx) for k, v in aux_states.items()}
+        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in aux_states.items()}
     return aux_states
 
 
-def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_train=True):
+def numeric_grad(executor, location, aux_states=None, eps=1e-4,
+                 use_forward_train=True, dtype=default_dtype()):
     """Calculates a numeric gradient via finite difference method.
 
     Class based on Theano's `theano.gradient.numeric_grad` [1]
@@ -578,11 +587,15 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
+
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    approx_grads = {k: np.zeros(v.shape, dtype=np.float32)
+    assert dtype == np.float32 or dtype == np.float64
+    approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
         executor.arg_dict[k][:] = v
@@ -619,7 +632,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
-                           grad_stype_dict=None):
+                           grad_stype_dict=None, dtype=default_dtype()):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -650,10 +663,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Check the gradient computation on the specified device.
     grad_stype_dict : dict of str->str, optional
         Storage type dictionary for gradient ndarrays.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
+
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
+    assert dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -669,9 +686,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         plain = _rng.rand(*shape) + 0.1
         return plain
 
-    location = _parse_location(sym=sym, location=location, ctx=ctx)
+    location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
     location_npy = {k:v.asnumpy() for k, v in location.items()}
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
+                                   dtype=dtype)
     if aux_states is not None:
         aux_states_npy = {k: v.asnumpy() for k, v in aux_states.items()}
     else:
@@ -695,11 +713,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     out = mx.sym.MakeLoss(out)
 
     location = dict(list(location.items()) +
-                    [("__random_proj", mx.nd.array(random_projection(out_shape[0]), ctx=ctx))])
+                    [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
+                                                   ctx=ctx, dtype=dtype))])
     args_grad_npy = dict([(k, _rng.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
                          + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
 
-    args_grad = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+    args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
     if grad_stype_dict is not None:
         assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
         for k, v in grad_stype_dict.items():
@@ -722,8 +741,9 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     executor.backward()
     symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
 
-    numeric_gradients = numeric_grad(executor, location_npy, aux_states_npy,
-                                     eps=numeric_eps, use_forward_train=use_forward_train)
+    numeric_gradients = numeric_grad(
+        executor, location_npy, aux_states_npy, eps=numeric_eps,
+        use_forward_train=use_forward_train, dtype=dtype)
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]
         orig_grad = args_grad_npy[name]
@@ -742,7 +762,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
 
 def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
-                           aux_states=None, ctx=None):
+                           aux_states=None, ctx=None, dtype=default_dtype()):
     """Compares a symbol's forward results with the expected ones.
     Prints error messages if the forward results are not the same as the expected ones.
 
@@ -773,6 +793,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Example
     -------
@@ -785,14 +807,16 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
+    assert dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
-    location = _parse_location(sym=sym, location=location, ctx=ctx)
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
+    location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
+                                   dtype=dtype)
     if isinstance(expected, dict):
         expected = [expected[k] for k in sym.list_outputs()]
-    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx) for k, v in location.items()}
+    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=dtype) for k, v in location.items()}
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
@@ -807,7 +831,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
-                            aux_states=None, grad_req='write', ctx=None, grad_stypes=None):
+                            aux_states=None, grad_req='write', ctx=None, grad_stypes=None,
+                            dtype=default_dtype()):
     """Compares a symbol's backward results with the expected ones.
     Prints error messages if the backward results are not the same as the expected results.
 
@@ -845,6 +870,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         Running context.
     grad_stypes: dict of str->str
         dictionary of mapping argument name to stype for the gradient
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Example
     -------
@@ -862,17 +889,19 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
+    assert dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
-    location = _parse_location(sym=sym, location=location, ctx=ctx)
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
+    location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
+                                   dtype=dtype)
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
-        nd = mx.nd.array(v, ctx=ctx)
+        nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
         if grad_stypes is not None and k in grad_stypes:
             args_grad_data[k] = nd.tostype(grad_stypes[k])
         else:
@@ -888,9 +917,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     executor.forward(is_train=True)
 
     if isinstance(out_grads, (tuple, list)):
-        out_grads = [mx.nd.array(v, ctx=ctx) for v in out_grads]
+        out_grads = [mx.nd.array(v, ctx=ctx, dtype=dtype) for v in out_grads]
     elif isinstance(out_grads, (dict)):
-        out_grads = {k:mx.nd.array(v, ctx=ctx) for k, v in out_grads.items()}
+        out_grads = {k:mx.nd.array(v, ctx=ctx, dtype=dtype)
+                     for k, v in out_grads.items()}
     else:
         assert out_grads is None
     executor.backward(out_grads)
