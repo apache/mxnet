@@ -292,10 +292,6 @@ class BatchNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
-    moving_mean_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the moving mean.
-    moving_variance_initializer: str or `Initializer`, default 'ones'
-        Initializer for the moving variance.
     in_channels : int, default 0
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
@@ -310,7 +306,6 @@ class BatchNorm(HybridBlock):
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
@@ -453,7 +448,7 @@ class InstanceNorm(HybridBlock):
     .. math::
 
       out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
-
+      
     This layer is similar to batch normalization layer (`BatchNorm`)
     with two differences: first, the normalization is
     carried out per example (instance), not over a batch. Second, the
@@ -461,23 +456,57 @@ class InstanceNorm(HybridBlock):
     operation is also known as `contrast normalization`.
     If the input data is of shape [batch, channel, spacial_dim1, spacial_dim2, ...],
     `gamma` and `beta` parameters must be vectors of shape [channel].
-    This implementation is based on paper:
+
+
+    Parameters
+    ----------
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    moving_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the moving mean.
+    moving_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the moving variance.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
+
+       This implementation is based on paper:
     .. [1] Instance Normalization: The Missing Ingredient for Fast Stylization,
        D. Ulyanov, A. Vedaldi, V. Lempitsky, 2016 (arXiv:1607.08022v2).
-    Examples::
 
-      // Input of shape (2,1,2)
-      x = mx.nd.array([[[ 1.1,  2.2]],
-                      [[ 3.3,  4.4]]])
-      // Instance normalization is calculated with the above formula
-      layer = InstanceNorm()
-      layer.initialize(ctx=mx.cpu(0))
-      layer(x)
-      [[[-0.99998355  0.99998331]]
-       [[-0.99998319  0.99998361]]]
-      <NDArray 2x1x2 @cpu(0)>
+    Examples
+    --------
+    >>> # Input of shape (2,1,2)
+    >>> x = mx.nd.array([[[ 1.1,  2.2]],
+    ...                 [[ 3.3,  4.4]]])
+    >>> # Instance normalization is calculated with the above formula
+    >>> layer = InstanceNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[[-0.99998355  0.99998331]]
+     [[-0.99998319  0.99998361]]]
+    <NDArray 2x1x2 @cpu(0)>
     """
-    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=False,
+    def __init__(self, epsilon=1e-5, center=True, scale=False,
                  beta_initializer='zeros', gamma_initializer='ones',
                  in_channels=0, **kwargs):
         super(InstanceNorm, self).__init__(**kwargs)
@@ -504,30 +533,4 @@ class InstanceNorm(HybridBlock):
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
 
-
-class ReflectionPad(HybridBlock):
-    """Pads the input tensor using the reflection of the input boundary.
-
-    Args:
-        pad_width int: the size of the padding. If is int, uses the same
-            padding in all boundaries. 
-
-    Shape:
-        - Input: :math:`(N, C, H_{in}, W_{in})`
-        - Output: :math:`(N, C, H_{out}, W_{out})` where
-          :math:`H_{out} = H_{in} + paddingTop + paddingBottom`
-          :math:`W_{out} = W_{in} + paddingLeft + paddingRight`
-
-    Examples::
-
-        m = nn.ReflectionPad(3)
-        input = mx.nd.random_normal(shape=(16, 3, 224, 224))
-        output = m(input)
-    """
-    def __init__(self, pad_width=None, **kwargs):
-        super(ReflectionPad(, self).__init__(**kwargs)
-        self.pad_width = pad_width
-        
-    def forward(self, x):
-        return F.pad(x, mode='reflect', pad_width=self.pad_width)
 
