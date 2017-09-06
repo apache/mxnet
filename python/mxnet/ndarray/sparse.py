@@ -52,7 +52,7 @@ from .ndarray import array as _array
 from . import op
 
 # When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import
+# pylint: disable=unused-import, too-many-lines
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.ndarray import _set_ndarray_class
