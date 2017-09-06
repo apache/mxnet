@@ -609,37 +609,6 @@ The `ndarray.random` module contains NDArray APIs for random distribution genera
     uniform
 ```
 
-## Contrib
-
-```eval_rst
-.. warning:: This package contains experimental APIs and may change in the near future.
-```
-
-The `ndarray.contrib` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
-
-```eval_rst
-.. currentmodule:: mxnet.ndarray.contrib
-
-.. autosummary::
-    :nosignatures:
-
-    CTCLoss
-    DeformableConvolution
-    DeformablePSROIPooling
-    MultiBoxDetection
-    MultiBoxPrior
-    MultiBoxTarget
-    MultiProposal
-    PSROIPooling
-    Proposal
-    count_sketch
-    ctc_loss
-    dequantize
-    fft
-    ifft
-    quantize
-```
-
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -660,9 +629,6 @@ The `ndarray.contrib` module contains many useful experimental APIs for new feat
     :members:
 
 .. automodule:: mxnet.ndarray.random
-    :members:
-
-.. automodule:: mxnet.ndarray.contrib
     :members:
 
 .. automodule:: mxnet.random

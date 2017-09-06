@@ -8,4 +8,5 @@
 
    ndarray.md
    sparse.md
+   contrib.md
 ```

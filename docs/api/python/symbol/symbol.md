@@ -612,37 +612,6 @@ The `symbol.random` module contains Symbol APIs for random distribution generato
     uniform
 ```
 
-## Contrib
-
-```eval_rst
-.. warning:: This package contains experimental APIs and may change in the near future.
-```
-
-The `symbol.contrib` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
-
-```eval_rst
-.. currentmodule:: mxnet.symbol.contrib
-
-.. autosummary::
-    :nosignatures:
-
-    CTCLoss
-    DeformableConvolution
-    DeformablePSROIPooling
-    MultiBoxDetection
-    MultiBoxPrior
-    MultiBoxTarget
-    MultiProposal
-    PSROIPooling
-    Proposal
-    count_sketch
-    ctc_loss
-    dequantize
-    fft
-    ifft
-    quantize
-```
-
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -663,9 +632,6 @@ The `symbol.contrib` module contains many useful experimental APIs for new featu
     :members:
 
 .. automodule:: mxnet.symbol.random
-    :members:
-
-.. automodule:: mxnet.symbol.contrib
     :members:
 
 ```
