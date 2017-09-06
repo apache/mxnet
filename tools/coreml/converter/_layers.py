@@ -290,7 +290,7 @@ def convert_convolution(net, node, module, builder):
     else:
         has_bias = True
 
-    if literal_eval(param['pad']) != (0, 0):
+    if 'pad' in param.keys() and literal_eval(param['pad']) != (0, 0):
         pad = literal_eval(param['pad'])
         builder.add_padding(
             name=name+"_pad",
@@ -314,7 +314,12 @@ def convert_convolution(net, node, module, builder):
         Wb = None
 
     channels = W.shape[1]
-    stride_height, stride_width = literal_eval(param['stride'])
+
+    stride_height = 1
+    stride_width = 1
+    if 'stride' in param.keys():
+        stride_height, stride_width = literal_eval(param['stride'])
+
     kernel_height, kernel_width = literal_eval(param['kernel'])
 
     W = W.transpose((2, 3, 1, 0))
@@ -367,7 +372,7 @@ def convert_pooling(net, node, module, builder):
         raise TypeError("Pooling type %s not supported" % layer_type_mx)
 
     # Add padding if there is any
-    if literal_eval(param['pad']) != (0, 0):
+    if 'pad' in param.keys() and literal_eval(param['pad']) != (0, 0):
         pad = literal_eval(param['pad'])
         builder.add_padding(
             name=name+"_pad",
@@ -380,7 +385,11 @@ def convert_pooling(net, node, module, builder):
             output_name=name+"_pad_output")
         input_name = name+"_pad_output"
 
-    stride_height, stride_width = literal_eval(param['stride'])
+    stride_height = 1
+    stride_width = 1
+    if 'stride' in param.keys():
+        stride_height, stride_width = literal_eval(param['stride'])
+
     kernel_width, kernel_height = literal_eval(param['kernel'])
 
     type_map = {'valid': 'VALID', 'full': 'INCLUDE_LAST_PIXEL'}
