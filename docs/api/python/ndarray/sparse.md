@@ -263,7 +263,6 @@ We summarize the interface for each class in the following sections.
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
     :members: shape, size, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, __getitem__, __setitem__
-    :special-members:
 
 .. automodule:: mxnet.ndarray.sparse
     :members:
