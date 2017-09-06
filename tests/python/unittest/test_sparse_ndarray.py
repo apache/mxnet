@@ -548,6 +548,14 @@ def test_synthetic_dataset_generator():
     test_powerlaw_generator(csr_arr_big, final_row=4)
     test_powerlaw_generator(csr_arr_square, final_row=6)
 
+def test_sparse_nd_exception():
+    """ test invalid sparse operator will throw a exception """
+    a = mx.nd.zeros((2,2))
+    try:
+        b = mx.nd.sparse.retain(a, invalid_arg="garbage_value")
+        assert(False)
+    except:
+        return
 
 if __name__ == '__main__':
     import nose
