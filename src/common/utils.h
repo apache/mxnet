@@ -48,12 +48,6 @@ namespace common {
 template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
-template<typename xpu>
-void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
-
-template<typename xpu>
-void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
-
 /*
  * \brief setup default-storage tblobs from source NDArrays. If any source NDArray has non-default
  *        storage, it creates a temp NDArray with default storage and uses the temp tblob. The

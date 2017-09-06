@@ -24,7 +24,6 @@
 
 #include "./utils.h"
 #include "../operator/tensor/cast_storage-inl.h"
-#include "../operator/contrib/two_bit_quantize-inl.h"
 
 namespace mxnet {
 namespace common {
@@ -34,16 +33,6 @@ void CastStorageDispatch<gpu>(const OpContext& ctx,
                               const NDArray& input,
                               const NDArray& output) {
   mxnet::op::CastStorageComputeImpl<gpu>(ctx, input, output);
-}
-
-template<>
-void Dequantize2BitDispatch(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs) {
-	mxnet::op::Dequantize2BitImpl<gpu>(s,inputs);
-}
-
-template<>
-void Quantize2BitDispatch(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs) {
-	mxnet::op::Quantize2BitImpl<gpu>(s,inputs);
 }
 
 }  // namespace common

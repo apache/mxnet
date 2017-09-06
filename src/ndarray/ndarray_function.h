@@ -164,6 +164,12 @@ void Copy(const TBlob &from, TBlob *to,
           Context from_ctx, Context to_ctx,
           RunContext ctx);
 
+template<typename xpu>
+void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
+
+template<typename xpu>
+void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
+
 template<typename Device>
 void ElementwiseSum(const std::vector<TBlob> source,
                     TBlob *out,

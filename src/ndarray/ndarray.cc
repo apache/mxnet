@@ -34,6 +34,7 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "./autograd.h"
+#include "./ndarray_function.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -569,7 +570,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([inputs](RunContext ctx) {
-          common::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
+          mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
         }, from.ctx(), const_vars, {ret.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
@@ -580,7 +581,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
         Engine::Get()->PushSync([inputs](RunContext ctx) {
-            common::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
+            mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
           }, from.ctx(), const_vars, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
         } else {
@@ -612,7 +613,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([inputs](RunContext ctx) {
-          common::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
+          mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
         }, from.ctx(), const_vars, {ret.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
@@ -623,7 +624,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
         Engine::Get()->PushSync([inputs](RunContext ctx) {
-            common::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
+            mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
           }, from.ctx(), const_vars, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
         } else {
