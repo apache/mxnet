@@ -160,15 +160,9 @@ struct quantize_2bit {
 };
 
 template<typename xpu>
-void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-  // For now, this method can only compress the float data
+void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
   // First, init the memory of output to 0x00000000
   Kernel<init_mem_2bit, xpu>::Launch(s, inputs[4].Size(),
                               inputs[4].dptr<float>());  // compressed array
@@ -184,6 +178,17 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                           inputs[1].dptr<float>(),     // residual array
                           inputs[2].dptr<float>(),     // negative threshold
                           inputs[3].dptr<float>());    // positive threshold
+}
+
+template<typename xpu>
+void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  // For now, this method can only compress the float data
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Quantize2BitImpl<xpu>(s, inputs);
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -303,20 +308,24 @@ struct dequantize_2bit {
 };
 
 template<typename xpu>
+void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs) {
+  //using namespace mshadow;
+  // For now, this method can only decompress the float data
+  mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
+                              inputs[1].dptr<float>(),       // out array
+                              inputs[0].dptr<float>()+2,     // compressed array
+                              inputs[0].dptr<float>(),     // negative threshold
+                              inputs[0].dptr<float>()+1);  // positve threshold
+}
+
+template<typename xpu>
 void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  // For now, this method can only decompress the float data
-  Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
-                              inputs[1].dptr<float>(),       // out array
-                              inputs[0].dptr<float>()+2,     // compressed array
-                              inputs[0].dptr<float>(),     // negative threshold
-                              inputs[0].dptr<float>()+1);  // positve threshold
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Dequantize2BitImpl<xpu>(s, inputs);
 }
 
 inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,

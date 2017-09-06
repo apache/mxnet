@@ -569,6 +569,10 @@ class CommDevice : public Comm {
                        &(buf.copy_buf[i]),
                        priority);
         */
+        Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]),
+                            pos_thre[i], neg_thre[i], compress_, priority);
+        CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
+        Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
       } else if (compress_.compare("1bit") == 0) {
         // TODO: New code: wrapper for NDArray quantize_1bit op
         /*
