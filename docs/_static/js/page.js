@@ -13,7 +13,7 @@ for (var i = 1; i < pathArr.length; ++i) {
     lastUrl += '/' + pathArr[i];
     if(pathArr[i] == 'versions') {
         versionIDX = i;
-        lastUrl += '/' + pathArr[i] + '/' + pathArr[i + 1];
+        lastUrl += '/' + pathArr[i + 1];
         break;
     }
 }
