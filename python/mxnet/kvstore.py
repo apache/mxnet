@@ -104,7 +104,7 @@ class KVStore(object):
         ----------
         key : str, int, or sequence of str or int
             The keys.
-        value : NDArray or sequence of NDArray
+        value : NDArray, RowSparseNDArray or sequence of NDArray or RowSparseNDArray
             Values corresponding to the keys.
 
         Examples
@@ -120,8 +120,15 @@ class KVStore(object):
         [ 2.  2.  2.]]
 
         >>> # init a list of key-value pairs
-        >>> keys = [5, 7, 9]
+        >>> keys = ['5', '7', '9']
         >>> kv.init(keys, [mx.nd.ones(shape)]*len(keys))
+
+        >>> # init a row_sparse value
+        >>> kv.init('4', mx.nd.ones(shape).tostype('row_sparse'))
+        >>> b = mx.nd.sparse.zeros('row_sparse', shape)
+        >>> kv.row_sparse_pull('4', row_ids=mx.nd.array([0, 1]), out=b)
+        >>> print b
+        <RowSparseNDArray 2x3 @cpu(0)>
         """
         ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if use_str_keys:
@@ -143,7 +150,8 @@ class KVStore(object):
         key : str, int, or sequence of str or int
             Keys.
 
-        value : NDArray or list of NDArray or list of list of NDArray
+        value : NDArray, RowSparseNDArray, list of NDArray or RowSparseNDArray,
+                or list of list of NDArray or RowSparseNDArray
             Values corresponding to the keys.
 
         priority : int, optional
@@ -171,7 +179,7 @@ class KVStore(object):
 
         >>> # push a list of keys.
         >>> # single device
-        >>> keys = [4, 5, 6]
+        >>> keys = ['4', '5', '6']
         >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys))
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
@@ -187,6 +195,15 @@ class KVStore(object):
         >>> print b[1][1].asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
+
+        >>> # push a row_sparse value
+        >>> b = mx.nd.sparse.zeros('row_sparse', shape)
+        >>> kv.init('10', mx.nd.sparse.zeros('row_sparse', shape))
+        >>> kv.push('10', mx.nd.ones(shape).tostype('row_sparse'))
+        >>> # pull out the value
+        >>> kv.row_sparse_pull('10', row_ids=mx.nd.array([0, 1]), out=b)
+        >>> print b
+        <RowSparseNDArray 2x3 @cpu(0)>
         """
         ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if use_str_keys:
@@ -209,7 +226,7 @@ class KVStore(object):
 
         The returned values are gauranteed to be the latest values in the store.
 
-        For row_sparse values, please use `row_sparse_pull` instead.
+        For `RowSparseNDArray` values, please use ``row_sparse_pull`` instead.
 
         Parameters
         ----------
@@ -242,7 +259,7 @@ class KVStore(object):
 
         >>> # pull a list of key-value pairs.
         >>> # On single device
-        >>> keys = [5, 7, 9]
+        >>> keys = ['5', '7', '9']
         >>> b = [mx.nd.zeros(shape)]*len(keys)
         >>> kv.pull(keys, out=b)
         >>> print b[1].asnumpy()
@@ -266,8 +283,8 @@ class KVStore(object):
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, ctypes.c_int(priority)))
 
     def row_sparse_pull(self, key, out=None, priority=0, row_ids=None):
-        """ Pulls a single row_sparse value or a sequence of row_sparse values from the store
-         with specified row_ids.
+        """ Pulls a single RowSparseNDArray value or a sequence of RowSparseNDArray values \
+        from the store with specified row_ids.
 
         `row_sparse_pull` is executed asynchronously after all previous
         `push`/`pull`/`row_sparse_pull` calls for the same input key(s) are finished.
@@ -279,7 +296,7 @@ class KVStore(object):
         key : str, int, or sequence of str or int
             Keys.
 
-        out: NDArray or list of NDArray or list of list of NDArray
+        out: RowSparseNDArray or list of RowSparseNDArray or list of list of RowSparseNDArray
             Values corresponding to the keys. The stype is expected to be row_sparse
 
         priority : int, optional
@@ -288,14 +305,14 @@ class KVStore(object):
             other pull actions.
 
         row_ids : NDArray or list of NDArray
-            The row_ids for which to pull for each value. Each row_id is an 1D-NDArray \
+            The row_ids for which to pull for each value. Each row_id is an 1D NDArray \
             whose values don't have to be unique nor sorted.
 
         Examples
         --------
         >>> shape = (3, 3)
         >>> kv.init('3', mx.nd.ones(shape).tostype('row_sparse'))
-        >>> a = mx.nd.zeros(shape, stype='row_sparse')
+        >>> a = mx.nd.sparse.zeros('row_sparse', shape)
         >>> row_ids = mx.nd.array([0, 2], dtype='int64')
         >>> kv.row_sparse_pull('3', out=a, row_ids=row_ids)
         >>> print a.asnumpy()

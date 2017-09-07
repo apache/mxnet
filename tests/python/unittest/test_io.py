@@ -163,7 +163,7 @@ def test_NDArrayIter_csr():
     dns = csr.asnumpy()
 
     # make iterators
-    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size))
+    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))
     begin = 0
     for batch in csr_iter:
         expected = np.zeros((batch_size, num_cols))

@@ -526,6 +526,8 @@ Composite multiple symbols into a new one by an operator.
     linalg_trmm
     linalg_trsm
     linalg_sumlogdiag
+    linalg_syrk
+    linalg_gelqf
 ```
 
 ### Miscellaneous

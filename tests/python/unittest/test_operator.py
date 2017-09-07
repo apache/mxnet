@@ -3578,15 +3578,53 @@ def test_deformable_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-def test_laop():
+# Helper functions for test_laop
 
+def _make_symm_symbol(a, ndims):
+    assert ndims >= 2
+    tr_shape = list(range(ndims))
+    tr_shape[-1] = ndims-2
+    tr_shape[-2] = ndims-1
+    tr_shape = tuple(tr_shape)
+    return 0.5 * (a + mx.sym.transpose(a, axes=tr_shape))
+
+def _make_lower_triangle_symm(a, ndims, m, dtype=np.float32):
+    assert ndims >= 2
+    # The last two dimensions must both be m
+    # Create mask for lower triangle and diagonal
+    index = mx.sym.arange(start=0, stop=m, step=1, dtype=np.int32)
+    lt_mask = mx.sym.one_hot(index, depth=m, dtype=dtype)
+    for j in range(1, m):
+        part1 = mx.sym.zeros(shape=(j, m), dtype=dtype)
+        index = mx.sym.arange(start=0, stop=m-j, step=1, dtype=np.int32)
+        part2 = mx.sym.one_hot(index, depth=m, dtype=dtype)
+        lt_mask = lt_mask + mx.sym.concat(*[part1, part2], dim=0)
+    shp = tuple([1]*(ndims-2) + [m, m])
+    lt_mask = mx.sym.reshape(lt_mask, shape=shp)
+    return mx.sym.broadcast_mul(a, lt_mask)
+
+def test_laop():
+    dtype = np.float64
+    rtol_fw = 1e-7
+    atol_fw = 1e-9
+    num_eps = 1e-6
+    rtol_bw = 1e-5
+    atol_bw = 1e-6
     # enable numerical checking of gradients
     grad_check = 1
 
     data1 = mx.symbol.Variable('data1')
     data2 = mx.symbol.Variable('data2')
     data3 = mx.symbol.Variable('data3')
-    data4 = mx.symbol.Variable('data4')
+
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+    rep_3x = lambda a, m, n :\
+        np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
 
     # Test gemm separately from other la-operators.
     shape1 = (2, 3)
@@ -3602,222 +3640,316 @@ def test_laop():
     # Check all transpositions of gemm operator.
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
-    res_gemm = 4*np.dot(data_in1,data_in2)+7*data_in4
-    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7)
-    check_symbolic_forward(test_gemm, [data_in1, data_in2, data_in4], [res_gemm])
+    res_gemm = 4. * np.dot(data_in1, data_in2) + 7. * data_in4
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.)
+    check_fw(test_gemm, [data_in1, data_in2, data_in4], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in2, data_in4], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
-    res_gemm = 4*np.dot(data_in1_t,data_in2_t)+7*data_in3
-    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1, transpose_b = 1)
-    check_symbolic_forward(test_gemm, [data_in1, data_in2, data_in3], [res_gemm])
+        check_grad(test_gemm, [data_in1, data_in2, data_in4])
+    res_gemm = 4. * np.dot(data_in1_t, data_in2_t) + 7. * data_in3
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+                                   transpose_a=True, transpose_b=True)
+    check_fw(test_gemm, [data_in1, data_in2, data_in3], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in2, data_in3], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
-    res_gemm = 4*np.dot(data_in1_t,data_in1)+7*data_in3
-    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_a = 1)
-    check_symbolic_forward(test_gemm, [data_in1, data_in1, data_in3], [res_gemm])
+        check_grad(test_gemm, [data_in1, data_in2, data_in3])
+    res_gemm = 4. * np.dot(data_in1_t, data_in1) + 7. * data_in3
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+                                   transpose_a=True)
+    check_fw(test_gemm, [data_in1, data_in1, data_in3], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in1, data_in3], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
-    res_gemm = 4*np.dot(data_in1,data_in1_t)+7*data_in4
-    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7, transpose_b = 1)
-    check_symbolic_forward(test_gemm, [data_in1, data_in1, data_in4], [res_gemm])
+        check_grad(test_gemm, [data_in1, data_in1, data_in3])
+    res_gemm = 4. * np.dot(data_in1, data_in1_t) + 7. * data_in4
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+                                   transpose_b=True)
+    check_fw(test_gemm, [data_in1, data_in1, data_in4], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in1, data_in4], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
+        check_grad(test_gemm, [data_in1, data_in1, data_in4])
 
     # Check batch of gemm.
-    a = np.tile(np.array(data_in1).flatten(),3)
-    a = np.reshape(a,(3,1,2,3))
-    b = np.tile(np.array(data_in2).flatten(),3)
-    b = np.reshape(b,(3,1,3,2))
-    c = np.tile(np.array(data_in4).flatten(),3)
-    c = np.reshape(c,(3,1,2,2))
-    r = 4*np.dot(data_in1,data_in2)+7*data_in4
-    r = np.tile(r.flatten(),3)
-    r = np.reshape(r,(3,1,2,2))
-    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha = 4, beta = 7)
-    check_symbolic_forward(test_gemm, [a, b, c], [r])
+    a = rep_3x(data_in1, 2, 3)
+    b = rep_3x(data_in2, 3, 2)
+    c = rep_3x(data_in4, 2, 2)
+    r = 4. * np.dot(data_in1, data_in2) + 7. * data_in4
+    r = rep_3x(r, 2, 2)
+    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.)
+    check_fw(test_gemm, [a, b, c], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [a, b, c], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
+        check_grad(test_gemm, [a, b, c])
 
     # Check gemm2 operator same way as gemm.
-    res_gemm = 4*np.dot(data_in1,data_in2)
-    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4)
-    check_symbolic_forward(test_gemm, [data_in1, data_in2], [res_gemm])
+    res_gemm = 4. * np.dot(data_in1, data_in2)
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4.)
+    check_fw(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in2], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
-    res_gemm = 4*np.dot(data_in1_t, data_in2_t)
-    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4, transpose_a = 1, transpose_b = 1)
-    check_symbolic_forward(test_gemm, [data_in1, data_in2], [res_gemm])
+        check_grad(test_gemm, [data_in1, data_in2])
+    res_gemm = 4. * np.dot(data_in1_t, data_in2_t)
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_a=True,
+                                    transpose_b=True)
+    check_fw(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in2], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
-    res_gemm = 4*np.dot(data_in1_t,data_in1)
-    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4, transpose_a = 1)
-    check_symbolic_forward(test_gemm, [data_in1, data_in1], [res_gemm])
+        check_grad(test_gemm, [data_in1, data_in2])
+    res_gemm = 4. * np.dot(data_in1_t, data_in1)
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_a=True)
+    check_fw(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in1], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
-    res_gemm = 4*np.dot(data_in1,data_in1_t)
-    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4, transpose_b = 1)
-    check_symbolic_forward(test_gemm, [data_in1, data_in1], [res_gemm])
+        check_grad(test_gemm, [data_in1, data_in1])
+    res_gemm = 4. * np.dot(data_in1, data_in1_t)
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_b=True)
+    check_fw(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [data_in1, data_in1], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
+        check_grad(test_gemm, [data_in1, data_in1])
 
     # Check batch of gemm2.
-    a = np.tile(np.array(data_in1).flatten(),3)
-    a = np.reshape(a,(3,1,2,3))
-    b = np.tile(np.array(data_in2).flatten(),3)
-    b = np.reshape(b,(3,1,3,2))
-    r = 4*np.dot(data_in1,data_in2)
-    r = np.tile(r.flatten(),3)
-    r = np.reshape(r,(3,1,2,2))
-    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha = 4)
-    check_symbolic_forward(test_gemm, [a, b], [r])
+    a = rep_3x(data_in1, 2, 3)
+    b = rep_3x(data_in2, 3, 2)
+    r = rep_3x(4. * np.dot(data_in1, data_in2), 2, 2)
+    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4.)
+    check_fw(test_gemm, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_gemm, [a, b], numeric_eps=1e-3, rtol=1e-1, atol=1e-1)
+        check_grad(test_gemm, [a, b])
 
     # Now test all the other operators.
 
     # Tests with trivial 1x1 matrices.
-    shape = (4, 4, 1, 1 )
+    shape = (4, 4, 1, 1)
     data_in = np.random.uniform(1, 10, shape)
     # test potrf
+    # Note: Have to symmetrize input, for gradient test to work
     res_potrf = np.sqrt(data_in)
-    test_potrf = mx.sym.linalg.potrf(data1)
-    check_symbolic_forward(test_potrf, [data_in], [res_potrf])
+    test_potrf = mx.sym.linalg_potrf(data1)
+    check_fw(test_potrf, [data_in], [res_potrf])
     if grad_check == 1:
-      check_numeric_gradient(test_potrf, [data_in])
+        check_grad(test_potrf, [data_in])
     # test potri
     ones = mx.nd.ones(shape).asnumpy()
-    res_potri = np.divide(ones,data_in*data_in)
-    test_potri = mx.sym.linalg.potri(data1)
-    check_symbolic_forward(test_potri, [data_in], [res_potri])
+    res_potri = np.divide(ones, data_in * data_in)
+    test_potri = mx.sym.linalg_potri(data1)
+    check_fw(test_potri, [data_in], [res_potri])
     if grad_check == 1:
-      check_numeric_gradient(test_potri, [data_in], atol = 0.01, rtol = 1.5)
+        check_grad(test_potri, [data_in])
     # test trsm
-    trian_in = data_in *7
-    test_trsm = mx.sym.linalg.trsm(data1,data2,alpha = 7)
-    check_symbolic_forward(test_trsm, [trian_in,data_in], [ones])
+    trian_in = data_in * 7.
+    test_trsm = mx.sym.linalg_trsm(data1, data2, alpha=7.)
+    check_fw(test_trsm, [trian_in, data_in], [ones])
     if grad_check == 1:
-      check_numeric_gradient(test_trsm, [trian_in,data_in], atol = 0.02, rtol = 2.0)
+        check_grad(test_trsm, [trian_in,data_in])
     # test trmm
-    trian_in = np.divide(ones,trian_in)
-    test_trmm = mx.sym.linalg.trmm(data1,data2,alpha = 7, transpose = 1, rightside = 1)
-    check_symbolic_forward(test_trmm, [trian_in,data_in], [ones])
+    trian_in = np.divide(ones, trian_in)
+    test_trmm = mx.sym.linalg_trmm(data1, data2, alpha=7., transpose=True,
+                                   rightside=True)
+    check_fw(test_trmm, [trian_in, data_in], [ones])
     if grad_check == 1:
-      check_numeric_gradient(test_trmm, [trian_in,data_in], atol = 0.02, rtol = 2.0)
+        check_grad(test_trmm, [trian_in, data_in])
     # test sumlogdiag
-    res_sumlogdiag = np.reshape(np.log(data_in),(4,4))
-    test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
-    check_symbolic_forward(test_sumlogdiag, [data_in], [res_sumlogdiag])
+    res_sumlogdiag = np.reshape(np.log(data_in), (4, 4))
+    test_sumlogdiag = mx.sym.linalg_sumlogdiag(data1)
+    check_fw(test_sumlogdiag, [data_in], [res_sumlogdiag])
     if grad_check == 1:
-      check_numeric_gradient(test_sumlogdiag, [data_in], atol = 0.01, rtol = 2.0)
+        check_grad(test_sumlogdiag, [data_in])
 
-    # more elaborate example of cholesky factorization
-    matrix = [ 9, 3, -6, 12, 3, 26, -7, -11, -6, -7, 9, 7, 12, -11, 7, 65 ]
-    trian  = [ 3, 0, 0, 0, 1, 5, 0, 0, -2, -1, 2, 0, 4, -3, 6, 2 ]
-    pow    = [ 2, 1, 1, 1, 1, 4, 1, 1, 1, 1, 8, 1, 1, 1, 1, 16 ]
-    inv    = [ 2.98333, 0.01667, 2.65, -0.83333, 0.01667, 0.05, 0.05, 0,  2.65, 0.05, 2.5, -0.75, -0.83333, 0, -0.75, 0.25 ]
-    ident  = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
-
-    # Tests for numeric gradients for potrf/potri/trmm/trsm are suppressed by default
-    # as they are very volatile and may often report false negatives which
-    # have to be excluded by manual inspection.
-    grad_check = 0
+    # more elaborate example of Cholesky factorization
+    matrix = np.array([[9., 3., -6., 12.],
+                       [3., 26., -7., -11.],
+                       [-6., -7., 9., 7.],
+                       [12., -11., 7., 65.]])
+    trian  = np.array([[3., 0., 0., 0.],
+                       [1., 5., 0., 0.],
+                       [-2., -1., 2., 0.],
+                       [4., -3., 6., 2.]])
+    pow    = np.array([[2., 1., 1., 1.],
+                       [1., 4., 1., 1.],
+                       [1., 1., 8., 1.],
+                       [1., 1., 1., 16.]])
+    inv    = np.array([[8.95/3., 0.05/3., 2.65, -2.5/3.],
+                       [0.05/3., 0.05, 0.05, 0.],
+                       [2.65, 0.05, 2.5, -0.75],
+                       [-2.5/3., 0., -0.75, 0.25]])
+    ident  = np.eye(4)
 
     # test potrf
-    a = np.tile(np.array(matrix),3)
-    a = np.reshape(a,(3,1,4,4))
-    r = np.tile(np.array(trian),3)
-    r = np.reshape(r,(3,1,4,4))
-    check_symbolic_forward(test_potrf, [a], [r])
+    test_potrf = mx.sym.linalg_potrf(_make_symm_symbol(data1, ndims=4))
+    a = rep_3x(matrix, 4, 4)
+    r = rep_3x(trian, 4, 4)
+    check_fw(test_potrf, [a], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_potrf, [a], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_potrf, [a])
 
     #test potri
-    a = np.tile(np.array(trian),3)
-    a = np.reshape(a,(3,1,4,4))
-    r = np.tile(np.array(inv),3)
-    r = np.reshape(r,(3,1,4,4))
-    check_symbolic_forward(test_potri, [a], [r], atol=0.01)
+    data1_ltri = _make_lower_triangle_symm(
+        data1, ndims=4, m=4, dtype=dtype)
+    test_potri = mx.sym.linalg_potri(data1_ltri)
+    a = rep_3x(trian, 4, 4)
+    r = rep_3x(inv, 4, 4)
+    check_fw(test_potri, [a], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_potri, [a], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_potri, [a])
 
-    #test trsm
-    a = np.tile(np.array(trian),3)
-    a = np.reshape(a,(3,1,4,4))
-    b = np.tile(np.array(matrix),3)
-    b = np.reshape(b,(3,1,4,4))
-    r = 7*np.transpose(np.reshape(np.array(trian),(4,4)))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trsm, [a,b], [r])
+    # test trsm
+    test_trsm = mx.sym.linalg_trsm(data1_ltri, data2, alpha=7.)
+    a = rep_3x(trian, 4, 4)
+    b = rep_3x(matrix, 4, 4)
+    r = rep_3x(7. * np.transpose(trian), 4, 4)
+    check_fw(test_trsm, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trsm, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trsm, [a, b])
 
-    test_trsm2 = mx.sym.linalg.trsm(data1,data2,alpha = -2, rightside = 1, transpose = 1)
-    r = -2*np.reshape(np.array(trian),(4,4))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trsm2, [a,b], [r])
+    test_trsm2 = mx.sym.linalg_trsm(
+        data1_ltri, data2, alpha=-2., rightside=True, transpose=True)
+    r = rep_3x(-2. * trian, 4, 4)
+    check_fw(test_trsm2, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trsm2, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trsm2, [a, b])
 
-    test_trsm3 = mx.sym.linalg.trsm(data1,data2,alpha = 0.50, transpose = 1)
-    b = np.transpose(np.reshape(np.array(trian),(4,4)))
-    b = np.reshape(np.tile(np.reshape(b,(16)),3),(3,1,4,4))
-    r = 0.5*np.reshape(np.array(ident),(4,4))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trsm3, [a,b], [r])
+    test_trsm3 = mx.sym.linalg_trsm(
+        data1_ltri, data2, alpha=0.5, transpose=True)
+    b = rep_3x(np.transpose(trian), 4, 4)
+    r = rep_3x(0.5 * ident, 4, 4)
+    check_fw(test_trsm3, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trsm3, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trsm3, [a, b])
 
-    test_trsm4 = mx.sym.linalg.trsm(data1,data2,alpha = -0.5, rightside = 1)
-    b = np.tile(np.array(trian),3)
-    b = np.reshape(b,(3,1,4,4))
-    r = -0.5*np.reshape(np.array(ident),(4,4))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trsm4, [a,b], [r])
+    test_trsm4 = mx.sym.linalg_trsm(
+        data1_ltri, data2, alpha=-0.5, rightside=True)
+    b = rep_3x(trian, 4, 4)
+    r = rep_3x(-0.5 * ident, 4, 4)
+    check_fw(test_trsm4, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trsm4, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trsm4, [a, b])
 
-    #test trmm
-    a = np.tile(np.array(trian),3)
-    a = np.reshape(a,(3,1,4,4))
-    b = np.tile(np.array(matrix),3)
-    b = np.reshape(b,(3,1,4,4))
-    r = 7*np.dot(np.reshape(np.array(matrix),(4,4)),np.transpose(np.reshape(np.array(trian),(4,4))))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trmm, [a,b], [r])
+    # test trmm
+    test_trmm = mx.sym.linalg_trmm(
+        data1_ltri, data2, alpha=7., transpose=True, rightside=True)
+    a = rep_3x(trian, 4, 4)
+    b = rep_3x(matrix, 4, 4)
+    r = rep_3x(7. * np.dot(matrix, trian.T), 4, 4)
+    check_fw(test_trmm, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trmm, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trmm, [a, b])
 
-    test_trmm2 = mx.sym.linalg.trmm(data1,data2,alpha = -2)
-    r = -2*np.dot(np.reshape(np.array(trian),(4,4)),np.reshape(np.array(matrix),(4,4)))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trmm2, [a,b], [r])
+    test_trmm2 = mx.sym.linalg_trmm(data1_ltri, data2, alpha=-2.)
+    r = rep_3x(-2. * np.dot(trian, matrix), 4, 4)
+    check_fw(test_trmm2, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trmm2, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trmm2, [a, b])
 
-    test_trmm3 = mx.sym.linalg.trmm(data1,data2,rightside = 1)
-    r = np.dot(np.reshape(np.array(matrix),(4,4)),np.reshape(np.array(trian),(4,4)))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trmm3, [a,b], [r])
+    test_trmm3 = mx.sym.linalg_trmm(data1_ltri, data2, rightside=True)
+    r = rep_3x(np.dot(matrix, trian), 4, 4)
+    check_fw(test_trmm3, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trmm3, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trmm3, [a, b])
 
-    test_trmm4 = mx.sym.linalg.trmm(data1,data2,alpha = 1.2,transpose = 1)
-    r = 1.2*np.dot(np.transpose(np.reshape(np.array(trian),(4,4))),np.reshape(np.array(matrix),(4,4)))
-    r = np.reshape(np.tile(np.reshape(r,(16)),3),(3,1,4,4))
-    check_symbolic_forward(test_trmm4, [a,b], [r])
+    test_trmm4 = mx.sym.linalg_trmm(
+        data1_ltri, data2, alpha=1.2, transpose=True)
+    r = rep_3x(1.2 * np.dot(trian.T, matrix), 4, 4)
+    check_fw(test_trmm4, [a, b], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_trmm4, [a,b], numeric_eps=1e-3, rtol=1e-2, atol=1e-1)
+        check_grad(test_trmm4, [a, b])
 
     # test sumlogdiag
-    a = np.array(pow)
-    a = np.tile(a,3)
-    a = np.reshape(a,(3,1,4,4))
-    r = 10*np.log(np.array([2]))
-    r = np.tile(r,3)
-    r = np.reshape(r,(3))
-    check_symbolic_forward(test_sumlogdiag, [a], [r])
+    a = rep_3x(pow, 4, 4)
+    r = np.reshape(np.tile(10. * np.log(np.array([2.])), 3), (3,))
+    check_fw(test_sumlogdiag, [a], [r])
     if grad_check == 1:
-      check_numeric_gradient(test_sumlogdiag, [a])
+        check_grad(test_sumlogdiag, [a])
+
+
+# Tests for new operators linalg_syrk, linalg_gelqf
+
+def _gelqf_combined_symbol(a):
+    q, l = mx.sym.linalg_gelqf(a)
+    q_qt = mx.sym.linalg_syrk(q, transpose=False, alpha=1., name='Q_times_Qt')
+    l_q = mx.sym.linalg_trmm(l, q, alpha=1., name='L_times_Q')
+    return mx.sym.Group([q_qt, l_q])
+
+# NOTE: If we leave the unused output dangling, things break if dtype=np.float64. Namely, the
+# backward gradient for the unused output is of dtype np.float32 then.
+# ==> Very annoying!
+def _gelqf_first_output(a):
+    q, l = mx.sym.linalg_gelqf(a)
+    bogus_scal = mx.sym.sum(mx.sym.BlockGrad(l), axis=(), keepdims=True) * 0.0
+    return mx.sym.broadcast_add(q, bogus_scal)
+
+def _gelqf_second_output(a):
+    q, l = mx.sym.linalg_gelqf(a)
+    bogus_scal = mx.sym.sum(mx.sym.BlockGrad(q), axis=(), keepdims=True) * 0.0
+    return mx.sym.broadcast_add(l, bogus_scal)
+
+def test_laop_2():
+    # Operators implemented for CPU only currently
+    if default_context() != mx.cpu():
+        return
+    np.random.seed(1896893923)
+    dtype = np.float64
+    rtol_fw = 1e-7
+    atol_fw = 1e-9
+    num_eps = 1e-6
+    rtol_bw = 1e-5
+    atol_bw = 1e-6
+    # enable numerical checking of gradients
+    grad_check = 1
+
+    data1 = mx.symbol.Variable('data1')
+
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+    rep_3x = lambda a, m, n :\
+        np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
+
+    # Tests for linalg_syrk
+    mnalpha_lst = [(2, 3, 1.), (5, 3, -2.), (1, 6, 5.), (3, 3, 0.5), (4, 1, 10.), (1, 1, 1.)]
+    for m, n, alpha in mnalpha_lst:
+        #print('m={}, n={}, alpha={}'.format(m, n, alpha))
+        data_in1 = np.random.uniform(1, 10, (m, n))
+        res_syrk1 = alpha * np.dot(data_in1, data_in1.T)
+        test_syrk1 = mx.sym.linalg_syrk(data1, transpose=False, alpha=alpha)
+        check_fw(test_syrk1, [data_in1], [res_syrk1])
+        if grad_check == 1:
+            check_grad(test_syrk1, [data_in1])
+        res_syrk2 = alpha * np.dot(data_in1.T, data_in1)
+        test_syrk2 = mx.sym.linalg_syrk(data1, transpose=True, alpha=alpha)
+        check_fw(test_syrk2, [data_in1], [res_syrk2])
+        if grad_check == 1:
+            check_grad(test_syrk2, [data_in1])
+        # Batch mode (3x the same thing)
+        a_batch = rep_3x(data_in1, m, n)
+        r1_batch = rep_3x(res_syrk1, m, m)
+        check_fw(test_syrk1, [a_batch], [r1_batch])
+        if grad_check == 1:
+            check_grad(test_syrk1, [a_batch])
+        r2_batch = rep_3x(res_syrk2, n, n)
+        check_fw(test_syrk2, [a_batch], [r2_batch])
+        if grad_check == 1:
+            check_grad(test_syrk2, [a_batch])
+
+    # Tests for linalg_gelqf
+    test_gelqf2 = _gelqf_combined_symbol(data1)  # Outputs (dot(Q, Q.T), dot(L, Q))
+    test_gelqf_q = _gelqf_first_output(data1)  # Output Q (L is not dangling)
+    test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)
+    mn_lst = [(4, 4), (1, 1), (5, 20), (1, 10), (15, 50)]
+    for m, n in mn_lst:
+        #print('m={}, n={}'.format(m, n))
+        data_in1 = np.random.normal(0., 10., (m, n))
+        res_eye = np.eye(m)
+        res_a = data_in1
+        check_fw(test_gelqf2, [data_in1], [res_eye, res_a])
+        if grad_check == 1:
+            # A => Q
+            check_grad(test_gelqf_q, [data_in1])
+            # A => L
+            check_grad(test_gelqf_l, [data_in1])
+        # Batch mode (3x the same thing)
+        a_batch = rep_3x(data_in1, m, n)
+        reye_batch = rep_3x(res_eye, m, m)
+        ra_batch = a_batch
+        check_fw(test_gelqf2, [a_batch], [reye_batch, ra_batch])
+        if grad_check == 1:
+            # A => Q
+            check_grad(test_gelqf_q, [a_batch])
+            # A => L
+            check_grad(test_gelqf_l, [a_batch])
 
 
 def test_stack():
