@@ -506,9 +506,8 @@ def test_factorization_machine_module():
     csr_nd = rand_ndarray((num_samples, feature_dim), 'csr', 0.1)
     label = mx.nd.ones((num_samples,1))
     # the alternative is to use LibSVMIter
-    train_iter = mx.io.NDArrayIter(data=csr_nd,
-                                   label={'label':label},
-                                   batch_size=batch_size)
+    train_iter = mx.io.NDArrayIter(data=csr_nd, label={'label':label},
+                                   batch_size=batch_size, last_batch_handle='discard')
     # create module
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
     # allocate memory by given the input data and lable shapes
@@ -548,7 +547,8 @@ def test_module_initializer():
 
     data = mx.nd.zeros(shape=(n, m), stype='csr')
     label = mx.nd.zeros((n, 1))
-    iterator = mx.io.NDArrayIter(data=data, label={'label':label}, batch_size=n)
+    iterator = mx.io.NDArrayIter(data=data, label={'label':label},
+                                 batch_size=n, last_batch_handle='discard')
 
     # create module
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])

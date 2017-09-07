@@ -719,4 +719,137 @@ LINALG_GPU_BATCH_POTRI(double)
 
 #endif
 
+//////////////////////////////// SYRK ////////////////////////////////////////////
+
+// CPU/GPU-versions of BLAS3 function "syrk". Please refer to the BLAS3-documentation
+// for further information about the function and its parameters.
+// Note that this is B = syrk(A, B), so B is input and output parameter.
+
+#if MSHADOW_USE_CBLAS == 1
+
+template<typename xpu, typename DType> inline
+void check_syrk(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
+                DType alpha, DType beta, bool tA) {
+  // Any checking that helps user debug potential problems.
+  CHECK_EQ(B.size(0), B.size(1))
+    << "B must be square symmetric matrix for syrk";
+  CHECK_EQ((tA ? A.size(1) : A.size(0)), B.size(0))
+    << "Non compatible matrix dimensions between inputs A and B for syrk";
+}
+
+#define LINALG_CPU_SYRK(fname, DType) \
+template<> inline \
+void linalg_syrk<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                             const Tensor<cpu, 2, DType>& B, DType alpha, \
+                             DType beta, bool tA, Stream<cpu> *s) { \
+  check_syrk(A, B, alpha, beta, tA); \
+  cblas_##fname(CblasRowMajor, CblasLower, (tA ? CblasTrans : CblasNoTrans), \
+                B.size(0), (tA ? A.size(0) : A.size(1)), alpha, \
+                A.dptr_, A.stride_, beta, B.dptr_, B.stride_); \
+}
+
+#define LINALG_CPU_BATCH_SYRK(DType) \
+template<> inline \
+void linalg_batch_syrk(const Tensor<cpu, 3, DType>& A, \
+                       const Tensor<cpu, 3, DType>& B, DType alpha, DType beta, \
+                       bool tA, Stream<cpu> *s) { \
+  linalg_check_batch_size(A.size(0), B.size(0), B.size(0)); \
+  for (index_t i = 0; i < A.size(0); ++i) { \
+    linalg_syrk(A[i], B[i], alpha, beta, tA); \
+  } \
+}
+
+#else
+
+#define LINALG_CPU_SYRK(fname, DType) \
+template<> inline \
+void linalg_syrk<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                             const Tensor<cpu, 2, DType>& B, DType alpha, \
+                             DType beta, bool tA, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_syrk not implemented by mxnet for cpu, needs cblas!"; \
+}
+
+#define LINALG_CPU_BATCH_SYRK(DType) \
+template<> inline \
+void linalg_batch_syrk(const Tensor<cpu, 3, DType>& A, \
+                       const Tensor<cpu, 3, DType>& B, DType alpha, DType beta, \
+                       bool tA, Stream<cpu> *s) { \
+  LOG(FATAL) << "linalg_batch_syrk not implemented by mxnet for cpu, needs cblas!"; \
+}
+
+#endif  // MSHADOW_USE_CBLAS == 1
+
+LINALG_CPU_SYRK(ssyrk, float)
+LINALG_CPU_SYRK(dsyrk, double)
+LINALG_CPU_BATCH_SYRK(float)
+LINALG_CPU_BATCH_SYRK(double)
+
+//////////////////////////////// GELQF ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK functions "gelqf", "orglq".
+
+template<typename xpu, typename DType> inline
+void check_gelqf(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 1, DType>& work) {
+  // Any checking that helps user debug potential problems.
+  CHECK_LE(A.size(0), A.size(1))
+    << "A must have num(rows) <= num(columns)";
+  CHECK_LT(A.size(0), work.size(0))
+    << "Size of work is too small";
+}
+
+#define LINALG_CPU_GELQF(fname, DType) \
+template<> inline \
+void linalg_gelqf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  check_gelqf(A, work); \
+  int m(A.size(0)); \
+  int lwork(work.size(0) - m); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, m, A.size(1), \
+                               A.dptr_ , A.stride_, work.dptr_, \
+                               work.dptr_ + m, lwork)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+LINALG_CPU_GELQF(sgelqf, float)
+LINALG_CPU_GELQF(dgelqf, double)
+
+#define LINALG_CPU_ORGLQ(fname, DType) \
+template<> inline \
+void linalg_orglq<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  check_gelqf(A, work); \
+  int m(A.size(0)); \
+  int lwork(work.size(0) - m); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, m, A.size(1), \
+                               A.dptr_ , A.stride_, work.dptr_, \
+                               work.dptr_ + m, lwork)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+LINALG_CPU_ORGLQ(sorglq, float)
+LINALG_CPU_ORGLQ(dorglq, double)
+
+#define LINALG_CPU_GELQF_WORKSPACE_QUERY(prefix, DType) \
+template<> inline \
+int linalg_gelqf_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                                             Stream<cpu> *s) { \
+  int m(A.size(0)); \
+  DType work; \
+  int ret(MXNET_LAPACK_##prefix##gelqf(MXNET_LAPACK_ROW_MAJOR, m, \
+                                       A.size(1), A.dptr_ , A.stride_, &work, \
+                                       &work, -1)); \
+  CHECK_EQ(ret, 0) << #prefix << "gelqf: Workspace query failed on CPU."; \
+  int ws_size(static_cast<int>(work)); \
+  ret = MXNET_LAPACK_##prefix##orglq(MXNET_LAPACK_ROW_MAJOR, m, \
+                                     A.size(1), A.dptr_ , \
+                                     A.stride_, &work, &work, -1); \
+  CHECK_EQ(ret, 0) << #prefix << "orglq: Workspace query failed on CPU."; \
+  int wsz2(static_cast<int>(work)); \
+  if (wsz2 > ws_size) ws_size = wsz2; \
+  return ws_size + m; \
+}
+LINALG_CPU_GELQF_WORKSPACE_QUERY(s, float)
+LINALG_CPU_GELQF_WORKSPACE_QUERY(d, double)
+
 #endif  // MXNET_OPERATOR_LINALG_IMPL_H_

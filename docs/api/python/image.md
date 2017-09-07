@@ -116,17 +116,17 @@ index_1  label_1  image_path_1
 Where `label_N` is a number a of fixed-width vector.
 The format of label used in object detection is a variable length vector
 ```
-A  B  [header]  [(object0), (object1), ... (objectN)]
+A  B  [extra header]  [(object0), (object1), ... (objectN)]
 ```
-Where A is the width of header, B is the width of each object.
-Header is optional and used for inserting helper information such as (width, height).
+Where A is the width of header (2 + length of extra header), B is the width of each object.
+Extra header is optional and used for inserting helper information such as (width, height).
 Each object is usually 5 or 6 numbers describing the object properties, for example:
 [id, xmin, ymin, xmax, ymax, difficulty]
 Putting all together, we have a `lst` file for object detection:
 ```
-0  2  5  640  480  1  0.1  0.2  0.8  0.9  2  0.5  0.3  0.6  0.8  data/xxx.jpg
-1  2  5  480  640  3  0.05  0.16  0.75  0.9  data/xxx.jpg
-2  2  5  500  600  2  0.6  0.1  0.7  0.5  0  0.1  0.3  0.2  0.4  3  0.25  0.25  0.3  0.3 data/xxx.jpg
+0  4  5  640  480  1  0.1  0.2  0.8  0.9  2  0.5  0.3  0.6  0.8  data/xxx.jpg
+1  4  5  480  640  3  0.05  0.16  0.75  0.9  data/yyy.jpg
+2  4  5  500  600  2  0.6  0.1  0.7  0.5  0  0.1  0.3  0.2  0.4  3  0.25  0.25  0.3  0.3 data/zzz.jpg
 ...
 ```
 
