@@ -1287,6 +1287,11 @@ fixed-size items.
         dtype : numpy.dtype or str
             The type of the returned array.
 
+        Returns
+        -------
+        NDArray, CSRNDArray or RowSparseNDArray
+            The copied array after casting to the specified type.
+
         Examples
         --------
         >>> x = mx.nd.zeros((2,3), dtype='float32')
@@ -1315,7 +1320,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray, CSRNDArray, RowSparseNDArray
+        NDArray, CSRNDArray or RowSparseNDArray
             The copied array. If ``other`` is an ``NDArray``, then the return value
             and ``other`` will point to the same ``NDArray``.
 
@@ -1349,7 +1354,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray
+        NDArray, CSRNDArray or RowSparseNDArray
             The copied array
 
         Examples
@@ -1375,7 +1380,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray
+        NDArray, CSRNDArray or RowSparseNDArray
             The target array.
 
 

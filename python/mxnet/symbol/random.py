@@ -15,5 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Random distribution generator NDArray API of MXNet."""
+"""Random Distribution Generator Symbol API of MXNet."""
 __all__ = []

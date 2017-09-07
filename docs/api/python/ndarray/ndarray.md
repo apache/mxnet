@@ -42,7 +42,7 @@ A detailed tutorial is available at
 
 .. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
-   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied 
+   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied
      array, instead of returning a view of the input array.
    - ``mxnet.ndarray.dot`` performs dot product between the last axis of the
      first input array and the first axis of the second input, while `numpy.dot`
@@ -56,7 +56,7 @@ A detailed tutorial is available at
   differs from ``symbol`` in few aspects:
 
   - ``ndarray`` adopts imperative programming, namely sentences are executed
-    step-by-step so that the results can be obtained immediately whereas 
+    step-by-step so that the results can be obtained immediately whereas
     ``symbol`` adopts declarative programming.
 
   - Most binary operators in ``ndarray`` such as ``+`` and ``>`` have
@@ -64,8 +64,7 @@ A detailed tutorial is available at
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`ndarray.NDArray` class and its subclasses, and then list other routines
-provided by the `ndarray` package.
+`ndarray.NDArray` class, and then list other routines provided by the `ndarray` package.
 
 The `ndarray` package provides several classes:
 
@@ -77,8 +76,6 @@ The `ndarray` package provides several classes:
     sparse.CSRNDArray
     sparse.RowSparseNDArray
 ```
-
-We summarize the interface for each class in the following sections.
 
 ## The `NDArray` class
 
@@ -276,35 +273,6 @@ We summarize the interface for each class in the following sections.
 
     NDArray.clip
     NDArray.sign
-```
-
-## The `sparse.RowSparseNDArray` Class
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sparse.RowSparseNDArray.copyto
-    sparse.RowSparseNDArray.tostype
-    sparse.RowSparseNDArray.__setitem__
-    sparse.RowSparseNDArray.__getitem__
-    sparse.RowSparseNDArray.data
-    sparse.RowSparseNDArray.indices
-```
-
-## The `sparse.CSRNDArray` Class
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sparse.CSRNDArray.copyto
-    sparse.CSRNDArray.tostype
-    sparse.CSRNDArray.__setitem__
-    sparse.CSRNDArray.__getitem__
-    sparse.CSRNDArray.data
-    sparse.CSRNDArray.indices
-    sparse.CSRNDArray.indptr
 ```
 
 ## Array creation routines
@@ -514,13 +482,6 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    random_uniform
-    random_normal
-    random_gamma
-    random_exponential
-    random_poisson
-    random_negative_binomial
-    random_generalized_negative_binomial
     sample_uniform
     sample_normal
     sample_gamma
@@ -542,21 +503,6 @@ We summarize the interface for each class in the following sections.
     argsort
     argmax
     argmin
-```
-
-### Linear Algebra
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    linalg_gemm
-    linalg_gemm2
-    linalg_potrf
-    linalg_potri
-    linalg_trmm
-    linalg_trsm
-    linalg_sumlogdiag
 ```
 
 ### Miscellaneous
@@ -625,37 +571,6 @@ We summarize the interface for each class in the following sections.
     Custom
 ```
 
-## Contrib
-
-```eval_rst
-.. warning:: This package contains experimental APIs and may change in the near future.
-```
-
-The `contrib.ndarray` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
-
-```eval_rst
-.. currentmodule:: mxnet.contrib.ndarray
-
-.. autosummary::
-    :nosignatures:
-
-    CTCLoss
-    DeformableConvolution
-    DeformablePSROIPooling
-    MultiBoxDetection
-    MultiBoxPrior
-    MultiBoxTarget
-    MultiProposal
-    PSROIPooling
-    Proposal
-    count_sketch
-    ctc_loss
-    dequantize
-    fft
-    ifft
-    quantize
-```
-
 ## API Reference
 
 <script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
@@ -666,24 +581,13 @@ The `contrib.ndarray` module contains many useful experimental APIs for new feat
     :members:
     :special-members:
 
-.. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members:
-    :special-members:
-
-.. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members:
-    :special-members:
-
 .. automodule:: mxnet.ndarray
     :members:
     :imported-members:
     :special-members:
-    :exclude-members: CachedOp, BaseSparseNDArray, NDArray, CSRNDArray, RowSparseNDArray
+    :exclude-members: CachedOp, NDArray
 
 .. automodule:: mxnet.random
-    :members:
-
-.. automodule:: mxnet.contrib.ndarray
     :members:
 
 ```
