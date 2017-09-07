@@ -136,6 +136,21 @@ NNVM_REGISTER_OP(_backward_rsqrt)
 .set_attr<FCompute>("FCompute<gpu>",
   BinaryCompute<gpu, unary_bwd<mshadow_op::reciprocal_square_root_grad> >);
 
+// cbrt
+NNVM_REGISTER_OP(cbrt)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::cube_root>);
+
+NNVM_REGISTER_OP(_backward_cbrt)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::cube_root_grad> >);
+
+// rcbrt
+NNVM_REGISTER_OP(rcbrt)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::reciprocal_cube_root>);
+
+NNVM_REGISTER_OP(_backward_rcbrt)
+.set_attr<FCompute>("FCompute<gpu>",
+  BinaryCompute<gpu, unary_bwd<mshadow_op::reciprocal_cube_root_grad> >);
+
 // exp
 NNVM_REGISTER_OP(exp)
 .set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::exp>);

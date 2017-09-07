@@ -20,6 +20,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 import numpy as np
 from nose.tools import raises
+from copy import deepcopy
 
 
 def test_parameter():
@@ -348,9 +349,13 @@ def test_flatten():
 
 
 def test_trainer():
+    def dict_equ(a, b):
+        assert set(a) == set(b)
+        for k in a:
+            assert (a[k].asnumpy() == b[k].asnumpy()).all()
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0})
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
@@ -367,7 +372,20 @@ def test_trainer():
             y.backward()
     trainer.step(1)
 
-    assert (x.data(mx.cpu(1)).asnumpy() == -3).all()
+    assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
+
+    trainer.save_states('test.states')
+    states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
+             else deepcopy(trainer._updaters[0].states)
+    trainer.load_states('test.states')
+    if trainer._update_on_kvstore:
+        dict_equ(trainer._kvstore._updater.states, states)
+        assert trainer._optimizer == trainer._kvstore._updater.optimizer
+    else:
+        for updater in trainer._updaters:
+            dict_equ(updater.states, states)
+        assert trainer._optimizer == trainer._updaters[0].optimizer
+
 
 def test_block_attr_hidden():
     b = gluon.Block()

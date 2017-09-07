@@ -7,7 +7,7 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
-max_time = 60
+max_time = 120
 // assign any caught errors here
 err = null
 
@@ -164,7 +164,7 @@ try {
       },
       'Amalgamation MIN': {
         node('mxnetlinux') {
-          ws('workspace/amalgamation') {
+          ws('workspace/amalgamationmin') {
             init_git()
             make('cpu', '-C amalgamation/ clean')
             make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')

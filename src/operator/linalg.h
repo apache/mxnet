@@ -123,6 +123,47 @@ void linalg_potri(const Tensor<xpu, 2, DType>& A, bool lower, Stream<xpu> *s = 0
 template<typename xpu, typename DType>
 void linalg_batch_potri(const Tensor<xpu, 3, DType>& A, bool lower, Stream<xpu> *s = 0);
 
+//////////////////////////////// SYRK ////////////////////////////////////////////
+
+// CPU/GPU-versions of BLAS3 function "syrk". Please refer to the BLAS3-documentation
+// for further information about the function and its parameters.
+// Note that this is B = syrk(A, B), so that B is input and output parameter.
+
+template<typename xpu, typename DType>
+void linalg_syrk(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 DType alpha, DType beta, bool tA, Stream<xpu> *s = 0);
+
+template<typename xpu, typename DType>
+void linalg_batch_syrk(const Tensor<xpu, 3, DType>& A,
+                       const Tensor<xpu, 3, DType>& B, DType alpha, DType beta,
+                       bool tA, Stream<xpu> *s = 0);
+
+//////////////////////////////// GELQF ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK functions "gelqf", "orglq". Please refer to the
+// LAPACK documentation for further details.
+// Note:
+// - The current implementation works for CPU only
+// - Both functions have A as input and output parameter
+// - Both functions require extra workspace, passed as 1D tensor
+// - We call orglq after gelqf. Apart from A, they also communicate via the
+//   first part of the workspace.
+
+template<typename xpu, typename DType>
+void linalg_gelqf(const Tensor<xpu, 2, DType>& A,
+                  const Tensor<xpu, 1, DType>& work, Stream<xpu> *s = 0);
+
+template<typename xpu, typename DType>
+void linalg_orglq(const Tensor<xpu, 2, DType>& A,
+                  const Tensor<xpu, 1, DType>& work, Stream<xpu> *s = 0);
+
+// This function determines the amount of workspace needed for linalg_gelqf,
+// linalg_orglq. The workspace can be used for both. The first m entries are
+// used to communicate information from gelqf to orglq.
+template<typename xpu, typename DType>
+int linalg_gelqf_workspace_query(const Tensor<xpu, 2, DType>& A,
+                                 Stream<xpu> *s = 0);
+
 #include "linalg_impl.h"
 
 #endif  // MXNET_OPERATOR_LINALG_H_
