@@ -374,6 +374,12 @@ div .burgerIcon a {
     max-width: 250px;
 }
 
+#plusMenu .dropdown-submenu>.dropdown-menu {
+    left: 138px;
+    top: 0;
+    background: #fff;
+}
+
 #burgerMenu li, #plusMenu li {
     height: 30px;
     list-style-position: inside;
@@ -902,7 +908,7 @@ div.page-tracker a {
     color: #337ab7;
 }
 
-div.page-tracker a.last-tracker {
+div.page-tracker li:last-child {
     color: #aab7b8;
 }
 
