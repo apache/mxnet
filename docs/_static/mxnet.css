@@ -397,7 +397,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     padding-left: 20px !important;
 }
 
-@media screen and (max-width: 360px) {
+@media screen and (max-width: 420px) {
     li.dropdown-submenu ul.dropdown-menu a {
         font-size: 12px !important;
     }
@@ -410,7 +410,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .dropdown-submenu>.dropdown-menu {
     top: -8px;
-    left: 200px;
+    left: 250px;
     -webkit-border-radius: 0 6px 6px 6px;
     -moz-border-radius: 0 6px 6px;
     border-radius: 0 6px 6px 6px;
