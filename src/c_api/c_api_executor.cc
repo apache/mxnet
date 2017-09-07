@@ -259,10 +259,10 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   std::vector<std::string> aux_state_names = sym->ListInputNames(nnvm::Symbol::kAuxiliaryStates);
 
   // attr_dict for setting up type_dict and arg/aux ctx
-  bool has_stype_provided = provided_arg_stypes != nullptr && num_provided_arg_stypes > 0;
-  bool has_dtype_provided = provided_arg_dtypes != nullptr && num_provided_arg_dtypes > 0;
+  const bool has_stype_provided = provided_arg_stypes != nullptr && num_provided_arg_stypes > 0;
+  const bool has_dtype_provided = provided_arg_dtypes != nullptr && num_provided_arg_dtypes > 0;
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> attr_dict;
-  if (!has_dtype_provided || nullptr != g2c_keys || !has_stype_provided) {
+  if (!has_dtype_provided || !has_stype_provided || g2c_keys != nullptr) {
     std::vector<std::tuple<std::string, std::string, std::string>> attrs =
       sym->ListAttrsRecursive();
     attr_dict.reserve(attrs.size());
