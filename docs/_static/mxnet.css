@@ -1,19 +1,19 @@
 /*-------------------- AmazonEmber font -----------------------------------*/
 @font-face {
     font-family: AmazonEmber;
-    src: url(font/AmazonEmber_Rg.ttf);
+    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Rg.ttf);
     font-weight: normal;
 }
 
 @font-face {
     font-family: AmazonEmber;
-    src: url(font/AmazonEmber_Bd.ttf);
+    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Bd.ttf);
     font-weight: bold;
 }
 
 @font-face {
     font-family: AmazonEmber;
-    src: url(font/AmazonEmber_Th.ttf);
+    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Th.ttf);
     font-weight: 300;
 }
 
@@ -124,7 +124,7 @@ img {
     height: 60px;
     margin-bottom: 0px;
     border-bottom: 0.01em solid #fff;
-    background-image: url("mxnet-navbar.png");
+    background-image: url("https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-navbar.png");
     background-size: cover;
     background-attachment: scroll;
 }
