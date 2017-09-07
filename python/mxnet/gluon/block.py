@@ -64,6 +64,8 @@ class _BlockScope(object):
         return current._block.prefix+prefix, params
 
     def __enter__(self):
+        if self._block._empty_prefix:
+            return
         self._old_scope = _BlockScope._current
         _BlockScope._current = self
         self._name_scope = _name.Prefix(self._block.prefix)
@@ -71,6 +73,8 @@ class _BlockScope(object):
         return self
 
     def __exit__(self, ptype, value, trace):
+        if self._block._empty_prefix:
+            return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
         _BlockScope._current = self._old_scope
@@ -157,6 +161,7 @@ class Block(object):
             dense1 = nn.Dense(20, params=dense0.collect_params())
     """
     def __init__(self, prefix=None, params=None):
+        self._empty_prefix = prefix == ''
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
         self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
