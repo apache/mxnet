@@ -27,7 +27,7 @@
 
 namespace mshadow {
 template<typename DType>
-static bool between(const DType value, const DType lowerBound, const DType upperBound) {
+static MSHADOW_CINLINE bool between(const DType value, const DType lowerBound, const DType upperBound) {
   return value >= lowerBound && value <= upperBound;
 }
 template<typename DType>
