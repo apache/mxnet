@@ -148,8 +148,9 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
       num_outputs, infered_num_outputs, num_visible_outputs, outputs);
 
   auto state = ImperativeRuntime::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
-  ImperativeRuntime::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
-
+  if (ImperativeRuntime::Get()->is_recording()) {
+    ImperativeRuntime::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+  }
 
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
 
@@ -203,31 +204,13 @@ int MXCreateCachedOp(SymbolHandle handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
 
   API_BEGIN();
-  nnvm::Graph *g = new nnvm::Graph;
-  g->outputs = sym->outputs;
-  auto vars = sym->ListInputs(nnvm::Symbol::kAll);
-  CHECK_GE(vars.size(), 1) << "CachedOp must have at least 1 input.";
-  g->attrs["vars"] = std::make_shared<dmlc::any>(std::move(vars));
-
-  const nnvm::IndexedGraph& idx = g->indexed_graph();
-  std::vector<std::vector<bool> > save_inputs(idx.num_nodes());
-  std::vector<std::vector<bool> > save_outputs(idx.num_nodes());
-  for (size_t i = 0; i < idx.num_nodes(); ++i) {
-    nnvm::NodePtr node = nnvm::Node::Create();
-    node->attrs = idx[i].source->attrs;
-    ImperativeRuntime::Get()->GetBackwardDependency(
-        node, idx[i].source->num_inputs(), idx[i].source->num_outputs(),
-        &save_inputs[i], &save_outputs[i]);
-  }
-  g->attrs["save_inputs"] = std::make_shared<dmlc::any>(std::move(save_inputs));
-  g->attrs["save_outputs"] = std::make_shared<dmlc::any>(std::move(save_outputs));
-
-  *out = g;
+  *out = new std::shared_ptr<ImperativeRuntime::CachedOp>(
+      new ImperativeRuntime::CachedOp(*sym));
   API_END();
 }
 
 int MXFreeCachedOp(CachedOpHandle handle) {
-  nnvm::Graph *g = static_cast<nnvm::Graph*>(handle);
+  CachedOpPtr* g = static_cast<CachedOpPtr*>(handle);
   API_BEGIN();
   delete g;
   API_END();
@@ -241,62 +224,35 @@ int MXInvokeCachedOp(CachedOpHandle handle,
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   API_BEGIN();
-  nnvm::Graph *g = reinterpret_cast<nnvm::Graph*>(handle);
-  NDArray** out_array = *reinterpret_cast<NDArray***>(outputs);
-  const std::vector<nnvm::NodePtr>& vars =
-      g->GetAttr<std::vector<nnvm::NodePtr> >("vars");
-  std::vector<std::vector<bool> > save_inputs =
-      g->GetAttr<std::vector<std::vector<bool> > >("save_inputs");
-  std::vector<std::vector<bool> > save_outputs =
-      g->GetAttr<std::vector<std::vector<bool> > >("save_outputs");
-  const nnvm::IndexedGraph& idx = g->indexed_graph();
-  CHECK_EQ(static_cast<size_t>(num_inputs), vars.size())
-      << "Actually number of inputs differs from expected number of inputs";
-  Context default_ctx = static_cast<NDArray*>(inputs[0])->ctx();
-
-  std::vector<NDArray> buff(idx.num_node_entries());
-  std::vector<NDArray*> arrays;
-  arrays.reserve(buff.size());
-  for (size_t i = 0; i < buff.size(); ++i) arrays.emplace_back(&buff[i]);
-  for (size_t i = 0; i < vars.size(); ++i) {
-    arrays[idx.entry_id(idx.node_id(vars[i].get()), 0)] =
-        reinterpret_cast<NDArray*>(inputs[i]);
+  CachedOpPtr op = *static_cast<CachedOpPtr*>(handle);
+  std::vector<NDArray*> ndinputs;
+  ndinputs.reserve(num_inputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    ndinputs.push_back(reinterpret_cast<NDArray*>(inputs[i]));
   }
 
-  std::vector<NDArray*> ndinputs, ndoutputs;
-  for (size_t i = 0; i < idx.num_nodes(); ++i) {
-    const nnvm::IndexedGraph::Node& node = idx[i];
-    if (node.source->attrs.op == nullptr) continue;
-    ndinputs.clear();
-    ndinputs.reserve(node.inputs.size());
-    for (const auto& j : node.inputs) {
-      ndinputs.emplace_back(arrays[idx.entry_id(j)]);
-    }
-    ndoutputs.clear();
-    ndoutputs.reserve(node.source->num_outputs());
-    for (size_t j = 0; j < node.source->num_outputs(); ++j) {
-      ndoutputs.emplace_back(arrays[idx.entry_id(i, j)]);
-    }
-
-    auto state = ImperativeRuntime::Get()->Invoke(
-        default_ctx, node.source->attrs, ndinputs, ndoutputs);
-    ImperativeRuntime::Get()->RecordOp(
-        nnvm::NodeAttrs(node.source->attrs), ndinputs, ndoutputs,
-        state, &save_inputs[i], &save_outputs[i]);
-  }
-
-  if (out_array != nullptr) {
-    // need to copy data. Fix later.
-    LOG(FATAL) << "CachedOp does not support specifying output yet.";
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(op->num_outputs());
+  if (*outputs == nullptr) {
+    *num_outputs = op->num_outputs();
+    for (int i = 0; i < *num_outputs; ++i) ndoutputs.push_back(new NDArray());
   } else {
-    ret->ret_handles.clear();
-    ret->ret_handles.reserve(idx.outputs().size());
-    for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      size_t index = idx.entry_id(idx.outputs()[i]);
-      CHECK(!arrays[index]->is_none());
-      ret->ret_handles.emplace_back(new NDArray(*arrays[index]));
+    CHECK_EQ(*num_outputs, op->num_outputs())
+        << "CachedOp expects " << op->num_outputs() << " outputs, but "
+        << *num_outputs << " was given.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
     }
-    *num_outputs = idx.outputs().size();
+  }
+
+  op->Forward(ndinputs, ndoutputs);
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*num_outputs);
+    for (int i = 0; i < *num_outputs; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
     *outputs = dmlc::BeginPtr(ret->ret_handles);
   }
 
