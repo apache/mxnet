@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from mxnet.test_utils import *
 import time
 import argparse
 import os
 import multiprocessing
+from mxnet.test_utils import *
 
 MAX_NUM_BATCH = 99999999
 COMP = "compute"
@@ -57,13 +57,15 @@ parser.add_argument('--enable-logging-for', default="0",
 parser.add_argument('--measure-only', default=None,
                     help="Measure only",
                     choices=[IO, COMP, COMM])
+parser.add_argument('--omit-row-sparse-push', action='store_true',
+                    help="omit row_sparse_push")
 
 
 def get_libsvm_data(data_dir, data_name, url, data_origin_name):
     if not os.path.isdir(data_dir):
         os.system("mkdir " + data_dir)
     os.chdir(data_dir)
-    if (not os.path.exists(data_name)):
+    if not os.path.exists(data_name):
         import urllib
         zippath = os.path.join(data_dir, data_origin_name)
         urllib.urlretrieve(url, zippath)
@@ -119,13 +121,13 @@ datasets = { 'kdda' : kdda, 'avazu' : avazu , 'criteo': criteo }
 
 
 def get_sym(feature_dim):
-     x = mx.symbol.Variable("data", stype='csr')
-     norm_init = mx.initializer.Normal(sigma=0.01)
-     w = mx.symbol.Variable("w", shape=(feature_dim, args.output_dim), init=norm_init, stype='row_sparse')
-     embed = mx.symbol.sparse.dot(x, w)
-     y = mx.symbol.Variable("softmax_label")
-     model = mx.symbol.SoftmaxOutput(data=embed, label=y, name="out")
-     return model
+    inputs = mx.symbol.Variable("data", stype='csr')
+    norm_init = mx.initializer.Normal(sigma=0.01)
+    weights = mx.symbol.Variable("w", shape=(feature_dim, args.output_dim), init=norm_init, stype='row_sparse')
+    embed = mx.symbol.sparse.dot(inputs, weights)
+    softmax_output = mx.symbol.Variable("softmax_label")
+    model = mx.symbol.SoftmaxOutput(data=embed, label=softmax_output, name="out")
+    return model
 
 
 def row_sparse_push(kv, param_arrays, grad_arrays, param_names):
@@ -170,6 +172,7 @@ if __name__ == '__main__':
     log_level = args.sparse_log_level
     measure_only = args.measure_only
     num_cores = multiprocessing.cpu_count()
+    omit_row_sparse_push = args.omit_row_sparse_push
     if measure_only == COMP or measure_only == IO:
         assert not kvstore, "when compute_only or io_only is set, kvstore should be None"
         num_batch = datasets[dataset]['lc'] / batch_size if num_batch == MAX_NUM_BATCH else num_batch
@@ -279,7 +282,7 @@ if __name__ == '__main__':
                 if nbatch == 1:
                     mod.forward_backward(batch)
                     mod.update()
-                else:
+                elif not omit_row_sparse_push:
                     row_sparse_push(kv, mod._exec_group.param_arrays, mod._exec_group.grad_arrays, mod._exec_group.param_names)
 
 
