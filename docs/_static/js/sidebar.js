@@ -231,6 +231,10 @@ $(document).ready(function () {
         }
         if ($('div.sphinxsidebar').css('visibility') == 'hidden') $('.content').css('width', '100%');
         if (url.indexOf('/api/') != -1) return;
+        if (url.indexOf('/install/') != -1) {
+            $('div.sphinxsidebar').hide();
+            $('.content').css('width', '100%');
+        }
         if (showRightToc) {
             $(window).scroll(function () {
                 scroll_righttoc();

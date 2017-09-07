@@ -124,7 +124,7 @@ img {
     height: 60px;
     margin-bottom: 0px;
     border-bottom: 0.01em solid #fff;
-    background-image: url("redesign-resource/mxnet-navbar.png");
+    background-image: url("mxnet-navbar.png");
     background-size: cover;
     background-attachment: scroll;
 }
@@ -295,12 +295,12 @@ img {
 
 @media screen and (max-width: 510px) {
     #search-input-wrap {
-        width: 140px;
+        width: 120px;
         margin-right: 10px;
     }
     
     .searchBox {
-        width: 140px;
+        width: 120px;
     }
 }
 
@@ -384,11 +384,17 @@ li.dropdown-submenu ul.dropdown-menu {
 }
 
 li.dropdown-submenu ul.dropdown-menu li {
-    height: auto
+    border-style: none !important;
 }
 
 li.dropdown-submenu ul.dropdown-menu a {
-    height: auto
+    padding-left: 20px !important;
+}
+
+@media screen and (max-width: 360px) {
+    li.dropdown-submenu ul.dropdown-menu a {
+        font-size: 12px !important;
+    }
 }
 
 /*dropdown submenu*/
@@ -397,13 +403,12 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .dropdown-submenu>.dropdown-menu {
-    top: 0;
-    left: 100%;
-    margin-top: -6px;
-    margin-left: -1px;
+    top: -8px;
+    left: 200px;
     -webkit-border-radius: 0 6px 6px 6px;
     -moz-border-radius: 0 6px 6px;
     border-radius: 0 6px 6px 6px;
+    background: transparent;
 }
 
 .dropdown-submenu:hover>.dropdown-menu {
@@ -420,7 +425,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     border-style: solid;
     border-width: 5px 0 5px 5px;
     border-left-color: #ccc;
-    margin-top: 5px;
+    margin-top: 10px;
     margin-right: -10px;
 }
 
@@ -470,8 +475,8 @@ li.dropdown-submenu ul.dropdown-menu a {
         top: 49px;
         width: 100%;
         height: 100%;
-        background: url(redesign-resource/mxnet-background.png);
-        background-attachment: fixed;
+        background: url(mxnet-background.png);
+        background-attachment: initial;
         background-size: cover;
     }
     
@@ -483,6 +488,11 @@ li.dropdown-submenu ul.dropdown-menu a {
         padding-top: 10px;
         color: #fff;
         text-decoration: none;
+    }
+    
+    #burgerMenu a:hover {
+        color: initial;
+        background-color: inherit;
     }
     
     #burgerMenu li {
@@ -565,7 +575,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     display: inline;
 }
 
-#install_blk {
+#why_mxnet {
     padding-left: 20px;
 }
 
