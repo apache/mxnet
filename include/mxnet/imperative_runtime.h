@@ -35,6 +35,39 @@ namespace mxnet {
 /*! \brief runtime functions for NDArray */
 class ImperativeRuntime {
  public:
+  class CachedOp {
+   public:
+    CachedOp(const nnvm::Symbol& sym);
+    uint32_t num_inputs() {
+      return fwd_graph_.indexed_graph().input_nodes().size();
+    }
+    uint32_t num_outputs() {
+      return fwd_graph_.outputs.size();
+    }
+    void Forward(const std::vector<NDArray*>& inputs,
+                 const std::vector<NDArray*>& outputs);
+    void Backward(const OpStatePtr& state,
+                  const std::vector<NDArray*>& inputs,
+                  const std::vector<NDArray*>& outputs);
+    nnvm::Graph GetForwardGraph(const std::vector<NDArray*>& inputs);
+    nnvm::Graph GetBackwardGraph(const OpStatePtr& state,
+                                 const std::vector<OpReqType>& reqs,
+                                 const std::vector<NDArray*>& inputs);
+    std::vector<nnvm::NodeEntry> Gradient(const nnvm::NodePtr& node,
+                                          const std::vector<nnvm::NodeEntry>& ograds);
+   private:
+    struct CachedOpState {
+      std::vector<NDArray> buff;
+      std::vector<OpStatePtr> states;
+    };
+    std::mutex mutex_;
+    nnvm::Graph fwd_graph_;
+    nnvm::Graph grad_graph_;
+    nnvm::Graph full_graph_;
+    std::vector<bool> curr_grad_req_;
+    std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
+    std::vector<uint32_t> bwd_input_eid_;
+  };
   /*! \brief whether operator recording is on. */
   bool is_training() const {
     return is_train_;
@@ -134,6 +167,14 @@ class ImperativeRuntime {
       uint32_t num_inputs, uint32_t num_outputs,
       std::vector<bool> *p_save_inputs,
       std::vector<bool> *p_save_outputs);
+  void RunGraph(
+      const Context& default_ctx,
+      const nnvm::IndexedGraph& idx,
+      const std::vector<NDArray*> arrays,
+      size_t node_start, size_t node_end,
+      std::vector<OpReqType>&& array_reqs,
+      std::vector<int>&& ref_count,
+      std::vector<OpStatePtr> *p_states);
   /*! \brief indicate whether is training. */
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
@@ -147,6 +188,8 @@ class ImperativeRuntime {
   /*! \brief variable count used for naming */
   std::atomic<uint64_t> variable_count_{0};
 };
+
+using CachedOpPtr = std::shared_ptr<ImperativeRuntime::CachedOp>;
 
 }  // namespace mxnet
 #endif  // MXNET_IMPERATIVE_RUNTIME_H_
