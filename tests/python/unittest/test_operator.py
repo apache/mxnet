@@ -3377,21 +3377,104 @@ def check_ctc_loss(acts, labels, loss_truth):
 def test_ctc_loss():
     # Test 1: check that batches are same + check against Torch WarpCTC
     acts = np.array([
-        [[3.4, 1.2, -0.1, -2.34, 1.2], [3.4, 1.2, -0.1, -2.34, 1.2]],
-        [[0.2, 0.3, 0.22, 0.123 ,0.1], [0.2, 0.3, 0.22, 0.123, 0.1]],
-        [[-14, -13, -12, -11, -15], [-14, -13, -12, -11, -15]]],
+        [[1.2, 3.4, 1.2, -0.1, -2.34], [1.2, 3.4, 1.2, -0.1, -2.34]],
+        [[0.1, 0.2, 0.3, 0.22, 0.123], [0.1, 0.2, 0.3, 0.22, 0.123]],
+        [[-15, -14, -13, -12, -11], [-15, -14, -13, -12, -11]]],
                     dtype=np.float32)
-    labels = np.array([[1, 2, -1], [1, 2, -1]])
+    labels = np.array([[2, 3, 0], [2, 3, 0]])
     true_loss = np.array([4.04789, 4.04789], dtype=np.float32) # from Torch
     check_ctc_loss(acts, labels, true_loss)
     # Test 2:
     acts2 = np.array([
-        [[-4, -3, -2, -1, -5], [3.4, 1.2, -0.1, -2.34, 1.2]],
-        [[-9, -8, -7, -6, -10], [0.2, 0.3, 0.22, 0.123, 0.1]],
-        [[-14, -13, -12, -11, -15], [-14.2, -13.5, -12.2, -11.22, -15]]], dtype=np.float32)
-    labels2 = np.array([[1, 2, 0], [1, -1, -1]], dtype=np.float32)
+        [[-5, -4, -3, -2, -1], [1.2, 3.4, 1.2, -0.1, -2.34]],
+        [[-10, -9, -8, -7, -6], [0.1, 0.2, 0.3, 0.22, 0.123]],
+        [[-15, -14, -13, -12, -11], [-15, -14.2, -13.5, -12.2, -11.22]]], dtype=np.float32)
+    labels2 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.float32)
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
+
+
+def test_ctc_loss_grad():
+    def check_ctc_loss_grad(reserve_first_label): # from tf
+        vocab_size = 5
+        max_label_len = 5
+        padding_mask = -1+reserve_first_label
+
+        targets_0 = [0, 1, 2, 1, 0]
+        loss_log_prob_0 = -3.34211
+        input_prob_matrix_0 = np.asarray(
+            [[0.633766, 0.221185, 0.0917319, 0.0129757, 0.0142857, 0.0260553],
+             [0.111121, 0.588392, 0.278779, 0.0055756, 0.00569609, 0.010436],
+             [0.0357786, 0.633813, 0.321418, 0.00249248, 0.00272882, 0.0037688],
+             [0.0663296, 0.643849, 0.280111, 0.00283995, 0.0035545, 0.00331533],
+             [0.458235, 0.396634, 0.123377, 0.00648837, 0.00903441, 0.00623107]],
+            dtype=np.float32)
+        gradient_log_prob_0 = np.asarray(
+            [[-0.366234, 0.221185, 0.0917319, 0.0129757, 0.0142857, 0.0260553],
+             [0.111121, -0.411608, 0.278779, 0.0055756, 0.00569609, 0.010436],
+             [0.0357786, 0.633813, -0.678582, 0.00249248, 0.00272882, 0.0037688],
+             [0.0663296, -0.356151, 0.280111, 0.00283995, 0.0035545, 0.00331533],
+             [-0.541765, 0.396634, 0.123377, 0.00648837, 0.00903441, 0.00623107]],
+            dtype=np.float32)
+
+        targets_1 = [0, 1, 1, 0]
+        loss_log_prob_1 = -5.42262
+        input_prob_matrix_1 = np.asarray(
+            [[0.30176, 0.28562, 0.0831517, 0.0862751, 0.0816851, 0.161508],
+             [0.24082, 0.397533, 0.0557226, 0.0546814, 0.0557528, 0.19549],
+             [0.230246, 0.450868, 0.0389607, 0.038309, 0.0391602, 0.202456],
+             [0.280884, 0.429522, 0.0326593, 0.0339046, 0.0326856, 0.190345],
+             [0.423286, 0.315517, 0.0338439, 0.0393744, 0.0339315, 0.154046]],
+            dtype=np.float32)
+        gradient_log_prob_1 = np.asarray(
+            [[-0.69824, 0.28562, 0.0831517, 0.0862751, 0.0816851, 0.161508],
+             [0.24082, -0.602467, 0.0557226, 0.0546814, 0.0557528, 0.19549],
+             [0.230246, 0.450868, 0.0389607, 0.038309, 0.0391602, -0.797544],
+             [0.280884, -0.570478, 0.0326593, 0.0339046, 0.0326856, 0.190345],
+             [-0.576714, 0.315517, 0.0338439, 0.0393744, 0.0339315, 0.154046]],
+            dtype=np.float32)
+
+        inputs = [
+            np.vstack(
+                [input_prob_matrix_0[t, :], input_prob_matrix_1[t, :]])
+            for t in range(5)
+        ] + 2 * [np.nan * np.ones((2, vocab_size+1), np.float32)]
+        inputs = np.log(np.asarray(inputs, dtype=np.float32))
+
+        grad_truth = np.array([
+            np.vstack(
+                [gradient_log_prob_0[t, :], gradient_log_prob_1[t, :]])
+            for t in range(5)
+        ] + 2 * [np.zeros((2, vocab_size+1), np.float32)])
+
+        if reserve_first_label:
+            inputs = np.roll(inputs, 1, axis=2)
+            grad_truth = np.roll(grad_truth, 1, axis=2)
+
+        labels = (np.asarray([x + [padding_mask]*(max_label_len-len(x))
+                             for x in [targets_0, targets_1]])+reserve_first_label)
+
+        seq_lens = np.array([5, 5], dtype=np.int32)
+        label_lens = np.array([5, 4], dtype=np.int32)
+        loss_truth = np.array([-loss_log_prob_0, -loss_log_prob_1], np.float32)
+
+        with default_context():
+            data = mx.nd.array(inputs)
+            label = mx.nd.array(labels)
+            data.attach_grad()
+            with mx.autograd.record():
+                l = mx.contrib.ndarray.CTCLoss(data, label,
+                                               use_data_lengths=True,
+                                               use_label_lengths=True,
+                                               data_lengths=mx.nd.array(seq_lens),
+                                               label_lengths=mx.nd.array(label_lens),
+                                               reserve_first_label=reserve_first_label)
+                l.backward()
+            assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
+            assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
+
+    check_ctc_loss_grad(False)
+    check_ctc_loss_grad(True)
 
 
 def test_quantization_op():
