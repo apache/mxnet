@@ -119,7 +119,13 @@ struct CastStorageRspDnsKernel {
     IType rid = idx[i];
     dim_t dns_offset = rid * row_length;
     dim_t rsp_offset = i * row_length;
-    memcpy(dns + dns_offset, data + rsp_offset, sizeof(DType) * row_length);
+    #if defined(__CUDACC__)
+      for (dim_t col = 0; col < row_length; col++) {
+        dns[dns_offset + col] = data[rsp_offset + col];
+      }
+    #else
+      memcpy(dns + dns_offset, data + rsp_offset, sizeof(DType) * row_length);
+    #endif
   }
 };
 
