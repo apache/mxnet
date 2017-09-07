@@ -27,9 +27,12 @@
 
 namespace mshadow {
 template<typename DType>
-static MSHADOW_CINLINE bool between(const DType value, const DType lowerBound, const DType upperBound) {
+static MSHADOW_CINLINE bool between(const DType value,
+                                    const DType lowerBound,
+                                    const DType upperBound) {
   return value >= lowerBound && value <= upperBound;
 }
+
 template<typename DType>
 inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
                                     const Tensor<cpu, 4, DType> &input,
