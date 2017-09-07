@@ -80,8 +80,63 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void Init(const std::vector<int>& keys,
-            const std::vector<NDArray>& values) override {
+  void set_updater(const Updater& updater) override {
+    CHECK(updater) << "invalid updater";
+    if (IsServerNode()) {
+      CHECK_NOTNULL(server_)->set_updater(updater);
+    } else {
+      updater_ = updater;
+    }
+  }
+
+  void Barrier() override {
+    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
+  }
+
+  void SendCommandToServers(int cmd_id,
+                            const std::string& cmd_body) override {
+    CHECK_NOTNULL(ps_worker_);
+    ps_worker_->Wait(ps_worker_->Request(cmd_id, cmd_body, ps::kServerGroup));
+  }
+
+  int get_group_size() const override { return ps::NumWorkers(); }
+
+  int get_rank() const override { return ps::MyRank(); }
+
+  int get_num_dead_node(int node_id, int timeout) const override {
+    int number = 0;
+    auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
+    const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);
+    std::unordered_set<int> watch_set(watch_nodes.begin(), watch_nodes.end());
+    for (int r : dead_nodes) {
+      if (watch_set.find(r) != watch_set.end()) number++;
+    }
+    return number;
+  }
+
+  void RunServer(const Controller& controller) override {
+    CHECK(!IsWorkerNode());
+    if (IsServerNode()) {
+      server_ = new KVStoreDistServer();
+      server_->set_controller(controller);
+    }
+
+    ps::StartAsync("mxnet_server\0");
+    if (!ps::Postoffice::Get()->is_recovery()) {
+      ps::Postoffice::Get()->Barrier(
+        ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
+    }
+    if (server_) server_->Run();
+    ps::Finalize();
+    if (server_) {
+      delete server_;
+    }
+    server_ = nullptr;
+  }
+
+ private:
+  void InitImpl(const std::vector<int>& keys,
+                const std::vector<NDArray>& values) override {
     CheckUnique(keys);
     for (size_t i = 0; i < keys.size(); ++i) {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
@@ -100,15 +155,15 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void Push(const std::vector<int>& keys,
-            const std::vector<NDArray>& values,
-            int priority) override {
+  void PushImpl(const std::vector<int>& keys,
+                const std::vector<NDArray>& values,
+                int priority) override {
     Push_(keys, values, priority, true);
   }
 
-  void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
-            int priority) override {
+  void PullImpl(const std::vector<int>& keys,
+                const std::vector<NDArray*>& values,
+                int priority) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
@@ -155,9 +210,9 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void PullRowSparse(const std::vector<int>& keys,
-                     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                     const int priority = 0) {
+  void PullRowSparseImpl(const std::vector<int>& keys,
+                         const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                         int priority = 0) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
     GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
@@ -198,66 +253,10 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void set_updater(const Updater& updater) override {
-    CHECK(updater) << "invalid updater";
-    if (IsServerNode()) {
-      CHECK_NOTNULL(server_)->set_updater(updater);
-    } else {
-      updater_ = updater;
-    }
-  }
-
-  void Barrier() override {
-    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
-  }
-
-
-  void SendCommandToServers(int cmd_id,
-                            const std::string& cmd_body) override {
-    CHECK_NOTNULL(ps_worker_);
-    ps_worker_->Wait(ps_worker_->Request(cmd_id, cmd_body, ps::kServerGroup));
-  }
-
-  int get_group_size() const override { return ps::NumWorkers(); }
-
-  int get_rank() const override { return ps::MyRank(); }
-
-  int get_num_dead_node(int node_id, int timeout) const override {
-    int number = 0;
-    auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(timeout);
-    const auto& watch_nodes = ps::Postoffice::Get()->GetNodeIDs(node_id);
-    std::unordered_set<int> watch_set(watch_nodes.begin(), watch_nodes.end());
-    for (int r : dead_nodes) {
-      if (watch_set.find(r) != watch_set.end()) number++;
-    }
-    return number;
-  }
-
-  void RunServer(const Controller& controller) override {
-    CHECK(!IsWorkerNode());
-    if (IsServerNode()) {
-      server_ = new KVStoreDistServer();
-      server_->set_controller(controller);
-    }
-
-    ps::StartAsync("mxnet_server\0");
-    if (!ps::Postoffice::Get()->is_recovery()) {
-      ps::Postoffice::Get()->Barrier(
-        ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
-    }
-    if (server_) server_->Run();
-    ps::Finalize();
-    if (server_) {
-      delete server_;
-    }
-    server_ = nullptr;
-  }
-
- private:
   void Push_(const std::vector<int>& keys,
              const std::vector<NDArray>& values,
              int priority,
-             bool do_merge)  {
+             bool do_merge) {
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
@@ -320,7 +319,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
-  void PullRowSparse_(int key, NDArray *recv_buf, const NDArray& indices, int priority) {
+  void PullRowSparse_(const int key, NDArray *recv_buf, const NDArray& indices, int priority) {
     using namespace rowsparse;
     auto pull_from_servers = [this, key, recv_buf, indices]
                              (RunContext rctx, Engine::CallbackOnComplete cb) {

@@ -339,6 +339,7 @@ class KVStoreDistServer {
       auto len = unit_len * num_rows;
       // concat values
       response.vals.resize(len);
+      #pragma omp parallel for
       for (size_t i = 1; i <= num_rows; i++) {
         int key = DecodeKey(req_data.keys[i]);
         int64_t row_id = key - master_key;
