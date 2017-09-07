@@ -1,6 +1,6 @@
 /*Preprocess*/
 var LANG = ['python', 'scala', 'r', 'julia', 'c++', 'perl'];
-var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/how_to/', '/architecture/'];
+var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/how_to/', '/architecture/', '/community/'];
 for(var i = 0; i < LANG.length; ++i) {
     TITLE_WITH_LANG.push('/api/' + LANG[i] + '/');
 }
@@ -9,22 +9,18 @@ for(var i = 0; i < LANG.length; ++i) {
 var API_PAGE = ['python'];
 var isAPI = false;
 
-function render_left_helper(toc, currentText) {
+function render_left_helper(toc) {
     var lefttoc = toc;
-    var currentText = currentText, trailing = ' Documents';
-    if (currentText.endsWith(trailing)) currentText = currentText.substring(0, currentText.length - trailing.length);
-    if (currentText == 'System') currentText = 'Architecture';
 
     lefttoc.addClass('current');
     $('.leftsidebar > .sphinxsidebarwrapper').children().remove();
     $('.leftsidebar > .sphinxsidebarwrapper').append(lefttoc);
-    
-    $('.leftsidebar > .sphinxsidebarwrapper').prepend('<h3>Contents</h3>');
+
     addToggle('.leftsidebar');
     
     $('.leftsidebar li a').click(function () {
-        $('.leftsidebar li a').css('color', 'black');
-        $(this).css('color', '#337ab7');
+        $('.leftsidebar li a').css('color', '#337ab7');
+        $(this).css('color', 'black');
     });
 }
 
@@ -38,6 +34,7 @@ function render_lefttoc() {
         $('.sphinxsidebar').css("visibility", "visible");
         return;
     }
+    // If current page is not index page
     if (url.indexOf(indexTrailing) == -1) {
         for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
             var path = TITLE_WITH_LANG[i];
@@ -50,14 +47,14 @@ function render_lefttoc() {
                         break;
                     }
                 }
-                var urlPath = 'https://' + window.location.host + version +  path;
+                var protocol = location.protocol.concat("//");
+                var urlPath = protocol + window.location.host + version +  path;
                 $.get(urlPath + indexTrailing, null, function(data) {
-                    var currentText = $($.parseHTML(data)).find('.leftsidebar >  .sphinxsidebarwrapper > ul.current > li.current > a').html();
                     if (isAPI) {
-                        render_left_helper($($.parseHTML(data)).find('#table-of-contents > div > ul'), currentText);
+                        render_left_helper($($.parseHTML(data)).find('#table-of-contents > div > ul'));
                     }
                     else {
-                        render_left_helper($($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul'), currentText);
+                        render_left_helper($($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul'));
                         var tocLink = $('.leftsidebar .sphinxsidebarwrapper .leaf a');
                         var staticLink = 'http';
                         tocLink.each(function () {
@@ -68,21 +65,22 @@ function render_lefttoc() {
                     }
                     keepExpand();
                     $('.sphinxsidebar').css("visibility", "visible");
+                    if ($('div.sphinxsidebar').css('display') != 'none') $('.content').css('width', 'calc(100% - 300px)');
+                    else $('.content').css('width', '100%');
                 })
             }
         }
     }
     else {
-        var currentText = $('.leftsidebar >  .sphinxsidebarwrapper > ul.current > li.current > a').html();
         var toc = isAPI ? $('#table-of-contents > div > ul').clone() : $('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul').clone();
-        render_left_helper(toc, currentText);
+        render_left_helper(toc);
         $('.sphinxsidebar').css("visibility", "visible");
     }
 }
 
 /*Render contents inside page*/
 function render_righttoc() {
-    var url = window.location.href, apiFlag = '/api/', indexTrailing = 'index.html';
+    var url = window.location.href, indexTrailing = 'index.html';
     
     var rightTocTitle = "Page Contents";
     $("div.rightsidebar > div.sphinxsidebarwrapper > h3").children().remove();
@@ -91,8 +89,8 @@ function render_righttoc() {
     addToggle('.rightsidebar');
     
     $('.rightsidebar li a').click(function () {
-        $('.rightsidebar li a').css('color', 'black');
-        $(this).css('color', '#337ab7');
+        $('.rightsidebar li a').css('color', '#337ab7');
+        $(this).css('color', 'black');
     });
     
     if (url.indexOf(indexTrailing) != -1 || isAPI) {
@@ -107,8 +105,8 @@ function scroll_righttoc() {
     for(var i = 1; i < links.length; ++i) {
         var divID = links.eq(i).attr('href');
         if ($(divID).offset().top - $(window).scrollTop() > navbarHeight) {
-            $('.rightsidebar a').css('color', 'black');
-            links.eq(i - 1).css('color', '#337ab7');
+            $('.rightsidebar a').css('color', '#337ab7');
+            links.eq(i - 1).css('color', 'black');
             if (!links.eq(i - 1).parent().hasClass('leaf')) {
                 links.eq(i - 1).parent().removeClass('closed');
                 links.eq(i - 1).parent().addClass('opened');
@@ -182,6 +180,7 @@ function keepExpand() {
         }
     }
     
+    //Merge right toc into left toc for API pages since they are quite long
     if (isAPI) {
         var rootEntry = currentEntry;
         if (rootEntry.parent().parent().is('li')) rootEntry = rootEntry.parent().parent();
@@ -201,8 +200,8 @@ function keepExpand() {
             }
         });
         $('.leftsidebar li a').click(function () {
-            $('.leftsidebar li a').css('color', 'black');
-            $(this).css('color', '#337ab7');
+            $('.leftsidebar li a').css('color', '#337ab7');
+            $(this).css('color', 'black');
         });
     }
     currentEntry.find('a').first().css('color', '#337ab7');
@@ -218,9 +217,9 @@ function keepExpand() {
 
 $(document).ready(function () {
     var url = window.location.href, searchFlag = 'search.html';
+    var showRightToc = false;
     try {
-        if(url.indexOf('/get_started/') != -1) return;
-        if (url.indexOf(searchFlag) == -1) {
+        if (url.indexOf('/get_started/') == -1 && url.indexOf(searchFlag) == -1) {
             for(var i = 0; i < API_PAGE.length; ++i) {
                 if (url.indexOf('/api/' + API_PAGE[i]) != -1) {
                     isAPI = true;
@@ -230,13 +229,27 @@ $(document).ready(function () {
             render_righttoc();
             if ($('.leftsidebar').length) render_lefttoc();
         }
-        
-        if(url.indexOf('/api/') != -1) return;
-        $(window).scroll(function () {
-            scroll_righttoc();
-        });
+        if ($('div.sphinxsidebar').css('visibility') == 'hidden') $('.content').css('width', '100%');
+        if (url.indexOf('/api/') != -1) return;
+        if (url.indexOf('/install/') != -1) {
+            $('div.sphinxsidebar').hide();
+            $('.content').css('width', '100%');
+        }
+        if (showRightToc) {
+            $(window).scroll(function () {
+                scroll_righttoc();
+            });
+        }
+        else {
+            $('.rightsidebar').hide();
+        }
+        // move right toc to left if current left toc is empty
+        if ($('.leftsidebar > .sphinxsidebarwrapper').children().length == 0) {
+            $('.leftsidebar > .sphinxsidebarwrapper').append($('.rightsidebar > .sphinxsidebarwrapper > ul'));
+        }
     }
     catch(err) {
+        if ($('div.sphinxsidebar').css('visibility') == 'hidden') $('.content').css('width', '100%');
         return;
     }
 });

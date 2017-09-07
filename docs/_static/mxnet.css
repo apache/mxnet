@@ -1,3 +1,22 @@
+/*-------------------- AmazonEmber font -----------------------------------*/
+@font-face {
+    font-family: AmazonEmber;
+    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Rg.ttf);
+    font-weight: normal;
+}
+
+@font-face {
+    font-family: AmazonEmber;
+    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Bd.ttf);
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: AmazonEmber;
+    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Th.ttf);
+    font-weight: 300;
+}
+
 
 /*-------------------- basic html elements and classes --------------------*/
 html, body {
@@ -9,16 +28,18 @@ html, body {
 body {
     display: block;
     visibility: hidden;
+    background-size: cover;
+    background-attachment: fixed;
 }
 
 body, div {
-    font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+    font-family: AmazonEmber;
     font-size: 16px;
     color: #000;
 }
 
 p {
-    font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+    font-family: AmazonEmber;
     color: #000;
     font-size: 16px;
     line-height: 1.5em;
@@ -34,6 +55,13 @@ li, dt a, dt span {
     line-height: 1.5em;
 }
 
+.footer {
+    z-index: 10;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
 /* /\*Content paragraph space*\/ */
 /* div.content p { */
 /*     margin-top: 20px; */
@@ -41,7 +69,7 @@ li, dt a, dt span {
 
 /*------------------ Headings -------------------*/
 h1, h2, h3 {
-    font-family: "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
+    font-family: AmazonEmber;
     margin-top: 18px;
     margin-bottom: 18px;
     color: #444;
@@ -51,6 +79,7 @@ h1 {
     margin-top: 0px;
     margin-bottom: 25px;
     font-size: 28px;
+    font-weight: bold;
 }
 
 h2 {
@@ -90,15 +119,18 @@ img {
 
 /*-----------------------nav bar-----------------------*/
 .navbar {
-    background-color:#0079b2;
     opacity: 0.9;
     border: 0px;
     height: 60px;
     margin-bottom: 0px;
+    border-bottom: 0.01em solid #fff;
+    background-image: url("https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-navbar.png");
+    background-size: cover;
+    background-attachment: scroll;
 }
 
 .navbar .container {
-    position: fixed;
+    position: relative;
     left: 20px;
 }
 
@@ -124,7 +156,8 @@ img {
     -webkit-box-align: center;
     -ms-flex-align: center;
     -webkit-align-items: center;
-    align-items: center
+    align-items: center;
+    padding-left: 10px;
 }
 
 @media screen and(max-width: 768 px) {
@@ -143,18 +176,14 @@ img {
     width: 125px;
 }
 
-@media screen and (max-width: 405px) {
-    #logo-wrap {
-        margin-left: -25px;
-    }
-}
-
 #logo {
+    color: #fff;
     width: 150px;
     display: block;
     float: left;
     height: 60px;
-    padding: 10px 0 0 0;
+    padding: 15px 0 0 0;
+    text-decoration: none;
 }
 
 #logo > img {
@@ -175,12 +204,10 @@ img {
     color: #fff;
     text-decoration: none;
     line-height: 50px;
-    opacity: .7;
-    -webkit-transition: .2s;
-    transition: .2s;
-    font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: AmazonEmber;
     display: inline-block;
     padding: 0 15px;
+    font-weight: 300;
 }
 
 .main-nav-link:hover {
@@ -190,18 +217,20 @@ img {
 }
 
 #dropdown-menu-position-anchor, 
+#dropdown-menu-position-anchor-docs,
+#dropdown-menu-position-anchor-community,
 #dropdown-menu-position-anchor-version, 
 #dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
 
-#package-dropdown-menu {
+.navbar-menu {
     top: 36px;
     border-radius: 4px;
     padding: 0;
 }
 
-#package-dropdown-menu > li > a {
+.navbar-menu > li > a {
     color: #0079b2;
     padding: 6px 16px;
 
@@ -209,10 +238,12 @@ img {
 
 #search-input-wrap {
     display: block;
-    position: fixed;
+    position: absolute;
     top: 15px;
-    right: 40px;
-    width: 140px;
+    right: 20px;
+    width: 200px;
+    -webkit-transition: width 0.5s;
+    transition: width 0.5s;
 }
 
 #search-input-wrap ul {
@@ -223,7 +254,7 @@ img {
     display: none;
     position: fixed;
     top: 20px;
-    right: 20px;
+    right: 35px;
     color: white;
 }
 
@@ -231,13 +262,15 @@ img {
     position: absolute;
     top: 0;
     left: 0;
-    width: 140px;
-    background: #87CEFA;
+    width: 200px;
+    background: transparent;
     border-radius: 5px;
+    -webkit-transition: width 0.5s;
+    transition: width 0.5s;
 }
 
 .searchBox input {
-    background: #87CEFA;
+    background: transparent;
 }
 
 .searchBox input::placeholder {
@@ -262,19 +295,12 @@ img {
 
 @media screen and (max-width: 510px) {
     #search-input-wrap {
-        display: none;
-        right: 40px;
-        margin-left: -100px;
+        width: 120px;
+        margin-right: 10px;
     }
-
-    #searchIcon {
-        display: block;
-    }
-}
-
-@media screen and (min-width: 511px) {
-    #search-input-wrap {
-        display: block !important;
+    
+    .searchBox {
+        width: 120px;
     }
 }
 
@@ -288,7 +314,7 @@ img {
 #lang-select-label {
     color: #fff;
     opacity: .7;
-    font-family: Lato, Helvetica Neue, Helvetica, Arial, sans-serif;
+    font-family: AmazonEmber;
     line-height: 50px
 }
 
@@ -318,18 +344,13 @@ div .burgerIcon {
     font-size: 25px;
     position: fixed;
     right: 155px;
-    top: 10px;
-    display: none
+    top: 11px;
+    display: none;
+    width: 30px;
 }
 
 div .burgerIcon a {
     color: white;
-}
-
-@media screen and (max-width: 405px) {
-    div .burgerIcon {
-        margin-left: -25px;
-    }
 }
 
 /*burger menu*/
@@ -350,7 +371,7 @@ div .burgerIcon a {
     height: 30px;
     padding-left: 5px;
     width: 108px;
-    max-width: 200px
+    max-width: 250px;
 }
 
 #burgerMenu li, #plusMenu li {
@@ -363,11 +384,17 @@ li.dropdown-submenu ul.dropdown-menu {
 }
 
 li.dropdown-submenu ul.dropdown-menu li {
-    height: auto
+    border-style: none !important;
 }
 
 li.dropdown-submenu ul.dropdown-menu a {
-    height: auto
+    padding-left: 20px !important;
+}
+
+@media screen and (max-width: 360px) {
+    li.dropdown-submenu ul.dropdown-menu a {
+        font-size: 12px !important;
+    }
 }
 
 /*dropdown submenu*/
@@ -376,13 +403,12 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .dropdown-submenu>.dropdown-menu {
-    top: 0;
-    left: 100%;
-    margin-top: -6px;
-    margin-left: -1px;
+    top: -8px;
+    left: 200px;
     -webkit-border-radius: 0 6px 6px 6px;
     -moz-border-radius: 0 6px 6px;
     border-radius: 0 6px 6px 6px;
+    background: transparent;
 }
 
 .dropdown-submenu:hover>.dropdown-menu {
@@ -399,7 +425,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     border-style: solid;
     border-width: 5px 0 5px 5px;
     border-left-color: #ccc;
-    margin-top: 5px;
+    margin-top: 10px;
     margin-right: -10px;
 }
 
@@ -422,9 +448,9 @@ li.dropdown-submenu ul.dropdown-menu a {
 /*Plus icon*/
 .plusIcon {
     display: none;
-    position: fixed;
+    position: absolute;
     top: 20px;
-    right: 175px;
+    right: 210px;
     width: 30px;
 }
 
@@ -437,18 +463,50 @@ li.dropdown-submenu ul.dropdown-menu a {
         display: none !important;
     }
 
-    div .burgerIcon {
+    div.burgerIcon {
         display: block;
         position: fixed;
-        top: 10px;
-        left: 160px;
+        left: 45px;
+    }
+    
+    #burgerMenu {
+        position: fixed;
+        left: 0;
+        top: 49px;
+        width: 100%;
+        height: 100%;
+        background: url(https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-background.png);
+        background-attachment: initial;
+        background-size: cover;
+    }
+    
+    #burgerMenu a {
+        display: block;
+        font-size: 19px;
+        width: auto;
+        padding-left: 75px;
+        padding-top: 10px;
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    #burgerMenu a:hover {
+        color: initial;
+        background-color: inherit;
+    }
+    
+    #burgerMenu li {
+        border-bottom: 1px solid lightgray;
+        height: 50px;
+    }
+    
+    #logo-wrap {
+        margin-left: 30px;
     }
 }
 /*--------------------------banner---------------------------*/
 #splash{
-    padding:60px 0 50px 0;
-    background-color:#0079b2;
-    /* background-image:url(../img/bg.jpg); */
+    padding:60px 0 0 0;
     background-size:cover;
     background-attachment:fixed;
     color:#fff;
@@ -459,31 +517,43 @@ li.dropdown-submenu ul.dropdown-menu a {
     text-align: center
 }
 
-#splash #banner-title {
-    padding: 20px 0 10px 0;
-    font-size: 40px;
-    line-height: 1.15;
-    font-weight: 300;
-    font-family: Lato, Helvetica Neue, Helvetica, Arial, sans-serif;
-    color: #fff;
+#banner-title span {
+    font-family: AmazonEmber;
+    font-weight: bold;
 }
 
-@media screen and (min-width:769px) {
-    #splash #banner-title {
-        padding-top: 100px;
-    }
+#banner-title {
+    padding: 60px 0 10px 0;
+    font-size: 40px;
+    line-height: 55px;
+    font-weight: 300;
+    font-family: AmazonEmber;
+    color: #fff;
+    max-width: 600px;
+    text-align: left;
+    margin-left: 30px;
+}
+
+#landing-title {
+    margin-right: 40px;
+    font-size: 35px;
+    color: #fff;
+    font-family: AmazonEmber;
+    font-weight: 300;
+}
+
+#intro {
+    font-size: 16px;
+    color: #fff;
+    font-family: AmazonEmber;
+    font-weight: 300;
 }
 
 @media screen and (max-width:768px) {
-    #splash #banner-title {
-            font-size: 30px;
-            padding: 60px 30px 10px 30px;
-    }
-}
-
-@media screen and (max-width:510px) {
-    #splash #banner-title {
-            padding-top: 60px;
+    #banner-title {
+        font-size: 30px;
+        padding: 60px 30px 10px 30px;
+        margin-left: 0;
     }
 }
 
@@ -496,62 +566,55 @@ li.dropdown-submenu ul.dropdown-menu a {
     margin:2em 0 4em 0;
 }
 
-#why_mxnet, #install_blk {
-    margin:2em 0
+#landing-btn-blk {
+    margin-top: 2em;
 }
 
-#why_mxnet_btn, #install_btn, #release_btn {
+#why_mxnet, #install_blk {
+    margin:2em 0;
+    display: inline;
+}
+
+#why_mxnet {
+    padding-left: 20px;
+}
+
+@media screen and (max-width:400px) {
+    #install_blk, #install_blk{
+        display: block;
+    }
+    
+    #install_blk {
+        padding-left: 0;
+        margin-top: 0;
+    }
+}
+
+#why_mxnet_btn {
     border: 1.8px solid #FFFFFF;
     color: #FFFFFF;
-    display: inline-block;
+    display: inline;
     font-size: 18px;
-    font-family: Helvetica, Helvetica Neue, Arial, sans-serif;
+    font-family: AmazonEmber;
     padding: 8px 20px;
     -webkit-transition: .2s;
     transition: .2s;
-    width: 160px;
-    border-radius: 30px;
+}
+
+#install_btn {
+    border: 1.8px solid #FFFFFF;
+    color: #fff;
+    display: inline;
+    font-size: 18px;
+    font-family: AmazonEmber;
+    padding: 8px 40px;
+    -webkit-transition: .2s;
+    transition: .2s;
 }
 
 #release_btn {
     width: auto;
     border: none;
-}
-
-@media (min-width: 768px) {
-    #why_mxnet_btn {
-        margin-right: -45%;
-    }
-    #install_btn {
-        margin-left: -45%;
-    }
-}
-
-@media (min-width: 992px) {
-    #why_mxnet_btn {
-        margin-right: -55%;
-    }
-    #install_btn {
-        margin-left: -55%;
-    }
-}
-
-@media (min-width: 1200px) {
-    #why_mxnet_btn {
-        margin-right: -65%;
-    }
-    #install_btn {
-        margin-left: -65%;
-    }
-}
-
-@media (max-width: 767px) {
-    #why_mxnet_btn {
-        margin-bottom: -20%;
-    }
-    #install_btn {
-        margin-top: -20%;
-    }
 }
 
 #why_mxnet_btn:hover, #install_btn:hover {
@@ -563,9 +626,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 /*------------------------index page section----------------------------*/
 .section-tout {
-    padding:3em 0 3em;
-    border-bottom:1px solid rgba(0,0,0,.05);
-    background-color:#fff
+    padding:3em 0 1em;
 }
 
 .section-tout .container {
@@ -577,21 +638,30 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-tout .row div {
-    height: 100%;
+    height: 110%;
     padding-left: 50px;
+    background-color:#fff;
+    box-shadow: 0px 2px 4px 0px rgba(0, 28, 36, 0.5);
 }
 
 .section-tout .row a {
+    font-family: AmazonEmber;
     position: absolute;
     bottom: 20px;
+    border: solid 1px;
+    padding: 5px 10px;
+    color: #111;
 }
 
 .section-tout h3{
+    font-family: AmazonEmber;
     font-size:20px;
-    color: #444;
+    color:  #007dbc;
+    padding-top: 10px
 }
 
 .section-tout p {
+    font-family: AmazonEmber;
     margin-bottom:2em;
 }
 
@@ -605,34 +675,76 @@ li.dropdown-submenu ul.dropdown-menu a {
     }
 
     .section-tout .row div {
-        margin-bottom: 20px;
-        padding-left: 20px;
+        padding-left: 45px;
+    }
+    
+    .section-tout .row p {
+        padding-bottom: 10px;
+    }
+}
+
+@media (max-width: 767px) {
+    .section-tout .row div {
+        margin-bottom: -20px;
     }
 }
 
 .section-util {
-    background-color: #eaf1f1;
     padding:3em 0 3em;
-    border-bottom:1px solid rgba(0,0,0,.05);
-    text-align: center;
+    text-align: left;
+    margin-bottom: 50px;
+}
+
+.section-util .row > div {
+    height: 320px;
+    padding-left: 50px;
+    padding-top: 40px;
+}
+
+.section-util .row div h2 {
+    font-family: AmazonEmber;
+    color: #fff;   
+}
+
+#model-zoo-blk {
+    background-color:  #00446e;
+    box-shadow: 0px 2px 4px 0px rgba(0, 28, 36, 0.5);
+}
+
+#example-blk {
+    background-color:  #006ea7;
+    box-shadow: 0px 2px 4px 0px rgba(0, 28, 36, 0.5);
+}
+
+#tutorial-blk {
+    background-color:  #00a1c9;
+    box-shadow: 0px 2px 4px 0px rgba(0, 28, 36, 0.5);
+}
+
+@media (min-width: 1200px) {
+    #model-zoo-blk {
+        width: 370px;
+        margin-right: 20px;
+    }
+
+    #example-blk {
+        width: 370px;
+        margin-right: 20px;
+    }
 }
 
 .section-util p {
-    color: #999;
+    font-family: AmazonEmber;
+    color: #fff;
     position: absolute;
-    width: 50%;
-    margin: auto;
-    left: 0;
-    right: 0;
+    width: 70%;
+    font-size: 14px;
+    font-weight: 300;
 }
 
 .section-util .util-btn {
     position: absolute;
-    margin: auto;
-    left: 0;
-    right: 0;
-    padding-top: 10px;
-    margin-top: 60px;
+    bottom: 30px;
 }
 
 @media (max-width: 600px) {
@@ -643,18 +755,17 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .section-util .glyphicon {
     font-size: 50px;
-    color: #999;
+    color: #b3ffff;
 }
 
 .util-btn a {
+    font-family: AmazonEmber;
     display: inline-block;
-    border: 1.8px solid #0079b2;
-    border-radius: 30px;
-    width: 200px;
-    height: 50px;
+    border: 1.8px solid;
     -webkit-transition: .2s;
     transition: .2s;
-    padding: 10px 30px;
+    padding: 5px 30px;
+    color: #fff;
 }
 
 .util-btn a:hover {
@@ -672,27 +783,35 @@ li.dropdown-submenu ul.dropdown-menu a {
     .section-util .container {
         height: auto
     }
-
-    .section-util .row div {
-        margin-bottom: 200px;
-    }
-}
-
-@media (max-width: 767px) {
-    .section-util .row div {
-        margin-bottom: 250px;
-    }
 }
 
 .section-inst {
     padding:3em 0 3em;
     border-bottom:1px solid rgba(0,0,0,.05);
+    text-align: left;
+    background-color: #fff;
+}
 
-    text-align:center
+.section-inst .row div {
+    text-align: center;
+    margin-bottom: 30px;
+    height: 80px;
 }
 
 .section-inst p {
-    margin-bottom:2em
+    font-family: AmazonEmber;
+    font-weight: 300;
+    margin-bottom:2em;
+    padding-left: 50px;
+    color: #111;
+}
+
+.section-inst h2 {
+    font-family: AmazonEmber;
+    margin-top: -20px;
+    margin-bottom: 50px;
+    color: dimgray;
+    padding-left: 40px;
 }
 
 @media (min-width: 1200px) {
@@ -718,26 +837,29 @@ li.dropdown-submenu ul.dropdown-menu a {
 }
 
 .section-disclaimer {
-    padding: 3em 3em 3em;
+    padding: 3em 0 3em;
+    background-color:  #f2f2f2;
+}
+
+.section-disclaimer .container div {
+    padding-left: 50px;
 }
 
 .section-disclaimer p {
     padding-top: 2em;
 }
 
-.footer{
-    padding-top: 40px;
-}
 .footer li{
     float:right;
     margin-right:1.5em;
     margin-bottom:1.5em
 }
 .footer p{
-    font-size: 15px;
-    color: #888;
+    font-family: AmazonEmber;
+    font-weight: 300;
+    font-size: 12px;
     clear:right;
-    margin-bottom:0
+    margin-bottom:0;
 }
 
 /*------------------content----------------------*/
@@ -746,39 +868,62 @@ div.navbar + div.container {
 }
 
 div.content {
-    position: absolute;
-    left: 320px;
-    right: 200px;
-    margin-right: 5%;
-    padding: 40px 0 0 0;
+    padding: 80px 40px 40px 45px;
+    background: #fff;
+    width: calc(100% - 300px);
+    float: right;
     overflow-x: hidden;
     z-index: -1;
 }
 
 @media (max-width: 999px) {
     div.content {
-        left: 0;
-        margin-left: 5%;
-        right: 0;
         overflow-x: auto;
+        width: 100%;
     }
+}
+
+div.page-tracker {
+    margin-bottom: 30px;
+    font-family: AmazonEmber;
+}
+
+div.page-tracker ul {
+    padding-left: 0;
+}
+
+div.page-tracker ul li {
+    text-transform: capitalize;
+    display: inline;
+}
+
+div.page-tracker a {
+    text-transform: capitalize;
+    color: #337ab7;
+}
+
+div.page-tracker a.last-tracker {
+    color: #aab7b8;
+}
+
+div.page-tracker i {
+    margin: 0 10px;
 }
 
 /*------------------sidebar-----------------------*/
 div.sphinxsidebar {
     position: fixed;
-    background-color: white;
-    height: calc(100% - 80px);
+    padding-top: 40px;
+    height: 100%;
     display: none;
     visibility: hidden;
     overflow: auto;
 }
 
 div.leftsidebar {
-    left: 30px;
-    width: 250px;
-    padding: 40px 0 15px 0;
-    margin: 0;
+    width: 300px;
+    margin-left: 25px;
+    background: #f2f2f2;
 }
 
 div.rightsidebar {
@@ -793,7 +938,8 @@ div.sphinxsidebar ul {
 }
 
 div.sphinxsidebar a {
-    color: black;
+    font-family: AmazonEmber;
+    font-size: 13px;
 }
 
 div.rightsidebar div.sphinxsidebarwrapper > ul {
@@ -804,11 +950,10 @@ div.sphinxsidebar li {
     padding-top: 5px;
     margin-bottom: 5px;
     margin-left: -10px;
-    font: normal 12px "Open Sans", "Lucida Grande", "Helvetica Neue", Arial;
 }
 
 div.leftsidebar > div.sphinxsidebarwrapper {
-    padding: 10px 10px 10px 10px;
+    padding: 40px 20px 10px 20px;
     background: #f2f2f2;
 }
 
@@ -827,26 +972,26 @@ div.rightsidebar > div.sphinxsidebarwrapper > ul > li {
 
 div.sphinxsidebar li.opened .tocToggle:before {
     font-family: 'FontAwesome';
-    content: "\f146";
+    content: "\f0d7";
     margin: 0 5px 0 -15px;
-    color: #337ab7;
+    color: #999999;
 }
 
 div.sphinxsidebar li.closed .tocToggle:before {
     font-family: 'FontAwesome';
-    content: "\f0fe";
+    content: "\f0da";
     margin: 0 5px 0 -15px;
-    color: #337ab7;
+    color: #999999;
 }
 
 div.sphinxsidebar li.leaf .tocToggle:before {
-    font-family: 'FontAwesome';
-    content: "\f096";
+    /*font-family: 'FontAwesome';*/
+    content: " ";
     margin: 0 5px 0 -15px;
-    color: #337ab7;
+    color: #f2f2f2;
 }
 
-@media (min-width:1000px) {
+@media (min-width:1015px) {
     div.sphinxsidebar {display: block}
 }
 
@@ -985,6 +1130,15 @@ code {
     background-color: #f5f5f5;
 }
 
+code.docutils.literal {
+    color: #111;
+    font-weight: bold;
+}
+
+a code.docutils.literal {
+    color: #337ab7;
+}
+
 dt code {
     color: #555;
 }
@@ -1120,7 +1274,6 @@ table.docutils tr:nth-child(even) {
     height: 38px;
 }
 
-
 /*----------------Search function style------------------*/
 #searchPage {
     width: 60%;
@@ -1187,7 +1340,7 @@ table.docutils tr:nth-child(even) {
 
 /* align icon */
 .left-addon .glyphicon  {
-    left:  0px;
+    right: 0px;
 }
 .right-addon .glyphicon {
     right: 0px;
@@ -1195,7 +1348,8 @@ table.docutils tr:nth-child(even) {
 
 /* add padding  */
 .left-addon input  {
-    padding-left:  40px;
+    font-family: AmazonEmber;
+    font-style: italic;
 }
 .right-addon input {
     padding-right: 40px;
@@ -1219,9 +1373,9 @@ button.download {
 }
 
 /*----------------------Download button------------------------*/
-div.download_btn {
+div.download-btn {
 
-    border: solid 1px lightgray;
+    border: solid 1px #000;
     border-radius: 3px;
     font-size: 90%;
     height: 40px;
@@ -1229,16 +1383,27 @@ div.download_btn {
     float: left;
 }
 
-div.download_btn a {
+div.download-btn a {
     padding: 0 10px;
     display: table-cell;
     vertical-align: middle;
+    color: #000;
 }
 
-div.download_btn a:hover {
+div.download-btn a:hover {
     background-color: #0079b2;
     color: white;
     text-decoration: none;
+}
+
+div.download-btn.download-btn-top {
+    border-color: #ec7211;
+    background: #ec7211;
+    float: right;
+}
+
+div.download-btn.download-btn-top a {
+    color: #fff;
 }
 
 /*-------------output blocks----------------*/
@@ -1257,4 +1422,29 @@ div.download_btn a:hover {
 #download-source-package {
     display: none;
     padding-top: 40px;
+}
+
+/*------------Mobile dropdown menu smooth transition---------------*/
+@keyframes slide {
+    0% {
+        left: -100%;
+    }
+    25% {
+        left: -75%;
+    }
+    50% {
+        left: -50%;
+    }
+    75% {
+        left: -25%;
+    }
+    100% {
+        left: 0;
+    }
+}
+
+#burgerMenu {
+    animation-name: slide;
+    animation-duration: 0.3s;
+    animation-timing-function: ease-in-out;
 }
