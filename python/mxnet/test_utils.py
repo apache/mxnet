@@ -710,8 +710,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    def as_stype(var, stype):
-        return mx.nd.cast_storage(mx.nd.array(var), stype=stype)
+    def as_stype(var, stype, dtype):
+        return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
     assert dtype == np.float32 or dtype == np.float64
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
@@ -719,7 +719,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     for k, v in location.items():
         stype = executor.arg_dict[k].stype
         if stype == 'default':
-            executor.arg_dict[k][:] = as_stype(v, stype)
+            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
     for k in location:
         location[k] = np.ascontiguousarray(location[k])
     for k, v in location.items():
@@ -730,7 +730,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         for i in range(np.prod(v.shape)):
             # inplace update
             v.ravel()[i] += eps/2.0
-            executor.arg_dict[k][:] = as_stype(v, stype)
+            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
             if aux_states is not None:
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
@@ -738,11 +738,11 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             f_peps = executor.outputs[0].asnumpy()
 
             v.ravel()[i] -= eps
-            executor.arg_dict[k][:] = as_stype(v, stype)
+            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
             if aux_states is not None:
                 for key, val in aux_states.items():
                     adstype = executor.aux_dict[key].stype
-                    executor.aux_dict[key][:] = as_stype(val, adstype)
+                    executor.aux_dict[key][:] = as_stype(val, adstype, dtype=dtype)
             executor.forward(is_train=use_forward_train)
             f_neps = executor.outputs[0].asnumpy()
 
@@ -750,7 +750,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             approx_grads[k].ravel()[i] = approx_grad
             v.ravel()[i] = old_value.ravel()[i]
         # copy back the original value
-        executor.arg_dict[k][:] = as_stype(old_value, stype)
+        executor.arg_dict[k][:] = as_stype(old_value, stype, dtype=dtype)
 
     return approx_grads
 
