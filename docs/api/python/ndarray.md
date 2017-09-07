@@ -557,6 +557,8 @@ We summarize the interface for each class in the following sections.
     linalg_trmm
     linalg_trsm
     linalg_sumlogdiag
+    linalg_syrk
+    linalg_gelqf
 ```
 
 ### Miscellaneous
