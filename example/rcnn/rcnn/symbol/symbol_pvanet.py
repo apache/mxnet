@@ -27,12 +27,12 @@ def get_pvanet_conv(data):
     upscale = mx.sym.Deconvolution(data=bsr, num_filter=384, kernel=(4, 4), stride=(2, 2), pad=(1, 1), name='deconv')  # (33*20)x384/(66*40)x384
     crop = mx.sym.Crop(upscale, downscale, name='crop')
     concat = mx.sym.concat(downscale, conv4_4, crop, name='concat')  # (66*40)x768/(66*40)x768
-    convf = mx.sym.Convolution(data=concat, num_filter=512, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name='convf')  # (66*40)x768/(66*40)x512
-    return convf
+    #convf = mx.sym.Convolution(data=concat, num_filter=512, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name='convf')  # (66*40)x768/(66*40)x512
+    return concat
 
 def crelu(data, num_filter, kernel, stride, pad, name=None, suffix=''):
     conv1=mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='%s%s_conv2d' %(name, suffix))
-    bn=mx.symbol.BatchNorm(data=conv1, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn=mx.symbol.BatchNorm(data=conv1, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix))
     negative=mx.symbol.negative(data=bn, name='negative')
     concat=mx.symbol.concat(bn, negative)
     net=scale_and_shift(concat, num_filter)
@@ -59,8 +59,8 @@ def res_crelu(data, middle_filter, num_filter, kernel, stride, pad, bsr, proj, n
     conv1 = mx.sym.Convolution(data=input, num_filter=middle_filter[0], kernel=(1, 1), stride=stride, pad=(0, 0), name='%s%s_1_con2d' %(name, suffix))
     bsr = bn_scale_relu(data=conv1, name=name, suffix='group')
     conv2 = mx.sym.Convolution(data=bsr, num_filter=middle_filter[1], kernel=kernel, stride=(1, 1), pad=pad, name='%s%s_2_con2d' %(name, suffix))
-    bn = mx.sym.BatchNorm(data=conv2, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
-    negative = mx.sym.negative(data=bn, name='%s%s_negative' %(name, suffix))
+    bn = mx.sym.BatchNorm(data=conv2, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    negative = mx.sym.negative(data=bn, name='%s%s_negative'%(name, suffix))
     concat = mx.sym.concat(bn, negative)
     scale = scale_and_shift(data=concat, name=name, suffix=suffix)
     relu = mx.sym.Activation(data=scale, act_type='relu', name='%s%s_relu' %(name, suffix))
@@ -69,7 +69,7 @@ def res_crelu(data, middle_filter, num_filter, kernel, stride, pad, bsr, proj, n
     return act
 
 def bn_scale_relu(data, name=None, suffix=''):
-    bn = mx.sym.BatchNorm(data=data, name='%s%s_batchnorm' % (name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=data, use_global_stats=True, name='%s%s_batchnorm' % (name, suffix))
     scale = scale_and_shift(data=bn, name=name, suffix=suffix)
     act = mx.sym.Activation(data=scale, act_type='relu', name='%s%s_relu' % (name, suffix))
     return act
@@ -120,14 +120,14 @@ def inception_last(data, middle_filter, num_filter, kernel, stride, proj, name, 
     else:
         conv_concat = mx.sym.concat(conv_a, conv_b2, conv_c3)
     conv = mx.sym.Convolution(data=conv_concat, num_filter=num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name='%s_conv' %(name))
-    bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' % (name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=conv, use_global_stats=True, name='%s%s_batchnorm' % (name, suffix))
     scale = scale_and_shift(data=bn, name=name, suffix='last')
     output = scale+shortcut
     return output
 
 def Conv(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None, suffix=''):
     conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True, name='%s%s_conv2d' %(name, suffix))
-    bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=conv, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix))
     scale = scale_and_shift(bn, name='%s%s_scale_and_shift' %(name, suffix))
     act = mx.sym.Activation(data=scale, act_type='relu', name='%s%s_relu' %(name, suffix))
     return act
@@ -143,11 +143,15 @@ def get_pvanet_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHO
     im_info = mx.symbol.Variable(name="im_info")
 
     # shared convolutional layers
-    convf = get_pvanet_conv(data)
-    slice = mx.sym.slice_axis(data=convf, axis=1, begin=0, end=128, name='slice')
+    concat = get_pvanet_conv(data)
+    conf_rpn = mx.symbol.Convolution(data=concat, kernel=(1, 1), pad=(0, 0), num_filter=128, name="conf_rpn")
+    reluf_rpn = mx.symbol.Activation(data=conf_rpn, act_type="relu", name="reluf_rpn")
+    conf_2 = mx.symbol.Convolution(data=concat, kernel=(1, 1), pad=(0, 0), num_filter=384, name="conf_2")
+    reluf_2 = mx.symbol.Activation(data=conf_2, act_type="relu", name="reluf_2")
+    concat_convf = mx.sym.concat(reluf_rpn, reluf_2)
     # RPN
     rpn_conv = mx.symbol.Convolution(
-        data=slice, kernel=(3, 3), pad=(1, 1), num_filter=512, name="rpn_conv_3x3")
+        data=reluf_rpn, kernel=(3, 3), pad=(1, 1), num_filter=384, name="rpn_conv_3x3")
     rpn_relu = mx.symbol.Activation(data=rpn_conv, act_type="relu", name="rpn_relu")
     rpn_cls_score = mx.symbol.Convolution(
         data=rpn_relu, kernel=(1, 1), pad=(0, 0), num_filter=2 * num_anchors, name="rpn_cls_score")
@@ -177,21 +181,24 @@ def get_pvanet_test(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCHO
 
     # Fast R-CNN
     pool5 = mx.symbol.ROIPooling(
-        name='roi_pool5', data=convf, rois=rois, pooled_size=(7, 7), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=concat_convf, rois=rois, pooled_size=(6, 6), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
     # group 6
     flatten = mx.symbol.Flatten(data=pool5, name="flatten")
     fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
-    relu6 = mx.symbol.Activation(data=fc6, act_type="relu", name="relu6")
-    drop6 = mx.symbol.Dropout(data=relu6, p=0.5, name="drop6")
+    fc6_bn = mx.sym.BatchNorm(data=fc6, name='fc6_batchnorm')
+    drop6 = mx.symbol.Dropout(data=fc6_bn, p=0.5, name="drop6")
+    relu6 = mx.symbol.Activation(data=drop6, act_type="relu", name="relu6")
     # group 7
-    fc7 = mx.symbol.FullyConnected(data=drop6, num_hidden=4096, name="fc7")
-    relu7 = mx.symbol.Activation(data=fc7, act_type="relu", name="relu7")
-    drop7 = mx.symbol.Dropout(data=relu7, p=0.5, name="drop7")
+    fc7 = mx.symbol.FullyConnected(data=relu6, num_hidden=4096, name="fc7")
+    fc7_bn = mx.sym.BatchNorm(data=fc7, name='fc7_batchnorm')
+    drop7 = mx.symbol.Dropout(data=fc7_bn, p=0.5, name="drop7")
+    relu7 = mx.symbol.Activation(data=drop7, act_type="relu", name="relu7")
+
     # classification
-    cls_score = mx.symbol.FullyConnected(name='cls_score', data=drop7, num_hidden=num_classes)
+    cls_score = mx.symbol.FullyConnected(name='cls_score', data=relu7, num_hidden=num_classes)
     cls_prob = mx.symbol.softmax(name='cls_prob', data=cls_score)
     # bounding box regression
-    bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=drop7, num_hidden=num_classes * 4)
+    bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=relu7, num_hidden=num_classes * 4)
 
     # reshape output
     cls_prob = mx.symbol.Reshape(data=cls_prob, shape=(config.TEST.BATCH_IMAGES, -1, num_classes), name='cls_prob_reshape')
@@ -217,13 +224,16 @@ def get_pvanet_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCH
     rpn_bbox_weight = mx.symbol.Variable(name='bbox_weight')
 
     # shared convolutional layers
-    relu5_3 = get_pvanet_conv(data)
-
-    slice = mx.sym.slice_axis(data=relu5_3, axis=1, begin=0, end=128, name='slice')
+    concat = get_pvanet_conv(data)
+    conf_rpn = mx.symbol.Convolution(data=concat, kernel=(1, 1), pad=(0, 0), num_filter=128, name="conf_rpn")
+    reluf_rpn = mx.symbol.Activation(data=conf_rpn, act_type="relu", name="reluf_rpn")
+    conf_2 = mx.symbol.Convolution(data=concat, kernel=(1, 1), pad=(0, 0), num_filter=384, name="conf_2")
+    reluf_2 = mx.symbol.Activation(data=conf_2, act_type="relu", name="reluf_2")
+    concat_convf = mx.sym.concat(reluf_rpn, reluf_2)
 
     # RPN layers
     rpn_conv = mx.symbol.Convolution(
-        data=slice, kernel=(3, 3), pad=(1, 1), num_filter=512, name="rpn_conv_3x3")
+        data=reluf_rpn, kernel=(3, 3), pad=(1, 1), num_filter=384, name="rpn_conv_3x3")
     rpn_relu = mx.symbol.Activation(data=rpn_conv, act_type="relu", name="rpn_relu")
     rpn_cls_score = mx.symbol.Convolution(
         data=rpn_relu, kernel=(1, 1), pad=(0, 0), num_filter=2 * num_anchors, name="rpn_cls_score")
@@ -272,21 +282,24 @@ def get_pvanet_train(num_classes=config.NUM_CLASSES, num_anchors=config.NUM_ANCH
 
     # Fast R-CNN
     pool5 = mx.symbol.ROIPooling(
-        name='roi_pool5', data=relu5_3, rois=rois, pooled_size=(7, 7), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
+        name='roi_pool5', data=concat_convf, rois=rois, pooled_size=(6, 6), spatial_scale=1.0 / config.RCNN_FEAT_STRIDE)
     # group 6
     flatten = mx.symbol.Flatten(data=pool5, name="flatten")
     fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
-    relu6 = mx.symbol.Activation(data=fc6, act_type="relu", name="relu6")
-    drop6 = mx.symbol.Dropout(data=relu6, p=0.5, name="drop6")
+    fc6_bn = mx.sym.BatchNorm(data=fc6, name='fc6_batchnorm')
+    drop6 = mx.symbol.Dropout(data=fc6_bn, p=0.5, name="drop6")
+    relu6 = mx.symbol.Activation(data=drop6, act_type="relu", name="relu6")
     # group 7
-    fc7 = mx.symbol.FullyConnected(data=drop6, num_hidden=4096, name="fc7")
-    relu7 = mx.symbol.Activation(data=fc7, act_type="relu", name="relu7")
-    drop7 = mx.symbol.Dropout(data=relu7, p=0.5, name="drop7")
+    fc7 = mx.symbol.FullyConnected(data=relu6, num_hidden=4096, name="fc7")
+    fc7_bn = mx.sym.BatchNorm(data=fc7, name='fc7_batchnorm')
+    drop7 = mx.symbol.Dropout(data=fc7_bn, p=0.5, name="drop7")
+    relu7 = mx.symbol.Activation(data=drop7, act_type="relu", name="relu7")
+
     # classification
-    cls_score = mx.symbol.FullyConnected(name='cls_score', data=drop7, num_hidden=num_classes)
+    cls_score = mx.symbol.FullyConnected(name='cls_score', data=relu7, num_hidden=num_classes)
     cls_prob = mx.symbol.SoftmaxOutput(name='cls_prob', data=cls_score, label=label, normalization='batch')
     # bounding box regression
-    bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=drop7, num_hidden=num_classes * 4)
+    bbox_pred = mx.symbol.FullyConnected(name='bbox_pred', data=relu7, num_hidden=num_classes * 4)
     bbox_loss_ = bbox_weight * mx.symbol.smooth_l1(name='bbox_loss_', scalar=1.0, data=(bbox_pred - bbox_target))
     bbox_loss = mx.sym.MakeLoss(name='bbox_loss', data=bbox_loss_, grad_scale=1.0 / config.TRAIN.BATCH_ROIS)
 
