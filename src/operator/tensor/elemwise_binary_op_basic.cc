@@ -89,11 +89,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
   CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
   NDArrayStorageType stype = kDefaultStorage;
   for (size_t i = 0; i < 2U; ++i) {
-    const auto in_stype = static_cast<NDArrayStorageType>((*in_attrs)[i]);
-    if (in_stype == kUndefinedStorage) {
-      (*in_attrs)[i] = kDefaultStorage;
-    } else {
-      if (in_stype != kDefaultStorage && stype == kDefaultStorage) {
+    const NDArrayStorageType in_stype = static_cast<NDArrayStorageType>((*in_attrs)[i]);
+    if (in_stype != kDefaultStorage) {
+      if (stype == kDefaultStorage) {
         stype = in_stype;
       }
     }
