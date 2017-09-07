@@ -99,8 +99,10 @@ def train_net(args, ctx, pretrained, epoch, prefix, begin_epoch, end_epoch,
         arg_params['fc6_bias'] = mx.nd.zeros(shape=arg_shape_dict['fc6_bias'])
         arg_params['fc7_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['fc7_weight'])
         arg_params['fc7_bias'] = mx.nd.zeros(shape=arg_shape_dict['fc7_bias'])
-        arg_params['convf_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['convf_weight'])
-        arg_params['convf_bias'] = mx.nd.zeros(shape=arg_shape_dict['convf_bias'])
+        arg_params['conf_rpn_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['conf_rpn_weight'])
+        arg_params['conf_rpn_bias'] = mx.nd.zeros(shape=arg_shape_dict['conf_rpn_bias'])
+        arg_params['conf_2_weight'] = mx.random.normal(0, 0.001, shape=arg_shape_dict['conf_2_weight'])
+        arg_params['conf_2_bias'] = mx.nd.zeros(shape=arg_shape_dict['conf_2_bias'])
 
     # check parameter shapes
     for k in sym.list_arguments():

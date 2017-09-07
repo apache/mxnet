@@ -31,7 +31,7 @@ def get_symbol(num_classes, **kwargs):
 
 def crelu(data, num_filter, kernel, stride, pad, name=None, suffix=''):
     conv1=mx.symbol.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, name='%s%s_conv2d' %(name, suffix))
-    bn=mx.symbol.BatchNorm(data=conv1, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn=mx.symbol.BatchNorm(data=conv1, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix))
     negative=mx.symbol.negative(data=bn, name='negative')
     concat=mx.symbol.concat(bn, negative)
     net=scale_and_shift(concat, num_filter)
@@ -58,7 +58,7 @@ def res_crelu(data, middle_filter, num_filter, kernel, stride, pad, bsr, proj, n
     conv1 = mx.sym.Convolution(data=input, num_filter=middle_filter[0], kernel=(1, 1), stride=stride, pad=(0, 0), name='%s%s_1_con2d' %(name, suffix))
     bsr = bn_scale_relu(data=conv1, name=name, suffix='group')
     conv2 = mx.sym.Convolution(data=bsr, num_filter=middle_filter[1], kernel=kernel, stride=(1, 1), pad=pad, name='%s%s_2_con2d' %(name, suffix))
-    bn = mx.sym.BatchNorm(data=conv2, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=conv2, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
     negative = mx.sym.negative(data=bn, name='%s%s_negative'%(name, suffix))
     concat = mx.sym.concat(bn, negative)
     scale = scale_and_shift(data=concat, name=name, suffix=suffix)
@@ -68,7 +68,7 @@ def res_crelu(data, middle_filter, num_filter, kernel, stride, pad, bsr, proj, n
     return act
 
 def bn_scale_relu(data, name=None, suffix=''):
-    bn = mx.sym.BatchNorm(data=data, name='%s%s_batchnorm' % (name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=data, use_global_stats=True, name='%s%s_batchnorm' % (name, suffix))
     scale = scale_and_shift(data=bn, name=name, suffix=suffix)
     act = mx.sym.Activation(data=scale, act_type='relu', name='%s%s_relu' % (name, suffix))
     return act
@@ -120,21 +120,20 @@ def inception_last(data, middle_filter, num_filter, kernel, stride, proj, name, 
     else:
         conv_concat = mx.sym.concat(conv_a, conv_b2, conv_c3)
     conv = mx.sym.Convolution(data=conv_concat, num_filter=num_filter, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name='%s_conv' %(name))
-    bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' % (name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=conv, use_global_stats=True, name='%s%s_batchnorm' % (name, suffix))
     scale = scale_and_shift(data=bn, name=name, suffix='last')
     output = scale+shortcut
     return output
 
-
 def Conv(data, num_filter=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0), name=None, suffix=''):
     conv = mx.sym.Convolution(data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True, name='%s%s_conv2d' %(name, suffix))
-    bn = mx.sym.BatchNorm(data=conv, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=conv, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix))
     scale = scale_and_shift(bn, name='%s%s_scale_and_shift' %(name, suffix))
     act = mx.sym.Activation(data=scale, act_type='relu', name='%s%s_relu' %(name, suffix))
     return act
 def fullconnection(data, num_hidden, name, suffix):
     fc = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, name='%s' %(name))
-    bn = mx.sym.BatchNorm(data=fc, name='%s%s_batchnorm' %(name, suffix), fix_gamma=True)
+    bn = mx.sym.BatchNorm(data=fc, use_global_stats=True, name='%s%s_batchnorm' %(name, suffix))
     scale = scale_and_shift(data=bn, name='%s%s_scaleshift' %(name, suffix))
     dropout = mx.sym.Dropout(data=scale, name= '%s_dropout' %(name))
     relu = mx.sym.Activation(data=dropout, act_type='relu', name='%s_relu' %(name))
