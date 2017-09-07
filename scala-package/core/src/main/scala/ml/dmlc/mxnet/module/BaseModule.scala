@@ -30,7 +30,7 @@ object BaseModule {
    * Check that all input names are in symbol's arguments.
    */
   @throws(classOf[IllegalArgumentException])
-  def _checkInputNames(symbol: Symbol, names: IndexedSeq[String],
+  private[module] def _checkInputNames(symbol: Symbol, names: IndexedSeq[String],
     typeName: String, throws: Boolean, logger: Logger): Unit = {
     val args = symbol.listArguments()
     for (name <- names) {

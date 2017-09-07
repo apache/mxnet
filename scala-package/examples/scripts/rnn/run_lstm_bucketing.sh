@@ -33,9 +33,9 @@ GPUS="0"
 SAVE_MODEL_PATH=./model/lstm
 
 java -Xmx4G -cp $CLASS_PATH \
-	ml.dmlc.mxnetexamples.rnn.LstmBucketing \
-	--data-train $DATA_TRAIN \
-	--data-val $DATA_VAL \
-	--num-epoch $NUM_EPOCH \
-	--gpus $GPUS \
-	--save-model-path $SAVE_MODEL_PATH
+  ml.dmlc.mxnetexamples.rnn.LstmBucketing \
+  --data-train $DATA_TRAIN \
+  --data-val $DATA_VAL \
+  --num-epoch $NUM_EPOCH \
+  --gpus $GPUS \
+  --save-model-path $SAVE_MODEL_PATH
