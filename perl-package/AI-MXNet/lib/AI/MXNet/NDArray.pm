@@ -208,17 +208,13 @@ method _sync_copyfrom(ArrayRef|PDL|PDL::Matrix $source_array)
         confess("Shape inconsistant: expected $ndary_shape_str vs got $pdl_shape_str")
     }
     my $perl_pack_type = DTYPE_MX_TO_PERL->{$dtype};
-    my $buf;
+    my $ptr = $source_array->get_dataref;
     ## special handling for float16
     if($perl_pack_type eq 'S')
     {
-        $buf = pack("S*", map { AI::MXNetCAPI::_float_to_half($_) } unpack ("f*", ${$source_array->get_dataref}));
+        $ptr = \( pack("S*", map { AI::MXNetCAPI::_float_to_half($_) } unpack ("f*", $$ptr)) );
     }
-    else
-    {
-        $buf = ${$source_array->get_dataref};
-    }
-    check_call(AI::MXNetCAPI::NDArraySyncCopyFromCPU($self->handle, $buf, $self->size));
+    check_call(AI::MXNetCAPI::NDArraySyncCopyFromCPU($self->handle, $$ptr, $self->size));
     return $self;
 }
 
@@ -238,14 +234,13 @@ method aspdl()
     my $pdl_type = PDL::Type->new(DTYPE_MX_TO_PDL->{ $dtype });
     my $pdl = PDL->new_from_specification($pdl_type, reverse @{ $self->shape });
     my $perl_pack_type = DTYPE_MX_TO_PERL->{$dtype};
-    my $buf = pack("$perl_pack_type*", (0)x$self->size);
-    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $buf, $self->size));
+    my $ptr = $pdl->get_dataref;
+    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $$ptr, $self->size));
     ## special handling for float16
     if($perl_pack_type eq 'S')
     {
-        $buf = pack("f*", map { AI::MXNetCAPI::_half_to_float($_) } unpack("S*", $buf));
+        $$ptr = pack("f*", map { AI::MXNetCAPI::_half_to_float($_) } unpack("S*", $$ptr));
     }
-    ${$pdl->get_dataref} = $buf;
     $pdl->upd_data;
     return $pdl;
 }
@@ -269,14 +264,13 @@ method asmpdl()
     my $pdl_type = PDL::Type->new(DTYPE_MX_TO_PDL->{ $dtype });
     my $pdl = PDL::Matrix->new_from_specification($pdl_type, @{ $self->shape });
     my $perl_pack_type = DTYPE_MX_TO_PERL->{$dtype};
-    my $buf = pack("$perl_pack_type*", (0)x$self->size);
-    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $buf, $self->size));
+    my $ptr = $pdl->get_dataref;
+    check_call(AI::MXNetCAPI::NDArraySyncCopyToCPU($self->handle, $$ptr, $self->size));
     ## special handling for float16
     if($perl_pack_type eq 'S')
     {
-        $buf = pack("f*", map { AI::MXNetCAPI::_half_to_float($_) } unpack("S*", $buf));
+        $$ptr = pack("f*", map { AI::MXNetCAPI::_half_to_float($_) } unpack("S*", $$ptr));
     }
-    ${$pdl->get_dataref} = $buf;
     $pdl->upd_data;
     return $pdl;
 }
