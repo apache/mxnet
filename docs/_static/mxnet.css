@@ -1,19 +1,19 @@
 /*-------------------- AmazonEmber font -----------------------------------*/
 @font-face {
     font-family: AmazonEmber;
-    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Rg.ttf);
+    src: url(https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/font/AmazonEmber_Rg.ttf);
     font-weight: normal;
 }
 
 @font-face {
     font-family: AmazonEmber;
-    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Bd.ttf);
+    src: url(https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/font/AmazonEmber_Bd.ttf);
     font-weight: bold;
 }
 
 @font-face {
     font-family: AmazonEmber;
-    src: url(https://raw.githubusercontent.com/kevinthesun/web-data/MoreResourcesForWeb/mxnet/font/AmazonEmber_Th.ttf);
+    src: url(https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/font/AmazonEmber_Th.ttf);
     font-weight: 300;
 }
 
@@ -374,6 +374,12 @@ div .burgerIcon a {
     max-width: 250px;
 }
 
+#plusMenu .dropdown-submenu>.dropdown-menu {
+    left: 138px;
+    top: 0;
+    background: #fff;
+}
+
 #burgerMenu li, #plusMenu li {
     height: 30px;
     list-style-position: inside;
@@ -391,7 +397,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     padding-left: 20px !important;
 }
 
-@media screen and (max-width: 360px) {
+@media screen and (max-width: 420px) {
     li.dropdown-submenu ul.dropdown-menu a {
         font-size: 12px !important;
     }
@@ -404,7 +410,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .dropdown-submenu>.dropdown-menu {
     top: -8px;
-    left: 200px;
+    left: 250px;
     -webkit-border-radius: 0 6px 6px 6px;
     -moz-border-radius: 0 6px 6px;
     border-radius: 0 6px 6px 6px;
@@ -902,7 +908,7 @@ div.page-tracker a {
     color: #337ab7;
 }
 
-div.page-tracker a.last-tracker {
+div.page-tracker li:last-child {
     color: #aab7b8;
 }
 
