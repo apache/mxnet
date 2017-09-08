@@ -131,7 +131,7 @@ inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0).Size() != 0U; 
+  return out_attrs->at(0).Size() != 0U;
 }
 ```
 Here are a few things to note about the above function:
@@ -175,7 +175,7 @@ inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
 
   TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0) != -1; 
+  return out_attrs->at(0) != -1;
 }
 ```
 Again, MXNet provides the following convenience function for mutual
@@ -195,27 +195,27 @@ the logic of running a tensor through the quadratic function performing
 a few element-wise operations. We paste the whole forward function code here
 and let's go through it line by line.
 ```cpp
-template<typename xpu>                                                        // 1                                  
-void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2                              
-                        const OpContext& ctx,                                 // 3                                  
-                        const std::vector<TBlob>& inputs,                     // 4                                  
-                        const std::vector<OpReqType>& req,                    // 5                                  
-                        const std::vector<TBlob>& outputs) {                  // 6                                  
-  CHECK_EQ(inputs.size(), 1U);                                                // 7                                  
-  CHECK_EQ(outputs.size(), 1U);                                               // 8                                  
-  CHECK_EQ(req.size(), 1U);                                                   // 9                                  
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                            // 10                                  
-  const TBlob& in_data = inputs[0];                                           // 11                                  
-  const TBlob& out_data = outputs[0];                                         // 12                                  
-  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);      // 13                                  
-  using namespace mxnet_op;                                                   // 14                                  
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {                           // 15                                  
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                               // 16                                  
-      Kernel<quadratic_forward<req_type>, xpu>::Launch(                       // 17                                  
-          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),  // 18                                  
-          param.a, param.b, param.c);                                         // 19                                  
-    });                                                                       // 20                                  
-  });                                                                         // 21                                  
+template<typename xpu>                                                        // 1   
+void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2                             
+                        const OpContext& ctx,                                 // 3                                 
+                        const std::vector<TBlob>& inputs,                     // 4                                 
+                        const std::vector<OpReqType>& req,                    // 5                                 
+                        const std::vector<TBlob>& outputs) {                  // 6                                 
+  CHECK_EQ(inputs.size(), 1U);                                                // 7                                 
+  CHECK_EQ(outputs.size(), 1U);                                               // 8                                 
+  CHECK_EQ(req.size(), 1U);                                                   // 9                                 
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                            // 10                                 
+  const TBlob& in_data = inputs[0];                                           // 11                                 
+  const TBlob& out_data = outputs[0];                                         // 12                                 
+  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);      // 13                                 
+  using namespace mxnet_op;                                                   // 14                                 
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {                           // 15                                 
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                               // 16                                 
+      Kernel<quadratic_forward<req_type>, xpu>::Launch(                       // 17                                 
+          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),  // 18                                 
+          param.a, param.b, param.c);                                         // 19                                 
+    });                                                                       // 20                                 
+  });                                                                         // 21                                 
 }
 ```
 - Line 1: `attrs` contains the user input parameters `a`, `b`, and `c`
