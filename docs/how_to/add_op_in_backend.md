@@ -286,7 +286,7 @@ of loss function with respect to user-input parameters `a`, `b`, and `c`
 since they are not learnable parameters in the network. To formulate the problem:
 given `dL/dy` and `y = a*x^2 + b*x + c`, where `L` represents the loss function and
 `y` stands for the output of the quadratic tensor, we need to solve for
-`dL/dx`. Using chain-rule, it is obvious to find that
+`dL/dx`. Using the chain-rule, it is obvious to find that
 ```
 dL/dx = dL/dy * dy/dx = dL/dy * (2*a*x + b).
 ```
@@ -319,7 +319,7 @@ void QuadraticOpBackward(const nnvm::NodeAttrs& attrs,                       // 
 }                                                                            // 23
 ```
 - Lines 1-6: Backward function has the same signature as forward function.
-- Lines 7-9: Verifying the sizes of the function arguments. One thing to note
+- Lines 7-9: Verify the sizes of the function arguments. One thing to note
 that since the gradient of the input depends on both the gradient of the output and
 the input tensor itself, `inputs` must contain two `TBlob`s.
 - Line 10: Get the stream of the context for serializing asynchronous executions.
@@ -389,3 +389,106 @@ NNVM_REGISTER_OP(_backward_quadratic)                                           
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)                                  // 26
 .set_attr<FCompute>("FCompute<cpu>", QuadraticOpBackward<cpu>);                    // 27
 ```
+
+- Line 1: Register the parameter struct.
+- Line 2: Register an operator named `quadratic` by creating an instance
+of `Op` type and save it in the operator manager.
+- Lines 3-4: Add description including use case(s) for the operator
+such that the documentation engine could extract and display it
+on the documentation web page.
+- Line 5: Set parameter struct parser. It is used for parsing
+the parameters `a`, `b`, and `c` input from frontend.
+- Line 6: Set the number of inputs.
+- Line 7: Set the number of outputs.
+- Lines 8-11: Defines a function generating a vector of names of
+the operator input arguments. This function is used to add missing
+arguments that users did not specify when creating a symbolic operator.
+For example, `quad_func=mx.sym.quadratic()` is still a valid symbol
+since we have registered the attribute `FListInputNames`. MXNet will
+add the missing argument with name `quadratic0_data`, where the prefix
+`quadratic0` is the operator name appended with an index and the postfix
+`data` comes from the user defined `FListInputName` function.
+- Line 12: Register shape inference function.
+- Line 13: Register type inference function.
+- Line 14: Register forward function.
+- Line 15: Register the function for creating the node of the operator in
+a backward pass. Note that we used a convenience functor struct `ElemwiseGradUseIn`.
+As you can tell from the name, the registered functor creates the node for gradient computation
+with dependencies on the output gradient node and input node. Similarly, there are
+other three functors defined as `ElemwiseGradUseOut`, `ElemwiseGradUseInOut`,
+and `ElemwiseGradUseNone` for developers' convenience.
+- Lines 16-19: This registered function implies which output tensor can reuse
+which input tensor's memory space instead of allocating a new memory space.
+In the operator `quadratic`, there is only one input and output, and the output can reuse
+the input memory space, so we put a pair of zeros in the function return result
+indicating that `inputs[0]`'s memory space can be reused by `outputs[0]`.
+Note that this function just provide a hint to the computational graph initializer.
+If there are other nodes depending on the input tensor, the memory space
+of the input tensor will not be overwritten by the output.
+- Line 20: Define the input argument name as `data` for the operator.
+- Line 21: Add user-input parameters `a`, `b`, and `c` as the attributes of the operator.
+- Line 22: Register an operator named `_backward_quadratic` for backward pass
+of the operator `quadratic`. The underscore prefix in the operator name indicates
+that this is an operator not exposed to frontend and only used in backend.
+- Line 23: Set the parameter parser for the operator `_backward_quadratic`.
+- Line 24: Set the number of inputs.
+- Line 25: Set the number of outputs.
+- Line 26: Register `TIsBackward` attribute for the operator. The shape and type
+inference uses this attribute to determine whether a node in the graph is a
+forward or backward node.
+- Line 27: Register backward function.
+
+To register the operator working on GPUs, we just need to add the following
+code to `quadratic_op.cu`. Note that here, forward and backward functions
+are registered with attribute key `FCompute<gpu>`, rather than `FCompute<cpu>`.
+```cpp
+NNVM_REGISTER_OP(quadratic)
+.set_attr<FCompute>("FCompute<gpu>", QuadraticOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_quadratic)
+.set_attr<FCompute>("FCompute<gpu>", QuadraticOpBackward<gpu>);
+```
+
+### Unit Test
+So far, we have finished implementing the operator `quadratic` in MXNet backend.
+In order to unit test it in frontend, we need to add the following code
+to the python file `test_operator.py`. Note that while testing the
+forward pass is straightforward using `mx.nd.quadratic`, testing
+the backward involves a little bit of more efforts. We create a
+`quadratic` symbol and feed it into the utility function `check_numeric_gradient`.
+The utility function will perform a perturbation on the input
+and calculate the response rate of the output using the
+[finite difference method](https://en.wikipedia.org/wiki/Finite_difference_method).
+Then it will compare the gradient from the backward pass with
+the values from the finite difference method. The test
+will pass once the results satisfy user-provided relative and absolute errors.
+```python
+def test_quadratic_function():
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    c = np.random.random_sample()
+    # check forward
+    for ndim in range(1, 6):
+        shape = rand_shape_nd(ndim, 5)
+        data = rand_ndarray(shape=shape, stype='default')
+        data_np = data.asnumpy()
+        expected = f(data_np, a, b, c)
+        output = mx.nd.quadratic(data, a=a, b=b, c=c)
+        assert_almost_equal(output.asnumpy(), expected)
+
+        # check backward using finite difference
+        data = mx.sym.Variable('data')
+        quad_sym = mx.sym.quadratic(data=data, a=a, b=b, c=c)
+        check_numeric_gradient(quad_sym, [data_np])
+```
+
+## Summary
+In this tutorial, we practiced implementing the operator `quadratic` in MXNet backend
+and unit testing the implementation in frontend. More specifically, we added parameter
+struct for user-input parameters, walked through shape and type inference work flow,
+implemented forward and backward functions, and registered the operator
+through nnvm interfaces. You now know how to add operators, and we welcome your
+contributions to MXNet.
