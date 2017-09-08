@@ -681,9 +681,9 @@ def test_cached():
     bias[:] = 2
     o2 = op(data, weight, bias)
     assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
-    # o2[:] = 0
-    # op(data, weight, bias, out=o2)
-    # assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+    o2[:] = 0
+    op(data, weight, bias, out=o2)
+    assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
 
 def test_output():
     shape = (2,2)
