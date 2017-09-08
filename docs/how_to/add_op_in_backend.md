@@ -110,7 +110,7 @@ for all the variables and final output. This is a result of mutual
 inference. In MXNet, the whole process can be interpreted as this:
 1. `a` and `b` are combined using an element-wise multiplication operator,
 so the shapes of `a` and `b` are same and `b`'s first dimension size is `2`.
-2. `b' and `c` are combined using an element-wise multiplication operator too,
+2. `b` and `c` are combined using an element-wise multiplication operator too,
 so the shapes of `b` and `c` are same and `b`'s second dimension size is `3`.
 3. Now `b`'s shape is completely known, so `a` and `c` missing dimension sizes
 are known as well.
@@ -151,10 +151,22 @@ exception to generate error message for shape inference.
 5. At the end of the function body, we check whether the output shape
 is completely known by comparing whether its size is greater than 0. If not,
 the function should return 'false' to notify the caller about shape inference failure.
+6. MXNet provides a convenience function implementing the logic of mutual inference
+for general element-wise operators with the following interface. Users can
+instantiate this function with `n_in=1` and `n_out=1` to replace the above
+function `QuadraticOpShape` in operator registration (discussed later).
+The function `QuadraticOpShape` is implemented here for illustration purpose only.
+```cpp
+template<int n_in, int n_out>
+inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
+                          std::vector<TShape> *in_attrs,
+                          std::vector<TShape> *out_attrs);
+```
 
 The same logic goes for data type inference. We will leave the analysis of
-the following code sample to users.
-```
+the following code sample to users. Note that `-1` means the data type
+is unknown and must be inferred from other arguments or outputs.
+```cpp
 inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int>* in_attrs,
                             std::vector<int>* out_attrs) {
@@ -165,4 +177,95 @@ inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
   return out_attrs->at(0) != -1; 
 }
+```
+Again, MXNet provides the following convenience function for mutual
+type inference of element-wise operators. Users can use that
+in operator registration (discussed later).
+```cpp
+template<int n_in, int n_out>
+inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs);
+```
+
+### Forward Function
+Forward function defines the operator behavior in the forward pass
+of neural networks. For our `quadratic` operator, it simply implements
+the logic of running a tensor through the quadratic function performing
+a few element-wise operations. We paste the whole forward function code here
+and let's go through it line by line.
+```cpp
+template<typename xpu>                                                        // 1                                  
+void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2                              
+                        const OpContext& ctx,                                 // 3                                  
+                        const std::vector<TBlob>& inputs,                     // 4                                  
+                        const std::vector<OpReqType>& req,                    // 5                                  
+                        const std::vector<TBlob>& outputs) {                  // 6                                  
+  CHECK_EQ(inputs.size(), 1U);                                                // 7                                  
+  CHECK_EQ(outputs.size(), 1U);                                               // 8                                  
+  CHECK_EQ(req.size(), 1U);                                                   // 9                                  
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                            // 10                                  
+  const TBlob& in_data = inputs[0];                                           // 11                                  
+  const TBlob& out_data = outputs[0];                                         // 12                                  
+  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);      // 13                                  
+  using namespace mxnet_op;                                                   // 14                                  
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {                           // 15                                  
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                               // 16                                  
+      Kernel<quadratic_forward<req_type>, xpu>::Launch(                       // 17                                  
+          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),  // 18                                  
+          param.a, param.b, param.c);                                         // 19                                  
+    });                                                                       // 20                                  
+  });                                                                         // 21                                  
+}
+```
+- Line 1: `attrs` contains the user input parameters `a`, `b`, and `c`
+- Line 2: `ctx` holds the `stream` for serializing asynchronous executions.
+For example, launching GPU kernels from CPU is an asynchronous operation.
+The `stream` guarantees that the kernels of the same `stream` execute
+in the same order on GPU as they are launched.
+- Line 3: `inputs` is a vector of input tensors (only one input tensor
+for the `quadratic` operator).
+- Line 4: `req` is a vector of `OpReqType` values. Each value defines
+the way of writing calculated values to the output tensors.
+Therefore, the number of `req`s must be same as the number of output tensors.
+MXNet currently supports three types of `req`: 'null', 'write', and 'add'.
+`null` means skipping calculating the corresponding output tensor,
+`write` means overwriting the values in the output tensor with the ones
+calculated from this operator, and `add` means adding the calculated values
+to the existing ones in the output tensor.
+- Line 5: `outputs` is a vector of output tensors (only one
+output tensor for the `quadratic` operator).
+- Lines 7-9: Verify that the size of each vector is expected.
+Otherwise, stop moving forward and output error message.
+- Line 10: Get the `stream` from the `ctx` for launching kernels.
+- Lines 11-12: Define the references of input tensor and output tensor
+for later coding convenience. Note that `TBlob` can be understood
+as a uniform data structure for tensors of various dimensions, so
+that tensors of different dimensions can be put in a homogeneous container,
+such as `std::vector`, `std::list`, and so on. You can still
+get tensors of desired dimensions from a `TBlob` object through
+the interface `get_with_shape`.
+- Line 13: Get user-input parameters from the node attribute.
+- Lines 15-21: This is the place where the formula of the operator is implemented.
+The two macros `MSHADOW_TYPE_SWITCH` and `MXNET_ASSIGN_REQ_SWITCH` enable
+the code block to work for all the supported data types and `req` types in MXNet.
+Insider the inner-most macro, we launch the kernel for calculating
+the output tensor such that each thread takes an element from
+the input tensor, feed it into the quadratic function, and assign
+the output element to the output tensor based on `req`. Note that
+this `Kernel::Launch` interface was designed for launching
+parallel computation on both CPU and GPU. This allows most of
+the simple operators to share the same piece of code as
+parallelization approaches are identical on both types of devices.
+The kernel function is defined as the following, where the function
+`Map` is executed by each thread for each input element.
+```cpp
+template<int req>
+struct quadratic_forward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                  const float a, const float b, const float c) {
+    KERNEL_ASSIGN(out_data[i], req, in_data[i] * (a * in_data[i] + b) + c);
+  }
+};
 ```
