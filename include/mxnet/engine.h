@@ -84,7 +84,9 @@ enum class FnProperty {
   /*! \brief Prioritized sync operation on CPU */
   kCPUPrioritized,
   /*! \brief Asynchronous function call */
-  kAsync
+  kAsync,
+  /*! \brief Delete variable call */
+  kDeleteVar
 };  // enum class FnProperty
 
 /*!

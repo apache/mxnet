@@ -325,7 +325,7 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
       // so during `ThreadedEngine::OnComplete` it could be recycled.
       threaded_var->SetToDelete();
       delete_fn(ctx);
-    }, exec_ctx, {}, {var}, FnProperty::kAsync, 0,
+    }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0,
     PROFILER_MESSAGE("DeleteVariable"));
 }
 
