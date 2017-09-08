@@ -79,10 +79,10 @@ the documentation build to display them on the
 [MXNet documentation web page](https://mxnet.incubator.apache.org/api/python/index.html).
 
 ### Attribute Inference
-Attribute inference means the process of deducing the properties of `NDArray`s
-in neural networks from user input information. Two most common attributes
-of `NDArray` are shape and dtype. Let's look at the following example.
-Given an input `NDArray` called `data`, you invoke the quadratic operator
+Attribute inference is the process of deducing the properties of `NDArray`s
+in neural networks from user provided information. Two most common attributes
+of an `NDArray` are shape and dtype. Let's take a look at the following example.
+Given an input `NDArray` called `data`, you invoke the `quadratic` operator
 like this `output = mx.nd.quadratic(data, a=1, b=2, c=3)`. Before calculating
 the `output` values, its shape and dtype are inferred from the input
 `data`'s shape and dtype following
@@ -150,11 +150,11 @@ dimension of two shapes, such as (2, 3) and (3, 3), the macro would throw
 exception to generate error message for shape inference.
 5. At the end of the function body, we check whether the output shape
 is completely known by comparing whether its size is greater than 0. If not,
-the function should return 'false' to notify the caller about shape inference failure.
+the function should return `false` to notify the caller about shape inference failure.
 6. MXNet provides a convenience function implementing the logic of mutual inference
 for general element-wise operators with the following interface. Users can
 instantiate this function with `n_in=1` and `n_out=1` to replace the above
-function `QuadraticOpShape` in operator registration (discussed later).
+function `QuadraticOpShape` in operator registration (explained later).
 The function `QuadraticOpShape` is implemented here for illustration purpose only.
 ```cpp
 template<int n_in, int n_out>
@@ -195,28 +195,28 @@ the logic of running a tensor through the quadratic function performing
 a few element-wise operations. We paste the whole forward function code here
 and let's go through it line by line.
 ```cpp
-template<typename xpu>                                                        // 1   
-void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2                             
-                        const OpContext& ctx,                                 // 3                                 
-                        const std::vector<TBlob>& inputs,                     // 4                                 
-                        const std::vector<OpReqType>& req,                    // 5                                 
-                        const std::vector<TBlob>& outputs) {                  // 6                                 
-  CHECK_EQ(inputs.size(), 1U);                                                // 7                                 
-  CHECK_EQ(outputs.size(), 1U);                                               // 8                                 
-  CHECK_EQ(req.size(), 1U);                                                   // 9                                 
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                            // 10                                 
-  const TBlob& in_data = inputs[0];                                           // 11                                 
-  const TBlob& out_data = outputs[0];                                         // 12                                 
-  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);      // 13                                 
-  using namespace mxnet_op;                                                   // 14                                 
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {                           // 15                                 
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                               // 16                                 
-      Kernel<quadratic_forward<req_type>, xpu>::Launch(                       // 17                                 
-          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),  // 18                                 
-          param.a, param.b, param.c);                                         // 19                                 
-    });                                                                       // 20                                 
-  });                                                                         // 21                                 
-}
+template<typename xpu>                                                        // 1
+void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2
+                        const OpContext& ctx,                                 // 3
+                        const std::vector<TBlob>& inputs,                     // 4
+                        const std::vector<OpReqType>& req,                    // 5
+                        const std::vector<TBlob>& outputs) {                  // 6
+  CHECK_EQ(inputs.size(), 1U);                                                // 7
+  CHECK_EQ(outputs.size(), 1U);                                               // 8
+  CHECK_EQ(req.size(), 1U);                                                   // 9
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                            // 10
+  const TBlob& in_data = inputs[0];                                           // 11
+  const TBlob& out_data = outputs[0];                                         // 12
+  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);      // 13
+  using namespace mxnet_op;                                                   // 14
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {                           // 15
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                               // 16
+      Kernel<quadratic_forward<req_type>, xpu>::Launch(                       // 17
+          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),  // 18
+          param.a, param.b, param.c);                                         // 19
+    });                                                                       // 20
+  });                                                                         // 21
+}                                                                             // 22
 ```
 - Line 1: `attrs` contains the user input parameters `a`, `b`, and `c`
 - Line 2: `ctx` holds the `stream` for serializing asynchronous executions.
@@ -253,9 +253,9 @@ Insider the inner-most macro, we launch the kernel for calculating
 the output tensor such that each thread takes an element from
 the input tensor, feed it into the quadratic function, and assign
 the output element to the output tensor based on `req`. Note that
-this `Kernel::Launch` interface was designed for launching
+`Kernel::Launch` serves as a universal interface for launching
 parallel computation on both CPU and GPU. This allows most of
-the simple operators to share the same piece of code as
+the simple operators to share the same piece of code for CPU and GPU as
 parallelization approaches are identical on both types of devices.
 The kernel function is defined as the following, where the function
 `Map` is executed by each thread for each input element.
@@ -268,4 +268,124 @@ struct quadratic_forward {
     KERNEL_ASSIGN(out_data[i], req, in_data[i] * (a * in_data[i] + b) + c);
   }
 };
+```
+
+### Backward Function
+Backward functions play the role of propagating derivatives of loss function
+with respect to parameters in the last layer throughout the network to the first
+layer. The whole process is the so-called backward propagation. We are not
+going to delineate the principle of backward propagation here since users can find
+great details covered in other resources, such as
+[CS231n](http://cs231n.github.io/optimization-2/) and
+[How the backgropagation algorithm works](http://neuralnetworksanddeeplearning.com/chap2.html).
+The problem we are going to solve here for the `quadratic` operator is that
+given a tensor representing the gradient of the loss function with respect
+to the output of the operator, calculate the gradient with respect to
+the input of the operator. There is no need to calculate the derivatives
+of loss function with respect to user-input parameters `a`, `b`, and `c`
+since they are not learnable parameters in the network. To formulate the problem:
+given `dL/dy` and `y = a*x^2 + b*x + c`, where `L` represents the loss function and
+`y` stands for the output of the quadratic tensor, we need to solve for
+`dL/dx`. Using chain-rule, it is obvious to find that
+```
+dL/dx = dL/dy * dy/dx = dL/dy * (2*a*x + b).
+```
+The above equation indicates that `dL/dx` depends on the gradient
+of the output tensor and the input tensor. With this information in mind,
+let's breakdown the following backward function line by line.
+```cpp
+template<typename xpu>                                                       // 1
+void QuadraticOpBackward(const nnvm::NodeAttrs& attrs,                       // 2
+                         const OpContext& ctx,                               // 3
+                         const std::vector<TBlob>& inputs,                   // 4
+                         const std::vector<OpReqType>& req,                  // 5
+                         const std::vector<TBlob>& outputs) {                // 6
+  CHECK_EQ(inputs.size(), 2U);                                               // 7
+  CHECK_EQ(outputs.size(), 1U);                                              // 8
+  CHECK_EQ(req.size(), 1U);                                                  // 9
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                           // 10
+  const TBlob& out_grad = inputs[0];                                         // 11
+  const TBlob& in_data = inputs[1];                                          // 12
+  const TBlob& in_grad = outputs[0];                                         // 13
+  const QuadraticParam& param = nnvm::get<QuadraticParam>(attrs.parsed);     // 14
+  using namespace mxnet_op;                                                  // 15
+  MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {                          // 16
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                              // 17
+      Kernel<quadratic_backward<req_type>, xpu>::Launch(                     // 18
+          s, in_grad.Size(), in_grad.dptr<DType>(), out_grad.dptr<DType>(),  // 19
+          in_data.dptr<DType>(), param.a, param.b);                          // 20
+    });                                                                      // 21
+  });                                                                        // 22
+}                                                                            // 23
+```
+- Lines 1-6: Backward function has the same signature as forward function.
+- Lines 7-9: Verifying the sizes of the function arguments. One thing to note
+that since the gradient of the input depends on both the gradient of the output and
+the input tensor itself, `inputs` must contain two `TBlob`s.
+- Line 10: Get the stream of the context for serializing asynchronous executions.
+- Lines 11-13: Convenience reference variables for later use. We name `out_grad`
+as the gradient of the operator output, `in_data` as the input of the operator,
+and `in_grad` as the gradient of the operator input.
+- Line 14: Get the parameter object of `QuadraticParam`.
+- Lines 16-22: Same as in the forward function, this is where parallel
+computation for `in_grad` happens. The struct `quadratic_backward` implements
+the formula of calculating each element of `in_grad` by one thread as the following.
+```cpp
+template<int req>
+struct quadratic_backward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
+                                  const DType* in_data, const float a, const float b) {
+    KERNEL_ASSIGN(in_grad[i], req, out_grad[i] * (2 * a * in_data[i] + b));
+  }
+};
+```
+
+### Operator Registration
+So far, we have implemented necessary data structure and functions for the operator `quadratic`.
+Now let's register them through `nnvm` interfaces to expose the operator `quadratic`
+to frontend. The following code is from `quadratic_op.cc`. The `.cc` file is responsible
+for registering the operator working on CPU.
+```cpp
+DMLC_REGISTER_PARAMETER(QuadraticParam);                                           // 1
+
+NNVM_REGISTER_OP(quadratic)                                                        // 2
+.describe(R"code(This operators implements the quadratic function:                 // 3
+.. math::
+
+    f(x) = ax^2+bx+c
+
+where :math:`x` is an input tensor and all operations
+in the function are element-wise.
+
+Example::
+  x = [[1, 2], [3, 4]]
+  y = quadratic(data=x, a=1, b=2, c=3)
+  y = [[6, 11], [18, 27]]
+
+)code" ADD_FILELINE)                                                               // 4
+.set_attr_parser(ParamParser<QuadraticParam>)                                      // 5
+.set_num_inputs(1)                                                                 // 6
+.set_num_outputs(1)                                                                // 7
+.set_attr<nnvm::FListInputNames>("FListInputNames",                                // 8
+  [](const NodeAttrs& attrs) {                                                     // 9
+    return std::vector<std::string>{"data"};                                       // 10
+  })                                                                               // 11
+.set_attr<nnvm::FInferShape>("FInferShape", QuadraticOpShape)                      // 12
+.set_attr<nnvm::FInferType>("FInferType", QuadraticOpType)                         // 13
+.set_attr<FCompute>("FCompute<cpu>", QuadraticOpForward<cpu>)                      // 14
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_quadratic"})  // 15
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",                                  // 16
+  [](const NodeAttrs& attrs) {                                                     // 17
+    return std::vector<std::pair<int, int> >{{0, 0}};                              // 18
+  })                                                                               // 19
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")                        // 20
+.add_arguments(QuadraticParam::__FIELDS__());                                      // 21
+
+NNVM_REGISTER_OP(_backward_quadratic)                                              // 22
+.set_attr_parser(ParamParser<QuadraticParam>)                                      // 23
+.set_num_inputs(2)                                                                 // 24
+.set_num_outputs(1)                                                                // 25
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)                                  // 26
+.set_attr<FCompute>("FCompute<cpu>", QuadraticOpBackward<cpu>);                    // 27
 ```
