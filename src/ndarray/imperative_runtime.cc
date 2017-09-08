@@ -886,6 +886,7 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
     bool create_graph) {
   using namespace nnvm;
   using namespace imperative;
+  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
 
   // Construct forward graph
   Graph graph;
@@ -950,10 +951,6 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
   }
-
-  std::vector<const Op*> zero_ops;
-  zero_ops.push_back(Op::Get("zeros_like"));
-  zero_ops.push_back(Op::Get("_zeros"));
 
   Graph g_graph = pass::Gradient(
       graph, graph.outputs, xs, ograd_entries,
@@ -1112,6 +1109,7 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
 ImperativeRuntime::CachedOp::CachedOp(const nnvm::Symbol& sym) {
   using namespace nnvm;
   using namespace imperative;
+  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
 
   // construct forward graph
   {
@@ -1143,10 +1141,6 @@ ImperativeRuntime::CachedOp::CachedOp(const nnvm::Symbol& sym) {
     for (const auto& i : args) xs.emplace_back(NodeEntry{i, 0, 0});
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
-
-    std::vector<const Op*> zero_ops;
-    zero_ops.push_back(Op::Get("zeros_like"));
-    zero_ops.push_back(Op::Get("_zeros"));
 
     grad_graph_ = pass::Gradient(
         fwd_graph_, fwd_graph_.outputs, xs, ograd_entries,
@@ -1210,8 +1204,11 @@ std::vector<nnvm::NodeEntry> ImperativeRuntime::CachedOp::Gradient(
     const nnvm::NodePtr& node,
     const std::vector<nnvm::NodeEntry>& ograds) {
   using namespace nnvm;
+  static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
+  static const auto _CachedOp_NoGrad = Op::Get("_CachedOp_NoGrad");
+
   auto p = Node::Create();
-  p->attrs.op = Op::Get("_backward_CachedOp");
+  p->attrs.op = _backward_CachedOp;
   p->attrs.name = node->attrs.name + "_backward";
   p->attrs.parsed = node->attrs.parsed;
   p->control_deps.push_back(node);
@@ -1224,10 +1221,11 @@ std::vector<nnvm::NodeEntry> ImperativeRuntime::CachedOp::Gradient(
   const auto& auxs = mutable_input_nodes();
   if (auxs.size()) {
     auto nop = Node::Create();
-    nop->attrs.op = Op::Get("_CachedOp_NoGrad");
+    nop->attrs.op = _CachedOp_NoGrad;
     nop->attrs.parsed = static_cast<uint32_t>(auxs.size());
     nop->control_deps.push_back(node);
-    for (uint32_t i = 0, j = 0, k = 0; i < num_inputs(); ++i) {
+    uint32_t j = 0, k = 0;
+    for (const auto& i : fwd_graph_.indexed_graph().input_nodes()) {
       if (auxs.count(i)) {
         ret.emplace_back(NodeEntry{nop, j++, 0});
       } else {
