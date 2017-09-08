@@ -1,9 +1,9 @@
-# Training a Linear Regression Model with Sparse Symbols
+# Train a Linear Regression Model with Sparse Symbols
 In previous tutorials, we introduced `CSRNDArray` and `RowSparseNDArray`,
 the basic data structures for manipulating sparse data.
 MXNet also provides `Sparse Symbol` API, which enables symbolic expressions that handle sparse arrays.
 In this tutorial, we first focus on how to compose a symbolic graph with sparse operators,
-then train a linear classification model using sparse symbols with the Module API.
+then train a linear regression model using sparse symbols with the Module API.
 
 ## Prerequisites
 
@@ -141,6 +141,93 @@ pred = mx.symbol.broadcast_add(dot, bias)
 y = mx.symbol.Variable("label")
 output = mx.symbol.SoftmaxOutput(data=pred, label=y, name="output")
 executor = output.simple_bind(ctx=mx.cpu())
+```
+
+## Training with Module APIs
+
+In the following section we'll walk through how one can implement *linear regression* using sparse symbols and sparse optimizers.
+
+The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 1000x<sub>1000*, where *(x<sub>1</sub>,x<sub>2</sub>, ..., x<sub>1000</sub>)* are input features and *y* is the corresponding label.
+
+### Preparing the Data
+
+In MXNet both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter)
+and [mx.io.NDArrayIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.NDArrayIter)
+support loading sparse data in CSR format. In this example, we'll use the `NDArrayIter`.
+
+```python
+# random training data
+train_data = mx.test_utils.rand_ndarray((100, 1000), 'csr', 0.01)
+target_weight = mx.nd.arange(1, 1001).reshape((1000, 1))
+train_label = mx.nd.dot(train_data, target_weight)
+batch_size = 1
+train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size, last_batch_handle='discard', label_name='label')
+```
+
+# TODO(haibin) if batch size is just right, we don't have to discard it...
+
+### Defining the Model
+
+Below we define a linear regression model specifying the storage type of the variables.
+
+```python
+initializer = mx.initializer.Normal(sigma=0.01)
+X = mx.sym.Variable('data', stype='csr')
+Y = mx.symbol.Variable('label')
+weight = mx.symbol.Variable('weight', stype='row_sparse', init=initializer)
+bias = mx.symbol.Variable('bias')
+pred = mx.sym.broadcast_add(mx.sym.sparse.dot(X, weight), bias)
+lro = mx.sym.LinearRegressionOutput(data=pred, label=Y, name="lro")
+```
+
+The above network uses the following symbols:
+
+1. `Variable X`: The placeholder for sparse data inputs. The `csr` stype indicates that the array to hold is in CSR format.
+
+2. `Variable Y`: The placeholder for dense labels.
+
+3. `Variable weight`: The placeholder for the weight to learn. The `stype` of weight is specified as `row_sparse` so that it is initialized as RowSparseNDArray,
+   and the optimizer will perform sparse update rules on it. The `init` attribute specifies what initializer to use for this variable.
+
+4. `Variable bias`: The placeholder for the bias to learn.
+
+5. `sparse.dot`: The dot product operation of `X` and `weight`. The sparse implementation will be invoked to handle `csr` and `row_sparse` inputs.
+
+6. `broadcast_add`: The broadcasting add operation to apply `bias`.
+
+7. `LinearRegressionOutput`: The output layer which computes *l2* loss against its input and the labels provided to it.
+
+## Training the model
+
+Once we have defined the model structure, the next step is to create a module and initialize the parameters and optimizer.
+
+```python
+# create module
+mod = mx.mod.Module(symbol=lro, data_names=['data'], label_names=['label'], batch_end_callback = mx.callback.Speedometer(batch_size, 2))
+# allocate memory by given the input data and label shapes
+mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
+# initialize parameters by random numbers
+mod.init_params(initializer=initializer)
+# use SGD as the optimizer, which performs sparse update on "row_sparse" weight
+sgd = mx.optimizer.SGD(clip_gradient=5.0, learning_rate=0.001, rescale_grad=1.0/batch_size, momentum=0.9)
+mod.init_optimizer(optimizer=sgd)
+```
+
+Finally, we train the parameters of the model to fit the training data by using the `forward`, `backward` and `update` methods in Module.
+
+```python
+# use mean square error as the metric
+metric = mx.metric.create('MSE')
+# train 10 epochs
+for epoch in range(10):
+    train_iter.reset()
+    metric.reset()
+    for batch in train_iter:
+        mod.forward(batch, is_train=True)       # compute predictions
+        mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+        mod.backward()                          # compute gradients
+        mod.update()                            # update parameters
+    print('Epoch %d, Training %s' % (epoch, metric.get()))
 ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
