@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup as bs
 
 parser = argparse.ArgumentParser(description="Add download package link.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--file_path', type=str, default='docs/_build/html/get_started/install.html',
+parser.add_argument('--file_path', type=str, default='docs/_build/html/install/index.html',
                         help='file to be modified')
 parser.add_argument('--current_version', type=str, default='master',
                         help='Current version')

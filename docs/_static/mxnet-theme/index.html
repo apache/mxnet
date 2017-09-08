@@ -2,12 +2,20 @@
   <div class="container">
     <div class="row">
       <div class="col-lg-12">
-        <div id="banner-title">A Flexible and Efficient Library for Deep Learning</div>
-        <div id="why_mxnet" class='col-sm-6 col-xs-12'>
-          <a href="get_started/why_mxnet.html" id="why_mxnet_btn">Learn More</a>
-        </div>
-        <div id="install_blk" class='col-sm-6 col-xs-12'>
-          <a href="get_started/install.html" id="install_btn">Install</a>
+          <div id="banner-title" class='col-sm-6 col-xs-12'><span>MXNet</span>
+            <p id="landing-title">is a flexible and efficient library for deep learning.</p>
+            <p id="intro">
+                Building a high-performance deep learning library requires many system-level design decisions. In this design note, we share the rationale for the specific 
+                choices made when designing MXNet. We imagine that these insights may be useful to both deep learning practioners and builders of other deep learning systems.
+            </p>
+            <div id='landing-btn-blk'>
+                <div id="install_blk">
+                    <a href="install/index.html" id="install_btn">Install</a>
+                </div>
+                <div id="why_mxnet">
+                    <a href="get_started/why_mxnet.html" id="why_mxnet_btn">Learn More</a>
+                </div>
+            </div>
         </div>
       </div>
     </div>
@@ -41,96 +49,30 @@
 <div class="section-util">
     <div class="container">
       <div class="row">
-        <div class="col-lg-6 col-sm-12">
-          <span class="glyphicon glyphicon-list-alt"></span>
-          <h2>Examples</h2>
-          <p>Explore projects from simple demos to state-of-the-art research</p>
-          <div class='util-btn'>
-            <a id="example-link" href="https://github.com/dmlc/mxnet/tree/master/example">MXNet Examples</a>
-          </div>
-        </div>
-        <div class="col-lg-6 col-sm-12">
+        <div id="model-zoo-blk" class="col-lg-4 col-sm-12">
           <span class="glyphicon glyphicon-folder-open"></span>
           <h2>Model Zoo</h2>
-          <p>Off the shelf pre-trained models</p>
+          <p>Off the shelf pre-trained models. Fast implementations of many state-of-art models.</p>
           <div class='util-btn'>
-            <a id="model-zoo-link" href="model_zoo/index.html">Model Zoo</a>
+            <a id="model-zoo-link" href="model_zoo/index.html">Model zoo</a>
+          </div>
+        </div>
+        <div id="example-blk" class="col-lg-4 col-sm-12">
+          <span class="glyphicon glyphicon-list-alt"></span>
+          <h2>Examples</h2>
+          <p>Explore projects from simple demos, exmaples, tutorials to state-of-the-art research.</p>
+          <div class='util-btn'>
+            <a id="example-link" href="https://github.com/dmlc/mxnet/tree/master/example">MXNet examples</a>
+          </div>
+        </div>
+        <div id="tutorial-blk" class="col-lg-4 col-sm-12">
+          <span class="glyphicon glyphicon-ok-circle"></span>
+          <h2>Tutorials</h2>
+          <p>These tutorials introduce a few fundamental concepts in deep learning and how to implement them in MXNet.</p>
+          <div class='util-btn'>
+            <a id="tutorial-link" href="tutorials/index.html">MXNet tutorials</a>
           </div>
         </div>
       </div>
     </div>
-</div>
-
-<div class="section-inst">
-  <div class="container">
-    <div class="row">
-      <p>
-        MXNet is developed by collaborators from multiple universities and
-        companies. We sincerely thank the following organizations for supporting
-        MXNet and sponsoring its major developers (alphabetical order).
-      </p>
-      <div class="col-lg-4 col-sm-6">
-        <img height="60px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/aws-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="55px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/baidu-logo.jpg">
-      </div>
-
-      <div class="col-lg-4 col-sm-6 smallClear">
-        <img height="70px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/cmu-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="70px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/dato-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="70px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/intel-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="55px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/nyu-logo.jpg">
-      </div>
-
-      <div class="col-lg-4 col-sm-6 clear smallClear">
-        <img height="40px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/nvidia-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/mit-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6 smallClear">
-        <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/ms-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6 clear smallClear">
-        <img height="55px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/hkust-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/tusimple-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/university-alberta-logo.png">
-      </div>
-
-      <div class="col-lg-4 col-sm-6 clear smallClear">
-        <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/university-washington-logo.jpg">
-      </div>
-
-      <div class="col-lg-4 col-sm-6">
-        <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/wolfram-logo.png">
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="section-disclaimer">
-    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/apache_incubator_logo.png" height=60>
-    <p>
-        Apache MXNet is an effort undergoing incubation at The Apache Software Foundation (ASF), <strong>sponsored by the <i>Apache Incubator</i></strong>. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.
-    </p>
 </div>

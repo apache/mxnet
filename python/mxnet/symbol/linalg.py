@@ -15,5 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Linear Algebra NDArray API of MXNet."""
+"""Linear Algebra Symbol API of MXNet."""
 __all__ = []
