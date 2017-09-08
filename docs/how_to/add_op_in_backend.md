@@ -4,18 +4,20 @@
 Operators are essential elements for constructing neural networks. They define mathematical formulas
 of transforming input data (tensors) to outputs. MXNet has a rich set of operators from simple ones,
 such as element-wise sum, to complicated ones, such as convolution. You may have noticed
-that many operators implemented in MXNet have their equivalent forms in Numpy, such as repeat,
-tile, etc., and wonder why we could not simply use those Numpy operators in MXNet. One of the
+that many operators implemented in MXNet have their equivalent forms in Numpy, such as
+[repeat](https://docs.scipy.org/doc/numpy/reference/generated/numpy.repeat.html),
+[tile](https://docs.scipy.org/doc/numpy/reference/generated/numpy.tile.html),
+etc., and wonder why we could not simply use those Numpy operators in MXNet. One of the
 major reasons is that we need to support both CPU and GPU computing for the operators in MXNet,
 while Numpy operators do not have GPU computing capability. In addition, we have performed plenty of
-optimizations on various components in MXNet, such as tensor data structure (`NDArray`), execution engine,
-computational graph and so on, for maximizing memory and runtime efficiency. An operator implemented
-under the MXNet operator framework is able to greatly leverage those optimizations for exhaustive
-performance enhancement.
+optimizations for various components in MXNet, such as tensor data structure (`NDArray`),
+execution engine, computational graph and so on, for maximizing memory and runtime efficiency.
+An operator implemented under the MXNet operator framework would greatly
+leverage those optimizations for exhaustive performance enhancement.
 
-In this tutorial, we are going to practice writing an operator using C++ in the MXNet backend. After
-finishing the implementation, we will add unit tests using Python testing the operator
-we just implemented.
+In this tutorial, we are going to practice implementing an operator using
+C++ in the MXNet backend. After finishing the implementation,
+we will add unit tests using Python for the operator we just implemented.
 
 ## Implementation
 ### An Operator Example
@@ -71,25 +73,25 @@ struct QuadraticParam : public dmlc::Parameter<QuadraticParam> {
 ```
 
 The function calls in the above parameter struct are self-explanatory. Note that
-for each parameter, we set the default value to 0.0 such that users can
+for each parameter, we set the default value to `0.0` such that users can
 skip passing 0-value parameters to the quadratic operator interface. You
 can choose not to define the default value for a parameter if it is required
 at runtime. Meanwhile, adding brief descriptions to the parameters enables
-the documentation build to display them on the
+the documentation engine to display them on
 [MXNet documentation web page](https://mxnet.incubator.apache.org/api/python/index.html).
 
 ### Attribute Inference
 Attribute inference is the process of deducing the properties of `NDArray`s
 in neural networks from user provided information. Two most common attributes
-of an `NDArray` are shape and dtype. Let's take a look at the following example.
+of an `NDArray` are shape and data type. Let's take a look at the following example.
 Given an input `NDArray` called `data`, you invoke the `quadratic` operator
-like this `output = mx.nd.quadratic(data, a=1, b=2, c=3)`. Before calculating
-the `output` values, its shape and dtype are inferred from the input
-`data`'s shape and dtype following
+like this: `output = mx.nd.quadratic(data, a=1, b=2, c=3)`. Before calculating
+the `output` values, its shape and data type are inferred from the input
+`data`'s shape and type following
 the rules you defined in order to allocate memory space for the output tensor.
 
 One important thing to note that inference functions should be capable of
-performing mutual inference, for example,
+performing **mutual inference**, for example,
 inferring input shape from output shape, inferring one argument's shape
 from another argument, etc. This is useful in building computational graphs
 for neural networks. Let's consider the following example.
@@ -104,7 +106,7 @@ for neural networks. Let's consider the following example.
 ```
 In this example, we only specified values for `a`'s first dimension
 and `c`'s second dimension. The `0` in shape `(2, 0)` means the size
-of the second dimension is unknown, same for shape `(0, 3)`.
+of the second dimension is unknown, same meaning for shape `(0, 3)`.
 However, the symbol `d` still successfully inferred the shapes
 for all the variables and final output. This is a result of mutual
 inference. In MXNet, the whole process can be interpreted as this:
@@ -146,10 +148,10 @@ to assert when the vector's size is wrong.
 4. We called macro `SHAPE_ASSIGN_CHECK` twice for mutual inference. One for
 inferring output shape from input shape, the other one is for inferring
 input shape from output shape. If there are any unequal non-zero values in the same
-dimension of two shapes, such as (2, 3) and (3, 3), the macro would throw
-exception to generate error message for shape inference.
+dimension of two shapes, such as (2, 3) and (3, 3), the macro would throw an
+exception with a error message for shape inference.
 5. At the end of the function body, we check whether the output shape
-is completely known by comparing whether its size is greater than 0. If not,
+is completely known by checking whether its size is greater than 0. If not,
 the function should return `false` to notify the caller about shape inference failure.
 6. MXNet provides a convenience function implementing the logic of mutual inference
 for general element-wise operators with the following interface. Users can
@@ -178,9 +180,10 @@ inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1;
 }
 ```
+
 Again, MXNet provides the following convenience function for mutual
 type inference of element-wise operators. Users can use that
-in operator registration (discussed later).
+in operator registration (explained later).
 ```cpp
 template<int n_in, int n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
@@ -218,17 +221,17 @@ void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         //
   });                                                                         // 21
 }                                                                             // 22
 ```
-- Line 1: `attrs` contains the user input parameters `a`, `b`, and `c`
+- Line 1: `attrs` contains the user input parameters `a`, `b`, and `c`.
 - Line 2: `ctx` holds the `stream` for serializing asynchronous executions.
 For example, launching GPU kernels from CPU is an asynchronous operation.
 The `stream` guarantees that the kernels of the same `stream` execute
-in the same order on GPU as they are launched.
+in the same order on GPU as they are launched from CPU.
 - Line 3: `inputs` is a vector of input tensors (only one input tensor
 for the `quadratic` operator).
 - Line 4: `req` is a vector of `OpReqType` values. Each value defines
 the way of writing calculated values to the output tensors.
 Therefore, the number of `req`s must be same as the number of output tensors.
-MXNet currently supports three types of `req`: 'null', 'write', and 'add'.
+MXNet currently supports three types of `req`: 'null', 'write', and 'add' in frontend.
 `null` means skipping calculating the corresponding output tensor,
 `write` means overwriting the values in the output tensor with the ones
 calculated from this operator, and `add` means adding the calculated values
@@ -240,18 +243,18 @@ Otherwise, stop moving forward and output error message.
 - Line 10: Get the `stream` from the `ctx` for launching kernels.
 - Lines 11-12: Define the references of input tensor and output tensor
 for later coding convenience. Note that `TBlob` can be understood
-as a uniform data structure for tensors of various dimensions, so
+as a uniform data structure for tensors of various dimensions, such
 that tensors of different dimensions can be put in a homogeneous container,
-such as `std::vector`, `std::list`, and so on. You can still
+such as `std::vector` and `std::list`. You can still
 get tensors of desired dimensions from a `TBlob` object through
 the interface `get_with_shape`.
-- Line 13: Get user-input parameters from the node attribute.
+- Line 13: Get user input parameters from the node attribute.
 - Lines 15-21: This is the place where the formula of the operator is implemented.
 The two macros `MSHADOW_TYPE_SWITCH` and `MXNET_ASSIGN_REQ_SWITCH` enable
 the code block to work for all the supported data types and `req` types in MXNet.
-Insider the inner-most macro, we launch the kernel for calculating
+Inside the inner-most macro, we launch the kernel for calculating
 the output tensor such that each thread takes an element from
-the input tensor, feed it into the quadratic function, and assign
+the input tensor, feeds it into the quadratic function, and assigns
 the output element to the output tensor based on `req`. Note that
 `Kernel::Launch` serves as a universal interface for launching
 parallel computation on both CPU and GPU. This allows most of
@@ -259,6 +262,7 @@ the simple operators to share the same piece of code for CPU and GPU as
 parallelization approaches are identical on both types of devices.
 The kernel function is defined as the following, where the function
 `Map` is executed by each thread for each input element.
+
 ```cpp
 template<int req>
 struct quadratic_forward {
@@ -272,7 +276,7 @@ struct quadratic_forward {
 
 ### Backward Function
 Backward functions play the role of propagating derivatives of loss function
-with respect to parameters in the last layer throughout the network to the first
+with respect to the outputs of the last layer throughout the network to the first
 layer. The whole process is the so-called backward propagation. We are not
 going to delineate the principle of backward propagation here since users can find
 great details covered in other resources, such as
@@ -282,7 +286,7 @@ The problem we are going to solve here for the `quadratic` operator is that
 given a tensor representing the gradient of the loss function with respect
 to the output of the operator, calculate the gradient with respect to
 the input of the operator. There is no need to calculate the derivatives
-of loss function with respect to user-input parameters `a`, `b`, and `c`
+of loss function with respect to user input parameters `a`, `b`, and `c`
 since they are not learnable parameters in the network. To formulate the problem:
 given `dL/dy` and `y = a*x^2 + b*x + c`, where `L` represents the loss function and
 `y` stands for the output of the quadratic tensor, we need to solve for
