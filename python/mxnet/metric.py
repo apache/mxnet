@@ -568,6 +568,20 @@ class F1(EvalMetric):
             self.sum_metric += f1_score
             self.num_inst += 1
 
+
+def truePositives(label):
+    """given a vector of labels, returns the set of indices 
+    corresponding to positives
+    Parameters:
+    ----------
+    label   : vector of binary ground truth
+    Returns:
+    --------
+    set of indices corresponding to positive examples
+    """
+    return set(numpy.ravel(numpy.argwhere(label == 1)))
+
+
 @register
 @alias('top_k_precision')
 class TopKPrecision(EvalMetric):
@@ -632,7 +646,7 @@ class TopKPrecision(EvalMetric):
             num_samples = pred_label.shape[0]
             local_precision = 0.0
             for s in range(num_samples):
-                truepos = set(numpy.ravel(numpy.argwhere(label[s, :] == 1)))
+                truepos = truePositives(label[s,:])
                 predpos = set(numpy.ravel(pred_label[s, :self.top_k]))
                 local_precision += len(truepos.intersection(predpos))/self.top_k
             self.sum_metric += local_precision
@@ -702,7 +716,7 @@ class TopKRecall(EvalMetric):
             num_samples = pred_label.shape[0]
             local_recall = 0.0
             for s in range(num_samples):
-                truepos = set(numpy.ravel(numpy.argwhere(label[s, :] == 1)))
+                truepos = truePositives(label[s,:])
                 predpos = set(numpy.ravel(pred_label[s, :self.top_k]))
                 local_recall += len(truepos.intersection(predpos))/len(truepos)
             self.sum_metric += local_recall
