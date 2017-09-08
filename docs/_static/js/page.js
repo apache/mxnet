@@ -29,7 +29,7 @@ for (var i = 1; i < pathArr.length; ++i) {
     lastUrl += '/' + pathArr[i];
     if (pathArr[i].endsWith('.html')) pathArr[i] = pathArr[i].substring(0, pathArr[i].length - 5);
     if (i == pathArr.length - 1 || pathArr[i + 1].length == 0 ||
-        pathArr[i + 1] == 'index.html') urlTracker += "<li><a class='last-tracker' href=" + lastUrl + ">" + pathArr[i].replace(/_/g, ' ') + "</a></li>";
+        pathArr[i + 1] == 'index.html') urlTracker += "<li>" + pathArr[i].replace(/_/g, ' ') + "</li>";
     else {
         // Check whether current folder has index.html.
         // If it doesn't, disable the link.
