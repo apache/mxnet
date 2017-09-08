@@ -6,7 +6,7 @@ import JSON
 ################################################################################
 libmxnet_detected = false
 libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
-curr_win = "20170502"
+curr_win = "20170819"
 
 if haskey(ENV, "MXNET_HOME")
   info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
