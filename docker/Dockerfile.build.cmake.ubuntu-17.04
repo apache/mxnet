@@ -33,5 +33,5 @@ RUN ninja
 
 
 # Copy artifacts
-RUN mkdir -p /workd/build
+RUN mkdir -p /work/build
 RUN cp *.a *.so /work/build
