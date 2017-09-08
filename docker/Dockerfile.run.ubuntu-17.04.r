@@ -5,7 +5,7 @@
 FROM mxnet.build.ubuntu-17.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV BUILD_OPTS "USE_OPENCV=0 USE_BLAS=openblas GTEST_PATH=/usr/src/googletest/googletest"
+#ENV BUILD_OPTS "USE_OPENCV=0 USE_BLAS=openblas GTEST_PATH=/usr/src/googletest/googletest"
 
 ##################
 # R installation
@@ -14,7 +14,7 @@ RUN apt-get update
 #RUN apt-get install -y --reinstall\
 #	 gnupg2 dirmngr
 
-RUN apt-get install -y dirmngr
+RUN apt-get install -y dirmngr libopencv-dev
 RUN echo "deb http://cran.rstudio.com/bin/linux/ubuntu zesty/" >> /etc/apt/sources.list
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
 
