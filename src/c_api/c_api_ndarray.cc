@@ -221,6 +221,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
                      NDArrayHandle *inputs,
                      int *num_outputs,
                      NDArrayHandle **outputs) {
+  static const auto cached_op = nnvm::Op::Get("_CachedOp");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   API_BEGIN();
@@ -245,7 +246,16 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     }
   }
 
-  op->Forward(ndinputs, ndoutputs);
+  OpStatePtr state = op->Forward(ndinputs, ndoutputs);
+  if (ImperativeRuntime::Get()->is_recording()) {
+    nnvm::NodeAttrs attrs;
+    attrs.op = cached_op;
+    attrs.name = "_cachedop";
+    attrs.parsed = op;
+    ImperativeRuntime::Get()->RecordOp(
+        std::move(attrs), ndinputs, ndoutputs, state,
+        &op->save_inputs(), &op->save_outputs());
+  }
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();

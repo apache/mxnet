@@ -37,24 +37,38 @@ class ImperativeRuntime {
  public:
   class CachedOp {
    public:
-    CachedOp(const nnvm::Symbol& sym);
+    explicit CachedOp(const nnvm::Symbol& sym);
     uint32_t num_inputs() {
       return fwd_graph_.indexed_graph().input_nodes().size();
     }
     uint32_t num_outputs() {
       return fwd_graph_.outputs.size();
     }
-    void Forward(const std::vector<NDArray*>& inputs,
-                 const std::vector<NDArray*>& outputs);
-    void Backward(const OpStatePtr& state,
-                  const std::vector<NDArray*>& inputs,
-                  const std::vector<NDArray*>& outputs);
+    uint32_t num_backward_inputs() {
+      return bwd_ograd_dep_.size() + bwd_in_dep_.size() + bwd_out_dep_.size();
+    }
+    std::vector<bool>& save_inputs() {
+      return save_inputs_;
+    }
+    std::vector<bool>& save_outputs() {
+      return save_outputs_;
+    }
+    const std::unordered_set<uint32_t>& mutable_input_nodes() {
+      return fwd_graph_.indexed_graph().mutable_input_nodes();
+    }
     nnvm::Graph GetForwardGraph(const std::vector<NDArray*>& inputs);
     nnvm::Graph GetBackwardGraph(const OpStatePtr& state,
                                  const std::vector<OpReqType>& reqs,
                                  const std::vector<NDArray*>& inputs);
     std::vector<nnvm::NodeEntry> Gradient(const nnvm::NodePtr& node,
                                           const std::vector<nnvm::NodeEntry>& ograds);
+    OpStatePtr Forward(const std::vector<NDArray*>& inputs,
+                       const std::vector<NDArray*>& outputs);
+    void Backward(const OpStatePtr& state,
+                  const std::vector<NDArray*>& inputs,
+                  const std::vector<OpReqType>& reqs,
+                  const std::vector<NDArray*>& outputs);
+
    private:
     struct CachedOpState {
       std::vector<NDArray> buff;
@@ -67,6 +81,7 @@ class ImperativeRuntime {
     std::vector<bool> curr_grad_req_;
     std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
     std::vector<uint32_t> bwd_input_eid_;
+    std::vector<bool> save_inputs_, save_outputs_;
   };
   /*! \brief whether operator recording is on. */
   bool is_training() const {
@@ -120,7 +135,7 @@ class ImperativeRuntime {
   /*! \return AutogradRuntime singleton */
   static ImperativeRuntime* Get();
 
- public:
+ private:
   /*! \brief */
   class AGInfo {
    public:
