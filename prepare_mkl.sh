@@ -97,9 +97,13 @@ if [ -z $MKLROOT ]; then
     if [ $VERSION_LINE -lt $VERSION_MATCH ] ; then
       #...If it is not then downloaded and unpacked
       if [ $PLATFORM == "Darwin" ]; then
-        curl -L -o $MXNET_ROOT/$ARCHIVE_BASENAME $MKLURL
+        if [ ! -f "$MXNET_ROOT/$ARCHIVE_BASENAME" ]; then
+          curl -L -o $MXNET_ROOT/$ARCHIVE_BASENAME $MKLURL
+        fi
       elif [ $PLATFORM == "Linux" ]; then
-        wget --quiet --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
+        if [ ! -f "$MXNET_ROOT/$ARCHIVE_BASENAME" ]; then
+          wget --quiet --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
+        fi
       fi
       tar -xzf $MXNET_ROOT/$ARCHIVE_BASENAME -C $MXNET_ROOT
       #echo $HOME_MKL
