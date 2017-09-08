@@ -54,7 +54,8 @@ function render_lefttoc() {
                         render_left_helper($($.parseHTML(data)).find('#table-of-contents > div > ul'));
                     }
                     else {
-                        render_left_helper($($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul'));
+                        var lastToc = $($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul')
+                        render_left_helper(lastToc);
                         var tocLink = $('.leftsidebar .sphinxsidebarwrapper .leaf a');
                         var staticLink = 'http';
                         tocLink.each(function () {
