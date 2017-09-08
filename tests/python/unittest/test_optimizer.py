@@ -23,7 +23,6 @@ import math
 from mxnet.test_utils import *
 
 
-# Common
 def test_learning_rate():
     o1 = mx.optimizer.Optimizer(learning_rate=0.01)
     o1.set_learning_rate(0.2)
