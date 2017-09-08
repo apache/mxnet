@@ -79,6 +79,7 @@ def get_arches():
     """Get a list of architectures given our dockerfiles"""
     dockerfiles = glob.glob("Dockerfile.build.*")
     arches = list(map(lambda x: re.sub(r"Dockerfile.build.(.*)", r"\1", x), dockerfiles))
+    arches.sort()
     return arches
 
 def sync_source():
