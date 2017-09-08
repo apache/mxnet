@@ -25,5 +25,6 @@ ENV BUILD_OPTS "USE_OPENCV=0 USE_BLAS=openblas"
 WORKDIR /work/mxnet
 RUN make -j$(nproc) $BUILD_OPTS
 
+# Copy artifacts
 WORKDIR /work/build/
 RUN cp /work/mxnet/lib/* .

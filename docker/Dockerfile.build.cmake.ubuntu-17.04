@@ -30,3 +30,8 @@ ADD mxnet mxnet
 WORKDIR mxnet/build
 RUN cmake -DUSE_CUDA=OFF -DUSE_OPENCV=OFF -GNinja .. 
 RUN ninja
+
+
+# Copy artifacts
+RUN mkdir -p /workd/build
+RUN cp *.a *.so /work/build
