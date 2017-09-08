@@ -384,5 +384,5 @@ class CTCLoss(Loss):
                                  use_data_lengths=data_lengths is not None,
                                  use_label_lengths=label_lengths is not None,
                                  data_lengths=data_lengths, label_lengths=label_lengths,
-                                 reserve_first_label=False)
+                                 blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)

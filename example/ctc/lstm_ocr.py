@@ -59,7 +59,7 @@ def gen_rand():
 def get_label(buf):
     ret = np.zeros(4)
     for i in range(len(buf)):
-        ret[i] = int(buf[i])
+        ret[i] = 1 + int(buf[i])
     if len(buf) == 3:
         ret[3] = 0
     return ret

@@ -3395,10 +3395,10 @@ def test_ctc_loss():
 
 
 def test_ctc_loss_grad():
-    def check_ctc_loss_grad(reserve_first_label): # from tf
+    def check_ctc_loss_grad(blank_label): # from tf
         vocab_size = 5
         max_label_len = 5
-        padding_mask = -1+reserve_first_label
+        padding_mask = -1+ (blank_label=='first')
 
         targets_0 = [0, 1, 2, 1, 0]
         loss_log_prob_0 = -3.34211
@@ -3447,12 +3447,12 @@ def test_ctc_loss_grad():
             for t in range(5)
         ] + 2 * [np.zeros((2, vocab_size+1), np.float32)])
 
-        if reserve_first_label:
+        if blank_label == 'first':
             inputs = np.roll(inputs, 1, axis=2)
             grad_truth = np.roll(grad_truth, 1, axis=2)
 
         labels = (np.asarray([x + [padding_mask]*(max_label_len-len(x))
-                             for x in [targets_0, targets_1]])+reserve_first_label)
+                             for x in [targets_0, targets_1]])+(blank_label == 'first'))
 
         seq_lens = np.array([5, 5], dtype=np.int32)
         label_lens = np.array([5, 4], dtype=np.int32)
@@ -3468,13 +3468,13 @@ def test_ctc_loss_grad():
                                                use_label_lengths=True,
                                                data_lengths=mx.nd.array(seq_lens),
                                                label_lengths=mx.nd.array(label_lens),
-                                               reserve_first_label=reserve_first_label)
+                                               blank_label=blank_label)
                 l.backward()
             assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
             assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
 
-    check_ctc_loss_grad(False)
-    check_ctc_loss_grad(True)
+    check_ctc_loss_grad('first')
+    check_ctc_loss_grad('last')
 
 
 def test_quantization_op():

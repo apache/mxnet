@@ -80,26 +80,26 @@ The `data` tensor consists of sequences of activation vectors (without applying 
 with i-th channel in the last dimension corresponding to i-th label
 for i between 0 and alphabet_size-1 (i.e always 0-indexed).
 Alphabet size should include one additional value reserved for blank label.
-When `reserve_first_label` is ``true``, the ``0``-th channel is be reserved for
-activation of blank label, or otherwise, ``(alphabet_size-1)``-th channel should be
+When `blank_label` is ``"first"``, the ``0``-th channel is be reserved for
+activation of blank label, or otherwise if it is "last", ``(alphabet_size-1)``-th channel should be
 reserved for blank label.
 
-``label`` is an index matrix of integers. When `reserve_first_label` is ``true``,
+``label`` is an index matrix of integers. When `blank_label` is ``"first"``,
 the value 0 is then reserved for blank label, and should not be passed in this matrix. Otherwise,
-when `reserve_first_label` is ``false``, the value `(alphabet_size-1)` is reserved for blank label.
+when `blank_label` is ``"last"``, the value `(alphabet_size-1)` is reserved for blank label.
 
 If a sequence of labels is shorter than *label_sequence_length*, use the special
 padding value at the end of the sequence to conform it to the correct
-length. The padding value is `0` when `reserve_first_label` is ``true``, and `-1` otherwise.
+length. The padding value is `0` when `blank_label` is ``"first"``, and `-1` otherwise.
 
 For example, suppose the vocabulary is `[a, b, c]`, and in one batch we have three sequences
-'ba', 'cbb', and 'abac'. When `reserve_first_label` is ``true``, we can index the labels as
+'ba', 'cbb', and 'abac'. When `blank_label` is ``"first"``, we can index the labels as
 `{'a': 1, 'b': 2, 'c': 3}`, and we reserve the 0-th channel for blank label in data tensor.
 The resulting `label` tensor should be padded to be::
 
   [[2, 1, 0, 0], [3, 2, 2, 0], [1, 2, 1, 3]]
 
-When `reserve_first_label` is ``false``, we can index the labels as
+When `blank_label` is ``"last"``, we can index the labels as
 `{'a': 0, 'b': 1, 'c': 2}`, and we reserve the channel index 3 for blank label in data tensor.
 The resulting `label` tensor should be padded to be::
 
