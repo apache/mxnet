@@ -124,10 +124,16 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as spsp
-    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
-    result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
-                                     (num_rows, num_cols), dtype=dtype)
+    try:
+        from scipy import sparse as spsp
+        csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+        result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
+                                         (num_rows, num_cols), dtype=dtype)
+    except ImportError:
+        # scipy not available. try to generate one from a dense array
+        dns = mx.nd.random.uniform(shape=(num_rows, num_cols), dtype=dtype)
+        masked_dns = dns * (dns < density)
+        result = masked_dns.tostype('csr')
     return result
 
 
@@ -183,16 +189,19 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
 
 def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=None):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
+
     Parameters
     ----------
     shape: list or tuple
     stype: str, valid values: "csr" or "row_sparse"
-    density, optional: float, should be between 0 and 1
+    density, optional: float, should be between 0 and 1. Defaults to a random number.
     distribution, optional: str, valid values: "uniform" or "powerlaw"
     dtype, optional: numpy.dtype, default value is None
+
     Returns
     -------
     Result of type CSRNDArray or RowSparseNDArray
+
     Examples
     --------
     Below is an example of the powerlaw distribution with csr as the stype.
