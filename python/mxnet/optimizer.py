@@ -65,10 +65,8 @@ class Optimizer(object):
     Properties
     ----------
     learning_rate: float
-        The learning rate of the optimizer or the learning rate of the
-        LRScheduler of the optimizer if the LRScheduler is defined. Given an
-        Optimizer object optimizer, the learning rate can be accessed as
-        optimizer.learning_rate and can be set as optimizer.learning_rate = val.
+        The current learning rate of the optimizer. Given an Optimizer object
+        optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
@@ -209,12 +207,20 @@ class Optimizer(object):
         """
         raise NotImplementedError()
 
-    @learning_rate.setter
-    def learning_rate(self, lr):
+    def set_learning_rate(self, lr):
+        """Sets a new learning rate of the optimizer.
+
+        Parameters
+        ----------
+        lr : float
+            The new learning rate of the optimizer.
+        """
         if self.lr_scheduler is not None:
-            raise UserWarning("set_learning_rate mutates the value of the "
-                              "learning rate of the optimizer only when the "
-                              "LRScheduler of the optimizer is undefined.")
+            raise UserWarning("LRScheduler of the optimizer has already been "
+                              "defined. Note that set_learning_rate can mutate "
+                              "the value of the learning rate of the optimizer "
+                              "only when the LRScheduler of the optimizer is "
+                              "undefined.")
         else:
             self.lr = lr
 

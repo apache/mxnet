@@ -47,10 +47,8 @@ class Trainer(object):
     Properties
     ----------
     learning_rate: float
-        The learning rate of the optimizer or the learning rate of the
-        LRScheduler of the optimizer if the LRScheduler is defined. Given a
-        Trainer object trainer, the learning rate can be accessed as
-        trainer.learning_rate and can be set as trainer.learning_rate = val.
+        The current learning rate of the optimizer. Given an Optimizer object
+        optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):
@@ -131,13 +129,19 @@ class Trainer(object):
             return self._optimizer.learning_rate
 
 
-    @learning_rate.setter
-    def learning_rate(self, lr):
+    def set_learning_rate(self, lr):
+        """Sets a new learning rate of the optimizer.
+
+        Parameters
+        ----------
+        lr : float
+            The new learning rate of the optimizer.
+        """
         if not isinstance(self._optimizer, opt.Optimizer):
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate is mutated.")
         else:
-            self._optimizer.learning_rate = lr
+            self._optimizer.set_learning_rate(lr)
 
 
     def step(self, batch_size, ignore_stale_grad=False):
