@@ -136,6 +136,7 @@ class ImperativeRuntime {
   static ImperativeRuntime* Get();
 
  private:
+  friend class NDArray;
   /*! \brief */
   class AGInfo {
    public:
