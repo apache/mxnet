@@ -157,14 +157,13 @@ support loading sparse data in CSR format. In this example, we'll use the `NDArr
 
 ```python
 # random training data
-train_data = mx.test_utils.rand_ndarray((100, 1000), 'csr', 0.01)
-target_weight = mx.nd.arange(1, 1001).reshape((1000, 1))
+feature_dimension = 1000
+train_data = mx.test_utils.rand_ndarray((1000, feature_dimension), 'csr', 0.01)
+target_weight = mx.nd.arange(1, feature_dimension + 1).reshape((feature_dimension, 1))
 train_label = mx.nd.dot(train_data, target_weight)
 batch_size = 1
 train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size, last_batch_handle='discard', label_name='label')
 ```
-
-# TODO(haibin) if batch size is just right, we don't have to discard it...
 
 ### Defining the Model
 
@@ -174,8 +173,8 @@ Below we define a linear regression model specifying the storage type of the var
 initializer = mx.initializer.Normal(sigma=0.01)
 X = mx.sym.Variable('data', stype='csr')
 Y = mx.symbol.Variable('label')
-weight = mx.symbol.Variable('weight', stype='row_sparse', init=initializer)
-bias = mx.symbol.Variable('bias')
+weight = mx.symbol.Variable('weight', stype='row_sparse', shape=(feature_dimension, 1), init=initializer)
+bias = mx.symbol.Variable('bias', shape=(1, ))
 pred = mx.sym.broadcast_add(mx.sym.sparse.dot(X, weight), bias)
 lro = mx.sym.LinearRegressionOutput(data=pred, label=Y, name="lro")
 ```
@@ -197,19 +196,19 @@ The above network uses the following symbols:
 
 7. `LinearRegressionOutput`: The output layer which computes *l2* loss against its input and the labels provided to it.
 
-## Training the model
+### Training the model
 
 Once we have defined the model structure, the next step is to create a module and initialize the parameters and optimizer.
 
 ```python
 # create module
-mod = mx.mod.Module(symbol=lro, data_names=['data'], label_names=['label'], batch_end_callback = mx.callback.Speedometer(batch_size, 2))
+mod = mx.mod.Module(symbol=lro, data_names=['data'], label_names=['label'])
 # allocate memory by given the input data and label shapes
 mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
 # initialize parameters by random numbers
 mod.init_params(initializer=initializer)
 # use SGD as the optimizer, which performs sparse update on "row_sparse" weight
-sgd = mx.optimizer.SGD(clip_gradient=5.0, learning_rate=0.001, rescale_grad=1.0/batch_size, momentum=0.9)
+sgd = mx.optimizer.SGD(learning_rate=0.05, rescale_grad=1.0/batch_size, momentum=0.9)
 mod.init_optimizer(optimizer=sgd)
 ```
 
@@ -227,7 +226,11 @@ for epoch in range(10):
         mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
         mod.backward()                          # compute gradients
         mod.update()                            # update parameters
-    print('Epoch %d, Training %s' % (epoch, metric.get()))
+    print('Epoch %d, Metric = %s' % (epoch, metric.get()))
 ```
+
+### Training the model with multiple machines
+
+To train a sparse model with multiple machines, please refer to the example in [mxnet/example/sparse/](https://github.com/apache/incubator-mxnet/tree/master/example/sparse)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
