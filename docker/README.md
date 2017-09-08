@@ -24,3 +24,10 @@ after.
 
 
 The tool will leave the resulting artifacts on the build/ directory
+
+# TODO
+
+- Handle dependencies between docker files, for example having a yaml file with the dependency graph
+  so they can be built in the right order. Right now the dependency is very simple so simple
+  alphabetical sorting of the images does the trick.
+
