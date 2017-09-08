@@ -789,6 +789,29 @@ class Ftrl(Optimizer):
     Referenced from *Ad Click Prediction: a View from the Trenches*, available at
     http://dl.acm.org/citation.cfm?id=2488200.
 
+    The optimizer updates the weight by::
+
+        rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+        z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
+        n += rescaled_grad**2
+        w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
+
+    If the storage types of weight, state and grad are all ``row_sparse``, \
+    sparse updates are applied by::
+
+        for row in grad.indices:
+            rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
+            z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - \
+                      sqrt(n[row])) * weight[row] / learning_rate
+            n[row] += rescaled_grad[row]**2
+            w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / \
+                     learning_rate + wd) * (abs(z[row]) > lamda1)
+
+    For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
     Parameters
     ----------
     lamda1 : float, optional
@@ -797,9 +820,6 @@ class Ftrl(Optimizer):
         The initial learning rate.
     beta : float, optional
         Per-coordinate learning rate correlation parameter.
-    eta :
-        .. math::
-           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
     """
 
     def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, **kwargs):
@@ -809,7 +829,7 @@ class Ftrl(Optimizer):
         self.lr = learning_rate
 
     def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context, stype=weight.stype),  # dn
+        return (zeros(weight.shape, weight.context, stype=weight.stype),  # z
                 zeros(weight.shape, weight.context, stype=weight.stype))  # n
 
     def update(self, index, weight, grad, state):
@@ -824,8 +844,8 @@ class Ftrl(Optimizer):
             kwargs['clip_gradient'] = self.clip_gradient
 
         # accumulated g and delta initialization
-        dn, n = state
-        ftrl_update(weight, grad, dn, n, out=weight,
+        z, n = state
+        ftrl_update(weight, grad, z, n, out=weight,
                     lr=lr, wd=wd, **kwargs)
 
 @register

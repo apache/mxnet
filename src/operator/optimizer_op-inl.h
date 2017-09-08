@@ -1242,8 +1242,6 @@ inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
-
-
 }  // namespace op
 }  // namespace mxnet
 

@@ -280,8 +280,22 @@ NNVM_REGISTER_OP(ftrl_update)
 Referenced from *Ad Click Prediction: a View from the Trenches*, available at
 http://dl.acm.org/citation.cfm?id=2488200.
 
-.. math::
-  \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
+It updates the weights using::
+
+ rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+ z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
+ n += rescaled_grad**2
+ w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
+
+If w, z and n are all of ``row_sparse`` storage type,
+only the row slices whose indices appear in grad.indices are updated (for w, z and n)::
+
+ for row in grad.indices:
+     rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
+     z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
+     n[row] += rescaled_grad[row]**2
+     w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
+
 )code" ADD_FILELINE)
 .set_num_inputs(4)
 .set_num_outputs(1)
