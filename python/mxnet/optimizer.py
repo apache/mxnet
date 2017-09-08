@@ -164,7 +164,7 @@ class Optimizer(object):
     @property
     def learning_rate(self):
         if self.lr_scheduler is not None:
-            return self.lr_scheduler.base_lr
+            return self.lr_scheduler(self.num_update)
         else:
             return self.lr
 
