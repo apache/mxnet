@@ -24,9 +24,14 @@ imported by running:
 ```eval_rst
 .. toctree::
    :maxdepth: 2
+   :titlesonly:
 
-   ndarray
-   symbol
+   ndarray/index.md
+   symbol/index.md
+
+.. toctree::
+   :maxdepth: 2
+
    module
    autograd
    gluon

@@ -2102,6 +2102,12 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     >>> data = mx.sym.Variable('data', attr={'a': 'b'})
     >>> data
     <Symbol data>
+    >>> csr_data = mx.sym.Variable('csr_data', stype='csr')
+    >>> csr_data
+    <Symbol csr_data>
+    >>> row_sparse_weight = mx.sym.Variable('weight', stype='row_sparse')
+    >>> row_sparse_weight
+    <Symbol weight>
 
     Parameters
     ----------
@@ -2122,7 +2128,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     init : initializer (mxnet.init.*)
         Initializer for this variable to (optionally) override the default initializer.
     stype : str
-        The storage type of the variable.
+        The storage type of the variable, such as 'row_sparse', 'csr', 'default', etc
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 

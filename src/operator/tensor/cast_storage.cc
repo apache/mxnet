@@ -55,13 +55,13 @@ Example::
              [ 0.,  0.,  0.]]
 
     # cast to row_sparse storage type
-    rsp = cast_storage(default, 'default')
+    rsp = cast_storage(default, 'row_sparse')
     rsp.indices = [0, 1]
     rsp.values = [[ 0.,  1.,  0.],
                   [ 2.,  0.,  3.]]
 
-    # cast to row_sparse storage type
-    csr = cast_storage(default, 'default')
+    # cast to csr storage type
+    csr = cast_storage(default, 'csr')
     csr.indices = [1, 0, 2]
     csr.values = [ 1.,  2.,  3.]
     csr.indptr = [0, 1, 3, 3, 3]

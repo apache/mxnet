@@ -48,6 +48,7 @@ Currently accept 2 input data shapes: (N, d) or (N1, N2, N3, d), data can only b
 The output data has shape: (N, 2*d) or (N1, N2, N3, 2*d). The format is: [real0, imag0, real1, imag1, ...].
 
 Example::
+
    data = np.random.normal(0,1,(3,4))
    out = mx.contrib.ndarray.fft(data = mx.nd.array(data,ctx = mx.gpu(0)))
 
