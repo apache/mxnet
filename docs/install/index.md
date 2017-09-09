@@ -725,7 +725,7 @@ The CPU version of MXNet R package can be installed in R like other packages
 
 ```r
 cran <- getOption("repos")
-cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/"
 options(repos = cran)
 install.packages("mxnet")
 ```
@@ -890,7 +890,7 @@ The CPU version of MXNet R package can be installed in R like other packages
 
 ```r
 cran <- getOption("repos")
-cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/"
 options(repos = cran)
 install.packages("mxnet")
 ```
@@ -906,7 +906,7 @@ The GPU version of MXNet R package can be installed in R like other packages
 
 ```r
 cran <- getOption("repos")
-cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/GPU"
+cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU"
 options(repos = cran)
 install.packages("mxnet")
 ```
