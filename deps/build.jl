@@ -105,6 +105,7 @@ if !libmxnet_detected
     ilp64 = "-DINTERFACE64"
   end
 
+  FORCE_LAPACK = false
   if blas_vendor == :unknown
     info("Julia is built with an unkown blas library ($blas_path).")
     info("Attempting build without reusing the blas library")
@@ -115,6 +116,7 @@ if !libmxnet_detected
     USE_JULIA_BLAS = true
   else
     USE_JULIA_BLAS = true
+    FORCE_LAPACK = true
   end
 
   blas_name = blas_vendor == :openblas64 ? "openblas" : string(blas_vendor)
@@ -163,6 +165,11 @@ if !libmxnet_detected
             if haskey(ENV, "CUDA_HOME")
               `sed -i -s 's/USE_CUDA_PATH = NULL/USE_CUDA_PATH = $(ENV["CUDA_HOME"])/' config.mk`
             end
+          end
+          # Force enable LAPACK build
+          # Julia's OpenBLAS has LAPACK functionality already
+          if FORCE_LAPACK
+            `sed -i -s 's/ADD_CFLAGS =\(.*\)/ADD_CFLAGS =\1 -DMXNET_USE_LAPACK/' config.mk`
           end
         end)
         @build_steps begin
