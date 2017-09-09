@@ -124,7 +124,7 @@ struct CastStorageRspDnsKernel {
         dns[dns_offset + col] = data[rsp_offset + col];
       }
     #else
-      memcpy(dns + dns_offset, data + rsp_offset, sizeof(DType) * row_length);
+      MXNET_MEMCPY(dns + dns_offset, data + rsp_offset, sizeof(DType) * row_length);
     #endif
   }
 };
