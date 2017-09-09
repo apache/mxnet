@@ -197,7 +197,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     Dataset
     ArrayDataset
     RecordFileDataset
-    ImageRecordDataset
 ```
 
 ```eval_rst
@@ -230,6 +229,7 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     MNIST
     FashionMNIST
     CIFAR10
+    ImageRecordDataset
 ```
 
 ## Model Zoo
