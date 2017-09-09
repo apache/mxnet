@@ -1,7 +1,7 @@
-# All the types supported by mshadow.
-const DType = Union{Float32, Float64, Float16, UInt8, Int32}
-@enum TypeFlag kFloat32 kFloat64 kFloat16 kUint8 kInt32
-const DEFAULT_DTYPE = Float32
+# All the types supported by mshadow. See `mshadow/base.h`
+const DType = Union{Float32, Float64, Float16, UInt8, Int32, Int8, Int64}
+@enum TypeFlag kFloat32 kFloat64 kFloat16 kUint8 kInt32 kInt8 kInt64
+const DEFAULT_DTYPE = Float32  # MSHADOW_DEFAULT_DTYPE
 
 function toTypeFlag{T <: DType}(:: Type{T})
   if T == Float32
@@ -14,6 +14,10 @@ function toTypeFlag{T <: DType}(:: Type{T})
     return kUint8
   elseif T == Int32
     return kInt32
+  elseif T == Int8
+    return kInt8
+  elseif T == Int64
+    return kInt64
   else
     throw(ArgumentError("Can't convert $T to DType."))
   end
@@ -30,6 +34,10 @@ function fromTypeFlag(T :: TypeFlag)
     return UInt8
   elseif T == kInt32
     return Int32
+  elseif T == kInt8
+    return Int8
+  elseif T == kInt64
+    return Int64
   else
     throw(ArgumentError("Can't convert DType $T."))
   end
