@@ -28,7 +28,6 @@
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
-#include <dmlc/optional.h>
 #include <mxnet/operator.h>
 #include <algorithm>
 #include <map>
@@ -196,7 +195,7 @@ inline bool PackLabelByLength(mshadow::Tensor<xpu, 2, DType> labels,
 struct CTCLossParam : public dmlc::Parameter<CTCLossParam> {
   bool use_data_lengths;
   bool use_label_lengths;
-  dmlc::optional<int> blank_label;
+  int blank_label;
   DMLC_DECLARE_PARAMETER(CTCLossParam) {
     DMLC_DECLARE_FIELD(use_data_lengths).set_default(false)
       .describe("Whether the data lenghts are decided by `data_lengths`. "
@@ -211,7 +210,7 @@ struct CTCLossParam : public dmlc::Parameter<CTCLossParam> {
     DMLC_DECLARE_FIELD(blank_label)
       .add_enum("first", 0)
       .add_enum("last", 1)
-      .set_default(dmlc::optional<int>(0))
+      .set_default(0)
       .describe("Set the label that is reserved for blank label."
                 "If \"first\", 0-th label is reserved, and "
                 "label values for tokens in the vocabulary are "
@@ -286,7 +285,7 @@ class CTCLossOp : public Operator {
       exceed_cudnn_limit = PackLabelByLength(labels, in_data[kLabelLength].get<xpu, 1, real_t>(s),
                                              &packed_labels, &label_lengths);
     } else {
-      exceed_cudnn_limit = LabelTensorToPackedVector(labels, param_.blank_label.value() == 0?0:-1,
+      exceed_cudnn_limit = LabelTensorToPackedVector(labels, param_.blank_label == 0?0:-1,
                                                      &packed_labels, &label_lengths);
     }
 
@@ -460,7 +459,7 @@ class CTCLossOp : public Operator {
     compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels->data(),
                      label_lengths->data(), data_lengths->data(),
                      workspace.dptr_, req_grad,
-                     param_.blank_label.value() == 0?0:(alphabet_size-1));
+                     param_.blank_label == 0?0:(alphabet_size-1));
   }
 };  // class CTCLossOp
 
