@@ -49,8 +49,8 @@ SET(Open_BLAS_LIB_SEARCH_PATHS
         /usr/local/opt/openblas/lib
         ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
-	${OpenBLAS_DIR}
-	${OpenBLAS_DIR}/lib
+        ${OpenBLAS_DIR}
+        ${OpenBLAS_DIR}/lib
         ${OpenBLAS_HOME}
         ${OpenBLAS_HOME}/lib
  )
