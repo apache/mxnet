@@ -284,4 +284,4 @@ if __name__ == "__main__":
     test_Cifar10Rec()
     test_LibSVMIter()
     test_NDArrayIter_csr()
-    test_CSVIter()
+    #test_CSVIter()
