@@ -832,10 +832,6 @@ void ImperativeRuntime::RunGraph(
     }
 
     if (node.source->op() == bwd_cached_op) {
-      CHECK(!recording)
-          << "CachedOp does not support higher order gradients. "
-          << "If you want to do backward with create_graph please "
-          << "do not use hybridize.";
       const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
       auto fwd_node_id = idx.node_id(fwd_node);
@@ -1051,19 +1047,6 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
         node_range, entry_range);
   }
 
-  const auto& shapes = graph.GetAttr<ShapeVector>("shape");
-  const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
-  const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
-    if (!arrays[i]->is_none()) continue;
-    if (stypes[i] == kDefaultStorage) {
-      *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
-    } else {
-      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
-    }
-  }
-
   // Calculate ref count
   for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
     for (const auto& j : idx[i].inputs) {
@@ -1079,6 +1062,19 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
   for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
     size_t eid = idx.entry_id(idx.outputs()[i]);
     array_reqs[eid] = x_reqs[i - num_forward_outputs];
+  }
+
+  const auto& shapes = graph.GetAttr<ShapeVector>("shape");
+  const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
+  const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
+  for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
+    if (!arrays[i]->is_none()) continue;
+    if (stypes[i] == kDefaultStorage) {
+      *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
+    } else {
+      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
+                           shapes[i], default_ctx, true, dtypes[i]);
+    }
   }
 
   // Execution
@@ -1355,7 +1351,21 @@ OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inp
     arrays[idx.entry_id(idx.outputs()[i])] = outputs[i];
   }
 
+  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
+
   // Allocate NDArrays
+  std::vector<int> ref_count;
+  if (prev_recording) {
+    ref_count = g.GetAttr<std::vector<int> >("ref_count_recording");
+  } else {
+    ref_count = g.GetAttr<std::vector<int> >("ref_count");
+  }
+
+  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
+    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+  }
+
   Context default_ctx = inputs[0]->ctx();
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
@@ -1370,21 +1380,6 @@ OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inp
     }
   }
 
-  // Execution
-  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
-
-  std::vector<int> ref_count;
-  if (prev_recording) {
-    ref_count = g.GetAttr<std::vector<int> >("ref_count_recording");
-  } else {
-    ref_count = g.GetAttr<std::vector<int> >("ref_count");
-  }
-
-  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
-    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
-  }
-
   ImperativeRuntime::Get()->RunGraph(
       default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states);
@@ -1397,7 +1392,6 @@ OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inp
   }
 
   ImperativeRuntime::Get()->set_is_recording(prev_recording);
-
   return op_state_ptr;
 }
 
@@ -1408,6 +1402,11 @@ void ImperativeRuntime::CachedOp::Backward(
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
+  CHECK(!ImperativeRuntime::Get()->is_recording())
+      << "CachedOp does not support higher order gradients. "
+      << "If you want to do backward with create_graph=True please "
+      << "do not use hybridize.";
+
   // Initialize
   nnvm::Graph g = GetBackwardGraph(state, reqs, inputs);
   const auto& idx = g.indexed_graph();
@@ -1432,6 +1431,13 @@ void ImperativeRuntime::CachedOp::Backward(
   }
 
   // Allocate NDArrays
+  std::vector<int> ref_count = g.GetAttr<std::vector<int> >("ref_count");
+
+  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  for (size_t i = num_forward_nodes; i < idx.num_node_entries(); ++i) {
+    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+  }
+
   Context default_ctx = inputs[0]->ctx();
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
@@ -1446,29 +1452,11 @@ void ImperativeRuntime::CachedOp::Backward(
     }
   }
 
-  // Execution
-  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
-
-  std::vector<int> ref_count = g.GetAttr<std::vector<int> >("ref_count");
-
-  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  for (size_t i = num_forward_nodes; i < idx.num_node_entries(); ++i) {
-    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
-  }
-
   ImperativeRuntime::Get()->RunGraph(
       default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
       std::move(array_reqs), std::move(ref_count), &states);
-
-  ImperativeRuntime::Get()->set_is_recording(prev_recording);
 }
 
-NNVM_REGISTER_OP(_CachedOp_NoGrad)
-.set_num_inputs(0)
-.set_num_outputs([](const NodeAttrs& attrs) {
-    const uint32_t& nout = nnvm::get<uint32_t>(attrs.parsed);
-    return nout;
-  });
 
 NNVM_REGISTER_OP(_CachedOp)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -1496,5 +1484,12 @@ NNVM_REGISTER_OP(_backward_CachedOp)
   })
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
+
+NNVM_REGISTER_OP(_CachedOp_NoGrad)
+.set_num_inputs(0)
+.set_num_outputs([](const NodeAttrs& attrs) {
+    const uint32_t& nout = nnvm::get<uint32_t>(attrs.parsed);
+    return nout;
+  });
 
 }  // namespace mxnet
