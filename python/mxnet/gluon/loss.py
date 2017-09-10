@@ -336,13 +336,14 @@ class CTCLoss(Loss):
         is not allowed in the label.
         When `label_lengths` is not specified, the first occurrence of ``-1``
         in each sample marks the end of the label sequence of that sample.
-        For example, suppose there are two samples, with ``label_sequence_length = 4``.
-        The three sequences of labels are [2, 1], [3, 2, 2], and [2, 3, 3, 3].
-        The `label` tensor should be padded to be::
 
-          [[2, 1, -1, -1],
-           [3, 2, 2, -1],
-           [2, 3, 3, 3]]
+        For example, suppose the vocabulary is `[a, b, c]`, and in one batch we have three
+        sequences 'ba', 'cbb', and 'abac'. We can index the labels as `{'a': 0, 'b': 1, 'c': 2}`.
+        The alphabet size should be 4, and we reserve the channel index 3 for blank label
+        in data tensor. The padding mask value for extra length is -1, so the resulting `label`
+        tensor should be padded to be::
+
+          [[1, 0, -1, -1], [2, 1, 1, -1], [0, 1, 0, 2]]
 
         `data_lengths` is optional and defaults to None.
         When specified, it represents the actual lengths of data.
