@@ -552,8 +552,8 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
         auto out_data = out.data().dptr<DType>();
         int offset = in_indptr[begin];
         // this is also a CPU-only implementation
-        memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
-        memcpy(out_data, in_data + offset, nnz * sizeof(DType));
+        MXNET_MEMCPY(out_idx, in_idx + offset, nnz * sizeof(IType));
+        MXNET_MEMCPY(out_data, in_data + offset, nnz * sizeof(DType));
       });
     });
   });
