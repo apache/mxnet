@@ -35,7 +35,10 @@ notifications:
   email: false
 
 script:
-  - source $TRAVIS/run_test.sh
+  # bump the time limit of no ouput
+  # the `travis_wait` wrapper can be removed once this issue fixed:
+  # https://github.com/JuliaLang/julia/pull/23601
+  - travis_wait 60 $TRAVIS/run_test.sh
 
 after_success:
   - source $TRAVIS/run_coverage.sh
