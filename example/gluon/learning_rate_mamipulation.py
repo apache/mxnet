@@ -17,7 +17,7 @@
 
 
 # This example demonstrates how to manipulate the learning rate of an optimizer
-# in gluon.
+# in gluon. The example uses linear regression as a case study.
 
 from __future__ import print_function
 import numpy as np
@@ -25,22 +25,24 @@ import mxnet as mx
 from mxnet import autograd
 from mxnet import gluon
 
+# Generate synthetic data.
 X = np.random.randn(10000, 2)
 Y = 2 * X[:, 0] - 3.4 * X[:, 1] + 4.2 + .01 * np.random.normal(size=10000)
 
 net = gluon.nn.Sequential()
+# The output dimension is 1.
 net.add(gluon.nn.Dense(1))
 net.collect_params().initialize()
 loss = gluon.loss.L2Loss()
 
-epochs = 5
 # Initialize the learning rate as 0.1.
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         optimizer_params={'learning_rate': 0.1})
 net.collect_params().initialize(mx.init.Xavier(magnitude=2.24),
                                 force_reinit=True)
 train_data = mx.io.NDArrayIter(X, Y, batch_size=10, shuffle=True)
-for e in range(epochs):
+
+for epoch in range(5):
     train_data.reset()
     for i, batch in enumerate(train_data):
         data = batch.data[0]
@@ -52,9 +54,10 @@ for e in range(epochs):
         trainer.step(data.shape[0])
     # After the second epoch, decay the learning rate of the optimizer every
     # epoch.
-    if e > 1:
+    if epoch > 1:
         trainer.set_learning_rate(trainer.learning_rate * 0.9)
-    print('Epoch:', e, 'Learning rate:', trainer.learning_rate)
+    print('Epoch:', epoch, 'Learning rate:', trainer.learning_rate)
 
 for para_name, para_value in net.collect_params().items():
+    # Print all the parameter values after training.
     print(para_name, para_value.data().asnumpy()[0])
