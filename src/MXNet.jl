@@ -50,6 +50,8 @@ include("visualize.jl")
 
 include("nn-factory.jl")
 
+include("deprecated.jl")
+
 end # mx
 
 end # module MXNet

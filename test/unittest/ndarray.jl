@@ -109,7 +109,7 @@ function test_plus()
   scalar_large = 1e8
   @test reldiff(t4 + scalar_small, copy(a4 .+ scalar_small)) < thresh
   @test reldiff(t4 + scalar_large, copy(a4 .+ scalar_large)) < thresh
-  
+
   t5 = zeros(Float64, dims)
   a5 = copy(t5, mx.cpu())
   scalar_small = 1e-8
@@ -160,7 +160,7 @@ function test_minus()
   scalar_large = 1e8
   @test reldiff(t4 - scalar_small, copy(a4 .- scalar_small)) < thresh
   @test reldiff(t4 - scalar_large, copy(a4 .- scalar_large)) < thresh
-  
+
   t5 = zeros(Float64, dims)
   a5 = copy(t5, mx.cpu())
   scalar_small = 1e-8
@@ -204,7 +204,7 @@ function test_mul()
   scalar_large = 1e8
   @test reldiff(t4 * scalar_small, copy(a4 .* scalar_small)) < thresh
   @test reldiff(t4 * scalar_large, copy(a4 .* scalar_large)) < thresh
-  
+
   t5, a5 = rand_tensors(Float64, dims)
   scalar_small = 1e-8
   scalar_large = 1e8
@@ -245,7 +245,7 @@ function test_div()
   scalar_large = 1e8
   @test reldiff(t4 / scalar_small, copy(a4 ./ scalar_small)) < thresh
   @test reldiff(t4 / scalar_large, copy(a4 ./ scalar_large)) < thresh
-  
+
   t5, a5 = rand_tensors(Float64, dims)
   scalar_small = 1e-8
   scalar_large = 1e8
@@ -382,6 +382,28 @@ function test_eltype()
   end
 end
 
+function test_reshape()
+    info("NDArray::reshape")
+    A = rand(2, 3, 4)
+
+    B = reshape(mx.NDArray(A), 4, 3, 2)
+    @test size(B) == (4, 3, 2)
+    @test copy(B)[3, 1, 1] == A[1, 2, 1]
+
+    C = reshape(mx.NDArray(A), (4, 3, 2))
+    @test size(C) == (4, 3, 2)
+    @test copy(C)[3, 1, 1] == A[1, 2, 1]
+
+    info("NDArray::reshape::reverse")
+    A = mx.zeros(10, 5, 4)
+
+    B = reshape(A, -1, 0)
+    @test size(B) == (40, 5)
+
+    C = reshape(A, -1, 0, reverse=true)
+    @test size(C) == (50, 4)
+end
+
 function test_kwargs()
   info("NDArray::kwargs")
   dims1 = (2,3,4)
@@ -412,6 +434,7 @@ end
   test_eltype()
   test_nd_as_jl()
   test_dot()
+  test_reshape()
   test_kwargs()
 end
 
