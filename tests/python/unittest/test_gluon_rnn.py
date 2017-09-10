@@ -181,6 +181,7 @@ def test_zoneout():
 
 
 def check_rnn_forward(layer, inputs):
+    inputs.attach_grad()
     layer.collect_params().initialize()
     with mx.autograd.record():
         layer.unroll(3, inputs, merge_outputs=True)[0].backward()

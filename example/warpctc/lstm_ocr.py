@@ -72,7 +72,7 @@ class OCRIter(mx.io.DataIter):
         self.num_label = num_label
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
-        self.provide_data = [('data', (batch_size, 2400))] + init_states
+        self.provide_data = [('data', (batch_size, 80, 30))] + init_states
         self.provide_label = [('label', (self.batch_size, 4))]
 
     def __iter__(self):
@@ -88,7 +88,7 @@ class OCRIter(mx.io.DataIter):
                 img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
                 img = cv2.resize(img, (80, 30))
                 img = img.transpose(1, 0)
-                img = img.reshape((80 * 30))
+                img = img.reshape((80, 30))
                 img = np.multiply(img, 1/255.0)
                 data.append(img)
                 label.append(get_label(num))

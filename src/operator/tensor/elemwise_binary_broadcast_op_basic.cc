@@ -123,6 +123,7 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow::op::mul>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
+
 NNVM_REGISTER_OP(_backward_broadcast_mul)
 .set_num_inputs(3)
 .set_num_outputs(2)

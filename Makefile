@@ -1,5 +1,11 @@
 ROOTDIR = $(CURDIR)
 
+ifeq ($(OS),Windows_NT)
+	UNAME_S := Windows
+else
+	UNAME_S := $(shell uname -s)
+endif
+
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
@@ -23,6 +29,10 @@ ifndef DLPACK_PATH
 	DLPACK_PATH = $(ROOTDIR)/dlpack
 endif
 
+ifndef AMALGAMATION_PATH
+	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -32,8 +42,8 @@ include $(config)
 
 ifeq ($(USE_MKL2017), 1)
 # must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT = $(firstword $(RETURN_STRING))
+	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT := $(firstword $(RETURN_STRING))
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
 
@@ -70,7 +80,7 @@ endif
 
 # Caffe Plugin
 ifdef CAFFE_PATH
-  CFLAGS += -DMXNET_USE_CAFFE=1
+	CFLAGS += -DMXNET_USE_CAFFE=1
 endif
 
 ifndef LINT_LANG
@@ -87,7 +97,9 @@ else
 endif
 
 ifeq ($(USE_OPENMP), 1)
-	CFLAGS += -fopenmp
+	ifneq ($(UNAME_S), Darwin)
+		CFLAGS += -fopenmp
+	endif
 endif
 
 ifeq ($(USE_NNPACK), 1)
@@ -101,11 +113,17 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
 	LDFLAGS += -L$(MKLML_ROOT)/lib
-ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-	CFLAGS += -DMKL_EXPERIMENTAL=1
-else
-	CFLAGS += -DMKL_EXPERIMENTAL=0
-endif
+	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
+		CFLAGS += -DMKL_EXPERIMENTAL=1
+	else
+		CFLAGS += -DMKL_EXPERIMENTAL=0
+	endif
+	ifeq ($(UNAME_S), Darwin)
+		LDFLAGS += -lmklml
+	else
+		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+	endif
+	LDFLAGS +=  -liomp5
 endif
 
 # verify existence of separate lapack library when using blas/openblas/atlas
@@ -162,8 +180,8 @@ endif
 
 # Sets 'CUDA_ARCH', which determines the GPU architectures supported
 # by the compiled kernels.  Users can edit the KNOWN_CUDA_ARCHS list below
-# to remove archs they don't wish to support to speed compilation, or they
-# can pre-set the CUDA_ARCH args in config.mk for full control.
+# to remove archs they don't wish to support to speed compilation, or they can
+# pre-set the CUDA_ARCH args in config.mk to a non-null value for full control.
 #
 # For archs in this list, nvcc will create a fat-binary that will include
 # the binaries (SASS) for all architectures supported by the installed version
@@ -171,13 +189,13 @@ endif
 # If these kernels are then run on a newer-architecture GPU, the binary will
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
-ifeq ($(origin CUDA_ARCH), undefined)
+ifeq ($(CUDA_ARCH),)
 	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
-                  $(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
-                          echo -gencode arch=compute_$(arch),code=sm_$(arch)))
+				$(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
+						echo -gencode arch=compute_$(arch),code=sm_$(arch)))
 	# Convert a trailing "code=sm_NN" to "code=[sm_NN,compute_NN]" to also
 	# include the PTX of the most recent arch in the fat-binaries for
 	# forward compatibility with newer GPUs.
@@ -185,7 +203,7 @@ ifeq ($(origin CUDA_ARCH), undefined)
 	# Add fat binary compression if supported by nvcc.
 	COMPRESS := --fatbin-options -compress-all
 	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
-	                     echo $(COMPRESS))
+						 echo $(COMPRESS))
 endif
 endif
 
@@ -227,20 +245,18 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
-# scala package profile
-ifeq ($(OS),Windows_NT)
+ifeq ($(UNAME_S), Windows)
 	# TODO(yizhi) currently scala package does not support windows
 	SCALA_PKG_PROFILE := windows
 else
-	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		WHOLE_ARCH= -all_load
 		NO_WHOLE_ARCH= -noall_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
-		SCALA_PKG_PROFILE := linux-x86_64
 		WHOLE_ARCH= --whole-archive
 		NO_WHOLE_ARCH= --no-whole-archive
+		SCALA_PKG_PROFILE := linux-x86_64
 	endif
 endif
 
@@ -303,9 +319,9 @@ lib/libmxnet.a: $(ALLX_DEP)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALLX_DEP)
-	 @mkdir -p $(@D)
-	 $(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
-	 -Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -396,10 +412,8 @@ rpkg:
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
-	R CMD build --no-build-vignettes R-package
-	rm -rf mxnet_current_r.tar.gz
+	R CMD INSTALL R-package
 	rm -rf R-package/src/image_recordio.h
-	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 rpkgtest:
 	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
@@ -439,6 +453,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -448,6 +463,7 @@ clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

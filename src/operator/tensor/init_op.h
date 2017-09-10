@@ -33,6 +33,8 @@
 #include <string>
 #include <limits>
 #include "../elemwise_op_common.h"
+#include "../mxnet_op.h"
+
 
 namespace mxnet {
 namespace op {
@@ -129,7 +131,6 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
@@ -145,6 +146,91 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
+// instead of the usual compact representation.
+template<typename xpu>
+inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  using namespace rowsparse;
+  using namespace mshadow::expr;
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
+  MSHADOW_REAL_TYPE_SWITCH(dst->dtype(), DType, {
+    MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+      auto num_rows = dst->shape()[0];
+      dst->CheckAndAlloc({Shape1(num_rows)});
+      auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
+      auto val = dst->data();
+      Kernel<set_zero, xpu>::Launch(s, val.Size(), val.dptr<DType>());
+      ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1));
+    });
+  });
+}
+
+struct PopulateFullIdxRspKernel {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* out) {
+    KERNEL_ASSIGN(out[i], kWriteTo, i);
+  }
+};
+
+// Fill full indices NDArray with zeros by updating the aux shape.
+template<typename xpu>
+void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  using namespace rowsparse;
+  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
+  nnvm::dim_t nnr = dst->shape()[0];
+  dst->CheckAndAllocAuxData(kIdx, mshadow::Shape1(nnr));
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+    IType* idx = dst->aux_data(kIdx).dptr<IType>();
+    mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
+  });
+}
+
+// Fill a rsp NDArray with zeros by updating the aux shape.
+template<typename xpu>
+void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  if (!dst->storage_initialized()) return;
+  // reset the shapes if it's not zeros
+  auto storage_shape = dst->storage_shape();
+  storage_shape[0] = 0;
+  dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+}
+
+// Fill a CSR NDArray with zeros by updating the aux shape.
+template<typename xpu>
+void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
+  if (!dst->storage_initialized()) return;
+  // reset the shapes if it's not zeros
+  TShape new_shape(mshadow::Shape1(0));
+  dst->set_aux_shape(csr::kIndPtr, new_shape);
+  dst->set_aux_shape(csr::kIdx, new_shape);
+}
+
+template<typename xpu>
+void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<NDArray>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(outputs.size(), 1);
+  auto stype = outputs[0].storage_type();
+  if (req[0] == kNullOp) return;
+  CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
+  if (stype == kRowSparseStorage) {
+    NDArray nd(outputs[0]);
+    FillZerosRspImpl<xpu>(s, &nd);
+  } else if (stype == kCSRStorage) {
+    NDArray nd(outputs[0]);
+    FillZerosCsrImpl<xpu>(s, &nd);
+  } else {
+    // no fallback is required since the output doesn't depend on input
+    LOG(FATAL) << "storage type " << stype << " not implemented.";
+  }
+}
 
 template<typename xpu>
 void RangeCompute(const nnvm::NodeAttrs& attrs,
@@ -186,9 +272,10 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     mshadow::Shape1(param.repeat *
-                                     ceil((param.stop.value() -
-                                           param.start) / param.step)));
+                     mshadow::Shape1(mshadow::expr::RangeOutSize(param.start,
+                                                                 param.stop.value(),
+                                                                 param.step,
+                                                                 param.repeat)));
   return true;
 }
 

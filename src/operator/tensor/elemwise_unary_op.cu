@@ -40,7 +40,8 @@ NNVM_REGISTER_OP(_backward_sigmoid)
 
 // copy
 NNVM_REGISTER_OP(_copy)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", IdentityComputeEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_copy)
 .set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
@@ -53,7 +54,9 @@ NNVM_REGISTER_OP(make_loss)
 
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
-.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", IdentityLikeRhsComputeEx<gpu>);
+
 
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
@@ -132,6 +135,21 @@ NNVM_REGISTER_OP(rsqrt)
 NNVM_REGISTER_OP(_backward_rsqrt)
 .set_attr<FCompute>("FCompute<gpu>",
   BinaryCompute<gpu, unary_bwd<mshadow_op::reciprocal_square_root_grad> >);
+
+// cbrt
+NNVM_REGISTER_OP(cbrt)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::cube_root>);
+
+NNVM_REGISTER_OP(_backward_cbrt)
+.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, unary_bwd<mshadow_op::cube_root_grad> >);
+
+// rcbrt
+NNVM_REGISTER_OP(rcbrt)
+.set_attr<FCompute>("FCompute<gpu>", UnaryCompute<gpu, mshadow_op::reciprocal_cube_root>);
+
+NNVM_REGISTER_OP(_backward_rcbrt)
+.set_attr<FCompute>("FCompute<gpu>",
+  BinaryCompute<gpu, unary_bwd<mshadow_op::reciprocal_cube_root_grad> >);
 
 // exp
 NNVM_REGISTER_OP(exp)

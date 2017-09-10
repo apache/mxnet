@@ -101,7 +101,7 @@ channel, height, width)*, the output is computed by
 
 .. math::
 
-   out[n,i,:,:] = bias[i] + \sum_{j=0}^{num\_filter} data[n,j,:,:] \star
+   out[n,i,:,:] = bias[i] + \sum_{j=0}^{channel} data[n,j,:,:] \star
    weight[i,j,:,:]
 
 where :math:`\star` is the 2-D cross-correlation operator.

@@ -232,29 +232,75 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
   }
 };
 
+using FSampleCompute = std::function<void (const nnvm::NodeAttrs& attrs,
+                                           const OpContext& ctx,
+                                           const OpReqType& req,
+                                           TBlob* outputs)>;
+
+template<typename xpu>
+void SampleComputeEx_(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs,
+                      FSampleCompute fcomp) {
+  NDArray output = outputs[0];
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (output.storage_type() == kRowSparseStorage) {
+    // indices
+    nnvm::dim_t nnr = output.shape()[0];
+    output.CheckAndAlloc({mshadow::Shape1(nnr)});
+    PopulateFullIdxRspImpl(s, &output);
+    // data
+    TBlob out_blob = output.data();
+    fcomp(attrs, ctx, req[0], &out_blob);
+  } else {
+    LOG(FATAL) << "Unexpected storage type for SampleComputeEx_: "
+               << output.storage_type();
+  }
+}
+
+template<typename xpu>
+void SampleUniformDnsImpl(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const OpReqType& req,
+                          TBlob* output) {
+  using namespace mxnet::op;
+  using namespace mshadow::expr;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
+  MSHADOW_REAL_TYPE_SWITCH(output->type_flag_, DType, {
+    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
+    mshadow::Tensor<xpu, 2, DType> out = output->FlatTo2D<xpu, DType>(s);
+    prnd->SampleUniform(&out, param.low, param.high);
+  });
+}
+
 template<typename xpu>
 void SampleUniform_(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleUniform(&out, param.low, param.high);
-  });
+  TBlob out = outputs[0];
+  SampleUniformDnsImpl<xpu>(attrs, ctx, req[0], &out);
+}
+
+
+template<typename xpu>
+void SampleUniformEx_(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
+  SampleComputeEx_<xpu>(attrs, ctx, inputs, req, outputs, SampleUniformDnsImpl<xpu>);
 }
 
 template<typename xpu>
-void SampleNormal_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
+void SampleNormalDnsImpl(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const OpReqType& req,
+                         TBlob* outputs) {
   using namespace mxnet::op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -268,11 +314,29 @@ void SampleNormal_(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void SampleGamma_(const nnvm::NodeAttrs& attrs,
+void SampleNormal_(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
+  TBlob out = outputs[0];
+  SampleNormalDnsImpl<xpu>(attrs, ctx, req[0], &out);
+}
+
+template<typename xpu>
+void SampleNormalEx_(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
+  SampleComputeEx_<xpu>(attrs, ctx, inputs, req, outputs, SampleNormalDnsImpl<xpu>);
+}
+
+template<typename xpu>
+void SampleGammaDnsImpl(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const OpReqType& req,
+                        TBlob* outputs) {
   using namespace mxnet::op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -284,6 +348,25 @@ void SampleGamma_(const nnvm::NodeAttrs& attrs,
     mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
     prnd->SampleGamma(&out, param.alpha, param.beta);  // NOLINT(*)
   });
+}
+
+template<typename xpu>
+void SampleGamma_(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+  TBlob out = outputs[0];
+  SampleGammaDnsImpl<xpu>(attrs, ctx, req[0], &out);
+}
+
+template<typename xpu>
+void SampleGammaEx_(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<NDArray>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<NDArray>& outputs) {
+  SampleComputeEx_<xpu>(attrs, ctx, inputs, req, outputs, SampleGammaDnsImpl<xpu>);
 }
 
 template<typename xpu>

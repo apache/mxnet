@@ -38,6 +38,8 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I run Keras 1.2.2 with mxnet backend?](https://github.com/dmlc/keras/wiki/Installation)
 
+* [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
+
 ## Extend and Contribute to MXNet
 
 * [How do I join the MXNet development discussion?](http://mxnet.io/community/mxnet_channels.html)

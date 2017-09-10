@@ -1,9 +1,11 @@
 var searchBox = $("#search-input-wrap");
-var TITLE = ['/get_started/', '/tutorials/', '/how_to/', '/api/', '/architecture/'];
-var APIsubMenu;
+var TITLE = ['/get_started/', '/tutorials/', '/community/contribute.html', '/api/'];
+var DOC_TITLE = ['/how_to/', '/architecture/', '/model_zoo/'];
+var APISubmenu, versionSubmenu, docSubmenu;
 $("#burgerMenu").children().each(function () {
-    if($(this).children().first().html() == 'API') APIsubMenu = $(this).clone()
-    if($(this).children().first().html().startsWith('Versions')) VersionsubMenu = $(this).clone()
+    if($(this).children().first().html() == 'API') APISubmenu = $(this).clone();
+    if($(this).children().first().html().startsWith('Versions')) versionSubmenu = $(this).clone();
+    if($(this).children().first().html() == 'Docs') docSubmenu= $(this).clone();
 });
 
 function navbar() {
@@ -40,10 +42,13 @@ function navbar() {
     $("#plusMenu").empty();
     for (var i = 0; i < plusMenuList.length; ++i) {
         if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor') {
-            $("#plusMenu").append(APIsubMenu);
+            $("#plusMenu").append(APISubmenu);
         }
         else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-version') {
-            $("#plusMenu").append(VersionsubMenu);
+            $("#plusMenu").append(versionSubmenu);
+        }
+        else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-docs') {
+            $("#plusMenu").append(docSubmenu);
         }
         else {
             $("#plusMenu").append("<li></li>");
@@ -62,8 +67,16 @@ function showTab() {
             var tab = $($('#main-nav').children().eq(i));
             if(!tab.is('a')) tab = tab.find('a').first();
             tab.css('border-bottom', '3px solid');
+            return;
         }
     }
+     for(var i = 0; i < DOC_TITLE.length; ++i) {
+        if(url.indexOf(DOC_TITLE[i]) != -1) {
+            var tab = $($('#main-nav').children().eq(4));
+            if(!tab.is('a')) tab = tab.find('a').first();
+            tab.css('border-bottom', '3px solid');
+        }
+     }
 }
 
 $(document).ready(function () {
@@ -71,5 +84,7 @@ $(document).ready(function () {
     showTab();
     $(window).resize(function () {
         navbar();
+        if($("body").prop("clientWidth") < 1000 || $('div.sphinxsidebar').css('visibility') == 'hidden') $('div.content').css('width', '100%');
+        else $('div.content').css('width', 'calc(100% - 300px)');
     });
 });

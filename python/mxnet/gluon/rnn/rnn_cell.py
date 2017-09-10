@@ -121,6 +121,8 @@ class RecurrentCell(Block):
         """Reset before re-using the cell for another graph."""
         self._init_counter = -1
         self._counter = -1
+        for cell in self._children:
+            cell.reset()
 
     def state_info(self, batch_size=0):
         """shape and layout information of states"""
@@ -669,7 +671,7 @@ class ZoneoutCell(ModifierCell):
         super(ZoneoutCell, self).__init__(base_cell)
         self.zoneout_outputs = zoneout_outputs
         self.zoneout_states = zoneout_states
-        self.prev_output = None
+        self._prev_output = None
 
     def __repr__(self):
         s = '{name}(p_out={zoneout_outputs}, p_state={zoneout_states}, {base_cell})'
@@ -681,14 +683,14 @@ class ZoneoutCell(ModifierCell):
 
     def reset(self):
         super(ZoneoutCell, self).reset()
-        self.prev_output = None
+        self._prev_output = None
 
     def hybrid_forward(self, F, inputs, states):
         cell, p_outputs, p_states = self.base_cell, self.zoneout_outputs, self.zoneout_states
         next_output, next_states = cell(inputs, states)
         mask = (lambda p, like: F.Dropout(F.ones_like(like), p=p))
 
-        prev_output = self.prev_output
+        prev_output = self._prev_output
         if prev_output is None:
             prev_output = F.zeros_like(next_output)
 
@@ -697,7 +699,7 @@ class ZoneoutCell(ModifierCell):
         states = ([F.where(mask(p_states, new_s), new_s, old_s) for new_s, old_s in
                    zip(next_states, states)] if p_states != 0. else next_states)
 
-        self.prev_output = output
+        self._prev_output = output
 
         return output, states
 

@@ -146,3 +146,5 @@ bld
 target
 
 bin/im2rec
+
+model/

@@ -80,9 +80,22 @@ class Parameter(object):
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
 
+    Attributes
+    ----------
+    grad_req : {'write', 'add', 'null'}
+        This can be set before or after initialization. Setting grad_req to null
+        with `x.grad_req = 'null'` saves memory and computation when you don't
+        need gradient w.r.t x.
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
-                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False):
+                 lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
+                 differentiable=True):
+        self._var = None
+        self._data = None
+        self._grad = None
+        self._deferred_init = ()
+        self._differentiable = differentiable
+        self._grad_req = None
         self.name = name
         self.shape = shape
         self.dtype = dtype
@@ -91,23 +104,47 @@ class Parameter(object):
         self.grad_req = grad_req
         self.init = init
         self.allow_deferred_init = allow_deferred_init
-        self._var = None
-        self._data = None
-        self._grad = None
-        self._deferred_init = ()
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
         return s.format(**self.__dict__)
 
-    def _check_initialized(self, ctx=None):
-        if self._data is not None:
-            if ctx is not None and ctx not in self._data:
-                raise RuntimeError(
-                    "Parameter %s was not initialized on context %s. "
-                    "It was only initialized on %s."%(
-                        self.name, str(ctx), str(self.list_ctx())))
+    @property
+    def grad_req(self):
+        return self._grad_req
+
+    @grad_req.setter
+    def grad_req(self, req):
+        assert req in ['write', 'add', 'null'], \
+            "grad_req must be one of write, add, or null, but got %s"%req
+        if not self._differentiable:
+            req = 'null'
+        if self._grad_req == req:
             return
+        self._grad_req = req
+        if req == 'null' and self._grad is not None:
+            self._grad = None
+            for ctx in self._data:
+                self._data[ctx] = self._data[ctx].detach()
+        elif self._data is not None:
+            self._init_grad()
+
+    def _check_and_get(self, arr_dict, ctx):
+        if arr_dict is not None:
+            if ctx is list:
+                return list(arr_dict.values())
+            if ctx is None:
+                if len(self._ctx_list) == 1:
+                    ctx = self._ctx_list[0]
+                else:
+                    ctx = context.current_context()
+            ret = arr_dict.get(ctx, None)
+            if ret is not None:
+                return ret
+            raise RuntimeError(
+                "Parameter %s was not initialized on context %s. "
+                "It was only initialized on %s."%(
+                    self.name, str(ctx), str(self._ctx_list)))
         if self._deferred_init:
             raise DeferredInitializationError
         raise RuntimeError(
@@ -170,15 +207,19 @@ class Parameter(object):
     def _init_impl(self, data, ctx):
         """Sets data and grad."""
         self._data = OrderedDict()
+        self._ctx_list = list(ctx)
         for i in ctx:
             self._data[i] = data.copyto(i)
+        self._init_grad()
 
+    def _init_grad(self):
+        """Initialize grad buffers."""
         if self.grad_req == 'null':
             self._grad = None
             return
 
         self._grad = OrderedDict()
-        for i in ctx:
+        for i in self._data:
             self._grad[i] = ndarray.zeros_like(self._data[i])
 
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
@@ -295,20 +336,12 @@ class Parameter(object):
         -------
         NDArray on ctx
         """
-        if ctx is None:
-            list_ctx = self.list_ctx()
-            if len(list_ctx) == 1:
-                ctx = list_ctx[0]
-            else:
-                ctx = context.current_context()
-        self._check_initialized(ctx)
-        return self._data[ctx]
+        return self._check_and_get(self._data, ctx)
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order
         as creation."""
-        self._check_initialized()
-        return list(self._data.values())
+        return self._check_and_get(self._data, list)
 
     def grad(self, ctx=None):
         """Returns a gradient buffer for this parameter on one context.
@@ -318,26 +351,20 @@ class Parameter(object):
         ctx : Context
             Desired context.
         """
-        if ctx is None:
-            list_ctx = self.list_ctx()
-            if len(list_ctx) == 1:
-                ctx = list_ctx[0]
-            else:
-                ctx = context.current_context()
-        self._check_initialized(ctx)
-        if self._grad is None:
+        if self._data is not None and self._grad is None:
             raise RuntimeError(
                 "Cannot get gradient array for Parameter %s " \
                 "because grad_req='null'"%(self.name))
-        return self._grad[ctx]
+        return self._check_and_get(self._grad, ctx)
 
     def list_grad(self):
         """Returns gradient buffers on all contexts, in the same order
         as `values`."""
-        self._check_initialized()
-        assert self._grad is not None, \
-            "Parameter %s does not have gradients because grad_req='null'"%self.name
-        return list(self._grad.values())
+        if self._data is not None and self._grad is None:
+            raise RuntimeError(
+                "Cannot get gradient array for Parameter %s " \
+                "because grad_req='null'"%(self.name))
+        return self._check_and_get(self._grad, list)
 
     def list_ctx(self):
         """Returns a list of contexts this parameter is initialized on."""
@@ -345,7 +372,7 @@ class Parameter(object):
             if self._deferred_init:
                 return self._deferred_init[1]
             raise RuntimeError("Parameter %s has not been initialized"%self.name)
-        return list(self._data.keys())
+        return self._ctx_list
 
     def zero_grad(self):
         """Sets gradient buffer on all contexts to 0. No action is taken if
@@ -381,15 +408,18 @@ class ParameterDict(object):
         self._params = OrderedDict()
         self._shared = shared
 
-    def __getitem__(self, key):
-        return self._params[key]
-
     def __repr__(self):
         s = '{name}(\n{content}\n)'
         name = self._prefix+' ' if self._prefix else ''
         return s.format(name=name,
                         content='\n'.join([_indent('  {0}'.format(v), 2)
                                            for v in self.values()]))
+
+    def __getitem__(self, key):
+        return self._params[key]
+
+    def __iter__(self):
+        return iter(self._params)
 
     def items(self):
         return self._params.items()
@@ -494,6 +524,28 @@ class ParameterDict(object):
         """
         for i in self.values():
             i.reset_ctx(ctx)
+
+    def setattr(self, name, value):
+        """Set an attribute to a new value for all Parameters.
+
+        For example, set grad_req to null if you don't need gradient w.r.t a
+        model's Parameters::
+
+            model.collect_params().setattr('grad_req', 'null')
+
+        or change the learning rate multiplier::
+
+            model.collect_params().setattr('lr_mult', 0.5)
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute.
+        value : valid type for attribute name
+            The new value for the attribute.
+        """
+        for i in self.values():
+            setattr(i, name, value)
 
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
