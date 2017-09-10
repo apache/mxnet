@@ -517,3 +517,9 @@ struct for user-input parameters, walked through shape and type inference work f
 implemented forward and backward functions, and registered the operator
 using nnvm. Congratulations! You now know how to add operators.
 We welcome your contributions to MXNet.
+
+**Note**: Source code in the tutorial can be found in
+[quadratic_op-inl.h](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op-inl.h),
+[quadratic_op.cc](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op.cc),
+and
+[quadratic_op.cu](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op.cu).
