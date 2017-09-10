@@ -50,8 +50,8 @@ _model_sha1 = {name: checksum for checksum, name in [
     ('f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'),
     ('9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn')]}
 
-_url_format = 'https://{bucket}.s3.amazonaws.com/gluon/models/{file_name}.zip'
-bucket = 'apache-mxnet'
+_url_format = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com' \
+              '/gluon/models/{file_name}.zip'
 
 def short_hash(name):
     if name not in _model_sha1:
@@ -92,8 +92,7 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
         os.makedirs(local_dir)
 
     zip_file_path = os.path.join(local_dir, file_name+'.zip')
-    download(_url_format.format(bucket=bucket,
-                                file_name=file_name),
+    download(_url_format.format(file_name=file_name),
              path=zip_file_path,
              overwrite=True)
     with zipfile.ZipFile(zip_file_path) as zf:
