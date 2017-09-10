@@ -3,13 +3,15 @@
 ## Introduction
 Operators are essential elements for constructing neural networks. They define mathematical formulas
 of transforming input data (tensors) to outputs. MXNet has a rich set of operators from simple ones,
-such as element-wise sum, to complicated ones, such as convolution. You may have noticed
+such as element-wise sum, to complicated ones, such as convolution, that is
+capable of constructing most of the popular neural networks. You may have noticed
 that many operators implemented in MXNet have their equivalent forms in Numpy, such as
 [repeat](https://docs.scipy.org/doc/numpy/reference/generated/numpy.repeat.html),
 [tile](https://docs.scipy.org/doc/numpy/reference/generated/numpy.tile.html),
 etc., and wonder why we could not simply use those Numpy operators in MXNet. One of the
 major reasons is that we need to support both CPU and GPU computing for the operators in MXNet,
-while Numpy operators do not have GPU computing capability. In addition, we have performed plenty of
+while Numpy operators do not possess GPU computing capability.
+In addition, we have performed plenty of
 optimizations for various components in MXNet, such as tensor data structure (`NDArray`),
 execution engine, computational graph and so on, for maximizing memory and runtime efficiency.
 An operator implemented under the MXNet operator framework would greatly
@@ -72,8 +74,8 @@ struct QuadraticParam : public dmlc::Parameter<QuadraticParam> {
 };
 ```
 
-The function calls in the above parameter struct are self-explanatory. Note that
-for each parameter, we set the default value to `0.0` such that users can
+The function calls in the above parameter struct are self-explanatory by their names.
+Note that for each parameter, we set the default value to `0.0` such that users can
 skip passing 0-value parameters through the quadratic operator interface. You
 can choose not to define the default value for a parameter if it is required
 at runtime. Meanwhile, adding brief descriptions to the parameters enables
@@ -142,9 +144,9 @@ Here are a few things to note about the above function:
 1. `attrs` contains parameters `a`, `b`, and `c` from user input.
 It's not used here since we don't rely on that information for shape inference.
 2. `in_attrs` is a vector containing all input shapes. Since there is
-only one input argument for operator `quadratic`, we use macro `CHECK_EQ`
+only one input argument for operator `quadratic`, we used macro `CHECK_EQ`
 to assert when the vector's size is wrong.
-3. `out_attrs` is a vector containing all output shapes. We also use
+3. `out_attrs` is a vector containing all output shapes. We also used
 `CHECK_EQ` to verify the size of the vector since there is only one output.
 4. We called macro `SHAPE_ASSIGN_CHECK` twice for mutual inference. One for
 inferring the output shape from the input shape, the other one is for inferring
@@ -152,7 +154,7 @@ the input shape from the output shape.
 If there are any unequal non-zero values in the same
 dimension of two shapes, such as (2, 3) and (3, 3), the macro would throw an
 exception with an error message for shape inference.
-5. At the end of the function body, we check whether the output shape
+5. At the end of the function body, we checked whether the output shape
 is completely known by testing whether its size is greater than 0. If not,
 the function should return `false` to notify the caller about shape inference failure.
 6. MXNet provides a convenience function implementing the logic of mutual inference
@@ -198,7 +200,7 @@ Forward function defines the operator's behavior in the forward pass
 of neural networks. For our `quadratic` operator, it simply implements
 the logic of running a tensor through the quadratic function by performing
 a few element-wise operations. We first paste the whole forward function code here
-and then let's go through it line by line.
+and then go through it line by line.
 ```cpp
 template<typename xpu>                                                        // 1
 void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         // 2
