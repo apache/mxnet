@@ -78,6 +78,11 @@ ifeq ($(USE_PROFILER), 1)
 	CFLAGS += -DMXNET_USE_PROFILER=1
 endif
 
+# CFLAGS for segfault logger
+ifeq ($(USE_SEGFAULT_LOGGER), 1)
+	CFLAGS += -DMXNET_USE_SEGFAULT_LOGGER=1
+endif
+
 # Caffe Plugin
 ifdef CAFFE_PATH
 	CFLAGS += -DMXNET_USE_CAFFE=1

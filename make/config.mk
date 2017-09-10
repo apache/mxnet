@@ -30,8 +30,11 @@ DEV = 0
 # whether compile with debug
 DEBUG = 0
 
-# whether compiler with profiler
+# whether compile with profiler
 USE_PROFILER =
+
+# whether to turn on segfault logger
+USE_SEGFAULT_LOGGER =
 
 # the additional link flags you want to add
 ADD_LDFLAGS =
