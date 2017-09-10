@@ -343,7 +343,7 @@ def visual(title, X, activation):
 #######################################################################
 # adverial training of the VAE
 ####################################################################### 
-def train(dataset, nef, ndf, ngf, nc, batch_size, Z, lr, beta1, epsilon, ctx, check_point, g_dl_weight, output_path, checkpoint_path, data_path, activation, save_after_every, visualize_after_every, show_after_every): 
+def train(dataset, nef, ndf, ngf, nc, batch_size, Z, lr, beta1, epsilon, ctx, check_point, g_dl_weight, output_path, checkpoint_path, data_path, activation,num_epoch, save_after_every, visualize_after_every, show_after_every): 
     
     #encoder
     z_mu, z_lv, z = encoder(nef, Z, batch_size)
@@ -501,7 +501,7 @@ def train(dataset, nef, ndf, ngf, nc, batch_size, Z, lr, beta1, epsilon, ctx, ch
     stamp =  datetime.now().strftime('%Y_%m_%d-%H_%M')
 
     # =============train===============
-    for epoch in range(200):
+    for epoch in range(num_epoch):
         train_iter.reset()
         for t, batch in enumerate(train_iter):
             
@@ -800,6 +800,7 @@ def parse_args():
     parser.add_argument('--epsilon', help='epsilon for adam optimizer', default=1e-5, type=float)
     parser.add_argument('--g_dl_weight', help='discriminator layer loss weight', default=1e-1, type=float)                     
     parser.add_argument('--gpu', help='gpu index', default=0, type=int)
+    parser.add_argument('--num_epoch', help='number of maximum epochs ', default=45, type=int)
     parser.add_argument('--save_after_every', help='save checkpoint after every this number of epochs ', default=5, type=int)
     parser.add_argument('--visualize_after_every', help='save output images after every this number of epochs', default=5, type=int)
     parser.add_argument('--show_after_every', help='show metrics after this number of iterations', default=10, type=int)    
@@ -817,7 +818,7 @@ def main():
     check_point = True
     
     if args.train:        
-        train(args.dataset, args.nef, args.ndf, args.ngf, args.nc, args.batch_size, args.Z, args.lr, args.beta1, args.epsilon, ctx, check_point, args.g_dl_weight, args.output_path, args.checkpoint_path, args.training_data_path, args.activation, args.save_after_every, args.visualize_after_every, args.show_after_every)
+        train(args.dataset, args.nef, args.ndf, args.ngf, args.nc, args.batch_size, args.Z, args.lr, args.beta1, args.epsilon, ctx, check_point, args.g_dl_weight, args.output_path, args.checkpoint_path, args.training_data_path, args.activation, args.num_epoch, args.save_after_every, args.visualize_after_every, args.show_after_every)
     
     if args.test:
         test(args.nef, args.ngf, args.nc, 1, args.Z, ctx, args.pretrained_encoder_path, args.pretrained_generator_path, args.output_path, args.testing_data_path, args.activation, args.save_embedding, args.embedding_path)    
