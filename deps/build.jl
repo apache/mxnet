@@ -159,22 +159,30 @@ if !libmxnet_detected
           `git submodule update --init --recursive`
           `git -C mshadow checkout -- make/mshadow.mk`
           `make clean`
+          `cp ../../cblas.h include/cblas.h`
+
           `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
-        end
-        FileRule(joinpath(_mxdir, "config.mk"), @build_steps begin
-          ChangeDirectory(_mxdir)
+
+          # Copy config.mk, always override the file
           if is_apple()
             `cp make/osx.mk config.mk`
           else
             `cp make/config.mk config.mk`
           end
+
+          # Configure OpenCV
           `sed -i -s 's/USE_OPENCV = 1/USE_OPENCV = 0/' config.mk`
+
+          # Configure CUDA
           if HAS_CUDA
-            `sed -i -s 's/USE_CUDA = 0/USE_CUDA = 1/' config.mk`
-            if haskey(ENV, "CUDA_HOME")
-              `sed -i -s 's/USE_CUDA_PATH = NULL/USE_CUDA_PATH = $(ENV["CUDA_HOME"])/' config.mk`
+            @build_steps begin
+              `sed -i -s 's/USE_CUDA = 0/USE_CUDA = 1/' config.mk`
+              if haskey(ENV, "CUDA_HOME")
+                `sed -i -s "s@USE_CUDA_PATH = NONE@USE_CUDA_PATH = $(ENV["CUDA_HOME"])@" config.mk`
+              end
             end
           end
+
           # Force enable LAPACK build
           # Julia's OpenBLAS has LAPACK functionality already
           if FORCE_LAPACK
@@ -183,10 +191,7 @@ if !libmxnet_detected
             end
             `sed -i -s 's/ADD_CFLAGS =\(.*\)/ADD_CFLAGS =\1 -DMXNET_USE_LAPACK/' config.mk`
           end
-        end)
-        @build_steps begin
-          ChangeDirectory(_mxdir)
-          `cp ../../cblas.h include/cblas.h`
+
           if USE_JULIA_BLAS
             `make -j$(get_cpucore()) USE_BLAS=$blas_name $MSHADOW_LDFLAGS`
           else
