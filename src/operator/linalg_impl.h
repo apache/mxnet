@@ -835,7 +835,7 @@ template<> inline \
 int linalg_gelqf_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                                              Stream<cpu> *s) { \
   int m(A.size(0)); \
-  DType work; \
+  DType work = 0; \
   int ret(MXNET_LAPACK_##prefix##gelqf(MXNET_LAPACK_ROW_MAJOR, m, \
                                        A.size(1), A.dptr_ , A.stride_, &work, \
                                        &work, -1)); \

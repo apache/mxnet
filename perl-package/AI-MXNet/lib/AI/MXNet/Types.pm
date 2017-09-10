@@ -37,6 +37,8 @@ class_type 'AI::MXNet::Optimizer';
 class_type 'AI::MXNet::Initializer';
 class_type 'AI::MXNet::InitDesc';
 class_type 'AI::MXNet::IRHeader';
+class_type 'AI::MXNet::Updater';
+class_type 'AI::MXNet::KVStore';
 subtype "AcceptableInput" => as "Num|PDL|PDL::Matrix|AI::MXNet::NDArray|AI::MXNet::NDArray::Slice|ArrayRef";
 subtype "Index"           => as "Int";
 subtype "DimSize"         => as "Int" => where { $_ >= 0 };
@@ -48,6 +50,7 @@ subtype "Metric"          => as "Maybe[CodeRef|Str]";
 subtype "ProfilerMode"    => as enum([qw[symbolic all]]);
 subtype "ProfilerState"   => as enum([qw[stop run]]);
 subtype "GradReq"         => as enum([qw[add write null]]);
+subtype "KVStoreStr"      => as enum([qw[local device dist dist_sync dist_async]]);
 subtype "NameShape"       => as "ArrayRef" => where {
     find_type_constraint("Str")->check($_->[0])
         and
@@ -57,6 +60,8 @@ subtype "Callback"        => as "CodeRef|ArrayRef[Coderef]|AI::MXNet::Callback|A
 subtype "EvalMetric"      => as "AI::MXNet::EvalMetric|Str|CodeRef";
 subtype "Optimizer"       => as "AI::MXNet::Optimizer|Str";
 subtype "Initializer"     => as "AI::MXNet::Initializer|Str";
+subtype "Updater"         => as "AI::MXNet::Updater|CodeRef";
+subtype "KVStore"         => as "AI::MXNet::KVStore|KVStoreStr";
 subtype "Activation"      => as "AI::MXNet::Symbol|Str|CodeRef";
 subtype "SymbolOrArrayOfSymbols" => as "AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]";
 subtype "NameShapeOrDataDesc" => as "NameShape|AI::MXNet::DataDesc";
