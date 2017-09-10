@@ -1,4 +1,4 @@
-VAE-GAN in MxNet
+VAE-GAN in MXNet
 
 Implementation of Autoencoding beyond pixels using a learned similarity metric based on the Tensorflow implementation of https://github.com/JeremyCCHsu/tf-vaegan/
 
