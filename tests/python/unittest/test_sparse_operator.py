@@ -408,7 +408,7 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         test_elemwise_binary_op("maximum", lhs_stype, rhs_stype, shape,
-                                lambda l, r: mx.sym.sparse.maximum(l, r),
+                                lambda l, r: mx.sym._internal._maximum(l, r),
                                 lambda l, r: np.maximum(l, r),
                                 lambda outg, l, r: (outg * ge(l, r), outg * lt(l, r)),
                                 lhs_grad_stype, rhs_grad_stype,
@@ -421,7 +421,7 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         test_elemwise_binary_op("minimum", lhs_stype, rhs_stype, shape,
-                                lambda l, r: mx.sym.sparse.minimum(l, r),
+                                lambda l, r: mx.sym._internal._minimum(l, r),
                                 lambda l, r: np.minimum(l, r),
                                 lambda outg, l, r: (outg * le(l, r), outg * gt(l, r)),
                                 lhs_grad_stype, rhs_grad_stype,
@@ -434,7 +434,7 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         test_elemwise_binary_op("hypot", lhs_stype, rhs_stype, shape,
-                                lambda l, r: mx.sym.sparse.hypot(l, r),
+                                lambda l, r: mx.sym._internal._hypot(l, r),
                                 lambda l, r: np.hypot(l, r),
                                 lambda outg, l, r: (
                                     outg * assign_each2(
