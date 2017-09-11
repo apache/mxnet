@@ -93,7 +93,7 @@ class Comm {
 
  protected:
   Context pinned_ctx_;
-  std::string compress_;
+  std::string compress_ = "none";
   float pos_threshold_;
   float neg_threshold_;
 };
