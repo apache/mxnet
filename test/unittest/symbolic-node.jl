@@ -136,6 +136,13 @@ function test_dot()
   @test reldiff(ret, 2*ones(100, 200)) < 1e-6
 end
 
+function test_print()
+  info("SymbolicNode::print")
+  io = IOBuffer()
+  print(io, mx.Variable(:x))
+  @test !isempty(String(take!(io)))
+end
+
 function test_misc()
   info("SymbolicNode::Miscellaneous")
   # Test for #189
@@ -158,6 +165,7 @@ end
   test_attrs()
   test_functions()
   test_dot()
+  test_print()
   test_misc()
 end
 
