@@ -31,8 +31,31 @@ def test_metrics():
     check_metric('f1')
     check_metric('perplexity', -1)
     check_metric('pearsonr')
+    check_metric('top_k_precision')
+    check_metric('top_k_recall')
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
+
+def test_top_k_precision():
+    ytrue = [[1.,0.,1.,0.],[0.,1.,1.,0.]]
+    ytrue = mx.nd.array(ytrue)
+    yhat = [[0.4,0.8,0.1,0.1],[0.4,0.8,0.8,0.4]]
+    yhat = mx.nd.array(yhat)
+    pre = mx.metric.create('top_k_precision',top_k=2)
+    pre.update(preds = [yhat], labels = [ytrue])
+    assert(pre.get()[1]==0.75), pre.get()
+
+
+def test_top_k_recall():
+    ytrue = [[1.,0.,1.,0.],[0.,1.,1.,0.]]
+    ytrue = mx.nd.array(ytrue)
+    yhat = [[0.4,0.1,0.1,0.4],[0.4,0.8,0.8,0.4]]
+    yhat = mx.nd.array(yhat)
+    rec = mx.metric.create('top_k_recall',top_k=2)
+    rec.update(preds = [yhat], labels = [ytrue])
+    assert(rec.get()[1]==0.75), rec.get()
+
+
 
 
 if __name__ == '__main__':
