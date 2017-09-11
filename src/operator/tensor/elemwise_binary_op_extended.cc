@@ -43,7 +43,6 @@ NNVM_REGISTER_OP(_backward_power)
   cpu, mshadow_op::power_grad, mshadow_op::power_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_maximum, mshadow_op::maximum)
-MXNET_ADD_SPARSE_OP_ALIAS(maximum)
 .add_alias("_Maximum")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_maximum"});
 
@@ -60,7 +59,6 @@ NNVM_REGISTER_OP(_backward_maximum)
   mshadow_op::lt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_minimum, mshadow_op::minimum)
-MXNET_ADD_SPARSE_OP_ALIAS(minimum)
 .add_alias("_Minimum")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_minimum"});
 
@@ -77,7 +75,6 @@ NNVM_REGISTER_OP(_backward_minimum)
   mshadow_op::gt>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_hypot, mshadow_op::hypot)
-MXNET_ADD_SPARSE_OP_ALIAS(hypot)
 .add_alias("_Hypot")
 .describe(R"code(Given the "legs" of a right triangle, return its hypotenuse.
 
