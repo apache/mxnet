@@ -236,12 +236,6 @@ template<typename OP>
 struct Kernel<OP, cpu> {
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<cpu> *s, int N, Args... args) {
-#if MXNET_USE_CUDA == 0
-    #pragma omp parallel for
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, args...);
-    }
-#else
     if (KernelState::GetUsingGPU()) {
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
@@ -252,7 +246,6 @@ struct Kernel<OP, cpu> {
         OP::Map(i, args...);
       }
     }
-#endif
   }
 };
 

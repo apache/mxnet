@@ -313,7 +313,7 @@ class ThreadedEngine : public Engine {
   void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
 #if MXNET_USE_CUDA
-    if(run_ctx.ctx.dev_mask() == gpu::kDevMask) {
+    if (run_ctx.ctx.dev_mask() == gpu::kDevMask) {
       // Signify to kernel that GPU is being used
       mxnet::op::mxnet_op::KernelState::SetUsingGPU(true);
     }
