@@ -50,7 +50,7 @@
 #endif
 
 /*!
- *\brief whether to use __builtin_memcpy
+ *\brief whether to use __builtin_memcpy or not
  */
 #ifdef MXNET_USE_BUILTIN_MEMCPY
 #define MXNET_MEMCPY __builtin_memcpy
