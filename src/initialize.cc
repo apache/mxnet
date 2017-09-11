@@ -53,7 +53,7 @@ class LibraryInitializer {
  public:
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
-#if MXNET_USE_SEGFAULT_LOGGER
+#if MXNET_USE_SIGNAL_HANDLER
     signal(SIGSEGV, segfault_logger);
 #endif
 #if MXNET_USE_PROFILER

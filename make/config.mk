@@ -33,8 +33,8 @@ DEBUG = 0
 # whether compile with profiler
 USE_PROFILER =
 
-# whether to turn on segfault logger
-USE_SEGFAULT_LOGGER =
+# whether to turn on signal handler (e.g. segfault logger)
+USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
 ADD_LDFLAGS =

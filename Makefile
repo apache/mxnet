@@ -79,8 +79,8 @@ ifeq ($(USE_PROFILER), 1)
 endif
 
 # CFLAGS for segfault logger
-ifeq ($(USE_SEGFAULT_LOGGER), 1)
-	CFLAGS += -DMXNET_USE_SEGFAULT_LOGGER=1
+ifeq ($(USE_SIGNAL_HANDLER), 1)
+	CFLAGS += -DMXNET_USE_SIGNAL_HANDLER=1
 endif
 
 # Caffe Plugin
