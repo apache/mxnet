@@ -107,6 +107,11 @@ for neural networks. Let's consider the following example.
 >>> print d.infer_shape()
 ([(2L, 3L), (2L, 3L), (2L, 3L)], [(2L, 3L)], [])
 ```
+The last line of the above code snippet is a tuple of three lists returned
+by `d.infer_shape()`. The first list contains all the argument shapes
+of `a`, `b`, and `c`. The second contains the output shape of `d`. The
+third one represents the shapes of auxiliary states, which is not used
+in this case, and thus is empty. 
 In this example, we only specified values for variable `a`'s first dimension
 and `c`'s second dimension. The `0` in shape `(2, 0)` indicates that the size
 of the second dimension is unknown, same meaning for shape `(0, 3)`.
@@ -199,7 +204,16 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
 Forward function defines the operator's behavior in the forward pass
 of neural networks. For our `quadratic` operator, it simply implements
 the logic of running a tensor through the quadratic function by performing
-a few element-wise operations. We first paste the whole forward function code here
+a few element-wise operations. The forward function's signature is fixed
+in MXNet as follows:
+```cpp
+void (const nnvm::NodeAttrs& attrs,
+      const OpContext& ctx,
+      const std::vector<TBlob>& inputs,
+      const std::vector<OpReqType>& req,
+      const std::vector<TBlob>& outputs);
+```
+We first paste the whole forward function code here
 and then go through it line by line.
 ```cpp
 template<typename xpu>                                                        // 1
@@ -236,7 +250,7 @@ that the kernels execute in the same order on GPU as they are launched from CPU.
 for the `quadratic` operator).
 - Line 4: `req` is a vector of `OpReqType` values. Each value defines
 the way of writing calculated values to the output tensors.
-Therefore, the number of `req`s must be same as the number of output tensors.
+Therefore, the number of `req`s must be the same as the number of output tensors.
 MXNet currently supports three types of `req` in frontend: `null`, `write`, and `add`.
 `null` means skipping calculating the corresponding output tensor,
 `write` means overwriting the values in the output tensor with the ones
@@ -306,7 +320,9 @@ given `dL/dy` and `y = a*x^2 + b*x + c`, where `L` represents the loss function 
 dL/dx = dL/dy * dy/dx = dL/dy * (2*a*x + b).
 ```
 The above equation indicates that `dL/dx` depends on the gradient
-of the output tensor and the input tensor. With this information in mind,
+of the output tensor and the input tensor.
+The backward function's signature is the same as the forward function's.
+With the aforementioned information in mind,
 let's breakdown the following backward function line by line.
 ```cpp
 template<typename xpu>                                                       // 1
@@ -497,8 +513,8 @@ def test_quadratic_function():
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
-    # check forward
     for ndim in range(1, 6):
+        # check forward
         shape = rand_shape_nd(ndim, 5)
         data = rand_ndarray(shape=shape, stype='default')
         data_np = data.asnumpy()
@@ -511,6 +527,16 @@ def test_quadratic_function():
         quad_sym = mx.sym.quadratic(data=data, a=a, b=b, c=c)
         check_numeric_gradient(quad_sym, [data_np])
 ```
+Note that here we used `mx.nd.quadratic` to test the forward function
+and `check_numeric_gradient` to test the backward function. In MXNet,
+two other utility functions are also commonly used: `check_symbolic_forward`
+and `check_symbolic_backward`. By using them in unit tests,
+users need to pass in the operator symbols and expected results
+for comparison. Please also note that
+we highly recommend adding `check_numeric_gradient` test for every operator
+with backward function implemented as it eliminates the possibility
+of passing incorrect expected results into `check_symbolic_backward`.
+
 
 ## Summary
 In this tutorial, we practiced implementing the operator `quadratic` in MXNet backend
