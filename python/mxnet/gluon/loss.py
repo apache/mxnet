@@ -312,9 +312,6 @@ class CTCLoss(Loss):
         Layout of the output sequence activation vector.
     label_layout : str, default 'NT'
         Layout of the labels.
-    padding_mask : int or None, default -1
-        This is the label value to be considered padding, which is used to derive the actual
-        lengths of labels. Only required when `label_lengths` is None.
     weight : float or None
         Global scalar weight for loss.
     sample_weight : Symbol or None
@@ -325,21 +322,28 @@ class CTCLoss(Loss):
         This should be used as the fifth argument when calling this loss.
 
     Input shapes:
-        `data` is an activation tensor without softmax.
+        `data` is an activation tensor (i.e. before softmax).
         Its shape depends on `layout`. For `layout='TNC'`, this
         input has shape `(sequence_length, batch_size, alphabet_size)`
+        Note that the last dimension with index `alphabet_size-1` is reserved for special
+        blank character.
 
-        `label` is the label index matrix.
+        `label` is the label index matrix with zero-indexed labels.
         Its shape depends on `label_layout`. For `label_layout='TN'`, this
-        input has shape `(label_sequence_length, batch_size)`
-        When `label_lengths` is not specified, the first occurrence of `padding_mask`
+        input has shape `(label_sequence_length, batch_size)`. Padding mask of value ``-1``
+        is available for dealing with unaligned label lengths.
+        When `label_lengths` is specified, label lengths are directly used and padding mask
+        is not allowed in the label.
+        When `label_lengths` is not specified, the first occurrence of ``-1``
         in each sample marks the end of the label sequence of that sample.
-        For example, suppose there are two samples, with *label_sequence_length* = 4.
-        The two sequences of labels are [2, 1] and [3, 2, 2], and their actual lengths
-        are smaller than 4. Thus, given *padding_mask* = 0, the resulting ```label```
+
+        For example, suppose the vocabulary is `[a, b, c]`, and in one batch we have three
+        sequences 'ba', 'cbb', and 'abac'. We can index the labels as `{'a': 0, 'b': 1, 'c': 2}`.
+        The alphabet size should be 4, and we reserve the channel index 3 for blank label
+        in data tensor. The padding mask value for extra length is -1, so the resulting `label`
         tensor should be padded to be::
 
-          [[2, 1, 0, 0], [3, 2, 2, 0]]
+          [[1, 0, -1, -1], [2, 1, 1, -1], [0, 1, 0, 2]]
 
         `data_lengths` is optional and defaults to None.
         When specified, it represents the actual lengths of data.
@@ -357,15 +361,13 @@ class CTCLoss(Loss):
     Output shape:
         The CTC loss output has the shape (batch_size,).
     """
-    def __init__(self, layout='NTC', label_layout='NT', padding_mask=-1,
-                 weight=None, **kwargs):
+    def __init__(self, layout='NTC', label_layout='NT', weight=None, **kwargs):
         assert layout in ['NTC', 'TNC'],\
                "Only 'NTC' and 'TNC' layouts for output are supported. Got: %s"%layout
         assert label_layout in ['NT', 'TN'],\
                "Only 'NT' and 'TN' layouts for label are supported. Got: %s"%label_layout
         self._layout = layout
         self._label_layout = label_layout
-        self._padding_mask = padding_mask
         batch_axis = label_layout.find('N')
         super(CTCLoss, self).__init__(weight, batch_axis, **kwargs)
 
@@ -383,5 +385,5 @@ class CTCLoss(Loss):
                                  use_data_lengths=data_lengths is not None,
                                  use_label_lengths=label_lengths is not None,
                                  data_lengths=data_lengths, label_lengths=label_lengths,
-                                 padding_mask=self._padding_mask)
+                                 blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)

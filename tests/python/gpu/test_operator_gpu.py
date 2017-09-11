@@ -1370,10 +1370,10 @@ def test_autograd_save_memory():
     x.backward()
 
 def test_gluon_ctc_consistency():
-    loss = mx.gluon.loss.CTCLoss(padding_mask=0)
+    loss = mx.gluon.loss.CTCLoss()
     data = mx.nd.arange(0, 4, repeat=40, ctx=mx.gpu(0)).reshape((2,20,4)).flip(axis=0)
-    cpu_label = mx.nd.array([[2,1,0,0],[3,2,2,0]], ctx=mx.cpu(0))
-    gpu_label = mx.nd.array([[2,1,0,0],[3,2,2,0]], ctx=mx.gpu(0))
+    cpu_label = mx.nd.array([[2,1,-1,-1],[3,2,2,-1]], ctx=mx.cpu(0))
+    gpu_label = mx.nd.array([[2,1,-1,-1],[3,2,2,-1]], ctx=mx.gpu(0))
 
     cpu_data = data.copy().as_in_context(mx.cpu(0))
     cpu_data.attach_grad()
