@@ -73,6 +73,47 @@ def cifar10_iterator(batch_size, data_shape, resize=-1):
 
     return train, val
 
+def imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-1):
+    train = mx.io.ImageRecordIter(
+        path_imgrec             = train_data,
+        data_shape              = data_shape,
+        mean_r                  = 123.68,
+        mean_g                  = 116.779,
+        mean_b                  = 103.939,
+        std_r                   = 58.395,
+        std_g                   = 57.12,
+        std_b                   = 57.375,
+        preprocess_threads      = 32,
+        shuffle                 = True,
+        batch_size              = batch_size,
+        rand_crop               = True,
+        resize                  = resize,
+        random_mirror           = True,
+        max_random_h            = 36,
+        max_random_s            = 50,
+        max_random_l            = 50,
+        max_random_rotate_angle = 10,
+        max_random_shear_ratio  = 0.1,
+        max_random_aspect_ratio = 0.25,
+        fill_value              = 127,
+        min_random_scale        = 0.533)
+
+    val = mx.io.ImageRecordIter(
+        path_imgrec        = val_data,
+        data_shape         = data_shape,
+        mean_r             = 123.68,
+        mean_g             = 116.779,
+        mean_b             = 103.939,
+        std_r              = 58.395,
+        std_g              = 57.12,
+        std_b              = 57.375,
+        preprocess_threads = 32,
+        batch_size         = batch_size,
+        resize             = resize)
+
+    return train, val
+
+
 class DummyIter(mx.io.DataIter):
     def __init__(self, batch_size, data_shape, batches = 5):
         super(DummyIter, self).__init__(batch_size)

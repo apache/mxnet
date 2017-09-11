@@ -20,59 +20,57 @@
 Simonyan, Karen, and Andrew Zisserman. "Very deep convolutional networks for
 large-scale image recognition." arXiv preprint arXiv:1409.1556 (2014).
 """
-import mxnet as mx
 
-def get_symbol(num_classes, **kwargs):
-    ## define VGG11
-    data = mx.symbol.Variable(name="data")
-    # group 1
-    conv1_1 = mx.symbol.Convolution(data=data, kernel=(3, 3), pad=(1, 1), num_filter=64, name="conv1_1")
-    relu1_1 = mx.symbol.Activation(data=conv1_1, act_type="relu", name="relu1_1")
-    pool1 = mx.symbol.Pooling(
-        data=relu1_1, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool1")
-    # group 2
-    conv2_1 = mx.symbol.Convolution(
-        data=pool1, kernel=(3, 3), pad=(1, 1), num_filter=128, name="conv2_1")
-    relu2_1 = mx.symbol.Activation(data=conv2_1, act_type="relu", name="relu2_1")
-    pool2 = mx.symbol.Pooling(
-        data=relu2_1, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool2")
-    # group 3
-    conv3_1 = mx.symbol.Convolution(
-        data=pool2, kernel=(3, 3), pad=(1, 1), num_filter=256, name="conv3_1")
-    relu3_1 = mx.symbol.Activation(data=conv3_1, act_type="relu", name="relu3_1")
-    conv3_2 = mx.symbol.Convolution(
-        data=relu3_1, kernel=(3, 3), pad=(1, 1), num_filter=256, name="conv3_2")
-    relu3_2 = mx.symbol.Activation(data=conv3_2, act_type="relu", name="relu3_2")
-    pool3 = mx.symbol.Pooling(
-        data=relu3_2, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool3")
-    # group 4
-    conv4_1 = mx.symbol.Convolution(
-        data=pool3, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv4_1")
-    relu4_1 = mx.symbol.Activation(data=conv4_1, act_type="relu", name="relu4_1")
-    conv4_2 = mx.symbol.Convolution(
-        data=relu4_1, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv4_2")
-    relu4_2 = mx.symbol.Activation(data=conv4_2, act_type="relu", name="relu4_2")
-    pool4 = mx.symbol.Pooling(
-        data=relu4_2, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool4")
-    # group 5
-    conv5_1 = mx.symbol.Convolution(
-        data=pool4, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv5_1")
-    relu5_1 = mx.symbol.Activation(data=conv5_1, act_type="relu", name="relu5_1")
-    conv5_2 = mx.symbol.Convolution(
-        data=relu5_1, kernel=(3, 3), pad=(1, 1), num_filter=512, name="conv5_2")
-    relu5_2 = mx.symbol.Activation(data=conv5_2, act_type="relu", name="relu5_2")
-    pool5 = mx.symbol.Pooling(
-        data=relu5_2, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool5")
-    # group 6
-    flatten = mx.symbol.Flatten(data=pool5, name="flatten")
-    fc6 = mx.symbol.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
-    relu6 = mx.symbol.Activation(data=fc6, act_type="relu", name="relu6")
-    drop6 = mx.symbol.Dropout(data=relu6, p=0.5, name="drop6")
-    # group 7
-    fc7 = mx.symbol.FullyConnected(data=drop6, num_hidden=4096, name="fc7")
-    relu7 = mx.symbol.Activation(data=fc7, act_type="relu", name="relu7")
-    drop7 = mx.symbol.Dropout(data=relu7, p=0.5, name="drop7")
-    # output
-    fc8 = mx.symbol.FullyConnected(data=drop7, num_hidden=num_classes, name="fc8")
-    softmax = mx.symbol.SoftmaxOutput(data=fc8, name='softmax')
-    return softmax
+import mxnet as mx
+import numpy as np
+
+def get_feature(internel_layer, layers, filters, batch_norm = False, **kwargs):
+    for i, num in enumerate(layers):
+        for j in range(num):
+            internel_layer = mx.sym.Convolution(data = internel_layer, kernel=(3, 3), pad=(1, 1), num_filter=filters[i], name="conv%s_%s" %(i + 1, j + 1))
+            if batch_norm:
+                internel_layer = mx.symbol.BatchNorm(data=internel_layer, name="bn%s_%s" %(i + 1, j + 1)) 
+            internel_layer = mx.sym.Activation(data=internel_layer, act_type="relu", name="relu%s_%s" %(i + 1, j + 1))
+        internel_layer = mx.sym.Pooling(data=internel_layer, pool_type="max", kernel=(2, 2), stride=(2,2), name="pool%s" %(i + 1))
+    return internel_layer    
+
+def get_classifier(input_data, num_classes, **kwargs):
+    flatten = mx.sym.Flatten(data=input_data, name="flatten")
+    fc6 = mx.sym.FullyConnected(data=flatten, num_hidden=4096, name="fc6")
+    relu6 = mx.sym.Activation(data=fc6, act_type="relu", name="relu6")
+    drop6 = mx.sym.Dropout(data=relu6, p=0.5, name="drop6")
+    fc7 = mx.sym.FullyConnected(data=drop6, num_hidden=4096, name="fc7")
+    relu7 = mx.sym.Activation(data=fc7, act_type="relu", name="relu7")
+    drop7 = mx.sym.Dropout(data=relu7, p=0.5, name="drop7")
+    fc8 = mx.sym.FullyConnected(data=drop7, num_hidden=num_classes, name="fc8")
+    return fc8  
+
+def get_symbol(num_classes, num_layers=11, batch_norm=False, dtype='float32', **kwargs):
+    """
+    Parameters
+    ----------
+    num_classes : int, default 1000
+        Number of classification classes.
+    num_layers : int
+        Number of layers for the variant of densenet. Options are 11, 13, 16, 19.
+    batch_norm : bool, default False
+        Use batch normalization. 
+    dtype: str, float32 or float16
+        Data precision.   
+    """
+    vgg_spec = {11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
+                13: ([2, 2, 2, 2, 2], [64, 128, 256, 512, 512]),
+                16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
+                19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512])}
+    if not vgg_spec.has_key(num_layers):        
+        raise ValueError("Invalide num_layers {}. Possible choices are 11,13,16,19.".format(num_layers))
+    layers, filters = vgg_spec[num_layers] 
+    data = mx.sym.Variable(name="data")
+    if dtype == 'float16':
+        data = mx.sym.Cast(data=data, dtype=np.float16)
+    feature = get_feature(data, layers, filters, batch_norm)
+    classifier = get_classifier(feature, num_classes)
+    if dtype == 'float16':
+        classifier = mx.sym.Cast(data=classifier, dtype=np.float32)  
+    symbol = mx.sym.SoftmaxOutput(data=classifier, name='softmax')
+    return symbol
