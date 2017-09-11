@@ -36,6 +36,8 @@ if is_unix()
 end
 
 HAS_CUDA = false
+HAS_CUDNN = false
+cudnnver = -1
 let cudalib = Libdl.find_library(["libcuda", "nvcuda.dll"], CUDAPATHS)
   HAS_CUDA = !isempty(cudalib) && Libdl.dlopen_e(cudalib) != C_NULL
 end
@@ -48,8 +50,21 @@ if !HAS_CUDA && is_windows()
   end
 end
 
+if HAS_CUDA  # then check cudnn
+  let cudnnlib = Libdl.find_library("libcudnn", CUDAPATHS)
+    HAS_CUDNN = !isempty(cudnnlib) && Libdl.dlopen_e(cudnnlib) != C_NULL
+    if HAS_CUDNN
+      # TODO: do more version check?
+      cudnnver = dec(ccall((:cudnnGetVersion, cudnnlib), Csize_t, ()))
+    end
+  end
+end
+
 if HAS_CUDA
   info("Found a CUDA installation.")
+  if HAS_CUDNN
+    info("Found a CuDNN installation (version -> $cudnnver).")
+  end
 else
   info("Did not find a CUDA installation, using CPU-only version of MXNet.")
 end
@@ -179,6 +194,9 @@ if !libmxnet_detected
               `sed -i -s 's/USE_CUDA = 0/USE_CUDA = 1/' config.mk`
               if haskey(ENV, "CUDA_HOME")
                 `sed -i -s "s@USE_CUDA_PATH = NONE@USE_CUDA_PATH = $(ENV["CUDA_HOME"])@" config.mk`
+              end
+              if HAS_CUDNN
+                `sed -i -s 's/USE_CUDNN = 0/USE_CUDNN = 1/' config.mk`
               end
             end
           end
