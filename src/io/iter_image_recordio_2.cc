@@ -370,6 +370,9 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
                          || normalize_param_.mirror;
       float contrast_scaled;
       float illumination_scaled;
+      float RGBA_MULT[4];
+      float RGBA_BIAS[4];
+      float RGBA_MEAN[4];
       if (!std::is_same<DType, uint8_t>::value) {
         contrast_scaled =
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
@@ -377,6 +380,20 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
         illumination_scaled =
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
           - normalize_param_.max_random_illumination) * normalize_param_.scale;
+        RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
+        RGBA_MULT[1] = contrast_scaled / normalize_param_.std_g;
+        RGBA_MULT[2] = contrast_scaled / normalize_param_.std_b;
+        RGBA_MULT[3] = contrast_scaled / normalize_param_.std_a;
+        RGBA_BIAS[0] = illumination_scaled / normalize_param_.std_r;
+        RGBA_BIAS[1] = illumination_scaled / normalize_param_.std_g;
+        RGBA_BIAS[2] = illumination_scaled / normalize_param_.std_b;
+        RGBA_BIAS[3] = illumination_scaled / normalize_param_.std_a;
+        if (!meanfile_ready_) {
+          RGBA_MEAN[0] = normalize_param_.mean_r;
+          RGBA_MEAN[1] = normalize_param_.mean_g;
+          RGBA_MEAN[2] = normalize_param_.mean_b;
+          RGBA_MEAN[3] = normalize_param_.mean_a;
+        }
       }
       DType RGBA[4] = {};
       for (int i = 0; i < res.rows; ++i) {
@@ -388,44 +405,20 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
           if (!std::is_same<DType, uint8_t>::value) {
             // normalize/mirror here to avoid memory copies
             // logic from iter_normalize.h, function SetOutImg
-
-            if (normalize_param_.mean_r > 0.0f || normalize_param_.mean_g > 0.0f ||
-                normalize_param_.mean_b > 0.0f || normalize_param_.mean_a > 0.0f) {
-              // subtract mean per channel
-              RGBA[0] -= normalize_param_.mean_r;
-              if (n_channels >= 3) {
-                RGBA[1] -= normalize_param_.mean_g;
-                RGBA[2] -= normalize_param_.mean_b;
-              }
-              if (n_channels == 4) {
-                RGBA[3] -= normalize_param_.mean_a;
-              }
-              for (int k = 0; k < n_channels; ++k) {
-                RGBA[k] = RGBA[k] * contrast_scaled + illumination_scaled;
-              }
-            } else if (!meanfile_ready_ || normalize_param_.mean_img.length() == 0) {
-              // do not subtract anything
-              for (int k = 0; k < n_channels; ++k) {
-                RGBA[k] = RGBA[k] * normalize_param_.scale;
-              }
-            } else {
-              CHECK(meanfile_ready_);
-              for (int k = 0; k < n_channels; ++k) {
-                  RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * contrast_scaled + illumination_scaled;
+            for (int k = 0; k < n_channels; ++k) {
+              if (meanfile_ready_) {
+                RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
+              } else {
+                RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
               }
             }
           }
           for (int k = 0; k < n_channels; ++k) {
-            if (!std::is_same<DType, uint8_t>::value) {
-              // normalize/mirror here to avoid memory copies
-              // logic from iter_normalize.h, function SetOutImg
-              if (is_mirrored) {
-                data[k][i][res.cols - j - 1] = RGBA[k];
-              } else {
-                data[k][i][j] = RGBA[k];
-              }
+            // mirror here to avoid memory copies
+            // logic from iter_normalize.h, function SetOutImg
+            if (is_mirrored) {
+              data[k][i][res.cols - j - 1] = RGBA[k];
             } else {
-              // do not do normalization in Uint8 reader
               data[k][i][j] = RGBA[k];
             }
           }

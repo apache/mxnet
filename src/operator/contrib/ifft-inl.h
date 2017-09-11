@@ -198,7 +198,8 @@ class IFFTOp : public Operator {
 
  private:
   IFFTParam param_;
-  int dim_, stride_, num_compute, n_iffts;
+  int dim_, stride_, n_iffts;
+  size_t num_compute;
   bool init_cufft_;
 };  // class IFFTOp
 
@@ -252,9 +253,7 @@ class IFFTProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

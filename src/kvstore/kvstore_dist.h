@@ -80,124 +80,6 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void Init(const std::vector<int>& keys,
-            const std::vector<NDArray>& values) override {
-    CheckUnique(keys);
-    for (size_t i = 0; i < keys.size(); ++i) {
-      comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
-    }
-    if (get_rank() == 0) {
-      Push_(keys, values, 0, false);
-      // wait until the push is finished
-      for (const auto& v : values) {
-        v.WaitToWrite();
-      }
-    } else {
-      // do nothing
-    }
-    if (!ps::Postoffice::Get()->is_recovery()) {
-      Barrier();
-    }
-  }
-
-  void Push(const std::vector<int>& keys,
-            const std::vector<NDArray>& values,
-            int priority) override {
-    Push_(keys, values, priority, true);
-  }
-
-  void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray*>& values,
-            int priority) override {
-    std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray*> > grouped_vals;
-    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
-
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
-      // use the same array for merging to guarantee that pull always happens
-      // after the previous push on this key
-      auto& recv_buf = comm_buf_[key];
-      const auto storage_type = grouped_vals[i][0]->storage_type();
-      CHECK_EQ(storage_type, kDefaultStorage)
-               << "Expected stype of value to be kDefaultStorage";
-      if (recv_buf.is_none()) {
-        // it may happen for the first time a no-rank-0 worker pull the weight.
-        recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
-                           true, grouped_vals[i][0]->dtype());
-      }
-      auto pull_from_servers = [this, key, recv_buf](
-          RunContext rctx, Engine::CallbackOnComplete cb) {
-        // convert to ps keys
-        size_t size = recv_buf.shape().Size();
-        PSKV& pskv = EncodeKey(key, size);
-#if MKL_EXPERIMENTAL == 1
-        mkl_set_tblob_eager_mode(recv_buf.data());
-#endif
-        real_t* data = static_cast<real_t*>(recv_buf.data().dptr_);
-        // false means not to delete data when SArray is deleted
-        auto vals = new ps::SArray<real_t>(data, size, false);
-        // issue pull
-        CHECK_NOTNULL(ps_worker_)->ZPull(
-          pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
-      };
-
-      CHECK_NOTNULL(Engine::Get())->PushAsync(
-          pull_from_servers,
-          pinned_ctx_,
-          {},
-          {recv_buf.var()},
-          FnProperty::kNormal,
-          priority,
-          PROFILER_MESSAGE("KVStoreDistDefaultPull"));
-
-      comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
-    }
-  }
-
-  void PullRowSparse(const std::vector<int>& keys,
-                     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                     const int priority = 0) {
-    std::vector<int> uniq_keys;
-    std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
-    GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
-
-    for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      int key = uniq_keys[i];
-      // use the same array for merging to guarantee that pull always happens
-      // after the previous push on this key
-      auto& recv_buf = comm_buf_[key];
-      auto& grouped_val_rowid = grouped_val_rowids[i];
-      const auto storage_type = grouped_val_rowid[0].first->storage_type();
-      CHECK_EQ(storage_type, kRowSparseStorage)
-               << "expected kRowSparseStorage, but got " << storage_type;
-      if (recv_buf.is_none()) {
-        // it may happen for the first time a no-rank-0 worker pull the weight.
-        recv_buf = NDArray(storage_type, grouped_val_rowid[0].first->shape(),
-                           pinned_ctx_, true, grouped_val_rowid[0].first->dtype());
-      }
-      auto &target_val_rowids = grouped_val_rowids[i];
-      const size_t num_vals = target_val_rowids.size();
-      size_t num_rows = 0;
-      // TODO(haibin) refactor this for loop
-      for (size_t i = 0; i < num_vals; i++) {
-        auto &row_id = target_val_rowids[i].second;
-        NDArray indices = row_id.Copy(pinned_ctx_);
-        Unique(&indices, priority);
-        target_val_rowids[i].second = indices;
-        num_rows += indices.shape().Size();
-      }
-      if (num_vals > 1) {
-        // TODO(haibin) aggregate over all unique indices
-        LOG(FATAL) << "RowSparsePull with multiple values is not implemented yet";
-      } else {
-        auto& indices = target_val_rowids[0].second;
-        PullRowSparse_(key, &recv_buf, indices, priority);
-        comm_->BroadcastRowSparse(key, recv_buf, grouped_val_rowid, num_vals == 1, priority);
-      }
-    }
-  }
-
   void set_updater(const Updater& updater) override {
     CHECK(updater) << "invalid updater";
     if (IsServerNode()) {
@@ -210,7 +92,6 @@ class KVStoreDist : public KVStoreLocal {
   void Barrier() override {
     ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
   }
-
 
   void SendCommandToServers(int cmd_id,
                             const std::string& cmd_body) override {
@@ -254,10 +135,128 @@ class KVStoreDist : public KVStoreLocal {
   }
 
  private:
+  void InitImpl(const std::vector<int>& keys,
+                const std::vector<NDArray>& values) override {
+    CheckUnique(keys);
+    for (size_t i = 0; i < keys.size(); ++i) {
+      comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
+    }
+    if (get_rank() == 0) {
+      Push_(keys, values, 0, false);
+      // wait until the push is finished
+      for (const auto& v : values) {
+        v.WaitToWrite();
+      }
+    } else {
+      // do nothing
+    }
+    if (!ps::Postoffice::Get()->is_recovery()) {
+      Barrier();
+    }
+  }
+
+  void PushImpl(const std::vector<int>& keys,
+                const std::vector<NDArray>& values,
+                int priority) override {
+    Push_(keys, values, priority, true);
+  }
+
+  void PullImpl(const std::vector<int>& keys,
+                const std::vector<NDArray*>& values,
+                int priority) override {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NDArray*> > grouped_vals;
+    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      // use the same array for merging to guarantee that pull always happens
+      // after the previous push on this key
+      auto& recv_buf = comm_buf_[key];
+      const auto storage_type = grouped_vals[i][0]->storage_type();
+      CHECK_EQ(storage_type, kDefaultStorage)
+               << "Expected stype of value to be kDefaultStorage";
+      if (recv_buf.is_none()) {
+        // it may happen for the first time a no-rank-0 worker pull the weight.
+        recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
+                           true, grouped_vals[i][0]->dtype());
+      }
+      auto pull_from_servers = [this, key, recv_buf](
+          RunContext rctx, Engine::CallbackOnComplete cb) {
+        // convert to ps keys
+        size_t size = recv_buf.shape().Size();
+        PSKV& pskv = EncodeKey(key, size);
+#if MKL_EXPERIMENTAL == 1
+        mkl_set_tblob_eager_mode(recv_buf.data());
+#endif
+        real_t* data = recv_buf.data().dptr<real_t>();
+        // false means not to delete data when SArray is deleted
+        auto vals = new ps::SArray<real_t>(data, size, false);
+        // issue pull
+        CHECK_NOTNULL(ps_worker_)->ZPull(
+          pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
+      };
+
+      CHECK_NOTNULL(Engine::Get())->PushAsync(
+          pull_from_servers,
+          pinned_ctx_,
+          {},
+          {recv_buf.var()},
+          FnProperty::kNormal,
+          priority,
+          PROFILER_MESSAGE("KVStoreDistDefaultPull"));
+
+      comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
+    }
+  }
+
+  void PullRowSparseImpl(const std::vector<int>& keys,
+                         const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
+                         int priority = 0) override {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<std::pair<NDArray*, NDArray>>> grouped_val_rowids;
+    GroupKVPairsPullRsp(keys, val_rowids, &uniq_keys, &grouped_val_rowids);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      // use the same array for merging to guarantee that pull always happens
+      // after the previous push on this key
+      auto& recv_buf = comm_buf_[key];
+      auto& grouped_val_rowid = grouped_val_rowids[i];
+      const auto storage_type = grouped_val_rowid[0].first->storage_type();
+      CHECK_EQ(storage_type, kRowSparseStorage)
+               << "expected kRowSparseStorage, but got " << storage_type;
+      if (recv_buf.is_none()) {
+        // it may happen for the first time a no-rank-0 worker pull the weight.
+        recv_buf = NDArray(storage_type, grouped_val_rowid[0].first->shape(),
+                           pinned_ctx_, true, grouped_val_rowid[0].first->dtype());
+      }
+      auto &target_val_rowids = grouped_val_rowids[i];
+      const size_t num_vals = target_val_rowids.size();
+      size_t num_rows = 0;
+      // TODO(haibin) refactor this for loop
+      for (size_t i = 0; i < num_vals; i++) {
+        auto &row_id = target_val_rowids[i].second;
+        NDArray indices = row_id.Copy(pinned_ctx_);
+        Unique(&indices, priority);
+        target_val_rowids[i].second = indices;
+        num_rows += indices.shape().Size();
+      }
+      if (num_vals > 1) {
+        // TODO(haibin) aggregate over all unique indices
+        LOG(FATAL) << "RowSparsePull with multiple values is not implemented yet";
+      } else {
+        auto& indices = target_val_rowids[0].second;
+        PullRowSparse_(key, &recv_buf, indices, priority);
+        comm_->BroadcastRowSparse(key, recv_buf, grouped_val_rowid, num_vals == 1, priority);
+      }
+    }
+  }
+
   void Push_(const std::vector<int>& keys,
              const std::vector<NDArray>& values,
              int priority,
-             bool do_merge)  {
+             bool do_merge) {
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
@@ -297,7 +296,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-          real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+          real_t* data = send_buf.data().dptr<real_t>();
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -320,7 +319,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
-  void PullRowSparse_(int key, NDArray *recv_buf, const NDArray& indices, int priority) {
+  void PullRowSparse_(const int key, NDArray *recv_buf, const NDArray& indices, int priority) {
     using namespace rowsparse;
     auto pull_from_servers = [this, key, recv_buf, indices]
                              (RunContext rctx, Engine::CallbackOnComplete cb) {
@@ -330,7 +329,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(recv_buf->data());
 #endif
-      real_t* data = static_cast<real_t*>(recv_buf->data().dptr_);
+      real_t* data = recv_buf->data().dptr<real_t>();
       auto indices_data = indices.data();
       const auto offsets = indices_data.dptr<int64_t>();
       const auto unit_len = recv_buf->shape().ProdShape(1, recv_buf->shape().ndim());
@@ -367,7 +366,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-      real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+      real_t* data = send_buf.data().dptr<real_t>();
       bool init = send_buf.storage_initialized();
       const int64_t num_rows = init ? send_buf.aux_shape(kIdx)[0] : 0;
       const auto offsets = init ? send_buf.aux_data(kIdx).dptr<int64_t>() : nullptr;

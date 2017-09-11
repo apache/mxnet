@@ -6,8 +6,8 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-parent_2.11</artifactId>
-    <version>${project.version}</version>
-    <relativePath>../pom.xml</relativePath>
+    <version>0.11.1-SNAPSHOT</version>
+<!--  <relativePath>../pom.xml</relativePath>-->
   </parent>
 
   <artifactId>mxnet-init_2.11</artifactId>

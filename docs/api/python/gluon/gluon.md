@@ -166,6 +166,7 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     L1Loss
     SoftmaxCrossEntropyLoss
     KLDivLoss
+    CTCLoss
 ```
 
 ## Utilities
@@ -197,7 +198,6 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     Dataset
     ArrayDataset
     RecordFileDataset
-    ImageRecordDataset
 ```
 
 ```eval_rst
@@ -230,6 +230,7 @@ in Python and then deploy with symbolic graph in C++ and Scala.
     MNIST
     FashionMNIST
     CIFAR10
+    ImageRecordDataset
 ```
 
 ## Model Zoo
@@ -482,6 +483,8 @@ Model zoo provides pre-defined and pre-trained models to help bootstrap machine 
 .. autoclass:: mxnet.gluon.loss.SoftmaxCrossEntropyLoss
     :members:
 .. autoclass:: mxnet.gluon.loss.KLDivLoss
+    :members:
+.. autoclass:: mxnet.gluon.loss.CTCLoss
     :members:
 .. automethod:: mxnet.gluon.utils.split_data
 

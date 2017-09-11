@@ -17,10 +17,29 @@
 
 import numpy as np
 import mxnet as mx
+import mxnet.lr_scheduler as lr_scheduler
+from nose.tools import raises
 import math
 from mxnet.test_utils import *
 
-# Common
+def test_learning_rate():
+    o1 = mx.optimizer.Optimizer(learning_rate=0.01)
+    o1.set_learning_rate(0.2)
+    assert o1.learning_rate == 0.2
+
+    lr_s = lr_scheduler.FactorScheduler(step=1)
+    o2 = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
+    assert o2.learning_rate == 0.3
+    o2.lr_scheduler.base_lr = 0.4
+    assert o2.learning_rate == 0.4
+
+
+@raises(UserWarning)
+def test_learning_rate_expect_user_warning():
+    lr_s = lr_scheduler.FactorScheduler(step=1)
+    o = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
+    o.set_learning_rate(0.5)
+
 
 def test_lr_wd_mult():
     data = mx.sym.Variable('data')
@@ -539,7 +558,6 @@ def test_rms():
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32, g_stype='row_sparse')
 
 if __name__ == '__main__':
-    test_adam()
-    test_rms()
-    test_sgd()
-    test_sparse_sgd()
+    import nose
+    nose.runmodule()
+

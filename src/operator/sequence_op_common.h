@@ -34,8 +34,8 @@ namespace op {
 
 template <typename DType, typename RType>
 typename std::enable_if<std::is_integral<RType>::value>::type
-IndexTensorToVector(mshadow::Tensor<gpu, 1, DType> data,
-                    std::vector<RType> *index_vec) {
+inline IndexTensorToVector(mshadow::Tensor<gpu, 1, DType> data,
+                           std::vector<RType> *index_vec) {
   int max_seq_len = data.shape_.Size();
 #if MXNET_USE_CUDA
   DType *temp_index =
@@ -52,8 +52,8 @@ IndexTensorToVector(mshadow::Tensor<gpu, 1, DType> data,
 }
 template <typename DType, typename RType>
 typename std::enable_if<std::is_integral<RType>::value>::type
-IndexTensorToVector(mshadow::Tensor<cpu, 1, DType> data,
-                    std::vector<RType> *index_vec) {
+inline IndexTensorToVector(mshadow::Tensor<cpu, 1, DType> data,
+                           std::vector<RType> *index_vec) {
   int max_seq_len = data.shape_.Size();
   DType *index_array = static_cast<DType *>(data.dptr_);
   for (int i = 0; i < max_seq_len; ++i)

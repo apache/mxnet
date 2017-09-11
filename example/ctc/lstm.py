@@ -96,7 +96,7 @@ def lstm_unroll(num_lstm_layer, seq_len,
     pred_fc = mx.sym.FullyConnected(data=hidden_concat, num_hidden=11)
     pred_ctc = mx.sym.Reshape(data=pred_fc, shape=(-4, seq_len, -1, 0))
 
-    loss = mx.contrib.sym.ctc_loss(data=pred_ctc, label=label)
+    loss = mx.sym.contrib.ctc_loss(data=pred_ctc, label=label)
     ctc_loss = mx.sym.MakeLoss(loss)
 
     softmax_class = mx.symbol.SoftmaxActivation(data=pred_fc)

@@ -301,11 +301,11 @@ class RNN(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.RNN(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
@@ -404,12 +404,12 @@ class LSTM(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.LSTM(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
-    >>> c0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> c0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, [h0, c0])
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
@@ -503,11 +503,11 @@ class GRU(_RNNLayer):
     --------
     >>> layer = mx.gluon.rnn.GRU(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
