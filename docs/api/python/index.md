@@ -19,27 +19,118 @@ imported by running:
 
 ```
 
-## Table of contents
+## NDArray API
 
 ```eval_rst
 .. toctree::
-   :maxdepth: 2
-   :titlesonly:
+   :maxdepth: 1
 
-   ndarray/index.md
-   symbol/index.md
+   ndarray/ndarray.md
+   ndarray/random.md
+   ndarray/linalg.md
+   ndarray/sparse.md
+   ndarray/contrib.md
+```
 
+## Symbol API
+
+```eval_rst
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   module
-   autograd
-   gluon
-   rnn
-   kvstore
-   io
-   image
-   optimization
-   callback
-   metric
+   symbol/ndarray.md
+   symbol/random.md
+   symbol/linalg.md
+   symbol/sparse.md
+   symbol/contrib.md
+```
+
+## Module API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   module/module.md
+```
+
+## Autograd API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   autograd/autograd.md
+```
+
+## Gluon API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   gluon/gluon.md
+```
+
+## RNN API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   rnn/rnn.md
+```
+
+## KVStore API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   kvstore/kvstore.md
+```
+
+## IO API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   io/io.md
+```
+
+## Image API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   image/image.md
+```
+
+## Optimization API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   optimization/optimization.md
+```
+
+## Callback API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   callback/callback.md
+```
+
+## Metric API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   metric/metric.md
 ```

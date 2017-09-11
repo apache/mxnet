@@ -50,20 +50,15 @@ function render_lefttoc() {
                 var protocol = location.protocol.concat("//");
                 var urlPath = protocol + window.location.host + version +  path;
                 $.get(urlPath + indexTrailing, null, function(data) {
-                    if (isAPI) {
-                        render_left_helper($($.parseHTML(data)).find('#table-of-contents > div > ul'));
-                    }
-                    else {
-                        var lastToc = $($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul')
-                        render_left_helper(lastToc);
-                        var tocLink = $('.leftsidebar .sphinxsidebarwrapper .leaf a');
-                        var staticLink = 'http';
-                        tocLink.each(function () {
-                            if (!$(this).attr('href').startsWith(staticLink)) {
-                                $(this).attr('href', urlPath + $(this).attr('href'));
-                            }
-                        });
-                    }
+                    var lastToc = $($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul')
+                    render_left_helper(lastToc);
+                    var tocLink = $('.leftsidebar .sphinxsidebarwrapper .leaf a');
+                    var staticLink = 'http';
+                    tocLink.each(function () {
+                        if (!$(this).attr('href').startsWith(staticLink)) {
+                            $(this).attr('href', urlPath + $(this).attr('href'));
+                        }
+                    });
                     keepExpand();
                     $('.sphinxsidebar').css("visibility", "visible");
                     if ($('div.sphinxsidebar').css('display') != 'none') $('.content').css('width', 'calc(100% - 300px)');
@@ -73,7 +68,7 @@ function render_lefttoc() {
         }
     }
     else {
-        var toc = isAPI ? $('#table-of-contents > div > ul').clone() : $('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul').clone();
+        var toc = $('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul').clone();
         render_left_helper(toc);
         $('.sphinxsidebar').css("visibility", "visible");
     }
@@ -172,7 +167,7 @@ function autoExpand(elem) {
 /*Keep toc expansion while redirecting*/
 function keepExpand() {
     var url = window.location.href, currentEntry;
-    var entryList = isAPI ? $('.leftsidebar li') : $('.sphinxsidebar li');
+    var entryList = $('.sphinxsidebar li');
     for(var i = entryList.length - 1; i >= 0; --i) {
         var entryURL = entryList.eq(i).find('a').first().attr('href');
         if (entryURL != '#' && url.indexOf(entryURL) != -1) {
@@ -184,10 +179,9 @@ function keepExpand() {
     //Merge right toc into left toc for API pages since they are quite long
     if (isAPI) {
         var rootEntry = currentEntry;
-        if (rootEntry.parent().parent().is('li')) rootEntry = rootEntry.parent().parent();
-        rootEntry.children("ul").first().remove();
         rootEntry.append($('.rightsidebar .sphinxsidebarwrapper > ul > li > ul').clone());
-        var allEntry = $(".leftsidebar div.sphinxsidebarwrapper li");
+        rootEntry.addClass('closed').removeClass('leaf');
+        var allEntry = $(".leftsidebar div.sphinxsidebarwrapper li.toctree-l2 li");
         allEntry.each(function () {
             var anchor = $(this).children("a").first();
             anchor.click(function () {
