@@ -33,8 +33,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 
 The storage type of ``elemwise_add`` output depends on storage types of inputs
 
-- elemwise_add(row_sparse, row_sparse) = row_sparse
-- otherwise, ``elemwise_add`` generates output with default storage
+   - elemwise_add(row_sparse, row_sparse) = row_sparse
+   - elemwise_add(csr, csr) = csr
+   - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
 .set_attr<nnvm::FGradient>("FGradient", CloneGradient{"_backward_add"});
@@ -62,6 +63,15 @@ NNVM_REGISTER_OP(_backward_add)
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_sub, mshadow::op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
 .add_alias("_sub").add_alias("_minus").add_alias("_Minus")
+.describe(R"code(Subtracts arguments element-wise.
+
+The storage type of ``elemwise_sub`` output depends on storage types of inputs
+
+   - elemwise_sub(row_sparse, row_sparse) = row_sparse
+   - elemwise_sub(csr, csr) = csr
+   - otherwise, ``elemwise_add`` generates output with default storage
+
+)code")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sub"});
 
 NNVM_REGISTER_OP(_backward_sub)
@@ -81,6 +91,18 @@ NNVM_REGISTER_OP(_backward_sub)
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
+.describe(R"code(Multiplies arguments element-wise.
+
+The storage type of ``elemwise_mul`` output depends on storage types of inputs
+
+   - elemwise_mul(default, default) = default
+   - elemwise_mul(row_sparse, row_sparse) = row_sparse
+   - elemwise_mul(default, row_sparse) = row_sparse
+   - elemwise_mul(row_sparse, default) = row_sparse
+   - elemwise_mul(csr, csr) = csr
+   - otherwise, ``elemwise_mul`` generates output with default storage
+
+)code")
 .set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs &attrs,
                                                      const Context &ctx,
                                                      std::vector<int> *in_attrs,
@@ -121,6 +143,11 @@ NNVM_REGISTER_OP(_backward_mul)
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(elemwise_div, mshadow::op::div)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_div)
+.describe(R"code(Divides arguments element-wise.
+
+The storage type of ``elemwise_dev`` output is always dense
+
+)code")
 .add_alias("_div").add_alias("_Div")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 

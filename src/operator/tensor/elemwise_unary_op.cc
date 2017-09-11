@@ -38,8 +38,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(relu)
 
 The storage type of ``relu`` output depends upon the input storage type:
 
-  relu(default) = default
-  relu(row_sparse) = row_sparse
+   - relu(default) = default
+   - relu(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
@@ -58,8 +58,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(sigmoid)
 .. math::
    y = 1 / (1 + exp(-x))
 
-The storage type of ``sigmoid`` output is always denseThe storage type of ``sigmoid`` output\
- is always dense
+The storage type of ``sigmoid`` output is always dense
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
@@ -97,7 +96,7 @@ NNVM_REGISTER_OP(_backward_copy)
   });
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
-MXNET_ADD_SPARSE_OP_ALIAS(BlockGrad)
+MXNET_ADD_SPARSE_OP_ALIAS(stop_gradient)
 .add_alias("stop_gradient")
 .describe(R"code(Stops gradient computation.
 
@@ -140,8 +139,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(make_loss)
 
 The storage type of ``make_loss`` output depends upon the input storage type:
 
-  make_loss(default) = default
-  make_loss(row_sparse) = row_sparse
+   - make_loss(default) = default
+   - make_loss(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
@@ -213,7 +212,6 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
-MXNET_ADD_SPARSE_OP_ALIAS(Cast)
 .add_alias("cast")
 .describe(R"code(Casts all elements of the input to a new type.
 
@@ -261,9 +259,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(negative)
 
 The storage type of ``negative`` output depends upon the input storage type:
 
-  negative(default) = default
-  negative(row_sparse) = row_sparse
-  negative(csr) = csr
+   - negative(default) = default
+   - negative(row_sparse) = row_sparse
+   - negative(csr) = csr
 
 )code")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
@@ -299,8 +297,8 @@ Example::
 
 The storage type of ``abs`` output depends upon the input storage type:
 
-  abs(default) = default
-  abs(row_sparse) = row_sparse
+   - abs(default) = default
+   - abs(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
@@ -318,8 +316,8 @@ Example::
 
 The storage type of ``sign`` output depends upon the input storage type:
 
-  sign(default) = default
-  sign(row_sparse) = row_sparse
+   - sign(default) = default
+   - sign(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
@@ -337,8 +335,8 @@ Example::
 
 The storage type of ``round`` output depends upon the input storage type:
 
-  round(default) = default
-  round(row_sparse) = row_sparse
+  - round(default) = default
+  - round(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
@@ -358,8 +356,8 @@ Example::
 
 The storage type of ``rint`` output depends upon the input storage type:
 
-  rint(default) = default
-  rint(row_sparse) = row_sparse
+   - rint(default) = default
+   - rint(row_sparse) = row_sparse
 
 )code" ADD_FILELINE);
 
@@ -376,8 +374,8 @@ Example::
 
 The storage type of ``ceil`` output depends upon the input storage type:
 
-  ceil(default) = default
-  ceil(row_sparse) = row_sparse
+   - ceil(default) = default
+   - ceil(row_sparse) = row_sparse
 
 )code" ADD_FILELINE);
 
@@ -394,8 +392,8 @@ Example::
 
 The storage type of ``floor`` output depends upon the input storage type:
 
-  floor(default) = default
-  floor(row_sparse) = row_sparse
+   - floor(default) = default
+   - floor(row_sparse) = row_sparse
 
 )code" ADD_FILELINE);
 
@@ -413,8 +411,8 @@ Example::
 
 The storage type of ``trunc`` output depends upon the input storage type:
 
-  trunc(default) = default
-  trunc(row_sparse) = row_sparse
+   - trunc(default) = default
+   - trunc(row_sparse) = row_sparse
 
 )code" ADD_FILELINE);
 
@@ -430,8 +428,8 @@ Example::
 
 The storage type of ``fix`` output depends upon the input storage type:
 
-  fix(default) = default
-  fix(row_sparse) = row_sparse
+   - fix(default) = default
+   - fix(row_sparse) = row_sparse
 
 )code" ADD_FILELINE);
 
@@ -449,9 +447,9 @@ Example::
 
 The storage type of ``square`` output depends upon the input storage type:
 
-  square(default) = default
-  square(row_sparse) = row_sparse
-  square(csr) = csr
+   - square(default) = default
+   - square(row_sparse) = row_sparse
+   - square(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
@@ -473,8 +471,8 @@ Example::
 
 The storage type of ``sqrt`` output depends upon the input storage type:
 
-  sqrt(default) = default
-  sqrt(row_sparse) = row_sparse
+   - sqrt(default) = default
+   - sqrt(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sqrt"});
@@ -605,8 +603,8 @@ The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
 The storage type of ``sin`` output depends upon the input storage type:
 
-  sin(default) = default
-  sin(row_sparse) = row_sparse
+   - sin(default) = default
+   - sin(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });
@@ -623,8 +621,8 @@ This function is more accurate than ``log(1 + x)``  for small ``x`` so that
 
 The storage type of ``log1p`` output depends upon the input storage type:
 
-  log1p(default) = default
-  log1p(row_sparse) = row_sparse
+   - log1p(default) = default
+   - log1p(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
@@ -641,8 +639,8 @@ This function provides greater precision than ``exp(x) - 1`` for small values of
 
 The storage type of ``expm1`` output depends upon the input storage type:
 
-  expm1(default) = default
-  expm1(row_sparse) = row_sparse
+   - expm1(default) = default
+   - expm1(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});
@@ -678,8 +676,8 @@ The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 
 The storage type of ``tan`` output depends upon the input storage type:
 
-  tan(default) = default
-  tan(row_sparse) = row_sparse
+   - tan(default) = default
+   - tan(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
@@ -699,8 +697,8 @@ The output is in the closed interval of [:math:`-\pi/2`, :math:`\pi/2`].
 
 The storage type of ``arcsin`` output depends upon the input storage type:
 
-  arcsin(default) = default
-  arcsin(row_sparse) = row_sparse
+   - arcsin(default) = default
+   - arcsin(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
@@ -739,8 +737,8 @@ The output is in the closed interval :math:`[-\pi/2, \pi/2]`
 
 The storage type of ``arctan`` output depends upon the input storage type:
 
-  arctan(default) = default
-  arctan(row_sparse) = row_sparse
+   - arctan(default) = default
+   - arctan(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
@@ -758,8 +756,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(degrees)
 
 The storage type of ``degrees`` output depends upon the input storage type:
 
-  degrees(default) = default
-  degrees(row_sparse) = row_sparse
+   - degrees(default) = default
+   - degrees(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
@@ -777,8 +775,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(radians)
 
 The storage type of ``radians`` output depends upon the input storage type:
 
-  radians(default) = default
-  radians(row_sparse) = row_sparse
+   - radians(default) = default
+   - radians(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
@@ -796,8 +794,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(sinh)
 
 The storage type of ``sinh`` output depends upon the input storage type:
 
-  sinh(default) = default
-  sinh(row_sparse) = row_sparse
+   - sinh(default) = default
+   - sinh(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
@@ -829,8 +827,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(tanh)
 
 The storage type of ``tanh`` output depends upon the input storage type:
 
-  tanh(default) = default
-  tanh(row_sparse) = row_sparse
+   - tanh(default) = default
+   - tanh(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
@@ -845,8 +843,8 @@ computed element-wise.
 
 The storage type of ``arcsinh`` output depends upon the input storage type:
 
-  arcsinh(default) = default
-  arcsinh(row_sparse) = row_sparse
+   - arcsinh(default) = default
+   - arcsinh(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });
@@ -876,8 +874,8 @@ computed element-wise.
 
 The storage type of ``arctanh`` output depends upon the input storage type:
 
-  arctanh(default) = default
-  arctanh(row_sparse) = row_sparse
+   - arctanh(default) = default
+   - arctanh(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
