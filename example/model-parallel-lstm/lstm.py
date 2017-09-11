@@ -121,7 +121,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                            name="t%d_cls" % seqidx)
                 label = mx.sym.Variable("t%d_label" % seqidx)
                 if use_loss:
-                    sm = mx.sym.softmax_cross_entropy(fc, label, name="t%d_sm" % seqidx)
+                    sm = mx.sym.softmax_cross_entropy(data=fc, label=label, name="t%d_sm" % seqidx)
                 else:
                     sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
                 out_prob.append(sm)

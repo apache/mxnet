@@ -24,6 +24,7 @@
 #include <vector>
 #include <atomic>
 #include <thread>
+#include "../operator/mxnet_op.h"
 #include "./engine_impl.h"
 #include "./profiler.h"
 
@@ -148,6 +149,8 @@ class NaiveEngine final : public Engine {
 #endif
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
+      // Signify to kernel that GPU is being used
+      mxnet::op::mxnet_op::KernelState::SetUsingGPU(true);
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
       MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {

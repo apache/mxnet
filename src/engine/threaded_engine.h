@@ -38,6 +38,7 @@
 #include "./engine_impl.h"
 #include "./profiler.h"
 #include "../common/object_pool.h"
+#include "../operator/mxnet_op.h"
 
 namespace mxnet {
 namespace engine {
@@ -311,6 +312,12 @@ class ThreadedEngine : public Engine {
    */
   void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
+#if MXNET_USE_CUDA
+    if(run_ctx.ctx.dev_mask() == gpu::kDevMask) {
+      // Signify to kernel that GPU is being used
+      mxnet::op::mxnet_op::KernelState::SetUsingGPU(true);
+    }
+#endif
 #if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
       const Context& ctx = opr_block->ctx;

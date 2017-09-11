@@ -213,6 +213,21 @@ struct set_zero {
 };
 
 
+#if MXNET_USE_CUDA
+class KernelState {
+  static bool using_gpu_;  // intentionally not atomic
+ public:
+  /* \brief Signify to kernel that GPU is occuring in the process */
+  static MSHADOW_CINLINE void SetUsingGPU(const bool using_gpu) {
+    using_gpu_ = using_gpu;
+  }
+  /* \brief Query whether GPU usage has been flagged as occuring in the process */
+  static MSHADOW_CINLINE bool GetUsingGPU() {
+    return using_gpu_;
+  }
+};
+#endif
+
 template<typename OP, typename xpu>
 struct Kernel;
 
@@ -221,12 +236,23 @@ template<typename OP>
 struct Kernel<OP, cpu> {
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<cpu> *s, int N, Args... args) {
-#if (MXNET_USE_CUDA == 0)
+#if MXNET_USE_CUDA == 0
     #pragma omp parallel for
-#endif
     for (int i = 0; i < N; ++i) {
       OP::Map(i, args...);
     }
+#else
+    if (KernelState::GetUsingGPU()) {
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    } else {
+      #pragma omp parallel for
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    }
+#endif
   }
 };
 
