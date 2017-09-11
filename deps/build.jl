@@ -178,6 +178,9 @@ if !libmxnet_detected
           # Force enable LAPACK build
           # Julia's OpenBLAS has LAPACK functionality already
           if FORCE_LAPACK
+            if is_apple()
+              MSHADOW_LDFLAGS *= " -framework Accelerate"
+            end
             `sed -i -s 's/ADD_CFLAGS =\(.*\)/ADD_CFLAGS =\1 -DMXNET_USE_LAPACK/' config.mk`
           end
         end)
