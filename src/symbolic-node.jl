@@ -614,6 +614,26 @@ end
 ################################################################################
 # Atomic SymbolicNode functions dynamically imported from libmxnet
 ################################################################################
+@inline function _create_atomic_symbol(creator::MX_handle, keys::Vector{String},
+                                       vals::Vector{String})
+  ref_sym_hdr = Ref{MX_handle}(C_NULL)
+  @mxcall(:MXSymbolCreateAtomicSymbol,
+          (MX_handle, MX_uint, Ptr{char_p}, Ptr{char_p}, Ref{MX_handle}),
+          creator, length(keys), keys, vals, ref_sym_hdr)
+  SymbolicNode(MX_SymbolHandle(ref_sym_hdr[]))
+end
+
+@inline function _create_atomic_symbol(creator::MX_handle, keys::Vector{String},
+                                       vals::Vector{String},
+                                       attrs::Dict{Symbol, String})
+  node = _create_atomic_symbol(creator, keys, vals)
+  # set attrs
+  for (k, v) in attrs
+    set_attr(node, k, v)
+  end
+  node
+end
+
 function _define_atomic_symbol_creator(name :: String)
   handle = _get_libmx_op_handle(name)
   f_desc, key_narg = _get_libmx_op_description(name, handle)
@@ -664,7 +684,7 @@ function _define_atomic_symbol_creator(name :: String)
         symbol_kws[k] = v
       elseif k == :attrs
         if isa(v, Dict)
-          attrs = convert(Dict{Symbol, AbstractString}, v)
+          attrs = convert(Dict{Symbol, String}, v)
         else
           throw(ArgumentError("attrs needs to be a Dictionary"))
         end
@@ -686,23 +706,12 @@ function _define_atomic_symbol_creator(name :: String)
       end
     end)
 
-    local hdr = _get_cached_libmx_op_handle($name)
+    local op = _get_cached_libmx_op_handle($name)
+    node = _create_atomic_symbol(op.value, param_keys, param_vals, attrs)
 
-    # create the SymbolicNode
-    ref_sym_hdr = Ref{MX_handle}()
-    @mxcall(:MXSymbolCreateAtomicSymbol,
-            (MX_handle, MX_uint, Ptr{char_p}, Ptr{char_p}, Ref{MX_handle}),
-            hdr, length(param_keys), param_keys, param_vals, ref_sym_hdr)
-    sym_hdr = ref_sym_hdr[]
-
-    node = SymbolicNode(MX_SymbolHandle(sym_hdr))
+    # generate a new name for the new symbol if user not provided in kwargs
     hint = lowercase($name)
     name = get!(DEFAULT_NAME_MANAGER, name, hint)
-
-    # set attrs
-    for (k, v) in attrs
-      set_attr(node, k, v)
-    end
 
     if length(symbol_kws) == 0
       _compose!(node, name, args...)
