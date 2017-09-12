@@ -304,7 +304,7 @@ class ThreadedEngine : public Engine {
   static int DefaultOMPThreadsPerWorker() {
     int cores = std::thread::hardware_concurrency();
 #ifdef _OPENMP
-    if(cores <= 0) {
+    if (cores <= 0) {
       cores = omp_get_num_threads();
     } else {
       // By default, leave one core to run the engine

@@ -24,7 +24,6 @@
 #include <vector>
 #include <atomic>
 #include <thread>
-#include <omp.h>
 #include "./engine_impl.h"
 #include "./profiler.h"
 #include "threaded_engine.h"
