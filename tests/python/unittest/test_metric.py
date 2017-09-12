@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+import numpy as np
 import json
 
 def check_metric(metric, *args, **kwargs):
@@ -34,6 +35,15 @@ def test_metrics():
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
 
+def test_log_loss():
+    metric = mx.metric.create('log_loss')
+    pred = mx.nd.array([[0.2, 0.3, 0.5], [0.6, 0.1, 0.3]])
+    label = mx.nd.array([2, 1])
+    metric.update([label], [pred])
+    _, loss = metric.get()
+    expected_loss = 0.0
+    expected_loss = -(np.log(pred[0][2].asscalar()) + np.log(pred[1][1].asscalar())) / 2
+    assert loss == expected_loss
 
 if __name__ == '__main__':
     import nose
