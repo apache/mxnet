@@ -53,7 +53,7 @@ def _is_random_op(name):
     """Check whether the name is a random operator name.
     A random operator name should start with prefix random_
     or is one of strings in random.__all__."""
-    return name.startswith('random_') or name.startswith('_random_')
+    return name.startswith('random_') or name.startswith('_random_') or name.startswith('_sample_')
 
 
 # pylint: disable=too-many-locals, invalid-name
