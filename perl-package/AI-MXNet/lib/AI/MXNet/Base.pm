@@ -120,12 +120,17 @@ use constant GRAD_REQ_MAP => {
 
 sub zip
 {
-    my ($sub, @arrays) = @_;
-    my $len = @{ $arrays[0] };
-    for (my $i = 0; $i < $len; $i++)
+    if('CODE' eq ref $_[0])
     {
-        $sub->(map { $_->[$i] } @arrays);
+        # continue supporting the callback style
+        my $code = shift;
+        $code->(@$_) for AI::MXNetCAPI::py_zip(map { \@$_ } @_);
+        return;
     }
+    # the map() here may seem like a no-op, but triggers overloading or
+    # whatever else is needed to make array-ish things actually arrays
+    # before entering the low level list builder.
+    return AI::MXNetCAPI::py_zip(map { \@$_ } @_);
 }
 
 =head2 enumerate
