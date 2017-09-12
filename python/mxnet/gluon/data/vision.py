@@ -74,7 +74,8 @@ class MNIST(_DownloadedDataset):
     """
     def __init__(self, root='~/.mxnet/datasets/mnist', train=True,
                  transform=None):
-        self._base_url = 'https://apache-mxnet.s3.amazonaws.com/gluon/dataset/mnist/'
+        self._base_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com' \
+                         '/gluon/dataset/mnist/'
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -129,7 +130,8 @@ class FashionMNIST(MNIST):
     """
     def __init__(self, root='~/.mxnet/datasets/fashion-mnist', train=True,
                  transform=None):
-        self._base_url = 'https://apache-mxnet.s3.amazonaws.com/gluon/dataset/fashion-mnist/'
+        self._base_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com' \
+                         '/gluon/dataset/fashion-mnist/'
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '0cf37b0d40ed5169c6b3aba31069a9770ac9043d')
         self._train_label = ('train-labels-idx1-ubyte.gz',

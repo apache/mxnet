@@ -34,10 +34,19 @@ namespace depthwise_conv {
 
 #define FULL_WARP_MASK 0xFFFFFFFF
 #if CUDA_VERSION < 9000
-#define __shfl_xor_sync(mask, ...) __shfl_xor(__VA_ARGS__)
-#define __shfl_down_sync(mask, ...) __shfl_down(__VA_ARGS__)
+template<typename DType>
+__forceinline__ __device__ DType  __shfl_xor_sync(unsigned, DType val, int delta) {
+  return __shfl_xor(val, delta);
+}
+
+template<typename DType>
+__forceinline__ __device__ DType  __shfl_down_sync(unsigned, DType val, int delta) {
+  return __shfl_down(val, delta);
+}
+
 // shuffle masks not used before CUDA 9.
-#define CREATE_SHFL_MASK(mask, predicate)
+#define CREATE_SHFL_MASK(mask, predicate) \
+    unsigned mask = 0u;
 #else
 #define CREATE_SHFL_MASK(mask, predicate) \
     unsigned mask = __ballot_sync(FULL_WARP_MASK, (predicate))

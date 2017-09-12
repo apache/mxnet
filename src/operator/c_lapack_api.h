@@ -91,6 +91,24 @@ extern "C" {
 
   void sposv_(char *uplo, int *n, int *nrhs,
     float *a, int *lda, float *b, int *ldb, int *info);
+
+  // Note: GELQF in row-major (MXNet) becomes GEQRF in column-major (LAPACK).
+  // Also, m and n are flipped, compared to the row-major version
+  #define MXNET_LAPACK_FSIG_GEQRF(func, dtype) \
+    void func##_(int *m, int *n, dtype *a, int *lda, dtype *tau, dtype *work, \
+                 int *lwork, int *info);
+
+  MXNET_LAPACK_FSIG_GEQRF(sgeqrf, float)
+  MXNET_LAPACK_FSIG_GEQRF(dgeqrf, double)
+
+  // Note: ORGLQ in row-major (MXNet) becomes ORGQR in column-major (LAPACK)
+  // Also, m and n are flipped, compared to the row-major version
+  #define MXNET_LAPACK_FSIG_ORGQR(func, dtype) \
+    void func##_(int *m, int *n, int *k, dtype *a, int *lda, dtype *tau, \
+                 dtype *work, int *lwork, int *info);
+
+  MXNET_LAPACK_FSIG_ORGQR(sorgqr, float)
+  MXNET_LAPACK_FSIG_ORGQR(dorgqr, double)
 }
 
 #define MXNET_LAPACK_ROW_MAJOR 101
@@ -183,6 +201,42 @@ inline void flip<cpu, double>(int m, int n,
     return info;
   }
 
+  // Note: Both MXNET_LAPACK_*gelqf, MXNET_LAPACK_*orglq can only be called with
+  // row-major format (MXNet). Internally, the QR variants are done in column-major.
+  // In particular, the matrix dimensions m and n are flipped.
+  #define MXNET_LAPACK_CWRAP_GELQF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gelqf(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      int info(0); \
+      prefix##geqrf_(&n, &m, a, &lda, tau, work, &lwork, &info); \
+      return info; \
+    } else { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "gelqf implemented for row-major layout only"; \
+      return 1; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GELQF(s, float)
+  MXNET_LAPACK_CWRAP_GELQF(d, double)
+
+  // Note: The k argument (rank) is equal to m as well
+  #define MXNET_LAPACK_CWRAP_ORGLQ(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##orglq(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      int info(0); \
+      prefix##orgqr_(&n, &m, &m, a, &lda, tau, work, &lwork, &info);    \
+      return info; \
+    } else { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "orglq implemented for row-major layout only"; \
+      return 1; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_ORGLQ(s, float)
+  MXNET_LAPACK_CWRAP_ORGLQ(d, double)
+
 #else
 
   // use pragma message instead of warning
@@ -193,6 +247,13 @@ inline void flip<cpu, double>(int m, int n,
   // Define compilable stubs.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
   inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
+  #define MXNET_LAPACK_CWRAPPER2(func, dtype) \
+  inline int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
+                                 int lda, dtype* tau, dtype* work, int lwork) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
@@ -210,6 +271,11 @@ inline void flip<cpu, double>(int m, int n,
 
   MXNET_LAPACK_UNAVAILABLE(sposv)
   MXNET_LAPACK_UNAVAILABLE(dposv)
+
+  MXNET_LAPACK_CWRAPPER2(sgelqf, float)
+  MXNET_LAPACK_CWRAPPER2(dgelqf, double)
+  MXNET_LAPACK_CWRAPPER2(sorglq, float)
+  MXNET_LAPACK_CWRAPPER2(dorglq, double)
 
 #endif
 

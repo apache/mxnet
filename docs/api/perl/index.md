@@ -56,9 +56,9 @@ pdl> print mx->nd->array(sequence(2,3))->aspdl ## 3 rows, 2 columns
 ]
 ```
  ## Perl API Reference
- * [Module API](module.md) is a flexible high-level interface for training neural networks.
- * [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
- * [IO Data Loading API](io.md) performs parsing and data loading.
- * [NDArray API](ndarray.md) performs vector/matrix/tensor operations.
- * [KVStore API](kvstore.md) performs multi-GPU and multi-host distributed training.
+ * [Module API is a flexible high-level interface for training neural networks.](module.md)
+ * [Symbolic API performs operations on NDArrays to assemble neural networks from layers.](symbol.md)
+ * [IO Data Loading API performs parsing and data loading.](io.md)
+ * [NDArray API performs vector/matrix/tensor operations.](ndarray.md)
+ * [KVStore API performs multi-GPU and multi-host distributed training.](kvstore.md)
 

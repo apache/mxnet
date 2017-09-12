@@ -49,6 +49,12 @@ class Trainer(object):
         positive threshold used in 2bit compression.
     neg_threshold:
         negative threshold used in 2bit compression.
+        
+    Properties
+    ----------
+    learning_rate: float
+        The current learning rate of the optimizer. Given an Optimizer object
+        optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
                  compress='none', pos_threshold=0.1, neg_threshold=-0.1):
@@ -133,6 +139,31 @@ class Trainer(object):
             self._update_on_kvstore = None
 
         self._kv_initialized = True
+
+
+    @property
+    def learning_rate(self):
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning "
+                              "rate can be accessed.")
+        else:
+            return self._optimizer.learning_rate
+
+
+    def set_learning_rate(self, lr):
+        """Sets a new learning rate of the optimizer.
+
+        Parameters
+        ----------
+        lr : float
+            The new learning rate of the optimizer.
+        """
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning "
+                              "rate is mutated.")
+        else:
+            self._optimizer.set_learning_rate(lr)
+
 
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after

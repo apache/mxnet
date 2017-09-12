@@ -422,9 +422,6 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 
   // create shared_buffer_map
   std::unordered_map<std::string, NDArray> shared_buffer_map;
-  std::vector<NDArray> shared_exec_in_args;
-  std::vector<NDArray> shared_exec_arg_grads;
-  std::vector<NDArray> shared_exec_aux_states;
   bool use_shared_buffer = (*shared_buffer_len >= 0);
   if (*shared_buffer_len > 0) {
     // create shared_buffer_map

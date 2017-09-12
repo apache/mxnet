@@ -67,6 +67,12 @@ NNVM_REGISTER_OP(zeros_like)
 .describe(R"code(Return an array of zeros with the same shape and type
 as the input array.
 
+The storage type of ``zeros_like`` output depends on the storage type of the input
+
+- zeros_like(row_sparse) = row_sparse
+- zeros_like(csr) = csr
+- zeros_like(default) = default
+
 Examples::
 
   x = [[ 1.,  1.,  1.],

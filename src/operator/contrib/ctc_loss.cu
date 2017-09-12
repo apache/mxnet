@@ -32,10 +32,9 @@ template <typename DType>
 ctcStatus_t compute_ctc_cost(const Tensor<gpu, 3, DType> activations,
                              DType *costs, DType *grads, int *labels,
                              int *label_lengths, int *input_lengths,
-                             void *workspace, int train) {
+                             void *workspace, int train, int blank_label) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
-  int blank_label = 0;
   mxnet_warpctc::GpuCTC<DType> ctc(alphabet_size, minibatch, workspace,
                     activations.stream_->stream_, blank_label);
   if (train)
