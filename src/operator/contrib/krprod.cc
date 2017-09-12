@@ -28,18 +28,49 @@ n * with the License.  You may obtain a copy of the License at
 #include <mxnet/op_attr_types.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include "krprod.h"
 #include "../../ndarray/ndarray_function.h"
+#include "krprod.h"
 
 namespace mxnet {
 namespace op {
 
+inline bool KhatriRaoShape(
+      const nnvm::NodeAttrs& attrs,
+      std::vector<TShape> *in_attrs,
+      std::vector<TShape> *out_attrs) {
+  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_GE(in_attrs->size(), 1);
+
+  // all input and output matrices must have the same number of rows/columns
+  // (when inputs_transposed is set to true/false)
+  int num_columns = static_cast<int>((*in_attrs)[0][1]);
+  int num_rows = 1;
+  for (const TShape& attr_shape : (*in_attrs)) {
+    CHECK_EQ(num_columns, static_cast<int>(attr_shape[1]));
+    num_rows *= attr_shape[0];
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, Shape2(num_rows, num_columns));
+  return true;
+}
+
+
+struct KhatriRaoParam : public dmlc::Parameter<KhatriRaoParam> {
+  int num_args;
+  bool row_wise = false;
+  DMLC_DECLARE_PARAMETER(KhatriRaoParam) {
+    DMLC_DECLARE_FIELD(num_args)
+      .set_lower_bound(1)
+      .describe("Number of input matrices.");
+  }
+};
 DMLC_REGISTER_PARAMETER(KhatriRaoParam);
+
 
 NNVM_REGISTER_OP(khatri_rao)
 .describe(R"code(Computes the Khatri-Rao product of the input matrices.
@@ -57,9 +88,6 @@ the (column-wise) Khatri-Rao product is defined as the matrix,
 where the :math:`k`th column is equal to the column-wise outer product
 :math:`{A_1}_k \otimes \cdots \otimes {A_n}_k` where :math:`{A_i}_k` is the kth
 column of the ith matrix.
-
-When the flag `row_wise` is set to `True` the row-wise Khatri-Rao product is
-performed. This operation is more memory efficient.
 
 Example::
 
@@ -102,9 +130,7 @@ Example::
   })
 .set_attr<FCompute>("FCompute<cpu>", KhatriRaoCompute<cpu>)
 .set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("args", "NDArray-or-Symbol[]", "Positional input matrices")
-.add_arguments(KhatriRaoParam::__FIELDS__());
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input matrices");
 
-
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

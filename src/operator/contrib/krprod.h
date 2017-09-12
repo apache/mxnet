@@ -25,9 +25,12 @@
  */
 #ifndef MXNET_OPERATOR_CONTRIB_KRPROD_H_
 #define MXNET_OPERATOR_CONTRIB_KRPROD_H_
+#include <algorithm>
+#include <utility>
 #include <vector>
 #include "mshadow/tensor.h"
 #include "../c_lapack_api.h"
+
 
 namespace mxnet {
 namespace op {
@@ -248,48 +251,6 @@ inline void inv_khatri_rao
 }
 
 
-struct KhatriRaoParam : public dmlc::Parameter<KhatriRaoParam> {
-  int num_args;
-  bool row_wise = false;
-  DMLC_DECLARE_PARAMETER(KhatriRaoParam) {
-    DMLC_DECLARE_FIELD(num_args)
-      .set_lower_bound(1)
-      .describe("Number of input matrices.");
-    DMLC_DECLARE_FIELD(row_wise)
-      .set_default(false)
-      .describe("If `True`, performs the (more efficient) row-wise "
-                "Khatri-Rao product.");
-  }
-};
-
-
-inline bool KhatriRaoShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
-  CHECK_EQ(out_attrs->size(), 1);
-  CHECK_GE(in_attrs->size(), 1);
-
-  // swap the role of rows and columns if row_wise is `true`
-  const KhatriRaoParam& param = nnvm::get<KhatriRaoParam>(attrs.parsed);
-  size_t column_index = param.row_wise ? 0 : 1;
-  size_t row_index = 1^column_index;
-
-  // all input and output matrices must have the same number of rows/columns
-  // (when inputs_transposed is set to true/false)
-  int num_columns = static_cast<int>((*in_attrs)[0][column_index]);
-  int num_rows = 1;
-  for (const TShape& attr_shape : (*in_attrs)) {
-    CHECK_EQ(num_columns, static_cast<int>(attr_shape[column_index]));
-    num_rows *= attr_shape[row_index];
-  }
-
-  if (param.row_wise)
-    std::swap(num_rows, num_columns);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, Shape2(num_rows, num_columns));
-  return true;
-}
-
-
 template<typename xpu, typename DType>
 inline void KhatriRaoCompute_(const nnvm::NodeAttrs &attrs,
                               const OpContext &ctx,
@@ -306,15 +267,7 @@ inline void KhatriRaoCompute_(const nnvm::NodeAttrs &attrs,
                  [&stream](TBlob blob) -> Tensor<xpu, 2, DType> {
                    return blob.get<xpu, 2, DType>(stream);
                  });
-
-  // the only difference between row_wise_kronecker and khatri_rao is that the
-  // latter performs a memory-level transpose of the input data before and after
-  // calling the former. skip this transposition if row_wise is set to `true`
-  const KhatriRaoParam& param = nnvm::get<KhatriRaoParam>(attrs.parsed);
-  if (param.row_wise)
-    row_wise_kronecker(out, ts_arr);
-  else
-    khatri_rao(out, ts_arr);
+  khatri_rao(out, ts_arr);
 }
 
 

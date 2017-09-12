@@ -26,15 +26,12 @@ from numpy.testing import assert_allclose
 def assert_mx_allclose(A, B, **kwds):
     return assert_allclose(A.asnumpy(), B.asnumpy(), **kwds)
 
+
 def test_krprod_one_input():
     A = mx.nd.arange(1,9).reshape((2,4))
     out = mx.nd.khatri_rao(A)
     assert_mx_allclose(out, A, rtol=1e-12)
 
-def test_krprod_one_input_row_wise():
-    A = mx.nd.arange(1,9).reshape((2,4))
-    out = mx.nd.khatri_rao(A, row_wise=True)
-    assert_mx_allclose(out, A, rtol=1e-12)
 
 def test_krprod_two_inputs():
     A = mx.nd.arange(1,7).reshape((3,2))
@@ -50,19 +47,6 @@ def test_krprod_two_inputs():
                             [21,32],[5,12],[15,24],[25,36],[35,48]])
     assert_mx_allclose(out, expected, rtol=1e-12)
 
-def test_krprod_two_inputs_row_wise():
-    A = mx.nd.arange(1,7).reshape((2,3))
-    B = mx.nd.arange(1,3).reshape((2,1))
-    out = mx.nd.khatri_rao(A, B, row_wise=True)
-    expected = mx.nd.array([[1,2,3],[8,10,12]])
-    assert_mx_allclose(out, expected, rtol=1e-12)
-
-    A = mx.nd.arange(1,7).reshape((2,3))
-    B = mx.nd.arange(1,9).reshape((2,4))
-    out = mx.nd.khatri_rao(A, B, row_wise=True)
-    expected = mx.nd.array([[1,2,3,4,2,4,6,8,3,6,9,12],
-                            [20,24,28,32,25,30,35,40,30,36,42,48]])
-    assert_mx_allclose(out, expected, rtol=1e-12)
 
 def test_krprod_three_inputs():
     A = mx.nd.arange(1,7).reshape((3,2))
@@ -78,20 +62,4 @@ def test_krprod_three_inputs():
 
     out_BC = mx.nd.khatri_rao(B, C)
     out = mx.nd.khatri_rao(A, out_BC)
-    assert_mx_allclose(out, expected, rtol=1e-12)
-
-def test_krprod_three_inputs_row_wise():
-    A = mx.nd.arange(1,7).reshape((2,3))
-    B = mx.nd.arange(1,3).reshape((2,1))
-    C = mx.nd.arange(1,5).reshape((2,2))
-    out = mx.nd.khatri_rao(A, B, C, row_wise=True)
-    expected = mx.nd.array([[1,2,2,4,3,6],[24,32,30,40,36,48]])
-    assert_mx_allclose(out, expected, rtol=1e-12)
-
-    out_AB = mx.nd.khatri_rao(A, B, row_wise=True)
-    out = mx.nd.khatri_rao(out_AB, C, row_wise=True)
-    assert_mx_allclose(out, expected, rtol=1e-12)
-
-    out_BC = mx.nd.khatri_rao(B, C, row_wise=True)
-    out = mx.nd.khatri_rao(A, out_BC, row_wise=True)
     assert_mx_allclose(out, expected, rtol=1e-12)
