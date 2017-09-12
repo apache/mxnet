@@ -1,125 +1,33 @@
-# Docker images for MXNET
+# Dockerized multi-architecture build
 
-## How to use
+These docker files and utilities will build mxnet and run tests for different architectures using cross compilation and produce
+runtime binary artifacts.
 
-First make sure [docker](https://docs.docker.com/engine/installation/) is
-installed. The docker plugin
-[nvidia-docker](https://github.com/NVIDIA/nvidia-docker) is required to run on
-Nvidia GPUs.
-
-Pre-built docker containers are available at https://hub.docker.com/r/mxnet/
-
-For example, the following command launches a container with the Python package
-installed. It will pull the docker images from docker hub if it does not exist
-locally.
-
-```bash
-docker run -ti --rm mxnet/python
+To compile for all the supported architectures you can run the script
+```
+$ ./tool.py
 ```
 
-Then you can run MXNet in python, e.g.:
+To build a single arch, you can invoke docker directly:
 
-```bash
-# python -c 'import mxnet as mx; a = mx.nd.ones((2,3)); print((a*2).asnumpy())'
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
+```
+$ docker build -f Dockerfile.build.<arch> -t <tag> .
 ```
 
-If the host machine has at least one GPU installed and `nvidia-docker` is installed, namely
-`nvidia-docker run --rm nvidia/cuda nvidia-smi` runs successfully, then you can
-run a container with GPU supports
-
-```bash
-nvidia-docker run -ti --rm mxnet/python:gpu
+Or pass the architecture id to the tool:
+```
+$ ./tool.py -a ubuntu-17.04
 ```
 
-Now you can run the above example in `GPU 0`:
-
-```bash
-# python -c 'import mxnet as mx; a = mx.nd.ones((2,3), mx.gpu(0)); print((a*2).asnumpy())'
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
-```
-
-## Hosted containers
-
-All images are based on Ubuntu 14.04. The `gpu` tag is built with CUDA 8.0 and
-cuDNN 5.
-
-### Python
-
-Hosted at https://hub.docker.com/r/mxnet/python/
-
-Python versions: 2.7.12 and 3.5.2.
-
-Available tags:
-
-- mxnet/python
-- mxnet/python:gpu
-
-### R
-
-Hosted at https://hub.docker.com/r/mxnet/r-lang/
-
-R version: 3.3.3
-
-Available tags:
-
-- mxnet/r-lang
-- mxnet/r-lang:gpu
+By convention all the Dockerfiles produce the build artifacts on /work/build so they can be copied
+after.
 
 
-### Julia
+The tool will leave the resulting artifacts on the build/ directory
 
-Hosted at https://hub.docker.com/r/mxnet/julia/
+# TODO
 
-Julia version: 0.5.1
+- Handle dependencies between docker files, for example having a yaml file with the dependency graph
+  so they can be built in the right order. Right now the dependency is very simple so simple
+  alphabetical sorting of the images does the trick.
 
-Available tags:
-
-- mxnet/julia
-- mxnet/julia:gpu
-
-#### Scala
-
-Hosted at https://hub.docker.com/r/mxnet/scala/
-
-Scala version: 2.11.8
-
-Available tags:
-
-- mxnet/scala
-
-### Perl
-
-Hosted at https://hub.docker.com/r/mxnet/perl/
-
-Perl version: 5.18.2
-
-Available tags:
-
-- mxnet/perl
-- mxnet/perl:gpu
-
-
-## How to build
-
-The following command build the default Python package
-
-```bash
-./tool.sh build python cpu
-```
-
-Run `./tool.sh` for more details. Use
-
-
-Tips: The following commands stop all docker containers and delete all docker images.
-
-```bash
-docker stop $(docker ps -a -q)
-docker rm $(docker ps -a -q)
-```
-
-```bash
-docker rmi $(docker images -a -q)
-```

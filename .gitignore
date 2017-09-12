@@ -148,3 +148,4 @@ target
 bin/im2rec
 
 model/
+docker/mxnet
