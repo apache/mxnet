@@ -122,6 +122,32 @@ function test_functions()
   typeof(mx.sum(data)) == mx.SymbolicNode
 end
 
+function test_reshape()
+  info("SymbolicNode::reshape(sym, dim...)")
+
+  A = mx.NDArray(collect(1:24))
+  x = mx.Variable(:x)
+  y = mx.reshape(x, 2, 3, 4)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (2, 3, 4)
+  @test copy(out) == reshape(1:24, 2, 3, 4)
+
+  info("SymbolicNode::reshape(sym, dim)")
+
+  A = mx.NDArray(collect(1:24))
+  x = mx.Variable(:x)
+  y = mx.reshape(x, (2, 3, 4))
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (2, 3, 4)
+  @test copy(out) == reshape(1:24, 2, 3, 4)
+end
+
 function test_dot()
   info("SymbolicNode::dot")
   x = mx.Variable(:x)
@@ -157,6 +183,7 @@ end
   test_saveload()
   test_attrs()
   test_functions()
+  test_reshape()
   test_dot()
   test_misc()
 end
