@@ -27,7 +27,9 @@
 
 #include <dmlc/omp.h>
 #include <mxnet/base.h>
+#include <mxnet/engine.h>
 #include <algorithm>
+
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
 #endif  // __CUDACC__
@@ -213,21 +215,6 @@ struct set_zero {
 };
 
 
-#if MXNET_USE_CUDA
-class KernelState {
-  static bool using_gpu_;  // intentionally not atomic
- public:
-  /* \brief Signify to kernel that GPU is occuring in the process */
-  static MSHADOW_CINLINE void SetUsingGPU(const bool using_gpu) {
-    using_gpu_ = using_gpu;
-  }
-  /* \brief Query whether GPU usage has been flagged as occuring in the process */
-  static MSHADOW_CINLINE bool GetUsingGPU() {
-    return using_gpu_;
-  }
-};
-#endif
-
 template<typename OP, typename xpu>
 struct Kernel;
 
@@ -235,14 +222,18 @@ struct Kernel;
 template<typename OP>
 struct Kernel<OP, cpu> {
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *s, int N, Args... args) {
-    if (KernelState::GetUsingGPU()) {
+  inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    const int omp_cores = Engine::Get()->GetNumOMPThreadsPerWorker();
+    if (omp_cores <= 1) {
+      // Zero means not to use OMP, but don't interfere with external OMP behavior
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     } else {
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(omp_cores - 1)
       for (int i = 0; i < N; ++i) {
+        const int nc = omp_get_num_threads();
+        CHECK_EQ(omp_cores - 1, nc);
         OP::Map(i, args...);
       }
     }
@@ -252,7 +243,7 @@ struct Kernel<OP, cpu> {
 
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
-__global__ void mxnet_generic_kernel(int N, Args... args) {
+__global__ void mxnet_generic_kernel(const int N, Args... args) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
     OP::Map(i, args...);
   }
@@ -261,7 +252,7 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
 template<typename OP>
 struct Kernel<OP, gpu> {
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
+  inline static void Launch(mshadow::Stream<gpu> *s, const int N, Args... args) {
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel<OP, Args...>

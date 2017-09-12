@@ -24,9 +24,10 @@
 #include <vector>
 #include <atomic>
 #include <thread>
-#include "../operator/mxnet_op.h"
+#include <omp.h>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "threaded_engine.h"
 
 namespace mxnet {
 namespace engine {
@@ -47,6 +48,7 @@ class NaiveEngine final : public Engine {
   };
 
   NaiveEngine() {
+    SetNumOMPThreadsPerWorker(ThreadedEngine::DefaultOMPThreadsPerWorker());
   }
   // virtual destructor
   virtual ~NaiveEngine() {
@@ -149,8 +151,6 @@ class NaiveEngine final : public Engine {
 #endif
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
-      // Signify to kernel that GPU is being used
-      mxnet::op::mxnet_op::KernelState::SetUsingGPU(true);
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
       MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {
@@ -190,6 +190,20 @@ class NaiveEngine final : public Engine {
     shutdown_phase_.store(true);
   }
 
+  /*! \brief Return the number of OMP threads that should be used per worker
+   * \return Number of OMP threads that should be used per worker
+   */
+  int GetNumOMPThreadsPerWorker() const override {
+    return num_omp_threads_per_worker_;
+  }
+
+  /*! \brief Set the number of OMP threads that should be used per worker
+   * \param num_threads_per_worker Number of OMP threads to be used per worker
+   */
+  void SetNumOMPThreadsPerWorker(int num_threads_per_worker) override {
+    num_omp_threads_per_worker_ = num_threads_per_worker;
+  }
+
  private:
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param) {
@@ -205,6 +219,8 @@ class NaiveEngine final : public Engine {
   mshadow::Stream<cpu> cpu_stream_;
   // GPU streams
   std::vector<mshadow::Stream<gpu>*> streams_;
+  /*! \brief Number of OMP threads to be used per worker */
+  int num_omp_threads_per_worker_{0};
 };  // class NaiveEngine
 
 

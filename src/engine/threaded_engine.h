@@ -28,6 +28,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/omp.h>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -38,7 +39,6 @@
 #include "./engine_impl.h"
 #include "./profiler.h"
 #include "../common/object_pool.h"
-#include "../operator/mxnet_op.h"
 
 namespace mxnet {
 namespace engine {
@@ -285,6 +285,13 @@ class ThreadedEngine : public Engine {
     objpool_blk_ref_    = common::ObjectPool<OprBlock>::_GetSharedRef();
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
+
+    /*! \brief Set default OMP threads per kernel worker.
+     * If std::thread::hardware_concurrency()
+     * returns zero (a possiblity on some platforms), just use the default OMP value
+     */
+    SetNumOMPThreadsPerWorker(DefaultOMPThreadsPerWorker());
+    CHECK_GT(GetNumOMPThreadsPerWorker(), 0);
   }
   ~ThreadedEngine() {
     {
@@ -292,6 +299,19 @@ class ThreadedEngine : public Engine {
       kill_.store(true);
     }
     finished_cv_.notify_all();
+  }
+
+  static int DefaultOMPThreadsPerWorker() {
+    int cores = std::thread::hardware_concurrency();
+#ifdef _OPENMP
+    if(cores <= 0) {
+      cores = omp_get_num_threads();
+    } else {
+      // By default, leave one core to run the engine
+      --cores;
+    }
+#endif
+    return cores;
   }
 
  protected:
@@ -312,12 +332,6 @@ class ThreadedEngine : public Engine {
    */
   void ExecuteOprBlock(RunContext run_ctx, OprBlock *opr_block) {
     ThreadedOpr* threaded_opr = opr_block->opr;
-#if MXNET_USE_CUDA
-    if (run_ctx.ctx.dev_mask() == gpu::kDevMask) {
-      // Signify to kernel that GPU is being used
-      mxnet::op::mxnet_op::KernelState::SetUsingGPU(true);
-    }
-#endif
 #if MXNET_USE_PROFILER
     if (opr_block->profiling && threaded_opr->opr_name) {
       const Context& ctx = opr_block->ctx;
@@ -367,6 +381,21 @@ class ThreadedEngine : public Engine {
     }
   }
 
+  /*! \brief Return the number of OMP threads that should be used per worker
+   * \return Number of OMP threads that should be used per worker
+   */
+  int GetNumOMPThreadsPerWorker() const override {
+    return num_omp_threads_per_worker_;
+  }
+
+  /*! \brief Set the number of OMP threads that should be used per worker
+   * \param num_threads_per_worker Number of OMP threads to be used per worker
+   * TODO(cjolivier01) Dynamically adjust based upon number of concurrent CPU jobs
+   */
+  void SetNumOMPThreadsPerWorker(int num_omp_threads_per_worker) override {
+    num_omp_threads_per_worker_ = num_omp_threads_per_worker;
+  }
+
  private:
   /*!
    * \brief check if thee is duplication in const_vars and mutable_vars.
@@ -412,6 +441,10 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+
+  /*! \brief Number of OMP threads to be used per worker */
+  int num_omp_threads_per_worker_{0};
+
   /*!
    * \brief Disallow copy construction and assignment.
    */

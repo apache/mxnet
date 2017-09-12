@@ -22,7 +22,6 @@
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
 #include <dmlc/base.h>
-#include <dmlc/omp.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
@@ -108,7 +107,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         if (is_copy) {
           auto ptr =
           gpu_copy_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-              auto blk = new ThreadWorkerBlock<kCopyQueue>();
+            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
+            Engine::Get()->SetNumOMPThreadsPerWorker(0);
+            auto blk = new ThreadWorkerBlock<kCopyQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
                 [this, ctx, is_copy, blk]
@@ -122,6 +123,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           }
         } else {
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
+            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
+              Engine::Get()->SetNumOMPThreadsPerWorker(0);
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -217,7 +220,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     }
   }
 
-/*! \brief Signal a single queue for shutdown */
+  /*! \brief Signal a single queue for shutdown */
   template<typename Object>
   static inline void SignalQueueForKill(common::LazyAllocArray<Object> *array) {
     array->ForEach([](size_t i, Object *block) {
