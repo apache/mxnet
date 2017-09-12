@@ -48,7 +48,7 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .describe("Upper bound of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -77,7 +77,7 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .describe("Standard deviation of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -106,7 +106,7 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
     .describe("Beta parameter (scale) of the gamma distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -132,7 +132,7 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
     .describe("Lambda parameter (rate) of the exponential distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -158,7 +158,7 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
     .describe("Lambda parameter (rate) of the Poisson distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -187,7 +187,7 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
     .describe("Failure probability in each experiment.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -216,7 +216,7 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
     .describe("Alpha (dispersion) parameter of the negative binomial distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."

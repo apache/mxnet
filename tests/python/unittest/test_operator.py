@@ -4088,6 +4088,38 @@ def test_dropout():
     assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
 
+def test_imperative_random_op_default_shape():
+    """For random operators, default shape is (1,), instead of ()."""
+    for name in dir(mx.nd):
+        if name.startswith('random_'):
+            random_op = getattr(mx.nd, name)
+            output = random_op()
+            assert output.shape == (1L,)
+
+    for name in dir(mx.nd.random):
+        if not name.startswith('_') and not name.endswith('_'):
+            random_op = getattr(mx.nd.random, name)
+            output = random_op()
+            assert output.shape == (1L,)
+
+
+def test_random_op_default_ctx():
+    """For the operators with ctx as one of the arguments,
+    default it to the current context if it's not provided at runtime.
+    Random operators are examples of this kind of operators."""
+    for name in dir(mx.nd):
+        if name.startswith('random_'):
+            random_op = getattr(mx.nd, name)
+            output = random_op()
+            assert output.context == mx.current_context()
+
+    for name in dir(mx.nd.random):
+        if not name.startswith('_') and not name.endswith('_'):
+            random_op = getattr(mx.nd.random, name)
+            output = random_op()
+            assert output.context == mx.current_context()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
