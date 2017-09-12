@@ -36,7 +36,7 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./mshadow_op.h"
-#include "./operator_common.h"
+#include "./nn/sequence_mask-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -90,7 +90,7 @@ class SequenceMaskOp : public Operator {
     if (param_.use_sequence_length) {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      SequenceMask(out, indices, static_cast<DType>(param_.value));
+      mxnet_op::SequenceMask(out, indices, static_cast<DType>(param_.value));
     }
   }
 
@@ -126,7 +126,7 @@ class SequenceMaskOp : public Operator {
     if (param_.use_sequence_length) {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      SequenceMask(data_grad, indices, DType(0));
+      mxnet_op::SequenceMask(data_grad, indices, DType(0));
     }
   }
 
