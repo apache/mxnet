@@ -25,7 +25,7 @@
 #include "./custom-inl.h"
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
-#include <mxnet/imperative_runtime.h>
+#include <mxnet/imperative.h>
 
 #include "../elemwise_op_common.h"
 
@@ -285,15 +285,15 @@ void Forward(const OpStatePtr& state,
     tags.push_back(4);
   }
 
-  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
-  bool prev_training = ImperativeRuntime::Get()->set_is_training(ctx.is_train);
+  bool prev_recording = Imperative::Get()->set_is_recording(false);
+  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
 
   CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
     ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
     static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpForward]));
 
-  ImperativeRuntime::Get()->set_is_training(prev_training);
-  ImperativeRuntime::Get()->set_is_recording(prev_recording);
+  Imperative::Get()->set_is_training(prev_training);
+  Imperative::Get()->set_is_recording(prev_recording);
 }
 
 
@@ -331,15 +331,15 @@ void Backward(const OpStatePtr& state,
     tags.push_back(4);
   }
 
-  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
-  bool prev_training = ImperativeRuntime::Get()->set_is_training(ctx.is_train);
+  bool prev_recording = Imperative::Get()->set_is_recording(false);
+  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
 
   CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
     ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
     static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpBackward]));
 
-  ImperativeRuntime::Get()->set_is_training(prev_training);
-  ImperativeRuntime::Get()->set_is_recording(prev_recording);
+  Imperative::Get()->set_is_training(prev_training);
+  Imperative::Get()->set_is_recording(prev_recording);
 }
 
 

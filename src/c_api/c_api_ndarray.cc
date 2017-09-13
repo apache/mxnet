@@ -28,7 +28,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
 #include <mxnet/op_attr_types.h>
-#include <mxnet/imperative_runtime.h>
+#include <mxnet/imperative.h>
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <string>
@@ -147,9 +147,9 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
   SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outputs);
 
-  auto state = ImperativeRuntime::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
-  if (ImperativeRuntime::Get()->is_recording()) {
-    ImperativeRuntime::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+  auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
+  if (Imperative::Get()->is_recording()) {
+    Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
   }
 
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
@@ -204,8 +204,8 @@ int MXCreateCachedOp(SymbolHandle handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
 
   API_BEGIN();
-  *out = new std::shared_ptr<ImperativeRuntime::CachedOp>(
-      new ImperativeRuntime::CachedOp(*sym));
+  *out = new std::shared_ptr<Imperative::CachedOp>(
+      new Imperative::CachedOp(*sym));
   API_END();
 }
 
@@ -247,12 +247,12 @@ int MXInvokeCachedOp(CachedOpHandle handle,
   }
 
   OpStatePtr state = op->Forward(ndinputs, ndoutputs);
-  if (ImperativeRuntime::Get()->is_recording()) {
+  if (Imperative::Get()->is_recording()) {
     nnvm::NodeAttrs attrs;
     attrs.op = cached_op;
     attrs.name = "_cachedop";
     attrs.parsed = op;
-    ImperativeRuntime::Get()->RecordOp(
+    Imperative::Get()->RecordOp(
         std::move(attrs), ndinputs, ndoutputs, state,
         &op->save_inputs(), &op->save_outputs());
   }
@@ -291,25 +291,25 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
 
 int MXAutogradIsTraining(bool* curr) {
   API_BEGIN();
-  *curr = ImperativeRuntime::Get()->is_training();
+  *curr = Imperative::Get()->is_training();
   API_END();
 }
 
 int MXAutogradSetIsTraining(int is_training, int* prev) {
   API_BEGIN();
-  *prev = ImperativeRuntime::Get()->set_is_training(static_cast<bool>(is_training));
+  *prev = Imperative::Get()->set_is_training(static_cast<bool>(is_training));
   API_END();
 }
 
 int MXAutogradIsRecording(bool* curr) {
   API_BEGIN();
-  *curr = ImperativeRuntime::Get()->is_recording();
+  *curr = Imperative::Get()->is_recording();
   API_END();
 }
 
 int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_BEGIN();
-  *prev = ImperativeRuntime::Get()->set_is_recording(static_cast<bool>(is_recording));
+  *prev = Imperative::Get()->set_is_recording(static_cast<bool>(is_recording));
   API_END();
 }
 
@@ -328,7 +328,7 @@ int MXAutogradMarkVariables(mx_uint num_var,
     gradients.emplace_back(static_cast<NDArray*>(grad_handles[i]));
     grad_reqs.emplace_back(reqs_array[i]);
   }
-  ImperativeRuntime::Get()->MarkVariables(variables, grad_reqs, gradients);
+  Imperative::Get()->MarkVariables(variables, grad_reqs, gradients);
   API_END();
 }
 
@@ -379,7 +379,7 @@ int MXAutogradBackwardEx(mx_uint num_output,
     variables.emplace_back(reinterpret_cast<NDArray*>(var_handles[i]));
   }
 
-  auto grads = ImperativeRuntime::Get()->Backward(outputs, ograds, variables, is_train,
+  auto grads = Imperative::Get()->Backward(outputs, ograds, variables, is_train,
                                                   retain_graph, create_graph);
   if (num_variables != 0) {
     ret->ret_handles.clear();

@@ -28,7 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/resource.h>
-#include <mxnet/imperative_runtime.h>
+#include <mxnet/imperative.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
 #include "../common/utils.h"
@@ -46,8 +46,8 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 namespace mxnet {
 
 NDArray NDArray::grad() const {
-  if (ImperativeRuntime::AGInfo::IsNone(*this)) return NDArray();
-  ImperativeRuntime::AGInfo& info = ImperativeRuntime::AGInfo::Get(entry_.node);
+  if (Imperative::AGInfo::IsNone(*this)) return NDArray();
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
   if (info.out_grads.size()) {
     CHECK_EQ(info.out_grads.size(), 1);
     return info.out_grads[0];
@@ -56,7 +56,7 @@ NDArray NDArray::grad() const {
 }
 
 nnvm::Symbol NDArray::get_autograd_symbol() const {
-  CHECK(!ImperativeRuntime::AGInfo::IsNone(*this))
+  CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
   nnvm::Symbol ret;
   ret.outputs.emplace_back(entry_);
@@ -78,7 +78,7 @@ NDArray NDArray::Reshape(const TShape &shape) const {
 
 NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
   NDArray ret = this->Reshape(shape);
-  if (!ImperativeRuntime::Get()->is_recording()) return ret;
+  if (!Imperative::Get()->is_recording()) return ret;
 
   CHECK_GE(shape_.Size(), shape.Size())
     << "NDArray.Reshape: target shape must have must have the same size as "
@@ -90,7 +90,7 @@ NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
   attrs.dict.insert({"shape", os.str()});
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
-  ImperativeRuntime::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
   return ret;
 }
 
@@ -112,7 +112,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   NDArray ret = this->Slice(begin, end);
-  if (!ImperativeRuntime::Get()->is_recording()) return ret;
+  if (!Imperative::Get()->is_recording()) return ret;
   // fake a slice_axis op
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("slice_axis");
@@ -121,7 +121,7 @@ NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   attrs.dict.insert({"end", std::to_string(end)});
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
-  ImperativeRuntime::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
   return ret;
 }
 
@@ -167,16 +167,16 @@ NDArray NDArray::data_ndarray() const {
 }
 
 bool NDArray::fresh_out_grad() const {
-  if (ImperativeRuntime::AGInfo::IsNone(*this)) return false;
-  ImperativeRuntime::AGInfo& info = ImperativeRuntime::AGInfo::Get(entry_.node);
+  if (Imperative::AGInfo::IsNone(*this)) return false;
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
   return info.fresh_out_grad;
 }
 
 
 void NDArray::set_fresh_out_grad(bool state) const {
-  CHECK(!ImperativeRuntime::AGInfo::IsNone(*this))
+  CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray has not been marked as a variable and does not have gradient state";
-  ImperativeRuntime::AGInfo& info = ImperativeRuntime::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
   info.fresh_out_grad = state;
 }
 
@@ -466,7 +466,7 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext rctx) {
     << " to stype = " << to_stype << " is not supported";
   const auto from_ctx = from.ctx();
   const auto to_ctx = to->ctx();
-  bool is_train = ImperativeRuntime::Get()->is_training();
+  bool is_train = Imperative::Get()->is_training();
   std::vector<Resource> requested;
   if (is_same<from_xpu, mshadow::gpu>::value && from_stype != to_stype) {
     requested.push_back(ResourceManager::Get()->Request(from_ctx,
