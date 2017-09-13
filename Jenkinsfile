@@ -23,7 +23,7 @@ def init_git() {
     } catch (exc) {
       deleteDir()
       error "Failed to fetch source codes"
-      sleep 2s
+      sleep 2
     }
   }
 }
@@ -39,7 +39,7 @@ def init_git_win() {
     } catch (exc) {
       deleteDir()
       error "Failed to fetch source codes"
-      sleep 2s
+      sleep 2
     }
   }
 }
