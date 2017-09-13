@@ -4093,14 +4093,28 @@ def test_imperative_random_op_default_shape():
     for name in dir(mx.nd):
         if name.startswith('random_'):
             random_op = getattr(mx.nd, name)
-            output = random_op()
-            assert output.shape == (1L,)
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'random_uniform' or name == 'random_normal':
+                output = random_op()
+                assert output.shape == (1L,)
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.shape == (1L,)
 
     for name in dir(mx.nd.random):
         if not name.startswith('_') and not name.endswith('_'):
             random_op = getattr(mx.nd.random, name)
-            output = random_op()
-            assert output.shape == (1L,)
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'random_uniform' or name == 'random_normal':
+                output = random_op()
+                assert output.shape == (1L,)
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.shape == (1L,)
 
 
 def test_random_op_default_ctx():

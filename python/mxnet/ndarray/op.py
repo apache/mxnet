@@ -180,25 +180,28 @@ def %s(%s):
         keys.append('%s')
         vals.append(np.dtype(%s).name)""" % (dtype_name, dtype_name, dtype_name))
 
+        # This is for random operator only.
         # If the op has argument 'shape' but its value
         # is not provided, set it to (1,).
         if shape_name is not None:
             code.append("""
-    keys.append('%s')
-    if %s is _Null:
+    if %s is _Null and out is None:
+        keys.append('%s')
         vals.append('(1,)')
-    else:
-        vals.append(str(%s))""" % (shape_name, shape_name, shape_name))
+    elif %s is not _Null:
+        keys.append('%s')
+        vals.append(str(%s))""" % (shape_name, shape_name, shape_name, shape_name, shape_name))
 
         # If the op has argument 'ctx' but its value
         # is not provided, set it to context.current_context().
         if ctx_name is not None:
             code.append("""
-    keys.append('%s')
-    if %s is _Null:
+    if %s is _Null and out is None:
+        keys.append('%s')
         vals.append(str(current_context()))
-    else:
-        vals.append(str(%s))""" % (ctx_name, ctx_name, ctx_name))
+    elif %s is not _Null:
+        keys.append('%s')
+        vals.append(str(%s))""" % (ctx_name, ctx_name, ctx_name, ctx_name, ctx_name))
 
     code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(

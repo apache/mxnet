@@ -52,7 +52,8 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -81,7 +82,8 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -110,7 +112,11 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -136,7 +142,11 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -162,7 +172,11 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -191,7 +205,11 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -220,7 +238,11 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
