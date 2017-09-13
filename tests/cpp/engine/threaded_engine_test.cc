@@ -73,11 +73,11 @@ void GenerateWorkload(int num_workloads, int num_var,
  * evaluate a single workload
  */
 void EvaluateWorload(const Workload& wl, std::vector<double>* data) {
-  double tmp = 0;
-  for (int i : wl.reads) tmp += data->at(i);
-  data->at(wl.write) = tmp / (wl.reads.size() + 1);
-  if (wl.time > 0) {
-    std::this_thread::sleep_for(std::chrono::microseconds(wl.time));
+   double tmp = 0;
+   for (int i : wl.reads) tmp += data->at(i);
+   data->at(wl.write) = tmp / (wl.reads.size() + 1);
+   if (wl.time > 0) {
+     std::this_thread::sleep_for(std::chrono::microseconds(wl.time));
   }
 }
 
