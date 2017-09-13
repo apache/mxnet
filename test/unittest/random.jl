@@ -8,10 +8,10 @@ function test_uniform()
 
   low = -10; high = 10
   seed = 123
-  mx.srand!(seed)
+  mx.srand(seed)
   ret1 = mx.rand(low, high, dims)
 
-  mx.srand!(seed)
+  mx.srand(seed)
   ret2 = mx.empty(dims)
   mx.rand!(low, high, ret2)
 
@@ -25,10 +25,10 @@ function test_gaussian()
 
   μ = 10; σ = 2
   seed = 456
-  mx.srand!(seed)
+  mx.srand(seed)
   ret1 = mx.randn(μ, σ, dims)
 
-  mx.srand!(seed)
+  mx.srand(seed)
   ret2 = mx.empty(dims)
   mx.randn!(μ, σ, ret2)
 
