@@ -121,7 +121,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   // limit inference to part of the graph
   uint32_t node_start = 0, node_end = idx.num_nodes();
   if (ret.attrs.count("node_range")) {
-    const auto& range = ret.GetAttr<std::pair<size_t, size_t> >("node_range");
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
     node_start = range.first;
     node_end = range.second;
     CHECK_GE(node_start, 0);
@@ -130,7 +130,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   }
   uint32_t entry_start = 0, entry_end = idx.num_node_entries();
   if (ret.attrs.count("entry_range")) {
-    const auto& range = ret.GetAttr<std::pair<size_t, size_t> >("entry_range");
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("entry_range");
     entry_start = range.first;
     entry_end = range.second;
     CHECK_GE(entry_start, 0);

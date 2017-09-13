@@ -425,14 +425,15 @@ void PushOperator(const OpStatePtr& state,
   }
 }
 
-nnvm::Graph CheckAndInferShape(nnvm::Graph&& g, nnvm::ShapeVector&& shapes,
-                               bool use_inputs,
-                               std::pair<size_t, size_t> node_range = {0, 0},
-                               std::pair<size_t, size_t> entry_range = {0, 0}) {
+bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
+                        bool use_inputs,
+                        std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                        std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
+  nnvm::Graph& g = *p_g;
   if (use_inputs) {
     if (g.attrs.count("shape_inputs") &&
-        g.GetAttr<ShapeVector>("shape_inputs") == shapes) return g;
+        g.GetAttr<ShapeVector>("shape_inputs") == shapes) return true;
   } else if (g.attrs.count("shape")) {
     const auto& prev_shapes = g.GetAttr<ShapeVector>("shape");
     CHECK_EQ(prev_shapes.size(), shapes.size());
@@ -446,7 +447,7 @@ nnvm::Graph CheckAndInferShape(nnvm::Graph&& g, nnvm::ShapeVector&& shapes,
       match = false;
       break;
     }
-    if (match) return g;
+    if (match) return true;
   }
   g.attrs.erase("shape");
   g.attrs.erase("shape_inputs");
@@ -464,18 +465,19 @@ nnvm::Graph CheckAndInferShape(nnvm::Graph&& g, nnvm::ShapeVector&& shapes,
   }
   CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
 
-  return g;
+  return false;
 }
 
 
-nnvm::Graph CheckAndInferType(nnvm::Graph&& g, nnvm::DTypeVector&& dtypes,
-                              bool use_inputs,
-                              std::pair<size_t, size_t> node_range = {0, 0},
-                              std::pair<size_t, size_t> entry_range = {0, 0}) {
+bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
+                       bool use_inputs,
+                       std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                       std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
+  nnvm::Graph& g = *p_g;
   if (use_inputs) {
     if (g.attrs.count("dtype_inputs") &&
-        g.GetAttr<DTypeVector>("dtype_inputs") == dtypes) return g;
+        g.GetAttr<DTypeVector>("dtype_inputs") == dtypes) return true;
   } else if (g.attrs.count("dtype")) {
     const auto& prev_dtypes = g.GetAttr<DTypeVector>("dtype");
     CHECK_EQ(prev_dtypes.size(), dtypes.size());
@@ -489,7 +491,7 @@ nnvm::Graph CheckAndInferType(nnvm::Graph&& g, nnvm::DTypeVector&& dtypes,
       match = false;
       break;
     }
-    if (match) return g;
+    if (match) return true;
   }
   g.attrs.erase("dtype");
   g.attrs.erase("dtype_inputs");
@@ -507,15 +509,16 @@ nnvm::Graph CheckAndInferType(nnvm::Graph&& g, nnvm::DTypeVector&& dtypes,
   }
   CHECK_EQ(g.GetAttr<size_t>("dtype_num_unknown_nodes"), 0U);
 
-  return g;
+  return false;
 }
 
 
-nnvm::Graph CheckAndInferStorageType(const Context& ctx, nnvm::Graph&& g,
-                                     StorageTypeVector&& storage_types, bool use_inputs,
-                                     std::pair<size_t, size_t> node_range = {0, 0},
-                                     std::pair<size_t, size_t> entry_range = {0, 0}) {
+bool CheckAndInferStorageType(nnvm::Graph* p_g, const Context& ctx,
+                              StorageTypeVector&& storage_types, bool use_inputs,
+                              std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                              std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
+  nnvm::Graph& g = *p_g;
   bool ctx_match = false;
   if (g.attrs.count("context")) {
     const auto& prev_vctx = g.GetAttr<exec::ContextVector>("context");
@@ -528,7 +531,7 @@ nnvm::Graph CheckAndInferStorageType(const Context& ctx, nnvm::Graph&& g,
 
   if (ctx_match && use_inputs) {
     if (g.attrs.count("storage_type_inputs") &&
-        g.GetAttr<StorageTypeVector>("storage_type_inputs") == storage_types) return g;
+        g.GetAttr<StorageTypeVector>("storage_type_inputs") == storage_types) return true;
   } else if (ctx_match && g.attrs.count("storage_type")) {
     const auto& prev_storage_types = g.GetAttr<StorageTypeVector>("storage_type");
     CHECK_EQ(prev_storage_types.size(), storage_types.size());
@@ -542,7 +545,7 @@ nnvm::Graph CheckAndInferStorageType(const Context& ctx, nnvm::Graph&& g,
       match = false;
       break;
     }
-    if (match) return g;
+    if (match) return true;
   }
   g.attrs.erase("storage_type");
   g.attrs.erase("storage_type_inputs");
@@ -560,7 +563,93 @@ nnvm::Graph CheckAndInferStorageType(const Context& ctx, nnvm::Graph&& g,
   }
   CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
 
-  return g;
+  return false;
+}
+
+struct MemoryPlanInfo {
+  uint32_t sid;
+  size_t size;
+  bool inplace;
+};
+
+using MemoryPlanVector = std::vector<MemoryPlanInfo>;
+
+MemoryPlanVector PlanMemory(
+    nnvm::Graph* p_g, nnvm::StorageVector&& storage,
+    const std::vector<uint32_t>& ref_count,
+    const std::pair<uint32_t, uint32_t>& node_range = {0, 0},
+    const std::pair<uint32_t, uint32_t>& entry_range = {0, 0}) {
+  using namespace nnvm;
+  nnvm::Graph& g = *p_g;
+  const auto& idx = g.indexed_graph();
+  if (node_range.second > node_range.first) {
+    g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
+  }
+  g.attrs["ref_count"] = std::make_shared<dmlc::any>(ref_count);
+  g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(storage));
+  g = nnvm::ApplyPass(g, "PlanMemory");
+
+  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  auto storage_ids = g.MoveCopyAttr<StorageVector>("storage_id");
+  auto storage_inplace = g.MoveCopyAttr<std::vector<int> >("storage_inplace_index");
+  uint32_t entry_start = entry_range.first;
+  uint32_t entry_end =
+      entry_range.second > entry_start ? entry_range.second : idx.num_node_entries();
+  MemoryPlanVector mem_plan(idx.num_node_entries());
+  std::unordered_map<int, uint32_t> sid_to_loc;
+
+  for (uint32_t i = entry_start; i < entry_end; ++i) {
+    if (stypes[i] != kDefaultStorage || storage_ids[i] < 0) continue;
+    if (!sid_to_loc.count(storage_ids[i])) {
+      CHECK_LT(storage_inplace[i], 0);
+      sid_to_loc[storage_ids[i]] = i;
+      mem_plan[i].sid = i;
+      mem_plan[i].size = mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size();
+    } else {
+      uint32_t loc = sid_to_loc[storage_ids[i]];
+      mem_plan[i] = {loc, 0, storage_inplace[i] >= 0};
+      mem_plan[loc].size = std::max(mem_plan[loc].size,
+          mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size());
+    }
+  }
+
+  return mem_plan;
+}
+
+
+void AllocateMemory(const nnvm::Graph& g,
+                    const nnvm::IndexedGraph& idx,
+                    const Context& default_ctx,
+                    const uint32_t entry_start, const uint32_t entry_end,
+                    const MemoryPlanVector& mem_plan,
+                    const std::vector<NDArray*>& arrays,
+                    std::vector<OpReqType> *array_reqs) {
+  using namespace nnvm;
+  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  for (uint32_t i = entry_start; i < entry_end; ++i) {
+    if (!arrays[i]->is_none()) continue;
+    if (stypes[i] == kDefaultStorage) {
+      if (mem_plan[i].sid == i) {
+        CHECK_GT(mem_plan[i].size, 0);
+        NDArray buff(TShape({static_cast<dim_t>(mem_plan[i].size)}),
+                     default_ctx, true, mshadow::kUint8);
+        *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
+      } else {
+        *arrays[i] = arrays[mem_plan[i].sid]->AsArray(shapes[i], dtypes[i]);
+        if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
+          array_reqs->at(i) = kWriteInplace;
+        }
+      }
+    } else {
+      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
+                           shapes[i], default_ctx, true, dtypes[i]);
+    }
+  }
 }
 
 }  // namespace imperative
@@ -790,12 +879,13 @@ void ImperativeRuntime::RecordOp(
 }
 
 void ImperativeRuntime::RunGraph(
+    const bool retain_graph,
     const Context& default_ctx,
     const nnvm::IndexedGraph& idx,
     const std::vector<NDArray*> arrays,
     size_t node_start, size_t node_end,
     std::vector<OpReqType>&& array_reqs,
-    std::vector<int>&& ref_count,
+    std::vector<uint32_t>&& ref_count,
     std::vector<OpStatePtr> *p_states) {
   using namespace nnvm;
   using namespace imperative;
@@ -835,7 +925,7 @@ void ImperativeRuntime::RunGraph(
       const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
       auto fwd_node_id = idx.node_id(fwd_node);
-      cached_op->Backward(states[fwd_node_id], ndinputs, req, ndoutputs);
+      cached_op->Backward(retain_graph, states[fwd_node_id], ndinputs, req, ndoutputs);
     } else if (createop.count(node.source->op())) {
       arg_shapes.clear();
       arg_dtypes.clear();
@@ -969,7 +1059,7 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
 
   // Allocate buffer
   std::vector<NDArray> buff(idx.num_node_entries());
-  std::vector<int> ref_count(buff.size(), 0);
+  std::vector<uint32_t> ref_count(buff.size(), 0);
   std::vector<OpStatePtr> states;
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
@@ -1030,20 +1120,20 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
     ShapeVector shapes;
     shapes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) shapes.emplace_back(i->shape());
-    graph = CheckAndInferShape(std::move(graph), std::move(shapes), false,
-                               node_range, entry_range);
+    CheckAndInferShape(&graph, std::move(shapes), false,
+                       node_range, entry_range);
 
     DTypeVector dtypes;
     dtypes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) dtypes.emplace_back(i->dtype());
-    graph = CheckAndInferType(std::move(graph), std::move(dtypes), false,
-                              node_range, entry_range);
+    CheckAndInferType(&graph, std::move(dtypes), false,
+                      node_range, entry_range);
 
     StorageTypeVector stypes;
     stypes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) stypes.emplace_back(i->storage_type());
-    graph = CheckAndInferStorageType(
-        default_ctx, std::move(graph), std::move(stypes), false,
+    CheckAndInferStorageType(
+        &graph, default_ctx, std::move(stypes), false,
         node_range, entry_range);
   }
 
@@ -1082,7 +1172,7 @@ std::vector<NDArray*> ImperativeRuntime::Backward(
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training = set_is_training(is_train);
 
-  RunGraph(default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
+  RunGraph(retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states);
 
   set_is_recording(prev_recording);
@@ -1113,14 +1203,15 @@ ImperativeRuntime::CachedOp::CachedOp(const nnvm::Symbol& sym) {
     const auto& idx = fwd_graph_.indexed_graph();
     CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 
-    std::vector<int> ref_count(idx.num_node_entries(), 0);
+    std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
     for (const auto& i : idx.input_nodes()) ++ref_count[idx.entry_id(i, 0)];
     for (const auto& i : idx.outputs()) ++ref_count[idx.entry_id(i)];
     for (size_t i = 0; i < idx.num_nodes(); ++i) {
       for (const auto& j : idx[i].inputs) ++ref_count[idx.entry_id(j)];
     }
 
-    fwd_graph_.attrs["ref_count"] = std::make_shared<dmlc::any>(std::move(ref_count));
+    fwd_graph_.attrs["forward_ref_count"] =
+        std::make_shared<dmlc::any>(std::move(ref_count));
   }
 
   // construct backward graph
@@ -1154,16 +1245,16 @@ ImperativeRuntime::CachedOp::CachedOp(const nnvm::Symbol& sym) {
     for (const auto& i : grad_graph_.outputs) full_graph_.outputs.emplace_back(i);
     const auto& idx = full_graph_.indexed_graph();
 
-    std::vector<int> ref_count(idx.num_node_entries(), 0);
+    std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
     for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
       for (const auto& j : idx[i].inputs) {
          ++ref_count[idx.entry_id(j)];
       }
     }
 
-    auto ref_count_recording = fwd_graph_.GetAttr<std::vector<int> >("ref_count");
+    auto ref_count_recording = fwd_graph_.GetAttr<std::vector<uint32_t> >("forward_ref_count");
     for (size_t i = 0; i < num_forward_entries; ++i) ref_count_recording[i] += ref_count[i];
-    fwd_graph_.attrs["ref_count_recording"] =
+    fwd_graph_.attrs["full_ref_count"] =
         std::make_shared<dmlc::any>(std::move(ref_count_recording));
 
     size_t num_forward_inputs = num_inputs();
@@ -1235,7 +1326,7 @@ std::vector<nnvm::NodeEntry> ImperativeRuntime::CachedOp::Gradient(
 }
 
 nnvm::Graph ImperativeRuntime::CachedOp::GetForwardGraph(
-    const std::vector<NDArray*>& inputs) {
+    const bool recording, const std::vector<NDArray*>& inputs) {
   using namespace nnvm;
   using namespace imperative;
   std::lock_guard<std::mutex> lock(mutex_);
@@ -1254,10 +1345,29 @@ nnvm::Graph ImperativeRuntime::CachedOp::GetForwardGraph(
     storage_type_inputs.emplace_back(inputs[i]->storage_type());
   }
 
-  g = CheckAndInferShape(std::move(g), std::move(shape_inputs), true);
-  g = CheckAndInferType(std::move(g), std::move(dtype_inputs), true);
-  g = CheckAndInferStorageType(inputs[0]->ctx(), std::move(g),
-                               std::move(storage_type_inputs), true);
+  bool match = true;
+  match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
+  match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
+  match &= CheckAndInferStorageType(&g, inputs[0]->ctx(),
+                                    std::move(storage_type_inputs), true);
+
+  if (!match) {
+    g.attrs.erase("forward_mem_plan");
+    g.attrs.erase("full_mem_plan");
+  } else if (g.attrs.count(recording ? "full_mem_plan" : "forward_mem_plan")) {
+    return g;
+  }
+
+  const auto& idx = g.indexed_graph();
+
+  StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
+  for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
+
+  auto mem_plan = PlanMemory(
+      &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >(
+          recording ? "full_ref_count" : "forward_ref_count"));
+  g.attrs[recording ? "full_mem_plan" : "forward_mem_plan"] =
+      std::make_shared<dmlc::any>(std::move(mem_plan));
 
   return g;
 }
@@ -1290,14 +1400,14 @@ nnvm::Graph ImperativeRuntime::CachedOp::GetBackwardGraph(
   size_t num_forward_nodes = fwd_graph_.indexed_graph().num_nodes();
   size_t num_forward_entries = fwd_graph_.indexed_graph().num_node_entries();
 
-  if (!g.attrs.count("ref_count")) {
-    std::vector<int> ref_count(idx.num_node_entries(), 0);
+  if (!g.attrs.count("backward_ref_count")) {
+    std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
     for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
       for (const auto& j : idx[i].inputs) ++ref_count[idx.entry_id(j)];
     }
     for (size_t i = 0; i < inputs.size(); ++i) ++ref_count[bwd_input_eid_[i]];
     for (const auto& i : idx.outputs()) ++ref_count[idx.entry_id(i)];
-    g.attrs["ref_count"] = std::make_shared<dmlc::any>(std::move(ref_count));
+    g.attrs["backward_ref_count"] = std::make_shared<dmlc::any>(std::move(ref_count));
   }
 
   ShapeVector shapes(idx.num_node_entries(), TShape());
@@ -1314,12 +1424,29 @@ nnvm::Graph ImperativeRuntime::CachedOp::GetBackwardGraph(
   node_range = {num_forward_nodes, idx.num_nodes()};
   entry_range = {num_forward_entries, idx.num_node_entries()};
 
-  g = CheckAndInferShape(std::move(g), std::move(shapes), false,
-                         node_range, entry_range);
-  g = CheckAndInferType(std::move(g), std::move(dtypes), false,
-                        node_range, entry_range);
-  g = CheckAndInferStorageType(inputs[0]->ctx(), std::move(g), std::move(stypes),
-                               false, node_range, entry_range);
+  bool match = true;
+  match &= CheckAndInferShape(&g, std::move(shapes), false,
+                              node_range, entry_range);
+  match &= CheckAndInferType(&g, std::move(dtypes), false,
+                             node_range, entry_range);
+  match &= CheckAndInferStorageType(&g, inputs[0]->ctx(), std::move(stypes),
+                                    false, node_range, entry_range);
+
+  if (!match) {
+    g.attrs.erase("backward_mem_plan");
+  } else if (g.attrs.count("backward_mem_plan")) {
+    return g;
+  }
+
+  StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
+  for (size_t i = 0; i < num_forward_entries; ++i) storage[i] = exec::kExternalStorageID;
+  for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
+  for (const auto i : idx.outputs()) storage[idx.entry_id(i)] = exec::kExternalStorageID;
+
+  auto mem_plan = PlanMemory(
+      &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >("backward_ref_count"),
+      {num_forward_nodes, idx.num_nodes()}, {num_forward_entries, idx.num_node_entries()});
+  g.attrs["backward_mem_plan"] = std::make_shared<dmlc::any>(std::move(mem_plan));
 
   return g;
 }
@@ -1327,8 +1454,10 @@ nnvm::Graph ImperativeRuntime::CachedOp::GetBackwardGraph(
 OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inputs,
                                                 const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
+  using namespace imperative;
+  bool recording = ImperativeRuntime::Get()->set_is_recording(false);
   // Initialize
-  nnvm::Graph g = GetForwardGraph(inputs);
+  nnvm::Graph g = GetForwardGraph(recording, inputs);
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
 
@@ -1348,18 +1477,14 @@ OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inp
     arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
   }
   for (size_t i = 0; i < idx.outputs().size(); ++i) {
-    arrays[idx.entry_id(idx.outputs()[i])] = outputs[i];
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    if (!arrays[eid]->is_none()) *outputs[i] = arrays[eid]->Detach();
+    arrays[eid] = outputs[i];
   }
-
-  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
 
   // Allocate NDArrays
-  std::vector<int> ref_count;
-  if (prev_recording) {
-    ref_count = g.GetAttr<std::vector<int> >("ref_count_recording");
-  } else {
-    ref_count = g.GetAttr<std::vector<int> >("ref_count");
-  }
+  std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t> >(
+      recording ? "full_ref_count" : "forward_ref_count");
 
   std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
@@ -1367,21 +1492,13 @@ OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inp
   }
 
   Context default_ctx = inputs[0]->ctx();
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = 0; i < arrays.size(); ++i) {
-    if (!arrays[i]->is_none()) continue;
-    if (stypes[i] == kDefaultStorage) {
-      *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
-    } else {
-      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
-    }
-  }
+  const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
+      recording ? "full_mem_plan" : "forward_mem_plan");
+  AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
+                 mem_plan, arrays, &array_reqs);
 
   ImperativeRuntime::Get()->RunGraph(
-      default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
+      false, default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states);
 
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
@@ -1391,17 +1508,20 @@ OpStatePtr ImperativeRuntime::CachedOp::Forward(const std::vector<NDArray*>& inp
     buff[i].storage_type_ = arrays[i]->storage_type_;
   }
 
-  ImperativeRuntime::Get()->set_is_recording(prev_recording);
+  ImperativeRuntime::Get()->set_is_recording(recording);
+
   return op_state_ptr;
 }
 
 
 void ImperativeRuntime::CachedOp::Backward(
+    const bool retain_graph,
     const OpStatePtr& state,
     const std::vector<NDArray*>& inputs,
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
+  using namespace imperative;
   CHECK(!ImperativeRuntime::Get()->is_recording())
       << "CachedOp does not support higher order gradients. "
       << "If you want to do backward with create_graph=True please "
@@ -1431,30 +1551,31 @@ void ImperativeRuntime::CachedOp::Backward(
   }
 
   // Allocate NDArrays
-  std::vector<int> ref_count = g.GetAttr<std::vector<int> >("ref_count");
+  auto ref_count = g.GetAttr<std::vector<uint32_t> >("backward_ref_count");
+  if (retain_graph) {
+    for (size_t i = 0; i < num_forward_entries; ++i) ++ref_count[i];
+  }
 
   std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  for (size_t i = num_forward_nodes; i < idx.num_node_entries(); ++i) {
+  for (size_t i = num_forward_entries; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
 
-  Context default_ctx = inputs[0]->ctx();
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
-    if (!arrays[i]->is_none()) continue;
-    if (stypes[i] == kDefaultStorage) {
-      *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
-    } else {
-      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
-    }
-  }
+  Context default_ctx = outputs[0]->ctx();
+  const auto& mem_plan = g.GetAttr<MemoryPlanVector >("backward_mem_plan");
+  AllocateMemory(g, idx, default_ctx, num_forward_entries, idx.num_node_entries(),
+                 mem_plan, arrays, &array_reqs);
 
   ImperativeRuntime::Get()->RunGraph(
-      default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
+      retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
       std::move(array_reqs), std::move(ref_count), &states);
+
+  if (retain_graph) {
+    buff.resize(num_forward_entries);
+  } else {
+    buff.clear();
+    states.clear();
+  }
 }
 
 
