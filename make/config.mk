@@ -34,7 +34,7 @@ DEBUG = 0
 USE_PROFILER =
 
 # the additional link flags you want to add
-ADD_LDFLAGS += -lmkldnn -lmklml_intel -liomp5
+ADD_LDFLAGS +=
 # below is for os x
 #ADD_LDFLAGS = -L/usr/lib/lib -lmklml -liomp5
 
@@ -80,9 +80,9 @@ USE_MKL2017 = 0
 
 # whether use MKL2017 experimental feature for high performance
 # Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 1
+USE_MKL2017_EXPERIMENTAL = 0
 
-# whether use MKL DNN Open Source Library for Inference
+# whether use MKL-DNN Open Source Library
 USE_MKLDNN = 1
 
 # whether use NNPACK library
