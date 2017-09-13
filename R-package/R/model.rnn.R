@@ -20,13 +20,13 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
   
   train.execs <- lapply(1:ndevice, function(i) {
     s <- slices[[i]]
-    mxnet:::mx.symbol.bind(symbol = sym_ini, arg.arrays = c(s, arg.params)[arg.update.idx], 
+    mx.symbol.bind(symbol = sym_ini, arg.arrays = c(s, arg.params)[arg.update.idx], 
                            aux.arrays = aux.params, ctx = ctx[[i]], grad.req = grad.req)
   })
   
   # KVStore related stuffs
   params.index <- as.integer(
-    mxnet:::mx.util.filter.null(
+    mx.util.filter.null(
       lapply(1:length(train.execs[[1]]$ref.grad.arrays), function(k) {
         if (!is.null(train.execs[[1]]$ref.grad.arrays[[k]])) k else NULL}
       )))
@@ -66,7 +66,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       if (is.list(symbol)) {
         train.execs <- lapply(1:ndevice, function(i) {
           s <- slices[[i]]
-          mxnet:::mx.symbol.bind(symbol = symbol[[names(train.data$bucketID)]], 
+          mx.symbol.bind(symbol = symbol[[names(train.data$bucketID)]], 
                                  arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
                                  aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
         })
@@ -155,7 +155,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
         if (is.list(symbol)) {
           train.execs <- lapply(1:ndevice, function(i) {
             s <- slices[[i]]
-            mxnet:::mx.symbol.bind(symbol = symbol[[names(eval.data$bucketID)]], 
+            mx.symbol.bind(symbol = symbol[[names(eval.data$bucketID)]], 
                                    arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
                                    aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
           })
@@ -194,7 +194,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       eval.metric <- NULL
     }
     # get the model out
-    model <- mxnet:::mx.model.extract.model(sym_ini, train.execs)
+    model <- mx.model.extract.model(sym_ini, train.execs)
     
     epoch_continue <- TRUE
     if (!is.null(epoch.end.callback)) {
@@ -323,7 +323,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
   aux.params[names(aux.params.input)] <- aux.params.input
   
   # kvstore initialization
-  kvstore <- mxnet:::mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), 
+  kvstore <- mx.model.create.kvstore(kvstore, params$arg.params, length(ctx), 
                                              verbose = verbose)
   
   ### Execute training

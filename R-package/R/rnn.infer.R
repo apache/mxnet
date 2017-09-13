@@ -58,20 +58,20 @@ mx.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   update_names <- c(input.names, arg.params.fix.names, arg.params.names)
   arg_update_idx <- match(arguments, update_names)
   
-  execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, arg.params.fix, arg.params)[arg_update_idx], 
+  execs <- mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, arg.params.fix, arg.params)[arg_update_idx], 
                                   aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad.req)
   
   # Initial input shapes - need to be adapted for multi-devices - divide highest
   # dimension by device nb
   
-  packer <- mxnet:::mx.nd.arraypacker()
+  packer <- mx.nd.arraypacker()
   infer.data$reset()
   while (infer.data$iter.next()) {
     
     # Get input data slice
     dlist <- infer.data$value()  #[input.names]
     
-    execs <- mxnet:::mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.params.fix.names], execs$arg.arrays[arg.params.names])[arg_update_idx], 
+    execs <- mx.symbol.bind(symbol = symbol, arg.arrays = c(dlist, execs$arg.arrays[arg.params.fix.names], execs$arg.arrays[arg.params.names])[arg_update_idx], 
                                     aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad.req)
     
     mx.exec.forward(execs, is.train = FALSE)
@@ -145,7 +145,7 @@ mx.infer.buckets.one <- function(infer.data,
   arg_update_idx <- match(arguments, update_names)
   
   # Initial binding
-  execs <- mxnet:::mx.symbol.bind(symbol = symbol, 
+  execs <- mx.symbol.bind(symbol = symbol, 
                                   arg.arrays = c(dlist, arg.params.fix, arg.params)[arg_update_idx], 
                                   aux.arrays = aux.params, ctx = ctx[[1]], grad.req = grad.req)
   
@@ -158,7 +158,7 @@ mx.infer.buckets.one <- function(infer.data,
     # Get input data slice
     dlist <- infer.data$value()[input.names]
     
-    execs <- mxnet:::mx.symbol.bind(symbol = symbol, 
+    execs <- mx.symbol.bind(symbol = symbol, 
                                     arg.arrays = c(dlist, execs$arg.arrays[arg.params.fix.names], execs$arg.arrays[arg.params.names])[arg_update_idx],
                                     aux.arrays = execs$aux.arrays, ctx = ctx[[1]], grad.req = grad.req)
     
