@@ -42,7 +42,7 @@ A detailed tutorial is available at
 
 .. note:: ``mxnet.ndarray`` is similar to ``numpy.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
-   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied 
+   - ``mxnet.ndarray.NDArray.T`` does real data transpose to return new a copied
      array, instead of returning a view of the input array.
    - ``mxnet.ndarray.dot`` performs dot product between the last axis of the
      first input array and the first axis of the second input, while `numpy.dot`
@@ -56,7 +56,7 @@ A detailed tutorial is available at
   differs from ``symbol`` in few aspects:
 
   - ``ndarray`` adopts imperative programming, namely sentences are executed
-    step-by-step so that the results can be obtained immediately whereas 
+    step-by-step so that the results can be obtained immediately whereas
     ``symbol`` adopts declarative programming.
 
   - Most binary operators in ``ndarray`` such as ``+`` and ``>`` have
@@ -64,8 +64,7 @@ A detailed tutorial is available at
 ```
 
 In the rest of this document, we first overview the methods provided by the
-`ndarray.NDArray` class and its subclasses, and then list other routines
-provided by the `ndarray` package.
+`ndarray.NDArray` class, and then list other routines provided by the `ndarray` package.
 
 The `ndarray` package provides several classes:
 
@@ -77,8 +76,6 @@ The `ndarray` package provides several classes:
     sparse.CSRNDArray
     sparse.RowSparseNDArray
 ```
-
-We summarize the interface for each class in the following sections.
 
 ## The `NDArray` class
 
@@ -110,6 +107,16 @@ We summarize the interface for each class in the following sections.
     NDArray.tostype
 ```
 
+### Array creation
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.zeros_like
+    NDArray.ones_like
+```
+
 ### Array change shape
 
 ```eval_rst
@@ -118,7 +125,75 @@ We summarize the interface for each class in the following sections.
 
     NDArray.T
     NDArray.reshape
+    NDArray.flatten
+    NDArray.expand_dims
+    NDArray.split
+```
+
+### Array expand elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
     NDArray.broadcast_to
+    NDArray.broadcast_axes
+    NDArray.tile
+    NDArray.pad
+```
+
+### Array rearrange elements
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.transpose
+    NDArray.swapaxes
+    NDArray.flip
+```
+
+### Array reduction
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sum
+    NDArray.nansum
+    NDArray.prod
+    NDArray.nanprod
+    NDArray.mean
+    NDArray.max
+    NDArray.min
+    NDArray.norm
+```
+
+### Array rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.round
+    NDArray.rint
+    NDArray.fix
+    NDArray.floor
+    NDArray.ceil
+    NDArray.trunc
+```
+
+### Array sorting and searching
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sort
+    NDArray.argsort
+    NDArray.topk
+    NDArray.argmax
+    NDArray.argmin
 ```
 
 ### Arithmetic operations
@@ -174,6 +249,11 @@ We summarize the interface for each class in the following sections.
 
     NDArray.__getitem__
     NDArray.__setitem__
+    NDArray.slice
+    NDArray.slice_axis
+    NDArray.take
+    NDArray.one_hot
+    NDArray.pick
 ```
 
 ### Lazy evaluation
@@ -185,33 +265,14 @@ We summarize the interface for each class in the following sections.
     NDArray.wait_to_read
 ```
 
-## The `sparse.RowSparseNDArray` Class
+### Miscellaneous
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    sparse.RowSparseNDArray.copyto
-    sparse.RowSparseNDArray.tostype
-    sparse.RowSparseNDArray.__setitem__
-    sparse.RowSparseNDArray.__getitem__
-    sparse.RowSparseNDArray.data
-    sparse.RowSparseNDArray.indices
-```
-
-## The `sparse.CSRNDArray` Class
-
-```eval_rst
-.. autosummary::
-    :nosignatures:
-
-    sparse.CSRNDArray.copyto
-    sparse.CSRNDArray.tostype
-    sparse.CSRNDArray.__setitem__
-    sparse.CSRNDArray.__getitem__
-    sparse.CSRNDArray.data
-    sparse.CSRNDArray.indices
-    sparse.CSRNDArray.indptr
+    NDArray.clip
+    NDArray.sign
 ```
 
 ## Array creation routines
@@ -223,7 +284,9 @@ We summarize the interface for each class in the following sections.
     array
     empty
     zeros
+    zeros_like
     ones
+    ones_like
     full
     arange
     load
@@ -290,6 +353,7 @@ We summarize the interface for each class in the following sections.
     batch_take
     one_hot
     pick
+    where
 ```
 
 ## Mathematical functions
@@ -323,6 +387,7 @@ We summarize the interface for each class in the following sections.
     arcsin
     arccos
     arctan
+    broadcast_hypot
     degrees
     radians
 ```
@@ -417,13 +482,13 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
-    random_uniform
-    random_normal
-    random_gamma
-    random_exponential
-    random_poisson
-    random_negative_binomial
-    random_generalized_negative_binomial
+    sample_uniform
+    sample_normal
+    sample_gamma
+    sample_exponential
+    sample_poisson
+    sample_negative_binomial
+    sample_generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -506,40 +571,9 @@ We summarize the interface for each class in the following sections.
     Custom
 ```
 
-## Contrib
-
-```eval_rst
-.. warning:: This package contains experimental APIs and may change in the near future.
-```
-
-The `contrib.ndarray` module contains many useful experimental APIs for new features. This is a place for the community to try out the new features, so that feature contributors can receive feedback.
-
-```eval_rst
-.. currentmodule:: mxnet.contrib.ndarray
-
-.. autosummary::
-    :nosignatures:
-
-    CTCLoss
-    DeformableConvolution
-    DeformablePSROIPooling
-    MultiBoxDetection
-    MultiBoxPrior
-    MultiBoxTarget
-    MultiProposal
-    PSROIPooling
-    Proposal
-    count_sketch
-    ctc_loss
-    dequantize
-    fft
-    ifft
-    quantize
-```
-
 ## API Reference
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 
@@ -547,24 +581,13 @@ The `contrib.ndarray` module contains many useful experimental APIs for new feat
     :members:
     :special-members:
 
-.. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members:
-    :special-members:
-
-.. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members:
-    :special-members:
-
 .. automodule:: mxnet.ndarray
     :members:
     :imported-members:
     :special-members:
-    :exclude-members: CachedOp, BaseSparseNDArray, NDArray, CSRNDArray, RowSparseNDArray
+    :exclude-members: CachedOp, NDArray
 
 .. automodule:: mxnet.random
-    :members:
-
-.. automodule:: mxnet.contrib.ndarray
     :members:
 
 ```

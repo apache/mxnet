@@ -244,7 +244,7 @@ method pull(
 method set_optimizer(AI::MXNet::Optimizer $optimizer)
 {
     my $is_worker = check_call(AI::MXNetCAPI::KVStoreIsWorkerNode());
-    if($self->type eq 'dist' and $is_worker)
+    if($self->type =~ /dist/ and $is_worker)
     {
         my $optim_str = MIME::Base64::encode_base64(Storable::freeze($optimizer), "");
         $self->_send_command_to_servers(0, $optim_str);
@@ -252,7 +252,7 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
     else
     {
         $self->_updater(AI::MXNet::Optimizer->get_updater($optimizer));
-        $self->_set_updater(sub { &{$self->_updater}(@_) });
+        $self->_set_updater($self->_updater);
     }
 }
 
@@ -371,7 +371,7 @@ method load_optimizer_states(Str $fname)
         [ 6.  6.  6.]]
 =cut
 
-method _set_updater(CodeRef $updater_func)
+method _set_updater(Updater $updater_func)
 {
     $self->_updater_func(
         sub {

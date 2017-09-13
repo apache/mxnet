@@ -23,7 +23,8 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-import StringIO
+# import StringIO from io for python3 compatibility
+from io import StringIO
 import contextlib
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
@@ -316,7 +317,7 @@ def _get_src_download_btn(out_prefix, langs, lines):
         with open(ipynb, 'w') as f:
             json.dump(_get_jupyter_notebook(lang, lines), f)
         f = ipynb.split('/')[-1]
-        btn += '<div class="download_btn"><a href="%s" download="%s">' \
+        btn += '<div class="download-btn"><a href="%s" download="%s">' \
                '<span class="glyphicon glyphicon-download-alt"></span> %s</a></div>' % (f, f, f)
     btn += '</div>\n'
     return btn

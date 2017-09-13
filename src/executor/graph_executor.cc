@@ -1335,8 +1335,8 @@ void GraphExecutor::InitOpSegs() {
     num_nodes_threshold = std::numeric_limits<size_t>::max();
   }
 
-  // create forward segments for training
-  if (prefer_bulk_exec > 0) {
+  if (prefer_bulk_exec) {
+    // create forward segments for training
     size_t topo_start = 0;
     for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
       auto &node = graph_.indexed_graph()[nid].source;
@@ -1354,17 +1354,15 @@ void GraphExecutor::InitOpSegs() {
     if (topo_start != num_forward_nodes_) {
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
     }
-  }
 
-  // create backward segments for training
-  if (prefer_bulk_exec) {
+    // create backward segments for training
     // get all gradient variables
     std::unordered_set<engine::VarHandle> grad_vars;
     for (auto &kv : grad_store_) {
       grad_vars.insert(kv.second.var());
     }
     auto &idx = graph_.indexed_graph();
-    size_t topo_start = num_forward_nodes_;
+    topo_start = num_forward_nodes_;
     for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
       auto &op_node = op_nodes_[nid];
       if (op_node.skip_exec_node || op_node.exec == nullptr) {
@@ -1393,6 +1391,7 @@ void GraphExecutor::InitOpSegs() {
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
     }
   }
+
   return;
 }
 

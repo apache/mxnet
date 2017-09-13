@@ -101,7 +101,7 @@ def test_dot_real(data_dict):
         # model
         data_shape = (k, )
         train_iter = get_iter(mini_path, data_shape, batch_size)
-        weight = mx.nd.random_uniform(low=0, high=1, shape=(k, m))
+        weight = mx.nd.random.uniform(low=0, high=1, shape=(k, m))
 
         csr_data = []
         dns_data = []
@@ -154,7 +154,7 @@ def test_dot_synthetic():
 
     def bench_dot_forward(m, k, n, density, ctx, repeat):
         set_default_context(ctx)
-        dns = mx.nd.random_uniform(shape=(k, n)).copyto(ctx)
+        dns = mx.nd.random.uniform(shape=(k, n)).copyto(ctx)
         data_shape = (m, k)
         csr_data = rand_ndarray(data_shape, 'csr', density)
         dns_data = csr_data.tostype('default')
@@ -183,7 +183,7 @@ def test_dot_synthetic():
 
     def bench_dot_backward(m, k, n, density, ctx, repeat):
         set_default_context(ctx)
-        dns = mx.nd.random_uniform(shape=(m, n)).copyto(ctx)
+        dns = mx.nd.random.uniform(shape=(m, n)).copyto(ctx)
         data_shape = (m, k)
         csr_data = rand_ndarray(data_shape, 'csr', density)
         dns_data = csr_data.tostype('default')

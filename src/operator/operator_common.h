@@ -218,6 +218,19 @@ inline bool type_assign(int *y, const int& x) {
   }
 
 /*!
+ * \brief macro check if type is the same as expected.
+ * \param type the type to be checked
+ * \param expected the expected type
+ */
+#define UNIFORM_TYPE_CHECK(type, expected, arg)                         \
+  {                                                                     \
+    CHECK_EQ(type, expected) << "This layer requires uniform type. "    \
+                             << "Expected '" << type_string(expected)   \
+                             << "' v.s. given '" << type_string(type)   \
+                             << "' at '" << arg << "'";                 \
+  }
+
+/*!
  * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
  *  Use macro so we can see the error file more clearly
  * \param type_array the storage type array to store the result

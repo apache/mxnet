@@ -28,6 +28,10 @@ from .sparse import zeros as _zeros_sparse_ndarray
 from .sparse import empty as _empty_sparse_ndarray
 from .sparse import array as _sparse_array
 from .sparse import _ndarray_cls
+try:
+    import scipy.sparse as spsp
+except ImportError:
+    spsp = None
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
@@ -44,8 +48,9 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     stype: string, optional
         The storage type of the empty array, such as 'row_sparse', 'csr', etc.
     aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depend on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
+        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
+        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
@@ -79,8 +84,9 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
     stype : str, optional
         An optional storage type (default is `default`).
     aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depend on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
+        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
+        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
@@ -118,8 +124,9 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         The data type of the output array. The default dtype is ``source_array.dtype``
         if `source_array` is an `NDArray`, `float32` otherwise.
     aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depend on the storage type)
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
+        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
+        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
@@ -140,8 +147,9 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
     >>> mx.nd.array(mx.nd.zeros((3, 2), stype='row_sparse'))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
-    # TODO(haibin/anisub) Check if input is scipy.sparse object with `scipy.sparse.issparse`
-    if isinstance(source_array, NDArray) and source_array.stype != 'default':
+    if spsp is not None and isinstance(source_array, spsp.csr.csr_matrix):
+        return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
+    elif isinstance(source_array, NDArray) and source_array.stype != 'default':
         return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
     else:
         return _array(source_array, ctx=ctx, dtype=dtype)

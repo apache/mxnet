@@ -27,13 +27,23 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 
-/**
- * MXNet Training On Spark
- * @author Yizhi Liu
- */
 class MXNet extends Serializable {
+
+  class MXNetControllingThread(
+      schedulerIP: String,
+      schedulerPort: Int,
+      sparkContext: SparkContext,
+      triggerOfComponent: (String, Int, SparkContext) => Unit) extends Thread {
+    override def run() {
+      triggerOfComponent(schedulerIP, schedulerPort, sparkContext)
+    }
+  }
+
   private val logger: Logger = LoggerFactory.getLogger(classOf[MXNet])
   private val params: MXNetParams = new MXNetParams
+
+  @transient private var psServerThread: MXNetControllingThread = _
+  @transient private var psSchedulerThread: MXNetControllingThread = _
 
   def setBatchSize(batchSize: Int): this.type = {
     params.batchSize = batchSize
@@ -105,30 +115,51 @@ class MXNet extends Serializable {
     this
   }
 
-  private def startParameterServers(
+  private def startPSServers(
       schedulerIP: String,
       schedulerPort: Int,
-      sc: SparkContext): ParameterServer = {
-    // TODO: check ip & port available
-    logger.info("Starting scheduler on {}:{}", schedulerIP, schedulerPort)
-    val scheduler = new ParameterServer(params.runtimeClasspath, role = "scheduler",
-      rootUri = schedulerIP, rootPort = schedulerPort,
-      numServer = params.numServer, numWorker = params.numWorker,
-      timeout = params.timeout, java = params.javabin)
-    require(scheduler.startProcess(), "Failed to start ps scheduler process")
-
-    sc.parallelize(1 to params.numServer, params.numServer).foreachPartition { p =>
-      logger.info("Starting server ...")
-      val server = new ParameterServer(params.runtimeClasspath,
-        role = "server",
-        rootUri = schedulerIP, rootPort = schedulerPort,
-        numServer = params.numServer,
-        numWorker = params.numWorker,
-        timeout = params.timeout,
-        java = params.javabin)
-      require(server.startProcess(), "Failed to start ps server process")
+      sc: SparkContext) = {
+    def startPSServersInner(
+        schedulerIP: String,
+        schedulerPort: Int,
+        sc: SparkContext): Unit = {
+      sc.parallelize(1 to params.numServer, params.numServer).foreachPartition { p =>
+          logger.info("Starting server ...")
+          val server = new ParameterServer(params.runtimeClasspath,
+            role = "server",
+            rootUri = schedulerIP, rootPort = schedulerPort,
+            numServer = params.numServer,
+            numWorker = params.numWorker,
+            timeout = params.timeout,
+            java = params.javabin)
+          val exitCode = server.startProcess()
+          require(exitCode == 0, s"ps server process quit with exit code $exitCode")
+        }
     }
-    scheduler
+    psServerThread = new MXNetControllingThread(schedulerIP, schedulerPort, sc, startPSServersInner)
+    psServerThread.start()
+  }
+
+  private def startPSScheduler(
+      schedulerIP: String,
+      schedulerPort: Int,
+      sc: SparkContext) = {
+    def startPSSchedulerInner(
+        schedulerIP: String,
+        schedulerPort: Int,
+        sc: SparkContext): Unit = {
+      // TODO: check ip & port available
+      logger.info("Starting scheduler on {}:{}", schedulerIP, schedulerPort)
+      val scheduler = new ParameterServer(params.runtimeClasspath, role = "scheduler",
+        rootUri = schedulerIP, rootPort = schedulerPort,
+        numServer = params.numServer, numWorker = params.numWorker,
+        timeout = params.timeout, java = params.javabin)
+      val exitCode = scheduler.startProcess()
+      require(exitCode == 0, s"Failed to start ps scheduler process with exit code $exitCode")
+    }
+    psSchedulerThread = new MXNetControllingThread(schedulerIP, schedulerPort, sc,
+      startPSSchedulerInner)
+    psSchedulerThread.start()
   }
 
   private def setFeedForwardModel(
@@ -212,23 +243,21 @@ class MXNet extends Serializable {
     // distribute native jars
     params.jars.foreach(jar => sc.addFile(jar))
     val trainData = {
-      if (params.numWorker > data.partitions.length) {
+      if (params.numWorker != data.partitions.length) {
         logger.info("repartitioning training set to {} partitions", params.numWorker)
         data.repartition(params.numWorker)
-      } else if (params.numWorker < data.partitions.length) {
-        logger.info("repartitioning training set to {} partitions", params.numWorker)
-        data.coalesce(params.numWorker)
       } else {
         data
       }
     }
     val schedulerIP = utils.Network.ipAddress
     val schedulerPort = utils.Network.availablePort
-    val scheduler = startParameterServers(schedulerIP, schedulerPort, sc)
-    // simply the first model
+    startPSScheduler(schedulerIP, schedulerPort, sc)
+    startPSServers(schedulerIP, schedulerPort, sc)
     val mxModel = trainModel(trainData, schedulerIP, schedulerPort)
     logger.info("Waiting for scheduler ...")
-    scheduler.waitFor()
+    psSchedulerThread.join()
+    psServerThread.join()
     mxModel
   }
 }

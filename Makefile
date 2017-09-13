@@ -1,5 +1,11 @@
 ROOTDIR = $(CURDIR)
 
+ifeq ($(OS),Windows_NT)
+	UNAME_S := Windows
+else
+	UNAME_S := $(shell uname -s)
+endif
+
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
@@ -72,9 +78,14 @@ ifeq ($(USE_PROFILER), 1)
 	CFLAGS += -DMXNET_USE_PROFILER=1
 endif
 
+# CFLAGS for segfault logger
+ifeq ($(USE_SIGNAL_HANDLER), 1)
+	CFLAGS += -DMXNET_USE_SIGNAL_HANDLER=1
+endif
+
 # Caffe Plugin
 ifdef CAFFE_PATH
-  CFLAGS += -DMXNET_USE_CAFFE=1
+	CFLAGS += -DMXNET_USE_CAFFE=1
 endif
 
 ifndef LINT_LANG
@@ -91,7 +102,9 @@ else
 endif
 
 ifeq ($(USE_OPENMP), 1)
-	CFLAGS += -fopenmp
+	ifneq ($(UNAME_S), Darwin)
+		CFLAGS += -fopenmp
+	endif
 endif
 
 ifeq ($(USE_NNPACK), 1)
@@ -105,11 +118,17 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
 	LDFLAGS += -L$(MKLML_ROOT)/lib
-ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-	CFLAGS += -DMKL_EXPERIMENTAL=1
-else
-	CFLAGS += -DMKL_EXPERIMENTAL=0
-endif
+	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
+		CFLAGS += -DMKL_EXPERIMENTAL=1
+	else
+		CFLAGS += -DMKL_EXPERIMENTAL=0
+	endif
+	ifeq ($(UNAME_S), Darwin)
+		LDFLAGS += -lmklml
+	else
+		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+	endif
+	LDFLAGS +=  -liomp5
 endif
 
 # verify existence of separate lapack library when using blas/openblas/atlas
@@ -180,8 +199,8 @@ ifeq ($(CUDA_ARCH),)
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
-                  $(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
-                          echo -gencode arch=compute_$(arch),code=sm_$(arch)))
+				$(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
+						echo -gencode arch=compute_$(arch),code=sm_$(arch)))
 	# Convert a trailing "code=sm_NN" to "code=[sm_NN,compute_NN]" to also
 	# include the PTX of the most recent arch in the fat-binaries for
 	# forward compatibility with newer GPUs.
@@ -189,7 +208,7 @@ ifeq ($(CUDA_ARCH),)
 	# Add fat binary compression if supported by nvcc.
 	COMPRESS := --fatbin-options -compress-all
 	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
-	                     echo $(COMPRESS))
+						 echo $(COMPRESS))
 endif
 endif
 
@@ -231,20 +250,18 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
-# scala package profile
-ifeq ($(OS),Windows_NT)
+ifeq ($(UNAME_S), Windows)
 	# TODO(yizhi) currently scala package does not support windows
 	SCALA_PKG_PROFILE := windows
 else
-	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		WHOLE_ARCH= -all_load
 		NO_WHOLE_ARCH= -noall_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
-		SCALA_PKG_PROFILE := linux-x86_64
 		WHOLE_ARCH= --whole-archive
 		NO_WHOLE_ARCH= --no-whole-archive
+		SCALA_PKG_PROFILE := linux-x86_64
 	endif
 endif
 
@@ -307,9 +324,9 @@ lib/libmxnet.a: $(ALLX_DEP)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALLX_DEP)
-	 @mkdir -p $(@D)
-	 $(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
-	 -Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -400,10 +417,8 @@ rpkg:
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
-	R CMD build --no-build-vignettes R-package
-	rm -rf mxnet_current_r.tar.gz
+	R CMD INSTALL R-package
 	rm -rf R-package/src/image_recordio.h
-	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 rpkgtest:
 	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"

@@ -50,6 +50,8 @@ def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
         force suppress different categories
     """
     if net is not None:
+        if isinstance(data_shape, tuple):
+            data_shape = data_shape[0]
         net = get_symbol(net, data_shape, num_classes=num_class, nms_thresh=nms_thresh,
             force_nms=force_nms, nms_topk=nms_topk)
     detector = Detector(net, prefix, epoch, data_shape, mean_pixels, ctx=ctx)
@@ -74,7 +76,7 @@ def parse_args():
                         action='store_true', default=False)
     parser.add_argument('--gpu', dest='gpu_id', type=int, default=0,
                         help='GPU device id to detect with')
-    parser.add_argument('--data-shape', dest='data_shape', type=int, default=512,
+    parser.add_argument('--data-shape', dest='data_shape', type=str, default='512',
                         help='set image shape')
     parser.add_argument('--mean-r', dest='mean_r', type=float, default=123,
                         help='red mean value')
@@ -115,6 +117,17 @@ def parse_class_names(class_names):
         raise RuntimeError("No valid class_name provided...")
     return class_names
 
+def parse_data_shape(data_shape_str):
+    """Parse string to tuple or int"""
+    ds = data_shape_str.strip().split(',')
+    if len(ds) == 1:
+        data_shape = (int(ds[0]), int(ds[0]))
+    elif len(ds) == 2:
+        data_shape = (int(ds[0]), int(ds[1]))
+    else:
+        raise ValueError("Unexpected data_shape: %s", data_shape_str)
+    return data_shape
+
 if __name__ == '__main__':
     args = parse_args()
     if args.cpu:
@@ -128,12 +141,13 @@ if __name__ == '__main__':
 
     network = None if args.deploy_net else args.network
     class_names = parse_class_names(args.class_names)
+    data_shape = parse_data_shape(args.data_shape)
     if args.prefix.endswith('_'):
-        prefix = args.prefix + args.network + '_' + str(args.data_shape)
+        prefix = args.prefix + args.network + '_' + str(args.data_shape[0])
     else:
         prefix = args.prefix
     detector = get_detector(network, prefix, args.epoch,
-                            args.data_shape,
+                            data_shape,
                             (args.mean_r, args.mean_g, args.mean_b),
                             ctx, len(class_names), args.nms_thresh, args.force_nms)
     # run detection
