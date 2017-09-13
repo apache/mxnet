@@ -18,19 +18,23 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """MobileNet, implemented in Gluon."""
-__all__ = ['MobileNet', 'mobilenet']
+__all__ = ['MobileNet', 'mobilenet1_0', 'mobilenet0_75', 'mobilenet0_5', 'mobilenet0_25',
+           'get_mobilenet']
 
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 
 # Helpers
-def _make_conv(channels=1, kernel=(1, 1), stride=(1, 1), pad=(0, 0), num_group=1):
-    out = nn.HybridSequential(prefix='')
+def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
     out.add(nn.Conv2D(channels, kernel, stride, pad, groups=num_group, use_bias=False))
     out.add(nn.BatchNorm(scale=False))
     out.add(nn.Activation('relu'))
-    return out
+
+def _add_conv_dw(out, channels, stride):
+    _add_conv(out, channels=channels)
+    _add_conv(out, channels=channels, kernel=3, stride=stride, pad=1, num_group=channels)
+
 
 # Net
 class MobileNet(HybridBlock):
@@ -43,42 +47,28 @@ class MobileNet(HybridBlock):
     classes : int, default 1000
         Number of classes for the output layer.
     """
-    def __init__(self, classes=1000, **kwargs):
+    def __init__(self, multiplier=1.0, classes=1000, **kwargs):
         super(MobileNet, self).__init__(**kwargs)
         with self.name_scope():
             self.features = nn.HybridSequential(prefix='')
             with self.features.name_scope():
-                self.features.add(_make_conv(channels=32, kernel=3, pad=1, stride=2))
-                self.features.add(_make_conv(num_group=32, channels=32, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=64))
-                self.features.add(_make_conv(num_group=64, channels=64, kernel=3, pad=1, stride=2))
-                self.features.add(_make_conv(channels=128))
-                self.features.add(_make_conv(num_group=128, channels=128, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=128))
-                self.features.add(_make_conv(num_group=128, channels=128,
-                                             kernel=3, pad=1, stride=2))
-                self.features.add(_make_conv(channels=256))
-                self.features.add(_make_conv(num_group=256, channels=256, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=256))
-                self.features.add(_make_conv(num_group=256, channels=256,
-                                             kernel=3, pad=1, stride=2))
-                self.features.add(_make_conv(channels=512))
-                self.features.add(_make_conv(num_group=512, channels=512, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=512))
-                self.features.add(_make_conv(num_group=512, channels=512, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=512))
-                self.features.add(_make_conv(num_group=512, channels=512, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=512))
-                self.features.add(_make_conv(num_group=512, channels=512, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=512))
-                self.features.add(_make_conv(num_group=512, channels=512, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=512))
-                self.features.add(_make_conv(num_group=512, channels=512,
-                                             kernel=3, pad=1, stride=2))
-                self.features.add(_make_conv(channels=1024))
-                self.features.add(_make_conv(num_group=1024, channels=1024, kernel=3, pad=1))
-                self.features.add(_make_conv(channels=1024))
-                self.features.add(nn.AvgPool2D(7, strides=1))
+                _add_conv(self.features, channels=int(32*multiplier), kernel=3, pad=1, stride=2)
+                _add_conv(self.features, channels=int(32*multiplier), kernel=3, pad=1,
+                          num_group=int(32*multiplier))
+                _add_conv_dw(self.features, channels=int(64*multiplier), stride=2)
+                _add_conv_dw(self.features, channels=int(128*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(128*multiplier), stride=2)
+                _add_conv_dw(self.features, channels=int(256*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(256*multiplier), stride=2)
+                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
+                _add_conv_dw(self.features, channels=int(512*multiplier), stride=2)
+                _add_conv_dw(self.features, channels=int(1024*multiplier), stride=1)
+                _add_conv(self.features, channels=int(1024*multiplier))
+                self.features.add(nn.GlobalAvgPool2D())
                 self.features.add(nn.Flatten())
 
             self.classifier = nn.HybridSequential(prefix='')
@@ -91,10 +81,17 @@ class MobileNet(HybridBlock):
         return x
 
 # Constructor
-def mobilenet(pretrained=False, ctx=cpu(), **kwargs):
+def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
+    net = MobileNet(multiplier, **kwargs)
+    if pretrained:
+        from ..model_store import get_model_file
+        net.load_params(get_model_file('mobilenet'), ctx=ctx)
+    return net
+
+def mobilenet1_0(**kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper.
+    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 1.0.
 
     Parameters
     ----------
@@ -103,8 +100,46 @@ def mobilenet(pretrained=False, ctx=cpu(), **kwargs):
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
     """
-    net = MobileNet(**kwargs)
-    if pretrained:
-        from ..model_store import get_model_file
-        net.load_params(get_model_file('mobilenet'), ctx=ctx)
-    return net
+    return get_mobilenet(1.0, **kwargs)
+
+def mobilenet0_75(**kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 0.75.
+
+    Parameters
+    ----------
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet(0.75, **kwargs)
+
+def mobilenet0_5(**kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 0.5.
+
+    Parameters
+    ----------
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet(0.5, **kwargs)
+
+def mobilenet0_25(**kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 0.25.
+
+    Parameters
+    ----------
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
+    return get_mobilenet(0.25, **kwargs)
