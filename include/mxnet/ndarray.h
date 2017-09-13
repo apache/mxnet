@@ -494,7 +494,7 @@ class NDArray {
   inline NDArray AsArray(const TShape &shape, int dtype) const {
     CHECK_EQ(storage_type(), kDefaultStorage)
              << "AsArray is intended only for kDefaultStorage.";
-    CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
+    CHECK_GE(ptr_->shandle.size,
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
 #if MKL_EXPERIMENTAL == 1

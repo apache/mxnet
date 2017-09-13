@@ -56,7 +56,8 @@ class ImperativeRuntime {
     const std::unordered_set<uint32_t>& mutable_input_nodes() {
       return fwd_graph_.indexed_graph().mutable_input_nodes();
     }
-    nnvm::Graph GetForwardGraph(const std::vector<NDArray*>& inputs);
+    nnvm::Graph GetForwardGraph(const bool recording,
+                                const std::vector<NDArray*>& inputs);
     nnvm::Graph GetBackwardGraph(const OpStatePtr& state,
                                  const std::vector<OpReqType>& reqs,
                                  const std::vector<NDArray*>& inputs);
@@ -64,7 +65,8 @@ class ImperativeRuntime {
                                           const std::vector<nnvm::NodeEntry>& ograds);
     OpStatePtr Forward(const std::vector<NDArray*>& inputs,
                        const std::vector<NDArray*>& outputs);
-    void Backward(const OpStatePtr& state,
+    void Backward(const bool retain_graph,
+                  const OpStatePtr& state,
                   const std::vector<NDArray*>& inputs,
                   const std::vector<OpReqType>& reqs,
                   const std::vector<NDArray*>& outputs);
@@ -184,12 +186,13 @@ class ImperativeRuntime {
       std::vector<bool> *p_save_inputs,
       std::vector<bool> *p_save_outputs);
   void RunGraph(
+      const bool retain_graph,
       const Context& default_ctx,
       const nnvm::IndexedGraph& idx,
       const std::vector<NDArray*> arrays,
       size_t node_start, size_t node_end,
       std::vector<OpReqType>&& array_reqs,
-      std::vector<int>&& ref_count,
+      std::vector<uint32_t>&& ref_count,
       std::vector<OpStatePtr> *p_states);
   /*! \brief indicate whether is training. */
 #if DMLC_CXX11_THREAD_LOCAL
