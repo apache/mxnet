@@ -342,6 +342,7 @@ Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& sha
 #if MXNET_USE_MKLDNN == 1
   if (shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
+      && shape[param.axis] % 8 == 0
       && !mxnet::op::batchnorm::disable_mkl) {
     switch (dtype) {
       case mshadow::kFloat32:

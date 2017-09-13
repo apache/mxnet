@@ -78,6 +78,18 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
     fwd_usr_input_md.reset(new memory::desc({ { n, ic, ih, iw } }, mpcsn, memory::format::nchw));
     fwd_usr_mpd.reset(new memory::primitive_desc(*fwd_usr_input_md, cpu_engine));
+    /* auto pmfmt = ((__builtin_cpu_supports("avx2")) || */ 
+    /*                (__builtin_cpu_supports("avx"))) ? */ 
+    /*                memory::format::nChw8c : memory::format::nChw16c; */
+    if (ic % 8 == 0) {
+      auto pmfmt = memory::format::nChw8c;
+      fwd_prv_input_md.reset(new memory::desc({ { n, ic, ih, iw } }, mpcsn, pmfmt));
+      fwd_prv_mpd.reset(new memory::primitive_desc(*fwd_prv_input_md, cpu_engine));
+    }
+    else {
+      fwd_prv_input_md = nullptr;
+      fwd_prv_mpd = nullptr;
+    }
   }
   void initFwd(const std::vector<TBlob> &in_data) {
     void * bottom_data =
@@ -94,8 +106,12 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
       usr_mpd = mem_descr->usr_memory_pd();
       prv_mpd = mem_descr->prv_memory_pd();
     } else {
-      input_md = fwd_usr_input_md;
+      if (fwd_prv_input_md != nullptr)
+      input_md = fwd_prv_input_md;
+      else
+        input_md = fwd_usr_input_md;
       usr_mpd = fwd_usr_mpd;
+      prv_mpd = fwd_prv_mpd;
       fwd_bottom_data.reset(new MKLDNNData<Dtype>(usr_mpd, prv_mpd));
       fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
     }
@@ -368,6 +384,8 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
   bool init_mkldnn_ = false;
   std::shared_ptr<memory::desc> fwd_usr_input_md;
   std::shared_ptr<memory::primitive_desc> fwd_usr_mpd;
+  std::shared_ptr<memory::desc> fwd_prv_input_md;
+  std::shared_ptr<memory::primitive_desc> fwd_prv_mpd;
 
   // Forward
   std::shared_ptr<MKLDNNData<Dtype> > fwd_top_data, fwd_bottom_data;
