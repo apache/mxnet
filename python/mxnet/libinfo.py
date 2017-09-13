@@ -21,6 +21,14 @@ from __future__ import absolute_import
 import os
 import platform
 
+try:
+    from mxnetdep.depinfo import find_dep_path
+    dep_path = find_dep_path()
+    os.environ['PATH'] = dep_path + ';' + os.environ['PATH']
+except:
+    pass
+
+
 def find_lib_path():
     """Find MXNet dynamic library files.
 
@@ -48,7 +56,7 @@ def find_lib_path():
         os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
         dll_path = [os.path.join(p, 'libmxnet.dll') for p in dll_path]
     elif platform.system() == 'Darwin':
-        dll_path = [os.path.join(p, 'libmxnet.dylib') for p in dll_path]+ \
+        dll_path = [os.path.join(p, 'libmxnet.dylib') for p in dll_path] + \
                    [os.path.join(p, 'libmxnet.so') for p in dll_path]
     else:
         dll_path.append('../../../')
