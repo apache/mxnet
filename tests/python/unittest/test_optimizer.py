@@ -611,8 +611,5 @@ def test_ftrl():
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
 if __name__ == '__main__':
-    test_adam()
-    test_ftrl()
-    test_rms()
-    test_sgd()
-    test_sparse_sgd()
+    import nose
+    nose.runmodule()
