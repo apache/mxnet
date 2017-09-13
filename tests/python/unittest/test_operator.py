@@ -1521,6 +1521,7 @@ def test_reduce():
                         outgrad.reshape(keepdim_shape) * (np.equal(data, outdata.reshape(keepdim_shape)).astype(np.float)),
                       mx.symbol.min)
 
+
 def test_broadcast():
     sample_num = 200
     for i in range(sample_num):

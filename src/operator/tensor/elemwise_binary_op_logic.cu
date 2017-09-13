@@ -27,22 +27,22 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow_op::eq>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::eq>);
 
 NNVM_REGISTER_OP(_not_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow_op::ne>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::ne>);
 
 NNVM_REGISTER_OP(_greater)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow_op::gt>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::gt>);
 
 NNVM_REGISTER_OP(_greater_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow_op::ge>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::ge>);
 
 NNVM_REGISTER_OP(_lesser)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow_op::lt>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::lt>);
 
 NNVM_REGISTER_OP(_lesser_equal)
-.set_attr<FCompute>("FCompute<gpu>", BinaryCompute<gpu, mshadow_op::le>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::le>);
 
 }  // namespace op
 }  // namespace mxnet

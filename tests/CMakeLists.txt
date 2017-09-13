@@ -43,6 +43,7 @@ if(GTEST_FOUND)
       ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
       dmlc
       ${mxnet_LINKER_LIBS}
+      ${pslite_LINKER_LIBS}
       )
   else()
     target_link_libraries(${PROJECT_NAME}_unit_tests
@@ -52,6 +53,7 @@ if(GTEST_FOUND)
       ${nnvm_LINKER_LIBS}
       ${mxnet_LINKER_LIBS}
       mxnet
+      ${pslite_LINKER_LIBS}
       )
   endif()
 
