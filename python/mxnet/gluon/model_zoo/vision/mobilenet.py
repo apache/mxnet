@@ -31,9 +31,9 @@ def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
     out.add(nn.BatchNorm(scale=False))
     out.add(nn.Activation('relu'))
 
-def _add_conv_dw(out, channels, stride):
+def _add_conv_dw(out, dw_channels, channels, stride):
+    _add_conv(out, channels=dw_channels, kernel=3, stride=stride, pad=1, num_group=dw_channels)
     _add_conv(out, channels=channels)
-    _add_conv(out, channels=channels, kernel=3, stride=stride, pad=1, num_group=channels)
 
 
 # Net
@@ -53,21 +53,12 @@ class MobileNet(HybridBlock):
             self.features = nn.HybridSequential(prefix='')
             with self.features.name_scope():
                 _add_conv(self.features, channels=int(32*multiplier), kernel=3, pad=1, stride=2)
-                _add_conv(self.features, channels=int(32*multiplier), kernel=3, pad=1,
-                          num_group=int(32*multiplier))
-                _add_conv_dw(self.features, channels=int(64*multiplier), stride=2)
-                _add_conv_dw(self.features, channels=int(128*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(128*multiplier), stride=2)
-                _add_conv_dw(self.features, channels=int(256*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(256*multiplier), stride=2)
-                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(512*multiplier), stride=1)
-                _add_conv_dw(self.features, channels=int(512*multiplier), stride=2)
-                _add_conv_dw(self.features, channels=int(1024*multiplier), stride=1)
-                _add_conv(self.features, channels=int(1024*multiplier))
+                dw_channels = [int(x*multiplier) for x in [32, 64]+[128]*2+[256]*2+[512]*6+[1024]]
+                channels = [int(x*multiplier) for x in [64]+[128]*2+[256]*2+[512]*6+[1024]*2]
+                stride = [1, 2] * 3 + [1, 1] * 5 + [2, 1]
+                for dw_channels, channels, stride in zip(dw_channels, channels, stride):
+                    _add_conv_dw(self.features, dw_channels=dw_channels, channels=channels,
+                                 stride=stride)
                 self.features.add(nn.GlobalAvgPool2D())
                 self.features.add(nn.Flatten())
 
