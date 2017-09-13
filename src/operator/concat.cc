@@ -41,9 +41,9 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype, std::vector<TShape> *in_sh
   // hence MKL supports 2D/3D/4D input tensors for concat operation
   // check if input tensor shapes are supported by MKL
   bool supportedDim = true;
-  for(auto in : (*in_shape)) {
+  for (auto in : (*in_shape)) {
     // MKL supports 2D, 3D or 4D
-    if(in.ndim() <= 1 || in.ndim() >= 5) {
+    if (in.ndim() <= 1 || in.ndim() >= 5) {
       supportedDim = false;
       break;
     }
