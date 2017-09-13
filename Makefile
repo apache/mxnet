@@ -113,14 +113,16 @@ ifeq ($(USE_NNPACK), 1)
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	CFLAGS += -DMKL_EXPERIMENTAL=1
+	# CFLAGS += -DMKL_EXPERIMENTAL=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
 	CFLAGS += -I$(ROOTDIR)/external/mkldnn/install/include
 	CFLAGS += -DMXNET_USE_MKLDNN=1
 	LDFLAGS += -L$(MKLML_ROOT)/lib
-	LDFLAGS += -lmkldnn -L$(ROOTDIR)/eternal/mkldnn/install/lib
+	LDFLAGS += -lmklml_intel -lmklml_gnu -liomp5 -lmkldnn -L$(ROOTDIR)/external/mkldnn/install/lib -L$(MKLROOT)/lib/
+
+	# LDFLAGS += -lmkldnn -lmklml_intel -L$(ROOTDIR)/external/mkldnn/install/lib
 	# disable MKL 2017 to avoid any interferences
 	USE_MKL2017 := 0
 endif

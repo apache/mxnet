@@ -15,7 +15,11 @@
 *
 * \file mkldnn_concat-inl.h
 * \brief
-* \author ashok.emani@intel.com
+* \author young.jin.kim@intel.com
+*         ashok.emani@intel.com
+*         deepthi.karkada@intel.com
+*         louis.feng@intel.com
+*         adam.d.straw@intel.com
 *
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_CONCAT_INL_H_

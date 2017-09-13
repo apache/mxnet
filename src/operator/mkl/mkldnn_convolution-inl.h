@@ -13,10 +13,13 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *
-* \file mkl_convolution-inl.h
+* \file mkldnn_convolution-inl.h
 * \brief
-* \author lingyan.guo@intel.com
-*         zhenlin.luo@intel.com
+* \author young.jin.kim@intel.com
+*         ashok.emani@intel.com
+*         deepthi.karkada@intel.com
+*         louis.feng@intel.com
+*         adam.d.straw@intel.com
 *
 *******************************************************************************/
 #ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_CONVOLUTION_INL_H_

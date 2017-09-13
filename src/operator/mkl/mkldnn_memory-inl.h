@@ -13,10 +13,13 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *
-* \file mkl_batch_norm-inl.h
+* \file mkldnn_memory-inl.h
 * \brief
-* \author lingyan.guo@intel.com
-*         zhenlin.luo@intel.com
+* \author young.jin.kim@intel.com
+*         ashok.emani@intel.com
+*         deepthi.karkada@intel.com
+*         louis.feng@intel.com
+*         adam.d.straw@intel.com
 *
 *******************************************************************************/
 

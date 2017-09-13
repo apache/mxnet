@@ -110,7 +110,7 @@ namespace op {
     return b.get_with_shape<xpu, dim, DType>(shape, s);
   }
 }  // namespace op
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
 inline void mkl_tblobs_prv_to_cpu(const std::vector<TBlob> &data) {
   for (size_t i = 0; i < data.size(); i++) {
     std::shared_ptr<MKLMemHolder> mem_holder = data[i].Mkl_mem_;

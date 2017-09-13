@@ -132,7 +132,7 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
     PreFCompute(is_gpu);
     fcompute_(state_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif
@@ -201,7 +201,7 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
     PreFCompute(is_gpu);
     fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     mkl_tblobs_prv_to_cpu(in_data_);
     mkl_tblobs_prv_to_cpu(out_data_);
 #endif

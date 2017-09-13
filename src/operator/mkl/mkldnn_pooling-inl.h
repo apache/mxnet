@@ -13,10 +13,13 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *
-* \file mkl_pooling-inl.h
+* \file mkldnn_pooling-inl.h
 * \brief
-* \author zhenlin.luo@intel.com
-*         lingyan.guo@intel.com
+* \author young.jin.kim@intel.com
+*         ashok.emani@intel.com
+*         deepthi.karkada@intel.com
+*         louis.feng@intel.com
+*         adam.d.straw@intel.com
 *
 *******************************************************************************/
 
