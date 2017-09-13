@@ -782,12 +782,17 @@ class AdaDelta(Optimizer):
         weight[:] -= current_delta + wd * weight
 
 #pylint: disable=invalid-name
+#pylint: disable=line-too-long
 @register
 class Ftrl(Optimizer):
     """The Ftrl optimizer.
 
     Referenced from *Ad Click Prediction: a View from the Trenches*, available at
     http://dl.acm.org/citation.cfm?id=2488200.
+
+    eta :
+        .. math::
+           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^2}}
 
     The optimizer updates the weight by::
 
@@ -801,11 +806,9 @@ class Ftrl(Optimizer):
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
-            z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - \
-                      sqrt(n[row])) * weight[row] / learning_rate
+            z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
             n[row] += rescaled_grad[row]**2
-            w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / \
-                     learning_rate + wd) * (abs(z[row]) > lamda1)
+            w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
 
     For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
 
@@ -848,6 +851,7 @@ class Ftrl(Optimizer):
         ftrl_update(weight, grad, z, n, out=weight,
                     lr=lr, wd=wd, **kwargs)
 
+# pylint: enable=line-too-long
 @register
 class Adamax(Optimizer):
     """The AdaMax optimizer.

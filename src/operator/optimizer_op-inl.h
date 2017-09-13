@@ -1101,7 +1101,7 @@ inline void FtrlUpdate(const nnvm::NodeAttrs& attrs,
            (F<sign>(z) * scalar<DType>(param.lamda1) - z) /
            ((scalar<DType>(param.beta) + F<square_root>(n)) /
            scalar<DType>(param.lr) + scalar<DType>(param.wd)) *
-           F<gt>(F<abs>(z), DType(param.lamda1)));
+           F<gt>(F<abs>(z), scalar<DType>(param.lamda1)));
   });
 }
 
@@ -1196,7 +1196,7 @@ inline void FtrlUpdateRspRspRspImpl(const FtrlParam& param,
   using namespace rowsparse;
   CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "FtrlUpdate", "weights");
   Stream<xpu>* s = ctx.get_stream<xpu>();
-  // fill mean and variance with zero values in order to reuse the sgd mom dns impl
+  // fill z and n with zero values in order to reuse the sgd mom dns impl
   if (!z.storage_initialized()) {
     NDArray z_zeros = z;
     FillDnsZerosRspImpl(s, &z_zeros);
