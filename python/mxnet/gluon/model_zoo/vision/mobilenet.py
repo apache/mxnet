@@ -44,6 +44,10 @@ class MobileNet(HybridBlock):
 
     Parameters
     ----------
+    multiplier : float, default 1.0
+        The width multiplier for controling the model size. Only multipliers that are no
+        less than 0.25 are supported. The actual number of channels is equal to the original
+        channel size multiplied by this multiplier.
     classes : int, default 1000
         Number of classes for the output layer.
     """
@@ -55,7 +59,7 @@ class MobileNet(HybridBlock):
                 _add_conv(self.features, channels=int(32*multiplier), kernel=3, pad=1, stride=2)
                 dw_channels = [int(x*multiplier) for x in [32, 64]+[128]*2+[256]*2+[512]*6+[1024]]
                 channels = [int(x*multiplier) for x in [64]+[128]*2+[256]*2+[512]*6+[1024]*2]
-                stride = [1, 2] * 3 + [1, 1] * 5 + [2, 1]
+                stride = [1, 2] * 3 + [1] * 5 + [2, 1]
                 for dw_channels, channels, stride in zip(dw_channels, channels, stride):
                     _add_conv_dw(self.features, dw_channels=dw_channels, channels=channels,
                                  stride=stride)
@@ -73,16 +77,34 @@ class MobileNet(HybridBlock):
 
 # Constructor
 def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
+    r"""MobileNet model from the
+    `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
+    <https://arxiv.org/abs/1704.04861>`_ paper.
+
+    Parameters
+    ----------
+    multiplier : float
+        The width multiplier for controling the model size. Only multipliers that are no
+        less than 0.25 are supported. The actual number of channels is equal to the original
+        channel size multiplied by this multiplier.
+    pretrained : bool, default False
+        Whether to load the pretrained weights for model.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    """
     net = MobileNet(multiplier, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('mobilenet'), ctx=ctx)
+        version_suffix = '{0:.2f}'.format(multiplier)
+        if version_suffix in ('1.00', '0.50'):
+            version_suffix = version_suffix[:-1]
+        net.load_params(get_model_file('mobilenet%s'%version_suffix), ctx=ctx)
     return net
 
 def mobilenet1_0(**kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 1.0.
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 1.0.
 
     Parameters
     ----------
@@ -96,7 +118,7 @@ def mobilenet1_0(**kwargs):
 def mobilenet0_75(**kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 0.75.
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.75.
 
     Parameters
     ----------
@@ -110,7 +132,7 @@ def mobilenet0_75(**kwargs):
 def mobilenet0_5(**kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 0.5.
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.5.
 
     Parameters
     ----------
@@ -124,7 +146,7 @@ def mobilenet0_5(**kwargs):
 def mobilenet0_25(**kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
-    <https://arxiv.org/abs/1704.04861>`_ paper, with multiplier 0.25.
+    <https://arxiv.org/abs/1704.04861>`_ paper, with width multiplier 0.25.
 
     Parameters
     ----------
