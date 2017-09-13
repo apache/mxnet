@@ -139,6 +139,9 @@ def check_layer_forward(layer, dshape):
         out = layer(x)
     out.backward()
 
+    np_out = out.asnumpy()
+    np_dx = x.grad.asnumpy()
+
     layer.hybridize()
 
     x = mx.nd.ones(shape=dshape)
@@ -146,6 +149,9 @@ def check_layer_forward(layer, dshape):
     with mx.autograd.record():
         out = layer(x)
     out.backward()
+
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy())
+    mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy())
 
 def test_conv():
     layers1d = [

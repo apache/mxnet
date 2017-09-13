@@ -33,7 +33,7 @@
 
 namespace mxnet {
 /*! \brief runtime functions for NDArray */
-class ImperativeRuntime {
+class Imperative {
  public:
   class CachedOp {
    public:
@@ -135,7 +135,7 @@ class ImperativeRuntime {
                                  bool is_train, bool retain_graph,
                                  bool create_graph);
   /*! \return AutogradRuntime singleton */
-  static ImperativeRuntime* Get();
+  static Imperative* Get();
 
  private:
   friend class NDArray;
@@ -178,7 +178,7 @@ class ImperativeRuntime {
     }
   };
   /*! \brief make constructor protected. */
-  ImperativeRuntime() {}
+  Imperative() {}
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
       const nnvm::NodePtr& node,
@@ -208,7 +208,7 @@ class ImperativeRuntime {
   std::atomic<uint64_t> variable_count_{0};
 };
 
-using CachedOpPtr = std::shared_ptr<ImperativeRuntime::CachedOp>;
+using CachedOpPtr = std::shared_ptr<Imperative::CachedOp>;
 
 }  // namespace mxnet
 #endif  // MXNET_IMPERATIVE_RUNTIME_H_

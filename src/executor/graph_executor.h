@@ -26,7 +26,7 @@
 
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
-#include <mxnet/imperative_runtime.h>
+#include <mxnet/imperative.h>
 #include <mxnet/operator.h>
 #include <mxnet/executor.h>
 #include <nnvm/graph.h>
@@ -106,7 +106,7 @@ class GraphExecutor : public Executor {
               = nnvm::NodeEntryMap<NDArray>());
 
  protected:
-  friend class mxnet::ImperativeRuntime;
+  friend class mxnet::Imperative;
   // Information about operational node
   struct OpNode {
     // The name of the operator

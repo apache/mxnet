@@ -25,7 +25,7 @@
 #include <mxnet/c_api.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
-#include <mxnet/imperative_runtime.h>
+#include <mxnet/imperative.h>
 
 #include "./c_api_common.h"
 
@@ -94,8 +94,8 @@ void Backward(const OpStatePtr& state,
     ptrs.push_back(reinterpret_cast<NDArrayHandle>(nd));
   }
 
-  bool prev_recording = ImperativeRuntime::Get()->set_is_recording(false);
-  bool prev_training = ImperativeRuntime::Get()->set_is_training(ctx.is_train);
+  bool prev_recording = Imperative::Get()->set_is_recording(false);
+  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
 
   CHECK(reinterpret_cast<CustomFunctionBwdFunc>(
       params.info->callbacks[kCustomFunctionBackward])(
@@ -103,8 +103,8 @@ void Backward(const OpStatePtr& state,
           reinterpret_cast<const int*>(req.data()), ctx.is_train,
           params.info->contexts[kCustomFunctionBackward]));
 
-  ImperativeRuntime::Get()->set_is_training(prev_training);
-  ImperativeRuntime::Get()->set_is_recording(prev_recording);
+  Imperative::Get()->set_is_training(prev_training);
+  Imperative::Get()->set_is_recording(prev_recording);
 }
 
 
@@ -163,7 +163,7 @@ int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
   using namespace mxnet;
   using namespace mxnet::custom_function;
   API_BEGIN();
-  CHECK(ImperativeRuntime::Get()->is_recording());
+  CHECK(Imperative::Get()->is_recording());
   auto state = OpStatePtr::Create<CustomFunctionParam>();
   CustomFunctionParam& params = state.get_state<CustomFunctionParam>();
   params.num_args = num_inputs;
@@ -189,7 +189,7 @@ int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("_CustomFunction");
   attrs.parsed = params;
-  ImperativeRuntime::Get()->RecordOp(
+  Imperative::Get()->RecordOp(
       std::move(attrs), ndinputs, ndoutputs, state);
 
   API_END();
