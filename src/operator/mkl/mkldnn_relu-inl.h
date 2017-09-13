@@ -134,12 +134,13 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
       LayerSetup(data);
       InitReLUFwd(in_data);
       init_mkldnn_ = true;
+      in_place_ = (data.dptr_ == out.dptr_);
       // ---- Initialize memory descriptors -------------
 
       input_primitive = fwd_bottom_data->get_converted_prv(data.dptr_,
         false, in_data[activation::kData]);
       output_memory = fwd_top_data->create_output_memory(
-        out.dptr_, out_data[activation::kOut], fwd_top_data, (data.dptr_ == out.dptr_));
+        out.dptr_, out_data[activation::kOut], fwd_top_data, in_place_);
       if (ctx.is_train) {
         reluFwd.reset(new relu_forward(*fwd_training_pd, *input_primitive, *output_memory));
       } else {
@@ -149,7 +150,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
       fwd_bottom_data->sync_converted_prv(
         false, in_data[activation::kData]);
         fwd_top_data->sync_output_memory(
-          out_data[activation::kOut], fwd_top_data);
+          out_data[activation::kOut], fwd_top_data, in_place_);
     }
     reluFwd.submit();
   }
@@ -257,6 +258,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
 
  private:
   bool init_mkldnn_;
+  bool in_place_;
 
   std::shared_ptr<MKLDNNData<Dtype> > fwd_top_data, fwd_bottom_data;
   std::shared_ptr<MKLDNNData<Dtype> > bwd_bottom_data, bwd_top_diff;
