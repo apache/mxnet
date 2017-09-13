@@ -4106,18 +4106,34 @@ def test_imperative_random_op_default_shape():
 def test_random_op_default_ctx():
     """For the operators with ctx as one of the arguments,
     default it to the current context if it's not provided at runtime.
-    Random operators are examples of this kind of operators."""
+    If the op does not support GPU computing and the current context
+    is on GPU, override current ctx with mx.cpu(0).
+    Random operators in this test are examples of this kind of operators."""
     for name in dir(mx.nd):
         if name.startswith('random_'):
             random_op = getattr(mx.nd, name)
-            output = random_op()
-            assert output.context == mx.current_context()
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'random_uniform' or name == 'random_normal':
+                output = random_op()
+                assert output.context == mx.current_context()
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.context == mx.current_context()
 
     for name in dir(mx.nd.random):
         if not name.startswith('_') and not name.endswith('_'):
             random_op = getattr(mx.nd.random, name)
-            output = random_op()
-            assert output.context == mx.current_context()
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'uniform' or name == 'normal':
+                output = random_op()
+                assert output.context == mx.current_context()
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.context == mx.current_context()
 
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ import ctypes
 import numpy as np  # pylint: disable=unused-import
 
 from ..ndarray_doc import _build_doc
-from ..context import current_context
+from ..context import current_context  # pylint: disable=unused-import
 
 # Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
@@ -188,7 +188,7 @@ def %s(%s):
     if %s is _Null:
         vals.append('(1,)')
     else:
-        vals.append(py_str(%s))""" % (shape_name, shape_name, shape_name))
+        vals.append(str(%s))""" % (shape_name, shape_name, shape_name))
 
         # If the op has argument 'ctx' but its value
         # is not provided, set it to context.current_context().
@@ -196,9 +196,9 @@ def %s(%s):
             code.append("""
     keys.append('%s')
     if %s is _Null:
-        vals.append('%s')
+        vals.append(str(current_context()))
     else:
-        vals.append(py_str(%s))""" % (ctx_name, ctx_name, py_str(current_context()), ctx_name))
+        vals.append(str(%s))""" % (ctx_name, ctx_name, ctx_name))
 
     code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(
