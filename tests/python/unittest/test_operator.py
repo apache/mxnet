@@ -4097,11 +4097,11 @@ def test_imperative_random_op_default_shape():
             # for other random ops, use `with Context(cpu(0))` to override
             if name == 'random_uniform' or name == 'random_normal':
                 output = random_op()
-                assert output.shape == (1L,)
+                assert output.shape == (1,)
             else:
                 with mx.Context(mx.cpu(0)):
                     output = random_op()
-                    assert output.shape == (1L,)
+                    assert output.shape == (1,)
 
     for name in dir(mx.nd.random):
         if not name.startswith('_') and not name.endswith('_'):
@@ -4110,11 +4110,11 @@ def test_imperative_random_op_default_shape():
             # for other random ops, use `with Context(cpu(0))` to override
             if name == 'random_uniform' or name == 'random_normal':
                 output = random_op()
-                assert output.shape == (1L,)
+                assert output.shape == (1,)
             else:
                 with mx.Context(mx.cpu(0)):
                     output = random_op()
-                    assert output.shape == (1L,)
+                    assert output.shape == (1,)
 
 
 def test_random_op_default_ctx():
