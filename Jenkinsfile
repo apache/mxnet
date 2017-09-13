@@ -16,9 +16,9 @@ def init_git() {
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
-        sh 'git clean -d -f'
         checkout scm
         sh 'git submodule update --init'
+        sh 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
@@ -31,9 +31,9 @@ def init_git_win() {
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
-        bat 'git clean -d -f'
         checkout scm
         bat 'git submodule update --init'
+        bat 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
