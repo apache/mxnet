@@ -3725,24 +3725,24 @@ def test_laop():
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
     res_gemm = 4. * np.dot(data_in1, data_in2) + 7. * data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.)
     check_fw(test_gemm, [data_in1, data_in2, data_in4], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2, data_in4])
     res_gemm = 4. * np.dot(data_in1_t, data_in2_t) + 7. * data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.,
                                    transpose_a=True, transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in2, data_in3], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2, data_in3])
     res_gemm = 4. * np.dot(data_in1_t, data_in1) + 7. * data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.,
                                    transpose_a=True)
     check_fw(test_gemm, [data_in1, data_in1, data_in3], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in1, data_in3])
     res_gemm = 4. * np.dot(data_in1, data_in1_t) + 7. * data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.,
                                    transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in1, data_in4], [res_gemm])
     if grad_check == 1:
@@ -3754,30 +3754,30 @@ def test_laop():
     c = rep_3x(data_in4, 2, 2)
     r = 4. * np.dot(data_in1, data_in2) + 7. * data_in4
     r = rep_3x(r, 2, 2)
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.)
     check_fw(test_gemm, [a, b, c], [r])
     if grad_check == 1:
         check_grad(test_gemm, [a, b, c])
 
     # Check gemm2 operator same way as gemm.
     res_gemm = 4. * np.dot(data_in1, data_in2)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4.)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4.)
     check_fw(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2])
     res_gemm = 4. * np.dot(data_in1_t, data_in2_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_a=True,
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., transpose_a=True,
                                     transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2])
     res_gemm = 4. * np.dot(data_in1_t, data_in1)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_a=True)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., transpose_a=True)
     check_fw(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in1])
     res_gemm = 4. * np.dot(data_in1, data_in1_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_b=True)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in1])
@@ -3786,7 +3786,7 @@ def test_laop():
     a = rep_3x(data_in1, 2, 3)
     b = rep_3x(data_in2, 3, 2)
     r = rep_3x(4. * np.dot(data_in1, data_in2), 2, 2)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4.)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4.)
     check_fw(test_gemm, [a, b], [r])
     if grad_check == 1:
         check_grad(test_gemm, [a, b])
@@ -3799,33 +3799,33 @@ def test_laop():
     # test potrf
     # Note: Have to symmetrize input, for gradient test to work
     res_potrf = np.sqrt(data_in)
-    test_potrf = mx.sym.linalg_potrf(data1)
+    test_potrf = mx.sym.linalg.potrf(data1)
     check_fw(test_potrf, [data_in], [res_potrf])
     if grad_check == 1:
         check_grad(test_potrf, [data_in])
     # test potri
     ones = mx.nd.ones(shape).asnumpy()
     res_potri = np.divide(ones, data_in * data_in)
-    test_potri = mx.sym.linalg_potri(data1)
+    test_potri = mx.sym.linalg.potri(data1)
     check_fw(test_potri, [data_in], [res_potri])
     if grad_check == 1:
         check_grad(test_potri, [data_in])
     # test trsm
     trian_in = data_in * 7.
-    test_trsm = mx.sym.linalg_trsm(data1, data2, alpha=7.)
+    test_trsm = mx.sym.linalg.trsm(data1, data2, alpha=7.)
     check_fw(test_trsm, [trian_in, data_in], [ones])
     if grad_check == 1:
         check_grad(test_trsm, [trian_in,data_in])
     # test trmm
     trian_in = np.divide(ones, trian_in)
-    test_trmm = mx.sym.linalg_trmm(data1, data2, alpha=7., transpose=True,
+    test_trmm = mx.sym.linalg.trmm(data1, data2, alpha=7., transpose=True,
                                    rightside=True)
     check_fw(test_trmm, [trian_in, data_in], [ones])
     if grad_check == 1:
         check_grad(test_trmm, [trian_in, data_in])
     # test sumlogdiag
     res_sumlogdiag = np.reshape(np.log(data_in), (4, 4))
-    test_sumlogdiag = mx.sym.linalg_sumlogdiag(data1)
+    test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
     check_fw(test_sumlogdiag, [data_in], [res_sumlogdiag])
     if grad_check == 1:
         check_grad(test_sumlogdiag, [data_in])
@@ -3850,7 +3850,7 @@ def test_laop():
     ident  = np.eye(4)
 
     # test potrf
-    test_potrf = mx.sym.linalg_potrf(_make_symm_symbol(data1, ndims=4))
+    test_potrf = mx.sym.linalg.potrf(_make_symm_symbol(data1, ndims=4))
     a = rep_3x(matrix, 4, 4)
     r = rep_3x(trian, 4, 4)
     check_fw(test_potrf, [a], [r])
@@ -3860,7 +3860,7 @@ def test_laop():
     #test potri
     data1_ltri = _make_lower_triangle_symm(
         data1, ndims=4, m=4, dtype=dtype)
-    test_potri = mx.sym.linalg_potri(data1_ltri)
+    test_potri = mx.sym.linalg.potri(data1_ltri)
     a = rep_3x(trian, 4, 4)
     r = rep_3x(inv, 4, 4)
     check_fw(test_potri, [a], [r])
@@ -3868,7 +3868,7 @@ def test_laop():
         check_grad(test_potri, [a])
 
     # test trsm
-    test_trsm = mx.sym.linalg_trsm(data1_ltri, data2, alpha=7.)
+    test_trsm = mx.sym.linalg.trsm(data1_ltri, data2, alpha=7.)
     a = rep_3x(trian, 4, 4)
     b = rep_3x(matrix, 4, 4)
     r = rep_3x(7. * np.transpose(trian), 4, 4)
@@ -3876,14 +3876,14 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_trsm, [a, b])
 
-    test_trsm2 = mx.sym.linalg_trsm(
+    test_trsm2 = mx.sym.linalg.trsm(
         data1_ltri, data2, alpha=-2., rightside=True, transpose=True)
     r = rep_3x(-2. * trian, 4, 4)
     check_fw(test_trsm2, [a, b], [r])
     if grad_check == 1:
         check_grad(test_trsm2, [a, b])
 
-    test_trsm3 = mx.sym.linalg_trsm(
+    test_trsm3 = mx.sym.linalg.trsm(
         data1_ltri, data2, alpha=0.5, transpose=True)
     b = rep_3x(np.transpose(trian), 4, 4)
     r = rep_3x(0.5 * ident, 4, 4)
@@ -3891,7 +3891,7 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_trsm3, [a, b])
 
-    test_trsm4 = mx.sym.linalg_trsm(
+    test_trsm4 = mx.sym.linalg.trsm(
         data1_ltri, data2, alpha=-0.5, rightside=True)
     b = rep_3x(trian, 4, 4)
     r = rep_3x(-0.5 * ident, 4, 4)
@@ -3900,7 +3900,7 @@ def test_laop():
         check_grad(test_trsm4, [a, b])
 
     # test trmm
-    test_trmm = mx.sym.linalg_trmm(
+    test_trmm = mx.sym.linalg.trmm(
         data1_ltri, data2, alpha=7., transpose=True, rightside=True)
     a = rep_3x(trian, 4, 4)
     b = rep_3x(matrix, 4, 4)
@@ -3909,19 +3909,19 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_trmm, [a, b])
 
-    test_trmm2 = mx.sym.linalg_trmm(data1_ltri, data2, alpha=-2.)
+    test_trmm2 = mx.sym.linalg.trmm(data1_ltri, data2, alpha=-2.)
     r = rep_3x(-2. * np.dot(trian, matrix), 4, 4)
     check_fw(test_trmm2, [a, b], [r])
     if grad_check == 1:
         check_grad(test_trmm2, [a, b])
 
-    test_trmm3 = mx.sym.linalg_trmm(data1_ltri, data2, rightside=True)
+    test_trmm3 = mx.sym.linalg.trmm(data1_ltri, data2, rightside=True)
     r = rep_3x(np.dot(matrix, trian), 4, 4)
     check_fw(test_trmm3, [a, b], [r])
     if grad_check == 1:
         check_grad(test_trmm3, [a, b])
 
-    test_trmm4 = mx.sym.linalg_trmm(
+    test_trmm4 = mx.sym.linalg.trmm(
         data1_ltri, data2, alpha=1.2, transpose=True)
     r = rep_3x(1.2 * np.dot(trian.T, matrix), 4, 4)
     check_fw(test_trmm4, [a, b], [r])
@@ -3936,26 +3936,34 @@ def test_laop():
         check_grad(test_sumlogdiag, [a])
 
 
-# Tests for new operators linalg_syrk, linalg_gelqf
+# Tests for operators linalg.syrk, linalg.gelqf
 
 def _gelqf_combined_symbol(a):
-    q, l = mx.sym.linalg_gelqf(a)
-    q_qt = mx.sym.linalg_syrk(q, transpose=False, alpha=1., name='Q_times_Qt')
-    l_q = mx.sym.linalg_trmm(l, q, alpha=1., name='L_times_Q')
+    q, l = mx.sym.linalg.gelqf(a)
+    q_qt = mx.sym.linalg.syrk(q, transpose=False, alpha=1., name='Q_times_Qt')
+    l_q = mx.sym.linalg.trmm(l, q, alpha=1., name='L_times_Q')
     return mx.sym.Group([q_qt, l_q])
 
 # NOTE: If we leave the unused output dangling, things break if dtype=np.float64. Namely, the
 # backward gradient for the unused output is of dtype np.float32 then.
 # ==> Very annoying!
 def _gelqf_first_output(a):
-    q, l = mx.sym.linalg_gelqf(a)
+    q, l = mx.sym.linalg.gelqf(a)
     bogus_scal = mx.sym.sum(mx.sym.BlockGrad(l), axis=(), keepdims=True) * 0.0
     return mx.sym.broadcast_add(q, bogus_scal)
 
 def _gelqf_second_output(a):
-    q, l = mx.sym.linalg_gelqf(a)
+    q, l = mx.sym.linalg.gelqf(a)
     bogus_scal = mx.sym.sum(mx.sym.BlockGrad(q), axis=(), keepdims=True) * 0.0
     return mx.sym.broadcast_add(l, bogus_scal)
+
+def _syevd_combined_symbol(a):
+    u, lam = mx.sym.linalg.syevd(a)
+    u_ut = mx.sym.linalg.syrk(u, transpose=False, alpha=1., name='U_times_Ut')
+    lam_u = mx.sym.broadcast_mul(mx.sym.reshape(lam, shape=(-2, 1)), u)
+    ut_lam_u = mx.sym.linalg.gemm2(u, lam_u, alpha=1., transpose_a=True,
+                                   transpose_b=False, name='Ut_L_U')
+    return mx.sym.Group([u_ut, ut_lam_u])
 
 def test_laop_2():
     np.random.seed(1896893923)
@@ -3979,18 +3987,18 @@ def test_laop_2():
     rep_3x = lambda a, m, n :\
         np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
 
-    # Tests for linalg_syrk
+    # Tests for linalg.syrk
     mnalpha_lst = [(2, 3, 1.), (5, 3, -2.), (1, 6, 5.), (3, 3, 0.5), (4, 1, 10.), (1, 1, 1.)]
     for m, n, alpha in mnalpha_lst:
-        #print('m={}, n={}, alpha={}'.format(m, n, alpha))
+        #print('syrk: m={}, n={}, alpha={}'.format(m, n, alpha))
         data_in1 = np.random.uniform(1, 10, (m, n))
         res_syrk1 = alpha * np.dot(data_in1, data_in1.T)
-        test_syrk1 = mx.sym.linalg_syrk(data1, transpose=False, alpha=alpha)
+        test_syrk1 = mx.sym.linalg.syrk(data1, transpose=False, alpha=alpha)
         check_fw(test_syrk1, [data_in1], [res_syrk1])
         if grad_check == 1:
             check_grad(test_syrk1, [data_in1])
         res_syrk2 = alpha * np.dot(data_in1.T, data_in1)
-        test_syrk2 = mx.sym.linalg_syrk(data1, transpose=True, alpha=alpha)
+        test_syrk2 = mx.sym.linalg.syrk(data1, transpose=True, alpha=alpha)
         check_fw(test_syrk2, [data_in1], [res_syrk2])
         if grad_check == 1:
             check_grad(test_syrk2, [data_in1])
@@ -4005,18 +4013,18 @@ def test_laop_2():
         if grad_check == 1:
             check_grad(test_syrk2, [a_batch])
 
-    # Tests for linalg_gelqf
+    # Tests for linalg.gelqf
     # Currently disabled on GPU as they need cuda8
     # and MxNet builds use cuda 7.5
-    if default_context() != mx.cpu():
+    if not (default_context() == mx.cpu()):
         return
- 
+
     test_gelqf2 = _gelqf_combined_symbol(data1)  # Outputs (dot(Q, Q.T), dot(L, Q))
     test_gelqf_q = _gelqf_first_output(data1)  # Output Q (L is not dangling)
     test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)
     mn_lst = [(4, 4), (1, 1), (5, 20), (1, 10), (15, 50)]
     for m, n in mn_lst:
-        #print('m={}, n={}'.format(m, n))
+        #print('gelqf: m={}, n={}'.format(m, n))
         data_in1 = np.random.normal(0., 10., (m, n))
         res_eye = np.eye(m)
         res_a = data_in1
@@ -4036,6 +4044,144 @@ def test_laop_2():
             check_grad(test_gelqf_q, [a_batch])
             # A => L
             check_grad(test_gelqf_l, [a_batch])
+
+
+# Tests for operator linalg.syevd
+
+def _syevd_first_output(a):
+    u, lam = mx.sym.linalg.syevd(a)
+    bogus_scal = mx.sym.sum(mx.sym.BlockGrad(lam), axis=(), keepdims=True) * 0.0
+    return mx.sym.broadcast_add(u, bogus_scal)
+
+def _syevd_second_output(a):
+    u, lam = mx.sym.linalg.syevd(a)
+    bogus_scal = mx.sym.sum(mx.sym.BlockGrad(u), axis=(), keepdims=True) * 0.0
+    return mx.sym.broadcast_add(lam, bogus_scal)
+
+def _syevd_forward(a):
+    lam, ut = np.linalg.eig(a)
+    ind = np.argsort(lam)
+    lam = lam[ind]
+    u = ut[:, ind].T
+    for i in range(0, a.shape[0]):
+        _syevd_forw_eigvec_sign(u[i])
+    return u, lam
+
+def _syevd_forw_eigvec_sign(v):
+    ind = np.argmax(np.abs(v))
+    if v[ind] < 0.:
+        v[:] = -v
+
+def _syevd_backward(grad_u, grad_l, u, l):
+    n = l.size
+    assert grad_l.size == n
+    assert grad_u.shape == (n, n)
+    assert u.shape == (n, n)
+    temp = np.dot(grad_u, u.T)
+    temp2 = np.diag(grad_l)
+    for i in range(1, n):
+        for j in range(0, i):
+            denom = 2. * (l[i] - l[j])
+            elem = (temp[i, j] - temp[j, i])/denom
+            temp2[i, j] = elem
+            temp2[j, i] = elem
+    temp3 = np.dot(u.T, temp2)
+    return np.dot(temp3, u)
+
+def test_laop_3():
+    # Operators implemented for CPU only currently
+    if not (default_context() == mx.cpu()):
+        return
+    np.random.seed(1896893923)
+    dtype = np.float64
+    rtol_fw = 1e-6
+    atol_fw = 1e-6
+    num_eps = 1e-4
+    rtol_bw = 1e-2
+    atol_bw = 1e-2
+    # enable numerical checking of gradients
+    grad_check = 1
+
+    data1 = mx.symbol.Variable('data1')
+
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+    rep_3x = lambda a, m, n :\
+        np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
+    check_bw = lambda sym, location, out_grads, expected :\
+        check_symbolic_backward(sym, location, out_grads, expected,
+                                rtol=rtol_fw, atol=atol_fw, dtype=dtype)
+
+    # Tests for linalg.syevd
+    test_syevd2 = _syevd_combined_symbol(data1)  # Outputs (U U^T, U^T (diag L) U)
+    data1_s2 = _make_symm_symbol(data1, ndims=2)
+    test_syevd_u_2 = _syevd_first_output(data1_s2)
+    test_syevd_l_2 = _syevd_second_output(data1_s2)
+    data1_s4 = _make_symm_symbol(data1, ndims=4)
+    test_syevd_u_4 = _syevd_first_output(data1_s4)
+    test_syevd_l_4 = _syevd_second_output(data1_s4)
+    n_lst = [4, 1, 2, 10, 14]
+    for n in n_lst:
+        #print('\n** syevd: n={}'.format(n))
+        data_in1 = np.random.normal(0., 10., (n, n))
+        data_in1 = 0.5 * (data_in1 + data_in1.T)
+        res_eye = np.eye(n)
+        res_a = data_in1
+        check_fw(test_syevd2, [data_in1], [res_eye, res_a])
+        # Check backward
+        grad_u = np.random.normal(0., 2., (n, n))
+        grad_l = np.random.normal(0., 2., (n,))
+        bw_u, bw_l = _syevd_forward(data_in1)
+        grad_a = _syevd_backward(grad_u, grad_l, bw_u, bw_l)
+        check_bw(mx.sym.linalg.syevd(data1), [data_in1], [grad_u, grad_l], [grad_a])
+        if grad_check == 1:
+            # A => U
+            check_grad(test_syevd_u_2, [data_in1])
+            # A => L
+            check_grad(test_syevd_l_2, [data_in1])
+        # Batch mode (3x the same thing)
+        a_batch = rep_3x(data_in1, n, n)
+        reye_batch = rep_3x(res_eye, n, n)
+        ra_batch = a_batch
+        check_fw(test_syevd2, [a_batch], [reye_batch, ra_batch])
+        if grad_check == 1:
+            # A => U
+            check_grad(test_syevd_u_4, [a_batch])
+            # A => L
+            check_grad(test_syevd_l_4, [a_batch])
+
+
+# Note: Currently, linalg.syevd is activated for float64 only, due to the issues
+# demonstrated by this unit test. For this reason, the second part of this test
+# (float32) is deactivated for now.
+def test_laop_4():
+    # Operators implemented for CPU only currently
+    if not(default_context() == mx.cpu()):
+        return
+    np.random.seed(1896893923)
+    rtol_fw = 1e-6
+    atol_fw = 1e-6
+
+    data1 = mx.symbol.Variable('data1')
+
+    check_fw = lambda sym, location, expected, dtype :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+
+    a_np = np.array([[1., 2.], [2., 4.]])
+    u_np = np.array([[0.89442718, -0.44721359], [0.44721359, 0.89442718]])
+    l_np = np.array([0., 5.])
+    test_syevd = mx.sym.linalg.syevd(data1)
+    # float64
+    #print('float64')
+    check_fw(test_syevd, [a_np], [u_np, l_np], np.float64)
+    # float32
+    #print('float32')
+    #check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
 
 def test_stack():
