@@ -31,6 +31,15 @@ function test_copy()
   @test reldiff(tensor, tensor2) < 1e-6
 end
 
+function test_deepcopy()
+  info("NDArray::deepcopy")
+
+  x = mx.zeros(2, 5)
+  y = deepcopy(x)
+  x[:] = 42
+  @test copy(x) != copy(y)
+end
+
 function test_assign()
   dims    = rand_dims()
   tensor  = rand(mx.MX_float, dims)
