@@ -253,8 +253,6 @@ struct Kernel<OP, cpu> {
     } else {
       #pragma omp parallel for num_threads(omp_cores - 1)
       for (int i = 0; i < N; ++i) {
-        const int nc = omp_get_num_threads();
-        CHECK_EQ(omp_cores - 1, nc);
         OP::Map(i, args...);
       }
     }
