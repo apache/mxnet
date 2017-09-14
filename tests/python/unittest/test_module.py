@@ -460,7 +460,7 @@ def test_executor_group():
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
 
-def test_factorization_machine_module(optimizer='sgd', num_epochs=None):
+def test_factorization_machine_module():
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
         print("check_factorization_machine_module( {} )".format(optimizer))
