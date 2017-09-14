@@ -25,8 +25,8 @@ import warnings
 import numpy
 from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
-from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update)
+from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update)
+from .ndarray import (mp_sgd_update, mp_sgd_mom_update)
 from .random import normal
 
 
