@@ -101,18 +101,19 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
                                   const std::vector<NDArray>& dst,
                                   const OpContext& ctx,
                                   bool storage_fallback = false) {
-  CHECK_GE(dst.size(), src.size());
-  if (src.size() == 0) return;
-  if (storage_fallback == false) {
-    storage_fallback = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK", true);
-  }
-  if (storage_fallback == false) {
-    LOG(FATAL) << "Storage type conversion detected during execution. "
-               << "You are probably executing an operator which "
-               << "doesn't support NDArray inputs with non-default storage.";
-  }
-  for (size_t i = 0; i < src.size(); i++) {
-    CastStorageDispatch<xpu>(ctx, src[i], dst[i]);
+  if (!src.empty()) {
+    if (!storage_fallback) {
+      storage_fallback = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK", true);
+    }
+    if (!storage_fallback) {
+      LOG(FATAL) << "Storage type conversion detected during execution. "
+                 << "You are probably executing an operator which "
+                 << "doesn't support NDArray inputs with non-default storage.";
+    }
+    CHECK_GE(dst.size(), src.size());
+    for (size_t i = 0; i < src.size(); i++) {
+      CastStorageDispatch<xpu>(ctx, src[i], dst[i]);
+    }
   }
 }
 

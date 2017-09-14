@@ -289,6 +289,23 @@ class BinaryScalarOp : public UnaryOp {
   .add_argument("data", "NDArray-or-Symbol", "source input")        \
   .add_argument("scalar", "float", "scalar input")
 
+#define MXNET_OPERATOR_REGISTER_BINARY_SCALAR_DR(name)              \
+  NNVM_REGISTER_OP(name)                                            \
+  .set_num_inputs(1)                                                \
+  .set_num_outputs(1)                                               \
+  .set_attr_parser([](NodeAttrs* attrs) {                           \
+      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
+    })                                                              \
+  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDenseOutput<1>) \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
+    [](const NodeAttrs& attrs){                                     \
+      return std::vector<std::pair<int, int> >{{0, 0}};             \
+    })                                                              \
+  .add_argument("data", "NDArray-or-Symbol", "source input")        \
+  .add_argument("scalar", "float", "scalar input")
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_

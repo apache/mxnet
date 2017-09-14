@@ -389,6 +389,17 @@ Example::
 
     clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
 
+The storage type of ``clip`` output depends on storage types of inputs and the a_min, a_max \
+parameter values:
+
+   - clip(default) = default
+   - clip(row_sparse, a_min <= 0, a_max >= 0) = row_sparse
+   - clip(csr, a_min <= 0, a_max >= 0) = csr
+   - clip(row_sparse, a_min < 0, a_max < 0) = default
+   - clip(row_sparse, a_min > 0, a_max > 0) = default
+   - clip(csr, a_min < 0, a_max < 0) = csr
+   - clip(csr, a_min > 0, a_max > 0) = csr
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -396,6 +407,27 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ClipEx<cpu>)
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const Context& ctx,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+    // For clipping ranges that cross zero, sparse output is possible
+    CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
+    int stype = kDefaultStorage;
+    const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
+    if(param.a_min <= 0.0 && param.a_max >= 0.0) {
+      for(size_t i = 0, n = in_attrs->size(); i < n; ++i) {
+        const int this_stype = (*in_attrs)[i];
+        if(this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
+          stype = this_stype;
+          break;
+        }
+      }
+    }
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, stype);
+    return true;
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(ClipParam::__FIELDS__());

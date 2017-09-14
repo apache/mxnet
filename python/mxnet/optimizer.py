@@ -26,7 +26,9 @@ import numpy
 from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update)
+                      mp_sgd_update, mp_sgd_mom_update, mp_sgd_update, mp_sgd_mom_update, square)
+from .ndarray import _internal
+from .ndarray import op
 from .random import normal
 
 
@@ -665,26 +667,46 @@ class AdaGrad(Optimizer):
     eps: float, optional
         Small value to avoid division by 0.
     """
-    def __init__(self, eps=1e-7, **kwargs):
+    def __init__(self, eps=1e-7, stype='default', **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
+        self.stype = stype
 
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context)  # history
+        return zeros(weight.shape, weight.context, stype=self.stype)  # history
 
     def update(self, index, weight, grad, state):
+        #print("ENTER ADAGRAD UPDATE")
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-
+        save_grad_stype = grad.stype
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
-        history[:] += (grad * grad)
-        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
+        save_history_stype = history.stype
+
+        is_sparse = True if weight.stype != 'default' or grad.stype != 'default' else False
+
+        if is_sparse:
+            history[:] = op.elemwise_add(history, op.square(grad))
+            assert history.stype == save_history_stype
+            srt = op.sqrt(history)
+            assert srt.stype == save_history_stype
+            div = _internal._scatter_elemwise_div(grad, srt)
+            assert div.stype == grad.stype
+        else:
+            history[:] += square(grad)
+            div = grad / sqrt(history + self.float_stable_eps)
+
+        weight[:] += (div + weight * wd) * -lr
+
+        assert weight.stype == save_grad_stype
+        #print("LEAVE ADAGRAD UPDATE")
+
 
 @register
 class RMSProp(Optimizer):

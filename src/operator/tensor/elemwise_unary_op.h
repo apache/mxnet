@@ -214,7 +214,7 @@ class UnaryOp : public OpBase {
     return false;
   }
 
- protected:
+ public:
   /*! \brief Map NDArray vectors to TBlob vectors and pass to compute function */
   template<typename xpu, typename FComputer>
   static inline void MapToFCompute(const nnvm::NodeAttrs &attrs,
@@ -235,7 +235,6 @@ class UnaryOp : public OpBase {
     }
   }
 
- public:
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,

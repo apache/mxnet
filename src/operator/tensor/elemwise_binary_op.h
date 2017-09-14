@@ -355,48 +355,7 @@ class ElemwiseBinaryOp : public OpBase {
                         const OpContext &ctx,
                         const std::vector<NDArray> &inputs,
                         const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(inputs.size(), 2);
-    CHECK_EQ(outputs.size(), 1);
-    if (req[0] != kNullOp) {
-      // If any input or output is dense, fallback to FCompute
-      if (!common::ContainsDefaultStorage(inputs)
-          && inputs[0].storage_type() == inputs[1].storage_type()) {
-        mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-        switch (inputs[0].storage_type()) {
-          case kRowSparseStorage:
-            MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-              MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-                RspRspOp<DType, IType, OP>(
-                  s, attrs, ctx, inputs[0], inputs[1],
-                  req[0], outputs[0],
-                  false, false, false);
-              });
-            });
-            break;
-          case kCSRStorage:
-            MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIdx), IType, {
-              MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIndPtr), CType, {
-                MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-                  CsrCsrOp<DType, IType, CType, OP>(
-                    s, attrs, ctx, inputs[0], inputs[1],
-                    req[0], outputs[0]);
-                });
-              });
-            });
-            break;
-          default:
-            CHECK(false) << "Unsupported storage type for ComputeEx" << inputs[0].storage_type();
-            break;
-        }
-      } else {
-        FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                             Compute<xpu, OP>, "ComputeEx");
-      }
-    }
-  }
+                        const std::vector<NDArray> &outputs);
 
   /*! \brief LaunchEx allowing dense lvalue and/or rvalue */
   template<typename xpu, typename OP, bool lhs_may_be_dense, bool rhs_may_be_dense>

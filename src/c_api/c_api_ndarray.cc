@@ -320,7 +320,7 @@ void PushFCompute(const FCompute& fn,
                   const std::vector<NDArray>& ndoutputs,
                   const std::vector<uint32_t>& mutate_idx) {
   using namespace common;
-  bool is_train = AutogradRuntime::Get()->IsTraining();
+  const bool is_train = AutogradRuntime::Get()->IsTraining();
   Engine::Get()->PushAsync(
     [ctx, attrs, fn, ndinputs, ndoutputs, requested, is_train, mutate_idx](
         RunContext rctx,

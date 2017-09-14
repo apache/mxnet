@@ -1785,13 +1785,22 @@ def add(lhs, rhs):
            [ 1.,  2.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
-    return _ufunc_helper(
-        lhs,
-        rhs,
-        op.broadcast_add,
-        operator.add,
-        _internal._plus_scalar,
-        None)
+    if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.elemwise_add,
+            operator.add,
+            _internal._plus_scalar,
+            None)
+    else:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.broadcast_add,
+            operator.add,
+            _internal._plus_scalar,
+            None)
     # pylint: enable= no-member, protected-access
 
 
@@ -1965,13 +1974,22 @@ def divide(lhs, rhs):
            [ 3.,  3.,  3.]], dtype=float32)
     """
     # pylint: disable= no-member, protected-access
-    return _ufunc_helper(
-        lhs,
-        rhs,
-        op.broadcast_div,
-        operator.truediv,
-        _internal._div_scalar,
-        _internal._rdiv_scalar)
+    if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.elemwise_div,
+            operator.truediv,
+            _internal._div_scalar,
+            _internal._rdiv_scalar)
+    else:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.broadcast_div,
+            operator.truediv,
+            _internal._div_scalar,
+            _internal._rdiv_scalar)
     # pylint: enable= no-member, protected-access
 
 

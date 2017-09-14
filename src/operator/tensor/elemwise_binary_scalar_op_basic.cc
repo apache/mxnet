@@ -26,13 +26,15 @@
 
 namespace mxnet {
 namespace op {
-MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_plus_scalar)
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR_DR(_plus_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::plus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
 .add_alias("_PlusScalar");
 
-MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_minus_scalar)
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR_DR(_minus_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::minus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::minus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
 .add_alias("_MinusScalar");
 
