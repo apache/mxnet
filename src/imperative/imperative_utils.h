@@ -28,8 +28,8 @@
 #include "../c_api/c_api_common.h"
 #include "../common/utils.h"
 
-#ifndef MXNET_IMPERATIVE_UTILS_H_
-#define MXNET_IMPERATIVE_UTILS_H_
+#ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
+#define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 
 namespace imperative {
 
@@ -646,4 +646,4 @@ inline void AllocateMemory(const nnvm::Graph& g,
 
 }  // namespace imperative
 
-#endif  // MXNET_IMPERATIVE_UTILS_H_
+#endif  // MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
