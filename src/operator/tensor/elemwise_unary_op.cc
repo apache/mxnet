@@ -52,7 +52,7 @@ The storage type of ``relu`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu, kernel_launch_op::relu_grad);
 
 // sigmoid
-MXNET_OPERATOR_REGISTER_UNARY_DR(sigmoid)
+MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
 MXNET_ADD_SPARSE_OP_ALIAS(sigmoid)
 .describe(R"code(Computes sigmoid of x element-wise.
 
