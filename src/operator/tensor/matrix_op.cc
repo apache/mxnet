@@ -416,10 +416,10 @@ parameter values:
     CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
     int stype = kDefaultStorage;
     const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
-    if(param.a_min <= 0.0 && param.a_max >= 0.0) {
-      for(size_t i = 0, n = in_attrs->size(); i < n; ++i) {
+    if (param.a_min <= 0.0 && param.a_max >= 0.0) {
+      for (size_t i = 0, n = in_attrs->size(); i < n; ++i) {
         const int this_stype = (*in_attrs)[i];
-        if(this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
+        if (this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
           stype = this_stype;
           break;
         }
