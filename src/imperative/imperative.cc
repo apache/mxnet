@@ -18,7 +18,7 @@
  */
 #include <unordered_set>
 #include <iostream>
-#include "./utils.h"
+#include "./imperative_utils.h"
 
 namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
