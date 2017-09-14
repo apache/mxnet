@@ -251,7 +251,7 @@ struct Kernel<OP, cpu> {
         OP::Map(i, args...);
       }
     } else {
-      #pragma omp parallel for num_threads(omp_cores - 1)
+      #pragma omp parallel for num_threads(omp_cores)
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
