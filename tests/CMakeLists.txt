@@ -29,7 +29,7 @@ if(GTEST_FOUND)
   include_directories(cpp/include)
 
   if (NOT PRIVATE_RUNTIME_DIR)
-   set(PRIVATE_RUNTIME_DIR CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+   set(PRIVATE_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   endif()
 
   add_executable(${PROJECT_NAME}_unit_tests ${UNIT_TEST_SOURCE})
