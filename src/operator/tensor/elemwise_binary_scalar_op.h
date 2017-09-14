@@ -281,7 +281,6 @@ class BinaryScalarOp : public UnaryOp {
     })                                                              \
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>) \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \

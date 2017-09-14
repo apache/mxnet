@@ -531,9 +531,15 @@ struct relu_grad {
   .add_alias("_sparse_" #__name$)
 
 /*! \brief Unary compute */
-#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(__name$, __xpu$, __kernel$)              \
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)              \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)       \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType2<1, true, true>)  \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
+  .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
+
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$)              \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType2<1, true, false>)  \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 

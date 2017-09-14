@@ -124,6 +124,16 @@ inline bool ContainsNonDefaultStorage(const StorageTypeVector& vstorage) {
   return false;
 }
 
+// Check if any storage type is not default storage
+// TODO doc
+inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
+                                const NDArrayStorageType stype) {
+  for (const auto& i : vstorage) {
+    if (i != stype) return false;
+  }
+  return true;
+}
+
 // Check if any NDArray in the list has default storage
 inline bool ContainsDefaultStorage(const std::vector<NDArray>& ndarrays) {
   for (const auto &nd : ndarrays) {

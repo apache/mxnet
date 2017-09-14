@@ -42,6 +42,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rminus_scalar)
 .add_alias("_RMinusScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_mul_scalar)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<
   cpu, mshadow::op::mul>)
@@ -50,6 +51,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_mul_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_backward_mul_scalar)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<
   cpu, mshadow::op::mul>);

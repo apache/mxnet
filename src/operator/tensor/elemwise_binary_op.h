@@ -49,42 +49,34 @@ inline bool ElemwiseBinaryStorageType(const nnvm::NodeAttrs& attrs,
   auto& lhs_stype = in_attrs->at(0);
   auto& rhs_stype = in_attrs->at(1);
   auto& out_stype = out_attrs->at(0);
-  bool fallback = true;
+  bool dispatched = false;
   if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    if (type_assign(&out_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
   } else if (lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage
              && out_stype == kDefaultStorage) {
-    // rsp, rsp -> default
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-    fallback = false;
+    // rsp, rsp -> dns
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   } else if (lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) {
     // rsp, rsp -> rsp
-    if (type_assign(&out_stype, kRowSparseStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   } else if ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
              (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
     // rsp, dns / dns, rsp -> dns
-    if (type_assign(&out_stype, kRowSparseStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
     // csr, csr -> csr
-    if (type_assign(&out_stype, kCSRStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   }
-  if (fallback) {
-    type_assign(&out_stype, kDefaultStorage);
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
-    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  if (!dispatched) {
+    dispatch_on_storage(&out_stype, kDefaultStorage,
+                        dispatch_type, kDispatchFComputeFallback);
+    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;
 }

@@ -253,6 +253,17 @@ inline bool type_assign(int *y, const int& x) {
   }
 #endif
 
+// TODO(haibin) doc
+inline bool dispatch_on_storage(int* stype, const NDArrayStorageType target_stype,
+                                int* dispatch, const DispatchType target_dispatch) {
+  if (type_assign(stype, target_stype)) {
+    TYPE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+    return true;
+  }
+  return false;
+}
+
+
 
 // make a new node with operator op_name. Inputs are not filled.
 inline nnvm::NodePtr MakeNode(
@@ -503,10 +514,24 @@ inline std::string OperatorInfoEx(const nnvm::NodeAttrs& attrs,
   return result;
 }
 
+inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
+                               const Context& ctx,
+                               const std::vector<int>* in_attrs,
+                               const std::vector<int>* out_attrs) {
+  using namespace op;
+  thread_local std::unordered_set<std::string> warning_printed;
+  // TODO(haibin) use env var for printing
+  std::string warning = OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+  if (warning_printed.find(warning) == warning_printed.end()) {
+    LOG(INFO) << "Storage fallback detected.\n" << warning;
+    warning_printed.insert(warning);
+  }
+}
+
 #define FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs)                  \
   {                                                                        \
     using namespace op;                                                    \
-    static std::unordered_set<std::string> warning_printed;                \
+    thread_local std::unordered_set<std::string> warning_printed;          \
     std::string warning = OperatorInfo(attrs, ctx, *in_attrs, *out_attrs); \
     if (warning_printed.find(warning) == warning_printed.end()) {          \
       LOG(INFO) << "Storage fallback detected.\n" << warning;              \
