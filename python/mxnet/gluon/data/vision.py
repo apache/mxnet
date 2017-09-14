@@ -30,15 +30,20 @@ from . import dataset
 from ..utils import download, check_sha1
 from ... import nd, image, recordio
 
+apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/'
 
 class _DownloadedDataset(dataset.Dataset):
     """Base class for MNIST, cifar10, etc."""
-    def __init__(self, root, train, transform):
+    def __init__(self, root, train, transform, repo_url):
         self._root = os.path.expanduser(root)
         self._train = train
         self._transform = transform
         self._data = None
         self._label = None
+
+        if repo_url[-1] != '/':
+            repo_url = repo_url+'/'
+        self._base_url = repo_url
 
         if not os.path.isdir(self._root):
             os.makedirs(self._root)
@@ -71,11 +76,12 @@ class MNIST(_DownloadedDataset):
         A user defined callback that transforms each instance. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
+
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'mnist' directory where dataset files are hosted.
     """
     def __init__(self, root='~/.mxnet/datasets/mnist', train=True,
-                 transform=None):
-        self._base_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com' \
-                         '/gluon/dataset/mnist/'
+                 transform=None, repo_url=apache_repo_url+'mnist/'):
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '6c95f4b05d2bf285e1bfb0e7960c31bd3b3f8a7d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -84,7 +90,7 @@ class MNIST(_DownloadedDataset):
                            'c3a25af1f52dad7f726cce8cacb138654b760d48')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '763e7fa3757d93b0cdec073cef058b2004252c17')
-        super(MNIST, self).__init__(root, train, transform)
+        super(MNIST, self).__init__(root, train, transform, repo_url)
 
     def _get_data(self):
         if self._train:
@@ -127,11 +133,12 @@ class FashionMNIST(MNIST):
         A user defined callback that transforms each instance. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
+
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'fashion-mnist' directory where dataset files are hosted.
     """
     def __init__(self, root='~/.mxnet/datasets/fashion-mnist', train=True,
-                 transform=None):
-        self._base_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com' \
-                         '/gluon/dataset/fashion-mnist/'
+                 transform=None, repo_url=apache_repo_url+'fashion-mnist/'):
         self._train_data = ('train-images-idx3-ubyte.gz',
                             '0cf37b0d40ed5169c6b3aba31069a9770ac9043d')
         self._train_label = ('train-labels-idx1-ubyte.gz',
@@ -140,7 +147,7 @@ class FashionMNIST(MNIST):
                            '626ed6a7c06dd17c0eec72fa3be1740f146a2863')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '17f9ab60e7257a1620f4ad76bbbaf857c3920701')
-        super(MNIST, self).__init__(root, train, transform) # pylint: disable=bad-super-call
+        super(MNIST, self).__init__(root, train, transform, repo_url) # pylint: disable=bad-super-call
 
 
 class CIFAR10(_DownloadedDataset):
@@ -158,16 +165,19 @@ class CIFAR10(_DownloadedDataset):
         A user defined callback that transforms each instance. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
+
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the directory where CIFAR10 dataset files are hosted.
     """
     def __init__(self, root='~/.mxnet/datasets/cifar10', train=True,
-                 transform=None):
+                 transform=None, repo_url='https://www.cs.toronto.edu/~kriz/'):
         self._file_hashes = {'data_batch_1.bin': 'aadd24acce27caa71bf4b10992e9e7b2d74c2540',
                              'data_batch_2.bin': 'c0ba65cce70568cd57b4e03e9ac8d2a5367c1795',
                              'data_batch_3.bin': '1dd00a74ab1d17a6e7d73e185b69dbf31242f295',
                              'data_batch_4.bin': 'aab85764eb3584312d3c7f65fd2fd016e36a258e',
                              'data_batch_5.bin': '26e2849e66a845b7f1e4614ae70f4889ae604628',
                              'test_batch.bin': '67eb016db431130d61cd03c7ad570b013799c88c'}
-        super(CIFAR10, self).__init__(root, train, transform)
+        super(CIFAR10, self).__init__(root, train, transform, repo_url)
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
@@ -181,8 +191,7 @@ class CIFAR10(_DownloadedDataset):
                       for name in self._file_hashes]
         if any(not os.path.exists(path) or not check_sha1(path, self._file_hashes[name])
                for name, path in file_paths):
-            url = 'https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
-            filename = download(url, self._root,
+            filename = download(self._base_url+'cifar-10-binary.tar.gz', self._root,
                                 sha1_hash='e8aa088b9774a44ad217101d2e2569f823d2d491')
 
             with tarfile.open(filename) as tar:

@@ -30,6 +30,7 @@ __all__ = ['ResNetV1', 'ResNetV2',
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
+from ...utils import _get_arg_dict
 
 # Helpers
 def _conv3x3(channels, stride, in_channels):
@@ -374,14 +375,21 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     block_type, layers, channels = resnet_spec[num_layers]
     resnet_class = resnet_net_versions[version-1]
     block_class = resnet_block_versions[version-1][block_type]
-    net = resnet_class(block_class, layers, channels, **kwargs)
+    net_args = _get_arg_dict(kwargs, ('classes', 'thumbnail', 'prefix', 'params'))
+    net = resnet_class(block_class, layers, channels, **net_args)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version)), ctx=ctx)
+        model_zoo_args = _get_arg_dict(kwargs, ('repo_url', 'local_dir'))
+        net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version),
+                                       **model_zoo_args), ctx=ctx)
     return net
 
 def resnet18_v1(**kwargs):
@@ -394,6 +402,10 @@ def resnet18_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 18, **kwargs)
 
@@ -407,6 +419,10 @@ def resnet34_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 34, **kwargs)
 
@@ -420,6 +436,10 @@ def resnet50_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 50, **kwargs)
 
@@ -433,6 +453,10 @@ def resnet101_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 101, **kwargs)
 
@@ -446,6 +470,10 @@ def resnet152_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 152, **kwargs)
 
@@ -459,6 +487,10 @@ def resnet18_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 18, **kwargs)
 
@@ -472,6 +504,10 @@ def resnet34_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 34, **kwargs)
 
@@ -485,6 +521,10 @@ def resnet50_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 50, **kwargs)
 
@@ -498,6 +538,10 @@ def resnet101_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 101, **kwargs)
 
@@ -511,5 +555,9 @@ def resnet152_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 152, **kwargs)

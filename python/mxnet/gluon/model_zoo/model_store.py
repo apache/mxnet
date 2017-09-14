@@ -50,15 +50,16 @@ _model_sha1 = {name: checksum for checksum, name in [
     ('f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'),
     ('9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn')]}
 
-_url_format = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com' \
-              '/gluon/models/{file_name}.zip'
+apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/'
+_url_format = '{repo_url}{file_name}.zip'
 
 def short_hash(name):
     if name not in _model_sha1:
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
+def get_model_file(name, repo_url=apache_repo_url,
+                   local_dir=os.path.expanduser('~/.mxnet/models/')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -68,6 +69,8 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
     ----------
     name : str
         Name of the model.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
 
@@ -92,7 +95,9 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
         os.makedirs(local_dir)
 
     zip_file_path = os.path.join(local_dir, file_name+'.zip')
-    download(_url_format.format(file_name=file_name),
+    if repo_url[-1] != '/':
+        repo_url = repo_url + '/'
+    download(_url_format.format(repo_url=repo_url, file_name=file_name),
              path=zip_file_path,
              overwrite=True)
     with zipfile.ZipFile(zip_file_path) as zf:

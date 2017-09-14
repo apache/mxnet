@@ -23,6 +23,7 @@ __all__ = ['AlexNet', 'alexnet']
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
+from ...utils import _get_arg_dict
 
 # Net
 class AlexNet(HybridBlock):
@@ -76,9 +77,15 @@ def alexnet(pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
-    net = AlexNet(**kwargs)
+    net_args = _get_arg_dict(kwargs, ('classes', 'prefix', 'params'))
+    net = AlexNet(**net_args)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('alexnet'), ctx=ctx)
+        model_zoo_args = _get_arg_dict(kwargs, ('repo_url', 'local_dir'))
+        net.load_params(get_model_file('alexnet', **model_zoo_args), ctx=ctx)
     return net

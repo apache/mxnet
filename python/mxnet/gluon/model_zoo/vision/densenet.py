@@ -23,6 +23,7 @@ __all__ = ['DenseNet', 'densenet121', 'densenet161', 'densenet169', 'densenet201
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
+from ...utils import _get_arg_dict
 from ..custom_layers import HybridConcurrent, Identity
 
 # Helpers
@@ -131,12 +132,18 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     num_init_features, growth_rate, block_config = densenet_spec[num_layers]
-    net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
+    net_args = _get_arg_dict(kwargs, ('bn_size', 'dropout', 'classes', 'prefix', 'params'))
+    net = DenseNet(num_init_features, growth_rate, block_config, **net_args)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('densenet%d'%(num_layers)), ctx=ctx)
+        model_zoo_args = _get_arg_dict(kwargs, ('repo_url', 'local_dir'))
+        net.load_params(get_model_file('densenet%d'%(num_layers), **model_zoo_args), ctx=ctx)
     return net
 
 def densenet121(**kwargs):
@@ -149,6 +156,10 @@ def densenet121(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(121, **kwargs)
 
@@ -162,6 +173,10 @@ def densenet161(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(161, **kwargs)
 
@@ -175,6 +190,10 @@ def densenet169(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(169, **kwargs)
 
@@ -188,5 +207,9 @@ def densenet201(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    repo_url : str, default to apache s3 accelerated mirror
+        URL to the 'models' directory where pretrained models are hosted.
+    local_dir : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(201, **kwargs)
