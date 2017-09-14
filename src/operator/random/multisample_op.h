@@ -145,7 +145,6 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
   using namespace mxnet_op;
-  const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& in0 = inputs[0];
   const TBlob& in1 = (inputs.size() == 1 ? inputs[0] : inputs[1]);

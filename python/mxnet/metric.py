@@ -390,13 +390,13 @@ class Accuracy(EvalMetric):
         for label, pred_label in zip(labels, preds):
             if pred_label.shape != label.shape:
                 pred_label = ndarray.argmax(pred_label, axis=self.axis)
-            pred_label = pred_label.asnumpy().astype('int32')
-            label = label.asnumpy().astype('int32')
+            label = label.astype('int32')
+            pred_label = pred_label.astype('int32').as_in_context(label.context)
 
             check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label.flat == label.flat).sum()
-            self.num_inst += len(pred_label.flat)
+            self.sum_metric += ndarray.sum(label == pred_label).asscalar()
+            self.num_inst += label.size
 
 
 @register
@@ -886,7 +886,7 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-8, name='cross-entropy',
+    def __init__(self, eps=1e-12, name='cross-entropy',
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, eps=eps,

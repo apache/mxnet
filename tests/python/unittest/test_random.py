@@ -27,7 +27,7 @@ def check_with_device(device, dtype):
     symbols = [
         {
             'name': 'normal',
-            'symbol': mx.sym.random_normal,
+            'symbol': mx.sym.random.normal,
             'multisymbol': mx.sym.sample_normal,
             'ndop': mx.random.normal,
             'params': { 'loc': 10.0, 'scale': 0.5 },
@@ -39,7 +39,7 @@ def check_with_device(device, dtype):
         },
         {
             'name': 'uniform',
-            'symbol': mx.sym.random_uniform,
+            'symbol': mx.sym.random.uniform,
             'multisymbol': mx.sym.sample_uniform,
             'ndop': mx.random.uniform,
             'params': { 'low': -1.5, 'high': 3.0 },
@@ -54,7 +54,7 @@ def check_with_device(device, dtype):
         symbols.extend([
             {
                 'name': 'gamma',
-                'symbol': mx.sym.random_gamma,
+                'symbol': mx.sym.random.gamma,
                 'multisymbol': mx.sym.sample_gamma,
                 'ndop': mx.random.gamma,
                 'params': { 'alpha': 9.0, 'beta': 0.5 },
@@ -66,7 +66,7 @@ def check_with_device(device, dtype):
             },
             {
                 'name': 'exponential',
-                'symbol': mx.sym.random_exponential,
+                'symbol': mx.sym.random.exponential,
                 'multisymbol': mx.sym.sample_exponential,
                 'ndop': mx.random.exponential,
                 'params': { 'lam': 4.0 },
@@ -78,7 +78,7 @@ def check_with_device(device, dtype):
             },
             {
                 'name': 'poisson',
-                'symbol': mx.sym.random_poisson,
+                'symbol': mx.sym.random.poisson,
                 'ndop': mx.random.poisson,
                 'multisymbol': mx.sym.sample_poisson,
                 'params': { 'lam': 4.0 },
@@ -90,7 +90,7 @@ def check_with_device(device, dtype):
             },
             {
                 'name': 'neg-binomial',
-                'symbol': mx.sym.random_negative_binomial,
+                'symbol': mx.sym.random.negative_binomial,
                 'multisymbol': mx.sym.sample_negative_binomial,
                 'ndop': mx.random.negative_binomial,
                 'params': { 'k': 3, 'p': 0.4 },
@@ -102,7 +102,7 @@ def check_with_device(device, dtype):
             },
             {
                 'name': 'gen-neg-binomial',
-                'symbol': mx.sym.random_generalized_negative_binomial,
+                'symbol': mx.sym.random.generalized_negative_binomial,
                 'multisymbol': mx.sym.sample_generalized_negative_binomial,
                 'ndop': mx.random.generalized_negative_binomial,
                 'params': { 'mu': 2.0, 'alpha': 0.3 },

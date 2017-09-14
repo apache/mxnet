@@ -24,8 +24,8 @@ import ctypes
 import functools
 from ..base import _LIB, check_call, string_types
 from ..base import mx_uint, NDArrayHandle, c_array
-from ..ndarray import NDArray, zeros_like
-from ..symbol import _GRAD_REQ_MAP
+# pylint: disable= unused-import
+from ..ndarray import NDArray, zeros_like, _GRAD_REQ_MAP
 
 
 def set_is_training(is_train):
