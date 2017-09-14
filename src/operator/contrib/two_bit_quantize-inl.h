@@ -67,8 +67,8 @@ inline bool Create2BitArrayShape(const nnvm::NodeAttrs& attrs,
   CHECK(!shape_is_none(in_attrs->at(0)));
   // output
   int shape = in_attrs->at(0).Size() % 16 == 0 ?
-                    in_attrs->at(0).Size() / 16 + 2:
-                    in_attrs->at(0).Size() / 16 + 3;
+                    in_attrs->at(0).Size() / 16 + 3:
+                    in_attrs->at(0).Size() / 16 + 4;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape{shape});
   return true;
 }
@@ -91,10 +91,13 @@ struct init_threshold_2bit {
   MSHADOW_XINLINE static void Map(int i,
                                   float *out,
                                   const float *neg_threshold,
-                                  const float *pos_threshold) {
+                                  const float *pos_threshold,
+                                  int size) {
     // The first two elments in output is threshold
+    // The third element is the original size of the array
     out[0] = *neg_threshold;
     out[1] = *pos_threshold;
+    out[2] = (float)size;
   }
 };
 
@@ -166,14 +169,15 @@ void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs)
   // First, init the memory of output to 0x00000000
   Kernel<init_mem_2bit, xpu>::Launch(s, inputs[4].Size(),
                               inputs[4].dptr<float>());  // compressed array
-  // Then, init threshold
+  // Then, init threshold and original size
   Kernel<init_threshold_2bit, xpu>::Launch(s, 1,
                               inputs[4].dptr<float>(),   // compressed array
                               inputs[2].dptr<float>(),   // negative threshold
-                              inputs[3].dptr<float>());  // positive threshold
+                              inputs[3].dptr<float>(),   // positive threshold
+                              inputs[0].Size());         // original size
   // Finally, compress the data and calculate new residual
   Kernel<quantize_2bit, xpu>::Launch(s, inputs[0].Size(),
-                          inputs[4].dptr<float>()+2,   // compressed array
+                          inputs[4].dptr<float>()+3,   // compressed array
                           inputs[0].dptr<float>(),     // input array
                           inputs[1].dptr<float>(),     // residual array
                           inputs[2].dptr<float>(),     // negative threshold
@@ -207,8 +211,8 @@ inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
   CHECK(shape_is_scalar(in_attrs->at(2)));
   CHECK(shape_is_scalar(in_attrs->at(3)));
   int shape = in_attrs->at(0).Size() % 16 == 0 ?
-                    in_attrs->at(0).Size() / 16 + 2:
-                    in_attrs->at(0).Size() / 16 + 3;
+                    in_attrs->at(0).Size() / 16 + 3:
+                    in_attrs->at(0).Size() / 16 + 4;
   CHECK_EQ(in_attrs->at(4).Size(), shape)
     << "The size of output array is not equal to "
     << "the size of compressed array";
@@ -313,7 +317,7 @@ void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& input
   // For now, this method can only decompress the float data
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
                               inputs[1].dptr<float>(),       // out array
-                              inputs[0].dptr<float>()+2,     // compressed array
+                              inputs[0].dptr<float>()+3,     // compressed array
                               inputs[0].dptr<float>(),     // negative threshold
                               inputs[0].dptr<float>()+1);  // positve threshold
 }
