@@ -526,18 +526,6 @@ struct relu_grad {
     })                                                              \
   .add_argument("data", "NDArray-or-Symbol", "The input array.")
 
-#define MXNET_OPERATOR_REGISTER_UNARY_DR(__name$)                   \
-  NNVM_REGISTER_OP(__name$)                                         \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "The input array.")
-
 /*! \brief Register scalar op name as an alias */
 #define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
   .add_alias("_sparse_" #__name$)
@@ -550,8 +538,8 @@ struct relu_grad {
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
 /*! \brief Unary compute, dense result */
-#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)           \
-  MXNET_OPERATOR_REGISTER_UNARY_DR(__name$)                                                \
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
 
 }  // namespace op

@@ -256,8 +256,7 @@ The storage type of ``negative`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
 
 // reciprocal
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(reciprocal, cpu, mshadow_op::reciprocal)
-MXNET_ADD_SPARSE_OP_ALIAS(reciprocal)
+MXNET_OPERATOR_REGISTER_UNARY(reciprocal)
 .describe(R"code(Returns the reciprocal of the argument, element-wise.
 
 Calculates 1/x.
@@ -266,9 +265,8 @@ Example::
 
     reciprocal([-2, 1, 3, 1.6, 0.2]) = [-0.5, 1.0, 0.33333334, 0.625, 5.0]
 
-The storage type of ``reciprocal`` output is always dense
-
 )code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::reciprocal>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_reciprocal"});
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
