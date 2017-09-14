@@ -20,6 +20,9 @@
 #include <mxnet/executor.h>
 #include <mxnet/imperative.h>
 #include <nnvm/pass_functions.h>
+#include <utility>
+#include <algorithm>
+#include <vector>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
 #include "../c_api/c_api_common.h"
@@ -643,4 +646,4 @@ inline void AllocateMemory(const nnvm::Graph& g,
 
 }  // namespace imperative
 
-# endif  // MXNET_IMPERATIVE_UTILS_H_
+#endif  // MXNET_IMPERATIVE_UTILS_H_
