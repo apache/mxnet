@@ -535,8 +535,8 @@ class CommDevice : public Comm {
           // recv buffer and send buffer
           int bits = compress_ == "2bit" ? 16 : 32;
           long int small_size = buf.merged.shape().Size() % bits == 0 ?
-                                 buf.merged.shape().Size() / bits + 2 :
-                                 buf.merged.shape().Size() / bits + 3;
+                                 buf.merged.shape().Size() / bits + 3 :
+                                 buf.merged.shape().Size() / bits + 4;
           buf.small_recv_buf[i] = NDArray(
             TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
           buf.small_send_buf[i] = NDArray(
