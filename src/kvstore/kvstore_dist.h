@@ -147,8 +147,11 @@ class KVStoreDist : public KVStoreLocal {
       for (const auto& v : values) {
         v.WaitToWrite();
       }
+      // wait for rank 0
+      Barrier();
     } else {
-      // do nothing
+      // wait for rank 0
+      Barrier();
     }
     if (!ps::Postoffice::Get()->is_recovery()) {
       Barrier();
