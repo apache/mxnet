@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_IMPERATIVE_RUNTIME_H_
-#define MXNET_IMPERATIVE_RUNTIME_H_
+#ifndef MXNET_IMPERATIVE_H_
+#define MXNET_IMPERATIVE_H_
 
 #include <mxnet/op_attr_types.h>
 #include <mxnet/c_api.h>
@@ -211,4 +211,4 @@ class Imperative {
 using CachedOpPtr = std::shared_ptr<Imperative::CachedOp>;
 
 }  // namespace mxnet
-#endif  // MXNET_IMPERATIVE_RUNTIME_H_
+#endif  // MXNET_IMPERATIVE_H_
