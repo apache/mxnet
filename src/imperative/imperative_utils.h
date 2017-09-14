@@ -31,6 +31,7 @@
 #ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 #define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 
+namespace mxnet {
 namespace imperative {
 
 struct MemoryPlanInfo {
@@ -645,5 +646,6 @@ inline void AllocateMemory(const nnvm::Graph& g,
 }
 
 }  // namespace imperative
+}  // namespace mxnet
 
 #endif  // MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
