@@ -53,13 +53,9 @@ class LibraryInitializer {
  public:
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
-<<<<<<< HEAD
 #if MXNET_USE_SIGNAL_HANDLER
     signal(SIGSEGV, segfault_logger);
 #endif
-=======
-    signal(SIGSEGV, segfault_logger);
->>>>>>> prioritize delete operation
 #if MXNET_USE_PROFILER
     // ensure profiler's constructor are called before atexit.
     engine::Profiler::Get();
