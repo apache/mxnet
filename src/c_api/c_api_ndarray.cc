@@ -34,6 +34,7 @@
 #include "./c_api_common.h"
 #include "../common/utils.h"
 #include "../ndarray/autograd.h"
+#include "../executor/exec_pass.h"
 
 using namespace mxnet;
 using mxnet::autograd::AutogradRuntime;
@@ -157,7 +158,7 @@ void SetShapeType(const nnvm::Op* op,
                   const Context& ctx,
                   const std::vector<NDArray>& ndinputs,
                   std::vector<NDArray>* p_ndoutputs,
-                  int* dispatch_stype) {
+                  int* dispatch_type) {
   std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
@@ -214,19 +215,18 @@ void SetShapeType(const nnvm::Op* op,
     out_storage_types.push_back(i.storage_type());
   }
   if (inferstorage.count(op)) {
-    CHECK(inferstorage[op](attrs, ctx, &in_storage_types, &out_storage_types));
-    CHECK_EQ(out_storage_types.size(), ndoutputs.size());
+    CHECK(inferstorage[op](attrs, ctx, dispatch_type, &in_storage_types, &out_storage_types));
+  } else {
+    CHECK(exec::DefaultStorageType(attrs, ctx, dispatch_type,
+                                   &in_storage_types, &out_storage_types));
   }
+  CHECK_EQ(out_storage_types.size(), ndoutputs.size());
+  CHECK_NE(*dispatch_type, kDispatchUndefined);
 
-  bool contains_non_default = common::ContainsNonDefaultStorage(in_storage_types);
-  contains_non_default |= common::ContainsNonDefaultStorage(out_storage_types);
-  int kNonDefaultStorage = -2;
-  *dispatch_stype = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
   for (size_t i = 0; i < ndoutputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (ndoutputs[i].is_none()) {
-      // if failed to infer the storage type, assume the output storage is dense
-      if (storage_type == kDefaultStorage || out_storage_types[i] == kUndefinedStorage) {
+      if (storage_type == kDefaultStorage) {
         ndoutputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
       } else {
         ndoutputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
@@ -252,7 +252,8 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
                    const nnvm::NodeAttrs& attrs,
                    const Context& ctx,
                    const std::vector<NDArray>& ndinputs,
-                   const std::vector<NDArray>& ndoutputs) {
+                   const std::vector<NDArray>& ndoutputs,
+                   const int dispatch_type) {
   static auto& mutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& tmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
 
@@ -263,7 +264,12 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
 
   if (tmp_resource.count(op)) {
     int ntmp = 0;
-    for (const auto& req : tmp_resource[op](attrs)) {
+    auto requests = tmp_resource[op](attrs);
+    // extra resource request for storage fallback
+    if (dispatch_type == kDispatchFComputeFallback) {
+      requests.push_back(ResourceRequest::kTempSpace);
+    }
+    for (const auto& req : requests) {
       switch (req.type) {
        case ResourceRequest::kTempSpace:
         ++ntmp;
@@ -508,19 +514,19 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   } else {
     // TODO(piiswrong): infer ctx
     Context ctx;
-    int stype;
+    int dispatch_type = -1;
     SetContext(&ctx, attrs, ndinputs, ndoutputs, default_ctx);
-    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs, &stype);
+    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs, &dispatch_type);
 
     std::vector<engine::VarHandle> read_vars, write_vars;
     std::vector<Resource> requested;
     std::vector<uint32_t> mutate_idx;
     SetDependency(&read_vars, &write_vars, &requested, &mutate_idx,
-        op, attrs, ctx, ndinputs, ndoutputs);
+        op, attrs, ctx, ndinputs, ndoutputs, dispatch_type);
 
     FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
     FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
-    if (fn_ex && stype != kDefaultStorage) {
+    if (fn_ex && dispatch_type == kDispatchFComputeEx) {
       PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
       if (AutogradRuntime::Get()->IsRecording()) {

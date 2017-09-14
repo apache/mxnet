@@ -42,6 +42,7 @@ The storage type of ``relu`` output depends upon the input storage type:
    - relu(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
   cpu, kernel_launch_op::relu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::KernelComputeEx<
@@ -71,6 +72,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid, kernel_launch_
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")
 .add_alias("identity")
+.set_attr<FInferStorageType>("FInferStorageType", CopyStorageType)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
@@ -87,9 +89,9 @@ NNVM_REGISTER_OP(_backward_copy)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
+.set_attr<FInferStorageType>("FInferStorageType", CopyStorageType)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
@@ -182,20 +184,7 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeFirstItemsEx<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
-                                                     const Context& ctx,
-                                                     std::vector<int> *in_attrs,
-                                                     std::vector<int> *out_attrs) {
-  // TODO(junwu): add ctx info into storage inference logic
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(2)) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(1)) << " in operator " << attrs.name;
-  auto &in = *in_attrs;
-  auto &out = *out_attrs;
-  CHECK_NE(in[1], kUndefinedStorage) << "rhs storage type must be known";
-  if (in[0] == kUndefinedStorage) in[0] = in[1];
-  if (out[0] == kUndefinedStorage) out[0] = in[1];
-  return true;
-})
+.set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {

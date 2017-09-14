@@ -35,13 +35,28 @@ namespace mxnet {
  * \code
  *  Graph g = ApplyPass(src_graph, "InferStorageType");
  *  const StorageVector& stypes = g.GetAttr<StorageTypeVector>("storage_type");
- *  // get shape by entry id
+ *  // get storage type by entry id
  *  int entry_type = stypes[g.indexed_graph().entry_id(my_entry)];
  * \endcode
  *
  * \sa FInferStorageType
  */
 using StorageTypeVector = std::vector<int>;
+
+/*!
++ * \brief The result holder of dispatch type of each Node in the graph.
++ * \note Stored under graph.attrs["dispatch_type"], provided by Pass "InferStorageType"
++ *
++ * \code
++ *  Graph g = ApplyPass(src_graph, "InferStorageType");
++ *  const DispatchTypeVector& dispatch_types = g.GetAttr<DispatchTypeVector>("dispatch_type");
++ *  // get dispatch type by entry node id
++ *  int node_type = dispatch_types[nid];
++ * \endcode
++ *
++ * \sa FInferStorageType
++ */
+using DispatchTypeVector = std::vector<int>;
 
 }  // namespace mxnet
 

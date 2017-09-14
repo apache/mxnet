@@ -103,24 +103,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
    - otherwise, ``elemwise_mul`` generates output with default storage
 
 )code")
-.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs &attrs,
-                                                     const Context &ctx,
-                                                     std::vector<int> *in_attrs,
-                                                     std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
-  NDArrayStorageType stype = kDefaultStorage;
-  for (size_t i = 0; i < 2U; ++i) {
-    const NDArrayStorageType in_stype = static_cast<NDArrayStorageType>((*in_attrs)[i]);
-    if (in_stype != kDefaultStorage) {
-      if (stype == kDefaultStorage) {
-        stype = in_stype;
-      }
-    }
-  }
-  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, stype);
-  return true;
-})
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseMulStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::ComputeExDenseLRValue<cpu, mshadow::op::mul, true, true>)

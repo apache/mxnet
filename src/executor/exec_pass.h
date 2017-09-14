@@ -171,6 +171,12 @@ Graph InferStorageType(Graph graph,
                        StorageTypeVector storage_type_inputs,
                        const std::string& storage_type_attr_key = "");
 
+bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                        const Context& ctx,
+                        int* dispatch_type,
+                        std::vector<int> *iattr,
+                        std::vector<int> *oattr);
+
 }  // namespace exec
 }  // namespace mxnet
 

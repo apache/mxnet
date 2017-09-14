@@ -102,6 +102,16 @@ enum class ExecType {
   kCrossDeviceCopy
 };
 
+enum DispatchType {
+  kDispatchUndefined = -1,
+  // dispatch on FCompute or FStatefulCompute
+  kDispatchFCompute,
+  // dispatch on FComputeEx or FStatefulComputeEx
+  kDispatchFComputeEx,
+  // dispatch on FCompute or FStatefulCompute, and performs fallback
+  kDispatchFComputeFallback,
+};
+
 /*!
  * \brief Operator state. This is a pointer type, its content is mutable
  *  even if OpStatePtr is const.
@@ -239,6 +249,7 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
 
 using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               const Context& ctx,
+                                              int* dispatch_type,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
 

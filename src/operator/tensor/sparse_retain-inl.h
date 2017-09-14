@@ -71,27 +71,49 @@ inline bool SparseRetainOpType(const nnvm::NodeAttrs& attrs,
 
 inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                 const Context& ctx,
+                                                int* dispatch_type,
                                                 std::vector<int> *in_attrs,
                                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  type_assign(&(in_attrs->at(sr::kArr)), kRowSparseStorage);
-  type_assign(&(in_attrs->at(sr::kIdx)), kDefaultStorage);
-  type_assign(&(out_attrs->at(sr::kOut)), kRowSparseStorage);
+  bool fallback = true;
+  auto &arr_stype = in_attrs->at(sr::kArr);
+  auto &idx_stype = in_attrs->at(sr::kIdx);
+  auto &out_stype = out_attrs->at(sr::kOut);
+  if (arr_stype == kRowSparseStorage && idx_stype == kDefaultStorage) {
+    if (type_assign(&out_stype, kRowSparseStorage)) {
+      type_assign(dispatch_type, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+  }
   return true;
 }
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  const Context& ctx,
+                                                 int* dispatch_type,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 2U);
-
-  type_assign(&(in_attrs->at(sr::kOut)), kDefaultStorage);
-  type_assign(&(in_attrs->at(sr::kIdx)), kDefaultStorage);
-  type_assign(&(out_attrs->at(sr::kArr)), kRowSparseStorage);
-  type_assign(&(out_attrs->at(sr::kIdx)), kDefaultStorage);
+  bool fallback = true;
+  auto &ograd_stype = in_attrs->at(sr::kOut);
+  auto &idx_stype = in_attrs->at(sr::kArr);
+  auto &arr_grad_stype = out_attrs->at(sr::kArr);
+  auto &idx_grad_stype = out_attrs->at(sr::kIdx);
+  if (ograd_stype == kDefaultStorage && idx_stype == kDefaultStorage) {
+    if (type_assign(&arr_grad_stype, kRowSparseStorage) &&
+        type_assign(&idx_grad_stype, kDefaultStorage)) {
+      type_assign(dispatch_type, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+  }
   return true;
 }
 

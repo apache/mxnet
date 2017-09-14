@@ -131,6 +131,35 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename ParamType>
+inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
+                            const Context& ctx,
+                            int *dispatch_type,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  auto &out_stype = out_attrs->at(0);
+  bool fallback = true;
+  type_assign(&out_stype, kDefaultStorage);
+  if (out_stype == kDefaultStorage) {
+    // dns
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
+    fallback = false;
+  } else if (out_stype == kRowSparseStorage || out_stype == kCSRStorage) {
+    // rsp / csr
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+    fallback = false;
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
@@ -227,8 +256,7 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
     NDArray nd(outputs[0]);
     FillZerosCsrImpl<xpu>(s, &nd);
   } else {
-    // no fallback is required since the output doesn't depend on input
-    LOG(FATAL) << "storage type " << stype << " not implemented.";
+    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
   }
 }
 

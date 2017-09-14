@@ -232,6 +232,35 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
   }
 };
 
+template<typename ParamType>
+inline bool SampleStorageType(const nnvm::NodeAttrs& attrs,
+                              const Context& ctx,
+                              int *dispatch_type,
+                              std::vector<int> *in_attrs,
+                              std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  auto &out_stype = out_attrs->at(0);
+  bool fallback = true;
+  type_assign(&out_stype, kDefaultStorage);
+  if (out_stype == kDefaultStorage) {
+    // dns
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
+    fallback = false;
+  } else if (out_stype == kRowSparseStorage) {
+    // rsp
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+    fallback = false;
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 using FSampleCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                            const OpContext& ctx,
                                            const OpReqType& req,

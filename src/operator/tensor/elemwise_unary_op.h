@@ -34,6 +34,68 @@
 namespace mxnet {
 namespace op {
 
+inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
+                            const Context& ctx,
+                            int* dispatch_type,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  CHECK_NE(in_stype, kUndefinedStorage);
+  type_assign(&out_stype, in_stype);
+  if (in_stype == kDefaultStorage && out_stype == kDefaultStorage) {
+    type_assign(dispatch_type, kDispatchFCompute);
+    fallback = false;
+  } else if ((in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
+             (in_stype == out_stype)) {
+    type_assign(dispatch_type, kDispatchFComputeEx);
+    fallback = false;
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    type_assign(dispatch_type, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
+                                           const Context& ctx,
+                                           int* dispatch_type,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+  // TODO(junwu): add ctx info into storage inference logic
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& lhs_stype = in_attrs->at(0);
+  auto& rhs_stype = in_attrs->at(1);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  CHECK_NE(rhs_stype, kUndefinedStorage);
+  CHECK(type_assign(&out_stype, rhs_stype)) << "Failed to assign output stype like rhs";
+  type_assign(&lhs_stype, rhs_stype);
+  if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
+      out_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    type_assign(dispatch_type, kDispatchFCompute);
+    fallback = false;
+  } else if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
+             (lhs_stype == out_stype)) {
+    type_assign(dispatch_type, kDispatchFComputeEx);
+    fallback = false;
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    type_assign(dispatch_type, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+
 class OpBase {
  protected:
   template<int req>
@@ -458,7 +520,6 @@ struct relu_grad {
   .set_num_outputs(1)                                               \
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>) \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
@@ -484,6 +545,7 @@ struct relu_grad {
 /*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(__name$, __xpu$, __kernel$)              \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)       \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 

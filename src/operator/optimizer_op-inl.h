@@ -64,6 +64,38 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
   }
 };
 
+inline bool SGDUpdateStorageType(const nnvm::NodeAttrs& attrs,
+                                 const Context& ctx,
+                                 int* dispatch_type,
+                                 std::vector<int> *in_attrs,
+                                 std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& weight_stype = in_attrs->at(0);
+  auto& grad_stype = in_attrs->at(1);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  if (weight_stype == kDefaultStorage && grad_stype == kDefaultStorage) {
+    if (type_assign(&out_stype, kDefaultStorage)) {
+      type_assign(dispatch_type, kDispatchFCompute);
+      fallback = false;
+    }
+  } else if (weight_stype == kRowSparseStorage &&
+             (grad_stype == kRowSparseStorage || grad_stype == kDefaultStorage)) {
+    // rsp, rsp/dns -> rsp
+    if (type_assign(&out_stype, kRowSparseStorage)) {
+      type_assign(dispatch_type, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    type_assign(dispatch_type, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 struct SGDKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* weight_data,
@@ -260,7 +292,7 @@ inline void SGDUpdateEx(const nnvm::NodeAttrs& attrs,
     NDArray out = outputs[0];
     SGDUpdateRspDnsImpl<xpu>(param, ctx, inputs[0], inputs[1].data(), req[0], &out);
   } else {
-    FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, SGDUpdate<xpu>, "SGDUpdate");
+    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -291,6 +323,41 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
   }
 };
+
+inline bool SGDMomUpdateStorageType(const nnvm::NodeAttrs& attrs,
+                                    const Context& ctx,
+                                    int* dispatch_type,
+                                    std::vector<int> *in_attrs,
+                                    std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& weight_stype = in_attrs->at(0);
+  auto& grad_stype = in_attrs->at(1);
+  auto& mom_stype = in_attrs->at(2);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  if (weight_stype == kDefaultStorage && grad_stype == kDefaultStorage &&
+      mom_stype == kDefaultStorage) {
+    if (type_assign(&out_stype, kDefaultStorage)) {
+      type_assign(dispatch_type, kDispatchFCompute);
+      fallback = false;
+    }
+  } else if (weight_stype == kRowSparseStorage && mom_stype == kRowSparseStorage &&
+             (grad_stype == kRowSparseStorage || grad_stype == kDefaultStorage)) {
+    // rsp, rsp/dns, rsp -> rsp
+    if (type_assign(&out_stype, kRowSparseStorage)) {
+      type_assign(dispatch_type, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    type_assign(dispatch_type, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 
 struct SGDMomKernel {
   template<typename DType>
@@ -621,9 +688,7 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
      NDArray out = outputs[0];
      SGDMomUpdateRspDnsImpl<xpu>(param, ctx, weight, grad.data(), mom, req[0], &out);
   } else {
-    // inputs[2] is a mutable input
-    FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                         SGDMomUpdate<xpu>, "SGDMomUpdate", {2});
+    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -662,6 +727,41 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
               "grad = max(min(grad, clip_gradient), -clip_gradient).");
   }
 };
+
+inline bool AdamUpdateStorageType(const nnvm::NodeAttrs& attrs,
+                                  const Context& ctx,
+                                  int* dispatch_type,
+                                  std::vector<int> *in_attrs,
+                                  std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 4U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& weight_stype = in_attrs->at(0);
+  auto& grad_stype = in_attrs->at(1);
+  auto& mean_stype = in_attrs->at(2);
+  auto& var_stype = in_attrs->at(3);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  if (weight_stype == kDefaultStorage && grad_stype == kDefaultStorage &&
+      mean_stype == kDefaultStorage && var_stype == kDefaultStorage) {
+    if (type_assign(&out_stype, kDefaultStorage)) {
+      type_assign(dispatch_type, kDispatchFCompute);
+      fallback = false;
+    }
+  } else if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
+             mean_stype == kRowSparseStorage && var_stype == kRowSparseStorage) {
+    // rsp, rsp, rsp, rsp -> rsp
+    if (type_assign(&out_stype, kRowSparseStorage)) {
+      type_assign(dispatch_type, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    type_assign(dispatch_type, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
 
 template<typename xpu>
 inline void AdamUpdate(const nnvm::NodeAttrs& attrs,

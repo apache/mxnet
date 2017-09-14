@@ -43,37 +43,57 @@ namespace op {
 
 inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                              const Context& ctx,
+                                             int* dispatch_type,
                                              std::vector<int>* in_attrs,
                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  if (in_attrs->at(0) == kRowSparseStorage) {  // current impl
+  auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  if (in_stype == kRowSparseStorage) {  // current impl
     if (param.axis[0] == 1 && param.keepdims) {  // sum per row and keep dims
-      STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
-    } else {
-      STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
+      if (type_assign(&out_stype, kRowSparseStorage)) {
+        TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+        fallback = false;
+      }
+    } else if (param.axis[0] == 0 || ((param.axis[0] == 1 && !param.keepdims))) {
+      if (type_assign(&out_stype, kDefaultStorage)) {
+        TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+        fallback = false;
+      }
     }
-  } else {  // fallback
-    type_assign(&((*in_attrs)[0]), kDefaultStorage);
-    type_assign(&((*out_attrs)[0]), kDefaultStorage);
+  }
+  if (fallback) {
+    // nothing to fallback on
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
   }
   return true;
 }
 
 inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                               const Context& ctx,
+                                              int* dispatch_type,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (in_attrs->at(0) == kDefaultStorage || in_attrs->at(0) == kRowSparseStorage) {
-    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, 1, kRowSparseStorage);
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
-  } else {  // fallback
-    type_assign(&((*in_attrs)[0]), kDefaultStorage);
-    type_assign(&((*in_attrs)[1]), kDefaultStorage);
-    type_assign(&((*out_attrs)[0]), kDefaultStorage);
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  auto& ograd_stype = in_attrs->at(0);
+  auto& in_stype = in_attrs->at(1);
+  auto& grad_stype = out_attrs->at(0);
+  bool fallback = true;
+  if ((ograd_stype == kDefaultStorage && in_stype == kRowSparseStorage) ||
+      (ograd_stype == kRowSparseStorage && in_stype == kRowSparseStorage)) {
+    if (type_assign(&grad_stype, kRowSparseStorage)) {
+      type_assign(dispatch_type, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    // nothing to fallback on
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
   }
   return true;
 }

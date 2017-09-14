@@ -34,6 +34,7 @@ Graph AttachOpResources(Graph g) {
       nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
   auto& op_execs = nnvm::get<OpExecVector>(*g.attrs.at("op_execs"));
   const auto& vctx = g.GetAttr<ContextVector>("context");
+  const auto& vdispatch = g.GetAttr<DispatchTypeVector>("dispatch_type");
   const auto& idx = g.indexed_graph();
   // Use global resource pool for each executor for now.
   std::map<Context, Resource> cached_temp;
@@ -45,6 +46,9 @@ Graph AttachOpResources(Graph g) {
     auto reqs = fresource[inode.source->op()](inode.source->attrs);
     auto& requested = op_execs[nid]->op_ctx.requested;
     requested.clear();
+    if (vdispatch[nid] == kDispatchFComputeFallback) {
+      reqs.push_back(ResourceRequest::kTempSpace);
+    }
     // Get the resource of temporal space.
     for (const ResourceRequest& req : reqs) {
       const Context &ctx = vctx[nid];

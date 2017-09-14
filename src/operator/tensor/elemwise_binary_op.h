@@ -39,6 +39,65 @@
 namespace mxnet {
 namespace op {
 
+// TODO move this into the class???
+inline bool ElemwiseBinaryAddStorageType(const nnvm::NodeAttrs& attrs,
+                                       const Context& ctx,
+                                       int *dispatch_type,
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& lhs_stype = in_attrs->at(0);
+  auto& rhs_stype = in_attrs->at(1);
+  auto& out_stype = out_attrs->at(0);
+  bool fallback = true;
+  if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    if (type_assign(&out_stype, kDefaultStorage)) {
+      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
+      fallback = false;
+    }
+  } else if (lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) {
+    // rsp, rsp -> rsp
+    if (type_assign(&out_stype, kRowSparseStorage)) {
+      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      fallback = false;
+    }
+  }
+  if (fallback) {
+    type_assign(&out_stype, kDefaultStorage);
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
+                                       const Context& ctx,
+                                       int *dispatch_type,
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
+  NDArrayStorageType stype = kDefaultStorage;
+  for (size_t i = 0; i < 2U; ++i) {
+    const NDArrayStorageType in_stype = static_cast<NDArrayStorageType>((*in_attrs)[i]);
+    if (in_stype != kDefaultStorage) {
+      if (stype == kDefaultStorage) {
+        stype = in_stype;
+      }
+    }
+  }
+  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, stype);
+  if (stype == kDefaultStorage) {
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+  }
+  else {
+    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+  }
+  return true;
+}
+
 /*! Gather binary operator functions into ElemwiseBinaryOp class */
 class ElemwiseBinaryOp : public OpBase {
  public:

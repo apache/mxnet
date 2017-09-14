@@ -25,6 +25,7 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include "./exec_pass.h"
+#include "../operator/operator_common.h"
 
 namespace mxnet {
 namespace exec {
@@ -47,7 +48,9 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs) {
   const ContextVector& ctxes = g.GetAttr<ContextVector>("context");
-  return finfer(attrs, ctxes[nid], in_attrs, out_attrs);
+  const DispatchTypeVector& dispatches = g.GetAttr<DispatchTypeVector>("dispatch_type");
+  int* dispatch = (int*) &dispatches[nid]; // NOLINT(*)
+  return finfer(attrs, ctxes[nid], dispatch, in_attrs, out_attrs);
 }
 
 /*!\brief
@@ -283,18 +286,31 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// assigning default type N to both input and output attrs with value -1
-template <int default_val, int none>
-inline bool DefaultType(const nnvm::NodeAttrs& attrs,
-                        const Context& ctx,
-                        std::vector<int> *iattr,
-                        std::vector<int> *oattr) {
+// Default storage type inference function.
+// If any input/output has non-default storage, then kDispatchFComputeFallback is inferred.
+// Otherwise kDispatchFCompute is inferred.
+inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                               const Context& ctx,
+                               int* dispatch_type,
+                               std::vector<int> *iattr,
+                               std::vector<int> *oattr) {
   // TODO(junwu): check whether need to use ctx
+  bool fallback = false;
   for (int& v : *oattr) {
-    if (v == none) v = default_val;
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
   }
   for (int& v : *iattr) {
-    if (v == none) v = default_val;
+    if (v == -1) v = kDefaultStorage;
+    if (v != kDefaultStorage) fallback = true;
+  }
+  if (*dispatch_type == -1) {
+    if (fallback) {
+      *dispatch_type = kDispatchFComputeFallback;
+      FALLBACK_WARNING(attrs, ctx, iattr, oattr);
+    } else {
+      *dispatch_type = kDispatchFCompute;
+    }
   }
   return true;
 }
@@ -345,6 +361,12 @@ nnvm::Graph InferStorageType(nnvm::Graph graph,
   if (storage_type_attr_key.length() != 0) {
     graph.attrs["storage_type_attr_key"] = std::make_shared<any>(std::move(storage_type_attr_key));
   }
+  // initialize unknown values for dispatch types
+  if (graph.attrs.count("dispatch_type") == 0) {
+    DispatchTypeVector dispatch_types(graph.indexed_graph().num_nodes(), -1);
+    graph.attrs["dispatch_type"] = std::make_shared<any>(std::move(dispatch_types));
+  }
+
   // for storage type, the backward attr is not necessarily the same as it's correspondence
   const int kDefaultStorage = 0;
   return InferAttr<int, FInferStorageType>(
@@ -352,7 +374,7 @@ nnvm::Graph InferStorageType(nnvm::Graph graph,
       "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
       "storage_type", "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      DefaultType<kDefaultStorage, -1>, false);
+      DefaultStorageType, false);
 }
 
 }  // namespace exec

@@ -360,6 +360,7 @@ struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
 
 inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
                                         const Context& ctx,
+                                        int* dispatch_type,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -369,7 +370,45 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   const CastStorageParam& param = nnvm::get<CastStorageParam>(attrs.parsed);
   CHECK_NE(param.stype, kUndefinedStorage)
     << "dst ndarray's storage type must be specified";
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.stype);
+  auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  auto& param_stype = param.stype;
+  bool fallback = true;
+  // dns -> dns, dns -> rsp, dns -> csr
+  if (in_stype == kDefaultStorage) {
+    if (param_stype == kDefaultStorage) {
+      // dns -> dns
+      if (type_assign(&out_stype, param_stype)) {
+        type_assign(dispatch_type, kDispatchFCompute);
+        fallback = false;
+      }
+    } else if (param_stype == kRowSparseStorage || param_stype == kCSRStorage) {
+      // dns -> rsp, dns -> csr
+      if (type_assign(&out_stype, param_stype)) {
+        type_assign(dispatch_type, kDispatchFComputeEx);
+        fallback = false;
+      }
+    }
+  } else if (in_stype == kRowSparseStorage) {
+    // rsp -> rsp, rsp -> dns
+    if (param_stype == kRowSparseStorage || param_stype == kDefaultStorage) {
+      if (type_assign(&out_stype, param_stype)) {
+        type_assign(dispatch_type, kDispatchFComputeEx);
+        fallback = false;
+      }
+    }
+  } else if (in_stype == kCSRStorage) {
+    // csr -> csr, csr -> dns
+    if (param_stype == kCSRStorage || param_stype == kDefaultStorage) {
+      if (type_assign(&out_stype, param_stype)) {
+        type_assign(dispatch_type, kDispatchFComputeEx);
+        fallback = false;
+      }
+    }
+  }
+  if (fallback) {
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+  }
   return true;
 }
 

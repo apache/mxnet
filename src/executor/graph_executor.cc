@@ -824,27 +824,7 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
                                     Executor* shared_exec,
                                     const nnvm::NodeEntryMap<NDArray>& feed_dict) {
   const auto& idx = g.indexed_graph();
-  // dispatch based on stype per operator
   const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
-  StorageTypeVector dispatch_stypes(idx.num_nodes(), kUndefinedStorage);
-  for (size_t nid = 0; nid < idx.num_nodes(); nid++) {
-      const auto& inode = idx[nid];
-      auto num_outputs = inode.source->num_outputs();
-      auto num_inputs = inode.inputs.size();
-      StorageTypeVector vs(num_inputs + num_outputs, kUndefinedStorage);
-      for (size_t i = 0; i < num_inputs; i++) {
-        auto e = inode.inputs[i];
-        vs[i] = vstorage_type[idx.entry_id(e)];
-        CHECK_NE(vs[i], kUndefinedStorage);
-      }
-      for (uint32_t i = 0; i < num_outputs; ++i) {
-        uint32_t eid = idx.entry_id(nid, i);
-        vs[i + num_inputs] = vstorage_type[eid];
-      }
-      bool contains_non_default = common::ContainsNonDefaultStorage(vs);
-      dispatch_stypes[nid] = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
-  }
-  g.attrs["dispatch_stypes"] = std::make_shared<dmlc::any>(std::move(dispatch_stypes));
 
   // data entries for output gradients
   for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
@@ -1193,6 +1173,8 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
+  const auto& dispatch_types = graph_.GetAttr<DispatchTypeVector>("dispatch_type");
+
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.
@@ -1202,7 +1184,8 @@ void GraphExecutor::InitCachedOps() {
       if (inode.source->is_variable()) {
         LOG(INFO) << "node " << nid << " var";
       } else {
-        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
+        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
+                  << ": " << dispatch_types[nid];
         const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
         auto exec = op_execs[nid];
         for (const auto& e : inode.inputs) {
