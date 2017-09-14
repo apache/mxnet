@@ -703,6 +703,19 @@ def test_cached():
         o.backward(retain_graph=True)
         o.backward()
 
+    # try a different shape
+    data = mx.nd.ones((5, 2, 10, 10))
+    weight = mx.nd.ones((10, 2, 3, 3))
+    bias = mx.nd.ones((10,))
+    data.attach_grad()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
+
 def test_output():
     shape = (2,2)
     ones = mx.nd.ones(shape)
