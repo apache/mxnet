@@ -39,6 +39,40 @@
 
 namespace mxnet {
 namespace op {
+
+// TODO add doc
+template<int n_in, bool rsp = false, bool csr = false>
+inline bool ElemwiseStorageType2(const nnvm::NodeAttrs& attrs,
+                                const Context& ctx,
+                                int* dispatch_type,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  // TODO(junwu): add ctx info into storage inference logic
+  CHECK_EQ(in_attrs->size(), n_in);
+  CHECK_EQ(out_attrs->size(), 1);
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, dns ... -> dns
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
+  } else if (rsp && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+    // rsp, rsp, ... -> rsp
+    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+                                     dispatch_type, kDispatchFComputeEx);
+  } else if (csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+    // csr, csr, ... -> csr
+    dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
+                                     dispatch_type, kDispatchFComputeEx);
+  }
+  if (!dispatched) {
+    dispatch_on_storage(&out_stype, kDefaultStorage,
+                        dispatch_type, kDispatchFComputeFallback);
+    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 template<typename AttrType, bool (*is_none)(const AttrType&),
          bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
          std::string (*attr_string)(const AttrType&),
