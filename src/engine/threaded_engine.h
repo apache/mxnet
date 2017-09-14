@@ -286,10 +286,7 @@ class ThreadedEngine : public Engine {
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
-    /*! \brief Set default OMP threads per kernel worker.
-     * If std::thread::hardware_concurrency()
-     * returns zero (a possiblity on some platforms), just use the default OMP value
-     */
+    /*! \brief Set default OMP threads per kernel worker to default */
     SetNumOMPThreadsPerWorker(DefaultOMPThreadsPerWorker());
     CHECK_GT(GetNumOMPThreadsPerWorker(), 0);
   }
@@ -301,17 +298,18 @@ class ThreadedEngine : public Engine {
     finished_cv_.notify_all();
   }
 
+  /*! \brief Return default OMP thread count. Currently, this is whatever OMP shows as number
+   * of procs
+   */
   static int DefaultOMPThreadsPerWorker() {
-    int cores = std::thread::hardware_concurrency();
 #ifdef _OPENMP
-    if (cores <= 0) {
-      cores = omp_get_num_threads();
-    } else {
-      // By default, leave one core to run the engine
-      --cores;
-    }
+    // TODO(cjolivier01): Programatically obtain hyperthreading count (if supported)
+    // Taking max including omp_get_max_threads() in case this implementation of OMP accounts for
+    // hyperthreading
+    return std::max(omp_get_max_threads(), omp_get_num_procs());
+#else
+    return 0;
 #endif
-    return cores;
   }
 
  protected:
