@@ -59,10 +59,9 @@ class MobileNet(HybridBlock):
                 _add_conv(self.features, channels=int(32*multiplier), kernel=3, pad=1, stride=2)
                 dw_channels = [int(x*multiplier) for x in [32, 64]+[128]*2+[256]*2+[512]*6+[1024]]
                 channels = [int(x*multiplier) for x in [64]+[128]*2+[256]*2+[512]*6+[1024]*2]
-                stride = [1, 2] * 3 + [1] * 5 + [2, 1]
-                for dw_channels, channels, stride in zip(dw_channels, channels, stride):
-                    _add_conv_dw(self.features, dw_channels=dw_channels, channels=channels,
-                                 stride=stride)
+                strides = [1, 2] * 3 + [1] * 5 + [2, 1]
+                for dwc, c, s in zip(dw_channels, channels, strides):
+                    _add_conv_dw(self.features, dw_channels=dwc, channels=c, stride=s)
                 self.features.add(nn.GlobalAvgPool2D())
                 self.features.add(nn.Flatten())
 
