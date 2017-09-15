@@ -307,7 +307,7 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   if (*dispatch_type == -1) {
     if (fallback) {
       *dispatch_type = kDispatchFComputeFallback;
-      FALLBACK_WARNING(attrs, ctx, iattr, oattr);
+      op::LogStorageFallback(attrs, ctx, iattr, oattr);
     } else {
       *dispatch_type = kDispatchFCompute;
     }

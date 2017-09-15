@@ -496,18 +496,6 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   }
 }
 
-#define FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs)                  \
-  {                                                                        \
-    using namespace op;                                                    \
-    thread_local std::unordered_set<std::string> warning_printed;          \
-    std::string warning = OperatorInfo(attrs, ctx, *in_attrs, *out_attrs); \
-    if (warning_printed.find(warning) == warning_printed.end()) {          \
-      LOG(INFO) << "Storage fallback detected.\n" << warning;              \
-      warning_printed.insert(warning);                                     \
-    }                                                                      \
-  }
-
-
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_OPERATOR_COMMON_H_
