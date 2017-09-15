@@ -118,7 +118,8 @@ def clip_global_norm(arrays, max_norm):
                                  for x in (arr.reshape((-1,)) for arr in arrays)])
     total_norm = ndarray.sqrt(total_norm).asscalar()
     if not np.isfinite(total_norm):
-        warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'))
+        warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),
+                      stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
     if scale < 1.0:
         for arr in arrays:
