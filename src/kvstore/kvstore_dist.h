@@ -350,7 +350,7 @@ class KVStoreDist : public KVStoreLocal {
       // push to servers
       if (storage_type == kDefaultStorage) {
       auto push_to_servers =
-          [this, key, send_buf, merged](RunContext rctx, Engine::CallbackOnComplete cb) {
+          [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
           PSKV& pskv = EncodeKey(key, size);
