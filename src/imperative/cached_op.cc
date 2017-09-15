@@ -78,7 +78,7 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
 
     grad_graph_ = pass::Gradient(
         fwd_graph_, fwd_graph_.outputs, xs, ograd_entries,
-        exec::AggregateGradient, false, nullptr,
+        exec::AggregateGradient, nullptr, nullptr,
         zero_ops, "_copy");
   }
 
