@@ -187,7 +187,7 @@ class KVStoreDist : public KVStoreLocal {
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
-        PSKV& pskv = EncodeKey(key, size);
+        PSKV& pskv = EncodeKey(key, size, false);
 #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
@@ -353,8 +353,7 @@ class KVStoreDist : public KVStoreLocal {
           [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
-          PSKV& pskv = EncodeKey(key, size);
-
+          PSKV& pskv = EncodeKey(key, size, true);
 
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
@@ -480,6 +479,8 @@ class KVStoreDist : public KVStoreLocal {
   /**
    * \brief cache all key partitions
    */
+  std::unordered_map<int, PSKV> push_ps_kv_;
+  std::unordered_map<int, PSKV> pull_ps_kv_;
   std::unordered_map<int, PSKV> ps_kv_;
 
   /**
@@ -490,13 +491,19 @@ class KVStoreDist : public KVStoreLocal {
   /**
    * \brief convert to keys in ps
    */
-  inline PSKV& EncodeKey(int key, size_t size) {
+  inline PSKV& EncodeKey(int key, size_t size, bool is_push) {
     mu_.lock();
     PSKV& pskv = ps_kv_[key];
+    if (is_push) {
+      pskv = push_ps_kv_[key];
+    } else {
+      pskv = pull_ps_kv_[key];
+    }
     mu_.unlock();
 
     if (!pskv.keys.empty()) {
-      //CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
+      // For compress, we cannt check here
+      CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
     } else {
       auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
       int num_servers = krs.size();
