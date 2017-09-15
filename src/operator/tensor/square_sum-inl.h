@@ -49,23 +49,19 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  auto& in_stype = in_attrs->at(0);
+  const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
-  bool fallback = true;
+  bool dispatched = false;
   if (in_stype == kRowSparseStorage) {  // current impl
     if (param.axis[0] == 1 && param.keepdims) {  // sum per row and keep dims
-      if (type_assign(&out_stype, kRowSparseStorage)) {
-        TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-        fallback = false;
-      }
+      dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+                                       dispatch_type, kDispatchFComputeEx);
     } else if (param.axis[0] == 0 || ((param.axis[0] == 1 && !param.keepdims))) {
-      if (type_assign(&out_stype, kDefaultStorage)) {
-        TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-        fallback = false;
-      }
+      dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                       dispatch_type, kDispatchFComputeEx);
     }
   }
-  if (fallback) {
+  if (!dispatched) {
     // nothing to fallback on
     LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
   }
@@ -80,18 +76,16 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  auto& ograd_stype = in_attrs->at(0);
-  auto& in_stype = in_attrs->at(1);
+  const auto& ograd_stype = in_attrs->at(0);
+  const auto& in_stype = in_attrs->at(1);
   auto& grad_stype = out_attrs->at(0);
-  bool fallback = true;
+  bool dispatched = false;
   if ((ograd_stype == kDefaultStorage && in_stype == kRowSparseStorage) ||
       (ograd_stype == kRowSparseStorage && in_stype == kRowSparseStorage)) {
-    if (type_assign(&grad_stype, kRowSparseStorage)) {
-      type_assign(dispatch_type, kDispatchFComputeEx);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&grad_stype, kRowSparseStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   }
-  if (fallback) {
+  if (!dispatched) {
     // nothing to fallback on
     LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
   }
