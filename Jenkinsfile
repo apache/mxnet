@@ -18,10 +18,12 @@ def init_git() {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
+        sh 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
       error "Failed to fetch source codes"
+      sleep 2
     }
   }
 }
@@ -32,10 +34,12 @@ def init_git_win() {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         bat 'git submodule update --init'
+        bat 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
       error "Failed to fetch source codes"
+      sleep 2
     }
   }
 }

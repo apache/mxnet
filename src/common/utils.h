@@ -134,6 +134,50 @@ inline bool ContainsDefaultStorage(const std::vector<NDArray>& ndarrays) {
   return false;
 }
 
+inline bool ContainsNonDefaultStorage(const std::vector<NDArray>& ndarrays) {
+  for (const auto &nd : ndarrays) {
+    if (nd.storage_type() != kUndefinedStorage && nd.storage_type() != kDefaultStorage) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool ContainsStorage(const std::vector<NDArray>& ndarrays, const NDArrayStorageType stype) {
+  for (const auto &nd : ndarrays) {
+    if (nd.storage_type() == stype) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
+                                const NDArrayStorageType stype) {
+  if (!ndarrays.empty()) {
+    for (const auto &nd : ndarrays) {
+      if (nd.storage_type() != stype) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+/*! \brief get string representation of storage_type */
+inline std::string stype_string(const int x) {
+  switch (x) {
+    case kDefaultStorage:
+      return "default";
+    case kCSRStorage:
+      return "csr";
+    case kRowSparseStorage:
+      return "row_sparse";
+  }
+  return "unknown";
+}
+
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
   // This is resource efficient option.
