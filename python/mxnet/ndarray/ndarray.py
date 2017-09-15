@@ -516,7 +516,7 @@ fixed-size items.
                 dtype = 'int32'
                 for idx_i in key:
                     if not isinstance(idx_i, NDArray):
-                        idx_i = array(idx_i, ctx=self.context, dtype='int32')
+                        idx_i = array(idx_i, ctx=self.context, dtype=dtype)
                     else:
                         dtype = idx_i.dtype
                     indices.append(idx_i)
