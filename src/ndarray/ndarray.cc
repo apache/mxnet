@@ -75,8 +75,7 @@ NDArray NDArray::Reshape(const TShape &shape) const {
     std::vector<NDArray> inputs, outputs;
     inputs.emplace_back(*this);
     outputs.emplace_back(std::move(ret));
-    AutogradRuntime::Get()->RecordImperativeFCompute(
-      op, attrs, &inputs, &outputs);
+    AutogradRuntime::Get()->RecordOp(std::move(attrs), &inputs, &outputs);
     return outputs[0];
   } else {
     CHECK_GE(shape_.Size(), shape.Size())
@@ -96,7 +95,6 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret = *this;
-  auto stype = storage_type();
   size_t length = shape_.ProdShape(1, shape_.ndim());
   MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
@@ -115,8 +113,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
     std::vector<NDArray> inputs, outputs;
     inputs.emplace_back(*this);
     outputs.emplace_back(std::move(ret));
-    AutogradRuntime::Get()->RecordImperativeFCompute(
-      op, attrs, &inputs, &outputs);
+    AutogradRuntime::Get()->RecordOp(std::move(attrs), &inputs, &outputs);
     return outputs[0];
   } else {
     return ret;
@@ -451,7 +448,6 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext rctx) {
     << " to stype = " << to_stype << " is not supported";
   const auto from_ctx = from.ctx();
   const auto to_ctx = to->ctx();
-  auto s = rctx.get_stream<from_xpu>();
   bool is_train = mxnet::autograd::AutogradRuntime::Get()->IsTraining();
   std::vector<Resource> requested;
   if (is_same<from_xpu, mshadow::gpu>::value && from_stype != to_stype) {

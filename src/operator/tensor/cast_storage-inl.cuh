@@ -65,15 +65,6 @@ struct CastDnsRspValsKernel {
   }
 };
 
-template<typename xpu, int ndim, typename DType>
-inline mshadow::Tensor<xpu, ndim, DType> AllocateTempDataForCast(const OpContext& op_ctx,
-                                                                 const mshadow::Shape<ndim>& shape) {
-  Resource rsc = ResourceManager::Get()->Request(op_ctx.run_ctx.ctx,
-                                                 ResourceRequest(ResourceRequest::kTempSpace));
-  mshadow::Stream<xpu> *stream = op_ctx.run_ctx.get_stream<xpu>();
-  return rsc.get_space_typed<xpu, ndim, DType>(shape, stream);
-};
-
 /*!
  * \brief GPU implementation of casting a dns tensor to rsp type.
  */
@@ -112,10 +103,12 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
                                     mshadow::Stream<gpu>::GetStream(s));
 
       // Allocate temp storage for marking non-zero rows and for cub's prefix sum
-      auto workspace = AllocateTempDataForCast<gpu, 1, char>(ctx, Shape1(num_rows*sizeof(dim_t)
-                                                                          + temp_storage_bytes));
-      row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
-      d_temp_storage = workspace.dptr_ + num_rows*sizeof(dim_t);
+
+      SparseTempStorage<char> sparseTempStorage(ctx);
+      auto workspace = sparseTempStorage.get_space_typed<gpu, 1>(
+        Shape1(num_rows * sizeof(RType) + temp_storage_bytes));
+      row_flg = reinterpret_cast<RType*>(workspace.dptr_);
+      d_temp_storage = workspace.dptr_ + num_rows * sizeof(RType);
 
       // Mark non-zero rows as 'one' in row_flg
       // Different kernel versions are optimized for different matrix instances
@@ -519,7 +512,8 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                       mshadow::Stream<gpu>::GetStream(s));
 
         // Allocate temporary storage
-        auto workspace = AllocateTempDataForCast<gpu, 1, char>(ctx, Shape1(temp_storage_bytes));
+        SparseTempStorage<char> sparseTempStorage(ctx);
+        auto workspace = sparseTempStorage.get_space_typed<gpu, 1>(Shape1(temp_storage_bytes));
 
         d_temp_storage = workspace.dptr_;
 

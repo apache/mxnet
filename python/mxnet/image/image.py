@@ -727,12 +727,12 @@ class HueJitterAug(Augmenter):
         https://beesbuzz.biz/code/hsv_color_transforms.php
         """
         alpha = random.uniform(-self.hue, self.hue)
-        vsu = np.cos(alpha * np.pi)
-        vsw = np.sin(alpha * np.pi)
+        u = np.cos(alpha * np.pi)
+        w = np.sin(alpha * np.pi)
         bt = np.array([[1.0, 0.0, 0.0],
-                       [0.0, vsu, -vsw],
-                       [0.0, vsw, vsu]])
-        t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
+                       [0.0, u, -w],
+                       [0.0, w, u]])
+        t = np.dot(np.dot(self.ityiq, bt), self.tyiq).T
         src = nd.dot(src, nd.array(t))
         return src
 

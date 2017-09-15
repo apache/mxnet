@@ -484,7 +484,7 @@ method fit(
     EvalMetric                         :$eval_metric='acc',
     Maybe[Callback]|ArrayRef[Callback] :$epoch_end_callback=,
     Maybe[Callback]|ArrayRef[Callback] :$batch_end_callback=,
-    Str                                :$kvstore='local',
+    KVStore                            :$kvstore='local',
     Optimizer                          :$optimizer='sgd',
     HashRef                            :$optimizer_params={ learning_rate => 0.01 },
     Maybe[Callback]|ArrayRef[Callback] :$eval_end_callback=,

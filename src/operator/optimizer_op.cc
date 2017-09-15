@@ -40,8 +40,11 @@ It updates the weights using::
 
  weight = weight - learning_rate * gradient
 
-If weight is stored with `row_sparse` storage type,
-only the row slices whose indices appear in grad.indices are updated.
+If weight is of ``row_sparse`` storage type,
+only the row slices whose indices appear in grad.indices are updated::
+
+ for row in gradient.indices:
+     weight[row] = weight[row] - learning_rate * gradient[row]
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -74,8 +77,12 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-If weights are stored with `row_sparse` storage type,
-only the row slices whose indices appear in grad.indices are updated (for both weight and momentum).
+If weight and momentum are both of ``row_sparse`` storage type,
+only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
+
+  for row in gradient.indices:
+      v[row] = momentum[row] * v[row] - learning_rate * gradient[row]
+      weight[row] += v[row]
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)
@@ -148,6 +155,14 @@ It updates the weights using::
  m = beta1*m + (1-beta1)*grad
  v = beta2*v + (1-beta2)*(grad**2)
  w += - learning_rate * m / (sqrt(v) + epsilon)
+
+If w, m and v are all of ``row_sparse`` storage type,
+only the row slices whose indices appear in grad.indices are updated (for w, m and v)::
+
+ for row in grad.indices:
+     m[row] = beta1*m[row] + (1-beta1)*grad[row]
+     v[row] = beta2*v[row] + (1-beta2)*(grad[row]**2)
+     w[row] += - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
 
 )code" ADD_FILELINE)
 .set_num_inputs(4)

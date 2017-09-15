@@ -184,7 +184,9 @@ void SetShapeType(const nnvm::Op* op,
   std::vector<int>& in_types = ret->arg_types;
   std::vector<int>& out_types = ret->out_types;
   in_types.clear();
+  in_types.reserve(ndinputs.size());
   out_types.clear();
+  out_types.reserve(ndoutputs.size());
 
   for (auto& i : ndinputs) {
     in_types.push_back(i.dtype());
@@ -201,7 +203,10 @@ void SetShapeType(const nnvm::Op* op,
   auto& in_storage_types = ret->arg_storage_types;
   auto& out_storage_types = ret->out_storage_types;
   in_storage_types.clear();
+  in_storage_types.reserve(ndinputs.size());
   out_storage_types.clear();
+  out_storage_types.reserve(ndoutputs.size());
+
   for (auto& i : ndinputs) {
     in_storage_types.push_back(i.storage_type());
   }
@@ -484,9 +489,11 @@ void PushOperator(const OpStatePtr& state,
 }
 
 void ImperativeInvokeImpl(const Context& default_ctx,
-                          const nnvm::NodeAttrs& attrs,
+                          nnvm::NodeAttrs&& attrs,
                           std::vector<NDArray>* p_ndinputs,
-                          std::vector<NDArray>* p_ndoutputs) {
+                          std::vector<NDArray>* p_ndoutputs,
+                          std::vector<bool>* p_save_inputs = nullptr,
+                          std::vector<bool>* p_save_outputs = nullptr) {
   static auto& ndfunc = nnvm::Op::GetAttr<FNDArrayFunction>("FNDArrayFunction");
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
@@ -514,29 +521,32 @@ void ImperativeInvokeImpl(const Context& default_ctx,
     FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
     FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
     if (fn_ex && stype != kDefaultStorage) {
-      if (AutogradRuntime::Get()->IsRecording()) {
-        AutogradRuntime::Get()->RecordImperativeFCompute(op,
-            attrs, &ndinputs, &ndoutputs);
-      }
       PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
-    } else if (fn) {
       if (AutogradRuntime::Get()->IsRecording()) {
-        AutogradRuntime::Get()->RecordImperativeFCompute(op,
-            attrs, &ndinputs, &ndoutputs);
+        AutogradRuntime::Get()->RecordOp(
+            std::move(attrs), &ndinputs, &ndoutputs, OpStatePtr(),
+            p_save_inputs, p_save_outputs);
       }
+    } else if (fn) {
       PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs, mutate_idx);
+      if (AutogradRuntime::Get()->IsRecording()) {
+        AutogradRuntime::Get()->RecordOp(
+            std::move(attrs), &ndinputs, &ndoutputs, OpStatePtr(),
+            p_save_inputs, p_save_outputs);
+      }
     } else if (createop.count(op)) {
       auto state =
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
-      if (AutogradRuntime::Get()->IsRecording()) {
-        AutogradRuntime::Get()->RecordImperativeOperator(state, op,
-            attrs, &ndinputs, &ndoutputs);
-      }
       write_vars.push_back(state.get_var());
       PushOperator(state, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs, mutate_idx);
+      if (AutogradRuntime::Get()->IsRecording()) {
+        AutogradRuntime::Get()->RecordOp(
+            std::move(attrs), &ndinputs, &ndoutputs, state,
+            p_save_inputs, p_save_outputs);
+      }
     } else {
       LOG(FATAL)
         << "Operator " << op->name << " is not implemented for "
@@ -545,19 +555,18 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   }
 }
 
-int MXImperativeInvoke(AtomicSymbolCreator creator,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       int num_params,
-                       const char **param_keys,
-                       const char **param_vals) {
+inline void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
+                                   int num_inputs,
+                                   NDArrayHandle *inputs,
+                                   int *num_outputs,
+                                   NDArrayHandle **outputs,
+                                   int num_params,
+                                   const char **param_keys,
+                                   const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
 
-  API_BEGIN();
   nnvm::NodeAttrs attrs;
   SetOpAttrs(op, &attrs, num_inputs, num_params, param_keys, param_vals);
 
@@ -569,7 +578,7 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
   SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outarray);
 
-  ImperativeInvokeImpl(Context::CPU(), attrs, &ndinputs, &ndoutputs);
+  ImperativeInvokeImpl(Context::CPU(), std::move(attrs), &ndinputs, &ndoutputs);
 
   if (outarray == nullptr) {
     ret->ret_handles.clear();
@@ -583,6 +592,19 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+}
+
+int MXImperativeInvoke(AtomicSymbolCreator creator,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       int num_params,
+                       const char **param_keys,
+                       const char **param_vals) {
+  API_BEGIN();
+  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs,
+                         outputs, num_params, param_keys, param_vals);
   API_END();
 }
 
@@ -596,8 +618,8 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                          const char **param_vals,
                          const int **out_stypes) {  // outputs storage types
   API_BEGIN();
-  MXImperativeInvoke(creator, num_inputs, inputs, num_outputs, outputs,
-                     num_params, param_keys, param_vals);
+  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
+                         num_params, param_keys, param_vals);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
   ret->out_types.resize(*num_outputs);
@@ -618,6 +640,20 @@ int MXCreateCachedOp(SymbolHandle handle,
   auto vars = sym->ListInputs(nnvm::Symbol::kAll);
   CHECK_GE(vars.size(), 1) << "CachedOp must have at least 1 input.";
   g->attrs["vars"] = std::make_shared<dmlc::any>(std::move(vars));
+
+  const nnvm::IndexedGraph& idx = g->indexed_graph();
+  std::vector<std::vector<bool> > save_inputs(idx.num_nodes());
+  std::vector<std::vector<bool> > save_outputs(idx.num_nodes());
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    nnvm::NodePtr node = nnvm::Node::Create();
+    node->attrs = idx[i].source->attrs;
+    AutogradRuntime::Get()->GetBackwardDependency(
+        node, idx[i].source->num_inputs(), idx[i].source->num_outputs(),
+        &save_inputs[i], &save_outputs[i]);
+  }
+  g->attrs["save_inputs"] = std::make_shared<dmlc::any>(std::move(save_inputs));
+  g->attrs["save_outputs"] = std::make_shared<dmlc::any>(std::move(save_outputs));
+
   *out = g;
   API_END();
 }
@@ -640,7 +676,11 @@ int MXInvokeCachedOp(CachedOpHandle handle,
 
   API_BEGIN();
   const std::vector<nnvm::NodePtr>& vars =
-    g->GetAttr<std::vector<nnvm::NodePtr> >("vars");
+      g->GetAttr<std::vector<nnvm::NodePtr> >("vars");
+  std::vector<std::vector<bool> > save_inputs =
+      g->GetAttr<std::vector<std::vector<bool> > >("save_inputs");
+  std::vector<std::vector<bool> > save_outputs =
+      g->GetAttr<std::vector<std::vector<bool> > >("save_outputs");
   const nnvm::IndexedGraph& idx = g->indexed_graph();
   CHECK_EQ(static_cast<size_t>(num_inputs), vars.size())
       << "Actually number of inputs differs from expected number of inputs";
@@ -661,7 +701,8 @@ int MXInvokeCachedOp(CachedOpHandle handle,
       in.emplace_back(buff[idx.entry_id(j)]);
     }
     std::vector<NDArray> out(node.source->num_outputs());
-    ImperativeInvokeImpl(default_ctx, node.source->attrs, &in, &out);
+    ImperativeInvokeImpl(default_ctx, nnvm::NodeAttrs(node.source->attrs), &in, &out,
+                         &save_inputs[i], &save_outputs[i]);
 
     for (size_t j = 0; j < node.source->num_outputs(); ++j) {
       buff[idx.entry_id(i, j)] = std::move(out[j]);
@@ -766,7 +807,6 @@ int MXAutogradBackwardEx(mx_uint num_output,
                          int retain_graph,
                          int is_train) {
   API_BEGIN();
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   std::vector<NDArray> outputs, ograds;
   outputs.reserve(num_output);

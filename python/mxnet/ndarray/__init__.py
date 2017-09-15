@@ -17,9 +17,13 @@
 
 """NDArray API of MXNet."""
 
-from . import _internal, sparse, op
-from .op import CachedOp
+from . import _internal, contrib, linalg, random, sparse
 # pylint: disable=wildcard-import, redefined-builtin
+from .op import *
 from .ndarray import *
+# pylint: enable=wildcard-import
 from .utils import load, save, zeros, empty, array
 from .sparse import _ndarray_cls
+from .ndarray import _GRAD_REQ_MAP
+
+__all__ = op.__all__ + ndarray.__all__ + ['contrib', 'linalg', 'random', 'sparse']

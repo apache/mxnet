@@ -115,7 +115,22 @@ def _validate_csr_generation_inputs(num_rows, num_cols, density,
                              % (density, num_rows, num_cols))
 
 
-def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
+def shuffle_csr_column_indices(csr):
+    """Shuffle CSR column indices per row
+    This allows validation of unordered column indices, which is not a requirement
+    for a valid CSR matrix
+    """
+    row_count = len(csr.indptr) - 1
+    for i in range(row_count):
+        start_index = csr.indptr[i]
+        end_index = csr.indptr[i + 1]
+        sublist = np.array(csr.indices[start_index : end_index])
+        np.random.shuffle(sublist)
+        csr.indices[start_index : end_index] = sublist
+
+
+def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
+                             data_init=None, shuffle_csr_indices=False):
     """Returns CSRNDArray with uniform distribution
     This generates a csr matrix with totalnnz unique randomly chosen numbers
     from num_rows*num_cols and arranges them in the 2d array in the
@@ -124,8 +139,12 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as sp
-    csr = sp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+    from scipy import sparse as spsp
+    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+    if data_init is not None:
+        csr.data.fill(data_init)
+    if shuffle_csr_indices is True:
+        shuffle_csr_column_indices(csr)
     result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
                                      (num_rows, num_cols), dtype=dtype)
     return result
@@ -181,7 +200,50 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
         return mx.nd.array(output_arr).tostype("csr")
 
 
-def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=None):
+def assign_each(the_input, function):
+    """Return ndarray composed of passing each array value through some function"""
+    if function is not None:
+        it_input = np.nditer(the_input, flags=['f_index'])
+
+        output = np.zeros(the_input.shape)
+        it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
+
+        while not it_input.finished:
+            val_input = it_input[0]
+            it_out[0] = function(val_input)
+            it_input.iternext()
+            it_out.iternext()
+
+        return output
+    else:
+        return np.array(the_input)
+
+def assign_each2(input1, input2, function):
+    """Return ndarray composed of passing two array values through some function"""
+    if function is not None:
+        assert input1.shape == input2.shape
+        it_input1 = np.nditer(input1, flags=['f_index'])
+        it_input2 = np.nditer(input2, flags=['f_index'])
+
+        output = np.zeros(input1.shape)
+        it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
+
+        while not it_input1.finished:
+            val_input1 = it_input1[0]
+            val_input2 = it_input2[0]
+            it_out[0] = function(val_input1, val_input2)
+            it_input1.iternext()
+            it_input2.iternext()
+            it_out.iternext()
+
+        return output
+    else:
+        return np.array(input1)
+
+# TODO(haibin) also include types in arguments
+def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
+                        data_init=None, rsp_indices=None, modifier_func=None,
+                        shuffle_csr_indices=False):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
     Parameters
     ----------
@@ -202,17 +264,7 @@ def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=Non
     else, remaining unused_nnzs will be used in n+1th row
     If number of cols is too small and we have already reached column size it will fill up
     all following columns in all followings rows until we reach the required density.
-
-    >>> csr_arr, _ = rand_sparse_ndarray(shape=(5, 16), stype="csr",
-                                         density=0.50, distribution="powerlaw")
-    >>> indptr = csr_arr.indptr.asnumpy()
-    >>> indices = csr_arr.indices.asnumpy()
-    >>> data = csr_arr.data.asnumpy()
-    >>> row2nnz = len(data[indptr[1]:indptr[2]])
-    >>> row3nnz = len(data[indptr[2]:indptr[3]])
-    >>> assert(row3nnz == 2*row2nnz)
-    >>> row4nnz = len(data[indptr[3]:indptr[4]])
-    >>> assert(row4nnz == 2*row3nnz)
+    density = rnd.rand() if density is None else density
     """
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
@@ -221,22 +273,35 @@ def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=Non
         assert (distribution == "uniform"), \
                "Distribution %s not supported for row_sparse" % (distribution)
         # sample index
-        idx_sample = rnd.rand(shape[0])
-        indices = np.argwhere(idx_sample < density).flatten()
+        if rsp_indices is not None:
+            indices = rsp_indices
+            assert(len(indices) <= shape[0])
+        else:
+            idx_sample = rnd.rand(shape[0])
+            indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
             result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
             return result, (np.array([], dtype=dtype), np.array([], dtype='int64'))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
+
+        # Allow caller to override or adjust random values
+        if data_init is not None:
+            val.fill(data_init)
+        if modifier_func is not None:
+            val = assign_each(val, modifier_func)
+
         arr = mx.nd.sparse.row_sparse_array(val, indices, shape, indices_type=np.int64, dtype=dtype)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2
         if distribution == "uniform":
-            csr = _get_uniform_dataset_csr(shape[0], shape[1], density, dtype=dtype)
+            csr = _get_uniform_dataset_csr(shape[0], shape[1], density,
+                                           data_init=data_init,
+                                           shuffle_csr_indices=shuffle_csr_indices, dtype=dtype)
             return csr, (csr.indptr, csr.indices, csr.data)
         elif distribution == "powerlaw":
-            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density, dtype=dtype)
+            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density=density, dtype=dtype)
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
@@ -244,14 +309,64 @@ def rand_sparse_ndarray(shape, stype, density=None, distribution=None, dtype=Non
         assert(False), "unknown storage type"
 
 
-def rand_ndarray(shape, stype, density=None, dtype=None, distribution=None):
+def rand_ndarray(shape, stype, density=None, dtype=None,
+                 modifier_func=None, shuffle_csr_indices=False, distribution=None):
     if stype == 'default':
         arr = mx.nd.array(random_arrays(shape), dtype=dtype)
     else:
-        arr, _ = rand_sparse_ndarray(shape, stype, density=density, dtype=dtype,
+        arr, _ = rand_sparse_ndarray(shape, stype, density=density,
+                                     modifier_func=modifier_func, dtype=dtype,
+                                     shuffle_csr_indices=shuffle_csr_indices,
                                      distribution=distribution)
     return arr
 
+
+def create_sparse_array(shape, stype, data_init=None, rsp_indices=None,
+                        dtype=None, modifier_func=None, density=.5,
+                        shuffle_csr_indices=False):
+    """Create a sparse array, For Rsp, assure indices are in a canonical format"""
+    if stype == 'row_sparse':
+        if rsp_indices is not None:
+            arr_indices = np.asarray(rsp_indices)
+            arr_indices.sort()
+        else:
+            arr_indices = None
+        arr_data, (_, _) = rand_sparse_ndarray(shape, stype,
+                                               density=density,
+                                               data_init=data_init,
+                                               rsp_indices=arr_indices,
+                                               dtype=dtype,
+                                               modifier_func=modifier_func)
+    elif stype == 'csr':
+        arr_data, (_, _, _) = rand_sparse_ndarray(shape,
+                                                  stype,
+                                                  density=density,
+                                                  data_init=data_init,
+                                                  dtype=dtype,
+                                                  modifier_func=modifier_func,
+                                                  shuffle_csr_indices=shuffle_csr_indices)
+    else:
+        msg = "Unknown storage type: " + stype
+        raise AssertionError(msg)
+
+    return arr_data
+
+
+def create_sparse_array_zd(shape, stype, density, data_init=None,
+                           rsp_indices=None, dtype=None, modifier_func=None,
+                           shuffle_csr_indices=False):
+    """Create sparse array, using only rsp_indices to determine density"""
+    if stype == 'row_sparse':
+        density = 0.0
+        if rsp_indices is not None:
+            assert len(rsp_indices) <= shape[0]
+    return create_sparse_array(shape, stype,
+                               data_init=data_init,
+                               rsp_indices=rsp_indices,
+                               dtype=dtype,
+                               modifier_func=modifier_func,
+                               density=density,
+                               shuffle_csr_indices=shuffle_csr_indices)
 
 def rand_shape_2d(dim0=10, dim1=10):
     return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1)
@@ -261,8 +376,8 @@ def rand_shape_3d(dim0=10, dim1=10, dim2=10):
     return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
 
 
-def rand_shape_nd(n, dim=10):
-    return rnd.randint(1, dim+1, size=n)
+def rand_shape_nd(num_dim, dim=10):
+    return tuple(rnd.randint(1, dim+1, size=num_dim))
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
@@ -320,12 +435,12 @@ def same(a, b):
     return np.array_equal(a, b)
 
 
-def almost_equal(a, b, rtol=None, atol=None):
+def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
     """Test if two numpy arrays are almost equal."""
-    return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol))
+    return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
 
 
-def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
 
     Parameters
@@ -338,7 +453,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b')):
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
 
-    if almost_equal(a, b, rtol, atol):
+    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
         return
 
     index, rel = find_max_violation(a, b, rtol, atol)
@@ -374,6 +489,7 @@ def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     b[nan_mask] = 0
 
     return almost_equal(a, b, rtol, atol)
+
 
 def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b')):
     """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
@@ -447,7 +563,7 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
     return outputs
 
 
-def _parse_location(sym, location, ctx):
+def _parse_location(sym, location, ctx, dtype=default_dtype()):
     """Parses the given location to a dictionary.
 
     Arguments of the provided op `sym` are used as dictionary keys
@@ -468,6 +584,8 @@ def _parse_location(sym, location, ctx):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Returns
     -------
@@ -489,6 +607,7 @@ def _parse_location(sym, location, ctx):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
+    assert dtype == np.float32 or dtype == np.float64
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -496,12 +615,12 @@ def _parse_location(sym, location, ctx):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx) if isinstance(v, np.ndarray) \
+    location = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) if isinstance(v, np.ndarray) \
                else v for k, v in location.items()}
     return location
 
 
-def _parse_aux_states(sym, aux_states, ctx):
+def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     """Parses the given auxiliary states to a dictionary.
 
     Auxiliary states of the provided op `sym` are used as dictionary
@@ -520,6 +639,10 @@ def _parse_aux_states(sym, aux_states, ctx):
         - if type is dict of str -> `np.ndarray`
             maps the name of arguments to the corresponding `np.ndarray`.
         *In either case, all aux states of `sym` must be provided.*
+    ctx : Context
+        Device context.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Returns
     -------
@@ -543,6 +666,7 @@ def _parse_aux_states(sym, aux_states, ctx):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
+    assert dtype == np.float32 or dtype == np.float64
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -553,11 +677,12 @@ def _parse_aux_states(sym, aux_states, ctx):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=ctx) for k, v in aux_states.items()}
+        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in aux_states.items()}
     return aux_states
 
 
-def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_train=True):
+def numeric_grad(executor, location, aux_states=None, eps=1e-4,
+                 use_forward_train=True, dtype=default_dtype()):
     """Calculates a numeric gradient via finite difference method.
 
     Class based on Theano's `theano.gradient.numeric_grad` [1]
@@ -578,24 +703,34 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
         Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
+
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    approx_grads = {k: np.zeros(v.shape, dtype=np.float32)
+    def as_stype(var, stype, dtype):
+        return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
+
+    assert dtype == np.float32 or dtype == np.float64
+    approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
-        executor.arg_dict[k][:] = v
+        stype = executor.arg_dict[k].stype
+        if stype == 'default':
+            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
     for k in location:
         location[k] = np.ascontiguousarray(location[k])
     for k, v in location.items():
         if v.dtype.kind != 'f':
             continue
+        stype = executor.arg_dict[k].stype
         old_value = v.copy()
         for i in range(np.prod(v.shape)):
             # inplace update
             v.ravel()[i] += eps/2.0
-            executor.arg_dict[k][:] = v
+            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
             if aux_states is not None:
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
@@ -603,23 +738,26 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4, use_forward_trai
             f_peps = executor.outputs[0].asnumpy()
 
             v.ravel()[i] -= eps
-            executor.arg_dict[k][:] = v
+            executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
             if aux_states is not None:
                 for key, val in aux_states.items():
-                    executor.aux_dict[key][:] = val
+                    adstype = executor.aux_dict[key].stype
+                    executor.aux_dict[key][:] = as_stype(val, adstype, dtype=dtype)
             executor.forward(is_train=use_forward_train)
             f_neps = executor.outputs[0].asnumpy()
 
-            approx_grads[k].ravel()[i] = (f_peps - f_neps).sum() / eps
+            approx_grad = (f_peps - f_neps).sum() / eps
+            approx_grads[k].ravel()[i] = approx_grad
             v.ravel()[i] = old_value.ravel()[i]
         # copy back the original value
-        executor.arg_dict[k][:] = old_value
+        executor.arg_dict[k][:] = as_stype(old_value, stype, dtype=dtype)
+
     return approx_grads
 
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
-                           grad_stype_dict=None):
+                           grad_stype_dict=None, dtype=default_dtype()):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -650,10 +788,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Check the gradient computation on the specified device.
     grad_stype_dict : dict of str->str, optional
         Storage type dictionary for gradient ndarrays.
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
+
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
+    assert dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -669,9 +811,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         plain = _rng.rand(*shape) + 0.1
         return plain
 
-    location = _parse_location(sym=sym, location=location, ctx=ctx)
+    location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
     location_npy = {k:v.asnumpy() for k, v in location.items()}
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
+                                   dtype=dtype)
     if aux_states is not None:
         aux_states_npy = {k: v.asnumpy() for k, v in aux_states.items()}
     else:
@@ -695,11 +838,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     out = mx.sym.MakeLoss(out)
 
     location = dict(list(location.items()) +
-                    [("__random_proj", mx.nd.array(random_projection(out_shape[0]), ctx=ctx))])
+                    [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
+                                                   ctx=ctx, dtype=dtype))])
     args_grad_npy = dict([(k, _rng.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
                          + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
 
-    args_grad = {k: mx.nd.array(v, ctx=ctx) for k, v in args_grad_npy.items()}
+    args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
     if grad_stype_dict is not None:
         assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
         for k, v in grad_stype_dict.items():
@@ -722,8 +866,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     executor.backward()
     symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
 
-    numeric_gradients = numeric_grad(executor, location_npy, aux_states_npy,
-                                     eps=numeric_eps, use_forward_train=use_forward_train)
+    numeric_gradients = numeric_grad(
+        executor, location_npy, aux_states_npy,
+        eps=numeric_eps, use_forward_train=use_forward_train, dtype=dtype)
+
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]
         orig_grad = args_grad_npy[name]
@@ -742,7 +888,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
 
 def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
-                           aux_states=None, ctx=None):
+                           aux_states=None, ctx=None, equal_nan=False,
+                           dtype=default_dtype()):
     """Compares a symbol's forward results with the expected ones.
     Prints error messages if the forward results are not the same as the expected ones.
 
@@ -773,6 +920,11 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
+
+    equal_nan: Boolean
+        if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
 
     Example
     -------
@@ -785,14 +937,16 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
+    assert dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
-    location = _parse_location(sym=sym, location=location, ctx=ctx)
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
+    location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
+                                   dtype=dtype)
     if isinstance(expected, dict):
         expected = [expected[k] for k in sym.list_outputs()]
-    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx) for k, v in location.items()}
+    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=dtype) for k, v in location.items()}
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
@@ -803,11 +957,13 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     outputs = [x.asnumpy() for x in executor.outputs]
     for output_name, expect, output in zip(sym.list_outputs(), expected, outputs):
         assert_almost_equal(expect, output, rtol, atol,
-                            ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name))
-
+                            ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name),
+                            equal_nan=equal_nan)
+    return executor.outputs
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
-                            aux_states=None, grad_req='write', ctx=None, grad_stypes=None):
+                            aux_states=None, grad_req='write', ctx=None, grad_stypes=None,
+                            equal_nan=False, dtype=default_dtype()):
     """Compares a symbol's backward results with the expected ones.
     Prints error messages if the backward results are not the same as the expected results.
 
@@ -845,6 +1001,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         Running context.
     grad_stypes: dict of str->str
         dictionary of mapping argument name to stype for the gradient
+    equal_nan: Boolean
+        if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
+    dtype: np.float32 or np.float64
+        Datatype for mx.nd.array.
 
     Example
     -------
@@ -862,19 +1022,27 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
+    assert dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
-    location = _parse_location(sym=sym, location=location, ctx=ctx)
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx)
+    location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
+                                   dtype=dtype)
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
+
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
-        nd = mx.nd.array(v, ctx=ctx)
+        nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
         if grad_stypes is not None and k in grad_stypes:
-            args_grad_data[k] = nd.tostype(grad_stypes[k])
+            stype = grad_stypes[k]
+            if stype is not None and stype != 'default':
+                out = create_sparse_array(v.shape, stype, density=0.0)
+            else:
+                out = nd
+            args_grad_data[k] = out
         else:
             args_grad_data[k] = nd
 
@@ -888,27 +1056,44 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     executor.forward(is_train=True)
 
     if isinstance(out_grads, (tuple, list)):
-        out_grads = [mx.nd.array(v, ctx=ctx) for v in out_grads]
-    elif isinstance(out_grads, (dict)):
-        out_grads = {k:mx.nd.array(v, ctx=ctx) for k, v in out_grads.items()}
+        outg = list()
+        for arr in out_grads:
+            if isinstance(arr, np.ndarray):
+                outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype))
+            else:
+                outg.append(arr)
+        out_grads = outg
+    elif isinstance(out_grads, dict):
+        outg = dict()
+        for k, v in out_grads.items():
+            if isinstance(v, np.ndarray):
+                outg[k] = mx.nd.array(v, ctx=ctx, dtype=dtype)
+            else:
+                outg[k] = v
+        out_grads = outg
     else:
         assert out_grads is None
+
     executor.backward(out_grads)
 
     grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
+
     for name in expected:
         if grad_req[name] == 'write':
             assert_almost_equal(expected[name], grads[name], rtol, atol,
-                                ("EXPECTED_%s"%name, "BACKWARD_%s"%name))
+                                ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
+                                equal_nan=equal_nan)
         elif grad_req[name] == 'add':
             assert_almost_equal(expected[name], grads[name] - args_grad_npy[name],
-                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name))
+                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
+                                equal_nan=equal_nan)
         elif grad_req[name] == 'null':
             assert_almost_equal(args_grad_npy[name], grads[name],
-                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name))
+                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
+                                equal_nan=equal_nan)
         else:
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
-
+    return args_grad_data
 
 def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
                 **kwargs):

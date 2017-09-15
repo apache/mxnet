@@ -30,7 +30,6 @@
 #include <mxnet/base.h>
 #include <dmlc/base.h>
 #include <mshadow/tensor.h>
-#include <mshadow/tensor_blob.h>
 #include <vector>
 #include <string>
 
@@ -169,20 +168,20 @@ struct TBlobBatch {
   }
   /*! \brief destructor */
   ~TBlobBatch() {
-    delete inst_index;
+    delete[] inst_index;
   }
 };  // struct TBlobBatch
 
-class TBlobContainer : public mshadow::TBlob {
+class TBlobContainer : public TBlob {
  public:
   TBlobContainer(void)
-    : mshadow::TBlob(), tensor_container_(nullptr) {}
+    : TBlob(), tensor_container_(nullptr) {}
   ~TBlobContainer() {
     if (tensor_container_) {
       release();
     }
   }
-  void resize(const mshadow::TShape &shape, int type_flag) {
+  void resize(const TShape &shape, int type_flag) {
     if (tensor_container_) {
       CHECK_EQ(this->type_flag_, type_flag);
       this->shape_ = shape;
@@ -192,13 +191,12 @@ class TBlobContainer : public mshadow::TBlob {
       this->shape_ = shape;
       create();
     }
-    this->stride_ = shape_[shape_.ndim() - 1];
   }
 
  private:
   void create() {
     CHECK(tensor_container_ == nullptr);
-    CHECK_EQ(this->dev_mask_, mshadow::cpu::kDevMask);
+    CHECK_EQ(this->dev_mask(), mshadow::cpu::kDevMask);
     MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
         auto tensor_container = new mshadow::TensorContainer<mshadow::cpu, 1, DType>(false);
         tensor_container->Resize(mshadow::Shape1(shape_.Size()));

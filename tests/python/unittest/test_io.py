@@ -28,6 +28,8 @@ except ImportError:
     h5py = None
 import sys
 from common import get_data
+import unittest
+
 
 def test_MNISTIter():
     # prepare data
@@ -154,7 +156,6 @@ def test_NDArrayIter_h5py():
             assert(labelcount[i] == 100)
 
 def test_NDArrayIter_csr():
-    import scipy.sparse as sp
     # creating toy data
     num_rows = rnd.randint(5, 15)
     num_cols = rnd.randint(1, 20)
@@ -164,7 +165,7 @@ def test_NDArrayIter_csr():
     dns = csr.asnumpy()
 
     # make iterators
-    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size))
+    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))
     begin = 0
     for batch in csr_iter:
         expected = np.zeros((batch_size, num_cols))
@@ -256,6 +257,27 @@ def test_LibSVMIter():
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
+    
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
+def test_CSVIter():
+    def check_CSVIter_synthetic():
+        cwd = os.getcwd()
+        data_path = os.path.join(cwd, 'data.t')
+        label_path = os.path.join(cwd, 'label.t')
+        with open(data_path, 'w') as fout:
+            for i in range(1000):
+                fout.write(','.join(['1' for _ in range(8*8)]) + '\n')
+        with open(label_path, 'w') as fout:
+            for i in range(1000):
+                fout.write('0\n')
+
+        data_train = mx.io.CSVIter(data_csv=data_path, data_shape=(8,8),
+                                   label_csv=label_path, batch_size=100)
+        expected = mx.nd.ones((100, 8, 8))
+        for batch in iter(data_train):
+            assert_almost_equal(data_train.getdata().asnumpy(), expected.asnumpy())
+
+    check_CSVIter_synthetic()
 
 if __name__ == "__main__":
     test_NDArrayIter()
@@ -265,3 +287,4 @@ if __name__ == "__main__":
     test_Cifar10Rec()
     test_LibSVMIter()
     test_NDArrayIter_csr()
+    test_CSVIter()

@@ -34,6 +34,7 @@ from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
+from .ndarray.sparse import CSRNDArray
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
@@ -189,6 +190,7 @@ class DataIter(object):
     --------
     NDArrayIter : Data-iterator for MXNet NDArray or numpy-ndarray objects.
     CSVIter : Data-iterator for csv data.
+    LibSVMIter : Data-iterator for libsvm data.
     ImageIter : Data-iterator for images.
     """
     def __init__(self, batch_size=0):
@@ -512,7 +514,8 @@ def _init_data(data, allow_empty, default_name):
     return list(data.items())
 
 class NDArrayIter(DataIter):
-    """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray`` or ``h5py.Dataset``.
+    """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
+    or ``mx.nd.sparse.CSRNDArray``.
 
     Example usage:
     ----------
@@ -575,6 +578,18 @@ class NDArrayIter(DataIter):
     >>> label = {'label1':np.zeros(shape=(10,1)), 'label2':np.zeros(shape=(20,1))}
     >>> dataiter = mx.io.NDArrayIter(data, label, 3, True, last_batch_handle='discard')
 
+    `NDArrayIter` also supports ``mx.nd.sparse.CSRNDArray`` with `shuffle` set to `False`
+    and `last_batch_handle` set to `discard`.
+
+    >>> csr_data = mx.nd.array(np.arange(40).reshape((10,4))).tostype('csr')
+    >>> labels = np.ones([10, 1])
+    >>> dataiter = mx.io.NDArrayIter(csr_data, labels, 3, last_batch_handle='discard')
+    >>> [batch.data[0] for batch in dataiter]
+    [
+    <CSRNDArray 3x4 @cpu(0)>,
+    <CSRNDArray 3x4 @cpu(0)>,
+    <CSRNDArray 3x4 @cpu(0)>]
+
     Parameters
     ----------
     data: array or list of array or dict of string to array
@@ -602,6 +617,11 @@ class NDArrayIter(DataIter):
 
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
+        if isinstance(data, CSRNDArray) or isinstance(label, CSRNDArray):
+            assert(shuffle is False), \
+                  "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
+            assert(last_batch_handle == 'discard'), "`NDArrayIter` only supports ``CSRNDArray``" \
+                                                    " with `last_batch_handle` set to `discard`."
 
         self.idx = np.arange(self.data[0][1].shape[0])
         # shuffle data
@@ -721,7 +741,7 @@ class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.
 
     This iterator is the Python wrapper to all native C++ data iterators, such
-    as `CSVIter, `ImageRecordIter`, `MNISTIter`, etc. When initializing
+    as `CSVIter`, `ImageRecordIter`, `MNISTIter`, etc. When initializing
     `CSVIter` for example, you will get an `MXDataIter` instance to use in your
     Python code. Calls to `next`, `reset`, etc will be delegated to the
     underlying C++ data iterators.
