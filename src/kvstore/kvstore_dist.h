@@ -352,12 +352,7 @@ class KVStoreDist : public KVStoreLocal {
       auto push_to_servers =
           [this, key, send_buf, merged](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
-          size_t size = 0;
-          if (compress_ == "none") {
-            size = send_buf.shape().Size();
-          } else {
-            size = merged.shape().Size();
-          }
+          size_t size = send_buf.shape().Size();
           PSKV& pskv = EncodeKey(key, size);
 
 
