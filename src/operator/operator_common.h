@@ -217,24 +217,6 @@ inline bool type_assign(int *y, const int& x) {
                              << "' at '" << arg << "'";                 \
   }
 
-/*!
- * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
- *  Use macro so we can see the error file more clearly
- * \param type_array the storage type array to store the result
- * \param index the index of in the array
- * \param type the inferred storage type
- */
-#define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
-  {                                                                         \
-    if (!type_assign(&(type_array)[index], type)) {                         \
-      std::ostringstream os;                                                \
-      os << "Storage type inconsistent, Provided="                          \
-         << common::stype_string((type_array)[index]) << ','                \
-         << " inferred storage type=" << common::stype_string(type);        \
-      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
-    }                                                                       \
-  }
-
 // helper macro to implement bind dispatch
 #if MXNET_USE_CUDA
 #define DO_BIND_DISPATCH(Method, ...)                                \
@@ -254,8 +236,10 @@ inline bool type_assign(int *y, const int& x) {
 #endif
 
 // TODO(haibin) doc
-inline bool dispatch_on_storage(int* stype, const NDArrayStorageType target_stype,
-                                int* dispatch, const DispatchType target_dispatch) {
+inline bool dispatch_on_storage(int* stype,
+                                const NDArrayStorageType target_stype,
+                                int* dispatch,
+                                const DispatchType target_dispatch) {
   if (type_assign(stype, target_stype)) {
     TYPE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
     return true;
@@ -263,8 +247,10 @@ inline bool dispatch_on_storage(int* stype, const NDArrayStorageType target_styp
   return false;
 }
 
-inline bool dispatch_on_storage(StorageTypeVector* stypes, const NDArrayStorageType target_stype,
-                                int* dispatch, const DispatchType target_dispatch) {
+inline bool dispatch_on_storage(StorageTypeVector* stypes,
+                                const NDArrayStorageType target_stype,
+                                int* dispatch,
+                                const DispatchType target_dispatch) {
   CHECK_GT(stypes->size(), 0);
   bool success = true;
   for (size_t i = 0; i < stypes->size(); i++) {
@@ -278,6 +264,12 @@ inline bool dispatch_on_storage(StorageTypeVector* stypes, const NDArrayStorageT
   return success;
 }
 
+inline void dispatch_fallback(StorageTypeVector* stypes, int* dispatch) {
+  for (auto& stype : *stypes) {
+    type_assign(&stype, kDefaultStorage);
+  }
+  TYPE_ASSIGN_CHECK(dispatch, 0, kDispatchFComputeFallback);
+}
 
 // make a new node with operator op_name. Inputs are not filled.
 inline nnvm::NodePtr MakeNode(
@@ -390,44 +382,6 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
     throw dmlc::ParamError(os.str());
   }
   attrs->parsed = std::move(param);
-}
-
-/*! \brief Perform storage fallback to invoke fcompute.
- *  \param attrs attributes of the operator
- *  \param ctx operator context
- *  \param inputs inputs of fcompute
- *  \param req req of fcompute
- *  \param outputs outputs of fcompute
- *  \param fcompute
- *  \param fname name of the operator
- *  \param mutate_idx the indices of mutable inputs
- */
-template <typename xpu>
-void FCompExFallback(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<NDArray>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<NDArray>& outputs,
-                     FCompute fcompute,
-                     const std::string& fname,
-                     std::vector<uint32_t> mutate_idx = {}) {
-  using namespace mxnet::common;
-  std::vector<TBlob> in_blobs, out_blobs;
-  std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
-  // mapping from index in input_blobs to index in pre_temp_dst
-  std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
-  SetupDefaultBlobs(inputs, &in_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
-  SetupDefaultBlobs(outputs, &out_blobs, &post_temp_dst, &post_temp_src);
-  for (const auto idx : mutate_idx) {
-    auto map_iter = in_temp_idx_map.find(idx);
-    if (map_iter != in_temp_idx_map.end()) {
-      post_temp_src.push_back(pre_temp_dst[map_iter->second]);
-      post_temp_dst.push_back(inputs[idx]);
-    }
-  }
-  CastNonDefaultStorage<xpu>(pre_temp_src, pre_temp_dst, ctx, true);
-  fcompute(attrs, ctx, in_blobs, req, out_blobs);
-  CastNonDefaultStorage<xpu>(post_temp_src, post_temp_dst, ctx, true);
 }
 
 #define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \

@@ -23,6 +23,7 @@
  * \author Junyuan Xie
  */
 #include "./optimizer_op-inl.h"
+#include "./elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -172,7 +173,7 @@ only the row slices whose indices appear in grad.indices are updated (for w, m a
 .set_attr_parser(ParamParser<AdamParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", AdamUpdateStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<4, 1, true, false>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3};

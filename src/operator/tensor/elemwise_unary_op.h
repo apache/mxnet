@@ -45,28 +45,28 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
   auto& lhs_stype = in_attrs->at(0);
   auto& rhs_stype = in_attrs->at(1);
   auto& out_stype = out_attrs->at(0);
-  bool fallback = true;
+  bool dispatched = false;
+
   CHECK_NE(rhs_stype, kUndefinedStorage);
-  CHECK(type_assign(&out_stype, rhs_stype)) << "Failed to assign output stype like rhs";
+  TYPE_ASSIGN_CHECK(&out_stype, 0, rhs_stype);
   type_assign(&lhs_stype, rhs_stype);
   if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
       out_stype == kDefaultStorage) {
     // dns, dns -> dns
-    type_assign(dispatch_type, kDispatchFCompute);
-    fallback = false;
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
   } else if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-             (lhs_stype == out_stype)) {
-    type_assign(dispatch_type, kDispatchFComputeEx);
-    fallback = false;
+             (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
+    // rsp, rsp -> rsp, or csr, csr -> csr
+    dispatched = dispatch_on_storage(&out_stype, static_cast<NDArrayStorageType>(out_stype),
+                                     dispatch_type, kDispatchFComputeEx);
   }
-  if (fallback) {
-    type_assign(&out_stype, kDefaultStorage);
-    type_assign(dispatch_type, kDispatchFComputeFallback);
-    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_type);
+    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;
 }
-
 
 class OpBase {
  protected:

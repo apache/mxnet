@@ -63,8 +63,7 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    dispatch_on_storage(out_attrs, kDefaultStorage,
-                        dispatch_type, kDispatchFComputeFallback);
+    dispatch_fallback(out_attrs, dispatch_type);
     LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;
@@ -175,8 +174,7 @@ inline bool ElemwiseStorageTypeDnsOutput(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    dispatch_on_storage(out_attrs, kDefaultStorage,
-                        dispatch_type, kDispatchFComputeFallback);
+    dispatch_fallback(out_attrs, dispatch_type);
     LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;

@@ -99,14 +99,13 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
    - elemwise_mul(row_sparse, row_sparse) = row_sparse
    - elemwise_mul(default, row_sparse) = row_sparse
    - elemwise_mul(row_sparse, default) = row_sparse
-   - elemwise_mul(csr, csr) = csr
    - otherwise, ``elemwise_mul`` generates output with default storage
 
 )code")
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseMulStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
-                      ElemwiseBinaryOp::ComputeExDenseLRValue<cpu, mshadow::op::mul, true, true>)
+                      ElemwiseBinaryOp::ComputeDnsLRValueEx<cpu, mshadow::op::mul, true, true>)
 .add_alias("_mul").add_alias("_Mul")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
 

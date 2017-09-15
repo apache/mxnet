@@ -116,15 +116,6 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
   }
 }
 
-// Check if any storage type is not default storage
-inline bool ContainsNonDefaultStorage(const StorageTypeVector& vstorage) {
-  for (const auto& i : vstorage) {
-    if (i != kUndefinedStorage && i != kDefaultStorage) return true;
-  }
-  return false;
-}
-
-// Check if any storage type is not default storage
 // TODO doc
 inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
                                 const NDArrayStorageType stype) {
@@ -132,34 +123,6 @@ inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
     if (i != stype) return false;
   }
   return true;
-}
-
-// Check if any NDArray in the list has default storage
-inline bool ContainsDefaultStorage(const std::vector<NDArray>& ndarrays) {
-  for (const auto &nd : ndarrays) {
-    if (nd.storage_type() == kDefaultStorage) {
-      return true;
-    }
-  }
-  return false;
-}
-
-inline bool ContainsNonDefaultStorage(const std::vector<NDArray>& ndarrays) {
-  for (const auto &nd : ndarrays) {
-    if (nd.storage_type() != kUndefinedStorage && nd.storage_type() != kDefaultStorage) {
-      return true;
-    }
-  }
-  return false;
-}
-
-inline bool ContainsStorage(const std::vector<NDArray>& ndarrays, const NDArrayStorageType stype) {
-  for (const auto &nd : ndarrays) {
-    if (nd.storage_type() == stype) {
-      return true;
-    }
-  }
-  return false;
 }
 
 inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,

@@ -68,8 +68,7 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-    dispatch_on_storage(out_attrs, kDefaultStorage,
-                        dispatch_type, kDispatchFComputeFallback);
+    dispatch_fallback(out_attrs, dispatch_type);
     LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;

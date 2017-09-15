@@ -728,41 +728,6 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   }
 };
 
-inline bool AdamUpdateStorageType(const nnvm::NodeAttrs& attrs,
-                                  const Context& ctx,
-                                  int* dispatch_type,
-                                  std::vector<int> *in_attrs,
-                                  std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 4U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  auto& weight_stype = in_attrs->at(0);
-  auto& grad_stype = in_attrs->at(1);
-  auto& mean_stype = in_attrs->at(2);
-  auto& var_stype = in_attrs->at(3);
-  auto& out_stype = out_attrs->at(0);
-  bool fallback = true;
-  if (weight_stype == kDefaultStorage && grad_stype == kDefaultStorage &&
-      mean_stype == kDefaultStorage && var_stype == kDefaultStorage) {
-    if (type_assign(&out_stype, kDefaultStorage)) {
-      type_assign(dispatch_type, kDispatchFCompute);
-      fallback = false;
-    }
-  } else if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
-             mean_stype == kRowSparseStorage && var_stype == kRowSparseStorage) {
-    // rsp, rsp, rsp, rsp -> rsp
-    if (type_assign(&out_stype, kRowSparseStorage)) {
-      type_assign(dispatch_type, kDispatchFComputeEx);
-      fallback = false;
-    }
-  }
-  if (fallback) {
-    type_assign(&out_stype, kDefaultStorage);
-    type_assign(dispatch_type, kDispatchFComputeFallback);
-    FALLBACK_WARNING(attrs, ctx, in_attrs, out_attrs);
-  }
-  return true;
-}
-
 template<typename xpu>
 inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
                        const OpContext &ctx,
