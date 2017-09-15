@@ -420,7 +420,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   Graph g_graph = pass::Gradient(
       graph, graph.outputs, xs, ograd_entries,
-      exec::AggregateGradient, false, nullptr,
+      exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto &e : g_graph.outputs) {

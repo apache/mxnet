@@ -152,8 +152,8 @@ def check_layer_forward(layer, dshape):
         out = layer(x)
     out.backward()
 
-    mx.test_utils.assert_almost_equal(np_out, out.asnumpy())
-    mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy())
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5)
+    mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5)
 
 def test_conv():
     layers1d = [
