@@ -263,6 +263,20 @@ inline bool dispatch_on_storage(int* stype, const NDArrayStorageType target_styp
   return false;
 }
 
+inline bool dispatch_on_storage(StorageTypeVector* stypes, const NDArrayStorageType target_stype,
+                                int* dispatch, const DispatchType target_dispatch) {
+  CHECK_GT(stypes->size(), 0);
+  bool success = true;
+  for (size_t i = 0; i < stypes->size(); i++) {
+    if (!type_assign(&(*stypes)[i], target_stype)) {
+      success = false;
+    }
+  }
+  if (success) {
+    TYPE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+  }
+  return success;
+}
 
 
 // make a new node with operator op_name. Inputs are not filled.

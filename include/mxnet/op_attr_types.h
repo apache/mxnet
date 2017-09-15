@@ -108,7 +108,7 @@ enum DispatchType {
   kDispatchFCompute,
   // dispatch on FComputeEx or FStatefulComputeEx
   kDispatchFComputeEx,
-  // dispatch on FCompute or FStatefulCompute, and performs fallback
+  // dispatch on FCompute or FStatefulCompute, and performs storage fallback
   kDispatchFComputeFallback,
 };
 

@@ -41,36 +41,44 @@ namespace mxnet {
 namespace op {
 
 // TODO add doc
-template<int n_in, bool rsp = false, bool csr = false>
-inline bool ElemwiseStorageType2(const nnvm::NodeAttrs& attrs,
+template<bool rsp = false, bool csr = false>
+inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
                                 const Context& ctx,
                                 int* dispatch_type,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   // TODO(junwu): add ctx info into storage inference logic
-  CHECK_EQ(in_attrs->size(), n_in);
-  CHECK_EQ(out_attrs->size(), 1);
-  auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
   if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns ... -> dns
-    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
   } else if (rsp && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, ... -> rsp
-    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+    dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
   } else if (csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
     // csr, csr, ... -> csr
-    dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
+    dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
                                      dispatch_type, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    dispatch_on_storage(&out_stype, kDefaultStorage,
+    dispatch_on_storage(out_attrs, kDefaultStorage,
                         dispatch_type, kDispatchFComputeFallback);
     LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;
+}
+
+template<int n_in, int n_out, bool rsp = false, bool csr = false>
+inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
+                                const Context& ctx,
+                                int* dispatch_type,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), n_in);
+  CHECK_EQ(out_attrs->size(), n_out);
+  return ElemwiseStorageAttr<rsp, csr>(attrs, ctx, dispatch_type, in_attrs, out_attrs);
 }
 
 template<typename AttrType, bool (*is_none)(const AttrType&),
@@ -115,51 +123,6 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// Only inferring output storage types from input for now
-template<typename AttrType, bool (*is_none)(const AttrType&),
-         bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
-         bool enable_fallback>
-inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
-                         int* dispatch_type,
-                         std::vector<AttrType> *in_attrs,
-                         std::vector<AttrType> *out_attrs) {
-  auto deduce = [&](std::vector<AttrType> *vec, const char *name, AttrType& result,
-                    bool fallback) {
-      auto &v = *vec;
-      for (size_t i = 0; i < vec->size(); ++i) {
-        if (v[i] == kUndefinedStorage) {
-          // if input type is unknown, assume it's default storage
-          CHECK(assign(&v[i], kDefaultStorage));
-        } else if (assign(&result, v[i]) == false && fallback) {
-          result = kDefaultStorage;
-        }
-      }
-    };
-  AttrType dattr = kUndefinedStorage;
-  deduce(in_attrs, "input", dattr, enable_fallback);
-  if (reverse_infer) {
-    LOG(FATAL) << "not implemented yet";
-  }
-  auto write = [&](std::vector<AttrType> *vec, const char *name) {
-      for (size_t i = 0; i < vec->size(); ++i) {
-        CHECK(assign(&(*vec)[i], dattr))
-          << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
-          << name << ": " << "expected " << dattr << ", got " << (*vec)[i];
-      }
-    };
-  if (is_none(dattr)) dattr = kDefaultStorage;
-  write(out_attrs, "output");
-  // TODO(haibin) this is a temporary fix since many operators are using this function.
-  // For some operator, kDispatchFCompute should be chosen instead
-  if (common::ContainsNonDefaultStorage(*in_attrs) ||
-      common::ContainsNonDefaultStorage(*out_attrs)) {
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-  } else {
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
-  }
-  return true;
-}
-
 template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
@@ -188,36 +151,33 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
-template<int n_in, int n_out>
-inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
-                                const Context& ctx,
-                                int* dispatch_type,
-                                std::vector<int> *in_attrs,
-                                std::vector<int> *out_attrs) {
-  // TODO(junwu): add ctx info into storage inference logic
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(n_in)) << " in operator " << attrs.name;
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
-  return ElemwiseStorageAttr<int, type_is_none, type_assign, false, true>(
-    attrs, dispatch_type, in_attrs, out_attrs);
-}
-
-template<int n_out>
-inline bool ElemwiseStorageTypeDenseOutput(const nnvm::NodeAttrs& attrs,
+// The output is always dense. But the input may not be.
+template<int n_out, bool rsp, bool csr>
+inline bool ElemwiseStorageTypeDnsOutput(const nnvm::NodeAttrs& attrs,
                                            const Context& ctx,
                                            int* dispatch_type,
                                            std::vector<int> *in_attrs,
                                            std::vector<int> *out_attrs) {
   CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
-  for (size_t i = 0; i < n_out; ++i) {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, kDefaultStorage);
+  // TODO(junwu): add ctx info into storage inference logic
+  bool dispatched = false;
+  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, dns ... -> dns
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
+  } else if (rsp && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+    // rsp, rsp, ... -> dns
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                     dispatch_type, kDispatchFComputeEx);
+  } else if (csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+    // csr, csr, ... -> dns
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   }
-  // TODO(haibin) this is a temporary fix since many operators are using this function.
-  // For some operator, kDispatchFCompute should be chosen instead
-  if (common::ContainsNonDefaultStorage(*in_attrs) ||
-      common::ContainsNonDefaultStorage(*out_attrs)) {
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-  } else {
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+  if (!dispatched) {
+    dispatch_on_storage(out_attrs, kDefaultStorage,
+                        dispatch_type, kDispatchFComputeFallback);
+    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
   }
   return true;
 }

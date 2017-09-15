@@ -39,11 +39,44 @@
 namespace mxnet {
 namespace op {
 
-inline bool ElemwiseBinaryStorageType(const nnvm::NodeAttrs& attrs,
-                                      const Context& ctx,
-                                      int *dispatch_type,
-                                      std::vector<int> *in_attrs,
-                                      std::vector<int> *out_attrs) {
+inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
+                                                   const Context& ctx,
+                                                   int *dispatch_type,
+                                                   std::vector<int> *in_attrs,
+                                                   std::vector<int> *out_attrs) {
+  using namespace common;
+  CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(out_attrs->size(), 2U);
+  const auto lhs_grad_stype = out_attrs->at(0);
+  auto& rhs_grad_stype = out_attrs->at(1);
+  bool dispatched = false;
+  if (ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
+  } else if (ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+    // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
+    dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
+                                     dispatch_type, kDispatchFComputeEx);
+    // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
+    if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
+        (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
+      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      dispatched = true;
+    }
+  }
+  if (!dispatched) {
+    dispatch_on_storage(out_attrs, kDefaultStorage,
+                        dispatch_type, kDispatchFComputeFallback);
+    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+inline bool ElemwiseBinaryComputeStorageType(const nnvm::NodeAttrs& attrs,
+                                             const Context& ctx,
+                                             int *dispatch_type,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   auto& lhs_stype = in_attrs->at(0);
@@ -65,7 +98,7 @@ inline bool ElemwiseBinaryStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
   } else if ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
              (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
-    // rsp, dns / dns, rsp -> dns
+    // rsp, dns -> dns / dns, rsp -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
                                      dispatch_type, kDispatchFComputeEx);
   } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
@@ -334,40 +367,35 @@ class ElemwiseBinaryOp : public OpBase {
                                       const std::vector<OpReqType> &req,
                                       const std::vector<NDArray> &outputs,
                                       BackupCompute backup_compute) {
-    CHECK_EQ(inputs.size(), 3U);  // output grad,
-    CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    // lhs grad
     if (req[0] != kNullOp) {
-      // If any input is dense, fallback to FCompute
-      if (common::ContainsOnlyStorage(inputs, kRowSparseStorage)) {
-        mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-        // ComputeRspRsp can handle dense outputs so long as OP(0, 0) == 0
-        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-          RspRspOp<DType, IType, LOP>(
-            s, attrs, ctx, inputs[1], inputs[2], req[0], outputs[0],
-            false, false, false);
-        });
-        // LHS in-place
-        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-          RspRspOp<DType, IType, mshadow::op::mul>(
-            s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
-            false, false, true);
-        });
-        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-          RspRspOp<DType, IType, ROP>(
-            s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
-            false, false, false);
-        });
-        // RHS in-place
-        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-          RspRspOp<DType, IType, mshadow::op::mul>(
-            s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
-            false, false, true);
-        });
-      } else {
-        FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                             backup_compute,
-                             "BackwardUseInEx_");
-      }
+      // RspRspOp can handle dense outputs so long as OP(0, 0) == 0
+      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
+        RspRspOp<DType, IType, LOP>(
+          s, attrs, ctx, inputs[1], inputs[2], req[0], outputs[0],
+          false, false, false);
+      });
+      // lhs in-place
+      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
+        RspRspOp<DType, IType, mshadow::op::mul>(
+          s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
+          false, false, true);
+      });
+    }
+    // rhs grad
+    if (req[1] != kNullOp) {
+      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
+        RspRspOp<DType, IType, ROP>(
+          s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
+          false, false, false);
+      });
+      // rhs in-place
+      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
+        RspRspOp<DType, IType, mshadow::op::mul>(
+          s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
+          false, false, true);
+      });
     }
   }
 
@@ -424,8 +452,6 @@ class ElemwiseBinaryOp : public OpBase {
                         const std::vector<NDArray> &inputs,
                         const std::vector<OpReqType> &req,
                         const std::vector<NDArray> &outputs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
     if (req[0] == kNullOp) return;
@@ -455,8 +481,7 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     } else {
-      FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                           Compute<xpu, OP>, "ComputeEx");
+      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -501,30 +526,35 @@ class ElemwiseBinaryOp : public OpBase {
                                        const std::vector<NDArray> &inputs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<NDArray> &outputs) {
-    CHECK_EQ(inputs.size(), 1U);   // output grad,
+    CHECK_EQ(inputs.size(), 1U);   // output grad
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
-    using namespace mshadow;
-    using namespace mshadow::expr;
+    const auto in_stype = inputs[0].storage_type();
+    const auto lhs_stype = outputs[0].storage_type();
+    const auto rhs_stype = outputs[1].storage_type();
+    // lhs grad
     if (req[0] != kNullOp) {
-      // If any input is dense, fallback to FCompute
-      if (!common::ContainsDefaultStorage(inputs)) {
-        CHECK_EQ(inputs[0].storage_type(), kRowSparseStorage);
-        DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);  // op requires 0-input
-                                                                  // returns 0-output
-        DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);  // op requires 0-input
-                                                                  // returns 0-output
+      if (in_stype == kRowSparseStorage && lhs_stype == kRowSparseStorage) {
+        // rsp -> rsp, _. op requires 0-input returns 0-output
+        DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
           UnaryOp::KernelComputeEx<xpu, BackwardUseNoneOp<LOP, Req>>(attrs, ctx, inputs,
                                                                      req, {outputs[0]});
         });
+      } else {
+        LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      }
+    }
+    // rhs grad
+    if (req[1] != kNullOp) {
+      if (in_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) {
+        // rsp -> _, rsp. op requires 0-input returns 0-output
+        DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
           UnaryOp::KernelComputeEx<xpu, BackwardUseNoneOp<ROP, Req>>(attrs, ctx, inputs,
                                                                      req, {outputs[1]});
         });
       } else {
-        FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                             BackwardUseNone<xpu, LOP, ROP>,
-                             "BackwardUseNoneEx");
+        LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
       }
     }
   }
@@ -559,10 +589,20 @@ class ElemwiseBinaryOp : public OpBase {
                                      const std::vector<NDArray> &inputs,
                                      const std::vector<OpReqType> &req,
                                      const std::vector<NDArray> &outputs) {
-    MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-      BackwardUseInEx_<xpu, LOP, ROP, DType, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
-        attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
-    });
+    using namespace common;
+    CHECK_EQ(inputs.size(), 3U);
+    CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
+    const auto lhs_grad_stype = outputs[0].storage_type();
+    const auto rhs_grad_stype = outputs[1].storage_type();
+    if (ContainsOnlyStorage(inputs, kRowSparseStorage) &&
+        (lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
+        (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
+      // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
+      MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
+        BackwardUseInEx_<xpu, LOP, ROP, DType, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+          attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
+      });
+    }
   }
 };  // class ElemwiseBinaryOp
 
@@ -584,17 +624,17 @@ class ElemwiseBinaryOp : public OpBase {
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
 /*! \brief Binary launch */
-#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)           \
-  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                            \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryStorageType)       \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)    \
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)            \
+  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                             \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryComputeStorageType) \
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)     \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 /*! \brief Binary launch, dense result */
-#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)          \
-  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                              \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDenseOutput<1>) \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)      \
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)                     \
+  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                         \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDnsOutput<1, true, false>) \
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)                 \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 }  // namespace op

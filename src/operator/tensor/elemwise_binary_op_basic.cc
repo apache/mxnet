@@ -57,8 +57,8 @@ NNVM_REGISTER_OP(_backward_add)
   cpu, mshadow_op::identity, mshadow_op::identity>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity,
-                        mshadow_op::identity>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2>);
+                      mshadow_op::identity>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, false>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_sub, mshadow::op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
@@ -87,7 +87,7 @@ NNVM_REGISTER_OP(_backward_sub)
   mshadow_op::identity, mshadow_op::negation>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseNoneEx<cpu,
   mshadow_op::identity, mshadow_op::negation>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2>);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, false>);
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
@@ -118,11 +118,11 @@ NNVM_REGISTER_OP(_backward_mul)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 2>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryBackwardUseInStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::right, mshadow_op::left>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
-  cpu, mshadow_op::right, mshadow_op::left>);;
+  cpu, mshadow_op::right, mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(elemwise_div, mshadow::op::div)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_div)
@@ -142,7 +142,7 @@ NNVM_REGISTER_OP(_backward_div)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 2>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryBackwardUseInStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
@@ -158,6 +158,7 @@ NNVM_REGISTER_OP(_backward_mod)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryBackwardUseInStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::mod_grad, mshadow_op::mod_rgrad>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
