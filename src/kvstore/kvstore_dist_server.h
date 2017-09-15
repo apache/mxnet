@@ -35,6 +35,7 @@
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op.h"
 #include "../operator/tensor/init_op.h"
+#include "../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -126,6 +127,10 @@ class KVStoreDistServer {
   void set_controller(const KVStore::Controller& controller) {
     CHECK(controller);
     controller_ = controller;
+  }
+
+  void set_compress(const std::string& compress) {
+    compress_ = compress;
   }
 
   void set_updater(const KVStore::Updater& updater)  {
@@ -380,10 +385,24 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
+
+      NDArray comp_buf = compress_buf_[key];
+      if (compress_ != "none") {
+        long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
+        dshape = TShape{original_size};
+        if (comp_buf.is_none()) {
+          comp_buf = NDArray(dshape, Context());
+        }
+      }
+
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
-        CopyFromTo(recved, &stored, 0);
+        if (compress_ == "none") {
+          CopyFromTo(recved, &stored, 0);
+        } else {
+          Dequantize(recved, &stored, compress_, 0);
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
@@ -393,9 +412,19 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          CopyFromTo(recved, &merged.array, 0);
+          if (compress_ == "none") {
+            CopyFromTo(recved, &merged.array, 0);
+          } else {
+            Dequantize(recved, &comp_buf, compress_, 0);
+            CopyFromTo(comp_buf, &merged.array, 0);
+          }
         } else {
-          merged.array += recved;
+          if (compress_ == "none") {
+            merged.array += recved;
+          } else {
+            Dequantize(recved, &comp_buf, compress_, 0);
+            merged.array += comp_buf;
+          }
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
@@ -435,12 +464,16 @@ class KVStoreDistServer {
 
   std::unordered_map<int, NDArray> store_;
   std::unordered_map<int, MergeBuf> merge_buf_;
+  std::unordered_map<int, NDArray> compress_buf_;
 
   Executor exec_;
   ps::KVServer<float>* ps_server_;
 
   // whether to LOG verbose information
   bool log_verbose_;
+
+  // set to use gradient compression
+  std::string compress_;
 };
 
 }  // namespace kvstore

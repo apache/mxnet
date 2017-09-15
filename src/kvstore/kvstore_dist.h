@@ -120,6 +120,7 @@ class KVStoreDist : public KVStoreLocal {
     if (IsServerNode()) {
       server_ = new KVStoreDistServer();
       server_->set_controller(controller);
+      server_->set_compress(compress_);
     }
 
     ps::StartAsync("mxnet_server\0");
