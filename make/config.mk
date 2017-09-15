@@ -79,14 +79,14 @@ USE_OPENMP = 1
 MKLML_ROOT=/usr/lib
 
 # whether use MKL2017 library
-USE_MKL2017 = 0
+USE_MKL2017 = 1
 
 # whether use MKL2017 experimental feature for high performance
 # Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
+USE_MKL2017_EXPERIMENTAL = 1
 
 # whether use MKL-DNN Open Source Library
-USE_MKLDNN = 1
+USE_MKLDNN = 0
 
 # whether use NNPACK library
 USE_NNPACK = 0
