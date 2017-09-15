@@ -166,7 +166,7 @@ endif
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
-ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
@@ -182,7 +182,7 @@ ifeq ($(USE_LAPACK), 1)
 	ifneq ($(USE_LAPACK_PATH), )
 		LDFLAGS += -L$(USE_LAPACK_PATH)
 	endif
-	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
+	ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 		LDFLAGS += -llapack
 	endif
 	CFLAGS += -DMXNET_USE_LAPACK
