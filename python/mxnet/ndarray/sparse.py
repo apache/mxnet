@@ -492,7 +492,7 @@ class RowSparseNDArray(BaseSparseNDArray):
     `indices`.
 
     - data: an NDArray of any dtype with shape [D0, D1, ..., Dn].
-    - indices: a 1-D int64 NDArray with shape [D0].
+    - indices: a 1D int64 NDArray with shape [D0] with values sorted in ascending order.
 
     The `indices` stores the indices of the row slices with non-zeros,
     while the values are stored in `data`. The corresponding NDArray ``dense``
@@ -513,10 +513,8 @@ class RowSparseNDArray(BaseSparseNDArray):
         array([[ 1.,  2., 3.],
                [ 4.,  0., 5.]], dtype=float32)
 
-    A RowSparseNDArray is typically used to represent non-zero row-slices of a large NDArray
+    A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray
     of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
-
-    The indices are expected to be sorted in ascending order.
 
     RowSparseNDArray is used principally in the definition of gradients for operations
     that have sparse gradients (e.g. sparse dot and sparse embedding).
