@@ -211,6 +211,7 @@ void Dequantize2BitDispatch(mshadow::Stream<gpu>* s, const std::vector<TBlob>& i
 template<>
 void Quantize2BitDispatch(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs) {
 	mxnet::op::Quantize2BitImpl<gpu>(s,inputs);
+}
 
 }  // namespace ndarray
 }  // namespace mxnet
