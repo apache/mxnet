@@ -352,7 +352,7 @@ Examples::
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .add_argument("data", "NDArray-or-Symbol", "data")
-.add_argument("indices", "NDArray-or-Symbol", "indices");
+.add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());
 
 
