@@ -16,6 +16,12 @@ To complete this tutorial, we need:
 pip install jupyter requests
 ```
 
+- Basic knowledge of Symbol in MXNet. See the detailed tutorial for Symbol in [Symbol - Neural network graphs and auto-differentiation](https://mxnet.incubator.apache.org/tutorials/basic/symbol.html).
+
+- Basic knowledge of CSRNDArray in MXNet. See the detailed tutorial for CSRNDArray in [TODO(haibin) Add Link Here](http://ec2-54-187-32-207.us-west-2.compute.amazonaws.com/tutorials/sparse/csr.html).
+
+- Basic knowledge of RowSparseNDArray in MXNet. See the detailed tutorial for RowSparseNDArray in [TODO(haibin) Add Link Here](http://ec2-54-187-32-207.us-west-2.compute.amazonaws.com/tutorials/sparse/rowsparse.html).
+
 ## Variables
 
 Variables are placeholder for arrays. We can use them to hold sparse arrays, too.
@@ -77,7 +83,7 @@ The sparse symbols are available in the `mx.sym.sparse` package.
 # element-wise addition of variables with "default" stype
 d = mx.sym.elemwise_add(a, a)
 # element-wise addition of variables with "csr" stype
-e = mx.sym.sparse.elemwise_add(b, b)
+e = mx.sym.sparse.negative(b)
 # element-wise addition of variables with "row_sparse" stype
 f = mx.sym.sparse.elemwise_add(c, c)
 {'d':d, 'e':e, 'f':f}
@@ -121,7 +127,7 @@ fallback_log = fallback_exec.outputs[1]
 {'fallback_add': fallback_add, 'fallback_log': fallback_log}
 ```
 
-### Inspecting Storage Types of the Symbol Graph
+### Inspecting Storage Types of the Symbol Graph (Work in Progress)
 
 When the environment variable `MXNET_EXEC_LOG_LEVEL` is set to `INFO`, MXNet will log the information of the graph executor,
 including storage types of operators' inputs and outputs in the graph. For example, we can inspect the storage types of
@@ -147,7 +153,7 @@ executor = output.simple_bind(ctx=mx.cpu())
 
 In the following section we'll walk through how one can implement *linear regression* using sparse symbols and sparse optimizers.
 
-The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 1000x<sub>1000*, where *(x<sub>1</sub>,x<sub>2</sub>, ..., x<sub>1000</sub>)* are input features and *y* is the corresponding label.
+The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 100x<sub>100*, where *(x<sub>1</sub>,x<sub>2</sub>, ..., x<sub>100</sub>)* are input features and *y* is the corresponding label.
 
 ### Preparing the Data
 
@@ -157,7 +163,7 @@ support loading sparse data in CSR format. In this example, we'll use the `NDArr
 
 ```python
 # random training data
-feature_dimension = 1000
+feature_dimension = 100
 train_data = mx.test_utils.rand_ndarray((1000, feature_dimension), 'csr', 0.01)
 target_weight = mx.nd.arange(1, feature_dimension + 1).reshape((feature_dimension, 1))
 train_label = mx.nd.dot(train_data, target_weight)
