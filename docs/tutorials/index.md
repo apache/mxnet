@@ -32,7 +32,7 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    vision/large_scale_classification
 ```
 
-### Sparse Tensor
+### Sparse NDArray
 
 ```eval_rst
 .. toctree::
