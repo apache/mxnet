@@ -45,6 +45,15 @@ imported by running:
    symbol/contrib.md
 ```
 
+### RNN API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   symbol/rnn.md
+```
+
 ## Module API
 
 ```eval_rst
@@ -52,6 +61,15 @@ imported by running:
    :maxdepth: 1
 
    module/module.md
+```
+
+### Executor
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   executor/executor.md
 ```
 
 ## Autograd API
@@ -70,15 +88,7 @@ imported by running:
    :maxdepth: 1
 
    gluon/gluon.md
-```
-
-## RNN API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   rnn/rnn.md
+   gluon/contrib.md
 ```
 
 ## KVStore API
