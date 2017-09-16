@@ -134,7 +134,8 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     """Returns CSRNDArray with uniform distribution
     This generates a csr matrix with totalnnz unique randomly chosen numbers
     from num_rows*num_cols and arranges them in the 2d array in the
-    following way: row_index = (random_number_generated / num_rows)
+    following way:
+    row_index = (random_number_generated / num_rows)
     col_index = random_number_generated - row_index * num_cols
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
@@ -142,13 +143,22 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     try:
         from scipy import sparse as spsp
         csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+        if data_init is not None:
+            csr.data.fill(data_init)
+        if shuffle_csr_indices is True:
+            shuffle_csr_column_indices(csr)
         result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
                                          (num_rows, num_cols), dtype=dtype)
     except ImportError:
+        assert(data_init is None), \
+               "data_init option is not supported when scipy is absent"
+        assert(not shuffle_csr_indices), \
+               "shuffle_csr_indices option is not supported when scipy is absent"
         # scipy not available. try to generate one from a dense array
         dns = mx.nd.random.uniform(shape=(num_rows, num_cols), dtype=dtype)
         masked_dns = dns * (dns < density)
         result = masked_dns.tostype('csr')
+    return result
 
 def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """Returns CSRNDArray with powerlaw distribution
