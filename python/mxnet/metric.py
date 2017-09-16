@@ -980,7 +980,7 @@ class LogarithmicLoss(EvalMetric):
 
             label = label.ravel()
             num_examples = pred.shape[0]
-            assert label.shape[0] == num_examples,(label.shape[0], num_examples)
+            assert label.shape[0] == num_examples, (label.shape[0], num_examples)
             prob = pred[numpy.arange(num_examples, dtype=numpy.int64), numpy.int64(label)]
             self.sum_metric += (-numpy.log(prob + self.eps)).sum()
             self.num_inst += num_examples
