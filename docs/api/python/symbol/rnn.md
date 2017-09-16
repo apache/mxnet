@@ -1,11 +1,11 @@
-# RNN Cell API
+# RNN Cell Symbol API
 
 ```eval_rst
 .. currentmodule:: mxnet.rnn
 ```
 
 ```eval_rst
-.. warning:: This package is currently experimental and may change in the near future.
+.. warning:: This package was experimental and may be deprecated in the near future.
 ```
 
 ## Overview

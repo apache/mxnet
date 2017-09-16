@@ -17,6 +17,7 @@
 
 # coding: utf-8
 """Definition of various recurrent neural network cells."""
+__all__ = ['VariationalDropoutCell']
 
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state

@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Base container class for all neural network models."""
+__all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
 
@@ -30,7 +31,7 @@ from .utils import _indent
 
 
 class _BlockScope(object):
-    """Scope for collecting child `Block`s."""
+    """Scope for collecting child `Block` s."""
     _current = None
 
     def __init__(self, block):
@@ -120,8 +121,8 @@ class Block(object):
     """Base class for all neural network layers and models. Your models should
     subclass this class.
 
-    `Block` can be nested recursively in a tree structure. You can create and
-    assign child `Block` as regular attributes::
+    :py:class:`Block` can be nested recursively in a tree structure. You can create and
+    assign child :py:class:`Block` as regular attributes::
 
         from mxnet.gluon import Block, nn
         from mxnet import ndarray as F
@@ -144,18 +145,19 @@ class Block(object):
         model(F.zeros((10, 10), ctx=mx.cpu(0)))
 
 
-    Child `Block` assigned this way will be registered and `collect_params`
+    Child :py:class:`Block` assigned this way will be registered and :py:meth:`collect_params`
     will collect their Parameters recursively.
 
     Parameters
     ----------
     prefix : str
         Prefix acts like a name space. It will be prepended to the names of all
-        Parameters and child `Block`s in this `Block`'s `name_scope`. Prefix
-        should be unique within one model to prevent name collisions.
+        Parameters and child :py:class:`Block` s in this :py:class:`Block` 's
+        :py:meth:`name_scope` .
+        Prefix should be unique within one model to prevent name collisions.
     params : ParameterDict or None
-        `ParameterDict` for sharing weights with the new `Block`. For example,
-        if you want `dense1` to share `dense0`'s weights, you can do::
+        :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
+        if you want ``dense1`` to share ``dense0``'s weights, you can do::
 
             dense0 = nn.Dense(20)
             dense1 = nn.Dense(20, params=dense0.collect_params())
@@ -200,17 +202,17 @@ class Block(object):
 
     @property
     def prefix(self):
-        """Prefix of this `Block`."""
+        """Prefix of this :py:class:`Block`."""
         return self._prefix
 
     @property
     def name(self):
-        """Name of this `Block`, without '_' in the end."""
+        """Name of this :py:class:`Block`, without '_' in the end."""
         return self._name
 
     def name_scope(self):
-        """Returns a name space object managing a child `Block` and parameter
-        names. Should be used within a `with` statement::
+        """Returns a name space object managing a child :py:class:`Block` and parameter
+        names. Should be used within a ``with`` statement::
 
             with self.name_scope():
                 self.dense = nn.Dense(20)
@@ -219,12 +221,12 @@ class Block(object):
 
     @property
     def params(self):
-        """Returns this `Block`'s parameter dictionary (does not include its
+        """Returns this :py:class:`Block`'s parameter dictionary (does not include its
         children's parameters)."""
         return self._params
 
     def collect_params(self):
-        """Returns a `ParameterDict` containing this `Block` and all of its
+        """Returns a :py:class:`ParameterDict` containing this :py:class:`Block` and all of its
         children's Parameters."""
         ret = ParameterDict(self._params.prefix)
         ret.update(self.params)
@@ -259,19 +261,19 @@ class Block(object):
 
 
     def register_child(self, block):
-        """Registers block as a child of self. `Block`s assigned to self as
+        """Registers block as a child of self. :py:class:`Block` s assigned to self as
         attributes will be registered automatically."""
         self._children.append(block)
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False):
-        """Initializes `Parameter`s of this `Block` and its children.
+        """Initializes :py:class:`Parameter` s of this :py:class:`Block` and its children.
 
-        Equivalent to `block.collect_params().initialize(...)`
+        Equivalent to ``block.collect_params().initialize(...)``
         """
         self.collect_params().initialize(init, ctx, verbose)
 
     def hybridize(self, active=True):
-        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
         Parameters
@@ -287,7 +289,7 @@ class Block(object):
         return self.forward(*args)
 
     def forward(self, *args):
-        """Overrides to implement forward computation using `NDArray`. Only
+        """Overrides to implement forward computation using :py:class:`NDArray`. Only
         accepts positional arguments.
 
         Parameters
@@ -302,16 +304,17 @@ class Block(object):
 class HybridBlock(Block):
     """`HybridBlock` supports forwarding with both Symbol and NDArray.
 
-    Forward computation in `HybridBlock` must be static to work with `Symbol`s,
-    i.e. you cannot call `.asnumpy()`, `.shape`, `.dtype`, etc on tensors.
+    Forward computation in :py:class:`HybridBlock` must be static to work with :py:class:`Symbol` s,
+    i.e. you cannot call :py:meth:`NDArray.asnumpy`, :py:attr:`NDArray.shape`,
+    :py:attr:`NDArray.dtype`, etc on tensors.
     Also, you cannot use branching or loop logic that bases on non-constant
     expressions like random numbers or intermediate results, since they change
     the graph structure for each iteration.
 
-    Before activating with `hybridize()`, `HybridBlock` works just like normal
-    `Block`. After activation, `HybridBlock` will create a symbolic graph
+    Before activating with :py:meth:`hybridize()`, :py:class:`HybridBlock` works just like normal
+    :py:class:`Block`. After activation, :py:class:`HybridBlock` will create a symbolic graph
     representing the forward computation and cache it. On subsequent forwards,
-    the cached graph will be used instead of `hybrid_forward`.
+    the cached graph will be used instead of :py:meth:`hybrid_forward`.
 
     Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
     the end-to-end usage.
@@ -414,7 +417,7 @@ class HybridBlock(Block):
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
-        `NDArray` or `Symbol`."""
+        :py:class:`NDArray` or :py:class:`Symbol`."""
         if isinstance(x, NDArray):
             with x.context as ctx:
                 if self._active:
