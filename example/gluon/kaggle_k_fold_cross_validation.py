@@ -32,7 +32,7 @@ from mxnet import autograd
 from mxnet import gluon
 from mxnet import ndarray as nd
 
-# The training and testing data sets can be downloaded at:
+# After logging in www.kaggle.com, the training and testing data sets can be downloaded at:
 # https://www.kaggle.com/c/house-prices-advanced-regression-techniques/download/train.csv
 # https://www.kaggle.com/c/house-prices-advanced-regression-techniques/download/test.csv
 train = pd.read_csv("train.csv")
