@@ -142,7 +142,7 @@ data = mx.sym.var('data', stype='csr', shape=(32, 10000))
 # weight in row_sparse format
 weight = mx.sym.var('weight', stype='row_sparse', shape=(10000, 2))
 bias = mx.symbol.Variable("bias", shape=(2,))
-dot = mx.symbol.sparse.dot(x, weight)
+dot = mx.symbol.sparse.dot(data, weight)
 pred = mx.symbol.broadcast_add(dot, bias)
 y = mx.symbol.Variable("label")
 output = mx.symbol.SoftmaxOutput(data=pred, label=y, name="output")
