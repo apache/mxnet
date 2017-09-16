@@ -73,13 +73,6 @@ def test_convrnn():
                                    prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
 
-    cell = contrib.rnn.Conv3DRNNCell(hidden_channels=100, prefix='rnn_')
-    states = cell.begin_state(input_shape=(10, 20, 30, 50), func=mx.sym.zeros)
-    check_rnn_cell(cell, prefix='rnn_',
-                   in_shape=(1, 10, 20, 30, 50),
-                   out_shape=(1, 100, 20, 30, 50),
-                   begin_state=states)
-
 
 def test_convlstm():
     cell = contrib.rnn.Conv1DLSTMCell(hidden_channels=100, input_shape=(10, 50),
