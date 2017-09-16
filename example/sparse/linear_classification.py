@@ -21,7 +21,7 @@ from get_data import get_libsvm_data
 import argparse
 import os
 
-parser = argparse.ArgumentParser(description="Run sparse linear regression " \
+parser = argparse.ArgumentParser(description="Run sparse linear classification " \
                                              "with distributed kvstore",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-epoch', type=int, default=5,
