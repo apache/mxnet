@@ -450,12 +450,12 @@ inline std::string OperatorInfo(const nnvm::NodeAttrs& attrs,
   result += "Operator = " + attrs.op->name + "\n";
   result += "Input storage types = [";
   for (const auto attr : in_attrs) {
-    result += std::to_string(attr) + ", ";
+    result += common::stype_string(attr) + ", ";
   }
   result += "]\n";
   result += "Output storage types = [";
   for (const auto attr : out_attrs) {
-    result += std::to_string(attr) + ", ";
+    result += common::stype_string(attr) + ", ";
   }
   result += "]\n";
   result += "Params = {";

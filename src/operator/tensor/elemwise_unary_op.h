@@ -42,8 +42,8 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
   // TODO(junwu): add ctx info into storage inference logic
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  auto& lhs_stype = in_attrs->at(0);
-  auto& rhs_stype = in_attrs->at(1);
+  const auto& lhs_stype = in_attrs->at(0);
+  const auto& rhs_stype = in_attrs->at(1);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
 
@@ -397,16 +397,24 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu>
-  static void IdentityComputeFirstItemsEx(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<NDArray>& inputs,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<NDArray>& outputs) {
+  static void IdentityAttrLikeRhsComputeEx(const nnvm::NodeAttrs& attrs,
+                                           const OpContext& ctx,
+                                           const std::vector<NDArray>& inputs,
+                                           const std::vector<OpReqType>& req,
+                                           const std::vector<NDArray>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
-    OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    const auto lhs_stype = inputs[0].storage_type();
+    const auto rhs_stype = inputs[1].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
+        (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
+      OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    } else {
+      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+    }
   }
 };
 
