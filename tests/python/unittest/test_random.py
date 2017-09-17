@@ -28,8 +28,8 @@ def check_with_device(device, dtype):
         {
             'name': 'normal',
             'symbol': mx.sym.random.normal,
-            'multisymbol': mx.sym.sample_normal,
-            'ndop': mx.random.normal,
+            'multisymbol': mx.sym.random.normal,
+            'ndop': mx.nd.random.normal,
             'params': { 'loc': 10.0, 'scale': 0.5 },
             'inputs': [ ('loc',[ [ 0.0, 2.5 ], [ -9.75, -7.0 ] ]) , ('scale',[ [ 1.0, 3.7 ], [ 4.2, 1.5 ] ]) ],
             'checks': [
@@ -40,8 +40,8 @@ def check_with_device(device, dtype):
         {
             'name': 'uniform',
             'symbol': mx.sym.random.uniform,
-            'multisymbol': mx.sym.sample_uniform,
-            'ndop': mx.random.uniform,
+            'multisymbol': mx.sym.random.uniform,
+            'ndop': mx.nd.random.uniform,
             'params': { 'low': -1.5, 'high': 3.0 },
             'inputs': [ ('low', [ [ 0.0, 2.5 ], [ -9.75, -1.0 ] ]) , ('high', [ [ 1.0, 3.7 ], [ 4.2, 10.5 ] ]) ],
             'checks': [
@@ -55,8 +55,8 @@ def check_with_device(device, dtype):
             {
                 'name': 'gamma',
                 'symbol': mx.sym.random.gamma,
-                'multisymbol': mx.sym.sample_gamma,
-                'ndop': mx.random.gamma,
+                'multisymbol': mx.sym.random.gamma,
+                'ndop': mx.nd.random.gamma,
                 'params': { 'alpha': 9.0, 'beta': 0.5 },
                 'inputs': [ ('alpha', [ [ 0.0, 2.5 ], [ 9.75, 11.0 ] ]) , ('beta', [ [ 1.0, 0.7 ], [ 0.5, 0.3 ] ]) ],
                 'checks': [
@@ -67,20 +67,20 @@ def check_with_device(device, dtype):
             {
                 'name': 'exponential',
                 'symbol': mx.sym.random.exponential,
-                'multisymbol': mx.sym.sample_exponential,
-                'ndop': mx.random.exponential,
-                'params': { 'lam': 4.0 },
-                'inputs': [ ('lam', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
+                'multisymbol': mx.sym.random.exponential,
+                'ndop': mx.nd.random.exponential,
+                'params': { 'scale': 1.0/4.0 },
+                'inputs': [ ('scale', [ [ 1.0/1.0, 1.0/8.5 ], [ 1.0/2.7 , 1.0/0.5 ] ]) ],
                 'checks': [
-                    ('mean', lambda x, params: np.mean(x.astype(np.float64)) - 1.0 / params['lam'], tol),
-                    ('std', lambda x, params: np.std(x.astype(np.float64)) - 1.0 / params['lam'], tol)
+                    ('mean', lambda x, params: np.mean(x.astype(np.float64)) - params['scale'], tol),
+                    ('std', lambda x, params: np.std(x.astype(np.float64)) - params['scale'], tol)
                 ]
             },
             {
                 'name': 'poisson',
                 'symbol': mx.sym.random.poisson,
-                'ndop': mx.random.poisson,
-                'multisymbol': mx.sym.sample_poisson,
+                'ndop': mx.nd.random.poisson,
+                'multisymbol': mx.sym.random.poisson,
                 'params': { 'lam': 4.0 },
                 'inputs': [ ('lam', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
                 'checks': [
@@ -91,8 +91,8 @@ def check_with_device(device, dtype):
             {
                 'name': 'neg-binomial',
                 'symbol': mx.sym.random.negative_binomial,
-                'multisymbol': mx.sym.sample_negative_binomial,
-                'ndop': mx.random.negative_binomial,
+                'multisymbol': mx.sym.random.negative_binomial,
+                'ndop': mx.nd.random.negative_binomial,
                 'params': { 'k': 3, 'p': 0.4 },
                 'inputs': [ ('k', [ [ 20, 49 ], [ 15 , 16 ] ]) , ('p', [ [ 0.4 , 0.77 ], [ 0.5, 0.84 ] ]) ],
                 'checks': [
@@ -103,8 +103,8 @@ def check_with_device(device, dtype):
             {
                 'name': 'gen-neg-binomial',
                 'symbol': mx.sym.random.generalized_negative_binomial,
-                'multisymbol': mx.sym.sample_generalized_negative_binomial,
-                'ndop': mx.random.generalized_negative_binomial,
+                'multisymbol': mx.sym.random.generalized_negative_binomial,
+                'ndop': mx.nd.random.generalized_negative_binomial,
                 'params': { 'mu': 2.0, 'alpha': 0.3 },
                 'inputs': [ ('mu', [ [ 2.0, 2.5 ], [ 1.3, 1.9 ] ]) , ('alpha', [ [ 1.0, 0.1 ], [ 0.2, 0.5 ] ]) ],
                 'checks': [
@@ -192,7 +192,7 @@ def test_sample_multinomial():
     dx = mx.nd.ones_like(x)
     mx.contrib.autograd.mark_variables([x], [dx])
     with mx.autograd.record():
-        y, prob = mx.nd.sample_multinomial(x, shape=1000, get_prob=True)
+        y, prob = mx.nd.random.multinomial(x, shape=1000, get_prob=True)
         r = prob * 5
         r.backward()
 
@@ -212,5 +212,5 @@ def test_sample_multinomial():
 
 
 if __name__ == '__main__':
-    test_random()
-    test_sample_multinomial()
+    import nose
+    nose.runmodule()
