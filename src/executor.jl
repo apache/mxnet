@@ -65,6 +65,8 @@ function _get_ndarray_inputs(arg_key::AbstractString, args::Dict{Base.Symbol,NDA
   return (args_hdr, args_vec)
 end
 
+@enum GRAD_REQ GRAD_NOP=0 GRAD_WRITE=1 GRAD_ADD=3
+
 """
     bind(sym, ctx, args; args_grad=Dict(), aux_states=Dict(), grad_req=GRAD_WRITE)
 
@@ -81,7 +83,6 @@ Create an `Executor` by binding a `SymbolicNode` to concrete `NDArray`.
 * `aux_states`:
 * `grad_req`:
 """
-@enum GRAD_REQ GRAD_NOP=0 GRAD_WRITE=1 GRAD_ADD=3
 function bind(self :: SymbolicNode, ctx :: Context, args :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}};
               args_grad  :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}} = Dict{Base.Symbol,NDArray}(),
               aux_states :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}} = Dict{Base.Symbol,NDArray}(),
