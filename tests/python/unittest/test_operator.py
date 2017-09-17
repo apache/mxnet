@@ -953,16 +953,16 @@ def test_batchnorm_training():
                              mx.nd.array(xrolling_std).tostype(stype)]
 
                 test = mx.symbol.BatchNorm(data, fix_gamma=True, axis=chaxis)
-                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
+                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=1e-4)
 
                 test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, axis=chaxis)
-                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
+                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=1e-4)
 
                 test = mx.symbol.BatchNorm(data, fix_gamma=False, axis=chaxis)
-                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
+                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=1e-4)
 
                 test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
-                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
+                check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=1e-4)
 
     stypes = ['row_sparse', 'default']
     for stype in stypes:
