@@ -150,36 +150,6 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
-// The output is always dense. But the input may not be.
-template<int n_out, bool rsp, bool csr>
-inline bool ElemwiseStorageTypeDnsOutput(const nnvm::NodeAttrs& attrs,
-                                           const Context& ctx,
-                                           int* dispatch_type,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
-  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
-  // TODO(junwu): add ctx info into storage inference logic
-  bool dispatched = false;
-  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-    // dns, dns ... -> dns
-    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
-  } else if (rsp && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
-    // rsp, rsp, ... -> dns
-    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  } else if (csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
-    // csr, csr, ... -> dns
-    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  }
-  if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
-    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
-  }
-  return true;
-}
-
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;

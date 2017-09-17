@@ -71,47 +71,6 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool ElemwiseBinaryComputeStorageType(const nnvm::NodeAttrs& attrs,
-                                             const Context& ctx,
-                                             int *dispatch_type,
-                                             std::vector<int> *in_attrs,
-                                             std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  const auto& lhs_stype = in_attrs->at(0);
-  const auto& rhs_stype = in_attrs->at(1);
-  auto& out_stype = out_attrs->at(0);
-  bool dispatched = false;
-  if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
-    // dns, dns -> dns
-    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
-  } else if (lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage
-             && out_stype == kDefaultStorage) {
-    // rsp, rsp -> dns
-    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  } else if (lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) {
-    // rsp, rsp -> rsp
-    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  } else if ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
-             (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
-    // rsp, dns -> dns / dns, rsp -> dns
-    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
-    // csr, csr -> csr
-    dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  }
-  if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
-    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
-  }
-  return true;
-}
-
 inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
                                        const Context& ctx,
                                        int *dispatch_type,
@@ -403,9 +362,9 @@ class ElemwiseBinaryOp : public OpBase {
     const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    // rsp, rsp -> rsp/dns
+    // rsp, rsp -> rsp
     if (lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage &&
-        (out_stype == kRowSparseStorage || out_stype == kDefaultStorage)) {
+        out_stype == kRowSparseStorage) {
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
         MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
           RspRspOp<DType, IType, OP>(
@@ -593,16 +552,16 @@ class ElemwiseBinaryOp : public OpBase {
 /*! \brief Binary launch */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)            \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                             \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryComputeStorageType) \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true>) \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)     \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 /*! \brief Binary launch, dense result */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)                     \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                         \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDnsOutput<1, true, false>) \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)                 \
-  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)
+  //.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDnsOutput<1, true, false>)
+  //.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 }  // namespace op
 }  // namespace mxnet

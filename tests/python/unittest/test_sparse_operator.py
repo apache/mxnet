@@ -1295,15 +1295,14 @@ def test_sparse_unary_with_numerics():
 
         expected_result_type, expected_grad_result_type = \
             get_fw_bw_result_types_2(forward_numpy_call, stype, backward_numpy_call, output_grad_stype)
-
         if backward_is_use_output is True:
             expected_grad_result_type = expected_result_type
 
         shape = (3, 4)
         data = mx.symbol.Variable("data")
 
-        grad_stypes = list()
-        grad_stypes.append(expected_grad_result_type)
+        print(expected_grad_result_type, expected_result_type)
+        grad_stypes = {'data' : expected_grad_result_type}
 
         y = mxnet_func(data)
         if stype == 'default':
@@ -1351,7 +1350,7 @@ def test_sparse_unary_with_numerics():
     check_sparse_function('relu',
                           lambda x: mx.sym.relu(x),
                           lambda x: np.maximum(x, 0.0),
-                          lambda input, outg: outg * assign_each(input, lambda x: x > 0.0))
+                          lambda output, outg: outg * assign_each(output, lambda x: x > 0.0), backward_is_use_output=True)
 
     check_sparse_function('sigmoid',
                           lambda x: mx.sym.sigmoid(x),
