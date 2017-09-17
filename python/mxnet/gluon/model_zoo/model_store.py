@@ -58,8 +58,7 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, repo_url=apache_repo_url,
-                   local_dir=os.path.expanduser('~/.mxnet/models/')):
+def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -69,8 +68,6 @@ def get_model_file(name, repo_url=apache_repo_url,
     ----------
     name : str
         Name of the model.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
 
@@ -95,6 +92,7 @@ def get_model_file(name, repo_url=apache_repo_url,
         os.makedirs(local_dir)
 
     zip_file_path = os.path.join(local_dir, file_name+'.zip')
+    repo_url = os.environ.get('MXNET_GLUON_MODEL_REPO', apache_repo_url)
     if repo_url[-1] != '/':
         repo_url = repo_url + '/'
     download(_url_format.format(repo_url=repo_url, file_name=file_name),

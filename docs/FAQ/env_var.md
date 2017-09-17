@@ -114,6 +114,14 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - The default value of cudnn auto tunning for convolution layers.
   - Auto tuning is turned off by default. For benchmarking, set this to 1 to turn it on by default.
 
+* MXNET_GLUON_DATASET_REPO
+  - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/'```
+  - The repository url to be used for Gluon datasets.
+
+* MXNET_GLUON_MODEL_REPO
+  - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/'```
+  - The repository url to be used for Gluon pre-trained models.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```

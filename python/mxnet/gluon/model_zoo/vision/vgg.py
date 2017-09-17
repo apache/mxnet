@@ -105,8 +105,6 @@ def get_vgg(num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -116,7 +114,7 @@ def get_vgg(num_layers, pretrained=False, ctx=cpu(), **kwargs):
     if pretrained:
         from ..model_store import get_model_file
         batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''
-        model_zoo_args = _get_arg_dict(kwargs, ('repo_url', 'local_dir'))
+        model_zoo_args = _get_arg_dict(kwargs, ('local_dir',))
         net.load_params(get_model_file('vgg%d%s'%(num_layers, batch_norm_suffix),
                                        **model_zoo_args), ctx=ctx)
     return net
@@ -131,8 +129,6 @@ def vgg11(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -148,8 +144,6 @@ def vgg13(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -165,8 +159,6 @@ def vgg16(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -182,8 +174,6 @@ def vgg19(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -200,8 +190,6 @@ def vgg11_bn(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -219,8 +207,6 @@ def vgg13_bn(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -238,8 +224,6 @@ def vgg16_bn(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
@@ -257,8 +241,6 @@ def vgg19_bn(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    repo_url : str, default to apache s3 accelerated mirror
-        URL to the 'models' directory where pretrained models are hosted.
     local_dir : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
