@@ -138,6 +138,21 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   return false;
 }
 
+
+/*! \brief get string representation of dispatch_type */
+inline std::string dispatch_type_string(const int x) {
+  switch (x) {
+    case kDispatchFCompute:
+      return "fcompute";
+    case kDispatchFComputeEx:
+      return "fcompute_ex";
+    case kDispatchFComputeFallback:
+      return "fcompute_fallback";
+  }
+  return "unknown";
+}
+
+
 /*! \brief get string representation of storage_type */
 inline std::string stype_string(const int x) {
   switch (x) {
