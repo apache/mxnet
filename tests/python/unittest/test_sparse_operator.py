@@ -149,14 +149,6 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
     return list(indices)
 
 
-def rand_bool():
-    return True if random.uniform(0, 1) <= 0.5 else False
-
-
-def rand_choice(a, b):
-    return a if random.uniform(0, 1) <= 0.5 else b
-
-
 def all_zero(var):
     return 0
 
@@ -314,23 +306,7 @@ def test_elemwise_binary_ops():
 
     def check_all(l, r, check_function):
         assert l.shape == r.shape
-
-        it_l = np.nditer(l, flags=['f_index'])
-        it_r = np.nditer(r, flags=['f_index'])
-
-        output = np.zeros(l.shape)
-        it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
-
-        while not it_l.finished:
-            val_l = it_l[0]
-            val_r = it_r[0]
-            if check_function(val_l, val_r):
-                it_out[0] = 1
-            it_l.iternext()
-            it_r.iternext()
-            it_out.iternext()
-
-        return output
+        return check_function(l, r)
 
     def gt(l, r):
         return check_all(l, r, lambda a, b: a > b)
@@ -486,13 +462,6 @@ def test_elemwise_binary_ops():
                                                       force_lr_overlap=force_lr_overlap,
                                                       force_grad_overlap=force_grad_overlap,
                                                       ograd_density=ograd_density)
-
-def as_dense(arr):
-    if arr.stype != 'default':
-        return arr.tostype('default')
-    else:
-        return arr
-
 
 # Make sure that 0's look like 0's when we do a comparison
 def do_normalize(arr):
