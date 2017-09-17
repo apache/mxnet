@@ -403,7 +403,8 @@ function getindex(arr :: NDArray, idx::UnitRange{Int})
   slice(arr, idx)
 end
 
-import Base: copy!, copy, convert
+import Base: copy!, copy, convert, deepcopy
+
 """
     copy!(dst :: Union{NDArray, Array}, src :: Union{NDArray, Array})
 
@@ -483,6 +484,18 @@ Convert an `NDArray` into a Julia `Array` of specific type. Data will be copied.
 """
 function convert{T<:Real}(t::Type{Array{T}}, arr :: NDArray)
   convert(t, copy(arr))
+end
+
+"""
+    deepcopy(arr::NDArray)
+
+Get a deep copy of the data blob in the form of an NDArray of default storage
+type. This function blocks. Do not use it in performance critical code.
+"""
+function deepcopy(arr::NDArray)
+  out_ref = Ref{MX_handle}(C_NULL)
+  @mxcall(:MXNDArrayGetDataNDArray, (MX_handle, Ref{MX_handle}), arr, out_ref)
+  NDArray(MX_NDArrayHandle(out_ref[]))
 end
 
 """
