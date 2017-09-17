@@ -377,7 +377,7 @@ def test_get_symbol():
 
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
-        x = mx.nd.zeros((1,), stype=array_stype)
+        x = mx.nd.zeros((1, 1), stype=array_stype)
         x.attach_grad(stype=grad_stype)
         # check grad attached
         assert x.grad.stype == expected_stype

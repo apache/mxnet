@@ -489,28 +489,17 @@ def test_elemwise_binary_ops():
 
 def as_dense(arr):
     if arr.stype != 'default':
-        return mx.nd.cast_storage(arr, stype='default')
+        return arr.tostype('default')
     else:
-        return arr;
+        return arr
 
 
 # Make sure that 0's look like 0's when we do a comparison
-def do_normalize(l):
-    it_l = np.nditer(l, flags=['f_index'])
-
-    output = np.zeros(l.shape)
-    it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
-
-    while not it_l.finished:
-        val_l = it_l[0]
-        if np.isclose(val_l, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
-            val_l = 0
-        it_out[0] = val_l
-        it_l.iternext()
-        it_out.iternext()
-
-    return output
-
+def do_normalize(arr):
+    ret = arr.copy()
+    idx = np.isclose(arr, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True)
+    ret[idx] = 0
+    return ret
 
 def check_sparse_mathematical_core(name, stype,
                                    forward_mxnet_call, forward_numpy_call, backward_numpy_call=None,
