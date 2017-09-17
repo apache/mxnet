@@ -38,7 +38,7 @@ NNVM_REGISTER_OP(_zeros)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", InitShape<InitOpParam>)
 .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<0, 1, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", InitStorageType)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FillComputeZerosEx<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());

@@ -131,6 +131,36 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
+                            const Context& ctx,
+                            int *dispatch_type,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto &out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  type_assign(&out_stype, kDefaultStorage);
+  if (out_stype == kDefaultStorage) {
+    // default
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
+  } else if (out_stype == kRowSparseStorage) {
+    // rsp
+    dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
+                                     dispatch_type, kDispatchFComputeEx);
+  } else if (out_stype == kCSRStorage) {
+    // csr
+    dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
+                                     dispatch_type, kDispatchFComputeEx);
+  }
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_type);
+    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,

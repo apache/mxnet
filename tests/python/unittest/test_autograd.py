@@ -273,7 +273,7 @@ def test_attach_grad():
         with record():
             y = x * 2
             assert y.grad is None
-            y.backward()
+            y.backward(out_grad=mx.nd.ones_like(y).tostype(x.stype))
         assert (x.grad.asnumpy() == 2).all()
     zeros = mx.nd.zeros((10, 10))
     stypes = ['default', 'row_sparse', 'csr']

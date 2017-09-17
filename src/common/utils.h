@@ -99,18 +99,9 @@ inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
 template <typename xpu>
 inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
                                   const std::vector<NDArray>& dst,
-                                  const OpContext& ctx,
-                                  bool storage_fallback = false) {
+                                  const OpContext& ctx) {
   CHECK_GE(dst.size(), src.size());
   if (src.size() == 0) return;
-  if (storage_fallback == false) {
-    storage_fallback = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK", true);
-  }
-  if (storage_fallback == false) {
-    LOG(FATAL) << "Storage type conversion detected during execution. "
-               << "You are probably executing an operator which "
-               << "doesn't support NDArray inputs with non-default storage.";
-  }
   for (size_t i = 0; i < src.size(); i++) {
     CastStorageDispatch<xpu>(ctx, src[i], dst[i]);
   }
@@ -119,16 +110,19 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
 // TODO doc
 inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
                                 const NDArrayStorageType stype) {
-  for (const auto& i : vstorage) {
-    if (i != stype) return false;
+  if (!vstorage.empty()) {
+    for (const auto& i : vstorage) {
+      if (i != stype) return false;
+    }
+    return true;
   }
-  return true;
+  return false;
 }
 
 inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
                                 const NDArrayStorageType stype) {
   if (!ndarrays.empty()) {
-    for (const auto &nd : ndarrays) {
+    for (const auto& nd : ndarrays) {
       if (nd.storage_type() != stype) {
         return false;
       }
@@ -137,6 +131,21 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   }
   return false;
 }
+
+
+/*! \brief get string representation of dispatch_type */
+inline std::string dispatch_type_string(const int x) {
+  switch (x) {
+    case kDispatchFCompute:
+      return "fcompute";
+    case kDispatchFComputeEx:
+      return "fcompute_ex";
+    case kDispatchFComputeFallback:
+      return "fcompute_fallback";
+  }
+  return "unknown";
+}
+
 
 /*! \brief get string representation of storage_type */
 inline std::string stype_string(const int x) {

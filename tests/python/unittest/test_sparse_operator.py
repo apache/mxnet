@@ -1058,8 +1058,6 @@ def test_elemwise_add_ex():
         shapes = [rand_shape_2d(), rand_shape_3d()]
         for shape in shapes:
             check_elemwise_add_ex('default', 'default', shape)
-            check_elemwise_add_ex('default', 'row_sparse', shape)
-            check_elemwise_add_ex('row_sparse', 'default', shape)
             check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
                                   lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
@@ -1114,7 +1112,7 @@ def test_cast_storage_ex():
         grad_stypes = {'x': to_stype}
         check_symbolic_backward(test, location, [out_np], [out_np], grad_stypes=grad_stypes)
 
-    density = [1.00, 0.50, 0.05, 0.01]
+    density = [1.00, 0.50, 0.01]
     for d in density:
         shape_2d = rand_shape_2d()
         shape_3d = rand_shape_3d()
@@ -1173,7 +1171,7 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
-    density = [1.00, 0.50, 0.10, 0.05, 0.01]
+    density = [1.00, 0.50, 0.01]
     for lhs_d in density:
         lhs_shape = rand_shape_2d(50, 200)
         rhs_d = 1
@@ -1225,23 +1223,12 @@ def test_sparse_retain():
 
     shape = rand_shape_2d()
     shape_3d = rand_shape_3d()
-    densities = [0.01, 0.1, 0.2, 0.5, 0.8, 1.0]
+    densities = [0.01, 0.5, 1.0]
     index_types = [np.float32, np.int32, np.int64]
     for density in densities:
         for itype in index_types:
             check_sparse_retain(shape, density, itype)
             check_sparse_retain(shape_3d, density, itype)
-
-def do_cast(arr, stype):
-    if arr.stype != stype:
-        return mx.nd.cast_storage(arr, stype=stype)
-    return arr
-
-def check_is_type(arr, stype):
-    if stype is not None:
-        assert arr.stype == stype
-    else:
-        assert arr.stype == 'default'
 
 
 def test_sparse_unary_with_numerics():
@@ -1402,10 +1389,8 @@ def test_sparse_storage_fallback():
 
         def np_softmax(x, axis=-1):
             # fix for old numpy on Travis not supporting keepdims
-            # x = x - np.max(x, axis=-1, keepdims=True)
             x = x - np.max(x, axis=axis, keepdims=True)
             x = np.exp(x)
-            # x /= np.sum(x, axis=-1, keepdims=True)
             x /= np.sum(x, axis=axis, keepdims=True)
             return x
 
