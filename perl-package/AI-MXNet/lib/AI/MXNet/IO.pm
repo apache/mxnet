@@ -398,7 +398,7 @@ method getpad()
 package AI::MXNet::NDArrayIter;
 use Mouse;
 use AI::MXNet::Base;
-use List::Util qw(shuffle);
+use List::Util;
 extends 'AI::MXNet::DataIter';
 
 =head1 NAME
@@ -434,23 +434,15 @@ has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[
 has 'data_list'           => (is => 'rw', isa => 'ArrayRef[AI::MXNet::NDArray]');
 has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
 has 'batch_size'          => (is => 'rw', isa => 'Int', default => 1);
-has '_shuffle'            => (is => 'rw', init_arg => 'shuffle', isa => 'Bool', default => 0);
+has 'shuffle'             => (is => 'rw', isa => 'Bool', default => 0);
 has 'last_batch_handle'   => (is => 'rw', isa => 'Str', default => 'pad');
 has 'label_name'          => (is => 'rw', isa => 'Str', default => 'softmax_label');
 has 'num_source'          => (is => 'rw', isa => 'Int');
 has 'cursor'              => (is => 'rw', isa => 'Int');
 has 'num_data'            => (is => 'rw', isa => 'Int');
 
-around BUILDARGS => sub {
-    my $orig  = shift;
-    my $class = shift;
-    if(@_%2)
-    {
-        my $data  = shift;
-        return $class->$orig(data => $data, @_);
-    }
-    return $class->$orig(@_);
-};
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
+method python_constructor_arguments() { ['data', 'label'] };
 
 sub BUILD
 {
@@ -460,9 +452,9 @@ sub BUILD
     my $num_data  = $data->[0][1]->shape->[0];
     confess("size of data dimension 0 $num_data < batch_size ${\ $self->batch_size }")
         unless($num_data >= $self->batch_size);
-    if($self->_shuffle)
+    if($self->shuffle)
     {
-        my @idx = shuffle(0..$num_data-1);
+        my @idx = List::Util::shuffle(0..$num_data-1);
         $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$data;
         $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$label;
     }

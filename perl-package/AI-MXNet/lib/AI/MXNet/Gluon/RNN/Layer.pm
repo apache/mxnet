@@ -28,7 +28,7 @@ has 'num_layers'    => (is => 'rw', isa => 'Int');
 has 'layout'        => (is => 'rw', isa => 'Str');
 has 'dropout'       => (is => 'rw', isa => 'Num');
 has 'bidirectional' => (is => 'rw', isa => 'Bool');
-has 'input_size'    => (is => 'rw', isa => 'Int');
+has 'input_size'    => (is => 'rw', isa => 'Int', default => 0);
 has [qw/
     i2h_weight_initializer
     h2h_weight_initializer
@@ -68,7 +68,7 @@ sub BUILD
     $self->dir($self->bidirectional ? 2 : 1);
     $self->gates({qw/rnn_relu 1 rnn_tanh 1 lstm 4 gru 3/}->{$self->mode});
     my ($ng, $ni, $nh) = ($self->gates, $self->input_size, $self->hidden_size);
-    for my $i (0..$self->num_layers)
+    for my $i (0..$self->num_layers-1)
     {
         for my $j ($self->dir == 2 ? ('l', 'r') : ('l'))
         {
@@ -149,7 +149,7 @@ method _unfuse()
             my %kwargs = @_;
             AI::MXNet::Gluon::RNN::LSTMCell->new(
                 $self->hidden_size,
-                activation => 'relu',
+                %kwargs
             )
         },
         gru => sub {
@@ -160,7 +160,7 @@ method _unfuse()
             )
         }
     }->{$self->mode};
-    my $stack = AI::MXNet::Gluon::RNN::SequentialCell->new(prefix => $self->prefix, params => $self->params);
+    my $stack = AI::MXNet::Gluon::RNN::SequentialRNNCell->new(prefix => $self->prefix, params => $self->params);
     $stack->name_scope(sub {
         my $ni = $self->input_size;
         for my $i (0..$self->num_layers-1)
@@ -197,7 +197,7 @@ method _unfuse()
 
 method begin_state(
     $batch_size=0,
-    CodeRef $func=sub { my %kwargs = @_; my $shape = delete $kwargs{shape}; AI::MXNet::NDArray->zeros($shape, %kwargs) },
+    CodeRef :$func=sub { my %kwargs = @_; my $shape = delete $kwargs{shape}; AI::MXNet::NDArray->zeros($shape, %kwargs) },
     %kwargs
 )
 {
@@ -218,7 +218,7 @@ method begin_state(
 }
 
 use Data::Dumper;
-method forward(GluonInput $inputs, GluonInput $states=)
+method forward(GluonInput $inputs, Maybe[GluonInput] $states=)
 {
     my $batch_size = $inputs->shape->[index($self->layout, 'N')];
     my $skip_states = not defined $states;
@@ -266,8 +266,8 @@ method _forward_cpu($inputs, $states)
     my $axis = index($self->layout, 'T');
     $states = [map { @{$_} } @{ $states }];
     my $outputs;
-    ($outputs, $states) = $self->_unfused->unroll(
-        $inputs->shape->[$axis], $inputs, $states,
+    ($outputs, $states) = $self->unfused->unroll(
+        $inputs->shape->[$axis], $inputs, begin_state => $states,
         layout => $self->layout, merge_outputs => 1
     );
     my @new_states;
@@ -278,10 +278,10 @@ method _forward_cpu($inputs, $states)
         {
             push @tmp, $states->[$j];
         }
-        my $state = AI::MXNet::NDArray->concat(map { $_->reshape([1, @{ $_->shape }]) } @tmp, dim => 0);
+        my $state = AI::MXNet::NDArray->concat((map { $_->reshape([1, @{ $_->shape }]) } @tmp), dim => 0);
         push @new_states, $state;
     }
-    return ($outputs, \@new_states);
+    return [$outputs, \@new_states];
 }
 
 method _forward_gpu($inputs, $states)
@@ -315,7 +315,7 @@ method _forward_gpu($inputs, $states)
     {
         $outputs = $outputs->swapaxes(dim1 => 0, dim2 => 1);
     }
-    return ($outputs, $states);
+    return [$outputs, $states];
 }
 
 

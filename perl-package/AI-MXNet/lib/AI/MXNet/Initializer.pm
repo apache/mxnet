@@ -740,6 +740,8 @@ package AI::MXNet::LSTMBias;
 use Mouse;
 extends 'AI::MXNet::Initializer';
 has 'forget_bias' => (is => 'ro', isa => 'Num', required => 1);
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
+method python_constructor_arguments() { ['forget_bias'] }
 
 method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 {

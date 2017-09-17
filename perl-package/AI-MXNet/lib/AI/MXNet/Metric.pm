@@ -559,6 +559,47 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }, $labels, $preds);
 }
 
+package AI::MXNet::Loss;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::EvalMetric';
+has '+name'   => (default => 'loss');
+
+=head1 NAME
+
+    AI::MXNet::Loss
+=cut
+
+=head1 DESCRIPTION
+
+    Dummy metric for directly printing loss.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+=cut
+
+method update($labels, ArrayRef[AI::MXNet::NDArray] $preds)
+{
+    for my $pred (@{ $preds })
+    {
+        $self->sum_metric($self->sum_metric + $pred->sum->asscalar);
+        $self->num_inst($self->num_inst + $pred->size);
+    }
+}
+
+=head1 NAME
+
+    AI::MXNet::CustomMetric
+=cut
+
 =head1 DESCRIPTION
 
     Custom evaluation metric that takes a sub ref.
@@ -624,6 +665,8 @@ my %metrics = qw/
     Perplexity     AI::MXNet::Perplexity
     perplexity     AI::MXNet::Perplexity
     pearsonr       AI::MXNet::PearsonCorrelation
+    Loss           AI::MXNet::Loss
+    loss           AI::MXNet::Loss
 /;
 
 method create(Metric|ArrayRef[Metric] $metric, %kwargs)

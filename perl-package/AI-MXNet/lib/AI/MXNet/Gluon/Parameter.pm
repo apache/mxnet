@@ -609,7 +609,7 @@ use overload
     '""'   => sub {
         my $self = shift;
         my $name = $self->_prefix ? $self->_prefix." " : '';
-        my $content = join('', map { _indent("   $_", 2) } $self->values);
+        my $content = join("\n", map { AI::MXNet::Base::_indent("   $_", 2) } $self->values);
         return "$name(\n$content\n)";
     },
     '%{}'  => sub { my %tmp = shift->_params->as_list; \%tmp },

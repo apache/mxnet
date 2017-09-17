@@ -124,6 +124,10 @@ func _make_atomic_symbol_function($handle, $name)
         {
             %kwargs = @_;
         }
+        if(blessed $class and $class->isa(__PACKAGE__))
+        {
+            $kwargs{data} = $class;
+        }
         my $params = {};
         my $symbol_kwargs = {};
         my $attr = delete $kwargs{ 'attr' };

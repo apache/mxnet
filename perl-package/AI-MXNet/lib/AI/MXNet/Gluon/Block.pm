@@ -143,7 +143,7 @@ use AI::MXNet::Gluon::Mouse;
 =cut
 
 method _flatten(
-    AI::MXNet::NDArray|AI::MXNet::Symbol|ArrayRef[AI::MXNet::NDArray|AI::MXNet::Symbol] $args
+    GluonInput $args
 )
 {
     if(blessed $args and $args->isa('AI::MXNet::NDArray'))
@@ -168,7 +168,7 @@ method _flatten(
 }
 
 method _regroup(
-    AI::MXNet::NDArray|AI::MXNet::Symbol|ArrayRef[AI::MXNet::NDArray|AI::MXNet::Symbol] $args,
+    GluonInput $args,
     Int|ArrayRef[Int] $fmt
 )
 {
@@ -176,11 +176,17 @@ method _regroup(
     my @ret;
     if(not ref $fmt)
     {
+        my $len = @{$args} - 1;
         if($fmt == 0)
         {
-            return (@{$args}[0], [@{$args}[1..@{$args}-1]]);
+            @ret = ([@{$args}[1..$len]]);
+            if($in_symbol)
+            {
+                $ret[0] = AI::MXNet::Symbol->Group($ret[0]);
+            }
+            return (@{$args}[0], $ret[0]);
         }
-        @ret = ([@{$args}[0..$fmt-1]], [@{$args}[$fmt..@{$args}-1]]);
+        @ret = ([@{$args}[0..$fmt-1]], [@{$args}[$fmt..$len]]);
         if($in_symbol)
         {
             @ret = map { AI::MXNet::Symbol->Group($_) } @ret;
@@ -198,7 +204,8 @@ method _regroup(
 
 has _prefix => (is => 'rw', init_arg => 'prefix', isa => 'Str');
 has _params => (is => 'rw', init_arg => 'params', isa => 'Maybe[AI::MXNet::Gluon::ParameterDict]');
-has [qw/_name _scope _children/] => (is => 'rw', init_arg => undef);
+has [qw/_name _scope/] => (is => 'rw', init_arg => undef);
+has [qw/_children/]    => (is => 'rw', init_arg => undef, default => sub { [] });
 around BUILDARGS => \&AI::MXNet::Base::process_arguments;
 
 sub AUTOLOAD {
@@ -218,7 +225,6 @@ sub BUILD
     my $name = $prefix;
     $name =~ s/_$//;
     $self->_name($name);
-    $self->_children([]);
     $self->_scope(AI::MXNet::Gluon::BlockScope->new(block => $self));
 }
 
@@ -694,11 +700,11 @@ method forward($x, @args)
         "Symbol or NDArray, but got [".ref($x)."]"
     );
     my %params = map { $_ => $self->_reg_params->{ $_ }->var } keys %{ $self->_reg_params };
-    my $ret;
+    my @ret;
     $self->name_scope(sub {
-        $ret = $self->hybrid_forward('AI::MXNet::Symbol', $x, @args, %params);
+        @ret = $self->hybrid_forward('AI::MXNet::Symbol', $x, @args, %params);
     });
-    return $ret;
+    return wantarray ? @ret : $ret[0];
 }
 
 =head2 hybrid_forward

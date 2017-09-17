@@ -15,11 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
+use strict;
+use warnings;
 package AI::MXNet::Gluon::RNN::RecurrentCell;
+use Mouse::Role;
 use AI::MXNet::Base;
-use AI::MXNet::Gluon::Mouse;
 use AI::MXNet::Function::Parameters;
-extends 'AI::MXNet::Gluon::Block';
 
 method _cells_state_info($cells, $batch_size)
 {
@@ -31,7 +32,7 @@ method _cells_begin_state($cells, %kwargs)
     return [map { @{ $_->begin_state(%kwargs) } } @{ $cells }];
 }
 
-method _get_begin_state($cell, GluonClass $F, $begin_state, GluonInput $inputs, $batch_size)
+method _get_begin_state(GluonClass $F, $begin_state, GluonInput $inputs, $batch_size)
 {
     if(not defined $begin_state)
     {
@@ -45,12 +46,12 @@ method _get_begin_state($cell, GluonClass $F, $begin_state, GluonInput $inputs, 
                     my $shape = delete $kwargs{shape};
                     return AI::MXNet::NDArray->zeros($shape, %kwargs);
                 };
-                $begin_state = $cell->begin_state(batch_size => $batch_size, func => $func);
+                $begin_state = $self->begin_state(batch_size => $batch_size, func => $func);
             }
         }
         else
         {
-            $begin_state = $cell->begin_state(batch_size => $batch_size, func => sub { return $F->zeros(@_) });
+            $begin_state = $self->begin_state(batch_size => $batch_size, func => sub { return $F->zeros(@_) });
         }
     }
     return $begin_state;
@@ -135,7 +136,7 @@ method _format_sequence($length, $inputs, $layout, $merge, $in_layout=)
 
 =head1 DESCRIPTION
 
-    Abstract base class for RNN cells
+    Abstract role for RNN cells
 
     Parameters
     ----------
@@ -147,27 +148,6 @@ method _format_sequence($length, $inputs, $layout, $merge, $in_layout=)
         Container for weight sharing between cells.
         A new Parameter container is created if `params` is `None`.
 =cut
-has 'modified'      => (is => 'rw', isa => 'Bool', default => 0);
-has [qw/counter
-     init_counter/] => (is => 'rw', isa => 'Int', default => -1);
-
-sub BUILD
-{
-    my $self = shift;
-    $self->reset;
-}
-
-use overload '""' => sub {
-    my $self = shift;
-    my $s = '%(%';
-    if($self->can('activation'))
-    {
-        $s .= ", ${\ $self->activation }";
-    }
-    $s .= ')';
-    my $mapping = $self->input_size ? $self->input_size . " -> " . $self->hidden_size : $self->hidden_size;
-    return sprintf($s, $self->_class_name, $mapping);
-};
 
 =head2 reset
 
@@ -226,7 +206,7 @@ method begin_state(Int :$batch_size=0, CodeRef :$func=, %kwargs)
         return AI::MXNet::NDArray->zeros($shape, %kwargs);
     };
     assert(
-        not $self->modified,
+        (not $self->modified),
         "After applying modifier cells (e.g. ZoneoutCell) the base ".
         "cell cannot be called directly. Call the modifier cell instead."
     );
@@ -243,7 +223,7 @@ method begin_state(Int :$batch_size=0, CodeRef :$func=, %kwargs)
             $info = \%kwargs;
         }
         my $state = $func->(
-            name => "${\ $self->_prefix }begin_state_{\ $self->init_counter }",
+            name => "${\ $self->_prefix }begin_state_${\ $self->init_counter }",
             %$info
         );
         push @states, $state;
@@ -257,9 +237,9 @@ method begin_state(Int :$batch_size=0, CodeRef :$func=, %kwargs)
 
         Parameters
         ----------
-        length : int
+        $length : int
             Number of steps to unroll.
-        inputs : Symbol, list of Symbol, or None
+        $inputs : Symbol, list of Symbol, or None
             If `inputs` is a single Symbol (usually the output
             of Embedding symbol), it should have shape
             (batch_size, length, ...) if `layout` is 'NTC',
@@ -268,14 +248,14 @@ method begin_state(Int :$batch_size=0, CodeRef :$func=, %kwargs)
             If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
-        begin_state : nested list of Symbol, optional
+        :$begin_state : nested list of Symbol, optional
             Input states created by `begin_state()`
             or output state of another cell.
             Created from `begin_state()` if `None`.
-        layout : str, optional
+        :$layout : str, optional
             `layout` of input symbol. Only used if inputs
             is a single Symbol.
-        merge_outputs : bool, optional
+        :$merge_outputs : bool, optional
             If `False`, returns outputs as a list of Symbols.
             If `True`, concatenates output across time steps
             and returns a single symbol with shape
@@ -298,9 +278,9 @@ method begin_state(Int :$batch_size=0, CodeRef :$func=, %kwargs)
 method unroll(
     Int $length,
     Maybe[GluonInput] $inputs,
-    Maybe[GluonInput|ArrayRef[GluonInput]] $begin_state=,
-    Str $layout='NTC',
-    Maybe[Bool] $merge_outputs=
+    Maybe[GluonInput] :$begin_state=,
+    Str :$layout='NTC',
+    Maybe[Bool] :$merge_outputs=
 )
 {
     $self->reset();
@@ -310,7 +290,7 @@ method unroll(
 
     my $states = $begin_state;
     my $outputs = [];
-    for my $i ($length-1)
+    for my $i (0..$length-1)
     {
         my $output;
         ($output, $states) = $self->($inputs->[$i], $states);
@@ -360,17 +340,37 @@ method _get_activation(GluonClass $F, GluonInput $inputs, Activation $activation
         unroll: This function unrolls an RNN for a given number of (>=1) time steps.
 =cut
 
+package AI::MXNet::Gluon::RNN::HybridRecurrentCell;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::HybridBlock';
+with 'AI::MXNet::Gluon::RNN::RecurrentCell';
+has 'modified'      => (is => 'rw', isa => 'Bool', default => 0);
+has [qw/counter
+     init_counter/] => (is => 'rw', isa => 'Int', default => -1);
+
+sub BUILD
+{
+    my $self = shift;
+    $self->reset;
+}
+
+use overload '""' => sub {
+    my $self = shift;
+    my $s = '%s(%s';
+    if($self->can('activation'))
+    {
+        $s .= ", ${\ $self->activation }";
+    }
+    $s .= ')';
+    my $mapping = $self->input_size ? $self->input_size . " -> " . $self->hidden_size : $self->hidden_size;
+    return sprintf($s, $self->_class_name, $mapping);
+};
+
 method forward(GluonInput $inputs, Maybe[GluonInput|ArrayRef[GluonInput]] $states)
 {
     $self->counter($self->counter + 1);
     $self->SUPER::forward($inputs, $states);
 }
-
-
-package AI::MXNet::Gluon::RNN::HybridRecurrentCell;
-use AI::MXNet::Gluon::Mouse;
-extends 'AI::MXNet::Gluon::RNN::RecurrentCell';
-extends 'AI::MXNet::Gluon::HybridBlock';
 
 package AI::MXNet::Gluon::RNN::RNNCell;
 use AI::MXNet::Gluon::Mouse;
@@ -476,12 +476,12 @@ method hybrid_forward(
 {
     my $prefix = "t${\ $self->counter}_";
     my $i2h = $F->FullyConnected(
-        data => $inputs, weight => $i2h_weight, bias => $i2h_bias,
+        $inputs, $i2h_weight, $i2h_bias,
         num_hidden => $self->hidden_size,
         name => "${prefix}i2h"
     );
     my $h2h = $F->FullyConnected(
-        data => $states->[0], weight => $h2h_weight, bias => $h2h_bias,
+        $states->[0], $h2h_weight, $h2h_bias,
         num_hidden => $self->hidden_size,
         name => "${prefix}h2h"
     );
@@ -597,12 +597,12 @@ method hybrid_forward(
 {
     my $prefix = "t${\ $self->counter}_";
     my $i2h = $F->FullyConnected(
-        data => $inputs, weight => $i2h_weight, bias => $i2h_bias,
+        $inputs, $i2h_weight, $i2h_bias,
         num_hidden => $self->hidden_size*4,
         name => "${prefix}i2h"
     );
     my $h2h = $F->FullyConnected(
-        data => $states->[0], weight => $h2h_weight, bias => $h2h_bias,
+        $states->[0], $h2h_weight, $h2h_bias,
         num_hidden => $self->hidden_size*4,
         name => "${prefix}h2h"
     );
@@ -723,12 +723,12 @@ method hybrid_forward(
     my $prefix = "t${\ $self->counter}_";
     my $prev_state_h = $states->[0];
     my $i2h = $F->FullyConnected(
-        data => $inputs, weight => $i2h_weight, bias => $i2h_bias,
+        $inputs, $i2h_weight, $i2h_bias,
         num_hidden => $self->hidden_size*3,
         name => "${prefix}i2h"
     );
     my $h2h = $F->FullyConnected(
-        data => $states->[0], weight => $h2h_weight, bias => $h2h_bias,
+        $states->[0], $h2h_weight, $h2h_bias,
         num_hidden => $self->hidden_size*3,
         name => "${prefix}h2h"
     );
@@ -747,7 +747,18 @@ __PACKAGE__->register('AI::MXNet::Gluon::RNN');
 package AI::MXNet::Gluon::RNN::SequentialRNNCell;
 use AI::MXNet::Gluon::Mouse;
 use AI::MXNet::Base;
-extends 'AI::MXNet::Gluon::RNN::RecurrentCell';
+no warnings 'redefine';
+extends 'AI::MXNet::Gluon::Block';
+with 'AI::MXNet::Gluon::RNN::RecurrentCell';
+has 'modified'      => (is => 'rw', isa => 'Bool', default => 0);
+has [qw/counter
+     init_counter/] => (is => 'rw', isa => 'Int', default => -1);
+
+sub BUILD
+{
+    my $self = shift;
+    $self->reset;
+}
 
 =head1 NAME
 
@@ -781,31 +792,31 @@ method state_info(Int $batch_size=0)
 method begin_state(%kwargs)
 {
     assert(
-        not $self->modified,
+        (not $self->modified),
         "After applying modifier cells (e.g. ZoneoutCell) the base ".
         "cell cannot be called directly. Call the modifier cell instead."
     );
     return $self->_cells_begin_state($self->_children, %kwargs);
 }
 
-method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] $begin_state=, Str $layout='NTC', Maybe[Bool] $merge_outputs=)
+method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=, Str :$layout='NTC', Maybe[Bool] :$merge_outputs=)
 {
     $self->reset();
     my ($F, $batch_size);
-    ($inputs, undef, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout);
+    ($inputs, undef, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout, undef);
     my $num_cells = @{ $self->_children };
-    $begin_state //= $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
+    $begin_state = $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
     my $p = 0;
     my @next_states;
     my $states;
     enumerate(sub {
         my ($i, $cell) = @_;
         my $n = @{ $cell->state_info() };
-        $states = @{ $begin_state }[$p..$p+$n-1];
+        $states = [@{ $begin_state }[$p..$p+$n-1]];
         $p += $n;
         ($inputs, $states) = $cell->unroll(
-            $length, $inputs, $states, $layout,
-            ($i < ($num_cells - 1)) ? undef : $merge_outputs
+            $length, $inputs, begin_state => $states, layout => $layout,
+            merge_outputs => ($i < ($num_cells - 1)) ? undef : $merge_outputs
         );
         push @next_states, @{ $states };
     }, $self->_children);
@@ -821,7 +832,7 @@ method call($inputs, $states)
     {
         assert(not $cell->isa('AI::MXNet::Gluon::RNN::BidirectionalCell'));
         my $n = @{ $cell->state_info() };
-        my $state = @{ $states }[$p,$p+$n-1];
+        my $state = [@{ $states }[$p,$p+$n-1]];
         $p += $n;
         ($inputs, $state) = $cell->($inputs, $state);
         push @next_states, @{ $state };
@@ -879,12 +890,12 @@ method hybrid_forward(GluonClass $F, GluonInput $inputs, GluonInput $states)
 {
     if($self->rate > 0)
     {
-        $inputs = $F->Dropout(data => $inputs, p => $self->rate, name => "t${\ $self->counter }_fwd");
+        $inputs = $F->Dropout($inputs, p => $self->rate, name => "t${\ $self->counter }_fwd");
     }
     return ($inputs, $states);
 }
 
-method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] $begin_state=, Str $layout='NTC', Maybe[Bool] $merge_outputs=)
+method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=, Str :$layout='NTC', Maybe[Bool] :$merge_outputs=)
 {
     $self->reset;
     my $F;
@@ -896,8 +907,8 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] $begin_state=, 
     else
     {
         return $self->SUPER::unroll(
-            $length, $inputs, $begin_state, $layout,
-            $merge_outputs
+            $length, $inputs, begin_state => $begin_state, layout => $layout,
+            merge_outputs => $merge_outputs
         );
     }
 }
@@ -936,7 +947,7 @@ sub BUILD
 {
     my $self = shift;
     assert(
-        not $self->base_cell->modified,
+        (not $self->base_cell->modified),
         "Cell ${\ $self->base_cell->name } is already modified. One cell cannot be modified twice"
     );
     $self->base_cell->modified(1);
@@ -956,7 +967,7 @@ method state_info(Int $batch_size=0)
 method begin_state(CodeRef :$func=sub{ AI::MXNet::Symbol->zeros(@_) }, %kwargs)
 {
     assert(
-        not $self->modified,
+        (not $self->modified),
         "After applying modifier cells (e.g. DropoutCell) the base ".
         "cell cannot be called directly. Call the modifier cell instead."
     );
@@ -999,7 +1010,7 @@ sub BUILD
 {
     my $self = shift;
     assert(
-        not $self->base_cell->isa('AI::MXNet::Gluon::RNN::BidirectionalCell'),
+        (not $self->base_cell->isa('AI::MXNet::Gluon::RNN::BidirectionalCell')),
         "BidirectionalCell doesn't support zoneout since it doesn't support step. ".
         "Please add ZoneoutCell to the cells underneath instead."
     );
@@ -1055,6 +1066,7 @@ package AI::MXNet::Gluon::RNN::ResidualCell;
 use AI::MXNet::Gluon::Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::Gluon::RNN::ModifierCell';
+method python_constructor_arguments() { ['base_cell'] }
 
 =head1 NAME
 
@@ -1076,13 +1088,13 @@ method hybrid_forward(GluonClas $F, GluonInput $inputs, GluonInput $states)
     return ($output, $states);
 }
 
-method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] $begin_state=, Str $layout='NTC', Maybe[Bool] $merge_outputs=)
+method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=, Str :$layout='NTC', Maybe[Bool] :$merge_outputs=)
 {
     $self->reset();
 
     $self->base_cell->modified(0);
     my ($outputs, $states) = $self->base_cell->unroll(
-        $length, $inputs, $begin_state, $layout, $merge_outputs
+        $length, $inputs, begin_state => $begin_state, layout => $layout, merge_outputs => $merge_outputs
     );
     $self->base_cell->modified(1);
 
@@ -1132,13 +1144,6 @@ method python_constructor_arguments() { ['l_cell', 'r_cell', 'output_prefix'] }
         Cell for backward unrolling
 =cut
 
-sub BUILD
-{
-    my $self = shift;
-    $self->register_child($self->l_cell);
-    $self->register_child($self->r_cell);
-}
-
 method call($inputs, $states)
 {
     confess("Bidirectional cell cannot be stepped. Please use unroll");
@@ -1157,30 +1162,32 @@ method state_info(Int $batch_size=0)
 method begin_state(%kwargs)
 {
     assert(
-        not $self->modified,
+        (not $self->modified),
         "After applying modifier cells (e.g. DropoutCell) the base ".
         "cell cannot be called directly. Call the modifier cell instead."
     );
     return $self->_cells_begin_state($self->_children, %kwargs);
 }
 
-method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] $begin_state=, Str $layout='NTC', Maybe[Bool] $merge_outputs=)
+method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=, Str :$layout='NTC', Maybe[Bool] :$merge_outputs=)
 {
     $self->reset();
     my ($axis, $F, $batch_size);
     ($inputs, $axis, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout, 0);
-    $begin_state = $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
+    $begin_state //= $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
 
     my $states = $begin_state;
     my ($l_cell, $r_cell) = @{ $self->_children };
+    $l_cell->state_info($batch_size);
     my ($l_outputs, $l_states) = $l_cell->unroll(
             $length, $inputs,
-            [@{ $states }[0..$l_cell->state_info($batch_size)-1]],
-            $layout, $merge_outputs
+            begin_state => [@{ $states }[0..@{ $l_cell->state_info($batch_size) }-1]],
+            layout => $layout,
+            merge_outputs => $merge_outputs
     );
     my ($r_outputs, $r_states) = $r_cell->unroll(
-        $length, inputs => [reverse @{$inputs}],
-        begin_state     => [@{$states}[@{$l_cell->state_info}..@{$states}-1]],
+        $length, [reverse @{$inputs}],
+        begin_state     => [@{$states}[@{ $l_cell->state_info }..@{$states}-1]],
         layout          => $layout,
         merge_outputs   => $merge_outputs
     );
