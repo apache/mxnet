@@ -291,6 +291,9 @@ def test_ndarray_slice():
 
     assert A[1,2,3,4,5].asscalar() == A2[1,2,3,4,5]
 
+    a = mx.nd.array([[0, 1], [2, 3]])
+    assert (a[[1, 1, 0], [0, 1, 0]].asnumpy() == [2, 3, 0]).all()
+    assert (a[mx.nd.array([1, 1, 0]), mx.nd.array([0, 1, 0])].asnumpy() == [2, 3, 0]).all()
 
 
 def test_ndarray_crop():
