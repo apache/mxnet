@@ -43,12 +43,12 @@ use overload
     '/'  => \&notsupported,
     '/=' => \&notsupported,
     '**' => \&notsupported,
-    '==' => \&notsupported,
-    '!=' => \&notsupported,
-    '>'  => \&notsupported,
-    '>=' => \&notsupported,
-    '<'  => \&notsupported,
-    '<=' => \&notsupported;
+    '==' => sub { my $self = $_[0]->sever; $self == $_[1] },
+    '!=' => sub { my $self = $_[0]->sever; $self != $_[1] },
+    '>'  => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] >  $self : $self > $_[1]  },
+    '>=' => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] >= $self : $self >= $_[1] },
+    '<'  => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] <  $self : $self < $_[1]  },
+    '<=' => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] <= $self : $self <= $_[1] };
 
 method set(AcceptableInput $value, $reverse=)
 {
@@ -107,6 +107,16 @@ method sever()
             $self->parent,
             { begin => $self->begin, end => $self->end }
     );
+}
+
+method aspdl()
+{
+    $self->sever->aspdl;
+}
+
+method asscalar()
+{
+    $self->sever->asscalar;
 }
 
 {

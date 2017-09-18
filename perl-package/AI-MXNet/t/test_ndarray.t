@@ -1,8 +1,8 @@
 use strict;
 use warnings;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(almost_equal);
-use Test::More tests => 10;
+use AI::MXNet::TestUtils qw(almost_equal same);
+use Test::More tests => 17;
 
 sub test_ndarray_reshape
 {
@@ -67,6 +67,31 @@ sub test_cached
     ok(almost_equal($o2->aspdl, $o1->aspdl+1));
 }
 
+sub test_ndarray_slice
+{
+    my $shape = [10];
+    my $A = mx->random->uniform(-10, 10, $shape);
+    my $A2 = $A->aspdl;
+    ok(same($A->slice([3,7])->aspdl, $A2->slice([3, 7])));
+    $A2->slice([3, 7]) *= 10;
+    $A->slice([3,7]) .= $A2->slice([3, 7]);
+    ok(same($A->slice([3,7])->aspdl, $A2->slice([3, 7])));
+
+    $shape = [3,4,5,6,7];
+    $A = mx->nd->random->uniform(shape=>$shape);
+    $A2 = $A->aspdl;
+
+    ok(same($A->slice([1], [3,3], 'X', [1,4], 'X')->aspdl, $A2->slice('X', [1,4], 'X', [3,3], [1])));
+    ok(($A->slice([1], [3,3], 'X', [1,4], 'X') == mx->nd->array($A2->slice('X', [1,4], 'X', [3,3], [1])))->aspdl->all);
+
+    ok($A->slice(1,2,3,4,5)->asscalar() == $A2->at(5, 4, 3, 2, 1));
+
+    my $a = mx->nd->array([[0, 1], [2, 3]]);
+    ok(($a->slice([[1, 1, 0], [0, 1, 0]])->aspdl == mx->nd->array([2, 3, 0])->aspdl)->all);
+    ok(($a->slice([mx->nd->array([1, 1, 0]), mx->nd->array([0, 1, 0])])->aspdl == mx->nd->array([2, 3, 0])->aspdl)->all);
+}
+
+test_ndarray_slice();
 test_ndarray_reshape();
 test_moveaxis();
 test_output();
