@@ -206,36 +206,29 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   // csr has many zero columns, so the result of dot(csr.T, matrix) should be rsp
-  auto& lhs_stype = in_attrs->at(0);
-  auto& rhs_stype = in_attrs->at(1);
+  const auto& lhs_stype = in_attrs->at(0);
+  const auto& rhs_stype = in_attrs->at(1);
   auto& out_stype = out_attrs->at(0);
-  bool fallback = true;
+  bool dispatched = false;
   bool only_lhs_transpose = param.transpose_a && !param.transpose_b;
   bool rhs_rsp_or_dns  = rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage;
   if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    if (type_assign(&out_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
   } else if (lhs_stype == kCSRStorage && only_lhs_transpose &&
              (rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage)) {
     // csr.T, rsp/dns -> rsp
-    if (type_assign(&out_stype, kRowSparseStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   } else if (lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
              !param.transpose_a && !param.transpose_b) {
     // csr, rsp/dns -> dns
-    if (type_assign(&out_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
-    }
+    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+                                     dispatch_type, kDispatchFComputeEx);
   }
-  if (fallback) {
-    type_assign(&out_stype, kDefaultStorage);
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_type);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -249,19 +242,19 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 2U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  auto& ograd_stype = in_attrs->at(0);
-  auto& lhs_stype = in_attrs->at(1);
-  auto& rhs_stype = in_attrs->at(2);
+  const auto& ograd_stype = in_attrs->at(0);
+  const auto& lhs_stype = in_attrs->at(1);
+  const auto& rhs_stype = in_attrs->at(2);
+  const bool no_transpose = !param.transpose_a && !param.transpose_b;
   auto& lhs_grad_stype = out_attrs->at(0);
   auto& rhs_grad_stype = out_attrs->at(1);
-  bool no_transpose = !param.transpose_a && !param.transpose_b;
-  bool fallback = true;
+  bool dispatched = false;
   if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
       ograd_stype == kDefaultStorage) {
     if (type_assign(&lhs_grad_stype, kDefaultStorage) &&
         type_assign(&rhs_grad_stype, kDefaultStorage)) {
       TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
-      fallback = false;
+      dispatched = true;
     }
   } else if (no_transpose && lhs_stype == kCSRStorage &&
       (ograd_stype == kRowSparseStorage || ograd_stype == kDefaultStorage)) {
@@ -269,7 +262,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     if (type_assign(&rhs_grad_stype, kRowSparseStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
       TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
+      dispatched = true;
     }
   } else if (param.transpose_a && !param.transpose_b && lhs_stype == kCSRStorage &&
       (ograd_stype == kRowSparseStorage || ograd_stype == kDefaultStorage)) {
@@ -277,13 +270,11 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     if (type_assign(&rhs_grad_stype, kDefaultStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
       TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
-      fallback = false;
+      dispatched = true;
     }
   }
-  if (fallback) {
-    type_assign(&lhs_grad_stype, kDefaultStorage);
-    type_assign(&rhs_grad_stype, kDefaultStorage);
-    TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_type);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

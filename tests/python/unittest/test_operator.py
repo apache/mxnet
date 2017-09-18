@@ -2184,7 +2184,6 @@ def sequence_mask_numpy(array, lengths, value):
         arrayMask[int(lengths[i]):, i] = value
     return arrayMask
 
-
 def check_sequence_mask(shape, xpu, mask_value):
     # bind with label
     X = mx.symbol.Variable('X')
@@ -2192,14 +2191,11 @@ def check_sequence_mask(shape, xpu, mask_value):
     Y = mx.symbol.SequenceMask(data=X, use_sequence_length=True, sequence_length=L, value=mask_value)
     x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
     l = mx.nd.array(np.random.randint(1, shape[0] + 1, shape[1]), ctx=mx.cpu()).copyto(xpu)
-
     # numpy result
     np_out = sequence_mask_numpy(x.asnumpy(), l.asnumpy(), mask_value)
     # mxnet result
-    gradX = mx.nd.empty(shape, ctx = xpu)
-    gradL = mx.nd.empty((shape[1]), ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'write', 'L':'null'}, args_grad = {'X':gradX, 'L':gradL})
-    exec1.forward(is_train=True)
+    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'null', 'L':'null'})
+    exec1.forward()
     out = exec1.outputs[0].asnumpy()
     # compare numpy + mxnet
     assert_almost_equal(out, np_out, rtol=1e-5)
@@ -2207,16 +2203,15 @@ def check_sequence_mask(shape, xpu, mask_value):
     check_numeric_gradient(Y, [x.asnumpy(), l.asnumpy()], grad_nodes={'X':'write'},
         numeric_eps=1e-3, rtol=1e-2)
 
-
 def test_sequence_mask():
     shape1 = (4, 2, 2, 3)
     shape2 = (1, 2, 2, 3, 1, 1)
     check_sequence_mask(shape1, default_context(), 2.1)
     check_sequence_mask(shape2, default_context(), 0.1)
+    check_sequence_mask((3, 4), default_context(), 0.14)
 
 
 def check_sequence_reverse(xpu):
-
     # sample data
     arr = np.array(
         [[[  1.,   2.,   3.],
@@ -2250,6 +2245,11 @@ def check_sequence_reverse(xpu):
          [[ 13.,  14.,   15.],
           [ 4.,  5.,   6.]]])
 
+    # test for matrix case
+    seq_len_1 = [1, 2, 2]
+    arr_4 = np.array([[7., 8., 9.], [16., 17., 5.4]], dtype=np.float32)
+    arr_5 = np.array([[7., 17., 5.4], [16., 8., 9.]], dtype=np.float32)
+
     def test_wrapper(arr, xpu, sequence_length=None, use_sequence_length=False):
         # MxNet symbol creation
         seq = mx.sym.Variable('seq')
@@ -2273,7 +2273,7 @@ def check_sequence_reverse(xpu):
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[3, 3], use_sequence_length=True), arr1)
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 2], use_sequence_length=True), arr2)
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 3], use_sequence_length=True), arr3)
-
+    assert_array_equal(test_wrapper(arr_4, xpu, sequence_length=seq_len_1, use_sequence_length=True), arr_5)
 
 def test_sequence_reverse():
     check_sequence_reverse(mx.cpu())
