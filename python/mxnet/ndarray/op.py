@@ -24,6 +24,7 @@ import ctypes
 import numpy as np  # pylint: disable=unused-import
 
 from ..ndarray_doc import _build_doc
+from ..context import current_context  # pylint: disable=unused-import
 
 # Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
@@ -46,6 +47,13 @@ except ImportError:
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null
 # pylint: enable=unused-import
+
+
+def _is_random_op(name):
+    """Check whether the name is a random operator name.
+    A random operator name should start with prefix random_
+    or is one of strings in random.__all__."""
+    return name.startswith('random_') or name.startswith('_random_') or name.startswith('_sample_')
 
 
 # pylint: disable=too-many-locals, invalid-name
@@ -83,16 +91,29 @@ def _make_ndarray_function(handle, name):
                          ret_type)
 
     dtype_name = None
+    shape_name = None
+    ctx_name = None
     arr_name = None
     ndsignature = []
     signature = []
     ndarg_names = []
     kwarg_names = []
+    is_random_op = _is_random_op(func_name)
     for i in range(narg):
         name, atype = arg_names[i], arg_types[i]
         if name == 'dtype':
             dtype_name = name
-            signature.append('%s=_Null'%name)
+            signature.append('%s=_Null' % name)
+        elif name == 'shape' and is_random_op:
+            # for random operators, we need to support default
+            # shape = (1,) in imperative invoke. In random op
+            # symbols, default shape is still an empty one
+            # since it may need to be inferred from other symbols
+            shape_name = name
+            signature.append('%s=_Null' % name)
+        elif name == 'ctx':
+            ctx_name = name
+            signature.append('%s=_Null' % name)
         elif atype.startswith('NDArray') or atype.startswith('Symbol'):
             assert not arr_name, \
                 "Op can only have one argument with variable " \
@@ -127,6 +148,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
     if '%s' in kwargs:
         kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
+
         code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
@@ -137,7 +159,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
 def %s(%s):
     ndargs = []
     keys = list(kwargs.keys())
-    vals = list(kwargs.values())"""%(func_name, ', '.join(signature)))
+    vals = list(kwargs.values())""" % (func_name, ', '.join(signature)))
         # NDArray args
         for name in ndarg_names: # pylint: disable=redefined-argument-from-local
             code.append("""
@@ -150,13 +172,36 @@ def %s(%s):
             code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(%s)"""%(name, name, name))
+        vals.append(%s)""" % (name, name, name))
         # dtype
         if dtype_name is not None:
             code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        vals.append(np.dtype(%s).name)""" % (dtype_name, dtype_name, dtype_name))
+
+        # This is for random operator only.
+        # If the op has argument 'shape' but its value
+        # is not provided, set it to (1,).
+        if shape_name is not None:
+            code.append("""
+    if %s is _Null and out is None:
+        keys.append('%s')
+        vals.append('(1,)')
+    elif %s is not _Null:
+        keys.append('%s')
+        vals.append(str(%s))""" % (shape_name, shape_name, shape_name, shape_name, shape_name))
+
+        # If the op has argument 'ctx' but its value
+        # is not provided, set it to context.current_context().
+        if ctx_name is not None:
+            code.append("""
+    if %s is _Null and out is None:
+        keys.append('%s')
+        vals.append(str(current_context()))
+    elif %s is not _Null:
+        keys.append('%s')
+        vals.append(str(%s))""" % (ctx_name, ctx_name, ctx_name, ctx_name, ctx_name))
 
     code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(

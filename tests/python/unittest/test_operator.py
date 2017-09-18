@@ -4091,6 +4091,68 @@ def test_dropout():
     assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
 
+def test_imperative_random_op_default_shape():
+    """For random operators, default shape is (1,), instead of ()."""
+    for name in dir(mx.nd):
+        if name.startswith('random_'):
+            random_op = getattr(mx.nd, name)
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'random_uniform' or name == 'random_normal':
+                output = random_op()
+                assert output.shape == (1,)
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.shape == (1,)
+
+    for name in dir(mx.nd.random):
+        if not name.startswith('_') and not name.endswith('_'):
+            random_op = getattr(mx.nd.random, name)
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'random_uniform' or name == 'random_normal':
+                output = random_op()
+                assert output.shape == (1,)
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.shape == (1,)
+
+
+def test_random_op_default_ctx():
+    """For the operators with ctx as one of the arguments,
+    default it to the current context if it's not provided at runtime.
+    If the op does not support GPU computing and the current context
+    is on GPU, override current ctx with mx.cpu(0).
+    Random operators in this test are examples of this kind of operators."""
+    for name in dir(mx.nd):
+        if name.startswith('random_'):
+            random_op = getattr(mx.nd, name)
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'random_uniform' or name == 'random_normal':
+                output = random_op()
+                assert output.context == mx.current_context()
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.context == mx.current_context()
+
+    for name in dir(mx.nd.random):
+        if not name.startswith('_') and not name.endswith('_'):
+            random_op = getattr(mx.nd.random, name)
+            # only uniform and normal have gpu implementation
+            # for other random ops, use `with Context(cpu(0))` to override
+            if name == 'uniform' or name == 'normal':
+                output = random_op()
+                assert output.context == mx.current_context()
+            else:
+                with mx.Context(mx.cpu(0)):
+                    output = random_op()
+                    assert output.context == mx.current_context()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

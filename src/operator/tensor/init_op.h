@@ -115,9 +115,8 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
-  return true;
+  return (*out_attrs)[0].ndim() != 0U && (*out_attrs)[0].Size() != 0U;
 }
 
 template<typename ParamType>
@@ -128,7 +127,7 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
-  return true;
+  return (*out_attrs)[0] != -1;
 }
 
 template<typename xpu, int value>

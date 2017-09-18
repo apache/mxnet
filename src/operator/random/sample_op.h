@@ -48,11 +48,12 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
     .describe("Upper bound of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -77,11 +78,12 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
     .describe("Standard deviation of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -106,11 +108,15 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
     .describe("Beta parameter (scale) of the gamma distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -132,11 +138,15 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
     .describe("Lambda parameter (rate) of the exponential distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -158,11 +168,15 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
     .describe("Lambda parameter (rate) of the Poisson distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -187,11 +201,15 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
     .describe("Failure probability in each experiment.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
@@ -216,11 +234,15 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
     .describe("Alpha (dispersion) parameter of the negative binomial distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
-    .describe("Shape of the output.");
+    .describe("Shape of the output. Note: In imperative mode, shape defaults to (1,).");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              " Only used for imperative calls.");
+              " Only used for imperative calls."
+              " Note: In imperative mode, ctx defaults to the current context."
+              " If the current context is on GPU, users should override the"
+              " current context with a CPU context since this op has not been"
+              " implemented for GPU computing.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
     .add_enum("float32", mshadow::kFloat32)
