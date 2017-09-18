@@ -82,7 +82,7 @@ class Executor(object):
         assert len(aux_arrays) == len(self._symbol.list_auxiliary_states())
         self._aux_dict = Executor._get_dict(
             self._symbol.list_auxiliary_states(), aux_arrays)
-        outputs = self._get_outputs()
+        self.outputs = self._get_outputs()
         assert len(outputs) == len(self._symbol.list_outputs())
         self._output_dict = Executor._get_dict(
             self._symbol.list_outputs(), self.outputs)
