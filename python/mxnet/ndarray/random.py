@@ -198,7 +198,7 @@ def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
 
 
 def exponential(scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
-    """Draw samples from an exponential distribution.
+    r"""Draw samples from an exponential distribution.
 
     Its probability density function is
 

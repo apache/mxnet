@@ -17,6 +17,7 @@
 
 # coding: utf-8
 # pylint: disable=no-member, protected-access, unused-import, no-name-in-module
+# pylint: disable=wildcard-import, unused-wildcard-import
 """Random number interface of MXNet."""
 from __future__ import absolute_import
 
