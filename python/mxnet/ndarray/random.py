@@ -38,7 +38,7 @@ def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
     elif isinstance(params[0], numeric_types):
         if ctx is None:
             ctx = current_context()
-        if shape is _Null:
+        if shape is _Null and out is None:
             shape = 1
         for i in params[1:]:
             assert isinstance(i, numeric_types), \
