@@ -35,7 +35,7 @@ namespace mxnet {
 namespace op {
 
 inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
-                                    const Context& ctx,
+                                    const int dev_mask,
                                     int* dispatch_type,
                                     std::vector<int> *in_attrs,
                                     std::vector<int> *out_attrs) {
@@ -53,7 +53,7 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
     // FComputeEx can handle dns output on cpu, too
-    if (ctx.dev_mask() == cpu::kDevMask && out_stype == kDefaultStorage) {
+    if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
       TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
@@ -62,14 +62,14 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
                                      dispatch_type, kDispatchFComputeEx);
     // FComputeEx can handle dns output on cpu, too
-    if (ctx.dev_mask() == cpu::kDevMask && out_stype == kDefaultStorage) {
+    if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
       TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_type);
-    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
 }

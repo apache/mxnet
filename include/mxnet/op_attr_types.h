@@ -248,7 +248,7 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                        const std::vector<NDArray>& outputs)>;
 
 using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
-                                              const Context& ctx,
+                                              const int dev_mask,
                                               int* dispatch_type,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;

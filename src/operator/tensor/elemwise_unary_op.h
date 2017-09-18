@@ -35,14 +35,14 @@ namespace mxnet {
 namespace op {
 
 inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
-                                           const Context& ctx,
+                                           const int dev_mask,
                                            int* dispatch_type,
                                            std::vector<int> *in_attrs,
                                            std::vector<int> *out_attrs) {
   // TODO(junwu): add ctx info into storage inference logic
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const auto& lhs_stype = in_attrs->at(0);
+  auto& lhs_stype = in_attrs->at(0);
   const auto& rhs_stype = in_attrs->at(1);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
@@ -63,7 +63,7 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_type);
-    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
 }

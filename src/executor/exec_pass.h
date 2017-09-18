@@ -172,7 +172,7 @@ Graph InferStorageType(Graph graph,
                        const std::string& storage_type_attr_key = "");
 
 bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
-                        const Context& ctx,
+                        const int dev_mask,
                         int* dispatch_type,
                         std::vector<int> *iattr,
                         std::vector<int> *oattr);

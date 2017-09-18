@@ -70,7 +70,7 @@ inline bool SparseRetainOpType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                                const Context& ctx,
+                                                const int dev_mask,
                                                 int* dispatch_type,
                                                 std::vector<int> *in_attrs,
                                                 std::vector<int> *out_attrs) {
@@ -86,13 +86,13 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                                 const Context& ctx,
+                                                 const int dev_mask,
                                                  int* dispatch_type,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
@@ -111,7 +111,7 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }

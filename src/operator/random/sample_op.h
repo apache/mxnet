@@ -234,7 +234,7 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
 
 template<typename ParamType>
 inline bool SampleStorageType(const nnvm::NodeAttrs& attrs,
-                              const Context& ctx,
+                              const int dev_mask,
                               int *dispatch_type,
                               std::vector<int> *in_attrs,
                               std::vector<int> *out_attrs) {
@@ -256,7 +256,7 @@ inline bool SampleStorageType(const nnvm::NodeAttrs& attrs,
   if (fallback) {
     type_assign(&out_stype, kDefaultStorage);
     TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeFallback);
-    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
 }

@@ -50,7 +50,7 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
   const ContextVector& ctxes = g.GetAttr<ContextVector>("context");
   const DispatchTypeVector& dispatches = g.GetAttr<DispatchTypeVector>("dispatch_type");
   int* dispatch = (int*) &dispatches[nid]; // NOLINT(*)
-  return finfer(attrs, ctxes[nid], dispatch, in_attrs, out_attrs);
+  return finfer(attrs, ctxes[nid].dev_mask(), dispatch, in_attrs, out_attrs);
 }
 
 /*!\brief
@@ -286,15 +286,14 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// Default storage type inference function.
+// The default storage type inference function.
 // If any input/output has non-default storage, then kDispatchFComputeFallback is inferred.
-// Otherwise kDispatchFCompute is inferred.
+// Otherwise, kDispatchFCompute is inferred.
 inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
-                               const Context& ctx,
+                               const int dev_mask,
                                int* dispatch_type,
                                std::vector<int> *iattr,
                                std::vector<int> *oattr) {
-  // TODO(junwu): check whether need to use ctx
   bool fallback = false;
   for (int& v : *oattr) {
     if (v == -1) v = kDefaultStorage;
@@ -307,7 +306,7 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   if (*dispatch_type == -1) {
     if (fallback) {
       *dispatch_type = kDispatchFComputeFallback;
-      op::LogStorageFallback(attrs, ctx, iattr, oattr);
+      op::LogStorageFallback(attrs, dev_mask, iattr, oattr);
     } else {
       *dispatch_type = kDispatchFCompute;
     }
