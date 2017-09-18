@@ -174,7 +174,7 @@ class KVStoreDist : public KVStoreLocal {
       int key = uniq_keys[i];
       // use the same array for merging to guarantee that pull always happens
       // after the previous push on this key
-      auto& recv_buf = comm_buf_[key];
+      auto& recv_buf = recv_comm_buf_[key];
       const auto storage_type = grouped_vals[i][0]->storage_type();
       CHECK_EQ(storage_type, kDefaultStorage)
                << "Expected stype of value to be kDefaultStorage";
@@ -270,7 +270,7 @@ class KVStoreDist : public KVStoreLocal {
       const auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
 
-      auto& send_buf = comm_buf_[key];
+      auto& send_buf = send_comm_buf_[key];
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
 
@@ -608,6 +608,9 @@ class KVStoreDist : public KVStoreLocal {
    */
   size_t bigarray_bound_;
   /// \brief send & recver buffer
+  std::unordered_map<int, NDArray> send_comm_buf_;
+  std::unordered_map<int, NDArray> recv_comm_buf_;
+
   std::unordered_map<int, NDArray> comm_buf_;
 
   /// \brief small buffer for quantize
