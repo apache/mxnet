@@ -1505,10 +1505,8 @@ class Symbol(SymbolBase):
         aux_arrays = [_ndarray_cls(NDArrayHandle(aux_state_handles[i]))
                       for i in range(num_aux_states.value)]
 
-        executor = Executor(exe_handle, self, ctx, grad_req, group2ctx)
-        executor.arg_arrays = arg_arrays
-        executor.grad_arrays = grad_arrays
-        executor.aux_arrays = aux_arrays
+        executor = Executor(exe_handle, self, ctx,
+                            arg_arrays, grad_arrays, aux_arrays, grad_req, group2ctx)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
@@ -1663,10 +1661,7 @@ class Symbol(SymbolBase):
                                          aux_args_handle,
                                          shared_handle,
                                          ctypes.byref(handle)))
-        executor = Executor(handle, self, ctx, grad_req, group2ctx)
-        executor.arg_arrays = args
-        executor.grad_arrays = args_grad
-        executor.aux_arrays = aux_states
+        executor = Executor(handle, self, ctx, args, args_grad, aux_states, grad_req, group2ctx)
         return executor
 
     def gradient(self, wrt):
