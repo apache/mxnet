@@ -455,11 +455,9 @@ struct trmm_backward {
 
 struct BackwardSumLogDiag {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int N, int stride, DType* dB, DType* A, DType* dA) {
-    const int offset(i * N * stride);
-    for ( int j = 0; j < N; ++j ) {
-      dA[offset+j*(stride+1)] = dB[i]/A[offset+j*(stride+1)];
-    }
+  MSHADOW_XINLINE static void Map(int i, int M, int stride, DType* dB, DType* A, DType* dA) {
+    const int matrix(i / M), row((i % M) / stride), col(i % stride);
+    dA[i] = (row == col ? dB[matrix]/A[i] : DType(0));
   }
 };
 struct sumlogdiag_backward {
@@ -472,10 +470,10 @@ struct sumlogdiag_backward {
     // this function as the LaOpCaller-adapters can only deal with a uniform
     // dimension for all tensor inputs. This doesn't matter as we will interpret
     // it correctly internally in this function.
+    // Note that A and dA may point to the same memory.
     using namespace mxnet_op;
-    Kernel<Scale, xpu>::Launch(s, dA.MSize(), DType(0), dA.dptr_);
     Kernel<BackwardSumLogDiag, xpu>::Launch
-         (s, A.size(0), A.size(1), A.stride_, dB.dptr_, A.dptr_, dA.dptr_);
+         (s, dA.MSize(), dA.size(1)*dA.stride_, dA.stride_, dB.dptr_, A.dptr_, dA.dptr_);
   }
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& dB, const Tensor<xpu, 3, DType>& A,

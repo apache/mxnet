@@ -415,6 +415,8 @@ Examples::
 NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
+  { return std::vector<std::pair<int, int>>{{1, 0}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
