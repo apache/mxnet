@@ -30,7 +30,7 @@ from . import dataset
 from ..utils import download, check_sha1
 from ... import nd, image, recordio
 
-apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/'
+apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 
 class _DownloadedDataset(dataset.Dataset):
     """Base class for MNIST, cifar10, etc."""
@@ -42,7 +42,7 @@ class _DownloadedDataset(dataset.Dataset):
         self._data = None
         self._label = None
 
-        repo_url = os.environ.get('MXNET_GLUON_DATASET_REPO', apache_repo_url)
+        repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
         if repo_url[-1] != '/':
             repo_url = repo_url+'/'
         self._base_url = repo_url
@@ -63,9 +63,9 @@ class _DownloadedDataset(dataset.Dataset):
         raise NotImplementedError
 
     def _get_url(self, filename):
-        return '{base_url}{repo_dir}/{filename}'.format(base_url=self._base_url,
-                                                        repo_dir=self._repo_dir,
-                                                        filename=filename)
+        return '{base_url}gluon/dataset/{repo_dir}/{filename}'.format(base_url=self._base_url,
+                                                                      repo_dir=self._repo_dir,
+                                                                      filename=filename)
 
 
 class MNIST(_DownloadedDataset):

@@ -50,8 +50,8 @@ _model_sha1 = {name: checksum for checksum, name in [
     ('f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'),
     ('9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn')]}
 
-apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/'
-_url_format = '{repo_url}{file_name}.zip'
+apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
+_url_format = '{repo_url}gluon/models/{file_name}.zip'
 
 def short_hash(name):
     if name not in _model_sha1:
@@ -92,7 +92,7 @@ def get_model_file(name, local_dir=os.path.expanduser('~/.mxnet/models/')):
         os.makedirs(local_dir)
 
     zip_file_path = os.path.join(local_dir, file_name+'.zip')
-    repo_url = os.environ.get('MXNET_GLUON_MODEL_REPO', apache_repo_url)
+    repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
     if repo_url[-1] != '/':
         repo_url = repo_url + '/'
     download(_url_format.format(repo_url=repo_url, file_name=file_name),
