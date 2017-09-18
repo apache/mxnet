@@ -44,6 +44,10 @@ NNVM_REGISTER_OP(batch_take)
 NNVM_REGISTER_OP(one_hot)
 .set_attr<FCompute>("FCompute<gpu>", OneHotOpForward<gpu>);
 
+NNVM_REGISTER_OP(gather_nd)
+.set_attr<FCompute>("FCompute<gpu>", GatherNDForward<gpu>);
+
+NNVM_REGISTER_OP(scatter_nd)
+.set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);
 }  // namespace op
 }  // namespace mxnet
-

@@ -18,9 +18,11 @@
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.test_utils import assert_almost_equal
 import numpy as np
 from nose.tools import raises
 from copy import deepcopy
+import warnings
 
 
 def test_parameter():
@@ -418,6 +420,21 @@ def test_block_attr_regular():
     c2 = gluon.Block()
     b.c = c2
     assert b.c is c2 and b._children[0] is c2
+
+
+def test_global_norm_clip():
+    x1 = mx.nd.ones((3,3))
+    x2 = mx.nd.ones((4,4))
+    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+    assert norm == 5.0
+    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
+    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
+
+    x3 = mx.nd.array([1.0, 2.0, float('nan')])
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        gluon.utils.clip_global_norm([x1, x3], 2.0)
+        assert len(w) == 1
 
 
 if __name__ == '__main__':

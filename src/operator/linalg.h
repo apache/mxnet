@@ -143,7 +143,6 @@ void linalg_batch_syrk(const Tensor<xpu, 3, DType>& A,
 // CPU/GPU-versions of LAPACK functions "gelqf", "orglq". Please refer to the
 // LAPACK documentation for further details.
 // Note:
-// - The current implementation works for CPU only
 // - Both functions have A as input and output parameter
 // - Both functions require extra workspace, passed as 1D tensor
 // - We call orglq after gelqf. Apart from A, they also communicate via the

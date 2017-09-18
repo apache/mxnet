@@ -557,6 +557,78 @@ def test_rms():
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32, g_stype='row_sparse')
 
+class PyFtrl(mx.optimizer.Optimizer):
+    """The Ftrl optimizer.
+
+    Referenced from *Ad Click Prediction: a View from the Trenches*, available at
+    http://dl.acm.org/citation.cfm?id=2488200.
+
+    Parameters
+    ----------
+    lamda1 : float, optional
+        L1 regularization coefficient.
+    learning_rate : float, optional
+        The initial learning rate.
+    beta : float, optional
+        Per-coordinate learning rate correlation parameter.
+    eta :
+        .. math::
+           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
+    """
+
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, sparse_update=False, **kwargs):
+        super(PyFtrl, self).__init__(**kwargs)
+        self.lamda1 = lamda1
+        self.beta = beta
+        self.lr = learning_rate
+        self.sparse_update = sparse_update
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # dn
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))  # n
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        wd = self._get_wd(index)
+        lr = self._get_lr(index)
+        num_rows = weight.shape[0]
+
+        dn, n = state
+        for row in range(num_rows):
+            all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
+            if all_zeros and self.sparse_update:
+                continue
+            grad[row] = grad[row] * self.rescale_grad
+            if self.clip_gradient is not None:
+                mx.nd.clip(grad[row], -self.clip_gradient, self.clip_gradient, out=grad[row])
+
+            #update dn, n
+            dn[row] += grad[row] - (mx.nd.sqrt(n[row] + grad[row] * grad[row]) - mx.nd.sqrt(n[row])) * weight[row] / lr
+            n[row] += grad[row] * grad[row]
+
+            # update weight
+            weight[row] = (mx.nd.sign(dn[row]) * self.lamda1 - dn[row]) / \
+                          ((self.beta + mx.nd.sqrt(n[row])) / lr + wd) * (mx.nd.abs(dn[row]) > self.lamda1)
+
+def test_ftrl():
+    mx.random.seed(0)
+    opt1 = PyFtrl
+    opt2 = mx.optimizer.Ftrl
+    shape = (3, 4, 5)
+    kwargs = [{},
+              {'clip_gradient': 0.5},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14},
+              {'rescale_grad': 0.8},
+              {'clip_gradient': 0.5, 'wd': 0.07},
+              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
+              {'rescale_grad': 0.8, 'wd': 0.05},
+              {'rescale_grad': 0.8, 'wd': 0.05, 'lamda1': 0.01},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'lamda1': 1.0}]
+    for kwarg in kwargs:
+        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                          np.float32, w_stype='row_sparse', g_stype='row_sparse')
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

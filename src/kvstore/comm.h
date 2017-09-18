@@ -165,9 +165,11 @@ class CommCPU : public Comm {
       auto result = buf.merged;
       Engine::Get()->PushSync([reduce, result, this](RunContext rctx) {
           NDArray out = result;
+          Resource rsc = ResourceManager::Get()->Request(rctx.ctx,
+              ResourceRequest(ResourceRequest::kTempSpace));
           is_serial_push_?
             ReduceSumCPUExSerial(reduce, &out)
-            : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), reduce, &out);
+            : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
         }, Context::CPU(), const_vars, {result.var()},
         FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
     }
