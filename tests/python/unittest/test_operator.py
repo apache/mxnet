@@ -3958,9 +3958,6 @@ def _gelqf_second_output(a):
     return mx.sym.broadcast_add(l, bogus_scal)
 
 def test_laop_2():
-    # Operators implemented for CPU only currently
-    if default_context() != mx.cpu():
-        return
     np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-7
@@ -4009,6 +4006,11 @@ def test_laop_2():
             check_grad(test_syrk2, [a_batch])
 
     # Tests for linalg_gelqf
+    # Currently disabled on GPU as they need cuda8
+    # and MxNet builds use cuda 7.5
+    if default_context() != mx.cpu():
+        return
+ 
     test_gelqf2 = _gelqf_combined_symbol(data1)  # Outputs (dot(Q, Q.T), dot(L, Q))
     test_gelqf_q = _gelqf_first_output(data1)  # Output Q (L is not dangling)
     test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)

@@ -51,6 +51,12 @@ NNVM_REGISTER_OP(_linalg_trsm)
 NNVM_REGISTER_OP(_backward_linalg_trsm)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 2, trsm_backward>);
 
+NNVM_REGISTER_OP(_linalg_syrk)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, syrk>);
+
+NNVM_REGISTER_OP(_backward_linalg_syrk)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, syrk_backward>);
+
 NNVM_REGISTER_OP(_linalg_sumlogdiag)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 0, 1, 1, sumlogdiag>);
 
@@ -70,6 +76,12 @@ NNVM_REGISTER_OP(_linalg_potrf)
 
 NNVM_REGISTER_OP(_backward_linalg_potrf)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, potrf_backward>);
+
+NNVM_REGISTER_OP(_linalg_gelqf)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 2, gelqf>);
+
+NNVM_REGISTER_OP(_backward_linalg_gelqf)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 1, gelqf_backward>);
 
 #endif
 
