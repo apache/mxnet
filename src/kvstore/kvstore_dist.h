@@ -174,7 +174,7 @@ class KVStoreDist : public KVStoreLocal {
       int key = uniq_keys[i];
       // use the same array for merging to guarantee that pull always happens
       // after the previous push on this key
-      auto& recv_buf = recv_comm_buf_[key];
+      auto& recv_buf = comm_buf_[key];
       const auto storage_type = grouped_vals[i][0]->storage_type();
       CHECK_EQ(storage_type, kDefaultStorage)
                << "Expected stype of value to be kDefaultStorage";
@@ -270,7 +270,23 @@ class KVStoreDist : public KVStoreLocal {
       const auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
 
-      auto& send_buf = send_comm_buf_[key];
+      auto& send_buf = comm_buf_[key];
+      const auto storage_type = merged.storage_type();
+      if (merged.ctx().dev_mask() == cpu::kDevMask) {
+        // make sure the previous push/pull is completed
+        send_buf.WaitToWrite();
+        send_buf = merged;  // avoid memory copy
+      } else {
+        if (send_buf.is_none()) {
+          if (storage_type == kDefaultStorage) {
+            send_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
+          } else {
+            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, merged.dtype());
+          }
+        }
+        CopyFromTo(merged, &send_buf);
+      }
+
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
 
@@ -282,83 +298,53 @@ class KVStoreDist : public KVStoreLocal {
                       merged.shape().Size() / bits + 4;
         // small buffer for quantize
         small_buf = NDArray(TShape{small_size},
-                  merged.ctx(),
-                  false,
-                  merged.dtype());
+                    send_buf.ctx(), false, send_buf.dtype());
         // residual buffer for quantize
-        res_buf = NDArray(merged.shape(),
-             merged.ctx(),
-             false,
-             merged.dtype());
-      }
-      // Init positive and negative threshold
-      if (pos_thre_.is_none() && compress_ != "none") {
-        // positive threshold
-        pos_thre_ = NDArray(TShape{1}, merged.ctx(),
-          false, merged.dtype());
-        pos_thre_ = pos_threshold_;
-        // negative threshold
-        neg_thre_ = NDArray(TShape{1}, merged.ctx(),
-          false, merged.dtype());
-        neg_thre_ = neg_threshold_;
+        res_buf = NDArray(merged.shape(), send_buf.ctx(),
+                  false, send_buf.dtype());
+        res_buf = 0;
+        if (pos_thre_.is_none()) {
+          // positive threshold
+          pos_thre_ = NDArray(TShape{1}, send_buf.ctx(),
+            false, send_buf.dtype());
+          pos_thre_ = pos_threshold_;
+          // negative threshold
+          neg_thre_ = NDArray(TShape{1}, send_buf.ctx(),
+            false, send_buf.dtype());
+          neg_thre_ = neg_threshold_;
+        }
       }
 
       // Compress
       if (compress_ == "2bit") {
-        Quantize(merged, &small_buf, &res_buf,
+        Quantize(send_buf, &small_buf, &res_buf,
            pos_thre_, neg_thre_,
            compress_,
            priority);
       }
 
-      const auto storage_type = merged.storage_type();
-      if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        // make sure the previous push/pull is completed
-        send_buf.WaitToWrite();
-        if (compress_ == "none") {
-          send_buf = merged;  // avoid memory copy
-        } else {
-          send_buf = small_buf; // avoid memory copy
-        }
-      } else {
-        if (send_buf.is_none()) {
-          if (storage_type == kDefaultStorage) {
-            if (compress_ == "none") {
-              send_buf = NDArray(merged.shape(),
-                 pinned_ctx_, true, merged.dtype());
-            } else {
-              send_buf = NDArray(small_buf.shape(),
-                 pinned_ctx_, true, small_buf.dtype());
-            }
-          } else {
-            if (compress_ == "none") {
-              send_buf = NDArray(storage_type, merged.shape(),
-                 pinned_ctx_, true, merged.dtype());
-            } else {
-              send_buf = NDArray(storage_type, small_buf.shape(),
-                 pinned_ctx_, true, small_buf.dtype());
-            }
-          }
-        }
-        if (compress_ == "none") {
-          CopyFromTo(merged, &send_buf);
-        } else {
-          CopyFromTo(small_buf, &send_buf);
-        }
-      }
-
       // push to servers
       if (storage_type == kDefaultStorage) {
       auto push_to_servers =
-          [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+          [this, key, send_buf, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
-          size_t size = send_buf.shape().Size();
+          size_t size = 0;
+          if (compress_ == "none") {
+            size = send_buf.shape().Size();
+          } else {
+            size = small_buf.shape().Size();
+          }
           PSKV& pskv = EncodeKey(key, size, true);
 
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-          real_t* data = send_buf.data().dptr<real_t>();
+          real_t* data = nullptr;
+          if (compress_ == "none") {
+            data = send_buf.data().dptr<real_t>();
+          } else {
+            data = small_buf.data().dptr<real_t>();
+          }
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
@@ -479,10 +465,9 @@ class KVStoreDist : public KVStoreLocal {
   /**
    * \brief cache all key partitions
    */
+  std::unordered_map<int, PSKV> ps_kv_;
   std::unordered_map<int, PSKV> push_ps_kv_;
   std::unordered_map<int, PSKV> pull_ps_kv_;
-  std::unordered_map<int, PSKV> ps_kv_;
-
   /**
    * \brief serizelize EncodeRowSparseKey and EncodeKey
    */
@@ -493,10 +478,8 @@ class KVStoreDist : public KVStoreLocal {
    */
   inline PSKV& EncodeKey(int key, size_t size, bool is_push) {
     mu_.lock();
-    PSKV& pskv = ps_kv_[key];
-    if (is_push) {
-      pskv = push_ps_kv_[key];
-    } else {
+    PSKV& pskv = push_ps_kv_[key];
+    if (!is_push) {
       pskv = pull_ps_kv_[key];
     }
     mu_.unlock();
@@ -607,12 +590,8 @@ class KVStoreDist : public KVStoreLocal {
    * \brief threshold for partition
    */
   size_t bigarray_bound_;
-  /// \brief send & recver buffer
-  std::unordered_map<int, NDArray> send_comm_buf_;
-  std::unordered_map<int, NDArray> recv_comm_buf_;
 
   std::unordered_map<int, NDArray> comm_buf_;
-
   /// \brief small buffer for quantize
   std::unordered_map<int, NDArray> comm_small_buf_;
   /// \brief residual buffer for quantize
