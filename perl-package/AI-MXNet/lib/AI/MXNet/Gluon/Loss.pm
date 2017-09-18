@@ -501,16 +501,7 @@ method hybrid_forward(
     {
         $label = $F->swapaxes($label, dim1 => 0, dim2 => 1);
     }
-    my $F_contrib;
-    if($F eq 'AI::MXNet::NDArray')
-    {
-        $F_contrib = 'AI::MXNet::Contrib::NDArray';
-    }
-    else
-    {
-        $F_contrib = 'AI::MXNet::Contrib::Symbol';
-    }
-    my $loss = $F_contrib->CTCLoss(
+    my $loss = $F->contrib->CTCLoss(
         $data, $label,
         (defined $data_lengths ? $data_lengths : ()),
         (defined $label_lengths ? $label_lengths : ()),
