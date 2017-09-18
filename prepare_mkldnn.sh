@@ -94,7 +94,7 @@ fi
 MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
 
-if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h]; then 
+if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h ]; then 
   MKLROOT=$MKLDNNROOT;
 fi
 
