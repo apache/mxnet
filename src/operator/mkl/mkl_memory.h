@@ -104,7 +104,7 @@ struct MKLMemHolder {
   void  check_and_prv_to_cpu(void *dptr_, bool convert = true) {
     if (!b_disable_prv_2_cpu && head_ == HEAD_AT_PRV) {
       CHECK(prv_descriptor_ != nullptr);
-      if(convert)
+      if (convert)
         prv_descriptor_->convert_from_prv(dptr_);
       // Because operator use CPU & maybe change it, change to CPU Flag
       head_ = HEAD_AT_CPU;

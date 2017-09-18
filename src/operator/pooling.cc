@@ -33,7 +33,7 @@
 #include "./mkl/mkldnn_memory-inl.h"
 #include "./mkl/mkl_util-inl.h"
 #include "./mkl/mkldnn_pooling-inl.h"
-#endif  //MXNET_USE_MKLDNN
+#endif  // MXNET_USE_MKLDNN
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
