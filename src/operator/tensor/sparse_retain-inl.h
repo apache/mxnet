@@ -106,7 +106,7 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (ograd_stype == kDefaultStorage && idx_stype == kDefaultStorage) {
     if (type_assign(&arr_grad_stype, kRowSparseStorage) &&
         type_assign(&idx_grad_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }

@@ -54,7 +54,7 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
     // FComputeEx can handle dns output on cpu, too
     if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   } else if (in_stype == kCSRStorage) {
@@ -63,7 +63,7 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
     // FComputeEx can handle dns output on cpu, too
     if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }

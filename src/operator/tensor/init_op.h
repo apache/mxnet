@@ -131,6 +131,7 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename ParamType, bool rsp, bool csr>
 inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
                             const int dev_mask,
                             int *dispatch_type,
@@ -145,11 +146,11 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
     // default
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if (out_stype == kRowSparseStorage) {
+  } else if (rsp && out_stype == kRowSparseStorage) {
     // rsp
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
-  } else if (out_stype == kCSRStorage) {
+  } else if (csr && out_stype == kCSRStorage) {
     // csr
     dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
                                      dispatch_type, kDispatchFComputeEx);

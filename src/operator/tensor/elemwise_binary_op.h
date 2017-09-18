@@ -60,7 +60,7 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
     // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
     if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
