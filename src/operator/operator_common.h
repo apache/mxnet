@@ -443,7 +443,7 @@ class SparseTempStorage {
 
 // TODO documentation
 inline std::string OperatorInfo(const nnvm::NodeAttrs& attrs,
-                                const Context& ctx,
+                                const int dev_mask,
                                 const std::vector<int>& in_attrs,
                                 const std::vector<int>& out_attrs) {
   std::string result = "";
@@ -463,7 +463,7 @@ inline std::string OperatorInfo(const nnvm::NodeAttrs& attrs,
     result += "\"" + kv.first + "\" : " + kv.second + ", ";
   }
   result += "}\n";
-  result += "Context.dev_mask = " + std::to_string(ctx.dev_mask());
+  result += "Context.dev_mask = " + std::to_string(dev_mask);
   return result;
 }
 
@@ -478,18 +478,18 @@ inline std::string OperatorInfoEx(const nnvm::NodeAttrs& attrs,
   auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
   std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
   std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
-  result += OperatorInfo(attrs, ctx.run_ctx.ctx, in_stypes, out_stypes);
+  result += OperatorInfo(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
   return result;
 }
 
 inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
-                               const Context& ctx,
+                               const int dev_mask,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
   thread_local std::unordered_set<std::string> warning_printed;
   // TODO(haibin) use env var for printing
-  std::string warning = OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+  std::string warning = OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   if (warning_printed.find(warning) == warning_printed.end()) {
     LOG(INFO) << "Storage fallback detected.\n" << warning;
     warning_printed.insert(warning);

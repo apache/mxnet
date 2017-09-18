@@ -42,7 +42,7 @@ namespace mxnet {
 namespace op {
 
 inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                             const Context& ctx,
+                                             const int dev_mask,
                                              int* dispatch_type,
                                              std::vector<int>* in_attrs,
                                              std::vector<int>* out_attrs) {
@@ -63,13 +63,13 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     // nothing to fallback on
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
 
 inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                              const Context& ctx,
+                                              const int dev_mask,
                                               int* dispatch_type,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs) {
@@ -87,7 +87,7 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     // nothing to fallback on
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
@@ -432,9 +432,7 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "_square_sum op only supports row-sparse ndarray"
-                  " as input, while input stype = "
-               << istype;
+    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -450,17 +448,14 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType ograd_stype = inputs[0].storage_type();
   const NDArrayStorageType input_stype = inputs[1].storage_type();
-  if (input_stype == kRowSparseStorage
-      && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage)) {
+  if (input_stype == kRowSparseStorage &&
+      (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage)) {
     CHECK_EQ(inputs[1].shape().ndim(), 2U) << "_square_sum op only supports"
                                               " 2D ndarray as input";
     NDArray output = outputs[0];
     SquareSumRspGradImpl(attrs, s, inputs[0], inputs[1], req[0], &output);
   } else {
-    LOG(FATAL) << "_square_sum op backward only supports dense ndarray as ograd,"
-                  " row-sparse ndarray as input and row-sparse ndarray as igrad,"
-                  " while ograd_stype = " << ograd_stype
-               << " input_stype = " << input_stype;
+    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
   }
 }
 

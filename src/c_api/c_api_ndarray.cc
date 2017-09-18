@@ -215,9 +215,10 @@ void SetShapeType(const nnvm::Op* op,
     out_storage_types.push_back(i.storage_type());
   }
   if (inferstorage.count(op)) {
-    CHECK(inferstorage[op](attrs, ctx, dispatch_type, &in_storage_types, &out_storage_types));
+    CHECK(inferstorage[op](attrs, ctx.dev_mask(), dispatch_type,
+                           &in_storage_types, &out_storage_types));
   } else {
-    CHECK(exec::DefaultStorageType(attrs, ctx, dispatch_type,
+    CHECK(exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_type,
                                    &in_storage_types, &out_storage_types));
   }
   CHECK_EQ(out_storage_types.size(), ndoutputs.size());

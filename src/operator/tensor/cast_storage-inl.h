@@ -359,7 +359,7 @@ struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
 };
 
 inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
-                                        const Context& ctx,
+                                        const int dev_mask,
                                         int* dispatch_type,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
@@ -407,7 +407,7 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (fallback) {
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, ctx, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }

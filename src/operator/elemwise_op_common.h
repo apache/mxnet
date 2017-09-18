@@ -43,7 +43,7 @@ namespace op {
 // TODO add doc
 template<bool rsp = false, bool csr = false>
 inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
-                                const Context& ctx,
+                                const int dev_mask,
                                 int* dispatch_type,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
@@ -64,20 +64,20 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_type);
-    LogStorageFallback(attrs, ctx, in_attrs, out_attrs);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
 }
 
 template<int n_in, int n_out, bool rsp = false, bool csr = false>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
-                                const Context& ctx,
+                                const int dev_mask,
                                 int* dispatch_type,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), n_in);
   CHECK_EQ(out_attrs->size(), n_out);
-  return ElemwiseStorageAttr<rsp, csr>(attrs, ctx, dispatch_type, in_attrs, out_attrs);
+  return ElemwiseStorageAttr<rsp, csr>(attrs, dev_mask, dispatch_type, in_attrs, out_attrs);
 }
 
 template<typename AttrType, bool (*is_none)(const AttrType&),
