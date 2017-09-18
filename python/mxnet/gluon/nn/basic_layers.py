@@ -292,10 +292,6 @@ class BatchNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
-    moving_mean_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the moving mean.
-    moving_variance_initializer: str or `Initializer`, default 'ones'
-        Initializer for the moving variance.
     in_channels : int, default 0
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
@@ -310,7 +306,6 @@ class BatchNorm(HybridBlock):
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
@@ -442,3 +437,96 @@ class Flatten(HybridBlock):
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class InstanceNorm(HybridBlock):
+    """
+    Applies instance normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array where (n>2) and normalizes 
+    the input using the following formula:
+
+    .. math::
+
+      out = \frac{x - mean[data]}{ \sqrt{Var[data]} + \epsilon} * gamma + beta
+
+    This layer is similar to batch normalization layer (`BatchNorm`)
+    with two differences: first, the normalization is
+    carried out per example (instance), not over a batch. Second, the
+    same normalization is applied both at test and train time. This
+    operation is also known as `contrast normalization`.
+    If the input data is of shape [batch, channel, spacial_dim1, spacial_dim2, ...],
+    `gamma` and `beta` parameters must be vectors of shape [channel].
+
+
+    Parameters
+    ----------
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+    Input shape:
+        Arbitrary.
+
+    Output shape:
+        Same shape as input.
+
+       This implementation is based on paper:
+    .. [1] Instance Normalization: The Missing Ingredient for Fast Stylization,
+       D. Ulyanov, A. Vedaldi, V. Lempitsky, 2016 (arXiv:1607.08022v2).
+
+    Examples
+    --------
+    >>> # Input of shape (2,1,2)
+    >>> x = mx.nd.array([[[ 1.1,  2.2]],
+    ...                 [[ 3.3,  4.4]]])
+    >>> # Instance normalization is calculated with the above formula
+    >>> layer = InstanceNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[[-0.99998355  0.99998331]]
+     [[-0.99998319  0.99998361]]]
+    <NDArray 2x1x2 @cpu(0)>
+    """
+    def __init__(self, epsilon=1e-5, center=True, scale=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 in_channels=0, **kwargs):
+        super(InstanceNorm, self).__init__(**kwargs)
+        self._kwargs = {'eps': epsilon}
+        if in_channels != 0:
+            self.in_channels = in_channels
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
+
+    def hybrid_forward(self, F, x, gamma, beta):
+        return F.InstanceNorm(x, gamma, beta,
+                           name='fwd', **self._kwargs)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        if hasattr(self, 'in_channels'):
+            s += ', in_channels={0}'.format(self.in_channels)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
+
+
