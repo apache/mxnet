@@ -370,43 +370,35 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   const CastStorageParam& param = nnvm::get<CastStorageParam>(attrs.parsed);
   CHECK_NE(param.stype, kUndefinedStorage)
     << "dst ndarray's storage type must be specified";
-  auto& in_stype = in_attrs->at(0);
+  const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
-  auto& param_stype = param.stype;
-  bool fallback = true;
+  const auto& param_stype = static_cast<NDArrayStorageType>(param.stype);
+  bool dispatched = false;
   // dns -> dns, dns -> rsp, dns -> csr
   if (in_stype == kDefaultStorage) {
     if (param_stype == kDefaultStorage) {
       // dns -> dns
-      if (type_assign(&out_stype, param_stype)) {
-        type_assign(dispatch_type, kDispatchFCompute);
-        fallback = false;
-      }
+      dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                       dispatch_type, kDispatchFCompute);
     } else if (param_stype == kRowSparseStorage || param_stype == kCSRStorage) {
       // dns -> rsp, dns -> csr
-      if (type_assign(&out_stype, param_stype)) {
-        type_assign(dispatch_type, kDispatchFComputeEx);
-        fallback = false;
-      }
+      dispatched = dispatch_on_storage(out_attrs, param_stype,
+                                       dispatch_type, kDispatchFComputeEx);
     }
   } else if (in_stype == kRowSparseStorage) {
     // rsp -> rsp, rsp -> dns
     if (param_stype == kRowSparseStorage || param_stype == kDefaultStorage) {
-      if (type_assign(&out_stype, param_stype)) {
-        type_assign(dispatch_type, kDispatchFComputeEx);
-        fallback = false;
-      }
+      dispatched = dispatch_on_storage(out_attrs, param_stype,
+                                       dispatch_type, kDispatchFComputeEx);
     }
   } else if (in_stype == kCSRStorage) {
     // csr -> csr, csr -> dns
     if (param_stype == kCSRStorage || param_stype == kDefaultStorage) {
-      if (type_assign(&out_stype, param_stype)) {
-        type_assign(dispatch_type, kDispatchFComputeEx);
-        fallback = false;
-      }
+      dispatched = dispatch_on_storage(out_attrs, param_stype,
+                                       dispatch_type, kDispatchFComputeEx);
     }
   }
-  if (fallback) {
+  if (!dispatched) {
     LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
