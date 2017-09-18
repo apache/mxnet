@@ -667,16 +667,14 @@ class AdaGrad(Optimizer):
     eps: float, optional
         Small value to avoid division by 0.
     """
-    def __init__(self, eps=1e-7, stype='default', **kwargs):
+    def __init__(self, eps=1e-7, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
-        self.stype = stype
 
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context, stype=self.stype)  # history
+        return zeros(weight.shape, weight.context, stype=weight.stype)  # history
 
     def update(self, index, weight, grad, state):
-        #print("ENTER ADAGRAD UPDATE")
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
@@ -694,7 +692,7 @@ class AdaGrad(Optimizer):
         if is_sparse:
             history[:] = op.elemwise_add(history, op.square(grad))
             assert history.stype == save_history_stype
-            srt = op.sqrt(history)
+            srt = op.sqrt(_internal._scatter_plus_scalar(history, self.float_stable_eps))
             assert srt.stype == save_history_stype
             div = _internal._scatter_elemwise_div(grad, srt)
             assert div.stype == grad.stype
@@ -705,8 +703,6 @@ class AdaGrad(Optimizer):
         weight[:] += (div + weight * wd) * -lr
 
         assert weight.stype == save_grad_stype
-        #print("LEAVE ADAGRAD UPDATE")
-
 
 @register
 class RMSProp(Optimizer):

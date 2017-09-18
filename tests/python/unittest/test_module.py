@@ -535,9 +535,7 @@ def test_factorization_machine_module():
             expected_accuracy = 0.05
         elif optimizer == 'adagrad':
             # use Sparse AdaGrad with learning rate 0.1 to train
-            adagrad = mx.optimizer.AdaGrad(stype='row_sparse',
-                                           clip_gradient=5.0,
-                                           learning_rate=0.01,
+            adagrad = mx.optimizer.AdaGrad(clip_gradient=5.0, learning_rate=0.01,
                                            rescale_grad=1.0/batch_size)
             mod.init_optimizer(optimizer=adagrad)
             if num_epochs is None:
