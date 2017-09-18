@@ -83,12 +83,13 @@ method _check_names_match(
 )
 {
     return if (not @$data_shapes and @$data_names == 1 and  $data_names->[0] eq 'softmax_label');
-    my @actual = map { @{$_}[0] } @{ $data_shapes };
-    if("@$data_names" ne "@actual")
+    my @actual = sort map { @{$_}[0] } @{ $data_shapes };
+    my @data_names = sort @$data_names;
+    if("@data_names" ne "@actual")
     {
         my $msg = sprintf(
             "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)",
-            $name, $name, "@$data_shapes", "@$data_names"
+            $name, $name, "@actual", "@data_names"
         );
         if($throw)
         {

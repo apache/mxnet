@@ -29,7 +29,7 @@ use Scalar::Util qw/blessed/;
 
 # Convert data into canonical form.
 method init_data(
-    AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Undef $data,
+    Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered] $data,
     Undef|Int :$allow_empty=,
     Str :$default_name
 )
@@ -37,8 +37,7 @@ method init_data(
     Carp::confess("data must be defined or allow_empty set to true value")
         if(not defined $data and not $allow_empty);
     $data //= [];
-
-    if(ref($data) and ref($data) ne 'ARRAY' and ref($data) ne 'HASH')
+    if(blessed $data and not $data->isa('Hash::Ordered'))
     {
         $data = [$data];
     }
@@ -59,11 +58,22 @@ method init_data(
             @ret = map { $i++; ["_${i}_$default_name", $_] } @{ $data };
         }
     }
-    if(ref($data) eq 'HASH')
+    elsif(ref($data) eq 'HASH')
     {
+        AI::MXNet::Logging->warning(
+            "Use of a raw perl hash as input is obsolete and the behaviour of the iterator is undefined.\n".
+            "Please use Hash::Ordered object instead."
+        );
         while(my ($k, $v) = each %{ $data })
         {
             push @ret, [$k, $v];
+        }
+    }
+    elsif(blessed $data and $data->isa('Hash::Ordered'))
+    {
+        for my $k ($data->keys)
+        {
+            push @ret, [$k, $data->get($k)];
         }
     }
     for my $d (@ret)
@@ -430,9 +440,9 @@ extends 'AI::MXNet::DataIter';
     for training and can cause problems if used for prediction.
 =cut
 
-has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
+has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered]');
 has 'data_list'           => (is => 'rw', isa => 'ArrayRef[AI::MXNet::NDArray]');
-has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
+has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered]');
 has 'batch_size'          => (is => 'rw', isa => 'Int', default => 1);
 has 'shuffle'             => (is => 'rw', isa => 'Bool', default => 0);
 has 'last_batch_handle'   => (is => 'rw', isa => 'Str', default => 'pad');

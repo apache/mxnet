@@ -1179,7 +1179,7 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
     ----------
     :$start=0 : number, optional
         Start of interval. The interval includes this value. The default start value is 0.
-    $stop= : number, optional
+    :$stop= : number, optional
         End of interval. The interval does not include this value.
     :$step=1 : number, optional
         Spacing between the values
@@ -1197,7 +1197,7 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
         The created NDArray
 =cut
 
-method arange(Index :$start=0, Index :$stop=, Index :$step=1, Index :$repeat=1,
+method arange(Index :$start=0, Maybe[Index] :$stop=, Index :$step=1, Index :$repeat=1,
               AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
 {
     return __PACKAGE__->_arange({

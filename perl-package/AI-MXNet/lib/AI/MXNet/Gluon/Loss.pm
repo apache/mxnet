@@ -490,7 +490,7 @@ sub BUILD
 
 method hybrid_forward(
     GluonClass $F, GluonInput $data, GluonInput $label,
-    Maybe[Int] $data_lengths=, Maybe[Int] $label_lengths=, Maybe[GluonInput] $sample_weight=
+    Maybe[GluonInput] $data_lengths=, Maybe[GluonInput] $label_lengths=, Maybe[GluonInput] $sample_weight=
 )
 {
     if($self->layout eq 'NTC')
@@ -510,15 +510,14 @@ method hybrid_forward(
     {
         $F_contrib = 'AI::MXNet::Contrib::Symbol';
     }
-    my $loss = $F_contrib->CTCLoss({
-        data => $data, label => $label,
+    my $loss = $F_contrib->CTCLoss(
+        $data, $label,
+        (defined $data_lengths ? $data_lengths : ()),
+        (defined $label_lengths ? $label_lengths : ()),
         use_data_lengths  => defined $data_lengths ? 1 : 0,
-        use_label_lengths => defined $data_lengths ? 1 : 0,
-        #data_lengths => $data_lengths,
-        #label_lengths => $label_lengths,
+        use_label_lengths => defined $label_lengths ? 1 : 0,
         blank_label=>'last'
-    });
-    warn "hahaha";
+    );
     return $self->_apply_weighting($F, $loss, $self->weight, $sample_weight);
 }
 
