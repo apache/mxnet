@@ -114,11 +114,14 @@ USE_LAPACK_PATH =
 USE_INTEL_PATH = NONE
 
 # If use MKL only for BLAS, choose static link automatically to allow python wrapper
-ifeq ($(USE_MKL2017), 0)
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
 endif
-else
+
+ifeq ($(USE_MKL2017), 0)
+USE_STATIC_MKL = NONE
+endif
+ifeq ($(USE_MKLDNN), 0)
 USE_STATIC_MKL = NONE
 endif
 
