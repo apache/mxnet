@@ -1,0 +1,79 @@
+MXNET_ROOTDIR := $(shell pwd)
+MKLDNN_ROOTDIR := external/mkldnn
+MKLDNN_TMPDIR := $(MKLDNN_ROOTDIR)/tmp
+MKLDNN_SRCDIR := $(MKLDNN_ROOTDIR)/src
+MKLDNN_BUILDDIR := $(MKLDNN_ROOTDIR)/build
+MKLDNN_INSTALLDIR := $(MKLDNN_ROOTDIR)/install
+MKLDNN_COMMIT := `cat ${MXNET_ROOTDIR}/mkldnn.commit`
+MKLDNN_CXX := g++
+MKLDNN_CC := gcc
+
+RETURN_STRING=$(shell ./prepare_mkl.sh $(MKLML_ROOT))
+MKLROOT=$(firstword $(RETURN_STRING))
+MKL_ROOTDIR := $(MKLROOT)
+
+# We do this because earlier versions of CMake have problems with ccache
+ifneq (,$(findstring ccache,$(CXX)))
+	MKLDNN_CXX := $(lastword $(CXX))
+endif
+
+ifneq (,$(findstring ccache,$(CC)))
+	MKLDNN_CC := $(lastword $(CC))
+endif
+
+MKLDNN_GITHUB := https://github.com/01org/mkl-dnn.git
+MKLDNN_CMAKE_FLAGS += $(MKLDNN_SRCDIR) -DCMAKE_INSTALL_PREFIX=$(MXNET_ROOTDIR)/$(MKLDNN_INSTALLDIR) -DMKLROOT=${MKL_ROOTDIR} -B$(MXNET_ROOTDIR)/$(MKLDNN_BUILDDIR) -DCMAKE_CXX_COMPILER="$(MKLDNN_CXX)" -DCMAKE_C_COMPILER="$(MKLDNN_CC)"
+
+ifeq ("$(wildcard $(MKLDNN_INSTALLDIR)/include/mkldnn.hpp)", "")
+# mkldnn_download:
+# 	git clone --no-checkout $(MKLDNN_GITHUB) $(MKLDNN_TMPDIR)
+# 	rsync -a $(MKLDNN_TMPDIR)/ $(MKLDNN_SRCDIR) && rm -rf $(MKLDNN_TMPDIR)
+# 	cd $(MKLDNN_SRCDIR) && git reset --hard $(MKLDNN_COMMIT)
+# 	echo "download end"
+# 	cmake $(MKLDNN_CMAKE_FLAGS)
+# 	make -C $(MXNET_ROOTDIR)/$(MKLDNN_BUILDDIR) -j$(shell cat /proc/cpuinfo |grep 'processor'|wc -l)
+# 	make -C $(MXNET_ROOTDIR)/$(MKLDNN_BUILDDIR) install
+# 	echo "build end"
+
+mkldnn:
+	git clone --no-checkout $(MKLDNN_GITHUB) $(MKLDNN_TMPDIR)
+	rsync -a $(MKLDNN_TMPDIR)/ $(MKLDNN_SRCDIR) && rm -rf $(MKLDNN_TMPDIR)
+	cd $(MKLDNN_SRCDIR) && git reset --hard $(MKLDNN_COMMIT)
+	echo "download end"
+	echo "build start"
+	cmake $(MKLDNN_CMAKE_FLAGS)
+	make -C $(MXNET_ROOTDIR)/$(MKLDNN_BUILDDIR) -j$(shell cat /proc/cpuinfo |grep 'processor'|wc -l)
+	make -C $(MXNET_ROOTDIR)/$(MKLDNN_BUILDDIR) install
+# CFLAGS += -I$(MKLDNN_INSTALLDIR)/include
+# LDFLAGS += -lmkldnn -L$(MKLDNN_INSTALLDIR)/lib
+# echo "mkldnnroot_notset"
+# else
+# # mkldnn_download:
+# mkldnn_build:
+endif
+
+mkldnn_clean:
+	@rm -rf $(MKLDNN_SRCDIR) $(MKLDNN_BUILDDIR) $(MKLDNN_INSTALLDIR) $(MKLDNN_TMPDIR)
+
+mkldnnroot_set:
+	# CFLAGS += -DMKLDNN_SUPPORTED
+	CFLAGS += -I$(MKLDNN_INSTALLDIR)/include
+	LDFLAGS += -lmkldnn -L$(MKLDNN_INSTALLDIR)/lib
+	echo "mkldnnroot_set"
+	# LDFLAGS += -Wl,-rpath,$(MKLDNN_INSTALLDIR)/lib
+
+
+mkldnnroot_notset: mkldnn_build
+	# CFLAGS += -DMKLDNN_SUPPORTED
+	CFLAGS += -I$(MKLDNN_INSTALLDIR)/include
+	LDFLAGS += -lmkldnn -L$(MKLDNN_INSTALLDIR)/lib
+	echo "mkldnnroot_notset"
+	# LDFLAGS += -Wl,-rpath,$(MKLDNN_INSTALLDIR)/lib
+
+# ifneq ($(origin MKLDNNROOT), undefined)
+# ifdef MKLDNNROOT
+# mkldnn: mkldnn
+# endif
+# else
+# mkldnn: mkldnn
+# endif

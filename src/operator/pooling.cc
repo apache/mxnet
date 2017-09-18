@@ -28,6 +28,12 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_pooling-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkl_util-inl.h"
+#include "./mkl/mkldnn_pooling-inl.h"
+#endif  //MXNET_USE_MKLDNN
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
@@ -39,6 +45,21 @@ template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
   // TODO(lingyan): kFull use exclude padding algorithm now
+#if MXNET_USE_MKLDNN == 1
+    if (param.kernel.ndim() == 2
+      && (param.pooling_convention == pool_enum::kValid)
+      && (param.pool_type == pool_enum::kMaxPooling
+      || param.pool_type == pool_enum::kAvgPooling)) {
+      switch (dtype) {
+      case mshadow::kFloat32:
+        return new MKLDNNPoolingOp<cpu, float>(param);
+      default:
+        break;
+      }
+      if (enableMKLDNNWarnGenerated())
+        LOG(INFO) << "MKLDNNPoolingOp Skip MKL DNN optimization";
+    }
+#endif
 #if MXNET_USE_MKL2017 == 1
     if (param.kernel.ndim() == 2
       && (param.pooling_convention == pool_enum::kValid)
@@ -47,8 +68,8 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
       switch (dtype) {
       case mshadow::kFloat32:
         return new MKLPoolingOp<cpu, float>(param);
-      case mshadow::kFloat64:
-        return new MKLPoolingOp<cpu, double>(param);
+      /*case mshadow::kFloat64:
+        return new MKLPoolingOp<cpu, double>(param);*/
       default:
         break;
       }

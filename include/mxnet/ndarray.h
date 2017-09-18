@@ -37,7 +37,7 @@
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
 #include <mkl_memory.h>
 #endif
 // check c++11
@@ -94,7 +94,7 @@ class NDArray {
  public:
   /*! \brief default constructor */
   NDArray() {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     Mkl_mem_ = MKLMemHolder::create();
 #endif
   }
@@ -109,7 +109,7 @@ class NDArray {
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
         shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
@@ -154,7 +154,7 @@ class NDArray {
       }
       ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
                                      dtype, aux_types, aux_shapes);
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
       Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
@@ -168,7 +168,7 @@ class NDArray {
   NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
         dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
@@ -187,7 +187,7 @@ class NDArray {
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
         dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
@@ -274,7 +274,7 @@ class NDArray {
             << "Unexpected storage type: " << stype;
       res = TBlob(dptr, shape, ptr_->aux_handles[i].ctx.dev_mask(), type);
     });
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     res.Mkl_mem_ = Mkl_mem_;
 #endif
     return res;
@@ -512,7 +512,7 @@ class NDArray {
     CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     if (Mkl_mem_ != nullptr) {
       // convert prv to cpu
       Mkl_mem_->check_and_prv_to_cpu(ptr_->shandle.dptr);
@@ -859,12 +859,12 @@ class NDArray {
     tblob_.shape_ = shape;
     tblob_.type_flag_ = dtype_;
     tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     tblob_.Mkl_mem_ = Mkl_mem_;
 #endif
   }
 
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
   std::shared_ptr<MKLMemHolder> Mkl_mem_;
 #endif
   /*! \brief internal data of NDArray */

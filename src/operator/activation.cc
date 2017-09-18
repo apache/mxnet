@@ -29,12 +29,30 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_relu-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkldnn_relu-inl.h"
+#endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(ActivationParam param, int dtype, const TShape& dshape) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  if (param.act_type == activation::kReLU) {
+    switch (dtype) {
+    case mshadow::kFloat32:
+    case mshadow::kInt8:
+    case mshadow::kInt32:
+    case mshadow::kUint8:
+      return new MKLDNNReluOp<cpu, float>();
+    default:
+      break;
+    }
+  }
+#endif
 #if MXNET_USE_MKL2017 == 1
   if (param.act_type == activation::kReLU && dshape.ndim() <= 4) {
       switch (dtype) {

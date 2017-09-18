@@ -83,6 +83,12 @@ USE_MKL2017 = 0
 # Prerequisite USE_MKL2017=1
 USE_MKL2017_EXPERIMENTAL = 0
 
+# Use the new open source Intel MKL-DNN library instead of MKLML
+USE_MKLDNN=0
+# MKLDNN root install folder, need to be root for /usr/local
+# Change to user dir for standard user, or leave empty to use local 'external' dir
+MKLDNN_ROOT=/usr/local
+
 # whether use NNPACK library
 USE_NNPACK = 0
 
@@ -108,11 +114,14 @@ USE_LAPACK_PATH =
 USE_INTEL_PATH = NONE
 
 # If use MKL only for BLAS, choose static link automatically to allow python wrapper
-ifeq ($(USE_MKL2017), 0)
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
 endif
-else
+
+ifeq ($(USE_MKL2017), 0)
+USE_STATIC_MKL = NONE
+endif
+ifeq ($(USE_MKLDNN), 0)
 USE_STATIC_MKL = NONE
 endif
 
