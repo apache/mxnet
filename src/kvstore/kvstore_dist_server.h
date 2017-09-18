@@ -33,7 +33,7 @@
 #include <vector>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
-#include "../operator/tensor/elemwise_binary_op-inl.h"
+#include "../operator/tensor/elemwise_binary_op.h"
 #include "../operator/tensor/init_op.h"
 #include "../ndarray/ndarray_function.h"
 
@@ -291,14 +291,14 @@ class KVStoreDistServer {
           // instead of calling BinaryComputeRspRsp directly
           using namespace mshadow;
           Engine::Get()->PushSync([recved, merged, out](RunContext ctx) {
-                                    std::vector<NDArray> inputs, outputs;
-                                    inputs.push_back(recved);
-                                    inputs.push_back(merged.array);
-                                    outputs.push_back(out);
-                                    op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
-                                      {}, {}, inputs, {kWriteTo}, outputs);
-                                  }, recved.ctx(), const_vars, {out.var()},
-                                  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+              std::vector<NDArray> inputs, outputs;
+              inputs.push_back(recved);
+              inputs.push_back(merged.array);
+              outputs.push_back(out);
+              op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
+                {}, {}, inputs, {kWriteTo}, outputs);
+            }, recved.ctx(), const_vars, {out.var()},
+            FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
           CopyFromTo(out, &merged.array, 0);
         }
         merged.request.push_back(req_meta);
@@ -366,6 +366,7 @@ class KVStoreDistServer {
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
+    std::cout << "hererrrrrrrrrrrrrrrr" << std::endl;
     CHECK_EQ(req_meta.cmd, kDefaultPushPull);
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
@@ -381,8 +382,10 @@ class KVStoreDistServer {
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
     if (req_meta.push) {
+      std::cout << "pushhhhhhhhhhhhh" << std::endl;
       size_t ds[] = {(size_t)req_data.lens[0]};
       TShape dshape(ds, ds + 1);
+      std::cout << "Recv shape: " << dshape.Size();
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
@@ -391,6 +394,7 @@ class KVStoreDistServer {
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
+        std::cout << "Uncompress shape: " << dshape.Size();
         if (comp_buf.is_none()) {
           comp_buf = NDArray(dshape, Context());
         }
