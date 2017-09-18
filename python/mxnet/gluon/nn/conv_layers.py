@@ -1009,3 +1009,32 @@ class GlobalAvgPool3D(_Pooling):
         assert layout == 'NCDHW', "Only supports NCW layout for now"
         super(GlobalAvgPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'avg', **kwargs)
+
+
+class ReflectionPad2D(HybridBlock):
+    """Pads the input tensor using the reflection of the input boundary.
+
+    Parameters
+    ----------
+        pad_width int: the size of the padding. If is int, uses the same
+            padding in all boundaries. 
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
+          :math:`H_{out} = H_{in} + paddingTop + paddingBottom`
+          :math:`W_{out} = W_{in} + paddingLeft + paddingRight`
+
+    Examples
+    --------
+    >>> m = nn.ReflectionPad(3)
+    >>> input = mx.nd.random_normal(shape=(16, 3, 224, 224))
+    >>> output = m(input)
+    """
+    def __init__(self, pad_width=0, **kwargs):
+        super(ReflectionPad2D(, self).__init__(**kwargs)
+        self._pad_width = pad_width
+        
+    def forward(self, x):
+        return F.pad(x, mode='reflect', pad_width=self._pad_width)
+
