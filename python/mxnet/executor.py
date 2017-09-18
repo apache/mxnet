@@ -76,7 +76,7 @@ class Executor(object):
             check(len(grad_arrays) == self._symbol.list_arguments())
             self._grad_dict = Executor._get_dict(
                     self._symbol.list_arguments(), grad_arrays)
-        else :
+        else:
             self._grad_dict = None
         check(len(aux_arrays) == self._symbol.list_auxiliary_states())
         self._aux_dict = Executor._get_dict(
