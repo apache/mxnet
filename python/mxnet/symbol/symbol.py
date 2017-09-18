@@ -1505,7 +1505,8 @@ class Symbol(SymbolBase):
         aux_arrays = [_ndarray_cls(NDArrayHandle(aux_state_handles[i]))
                       for i in range(num_aux_states.value)]
 
-        executor = Executor(exe_handle, self, ctx, arg_arrays, grad_arrays, aux_arrays, grad_req, group2ctx)
+        executor = Executor(exe_handle, self, ctx,
+            arg_arrays, grad_arrays, aux_arrays, grad_req, group2ctx)
         return executor
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',

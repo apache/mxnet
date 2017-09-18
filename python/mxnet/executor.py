@@ -71,20 +71,20 @@ class Executor(object):
         self._symbol = copy.deepcopy(symbol)
         check(len(arg_arrays) == self._symbol.list_arguments())
         self._arg_dict = Executor._get_dict(
-                self._symbol.list_arguments(), arg_arrays)
+            self._symbol.list_arguments(), arg_arrays)
         if grad_arrays is not None:
             check(len(grad_arrays) == self._symbol.list_arguments())
             self._grad_dict = Executor._get_dict(
-                    self._symbol.list_arguments(), grad_arrays)
+                self._symbol.list_arguments(), grad_arrays)
         else:
             self._grad_dict = None
         check(len(aux_arrays) == self._symbol.list_auxiliary_states())
         self._aux_dict = Executor._get_dict(
-                self._symbol.list_auxiliary_states(), aux_arrays)
+            self._symbol.list_auxiliary_states(), aux_arrays)
         outputs = self._get_outputs()
         check(len(outputs) == self._symbol.list_outputs())
         self._output_dict = Executor._get_dict(
-                self._symbol.list_outputs(), self.outputs)
+            self._symbol.list_outputs(), self.outputs)
         self._monitor_callback = None
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
