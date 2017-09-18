@@ -27,6 +27,7 @@
 
 #include <dmlc/omp.h>
 #include <mxnet/base.h>
+#include <mxnet/op_attr_types.h>
 #include <algorithm>
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -89,13 +90,13 @@ inline int get_num_threads<cpu>(const int N) {
   case kWriteInplace:                               \
   case kWriteTo:                                    \
     {                                               \
-      const int ReqType = kWriteTo;                 \
+      const OpReqType ReqType = kWriteTo;           \
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
   case kAddTo:                                      \
     {                                               \
-      const int ReqType = kAddTo;                   \
+      const OpReqType ReqType = kAddTo;             \
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
@@ -212,6 +213,26 @@ struct set_zero {
   }
 };
 
+/*! \brief Select assignment operation based upon the req value
+ * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
+ */
+template<typename OP, int req>
+struct op_with_req {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs, const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+};
 
 template<typename OP, typename xpu>
 struct Kernel;
@@ -251,7 +272,6 @@ struct Kernel<OP, gpu> {
   }
 };
 #endif  // __CUDACC__
-
 
 }  // namespace mxnet_op
 }  // namespace op

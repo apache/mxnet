@@ -310,7 +310,7 @@ struct DotCsrTransDnsDnsByRowBlocks {
 /*!
  * \brief CPU Kernel of dot(csr.T(), dns) = rsp
  * Parallelization by row blocks.
- * This kernel fills up the row_idx array of the rsp 
+ * This kernel fills up the row_idx array of the rsp
  * with 1 for nonzero rows and 0 for zero rows.
  * The matrix will be compacted after this kernel call.
  */
@@ -828,7 +828,6 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";
   const auto ograd_stype = inputs[0].storage_type();
   const auto lhs_stype = inputs[1].storage_type();
-  const auto rhs_stype = inputs[2].storage_type();
   const auto grad_rhs_stype = outputs[1].storage_type();
   if (ograd_stype == kDefaultStorage  // ograd dns format
       && lhs_stype == kCSRStorage  // csr input lhs of the op
