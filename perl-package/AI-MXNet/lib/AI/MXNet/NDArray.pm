@@ -114,9 +114,29 @@ method at(Index @indices)
 
 method len() { $self->shape->[0] }
 
-method slice(Slice @slices)
+method slice(Slice|AdvancedSlice @slices)
 {
     confess("No slices supplied") unless @slices;
+    if(ref $slices[0] eq 'ARRAY' and ref $slices[0]->[0])
+    {
+        my @indices;
+        my $key = $slices[0];
+        my $dtype = 'int32';
+        for my $idx_i (@{ $key })
+        {
+            if(not (blessed $idx_i and $idx_i->isa(__PACKAGE__)))
+            {
+                $idx_i = __PACKAGE__->array($idx_i, ctx=>$self->context, dtype=>$dtype);
+            }
+            else
+            {
+                $dtype = $idx_i->dtype;
+            }
+            push @indices, $idx_i;
+        }
+        my $indices = __PACKAGE__->stack(@indices);
+        return __PACKAGE__->gather_nd($self, $indices);
+    }
     my $shape = $self->shape;
     my $dsize = @$shape;
     my $isize = @slices;
