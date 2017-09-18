@@ -253,7 +253,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
       ograd_stype == kDefaultStorage) {
     if (type_assign(&lhs_grad_stype, kDefaultStorage) &&
         type_assign(&rhs_grad_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
       dispatched = true;
     }
   } else if (no_transpose && lhs_stype == kCSRStorage &&
@@ -261,7 +261,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     // backward: csr.T, rsp/dns -> rsp, dns.T, rsp/dns -> dns
     if (type_assign(&rhs_grad_stype, kRowSparseStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   } else if (param.transpose_a && !param.transpose_b && lhs_stype == kCSRStorage &&
@@ -269,7 +269,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     // backward: csr, rsp/dns -> dns, dns, rsp/dns -> dns
     if (type_assign(&rhs_grad_stype, kDefaultStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
-      TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
