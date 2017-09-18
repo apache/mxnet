@@ -14,6 +14,18 @@ const char_p = Ptr{UInt8}
 const char_pp = Ptr{char_p}
 
 ################################################################################
+# Enumeration from MXNet headers
+################################################################################
+# OpReqType in include/mxnet/op_attr_types.h
+@enum GRAD_REQ GRAD_NOP=0 GRAD_WRITE=1 GRAD_INPLACE=2 GRAD_ADD=3
+const grad_req_map = Dict{Symbol, GRAD_REQ}(
+    :nop     => GRAD_NOP,      # no operation, do not write anything
+    :write   => GRAD_WRITE,    # write gradient to provided space
+    :inplace => GRAD_INPLACE,  # perform an inplace write
+    :add     => GRAD_ADD,      # add to the provided space
+)
+
+################################################################################
 # Initialization and library API entrance
 ################################################################################
 const MXNET_LIB = Libdl.find_library("libmxnet.$(Libdl.dlext)",
