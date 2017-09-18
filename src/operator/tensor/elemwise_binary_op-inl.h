@@ -280,7 +280,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
   OpBase::FillDense<cpu, IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
   OpBase::FillDense<cpu, DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
-  if(!same_lhs_rhs) {
+  if (!same_lhs_rhs) {
     OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
   }
 
