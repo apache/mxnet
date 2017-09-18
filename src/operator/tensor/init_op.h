@@ -197,14 +197,21 @@ void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
 }
 
-// Fill a CSR NDArray with zeros by updating the aux shape.
+/*! \brief Fill a CSR NDArray with zeros by updating the aux shape
+ *
+ * @tparam xpu - cpu or gpu
+ * @param s - The device stream
+ * @param dst - NDArray which is to be set to "all zeroes"
+ */
 template<typename xpu>
 void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
-  // reset the shapes if it's not zeros
-  TShape new_shape(mshadow::Shape1(0));
-  dst->set_aux_shape(csr::kIndPtr, new_shape);
-  dst->set_aux_shape(csr::kIdx, new_shape);
+  dst->set_aux_shape(csr::kIdx, mshadow::Shape1(0));
+  dst->CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst->shape()[0] + 1));
+  TBlob indptr_data = dst->aux_data(csr::kIndPtr);
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(csr::kIndPtr), IType, {
+    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+      s, indptr_data.Size(), indptr_data.dptr<IType>());
+  });
 }
 
 template<typename xpu>
