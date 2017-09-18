@@ -45,7 +45,7 @@ inline IndexTensorToVector(mshadow::Tensor<gpu, 1, DType> data,
                       cudaMemcpyDeviceToHost, data.stream_->stream_);
   CHECK_EQ(cuda_status, cudaSuccess) << "cuda memcpy label error";
   for (int i = 0; i < max_seq_len; ++i) {
-    (*index_vec)[i] = static_cast<RType>(temp_index[i]);
+    (*index_vec)[i] = static_cast<RType>(std::lround(temp_index[i]));
   }
   free(temp_index);
 #endif
@@ -57,7 +57,7 @@ inline IndexTensorToVector(mshadow::Tensor<cpu, 1, DType> data,
   int max_seq_len = data.shape_.Size();
   DType *index_array = static_cast<DType *>(data.dptr_);
   for (int i = 0; i < max_seq_len; ++i)
-    (*index_vec)[i] = static_cast<RType>(index_array[i]);
+    (*index_vec)[i] = static_cast<RType>(std::lround(index_array[i]));
 }
 
 }  // namespace op
