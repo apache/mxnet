@@ -22,8 +22,8 @@
 *         adam.d.straw@intel.com
 *
 *******************************************************************************/
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_BATCH_NORM_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_BATCH_NORM_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_BATCH_NORM_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_BATCH_NORM_INL_H_
 
 #include <mkldnn_types.h>
 #include <dmlc/parameter.h>
@@ -78,15 +78,14 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
     fwd_usr_input_md.reset(new memory::desc({ { n, ic, ih, iw } }, mpcsn, memory::format::nchw));
     fwd_usr_mpd.reset(new memory::primitive_desc(*fwd_usr_input_md, cpu_engine));
-    /* auto pmfmt = ((__builtin_cpu_supports("avx2")) || */ 
-    /*                (__builtin_cpu_supports("avx"))) ? */ 
+    /* auto pmfmt = ((__builtin_cpu_supports("avx2")) || */
+    /*                (__builtin_cpu_supports("avx"))) ? */
     /*                memory::format::nChw8c : memory::format::nChw16c; */
     if (ic % 8 == 0) {
       auto pmfmt = memory::format::nChw8c;
       fwd_prv_input_md.reset(new memory::desc({ { n, ic, ih, iw } }, mpcsn, pmfmt));
       fwd_prv_mpd.reset(new memory::primitive_desc(*fwd_prv_input_md, cpu_engine));
-    }
-    else {
+    } else {
       fwd_prv_input_md = nullptr;
       fwd_prv_mpd = nullptr;
     }
@@ -171,9 +170,10 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
       mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
       if (param_.fix_gamma)
         slope = 1.f;
-        LayerSetUp(data, out);
-        init_mkldnn_ = true;
-    
+
+      LayerSetUp(data, out);
+      init_mkldnn_ = true;
+
       int32_t ic = this->channels_;
       if (fwd_inference_pd == NULL) {
         initFwd(in_data);
@@ -201,7 +201,8 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
         mean_memory.reset(new memory(fwd_training_pd->mean_primitive_desc(), mean.dptr_));
         var_memory.reset(new memory(fwd_training_pd->variance_primitive_desc(), var.dptr_));
       } else {
-        Tensor<xpu, 1, Dtype> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, Dtype>(s);
+        Tensor<xpu, 1, Dtype> moving_mean =
+          aux_states[batchnorm::kMovingMean].get<xpu, 1, Dtype>(s);
         Tensor<xpu, 1, Dtype> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, Dtype>(s);
         mean_memory.reset(new memory(fwd_inference_pd->mean_primitive_desc(),
           moving_mean.dptr_));
@@ -216,8 +217,8 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
         BatchNormFwd.reset(new batch_normalization_forward(*fwd_inference_pd,
           *fwd_input_primitive, (const primitive::at)*mean_memory, (const primitive::at)*var_memory,
           *weight_memory, *fwd_output_memory));
-        } 
-      }else {
+        }
+      } else {
         fwd_bottom_data->sync_converted_prv(false,
           in_data[batchnorm::kData]);
         fwd_top_data->sync_output_memory(
@@ -410,4 +411,4 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
   template<> int MKLDNNBatchNormOp<cpu, float>::s_id_gen = 1;
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_BATCH_NORM_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_BATCH_NORM_INL_H_

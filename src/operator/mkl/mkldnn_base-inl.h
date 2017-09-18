@@ -23,8 +23,8 @@
 *
 *******************************************************************************/
 
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_BASE_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_BASE_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
 #include <string>
@@ -135,35 +135,30 @@ template<typename T>
 struct data_type_enum {};
 
 template<>
-struct data_type_enum<float>
-{
+struct data_type_enum<float> {
     enum { type = mkldnn::memory::data_type::f32 };
 };
 
 template<>
-struct data_type_enum<int32_t>
-{
+struct data_type_enum<int32_t> {
     enum { type = mkldnn::memory::data_type::s32 };
 };
 
 template<>
-struct data_type_enum<int16_t>
-{
+struct data_type_enum<int16_t> {
     enum { type = mkldnn::memory::data_type::s16 };
 };
 
 template<>
-struct data_type_enum<int8_t>
-{
+struct data_type_enum<int8_t> {
     enum { type = mkldnn::memory::data_type::s8 };
 };
 
 template<>
-struct data_type_enum<uint8_t>
-{
+struct data_type_enum<uint8_t> {
     enum { type = mkldnn::memory::data_type::u8 };
 };
 
 }  // namespace mxnet
 #endif
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_BASE_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_

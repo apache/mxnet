@@ -22,8 +22,8 @@
 *         adam.d.straw@intel.com
 *
 *******************************************************************************/
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_LRN_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_LRN_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_LRN_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_LRN_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -265,5 +265,5 @@ class MKLDNNLRNOp : public Operator, public MKLDNNLayer<Dtype> {
 };  // class LocalResponseNormOp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_LRN_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_LRN_INL_H_
 

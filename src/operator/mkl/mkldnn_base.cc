@@ -23,8 +23,8 @@
 *
 *******************************************************************************/
 
-#ifdef MXNET_USE_MKLDNN
 #include <dmlc/logging.h>
+#ifdef MXNET_USE_MKLDNN
 #include "mkldnn_base-inl.h"
 using namespace mkldnn;
 namespace mxnet {

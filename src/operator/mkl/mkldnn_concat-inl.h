@@ -22,8 +22,8 @@
 *         adam.d.straw@intel.com
 *
 *******************************************************************************/
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_CONCAT_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_CONCAT_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_CONCAT_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_CONCAT_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -53,7 +53,7 @@ class MKLDNNConcatOp : public Operator, public MKLDNNLayer<Dtype> {
   virtual ~MKLDNNConcatOp() {
   }
 
-private:
+ private:
   void LayerSetup(const std::vector<mshadow::Tensor<xpu, 4, Dtype> > &data,
                   size_t data_shape_size) {
     for (size_t i = 1; i < size_; ++i) {
@@ -121,11 +121,11 @@ private:
       memory::format mfmt = mfmt_nchw;
       fwd_bottom_data_.push_back(std::shared_ptr<MKLDNNData<Dtype> >());
       memory::dims input_tz = {n_, (int32_t)split_channels_[i], h_, w_};
-      
+
       std::shared_ptr<memory::primitive_desc> prv_src_mpd;
       std::shared_ptr<memory::primitive_desc> usr_src_mpd(
-		      new memory::primitive_desc({input_tz, mtype, mfmt_nchw}, cpu_engine));
-     
+        new memory::primitive_desc({input_tz, mtype, mfmt_nchw}, cpu_engine));
+
       if (const_cast<Dtype*>(mkl_prv_data<Dtype>(in_data[i])) != NULL) {
         std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > mem_descr
           = get_mkldnn_prv_descriptor<Dtype>(in_data[i]);
@@ -134,21 +134,21 @@ private:
         prv_src_mpd.reset(new memory::primitive_desc(
                 {input_tz, mtype, mfmt}, cpu_engine));
       }
-      
+
       bottom_data_mpd.push_back(memory::primitive_desc(
           {input_tz, mtype, mfmt}, cpu_engine));
-      
+
       fwd_bottom_data_[i].reset(new MKLDNNData<Dtype>(usr_src_mpd, prv_src_mpd));
-    } 
-    
+    }
+
     std::shared_ptr<memory::primitive_desc> usr_dst_mpd(new memory::primitive_desc(
         {output_tz, mtype, mfmt_nchw}, cpu_engine));
-    
+
     fwd_pd.reset(new concat::primitive_desc(static_cast<int>(dimension_), bottom_data_mpd));
 
     std::shared_ptr<memory::primitive_desc> prv_dst_mpd(new memory::primitive_desc(
         fwd_pd->dst_primitive_desc()));
-   
+
     fwd_top_data_.reset(new MKLDNNData<Dtype>(usr_dst_mpd, prv_dst_mpd));
 
     for (size_t i = 0; i < size_; ++i) {
@@ -182,7 +182,7 @@ private:
      concatFwd.submit();
   }
 
-  void InitConcatBwd(const std::vector<TBlob> &out_grad, 
+  void InitConcatBwd(const std::vector<TBlob> &out_grad,
                   const std::vector<mshadow::Tensor<xpu, 4, Dtype> > &data,
                   const mshadow::Tensor<xpu, 4, Dtype> &out) {
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
@@ -191,13 +191,14 @@ private:
     memory::format diff_dst_mfmt = mfmt_nchw;
     memory::dims input_tz = {n_, c_, h_, w_};
     memory::dims offsets = {0, 0, 0, 0};
-    
+
     std::shared_ptr<memory::primitive_desc> prv_diff_dst_mpd;
     std::shared_ptr<memory::primitive_desc> usr_diff_dst_mpd(
       new memory::primitive_desc({input_tz, mtype, mfmt_nchw},
         cpu_engine));
-   
-    bool top_diff_is_prv = (const_cast<Dtype*>(mkl_prv_data<Dtype>(out_grad[concat_enum::kOut])) != NULL); 
+
+    bool top_diff_is_prv =
+      (const_cast<Dtype*>(mkl_prv_data<Dtype>(out_grad[concat_enum::kOut])) != NULL);
     if (top_diff_is_prv) {
         std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > mem_descr
           = get_mkldnn_prv_descriptor<Dtype>(out_grad[concat_enum::kOut]);
@@ -221,7 +222,7 @@ private:
             cpu_engine));
       bwd_bottom_diff_[i].reset(new MKLDNNData<Dtype>(
             usr_diff_src_mpd, prv_diff_src_mpd));
-      
+
       auto view_pd = top_diff_is_prv ?
         view::primitive_desc(*prv_diff_dst_mpd, dims, offsets) :
         view::primitive_desc(*usr_diff_dst_mpd, dims, offsets);
@@ -229,9 +230,8 @@ private:
       bwd_pd[i].reset(new reorder::primitive_desc(view_dst_pd, *prv_diff_src_mpd));
       offsets[dimension_] += split_channels_[i];
     }
-    
   }
-  
+
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
@@ -282,20 +282,22 @@ private:
     if (!need_bwd) {
       return;
     }
-    
+
     if (bwd_pd.empty()) {
       InitConcatBwd(out_grad, grad_in, grad);
     }
-    
+
     for (size_t i = 0; i < size_; ++i) {
-     std::shared_ptr<memory> bwd_reorder_input_memory = bwd_top_diff_->get_converted_prv(grad.dptr_, true,out_grad[concat_enum::kOut] ); 
-     std::shared_ptr<memory> bwd_reorder_output_memory = bwd_bottom_diff_[i]->create_output_memory(grad_in[i].dptr_, in_grad[i], bwd_bottom_diff_[i]);
-	    
+     std::shared_ptr<memory> bwd_reorder_input_memory =
+      bwd_top_diff_->get_converted_prv(grad.dptr_, true, out_grad[concat_enum::kOut]);
+     std::shared_ptr<memory> bwd_reorder_output_memory =
+      bwd_bottom_diff_[i]->create_output_memory(grad_in[i].dptr_, in_grad[i], bwd_bottom_diff_[i]);
+
      MKLDNNPrimitive<Dtype> concatBwd;
-     concatBwd.reset(new reorder(*bwd_pd[i], *bwd_reorder_input_memory, *bwd_reorder_output_memory));
+     concatBwd.reset(
+        new reorder(*bwd_pd[i], *bwd_reorder_input_memory, *bwd_reorder_output_memory));
      concatBwd.submit();
     }
-
   }
 
  private:
@@ -315,11 +317,10 @@ private:
   std::vector<memory::primitive_desc> bottom_data_mpd;
   std::shared_ptr<memory::desc> top_data_md;
   std::shared_ptr<memory> output_memory;
-  
   std::shared_ptr<concat::primitive_desc> fwd_pd;
   std::vector<std::shared_ptr<mkldnn::reorder::primitive_desc>> bwd_pd;
 };  // class MKLDNNConcatOp
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_CONCAT_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_CONCAT_INL_H_

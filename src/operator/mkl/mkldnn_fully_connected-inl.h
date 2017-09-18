@@ -23,8 +23,8 @@
 *         
 *
 *******************************************************************************/
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_FULLY_CONNECTED_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_FULLY_CONNECTED_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_FULLY_CONNECTED_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_FULLY_CONNECTED_INL_H_
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -419,4 +419,4 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_FULLY_CONNECTED_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_FULLY_CONNECTED_INL_H_

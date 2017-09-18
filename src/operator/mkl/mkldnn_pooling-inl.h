@@ -23,8 +23,8 @@
 *
 *******************************************************************************/
 
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_POOLING_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_POOLING_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_POOLING_INL_H_
 #include <vector>
 #include <string>
 #include <utility>
@@ -192,9 +192,9 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
         in_data[pool_enum::kData], s);
       Tensor<xpu, 4, Dtype> out = mkl_experimental_direct_get<xpu, 4, Dtype>(
         out_data[pool_enum::kOut], s);
-        LayerSetUp(data, out);
-        init_mkldnn_ = true;
-    
+      LayerSetUp(data, out);
+      init_mkldnn_ = true;
+
       if (poolingFwdInference_pd == NULL)
         InitPoolingFwd(in_data);
       // ---  init primitive and prv_memory descriptors ----------------------
@@ -347,4 +347,4 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
 }   // namespace op
 }   // namespace mxnet
 
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_POOLING_INL_H_

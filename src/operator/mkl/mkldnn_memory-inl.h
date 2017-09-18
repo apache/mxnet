@@ -23,8 +23,8 @@
 *
 *******************************************************************************/
 
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_MEMORY_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_MEMORY_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_MEMORY_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_MEMORY_INL_H_
 
 #include <string>
 #include <vector>
@@ -203,4 +203,4 @@ template struct MKLDNNData<int32_t>;
 }  // namespace mxnet
 
 #endif
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_MEMORY_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_MEMORY_INL_H_

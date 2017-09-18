@@ -22,8 +22,8 @@
 *         adam.d.straw@intel.com
 *
 *******************************************************************************/
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_CONVOLUTION_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_CONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_CONVOLUTION_INL_H_
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -169,7 +169,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-      
       if (convFwd_pd == NULL) {
         using namespace mshadow;
         using namespace mshadow::expr;
@@ -194,33 +193,34 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
         if (!b_init_conv) {
           this->init_properties(data, out);
           this->b_init_conv = true;
-        }   
-          InitForward(ctx);
-            // ---  init primitive and prv_memory descriptors ---------
-          fwd_bottom_data_primitive =
-            fwd_bottom_data->get_converted_prv(data_ptr, false, in_data[conv::kData]);
-          fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true,
-            in_data[conv::kWeight]);
-          if (!this->param_.no_bias) {
-            bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
-            fwd_bias_data_primitive =
-              fwd_bias_data->get_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
-          }
-          fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out_data[conv::kOut],
-            fwd_top_data);
-          if (!this->param_.no_bias) {
-            convFwd.reset(new convolution_forward(*convFwd_pd
-              , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
-              , *fwd_bias_data_primitive, *fwd_top_data_memory));
-          } else {
-            convFwd.reset(new convolution_forward(*convFwd_pd
-              , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
-              , *fwd_top_data_memory));
-          }
+        }
+
+        InitForward(ctx);
+          // ---  init primitive and prv_memory descriptors ---------
+        fwd_bottom_data_primitive =
+          fwd_bottom_data->get_converted_prv(data_ptr, false, in_data[conv::kData]);
+        fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true,
+          in_data[conv::kWeight]);
+        if (!this->param_.no_bias) {
+          bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
+          fwd_bias_data_primitive =
+            fwd_bias_data->get_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
+        }
+        fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out_data[conv::kOut],
+          fwd_top_data);
+        if (!this->param_.no_bias) {
+          convFwd.reset(new convolution_forward(*convFwd_pd
+            , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
+            , *fwd_bias_data_primitive, *fwd_top_data_memory));
+        } else {
+          convFwd.reset(new convolution_forward(*convFwd_pd
+            , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
+            , *fwd_top_data_memory));
+        }
       } else {
           fwd_bottom_data->sync_converted_prv(false, in_data[conv::kData]);
           fwd_weights_data->sync_converted_prv(true, in_data[conv::kWeight]);
-          if (!this->param_.no_bias) 
+          if (!this->param_.no_bias)
               fwd_bias_data->sync_converted_prv(true, in_data[conv::kBias]);
           fwd_top_data->sync_output_memory(out_data[conv::kOut],
             fwd_top_data);
@@ -488,4 +488,4 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
 };  // class MKLDNNConvolutionOp
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_CONVOLUTION_INL_H_

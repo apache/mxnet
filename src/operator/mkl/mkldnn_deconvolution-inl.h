@@ -22,8 +22,8 @@
 *         adam.d.straw@intel.com
 *
 *******************************************************************************/
-#ifndef MXNET_OPERATOR_MKL_DNN_MKLDNN_DECONVOLUTION_INL_H_
-#define MXNET_OPERATOR_MKL_DNN_MKLDNN_DECONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_DECONVOLUTION_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_DECONVOLUTION_INL_H_
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -354,4 +354,4 @@ class MKLDNNDeConvolutionOp : public Operator, public MKLDNNLayer<DType>,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_MKL_DNN_MKLDNN_DECONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_DECONVOLUTION_INL_H_

@@ -24,8 +24,8 @@
 *******************************************************************************/
 
 
-#if MXNET_USE_MKLDNN == 1
 #include <mxnet/base.h>
+#if MXNET_USE_MKLDNN == 1
 #include <mkl_memory.h>
 #include "mkldnn_memory-inl.h"
 
@@ -217,7 +217,7 @@ void MKLDNNMemoryDescriptor<Dtype>::sync_converted_prv(
       }
       // Need:    CHECK(blob_prv_mkldnn_mem_descr->mkldnn_primitive());
     }
-  } 
+  }
 }
 
 
