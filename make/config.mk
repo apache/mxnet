@@ -37,9 +37,7 @@ USE_PROFILER =
 USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
-ADD_LDFLAGS +=
-# below is for os x
-#ADD_LDFLAGS = -L/usr/lib/lib -lmklml -liomp5
+ADD_LDFLAGS =
 
 # the additional compile flags you want to add
 ADD_CFLAGS =
@@ -65,7 +63,7 @@ USE_NVRTC = 0
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
-USE_OPENCV = 0
+USE_OPENCV = 1
 
 # use openmp for parallelization
 USE_OPENMP = 1
@@ -76,17 +74,20 @@ USE_OPENMP = 1
 # MKL ML Library folder, need to be root for /usr/local
 # Change to User Home directory for standard user
 # For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/lib
+MKLML_ROOT=/usr/local
 
 # whether use MKL2017 library
-USE_MKL2017 = 1
+USE_MKL2017 = 0
 
 # whether use MKL2017 experimental feature for high performance
 # Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 1
+USE_MKL2017_EXPERIMENTAL = 0
 
-# whether use MKL-DNN Open Source Library
-USE_MKLDNN = 0
+# Use the new open source Intel MKL-DNN library instead of MKLML
+USE_MKLDNN=0
+# MKLDNN root install folder, need to be root for /usr/local
+# Change to user dir for standard user, or leave empty to use local 'external' dir
+MKLDNN_ROOT=/usr/local
 
 # whether use NNPACK library
 USE_NNPACK = 0
@@ -110,7 +111,7 @@ USE_LAPACK_PATH =
 
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
-USE_INTEL_PATH = /usr/lib
+USE_INTEL_PATH = NONE
 
 # If use MKL only for BLAS, choose static link automatically to allow python wrapper
 ifeq ($(USE_MKL2017), 0)
