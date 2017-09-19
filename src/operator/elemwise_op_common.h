@@ -49,19 +49,20 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *out_attrs) {
   using namespace common;
   bool dispatched = false;
-  bool valid_ctx = !cpu_only || dev_mask == mshadow::cpu::kDevMask;
+  const bool invalid_ctx = cpu_only && dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? kDispatchFComputeFallback : kDispatchFComputeEx;
   if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns ... -> dns
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if (valid_ctx && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+  } else if (rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, ... -> rsp
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
-  } else if (valid_ctx && csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+                                     dispatch_type, dispatch_ex);
+  } else if (csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
     // csr, csr, ... -> csr
     dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_type, dispatch_ex);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_type);
