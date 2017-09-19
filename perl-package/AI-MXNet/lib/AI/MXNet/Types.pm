@@ -51,7 +51,6 @@ subtype "Shape"           => as "ArrayRef[DimSize]";
 subtype "WholeDim"        => as "Str" => where { $_ eq 'X' };
 subtype "Slice"           => as "ArrayRef[Index]|WholeDim|Index" => where { ref $_ ? @$_ > 0 : 1 };
 subtype "Dtype"           => as enum([qw[float32 float64 float16 uint8 int32]]);
-subtype "Metric"          => as "Maybe[CodeRef|Str]";
 subtype "ProfilerMode"    => as enum([qw[symbolic all]]);
 subtype "GluonClass"      => as enum([qw[AI::MXNet::NDArray AI::MXNet::Symbol]]);
 subtype "GluonInput"      => as "AI::MXNet::NDArray|AI::MXNet::Symbol|ArrayRef[AI::MXNet::NDArray|AI::MXNet::Symbol]";
@@ -66,6 +65,7 @@ subtype "NameShape"       => as "ArrayRef" => where {
 };
 subtype "Callback"        => as "CodeRef|ArrayRef[Coderef]|AI::MXNet::Callback|ArrayRef[AI::MXNet::Callback]";
 subtype "EvalMetric"      => as "AI::MXNet::EvalMetric|Str|CodeRef";
+subtype "Metric"          => as "Maybe[EvalMetric]";
 subtype "Optimizer"       => as "AI::MXNet::Optimizer|Str";
 subtype "Initializer"     => as "AI::MXNet::Initializer|Str";
 subtype "Updater"         => as "AI::MXNet::Updater|CodeRef";

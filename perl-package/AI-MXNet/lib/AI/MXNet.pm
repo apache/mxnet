@@ -175,7 +175,7 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
 =head1 BUGS AND INCOMPATIBILITIES
 
-    Parity with Python inteface is mostly achieved, few deprecated
+    Parity with Python interface is mostly achieved, few deprecated
     and not often used features left unported for now.
 
 =head1 SEE ALSO
