@@ -44,7 +44,7 @@ Operator *SoftmaxOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
-.describe(R"code(Computes the gradient of cross entropy loss with respect to the input array (`data`).
+.describe(R"code(Computes the gradient of cross entropy loss with respect to the input array `data`.
 
 - This operator computes the gradient in two steps.
   The cross entropy loss does not actually need to be computed.
