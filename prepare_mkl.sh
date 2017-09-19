@@ -115,7 +115,7 @@ if [ -z $MKLROOT ]; then
 fi
 
 # Check what MKL lib we have in MKLROOT
-if [ -z `find $MKLROOT -name libmklml_gnu.so -print -quit` ]; then
+if [ -z `find $MKLROOT -name libmklml* -print -quit` ]; then
   USE_MKLML=0
 elif [ -z `find $MKLROOT -name libmkl_core.so -print -quit` ]; then
   USE_MKLML=1
