@@ -166,11 +166,22 @@ def test_sync_push_pull():
             expected[row] = updated_val[row]
         check_diff_to_scalar(val, expected, rank=my_rank)
 
-    check_default_keys(kv, my_rank, nworker)
+    check_default_keys(kv, my_rank, nworker)  
     check_row_sparse_keys(kv, my_rank, nworker)
     check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
     check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done')
 
+def test_quantize():
+    kv = mx.kv.create('dist_sync')
+    kv.set_compress('2bit')
+    kv.init(keys, [mx.nd.ones(big_shape)] * len(keys))
+    my_rank = kv.rank
+    nworker = kv.num_workers
+    # init updater on servers
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
+    kv.push('3',mx.nd.ones(shape)*(my_rank+1))
+
 if __name__ == "__main__":
-    test_sync_push_pull()
+    # test_sync_push_pull()  
+    test_quantize()
