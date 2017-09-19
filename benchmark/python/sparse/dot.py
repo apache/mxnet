@@ -161,7 +161,7 @@ def _compare_sparse_dense(data_dir, file_name, mini_file_name, feature_dim,
         weight_row_dim = batch_size if transpose else feature_dim
         weight_shape = (weight_row_dim, output_dim)
         if not rsp:
-            weight = mx.nd.random_uniform(low=0, high=1, shape=weight_shape)
+            weight = mx.nd.random.uniform(low=0, high=1, shape=weight_shape)
         else:
             weight = rand_ndarray(weight_shape, "row_sparse", density=0.05, distribution="uniform")
         total_cost = {}
@@ -172,7 +172,7 @@ def _compare_sparse_dense(data_dir, file_name, mini_file_name, feature_dim,
         for _ in train_iter:
             csr_data = train_iter.getdata()
             dns_data = csr_data.tostype('default')
-            cost_sparse = measure_cost(num_repeat, False, False, mx.nd.dot, csr_data, weight, transpose_a=transpose)
+            cost_sparse = measure_cost(num_repeat, False, False, mx.nd.sparse.dot, csr_data, weight, transpose_a=transpose)
             cost_dense = measure_cost(num_repeat, False, False, mx.nd.dot, dns_data, weight, transpose_a=transpose)
             total_cost["sparse"] += cost_sparse
             total_cost["dense"] += cost_dense
@@ -270,7 +270,7 @@ def test_dot_synthetic(data_dict):
         set_default_context(ctx)
         assert fw == "mxnet" or fw == "scipy"
         # Set funcs
-        dot_func_sparse = mx.nd.dot if fw == "mxnet" else sp.spmatrix.dot
+        dot_func_sparse = mx.nd.sparse.dot if fw == "mxnet" else sp.spmatrix.dot
         dot_func_dense = mx.nd.dot if fw == "mxnet" else np.dot
         # Create matrix instances
         lhs_nd = rand_ndarray(lhs_shape, lhs_stype, density=lhs_den, distribution=distribution)

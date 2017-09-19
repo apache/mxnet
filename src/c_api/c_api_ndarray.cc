@@ -184,7 +184,9 @@ void SetShapeType(const nnvm::Op* op,
   std::vector<int>& in_types = ret->arg_types;
   std::vector<int>& out_types = ret->out_types;
   in_types.clear();
+  in_types.reserve(ndinputs.size());
   out_types.clear();
+  out_types.reserve(ndoutputs.size());
 
   for (auto& i : ndinputs) {
     in_types.push_back(i.dtype());
@@ -201,7 +203,10 @@ void SetShapeType(const nnvm::Op* op,
   auto& in_storage_types = ret->arg_storage_types;
   auto& out_storage_types = ret->out_storage_types;
   in_storage_types.clear();
+  in_storage_types.reserve(ndinputs.size());
   out_storage_types.clear();
+  out_storage_types.reserve(ndoutputs.size());
+
   for (auto& i : ndinputs) {
     in_storage_types.push_back(i.storage_type());
   }
@@ -550,19 +555,18 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   }
 }
 
-int MXImperativeInvoke(AtomicSymbolCreator creator,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       int num_params,
-                       const char **param_keys,
-                       const char **param_vals) {
+inline void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
+                                   int num_inputs,
+                                   NDArrayHandle *inputs,
+                                   int *num_outputs,
+                                   NDArrayHandle **outputs,
+                                   int num_params,
+                                   const char **param_keys,
+                                   const char **param_vals) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** outarray = *reinterpret_cast<NDArray***>(outputs);
 
-  API_BEGIN();
   nnvm::NodeAttrs attrs;
   SetOpAttrs(op, &attrs, num_inputs, num_params, param_keys, param_vals);
 
@@ -588,6 +592,19 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
       *outarray[i] = std::move(ndoutputs[i]);
     }
   }
+}
+
+int MXImperativeInvoke(AtomicSymbolCreator creator,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       int num_params,
+                       const char **param_keys,
+                       const char **param_vals) {
+  API_BEGIN();
+  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs,
+                         outputs, num_params, param_keys, param_vals);
   API_END();
 }
 
@@ -601,8 +618,8 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                          const char **param_vals,
                          const int **out_stypes) {  // outputs storage types
   API_BEGIN();
-  MXImperativeInvoke(creator, num_inputs, inputs, num_outputs, outputs,
-                     num_params, param_keys, param_vals);
+  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
+                         num_params, param_keys, param_vals);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   NDArray** output_nds = reinterpret_cast<NDArray**>(*outputs);
   ret->out_types.resize(*num_outputs);
@@ -790,7 +807,6 @@ int MXAutogradBackwardEx(mx_uint num_output,
                          int retain_graph,
                          int is_train) {
   API_BEGIN();
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   std::vector<NDArray> outputs, ograds;
   outputs.reserve(num_output);

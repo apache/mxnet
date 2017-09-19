@@ -35,6 +35,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -156,11 +157,23 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs);
 }
 
+template<int n_out>
+inline bool ElemwiseStorageTypeDenseOutput(const nnvm::NodeAttrs& attrs,
+                                           const Context& ctx,
+                                           std::vector<int> */*in_attrs*/,
+                                           std::vector<int> *out_attrs) {
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  for (size_t i = 0; i < n_out; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, kDefaultStorage);
+  }
+  return true;
+}
+
 // Transfer gradient and input to FGradient function
 struct ElemwiseGradUseIn {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, n->inputs, n->attrs.dict);
   }
 };
@@ -169,7 +182,7 @@ struct ElemwiseGradUseIn {
 struct ElemwiseGradUseOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     index_t n_out = n->num_outputs();
     for (index_t i = 0; i < n_out; ++i) {
@@ -183,7 +196,7 @@ struct ElemwiseGradUseOut {
 struct ElemwiseGradUseInOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     for (auto& h : n->inputs) {
       heads.push_back(h);
@@ -200,7 +213,7 @@ struct ElemwiseGradUseInOut {
 struct ElemwiseGradUseNone {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, {}, n->attrs.dict);
   }
 };
@@ -208,13 +221,16 @@ struct ElemwiseGradUseNone {
 struct CloneGradient {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> ret;
-    for (size_t i = 0; i < n->inputs.size(); ++i)
+    const size_t input_count = n->inputs.size();
+    ret.reserve(input_count);
+    for (size_t i = 0; i < input_count; ++i)
       ret.emplace_back(ograds[0]);
     return ret;
   }
 };
+
 }  // namespace op
 }  // namespace mxnet
 

@@ -33,6 +33,7 @@
 #include <iterator>
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"
+#include "mxnet-cpp/operator.h"
 
 namespace mxnet {
 namespace cpp {

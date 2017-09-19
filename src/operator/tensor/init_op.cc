@@ -63,8 +63,15 @@ NNVM_REGISTER_OP(_arange)
 .add_arguments(RangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(zeros_like)
+.add_alias("_sparse_zeros_like")
 .describe(R"code(Return an array of zeros with the same shape and type
 as the input array.
+
+The storage type of ``zeros_like`` output depends on the storage type of the input
+
+- zeros_like(row_sparse) = row_sparse
+- zeros_like(csr) = csr
+- zeros_like(default) = default
 
 Examples::
 
@@ -79,9 +86,11 @@ Examples::
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FillComputeZerosEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "The input");
 

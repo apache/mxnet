@@ -59,9 +59,6 @@ if __name__ == '__main__':
                 continue
             with open(os.path.join(path, name), 'r') as html_file:
                 content = bs(html_file, 'html.parser')
-            if os.path.join(path, name) == args.file_path + 'index.html':
-                content.find(id='example-link')['href'] = \
-                    'https://github.com/apache/incubator-mxnet/tree/%s/example' % (args.current_version)
             navbar = content.find(id="main-nav")
             navbar_mobile = content.find(id="burgerMenu")
             outstr = str(content)
@@ -90,7 +87,7 @@ if __name__ == '__main__':
             pip_pattern = ['', '-cu80', '-cu75', '-cu80mkl', '-cu75mkl', '-mkl']
             if args.current_version == 'master':
                 outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
-                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git')
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet')
                 for trail in pip_pattern:
                     outstr = outstr.replace('pip install mxnet%s<' % (trail),
                                             'pip install mxnet%s --pre<' % (trail))
@@ -98,13 +95,18 @@ if __name__ == '__main__':
                                             'pip install mxnet%s --pre\n<' % (trail))
             else:
                 outstr = outstr.replace('git clone --recursive https://github.com/dmlc/mxnet',
-                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git '
+                                        'git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet '
                                         '--branch %s' % (args.current_version))
                 for trail in pip_pattern:
                     outstr = outstr.replace('pip install mxnet%s<' % (trail),
                                             'pip install mxnet%s==%s<' % (trail, args.current_version))
                     outstr = outstr.replace('pip install mxnet%s\n<' % (trail),
                                             'pip install mxnet%s==%s\n<' % (trail, args.current_version))
+
+            # Add tag for example link
+            outstr = outstr.replace('https://github.com/apache/incubator-mxnet/tree/master/example',
+                                    'https://github.com/apache/incubator-mxnet/tree/%s/example' %
+                                    (args.current_version))
 
             with open(os.path.join(path, name), "w") as outf:
                 outf.write(outstr)

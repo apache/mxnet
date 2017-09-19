@@ -16,6 +16,7 @@
 # under the License.
 
 """Register backend ops in mxnet.ndarray namespace"""
+__all__ = ['CachedOp']
 
 import sys as _sys
 import os as _os
@@ -29,21 +30,21 @@ from ..ndarray_doc import _build_doc
 # pylint: disable=unused-import
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, _STORAGE_TYPE_ID_TO_STR
+        from .._ctypes.ndarray import NDArrayBase
         from .._ctypes.ndarray import CachedOp, _imperative_invoke
     elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
+        from .._cy3.ndarray import NDArrayBase, _imperative_invoke
         from .._cy3.ndarray import CachedOp, _imperative_invoke
     else:
-        from .._cy2.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
+        from .._cy2.ndarray import NDArrayBase, _imperative_invoke
         from .._cy2.ndarray import CachedOp, _imperative_invoke
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, _imperative_invoke, _STORAGE_TYPE_ID_TO_STR
+    from .._ctypes.ndarray import NDArrayBase, _imperative_invoke
     from .._ctypes.ndarray import CachedOp, _imperative_invoke
 
-from ..base import mx_uint, check_call, _LIB, py_str, OpHandle, c_str, _Null
+from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null
 # pylint: enable=unused-import
 
 
@@ -170,40 +171,4 @@ def %s(%s):
     return ndarray_function
 
 
-# pylint: enable=too-many-locals, invalid-name
-def _init_ndarray_module(root_namespace):
-    """List and add all the ndarray functions to current module."""
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
-
-    module_obj = _sys.modules["%s.ndarray" % root_namespace]
-    module_sparse = _sys.modules["%s.ndarray.sparse" % root_namespace]
-    module_internal = _sys.modules["%s.ndarray._internal" % root_namespace]
-    module_contrib = _sys.modules["%s.contrib.ndarray" % root_namespace]
-    for name in op_names:
-        hdl = OpHandle()
-        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        function = _make_ndarray_function(hdl, name)
-        if function.__name__.startswith('_contrib_'):
-            function.__name__ = function.__name__[9:]
-            function.__module__ = 'mxnet.contrib.ndarray'
-            setattr(module_contrib, function.__name__, function)
-        elif function.__name__.startswith('_'):
-            setattr(module_internal, function.__name__, function)
-        else:
-            setattr(module_obj, function.__name__, function)
-
-        # register sparse ops under mxnet.ndarray.sparse
-        if function.__name__.startswith('_sparse_'):
-            function.__name__ = function.__name__[8:]
-            function.__module__ = 'mxnet.ndarray.sparse'
-            setattr(module_sparse, function.__name__, function)
-
-# register backend operators in mx.nd
-_init_ndarray_module("mxnet")
+_init_op_module('mxnet', 'ndarray', _make_ndarray_function)

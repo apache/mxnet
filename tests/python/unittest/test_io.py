@@ -28,6 +28,8 @@ except ImportError:
     h5py = None
 import sys
 from common import get_data
+import unittest
+
 
 def test_MNISTIter():
     # prepare data
@@ -154,7 +156,6 @@ def test_NDArrayIter_h5py():
             assert(labelcount[i] == 100)
 
 def test_NDArrayIter_csr():
-    import scipy.sparse as sp
     # creating toy data
     num_rows = rnd.randint(5, 15)
     num_cols = rnd.randint(1, 20)
@@ -164,7 +165,7 @@ def test_NDArrayIter_csr():
     dns = csr.asnumpy()
 
     # make iterators
-    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size))
+    csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))
     begin = 0
     for batch in csr_iter:
         expected = np.zeros((batch_size, num_cols))
@@ -256,7 +257,8 @@ def test_LibSVMIter():
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
-
+    
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
 def test_CSVIter():
     def check_CSVIter_synthetic():
         cwd = os.getcwd()

@@ -65,7 +65,7 @@ struct MultiBoxTargetParam : public dmlc::Parameter<MultiBoxTargetParam> {
   nnvm::Tuple<float> variances;
   DMLC_DECLARE_PARAMETER(MultiBoxTargetParam) {
     DMLC_DECLARE_FIELD(overlap_threshold).set_default(0.5f)
-    .describe("Anchor-GT overlap threshold to be regarded as a possitive match.");
+    .describe("Anchor-GT overlap threshold to be regarded as a positive match.");
     DMLC_DECLARE_FIELD(ignore_label).set_default(-1.0f)
     .describe("Label for ignored anchors.");
     DMLC_DECLARE_FIELD(negative_mining_ratio).set_default(-1.0f)

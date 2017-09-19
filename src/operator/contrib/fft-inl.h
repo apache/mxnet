@@ -208,7 +208,8 @@ class FFTOp : public Operator {
 
  private:
   FFTParam param_;
-  int dim_, stride_, num_compute, n_ffts;
+  int dim_, stride_, n_ffts;
+  size_t num_compute;
   bool init_cufft_;
 };  // class FFTOp
 #endif  // MXNET_USE_CUDA
@@ -260,9 +261,7 @@ class FFTProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

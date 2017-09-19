@@ -46,7 +46,7 @@ struct DotCsrDnsDnsScalarKernel {
    * \param data_l      csr matrix data
    * \param indptr_l    csr matrix row index pointer
    * \param col_idx_l   csr matrix column indices
-   * \param data_r      dns1 matrix data of rhs
+   * \param data_r      dns1 matrix data
    * \param num_cols_r  dns1 matrix number of columns
    */
   template<typename DType, typename IType, typename CType>
@@ -861,7 +861,7 @@ inline void DotCsrRspDnsImpl(const OpContext& ctx,
             Kernel<set_zero, gpu>::Launch(s, num_threads, row_flg_r);
             // Set row_flg index array
             num_threads = nnr_r;
-            Kernel<SetRspRowFlgKernel, gpu>::Launch(s, num_threads,
+            Kernel<IndexRspRowFlgKernel, gpu>::Launch(s, num_threads,
                 row_flg_r, row_idx_r.dptr<RType>(), nnr_r);
             // Perform sparse matrix-matrix multiply
             num_threads = num_rows*num_cols;

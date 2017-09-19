@@ -16,3 +16,4 @@
 # under the License.
 
 """Sparse Symbol API of MXNet."""
+__all__ = []
