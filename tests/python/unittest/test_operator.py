@@ -414,6 +414,38 @@ def test_sigmoid():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
 
+def _test_activation(act_type):
+    if (act_type == 'relu'):
+        for_func = lambda x: np.maximum(x, 0.0)
+        back_func = lambda x: 1.0 * (x > 0.0)
+    elif (act_type == 'sigmoid'):
+        for_func = lambda x: np.divide(1.0, (1.0 + np.exp(-x)))
+        back_func = lambda x: x * (1 - x)
+    elif (act_type == 'tanh'):
+        for_func = lambda x: np.tanh(x)
+        back_func = lambda x: 1 - x * x
+    elif (act_type == 'softrelu'):
+        for_func = lambda x: np.log(1 + np.exp(x))
+        back_func = lambda x: 1 - np.exp(-x)
+
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.Activation(x, act_type=act_type)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = for_func(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
+    ga = back_func(ya)
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
+
+def test_activation():
+    print("test activation")
+    _test_activation('relu')
+    _test_activation('sigmoid')
+    _test_activation('tanh')
+    _test_activation('softrelu')
+
+
 def test_binary_logic():
     def _inner_test(forward_gt, logic_sym, x_shape, y_shape, test_scalar=True):
         x = mx.symbol.Variable("x")
