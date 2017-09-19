@@ -262,7 +262,6 @@ class KVStoreDist : public KVStoreLocal {
              const std::vector<NDArray>& values,
              int priority,
              bool do_merge) {
-    std::cout << "worker: " << compress_ << std::endl;
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;

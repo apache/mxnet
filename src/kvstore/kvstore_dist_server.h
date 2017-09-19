@@ -367,10 +367,6 @@ class KVStoreDistServer {
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
-    //if (compress_ != "none") {
-      std::cout << "server: " << compress_ << std::endl;
-    //}
-    //std::cout << "server: " << compress_ << std::endl;
     CHECK_EQ(req_meta.cmd, kDefaultPushPull);
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
