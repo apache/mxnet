@@ -277,7 +277,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
   
   shapes <- sym_ini$infer.shape(input.shape)
   
-  # assig arg.params and aux.params arguments to arg.params.input and aux.params.input
+  # assign arg.params and aux.params arguments to arg.params.input and aux.params.input
   arg.params.input <- arg.params
   aux.params.input <- aux.params
   
@@ -289,7 +289,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
   # initialize input parameters
   dlist <- arg.params[input.names]
   
-  # initialize parameters - only argument endind with _weight and _bias are initialized
+  # initialize parameters - only argument ending with _weight and _bias are initialized
   arg.params.ini <- mx.init.create(initializer = initializer, shape.array = shapes$arg.shapes, ctx = mx.cpu(), skip.unknown = TRUE)
   
   # assign initilized parameters to arg.params
