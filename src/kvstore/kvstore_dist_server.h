@@ -44,6 +44,17 @@ static const int kRowSparsePushPull = 1;
 static const int kDefaultPushPull = 0;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
+static const int kSetCompress = 2;
+
+template<typename Out>
+void split(const std::string &s, char delim, Out result) {
+  std::stringstream ss;
+  ss.str(s);
+  std::string item;
+  while (std::getline(ss, item, delim)) {
+    *(result++) = item;
+  }
+}
 
 /**
  * \brief executor runs a function using the thread called \ref Start
@@ -109,7 +120,7 @@ class Executor {
 
 class KVStoreDistServer {
  public:
-  KVStoreDistServer(std::string comp) {
+  KVStoreDistServer() {
     using namespace std::placeholders;
     ps_server_ = new ps::KVServer<float>(0);
     static_cast<ps::SimpleApp*>(ps_server_)->set_request_handle(
@@ -118,7 +129,6 @@ class KVStoreDistServer {
         std::bind(&KVStoreDistServer::DataHandleEx, this, _1, _2, _3));
     sync_mode_ = false;
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
-    compress_ = comp;
   }
 
   ~KVStoreDistServer() {
@@ -130,8 +140,14 @@ class KVStoreDistServer {
     controller_ = controller;
   }
 
-  void set_compress(const std::string& compress) {
-    compress_ = compress;
+  void load_compress_params(std::string& params) {
+    std::vector<std::string> elems;
+    split(params, ',', std::back_inserter(elems));
+    compress_ = elems[0];
+    if (elems.size() > 1) {
+      pos_threshold_ = strtof(elems[1]);
+      neg_threshold_ = strtof(elems[2]);
+    }
   }
 
   void set_updater(const KVStore::Updater& updater)  {
@@ -157,6 +173,8 @@ class KVStoreDistServer {
       exec_.Stop();
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
+    } else if (recved.head == kSetCompress) {
+      load_compress_params(recved.body);
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -480,6 +498,17 @@ class KVStoreDistServer {
 
   // set to use gradient compression
   std::string compress_;
+
+  /**
+   * \brief positive threshold for 2bit compression
+   */
+  float pos_threshold_ = 0.1;
+
+  /**
+   * \brief negative threshold for 2bit compression
+   */
+  float neg_threshold_ = -0.1;
+
 };
 
 }  // namespace kvstore

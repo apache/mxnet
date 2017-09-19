@@ -521,6 +521,7 @@ class Module(BaseModule):
         self._updater = None
 
         if kvstore:
+            kvstore.set_compress(self._compress_params)
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
                                 param_arrays=self._exec_group.param_arrays,

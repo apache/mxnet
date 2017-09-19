@@ -172,7 +172,8 @@ def test_sync_push_pull():
     print('worker ' + str(my_rank) + ' is done')
 
 def test_compressed():
-    kv = mx.kv.create('dist_sync','2bit')
+    kv = mx.kv.create('dist_sync')
+    kv.set_compress({'compress':'2bit'})
     kv.init(keys, [mx.nd.ones(big_shape)] * len(keys))
     my_rank = kv.rank
     nworker = kv.num_workers

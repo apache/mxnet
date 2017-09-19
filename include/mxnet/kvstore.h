@@ -57,8 +57,7 @@ class KVStore {
    *   - 'dist_*' : multi-machines
    * \return a new created KVStore.
    */
-  static KVStore *Create(const char *type = "local",
-                         const char *compress = "none");
+  static KVStore *Create(const char *type = "local");
 
   /**
    * \brief return the type
@@ -74,6 +73,14 @@ class KVStore {
     compress_ = compress;
     pos_threshold_ = pos_threshold;
     neg_threshold_ = neg_threshold;
+  }
+
+  std::string& GetCompressParams() {
+    std::string rval = compress_;
+    if (compress_ == "2bit") {
+      rval += "," + std::to_string(pos_threshold_) + "," + std::to_string(neg_threshold_);
+    }
+    return rval;
   }
 
   /*!
@@ -405,12 +412,12 @@ class KVStore {
   std::string compress_ = "none";
 
   /**
-   * \brief positive threshold
+   * \brief positive threshold for 2bit compression
    */
   float pos_threshold_ = 0.1;
 
   /**
-   * \brief negative threshold
+   * \brief negative threshold for 2bit compression
    */
   float neg_threshold_ = -0.1;
 
