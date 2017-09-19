@@ -42,7 +42,7 @@ The storage type of ``relu`` output depends upon the input storage type:
    - relu(row_sparse) = row_sparse
 
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, false>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
   cpu, kernel_launch_op::relu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::KernelComputeEx<
@@ -72,7 +72,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid, kernel_launch_
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")
 .add_alias("identity")
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
@@ -89,7 +89,7 @@ NNVM_REGISTER_OP(_backward_copy)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
@@ -126,7 +126,7 @@ Example::
   [ 1.  1.]
 
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
@@ -150,7 +150,7 @@ The storage type of ``make_loss`` output depends upon the input storage type:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"loss"};
   })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
