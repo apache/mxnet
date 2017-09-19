@@ -29,6 +29,7 @@ from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, r
                       mp_sgd_update, mp_sgd_mom_update, square, ftrl_update)
 from .ndarray import _internal
 from .ndarray import op
+from .ndarray import sparse
 from .random import normal
 
 
@@ -666,6 +667,7 @@ class AdaGrad(Optimizer):
     ----------
     eps: float, optional
         Small value to avoid division by 0.
+
     """
     def __init__(self, eps=1e-7, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
@@ -696,11 +698,12 @@ class AdaGrad(Optimizer):
             assert srt.stype == save_history_stype
             div = _internal._scatter_elemwise_div(grad, srt)
             assert div.stype == grad.stype
+            retained_weight = sparse.retain(weight, grad.indices)
+            weight[:] += (div + retained_weight * wd) * -lr
         else:
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
-
-        weight[:] += (div + weight * wd) * -lr
+            weight[:] += (div + weight * wd) * -lr
 
         assert weight.stype == save_grad_stype
 
