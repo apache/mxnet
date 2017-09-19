@@ -1246,7 +1246,6 @@ def test_sparse_unary_with_numerics():
         shape = (3, 4)
         data = mx.symbol.Variable("data")
 
-        print(expected_grad_result_type, expected_result_type)
         grad_stypes = {'data' : expected_grad_result_type}
 
         y = mxnet_func(data)

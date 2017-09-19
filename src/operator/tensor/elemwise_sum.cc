@@ -78,7 +78,7 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                            std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
-  return ElemwiseStorageAttr<true, false>(attrs, dev_mask, dispatch_type, in_attrs, out_attrs);
+  return ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_type, in_attrs, out_attrs);
 }
 
 void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,

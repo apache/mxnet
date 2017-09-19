@@ -58,7 +58,7 @@ NNVM_REGISTER_OP(_backward_add)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity,
                       mshadow_op::identity>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, false>);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, true, false>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_sub, mshadow::op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
@@ -87,7 +87,7 @@ NNVM_REGISTER_OP(_backward_sub)
   mshadow_op::identity, mshadow_op::negation>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseNoneEx<cpu,
   mshadow_op::identity, mshadow_op::negation>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, false>);
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, true, false>);
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)

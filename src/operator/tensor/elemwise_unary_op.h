@@ -519,13 +519,13 @@ struct relu_grad {
 /*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)              \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, true>)  \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)  \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$)              \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, false>)  \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)  \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 

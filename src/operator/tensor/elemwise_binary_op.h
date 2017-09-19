@@ -550,18 +550,16 @@ class ElemwiseBinaryOp : public OpBase {
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
 /*! \brief Binary launch */
-#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)            \
-  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                             \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true>) \
-  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)     \
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)                       \
+  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                        \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true, true>) \
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 /*! \brief Binary launch, dense result */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)                     \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                         \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)
-  //.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageTypeDnsOutput<1, true, false>)
-  //.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
 }  // namespace op
 }  // namespace mxnet
