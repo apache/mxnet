@@ -384,7 +384,7 @@ inline void CopyFromToCsrImpl(const NDArray from, NDArray *to, RunContext ctx) {
   // if source storage is not initialized, fill destination with zeros
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosCsrImpl<to_xpu>(s, to);
+    op::FillZerosCsrImpl(s, to);
     return;
   }
   // Allocate storage
