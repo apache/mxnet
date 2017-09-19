@@ -124,14 +124,14 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    local_dir : str, default '~/.mxnet/models'
+    root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
     net_args = _get_arg_dict(kwargs, ('classes', 'prefix', 'params'))
     net = SqueezeNet(version, **net_args)
     if pretrained:
         from ..model_store import get_model_file
-        model_zoo_args = _get_arg_dict(kwargs, ('local_dir',))
+        model_zoo_args = _get_arg_dict(kwargs, ('root',))
         net.load_params(get_model_file('squeezenet%s'%version, **model_zoo_args), ctx=ctx)
     return net
 
@@ -145,7 +145,7 @@ def squeezenet1_0(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    local_dir : str, default '~/.mxnet/models'
+    root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
     return get_squeezenet('1.0', **kwargs)
@@ -162,7 +162,7 @@ def squeezenet1_1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    local_dir : str, default '~/.mxnet/models'
+    root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
     return get_squeezenet('1.1', **kwargs)

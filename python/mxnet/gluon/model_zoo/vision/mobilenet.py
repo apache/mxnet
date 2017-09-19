@@ -24,6 +24,7 @@ __all__ = ['MobileNet', 'mobilenet1_0', 'mobilenet0_75', 'mobilenet0_5', 'mobile
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
+from ...utils import _get_arg_dict
 
 # Helpers
 def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
@@ -90,14 +91,18 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
-    net = MobileNet(multiplier, **kwargs)
+    net_args = _get_arg_dict(kwargs, ('multiplier', 'classes', 'prefix', 'params'))
+    net = MobileNet(multiplier, **net_args)
     if pretrained:
         from ..model_store import get_model_file
         version_suffix = '{0:.2f}'.format(multiplier)
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
-        net.load_params(get_model_file('mobilenet%s'%version_suffix), ctx=ctx)
+        model_zoo_args = _get_arg_dict(kwargs, ('root',))
+        net.load_params(get_model_file('mobilenet%s'%version_suffix, **model_zoo_args), ctx=ctx)
     return net
 
 def mobilenet1_0(**kwargs):
