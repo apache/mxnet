@@ -31,7 +31,7 @@
 
 namespace mxnet {
 
-KVStore* KVStore::Create(const char *type_name) {
+KVStore* KVStore::Create(const char *type_name, const char *comp) {
   std::string tname = type_name;
   std::transform(tname.begin(), tname.end(), tname.begin(), ::tolower);
   KVStore* kv = nullptr;
@@ -42,10 +42,11 @@ KVStore* KVStore::Create(const char *type_name) {
   if (has("device")) {
     use_device_comm = true;
   }
+  std::string compress(comp);
 
   if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE
-    kv = new kvstore::KVStoreDist(use_device_comm);
+    kv = new kvstore::KVStoreDist(use_device_comm, compress);
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
       // configure the server to be the sync mode
       kv->SendCommandToServers(kvstore::kSyncMode, "");
@@ -55,7 +56,7 @@ KVStore* KVStore::Create(const char *type_name) {
     return nullptr;
 #endif  // MXNET_USE_DIST_KVSTORE
   } else {
-    kv =  new kvstore::KVStoreLocal(use_device_comm);
+    kv =  new kvstore::KVStoreLocal(use_device_comm, compress);
   }
   kv->type_ = tname;
   return kv;

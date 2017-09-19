@@ -52,8 +52,8 @@ namespace kvstore {
  */
 class KVStoreDist : public KVStoreLocal {
  public:
-  explicit KVStoreDist(bool use_device_comm)
-      : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
+  explicit KVStoreDist(bool use_device_comm, std::string& comp)
+      : KVStoreLocal(use_device_comm, comp), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
       ps::StartAsync("mxnet\0");
@@ -61,6 +61,7 @@ class KVStoreDist : public KVStoreLocal {
         ps::Postoffice::Get()->Barrier(
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
+      compress_ = comp;
     }
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
@@ -118,9 +119,8 @@ class KVStoreDist : public KVStoreLocal {
   void RunServer(const Controller& controller) override {
     CHECK(!IsWorkerNode());
     if (IsServerNode()) {
-      server_ = new KVStoreDistServer();
+      server_ = new KVStoreDistServer(compress_);
       server_->set_controller(controller);
-      server_->set_compress(compress_);
     }
 
     ps::StartAsync("mxnet_server\0");
@@ -140,6 +140,9 @@ class KVStoreDist : public KVStoreLocal {
   void InitImpl(const std::vector<int>& keys,
                 const std::vector<NDArray>& values) override {
     CheckUnique(keys);
+    if (IsServerNode()) {
+      server_->set_compress(compress_);
+    }
     for (size_t i = 0; i < keys.size(); ++i) {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
@@ -259,6 +262,7 @@ class KVStoreDist : public KVStoreLocal {
              const std::vector<NDArray>& values,
              int priority,
              bool do_merge) {
+    std::cout << "worker: " << compress_ << std::endl;
     // first aggregate the values over keys
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
@@ -317,6 +321,7 @@ class KVStoreDist : public KVStoreLocal {
 
       // Compress
       if (compress_ == "2bit") {
+        std::cout << "worker: compress !!!" << std::endl;
         Quantize(send_buf, &small_buf, &res_buf,
            pos_thre_, neg_thre_,
            compress_,

@@ -109,7 +109,7 @@ class Executor {
 
 class KVStoreDistServer {
  public:
-  KVStoreDistServer() {
+  KVStoreDistServer(std::string comp) {
     using namespace std::placeholders;
     ps_server_ = new ps::KVServer<float>(0);
     static_cast<ps::SimpleApp*>(ps_server_)->set_request_handle(
@@ -118,6 +118,7 @@ class KVStoreDistServer {
         std::bind(&KVStoreDistServer::DataHandleEx, this, _1, _2, _3));
     sync_mode_ = false;
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
+    compress_ = comp;
   }
 
   ~KVStoreDistServer() {
@@ -366,7 +367,8 @@ class KVStoreDistServer {
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
-    std::cout << "hererrrrrrrrrrrrrrrr" << std::endl;
+
+    std::cout << "server: " << compress_ << std::endl;
     CHECK_EQ(req_meta.cmd, kDefaultPushPull);
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
@@ -382,24 +384,21 @@ class KVStoreDistServer {
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
     if (req_meta.push) {
-      std::cout << "pushhhhhhhhhhhhh" << std::endl;
       size_t ds[] = {(size_t)req_data.lens[0]};
       TShape dshape(ds, ds + 1);
-      std::cout << "Recv shape: " << dshape.Size();
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-
+      std::cout << "server: compress shape: " << dshape.Size() << std::endl;
       NDArray comp_buf = compress_buf_[key];
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
-        std::cout << "Uncompress shape: " << dshape.Size();
+        std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
         if (comp_buf.is_none()) {
           comp_buf = NDArray(dshape, Context());
         }
       }
-
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
