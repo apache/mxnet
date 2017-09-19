@@ -144,14 +144,11 @@ class KVStoreDist : public KVStoreLocal {
     if (get_rank() == 0) {
       Push_(keys, values, 0, false);
       // wait until the push is finished
-      for (const auto& v : values) {
-        v.WaitToWrite();
-      }
-      // wait for rank 0
-      Barrier();
+      for (const int key : keys) {
+        comm_buf_[key].WaitToWrite();
+      }   
     } else {
-      // wait for rank 0
-      Barrier();
+      // do nothing
     }
     if (!ps::Postoffice::Get()->is_recovery()) {
       Barrier();
