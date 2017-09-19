@@ -41,10 +41,10 @@ The following activation functions are supported:
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_activation"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_Activation"})
 .add_arguments(ActivationParam::__FIELDS__());
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_activation)
+MXNET_OPERATOR_REGISTER_BINARY(_backward_Activation)
 .set_attr_parser(ParamParser<ActivationParam>)
 .set_attr<FCompute>("FCompute<cpu>", ActivationGradCompute<cpu>);
 

@@ -35,20 +35,11 @@ namespace mxnet {
 namespace op {
 namespace mxnet_op {
 
-template<int req, typename Op>
-struct forward_comp {
+template<typename Op>
+struct grad_op {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data) {
-    KERNEL_ASSIGN(out_data[i], req, Op::Map(in_data[i]));
-  }
-};
-
-template<int req, typename Op>
-struct backward_comp {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_data,
-      const DType *out_grad) {
-    KERNEL_ASSIGN(in_grad[i], req, Op::Map(out_data[i]) * out_grad[i]);
+  MSHADOW_XINLINE static DType Map(DType out_data, DType out_grad) {
+    return Op::Map(out_data) * out_grad;
   }
 };
 
@@ -58,7 +49,7 @@ void activation_forward(const OpContext& ctx, const TBlob &in_data, const TBlob 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      Kernel<forward_comp<req_type, Op>, xpu>::Launch(
+      Kernel<op_with_req<Op, req_type>, xpu>::Launch(
           s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>());
       });
     });
@@ -70,7 +61,7 @@ void activation_backward(const OpContext& ctx, const TBlob &in_grad, const TBlob
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      Kernel<backward_comp<req_type, Op>, xpu>::Launch(
+      Kernel<op_with_req<grad_op<Op>, req_type>, xpu>::Launch(
           s, in_grad.Size(), in_grad.dptr<DType>(), out_data.dptr<DType>(),
           out_grad.dptr<DType>());
       });
