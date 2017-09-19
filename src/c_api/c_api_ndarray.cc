@@ -152,7 +152,7 @@ void SetContext(Context* p_ctx,
 #endif  // MXNET_USE_CUDA
 }
 
-// Set the shape, dtype and storage type
+// Set the shape, dtype, storage type and dispatch type via the attribute inference functions
 void SetShapeType(const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
