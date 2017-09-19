@@ -2184,7 +2184,6 @@ def sequence_mask_numpy(array, lengths, value):
         arrayMask[int(lengths[i]):, i] = value
     return arrayMask
 
-
 def check_sequence_mask(shape, xpu, mask_value):
     # bind with label
     X = mx.symbol.Variable('X')
@@ -2192,14 +2191,11 @@ def check_sequence_mask(shape, xpu, mask_value):
     Y = mx.symbol.SequenceMask(data=X, use_sequence_length=True, sequence_length=L, value=mask_value)
     x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
     l = mx.nd.array(np.random.randint(1, shape[0] + 1, shape[1]), ctx=mx.cpu()).copyto(xpu)
-
     # numpy result
     np_out = sequence_mask_numpy(x.asnumpy(), l.asnumpy(), mask_value)
     # mxnet result
-    gradX = mx.nd.empty(shape, ctx = xpu)
-    gradL = mx.nd.empty((shape[1]), ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'write', 'L':'null'}, args_grad = {'X':gradX, 'L':gradL})
-    exec1.forward(is_train=True)
+    exec1 = Y.bind(xpu, args = [x, l], grad_req={'X':'null', 'L':'null'})
+    exec1.forward()
     out = exec1.outputs[0].asnumpy()
     # compare numpy + mxnet
     assert_almost_equal(out, np_out, rtol=1e-5)
@@ -2207,16 +2203,15 @@ def check_sequence_mask(shape, xpu, mask_value):
     check_numeric_gradient(Y, [x.asnumpy(), l.asnumpy()], grad_nodes={'X':'write'},
         numeric_eps=1e-3, rtol=1e-2)
 
-
 def test_sequence_mask():
     shape1 = (4, 2, 2, 3)
     shape2 = (1, 2, 2, 3, 1, 1)
     check_sequence_mask(shape1, default_context(), 2.1)
     check_sequence_mask(shape2, default_context(), 0.1)
+    check_sequence_mask((3, 4), default_context(), 0.14)
 
 
 def check_sequence_reverse(xpu):
-
     # sample data
     arr = np.array(
         [[[  1.,   2.,   3.],
@@ -2250,6 +2245,11 @@ def check_sequence_reverse(xpu):
          [[ 13.,  14.,   15.],
           [ 4.,  5.,   6.]]])
 
+    # test for matrix case
+    seq_len_1 = [1, 2, 2]
+    arr_4 = np.array([[7., 8., 9.], [16., 17., 5.4]], dtype=np.float32)
+    arr_5 = np.array([[7., 17., 5.4], [16., 8., 9.]], dtype=np.float32)
+
     def test_wrapper(arr, xpu, sequence_length=None, use_sequence_length=False):
         # MxNet symbol creation
         seq = mx.sym.Variable('seq')
@@ -2273,7 +2273,7 @@ def check_sequence_reverse(xpu):
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[3, 3], use_sequence_length=True), arr1)
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 2], use_sequence_length=True), arr2)
     assert_array_equal(test_wrapper(arr, xpu, sequence_length=[2, 3], use_sequence_length=True), arr3)
-
+    assert_array_equal(test_wrapper(arr_4, xpu, sequence_length=seq_len_1, use_sequence_length=True), arr_5)
 
 def test_sequence_reverse():
     check_sequence_reverse(mx.cpu())
@@ -3958,9 +3958,6 @@ def _gelqf_second_output(a):
     return mx.sym.broadcast_add(l, bogus_scal)
 
 def test_laop_2():
-    # Operators implemented for CPU only currently
-    if default_context() != mx.cpu():
-        return
     np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-7
@@ -4009,6 +4006,11 @@ def test_laop_2():
             check_grad(test_syrk2, [a_batch])
 
     # Tests for linalg_gelqf
+    # Currently disabled on GPU as they need cuda8
+    # and MxNet builds use cuda 7.5
+    if default_context() != mx.cpu():
+        return
+ 
     test_gelqf2 = _gelqf_combined_symbol(data1)  # Outputs (dot(Q, Q.T), dot(L, Q))
     test_gelqf_q = _gelqf_first_output(data1)  # Output Q (L is not dangling)
     test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)
@@ -4087,6 +4089,34 @@ def test_dropout():
     assert exe.outputs[0].asnumpy().min() == 0
     exe.backward([mx.nd.ones((10, 10))], is_train=False)
     assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+
+def test_scatter_gather_nd():
+    def check(data, idx):
+        data.attach_grad()
+        with mx.autograd.record():
+            y = mx.nd.gather_nd(data, idx)
+            y.backward(y)
+        npidx = tuple(i.asnumpy() for i in idx)
+        assert (data.asnumpy()[npidx] == y.asnumpy()).all()
+        npdata = np.zeros_like(data.asnumpy())
+        npdata[npidx] = y.asnumpy()
+        assert (npdata == data.grad.asnumpy()).all()
+        assert (mx.nd.scatter_nd(y, idx, shape=data.shape).asnumpy() == data.grad.asnumpy()).all()
+
+    data = mx.nd.arange(360, dtype='int32').reshape((3,4,5,6))
+    idx = mx.nd.array([[1,1,2], [3, 3, 0], [3,2,1]], dtype='int32')
+
+    check(data, idx)
+
+    idx = mx.nd.array([[1,1,2], [3,3,0], [3,2,1], [5,2,4]], dtype='int32')
+
+    check(data, idx)
+
+    data = mx.nd.array([2, 3, 0])
+    idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
+
+    assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
 
 if __name__ == '__main__':

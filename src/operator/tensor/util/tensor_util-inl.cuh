@@ -149,16 +149,39 @@ struct MarkRspRowBlockKernel {
 };
 
 /*!
- * \brief GPU kernel to flag non-zero rows of an rsp tensor with indices.
- * Parallelized by matrix rows: 1 thread/row
+ * \brief GPU kernel to flag non-zero rows of an rsp tensor with 1.
+ * Parallelized by tensor rows: 1 thread/row
  */
-struct SetRspRowFlgKernel {
+struct MarkRspRowFlgKernel {
   /*!
    * \brief
    * \param tid      global thread id
    * \param row_flg  array to flag storage indices of non-zero rows
-   * \param row_idx  rsp matrix row index array storing indices of non-zero rows
-   * \param nnr      rsp matrix number of non-zero rows (storage shape)
+   * \param row_idx  rsp tensor row index array storing indices of non-zero rows
+   * \param nnr      rsp tensor number of non-zero rows (storage shape)
+   */
+  template<typename IType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             IType* row_flg,
+                                             const IType* row_idx,
+                                             const nnvm::dim_t nnr) {
+    if (tid < nnr) {
+      row_flg[row_idx[tid]] = 1;
+    }
+  }
+};
+
+/*!
+ * \brief GPU kernel to flag non-zero rows of an rsp tensor with indices.
+ * Parallelized by matrix rows: 1 thread/row
+ */
+struct IndexRspRowFlgKernel {
+  /*!
+   * \brief
+   * \param tid      global thread id
+   * \param row_flg  array to flag storage indices of non-zero rows
+   * \param row_idx  rsp tensor row index array storing indices of non-zero rows
+   * \param nnr      rsp tensor number of non-zero rows (storage shape)
    */
   template<typename RType>
   __device__ __forceinline__ static void Map(int tid,
