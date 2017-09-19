@@ -445,7 +445,7 @@ class Flatten(HybridBlock):
 
 
 class InstanceNorm(HybridBlock):
-    """
+    r"""
     Applies instance normalization to the n-dimensional input array.
     This operator takes an n-dimensional input array where (n>2) and normalizes 
     the input using the following formula:
