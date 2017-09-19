@@ -13,7 +13,7 @@ err = null
 
 properties([
     pipelineTriggers([
-        cancelOutdatedJobs(true)
+        cancelOutdatedJobs:true
     ])
 ])
 
