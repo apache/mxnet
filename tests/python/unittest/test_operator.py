@@ -414,7 +414,7 @@ def test_sigmoid():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
 
-def _test_activation(act_type):
+def check_activation(act_type):
     if (act_type == 'relu'):
         for_func = lambda x: np.maximum(x, 0.0)
         back_func = lambda x: 1.0 * (x > 0.0)
@@ -439,11 +439,10 @@ def _test_activation(act_type):
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
 def test_activation():
-    print("test activation")
-    _test_activation('relu')
-    _test_activation('sigmoid')
-    _test_activation('tanh')
-    _test_activation('softrelu')
+    check_activation('relu')
+    check_activation('sigmoid')
+    check_activation('tanh')
+    check_activation('softrelu')
 
 
 def test_binary_logic():

@@ -30,7 +30,7 @@ namespace op {
 NNVM_REGISTER_OP(Activation)
 .set_attr<FCompute>("FCompute<gpu>", ActivationCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_activation)
+NNVM_REGISTER_OP(_backward_Activation)
 .set_attr<FCompute>("FCompute<gpu>", ActivationGradCompute<gpu>);
 
 }  // namespace op
