@@ -43,7 +43,7 @@ def init_kv():
     # init kv dns keys
     #kv.init(keys, [mx.nd.ones(shape)] * len(keys))
     #kv.init('99', mx.nd.ones(big_shape))
-    kv.init('99', mx.nd.ones(shape))
+    kv.init('99', mx.nd.zeros(shape))
     # init kv row_sparse keys
     #kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
     #kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
@@ -175,7 +175,7 @@ def test_sync_push_pull():
 
 def test_sync_push():
   kv, my_rank, nworker = init_kv()
-  kv.push('99', mx.nd.ones(shape)*(my_rank+1))
+  kv.push('99', mx.nd.ones(shape))
   val = mx.nd.zeros(shape)
   kv.pull('99', out=val)
   print val
