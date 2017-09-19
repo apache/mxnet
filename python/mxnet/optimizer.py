@@ -588,7 +588,7 @@ class Adam(Optimizer):
     The optimizer updates the weight by::
 
         rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        m = beta1 * m + (1 - beta1 * lambda^(t-1)) * rescaled_grad
+        m = beta1 * rho**(t-1) * m + (1 - beta1 * rho**(t-1)) * rescaled_grad
         v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
         w = w - learning_rate * m / (sqrt(v) + epsilon)
 
@@ -597,7 +597,7 @@ class Adam(Optimizer):
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
-            m[row] = beta1 * m[row] + (1 - beta1 * lambda^(t-1)) * rescaled_grad[row]
+            m[row] = beta1 * rho**(t-1) * m[row] + (1 - beta1 * rho**(t-1)) * rescaled_grad[row]
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
             w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
 
