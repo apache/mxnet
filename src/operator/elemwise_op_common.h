@@ -40,7 +40,12 @@
 namespace mxnet {
 namespace op {
 
-// TODO add doc
+/*! \brief storge type inference function for elemwise operators.
+ *         It infers output stypes the same as input stypes when input stypes are the same
+ *  \tparam cpu_only whether fcompute_ex can only be dispatched on cpu context
+ *  \tparam rsp whether row sparse stype is supported
+ *  \tparam rsp whether csr stype is supported
+ */
 template<bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
@@ -71,8 +76,13 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-/* TODO doc
- * @tparam xpu - cpu or gpu
+/*! \brief storge type inference function for elemwise operators.
+ *         It infers output stypes the same as input stypes when input stypes are the same
+ *  \tparam n_in the number of inputs
+ *  \tparam n_in the number of outputs
+ *  \tparam cpu_only whether fcompute_ex can only be dispatched on cpu context
+ *  \tparam rsp whether row sparse stype is supported
+ *  \tparam rsp whether csr stype is supported
  */
 template<int n_in, int n_out, bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,

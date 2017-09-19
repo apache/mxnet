@@ -261,8 +261,6 @@ Graph AttachOpExecs(Graph g) {
     std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
   const auto& dispatch_types = g.GetAttr<DispatchTypeVector>("dispatch_type");
 
-
-
   // get the graph
   const auto& idx = g.indexed_graph();
   std::vector<std::shared_ptr<OpExecutor> > ret(idx.num_nodes());

@@ -86,7 +86,8 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
@@ -111,7 +112,8 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
