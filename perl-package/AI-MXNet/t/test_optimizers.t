@@ -8,6 +8,7 @@ extends 'AI::MXNet::Optimizer';
 has 'beta1' => (is => 'rw', default => 0.9);
 has 'beta2' => (is => 'rw', default => 0.999);
 has 'epsilon' => (is => 'rw', default => 1e-8);
+has 'rho' => (is => 'rw', default => (1-1e-8));
 has 'rescale_grad' => (is => 'rw', default => 1);
 has 'decay_factor' => (is => 'rw', default => (1-1e-8));
 around BUILDARGS => \&init;
@@ -64,8 +65,8 @@ method update($index, $weight, $grad, $state)
     {
         mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, { out => $grad });
     }
-    $mean *= $self->beta1;
-    $mean += $grad * (1 - $self->beta1);
+    $mean *= $self->beta1 * $self->rho**($t-1);
+    $mean += $grad * (1 - $self->beta1 * $self->rho**($t-1));
 
     $variance *= $self->beta2;
     $variance += (1 - $self->beta2) * mx->nd->square($grad, { out => $grad });
