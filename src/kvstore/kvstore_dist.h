@@ -61,8 +61,8 @@ class KVStoreDist : public KVStoreLocal {
         ps::Postoffice::Get()->Barrier(
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
-      compress_ = comp;
     }
+    compress_ = comp;
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 1000 * 1000);
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
   }
@@ -321,7 +321,6 @@ class KVStoreDist : public KVStoreLocal {
 
       // Compress
       if (compress_ == "2bit") {
-        std::cout << "worker: compress !!!" << std::endl;
         Quantize(send_buf, &small_buf, &res_buf,
            pos_thre_, neg_thre_,
            compress_,

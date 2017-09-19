@@ -37,21 +37,19 @@ rate = 2
 shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
 
-
 def init_kv():
-    kv = mx.kv.create('dist_sync', '2bit')
+    kv = mx.kv.create('dist_sync')
     # init kv dns keys
-    #kv.init(keys, [mx.nd.ones(shape)] * len(keys))
-    #kv.init('99', mx.nd.ones(big_shape))
-    kv.init('99', mx.nd.ones(shape))
+    kv.init(keys, [mx.nd.ones(shape)] * len(keys))
+    kv.init('99', mx.nd.ones(big_shape))
     # init kv row_sparse keys
-    #kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
-    #kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
+    kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
+    kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
     # worker info
     my_rank = kv.rank
     nworker = kv.num_workers
     # init updater on servers
-    #kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     return kv, my_rank, nworker
 
 def test_sync_push_pull():
@@ -167,15 +165,14 @@ def test_sync_push_pull():
             expected[row] = updated_val[row]
         check_diff_to_scalar(val, expected, rank=my_rank)
 
-    check_default_keys(kv, my_rank, nworker)  
+    check_default_keys(kv, my_rank, nworker)
     check_row_sparse_keys(kv, my_rank, nworker)
     check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
     check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done')
 
-def test_quantize():
-    kv = mx.kv.create('dist_sync')
-    kv.set_compress('2bit')
+def test_compressed():
+    kv = mx.kv.create('dist_sync','2bit')
     kv.init(keys, [mx.nd.ones(big_shape)] * len(keys))
     my_rank = kv.rank
     nworker = kv.num_workers
@@ -186,5 +183,5 @@ def test_quantize():
     kv.pull('3',out=val)
 
 if __name__ == "__main__":
-    # test_sync_push_pull()  
-    test_quantize()
+    # test_sync_push_pull()
+    test_compressed()
