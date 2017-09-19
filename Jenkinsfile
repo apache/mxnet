@@ -13,7 +13,7 @@ err = null
 
 properties([
     pipelineTriggers([
-        commentTrigger('build')
+        commentTrigger:'build'
     ])
 ])
 
