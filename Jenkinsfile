@@ -12,7 +12,9 @@ max_time = 120
 err = null
 
 properties([
-        cancelOutdatedJobs(true)
+    pipelineTriggers([
+        commentTrigger('build')
+    ])
 ])
 
 // initialize source codes
