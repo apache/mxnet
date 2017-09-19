@@ -13,7 +13,7 @@ err = null
 
 properties([
     pipelineTriggers([
-        cron('H/5 * * * *')
+        cancelOutdatedJobs(true)
     ])
 ])
 
