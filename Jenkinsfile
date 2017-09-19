@@ -11,6 +11,12 @@ max_time = 120
 // assign any caught errors here
 err = null
 
+properties([
+    pipelineTriggers([
+        commentTrigger:'Build Now'
+    ])
+])
+
 // initialize source codes
 def init_git() {
   retry(5) {
