@@ -12,9 +12,7 @@ max_time = 120
 err = null
 
 properties([
-    pipelineTriggers([
-        cancelOutdatedJobs:true
-    ])
+        cancelOutdatedJobs(true)
 ])
 
 // initialize source codes
