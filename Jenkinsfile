@@ -12,7 +12,9 @@ max_time = 120
 err = null
 
 properties([
-pipelineTriggers()
+    pipelineTriggers([
+        cron('H/5 * * * *')
+    ])
 ])
 
 // initialize source codes
@@ -31,20 +33,6 @@ def init_git() {
   }
 }
 
-def init_git_win() {
-  retry(5) {
-    try {
-      timeout(time: 2, unit: 'MINUTES') {
-        bat 'git clean -d -f'
-        checkout scm
-        bat 'git submodule update --init'
-      }
-    } catch (exc) {
-      deleteDir()
-      error "Failed to fetch source codes"
-    }
-  }
-}
 
 // Run make. First try to do an incremental make from a previous workspace in hope to
 // accelerate the compilation. If something wrong, clean the workspace and then
