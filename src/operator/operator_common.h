@@ -253,7 +253,9 @@ inline bool type_assign(int *y, const int& x) {
   }
 #endif
 
-// TODO(haibin) doc
+/*! \brief assign stype to target_stype, if successful,
+ *         assign dispatch_type to target_dispatch
+ */
 inline bool dispatch_on_storage(int* stype,
                                 const NDArrayStorageType target_stype,
                                 int* dispatch,
@@ -265,6 +267,9 @@ inline bool dispatch_on_storage(int* stype,
   return false;
 }
 
+/*! \brief assign the stype vector to target_stype, if successful,
+ *         assign dispatch_type to target_dispatch
+ */
 inline bool dispatch_on_storage(StorageTypeVector* stypes,
                                 const NDArrayStorageType target_stype,
                                 int* dispatch,
@@ -282,6 +287,8 @@ inline bool dispatch_on_storage(StorageTypeVector* stypes,
   return success;
 }
 
+/*! \brief update the stype vector to default storage and dispatch_type to fallback
+ */
 inline void dispatch_fallback(StorageTypeVector* stypes, int* dispatch) {
   for (auto& stype : *stypes) {
     type_assign(&stype, kDefaultStorage);
@@ -459,33 +466,34 @@ class SparseTempStorage {
   Storage::Handle  handle_;
 };
 
-// TODO documentation
-inline std::string OperatorInfo(const nnvm::NodeAttrs& attrs,
-                                const int dev_mask,
-                                const std::vector<int>& in_attrs,
-                                const std::vector<int>& out_attrs) {
+/*! \brief get string representation of the operator stypes */
+inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         const std::vector<int>& in_attrs,
+                                         const std::vector<int>& out_attrs) {
   std::string result = "";
-  result += "Operator = " + attrs.op->name + "\n";
-  result += "Input storage types = [";
+  result += "operator = " + attrs.op->name + "\n";
+  result += "input storage types = [";
   for (const auto attr : in_attrs) {
     result += common::stype_string(attr) + ", ";
   }
   result += "]\n";
-  result += "Output storage types = [";
+  result += "output storage types = [";
   for (const auto attr : out_attrs) {
     result += common::stype_string(attr) + ", ";
   }
   result += "]\n";
-  result += "Params = {";
+  result += "params = {";
   for (auto kv : attrs.dict) {
     result += "\"" + kv.first + "\" : " + kv.second + ", ";
   }
   result += "}\n";
-  result += "Context.dev_mask = " + std::to_string(dev_mask);
+  result += "context.dev_mask = " + std::to_string(dev_mask);
   return result;
 }
 
-inline std::string OperatorInfoEx(const nnvm::NodeAttrs& attrs,
+/*! \brief get string representation of the operator */
+inline std::string operator_string(const nnvm::NodeAttrs& attrs,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
                                   const std::vector<OpReqType>& req,
@@ -496,7 +504,7 @@ inline std::string OperatorInfoEx(const nnvm::NodeAttrs& attrs,
   auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
   std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
   std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
-  result += OperatorInfo(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
+  result += operator_stype_string(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
   return result;
 }
 
@@ -507,9 +515,9 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   using namespace op;
   thread_local std::unordered_set<std::string> warning_printed;
   // TODO(haibin) use env var for printing
-  std::string warning = OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
+  std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   if (warning_printed.find(warning) == warning_printed.end()) {
-    LOG(INFO) << "Storage fallback detected.\n" << warning;
+    LOG(INFO) << "\nstorage fallback detected:\n" << warning;
     warning_printed.insert(warning);
   }
 }

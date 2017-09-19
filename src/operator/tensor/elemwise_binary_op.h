@@ -384,7 +384,7 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     } else {
-      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -420,7 +420,7 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     } else {
-      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -467,7 +467,7 @@ class ElemwiseBinaryOp : public OpBase {
                                                                      req, {outputs[0]});
         });
       } else {
-        LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+        LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
       }
     }
     // rhs grad
@@ -480,7 +480,7 @@ class ElemwiseBinaryOp : public OpBase {
                                                                      req, {outputs[1]});
         });
       } else {
-        LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+        LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
       }
     }
   }

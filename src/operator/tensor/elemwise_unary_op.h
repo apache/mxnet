@@ -353,7 +353,7 @@ class UnaryOp : public OpBase {
         MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, KernelCompute<xpu, OP>);
       }
     } else {
-      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -392,7 +392,7 @@ class UnaryOp : public OpBase {
         (in_stype == kRowSparseStorage && out_stype == kRowSparseStorage)) {
       MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>);
     } else {
-      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -413,7 +413,7 @@ class UnaryOp : public OpBase {
         (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     } else {
-      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 };

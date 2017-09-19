@@ -287,7 +287,7 @@ class BinaryScalarOp : public UnaryOp {
         });
       });
     } else {
-      LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 

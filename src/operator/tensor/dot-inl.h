@@ -856,7 +856,7 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray ret = outputs[0];
     DotCsrRspRspImpl(ctx, xpu(), inputs[0], inputs[1], req[0], param.transpose_a, &ret);
   } else {
-    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -899,7 +899,7 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
     TBlob ret = outputs[1].data();
     DotCsrRspDnsImpl(ctx, xpu(), inputs[1], inputs[0], req[1], !param.transpose_a, &ret);
   } else {
-    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 

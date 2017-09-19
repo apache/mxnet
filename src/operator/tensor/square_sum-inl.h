@@ -67,7 +67,8 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     // nothing to fallback on
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
@@ -94,7 +95,8 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     // nothing to fallback on
-    LOG(FATAL) << "Not implemented: " << OperatorInfo(attrs, dev_mask, *in_attrs, *out_attrs);
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
@@ -439,7 +441,7 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -462,7 +464,7 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspGradImpl(attrs, s, inputs[0], inputs[1], req[0], &output);
   } else {
-    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 

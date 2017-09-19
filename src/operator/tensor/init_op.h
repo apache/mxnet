@@ -258,7 +258,7 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
     NDArray nd(outputs[0]);
     FillZerosCsrImpl<xpu>(s, &nd);
   } else {
-    LOG(FATAL) << "Not implemented: " << OperatorInfoEx(attrs, ctx, inputs, req, outputs);
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
