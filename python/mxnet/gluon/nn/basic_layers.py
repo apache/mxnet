@@ -447,7 +447,7 @@ class Flatten(HybridBlock):
 class InstanceNorm(HybridBlock):
     r"""
     Applies instance normalization to the n-dimensional input array.
-    This operator takes an n-dimensional input array where (n>2) and normalizes 
+    This operator takes an n-dimensional input array where (n>2) and normalizes
     the input using the following formula:
 
     .. math::
@@ -523,7 +523,7 @@ class InstanceNorm(HybridBlock):
 
     def hybrid_forward(self, F, x, gamma, beta):
         return F.InstanceNorm(x, gamma, beta,
-                           name='fwd', **self._kwargs)
+                              name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -533,5 +533,3 @@ class InstanceNorm(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
-
-
