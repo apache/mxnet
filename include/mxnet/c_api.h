@@ -1511,6 +1511,7 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
+                              const char *compress,
                               KVStoreHandle *out);
 
 /*!

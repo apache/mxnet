@@ -57,7 +57,8 @@ class KVStore {
    *   - 'dist_*' : multi-machines
    * \return a new created KVStore.
    */
-  static KVStore *Create(const char *type = "local");
+  static KVStore *Create(const char *type = "local",
+                         const char *compress = "none");
 
   /**
    * \brief return the type
@@ -406,12 +407,12 @@ class KVStore {
   /**
    * \brief positive threshold
    */
-  float pos_threshold_;
+  float pos_threshold_ = 0.1;
 
   /**
    * \brief negative threshold
    */
-  float neg_threshold_;
+  float neg_threshold_ = -0.1;
 
   /**
    * \brief whether to do barrier when finalize

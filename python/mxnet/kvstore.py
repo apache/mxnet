@@ -541,7 +541,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
-def create(name='local'):
+def create(name='local', compress='none'):
     """Creates a new KVStore.
 
     For single machine training, there are two commonly used types:
@@ -580,5 +580,6 @@ def create(name='local'):
         raise TypeError('name must be a string')
     handle = KVStoreHandle()
     check_call(_LIB.MXKVStoreCreate(c_str(name),
+                                    c_str(compress),
                                     ctypes.byref(handle)))
     return KVStore(handle)

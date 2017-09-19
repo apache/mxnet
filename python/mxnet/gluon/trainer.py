@@ -49,7 +49,7 @@ class Trainer(object):
         positive threshold used in 2bit compression.
     neg_threshold:
         negative threshold used in 2bit compression.
-        
+
     Properties
     ----------
     learning_rate: float
@@ -119,7 +119,8 @@ class Trainer(object):
         arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore,
                                                      len(self._contexts),
-                                                     arg_arrays)
+                                                     arg_arrays,
+                                                     self._compress)
         if kvstore:
             kvstore.set_compress(self._compress,
                                  self._pos_threshold,
