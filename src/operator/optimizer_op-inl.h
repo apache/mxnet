@@ -694,7 +694,8 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
       var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2)*F<square>(
           F<clip>(grad, DType(param.clip_gradient)));
     } else {
-      mean = scalar<DType>(param.beta1*param.rho)*mean + scalar<DType>(1.f-param.beta1*param.rho) * grad;
+      mean = scalar<DType>(param.beta1*param.rho)*mean +
+             scalar<DType>(1.f-param.beta1*param.rho) * grad;
       var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2) * F<square>(grad);
     }
     Assign(out, req[0],
