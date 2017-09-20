@@ -82,6 +82,8 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   const auto& rhs_stype = in_attrs->at(1);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? kDispatchFComputeFallback : kDispatchFComputeEx;
   if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
@@ -93,7 +95,7 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
     // rsp, dns -> rsp
     // dns, rsp -> rsp
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_type, dispatch_ex);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_type);
