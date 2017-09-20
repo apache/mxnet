@@ -684,7 +684,7 @@ class AdaGrad(Optimizer):
         wd = self._get_wd(index)
         save_grad_stype = grad.stype
 
-        is_sparse = True if weight.stype == 'row_sparse' or grad.stype == 'row_sparse' else False
+        is_sparse = True if weight.stype == 'row_sparse' and grad.stype == 'row_sparse' else False
 
         if is_sparse is True:
             grad_indices_count = len(grad.indices)
@@ -714,8 +714,6 @@ class AdaGrad(Optimizer):
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
             weight[:] += (div + weight * wd) * -lr
-
-        assert weight.stype == save_grad_stype
 
 @register
 class RMSProp(Optimizer):
