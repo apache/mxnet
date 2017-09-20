@@ -177,7 +177,7 @@ def test_compressed():
     kv = mx.kv.create('dist_sync')
     pos_threshold = 0.5
     neg_threshold = -0.5
-    kv.set_compress({'compress':'2bit', 'pos_threshold': pos_threshold , 'neg_threshold': neg_threshold})
+    kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
     # init kv dns keys
     kv.init('99', mx.nd.ones(big_shape))
     kv.init('3', mx.nd.ones(shape))
