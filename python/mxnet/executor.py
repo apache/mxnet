@@ -53,7 +53,8 @@ class Executor(object):
     >>> c = 2 * a + b
     >>> texec = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
+    def __init__(self, handle, symbol, ctx,
+                 arg_arrays, grad_arrays, aux_arrays, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
         Parameters
@@ -68,15 +69,23 @@ class Executor(object):
         if not isinstance(handle, ExecutorHandle):
             raise TypeError("Handle type error")
         self.handle = handle
-        self.arg_arrays = []
-        self.grad_arrays = []
-        self.aux_arrays = []
-        self.outputs = self._get_outputs()
         self._symbol = copy.deepcopy(symbol)
-        self._arg_dict = None
-        self._grad_dict = None
-        self._aux_dict = None
-        self._output_dict = None
+        assert len(arg_arrays) == len(self._symbol.list_arguments())
+        self._arg_dict = Executor._get_dict(
+            self._symbol.list_arguments(), arg_arrays)
+        if grad_arrays is not None:
+            assert len(grad_arrays) == len(self._symbol.list_arguments())
+            self._grad_dict = Executor._get_dict(
+                self._symbol.list_arguments(), grad_arrays)
+        else:
+            self._grad_dict = None
+        assert len(aux_arrays) == len(self._symbol.list_auxiliary_states())
+        self._aux_dict = Executor._get_dict(
+            self._symbol.list_auxiliary_states(), aux_arrays)
+        self.outputs = self._get_outputs()
+        assert len(self.outputs) == len(self._symbol.list_outputs())
+        self._output_dict = Executor._get_dict(
+            self._symbol.list_outputs(), self.outputs)
         self._monitor_callback = None
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
@@ -263,14 +272,7 @@ class Executor(object):
         -------
         arg_dict : dict of str to NDArray
             The dictionary that maps the names of arguments to NDArrays.
-
-        Raises
-        ------
-        ValueError : if there are duplicated names in the arguments.
         """
-        if self._arg_dict is None:
-            self._arg_dict = Executor._get_dict(
-                self._symbol.list_arguments(), self.arg_arrays)
         return self._arg_dict
 
     @property
@@ -282,9 +284,6 @@ class Executor(object):
         grad_dict : dict of str to NDArray
             The dictionary that maps name of arguments to gradient arrays.
         """
-        if self._grad_dict is None:
-            self._grad_dict = Executor._get_dict(
-                self._symbol.list_arguments(), self.grad_arrays)
         return self._grad_dict
 
     @property
@@ -295,14 +294,7 @@ class Executor(object):
         -------
         aux_dict : dict of str to NDArray
             The dictionary that maps name of auxiliary states to NDArrays.
-
-        Raises
-        ------
-        ValueError : if there are duplicated names in the auxiliary states.
         """
-        if self._aux_dict is None:
-            self._aux_dict = Executor._get_dict(
-                self._symbol.list_auxiliary_states(), self.aux_arrays)
         return self._aux_dict
 
     @property
@@ -313,14 +305,7 @@ class Executor(object):
         -------
         output_dict : dict of str to NDArray
             The dictionary that maps name of output names to NDArrays.
-
-        Raises
-        ------
-        ValueError : if there are duplicated names in the outputs.
         """
-        if self._output_dict is None:
-            self._output_dict = Executor._get_dict(
-                self._symbol.list_outputs(), self.outputs)
         return self._output_dict
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
@@ -407,8 +392,8 @@ class Executor(object):
         new_grad_dict = {}
         for i, name in enumerate(self._symbol.list_arguments()):
             new_shape = arg_shapes[i]
-            arr = self.arg_arrays[i]
-            darr = None if self.grad_arrays is None else self.grad_arrays[i]
+            arr = self.arg_dict[name]
+            darr = None if self.grad_dict is None else self.grad_dict[name]
             if partial_shaping or name in kwargs or new_shape == arr.shape:
                 if np.prod(new_shape) > np.prod(arr.shape):
                     assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
@@ -430,8 +415,9 @@ class Executor(object):
                     "If this is intended, set partial_shaping=True to suppress this warning.")
 
         new_aux_dict = {}
-        for name, new_shape, arr in zip(self._symbol.list_auxiliary_states(),
-                                        aux_shapes, self.aux_arrays):
+        for i, name in enumerate(self._symbol.list_auxiliary_states()):
+            new_shape = aux_shapes[i]
+            arr = self.aux_dict[name]
             if partial_shaping or new_shape == arr.shape:
                 if np.prod(new_shape) > np.prod(arr.shape):
                     assert allow_up_sizing, "New shape of arg:%s larger than original. "%name + \
