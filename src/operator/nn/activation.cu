@@ -28,10 +28,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(Activation)
-.set_attr<FComputeEx>("FComputeEx<gpu>", ActivationCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ActivationCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Activation)
-.set_attr<FComputeEx>("FComputeEx<gpu>", ActivationGradCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ActivationGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

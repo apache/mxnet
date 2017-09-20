@@ -44,10 +44,8 @@ struct grad_op {
 };
 
 template<typename xpu, typename Op>
-void activation_forward(const OpContext& ctx, const NDArray &_in_data,
-    const NDArray &_out_data, const OpReqType &req) {
-  const TBlob &in_data = _in_data.data();
-  const TBlob &out_data = _out_data.data();
+void activation_forward(const OpContext& ctx, const TBlob &in_data, const TBlob &out_data,
+    const OpReqType &req) {
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
@@ -58,11 +56,8 @@ void activation_forward(const OpContext& ctx, const NDArray &_in_data,
 }
 
 template<typename xpu, typename Op>
-void activation_backward(const OpContext& ctx, const NDArray &_in_grad,
-    const NDArray &_out_data, const NDArray &_out_grad, const OpReqType &req) {
-  const TBlob &in_grad = _in_grad.data();
-  const TBlob &out_data = _out_data.data();
-  const TBlob &out_grad = _out_grad.data();
+void activation_backward(const OpContext& ctx, const TBlob &in_grad, const TBlob &out_data,
+    const TBlob &out_grad, const OpReqType &req) {
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
@@ -97,13 +92,13 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
 template<typename xpu>
 void ActivationCompute(const nnvm::NodeAttrs& attrs,
     const OpContext& ctx,
-    const std::vector<NDArray>& inputs,
+    const std::vector<TBlob>& inputs,
     const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& outputs) {
+    const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const NDArray& in_data = inputs[0];
-  const NDArray& out_data = outputs[0];
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   switch (param.act_type) {
     case activation::kReLU:
@@ -131,15 +126,15 @@ void ActivationCompute(const nnvm::NodeAttrs& attrs,
 template<typename xpu>
 void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
     const OpContext& ctx,
-    const std::vector<NDArray>& inputs,
+    const std::vector<TBlob>& inputs,
     const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& outputs) {
+    const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const NDArray& out_grad = inputs[0];
-  const NDArray& out_data = inputs[1];
-  const NDArray& in_grad = outputs[0];
+  const TBlob& out_grad = inputs[0];
+  const TBlob& out_data = inputs[1];
+  const TBlob& in_grad = outputs[0];
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   switch (param.act_type) {
     case activation::kReLU:
