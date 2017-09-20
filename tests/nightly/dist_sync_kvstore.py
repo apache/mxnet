@@ -37,6 +37,7 @@ rate = 2
 shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
 
+
 def init_kv():
     kv = mx.kv.create('dist_sync')
     # init kv dns keys
@@ -174,15 +175,27 @@ def test_sync_push_pull():
 def test_compressed():
     kv = mx.kv.create('dist_sync')
     kv.set_compress({'compress':'2bit'})
-    kv.init(keys, [mx.nd.ones(big_shape)] * len(keys))
-    my_rank = kv.rank
-    nworker = kv.num_workers
-    # init updater on servers
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
-    kv.push('3',mx.nd.ones(big_shape)*(my_rank+1))
-    val = mx.nd.zeros(big_shape)
-    kv.pull('3',out=val)
+    # init kv dns keys
+    kv.init('99', mx.nd.ones(big_shape))
+    kv.init('3', mx.nd.ones(shape))
+
+    def check_default_keys(kv, my_rank, nworker):
+        nrepeat = 3
+        for i in range(nrepeat):
+            kv.push('3', mx.nd.ones(shape)*(my_rank+1))
+            kv.push('99', mx.nd.ones(big_shape)*(my_rank+1))
+
+        num = (nworker + 1) * nworker * rate / 2 * nrepeat + 1
+        val = mx.nd.zeros(shape)
+        kv.pull('3', out=val)
+        check_diff_to_scalar(val, num)
+
+        val2 = mx.nd.zeros(big_shape)
+        kv.pull('99', out=val2)
+        check_diff_to_scalar(val2, num)
+
+    check_default_keys(kv, kv.rank, kv.num_workers)
 
 if __name__ == "__main__":
-    # test_sync_push_pull()
+    test_sync_push_pull()
     test_compressed()

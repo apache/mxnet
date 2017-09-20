@@ -480,12 +480,8 @@ class KVStoreDist : public KVStoreLocal {
    */
   inline PSKV& EncodeKey(int key, size_t size, bool is_push) {
     mu_.lock();
-    PSKV& pskv = push_ps_kv_[key];
-    if (!is_push) {
-      pskv = pull_ps_kv_[key];
-    }
+    PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
     mu_.unlock();
-
     if (!pskv.keys.empty()) {
       // For compress, we cannt check here
       CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
@@ -519,6 +515,7 @@ class KVStoreDist : public KVStoreLocal {
         CHECK_EQ(static_cast<size_t>(pskv.size), size);
       }
     }
+
     return pskv;
   }
 

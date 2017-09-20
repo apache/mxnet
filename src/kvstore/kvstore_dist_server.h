@@ -385,10 +385,7 @@ class KVStoreDistServer {
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
-    //if (compress_ != "none") {
-      std::cout << "server: " << compress_ << std::endl;
-    //}
-    //std::cout << "server: " << compress_ << std::endl;
+
     CHECK_EQ(req_meta.cmd, kDefaultPushPull);
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
@@ -409,12 +406,12 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-      std::cout << "server: compress shape: " << dshape.Size() << std::endl;
+     // std::cout << "server: compress shape: " << dshape.Size() << std::endl;
       NDArray comp_buf = compress_buf_[key];
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
-        std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
+        //std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
         if (comp_buf.is_none()) {
           comp_buf = NDArray(dshape, Context());
         }
