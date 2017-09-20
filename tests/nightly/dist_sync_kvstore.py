@@ -174,7 +174,9 @@ def test_sync_push_pull():
 
 def test_compressed():
     kv = mx.kv.create('dist_sync')
-    kv.set_compress({'compress':'2bit'})
+    pos_threshold = 0.5
+    neg_threshold = -0.5
+    kv.set_compress({'compress':'2bit', 'pos_threshold': pos_threshold , 'neg_threshold': neg_threshold})
     # init kv dns keys
     kv.init('99', mx.nd.ones(big_shape))
     kv.init('3', mx.nd.ones(shape))
@@ -188,11 +190,11 @@ def test_compressed():
         num = (nworker + 1) * nworker * rate / 2 * nrepeat + 1
         val = mx.nd.zeros(shape)
         kv.pull('3', out=val)
-        check_diff_to_scalar(val, num)
+        check_diff_to_scalar(val, pos_threshold)
 
         val2 = mx.nd.zeros(big_shape)
         kv.pull('99', out=val2)
-        check_diff_to_scalar(val2, num)
+        check_diff_to_scalar(val2, pos_threshold)
 
     check_default_keys(kv, kv.rank, kv.num_workers)
 
