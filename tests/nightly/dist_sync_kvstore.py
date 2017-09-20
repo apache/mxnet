@@ -172,6 +172,7 @@ def test_sync_push_pull():
     check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done')
 
+
 def test_compressed():
     kv = mx.kv.create('dist_sync')
     pos_threshold = 0.5
