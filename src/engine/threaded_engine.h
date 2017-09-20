@@ -307,7 +307,11 @@ class ThreadedEngine : public Engine {
     // TODO(cjolivier01): Programatically obtain hyperthreading count (if supported)
     // Taking max including omp_get_max_threads() in case this implementation of OMP accounts for
     // hyperthreading
-    return std::max(omp_get_max_threads(), omp_get_num_procs());
+    const int env_max_threads = dmlc::GetEnv("OMP_NUM_THREADS", -1);
+    const int max_threads = env_max_threads == -1
+                            ? std::max(omp_get_max_threads(), omp_get_num_procs())
+                            : env_max_threads;
+    return max_threads;
 #else
     return 0;
 #endif
