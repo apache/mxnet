@@ -682,7 +682,6 @@ class AdaGrad(Optimizer):
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
-        save_grad_stype = grad.stype
 
         is_sparse = True if weight.stype == 'row_sparse' and grad.stype == 'row_sparse' else False
 
