@@ -376,7 +376,7 @@ void ElemwiseBinaryOp::ComputeEx(const nnvm::NodeAttrs &attrs,
           });
           break;
         case kCSRStorage:
-          if(common::ContainsOnlyStorage(inputs, kCSRStorage)
+          if (common::ContainsOnlyStorage(inputs, kCSRStorage)
              && common::ContainsOnlyStorage(outputs, kCSRStorage)) {
             MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIdx), IType, {
               MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIndPtr), CType, {

@@ -365,7 +365,7 @@ class UnaryOp : public OpBase {
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
-    if(inputs[0].storage_type() == outputs[0].storage_type()) {
+    if (inputs[0].storage_type() == outputs[0].storage_type()) {
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     } else {
       IdentityComputeEx<xpu>(attrs, ctx, { inputs[0] }, req, { outputs[0] });
