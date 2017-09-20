@@ -103,8 +103,7 @@ def _slice_axis(arr, axis, islice):
         return arr[islice]
     elif axis > 0:
         # pylint: disable=no-member
-        return nd.slice_axis(arr, axis=axis, begin=islice.start,
-                             end=islice.stop).as_in_context(arr.context)
+        return nd.slice(arr, axis=axis, begin=islice.start, end=islice.stop)
         # pylint: enable=no-member
     return arr
 
@@ -414,11 +413,7 @@ class DataParallelExecutorGroup(object):
 
         """
         _load_data(data_batch, self.data_arrays, self.data_layouts)
-
-        if hasattr(data_batch, 'pad'):
-            self.cur_batch_pad = data_batch.pad
-        else:
-            self.cur_batch_pad = None
+        self.cur_batch_pad = getattr(data_batch, 'pad', None)
 
         if is_train is None:
             is_train = self.for_training
