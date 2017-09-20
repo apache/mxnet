@@ -50,13 +50,14 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_NE(rhs_stype, kUndefinedStorage);
   TYPE_ASSIGN_CHECK(&out_stype, 0, rhs_stype);
   type_assign(&lhs_stype, rhs_stype);
-  if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
+  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
       out_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-             (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
+  }
+  if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
+      (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
     // rsp, rsp -> rsp, or csr, csr -> csr
     dispatched = dispatch_on_storage(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_type, kDispatchFComputeEx);
@@ -411,6 +412,7 @@ class UnaryOp : public OpBase {
     const auto out_stype = outputs[0].storage_type();
     if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
         (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
+      // csr, csr -> csr, or rsp, rsp -> rsp
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     } else {
       LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);

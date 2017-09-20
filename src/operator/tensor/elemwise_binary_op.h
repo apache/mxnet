@@ -50,10 +50,11 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   const auto lhs_grad_stype = out_attrs->at(0);
   auto& rhs_grad_stype = out_attrs->at(1);
   bool dispatched = false;
-  if (ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if (ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+  }
+  if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
@@ -84,18 +85,21 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   const auto dispatch_ex = invalid_ctx ? kDispatchFComputeFallback : kDispatchFComputeEx;
-  if (lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
+  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
-             (lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
-             (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
-    // rsp, rsp -> rsp
-    // rsp, dns -> rsp
-    // dns, rsp -> rsp
-    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                     dispatch_type, dispatch_ex);
+  }
+  if (!dispatched) {
+    if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
+        (lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+        (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
+      // rsp, rsp -> rsp
+      // rsp, dns -> rsp
+      // dns, rsp -> rsp
+      dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+                                       dispatch_type, dispatch_ex);
+    }
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_type);

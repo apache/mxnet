@@ -80,7 +80,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   auto &arr_stype = in_attrs->at(sr::kArr);
   auto &idx_stype = in_attrs->at(sr::kIdx);
   auto &out_stype = out_attrs->at(sr::kOut);
-  if (arr_stype == kRowSparseStorage && idx_stype == kDefaultStorage) {
+  if (!dispatched && arr_stype == kRowSparseStorage && idx_stype == kDefaultStorage) {
     // rsp, dns -> rsp
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
@@ -104,7 +104,7 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto &idx_stype = in_attrs->at(sr::kArr);
   auto &arr_grad_stype = out_attrs->at(sr::kArr);
   auto &idx_grad_stype = out_attrs->at(sr::kIdx);
-  if (ograd_stype == kDefaultStorage && idx_stype == kDefaultStorage) {
+  if (!dispatched && ograd_stype == kDefaultStorage && idx_stype == kDefaultStorage) {
     if (type_assign(&arr_grad_stype, kRowSparseStorage) &&
         type_assign(&idx_grad_stype, kDefaultStorage)) {
       DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);

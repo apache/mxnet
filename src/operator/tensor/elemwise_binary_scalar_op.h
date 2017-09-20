@@ -44,11 +44,12 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
   const auto in_stype = in_attrs->at(0);
   auto &out_stype = out_attrs->at(0);
   bool dispatched = false;
-  if (in_stype == kDefaultStorage) {
+  if (!dispatched && in_stype == kDefaultStorage) {
     // dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if (in_stype == kRowSparseStorage) {
+  }
+  if (!dispatched && in_stype == kRowSparseStorage) {
     // rsp -> rsp
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
@@ -57,7 +58,8 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
       DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
       dispatched = true;
     }
-  } else if (in_stype == kCSRStorage) {
+  }
+  if (!dispatched && in_stype == kCSRStorage) {
     // csr -> csr
     dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
                                      dispatch_type, kDispatchFComputeEx);

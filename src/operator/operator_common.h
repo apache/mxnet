@@ -36,6 +36,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
 

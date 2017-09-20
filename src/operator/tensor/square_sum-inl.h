@@ -55,14 +55,15 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   // current impl is only available on cpu
   if (dev_mask == mshadow::cpu::kDevMask) {
-    if (in_stype == kRowSparseStorage) {
-      if (param.axis[0] == 1 && param.keepdims) {  // sum per row and keep dims
-        dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                         dispatch_type, kDispatchFComputeEx);
-      } else if (param.axis[0] == 0 || ((param.axis[0] == 1 && !param.keepdims))) {
+    if (!dispatched && in_stype == kRowSparseStorage && param.axis[0] == 1 && param.keepdims) {
+      // sum per row and keep dims
+      dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+                                       dispatch_type, kDispatchFComputeEx);
+    }
+    if (!dispatched && in_stype == kRowSparseStorage &&
+        (param.axis[0] == 0 || (param.axis[0] == 1 && !param.keepdims))) {
         dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
                                          dispatch_type, kDispatchFComputeEx);
-      }
     }
   }
   if (!dispatched) {
@@ -87,7 +88,7 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   // only implemented on cpu
   if (dev_mask == mshadow::cpu::kDevMask) {
-    if ((ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
+    if (!dispatched && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
         in_stype == kRowSparseStorage) {
       dispatched = dispatch_on_storage(&grad_stype, kRowSparseStorage,
                                        dispatch_type, kDispatchFComputeEx);

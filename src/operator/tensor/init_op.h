@@ -142,15 +142,17 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
   auto &out_stype = out_attrs->at(0);
   bool dispatched = false;
   type_assign(&out_stype, kDefaultStorage);
-  if (out_stype == kDefaultStorage) {
+  if (!dispatched && out_stype == kDefaultStorage) {
     // default
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
                                      dispatch_type, kDispatchFCompute);
-  } else if (rsp && out_stype == kRowSparseStorage) {
+  }
+  if (!dispatched && rsp && out_stype == kRowSparseStorage) {
     // rsp
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
                                      dispatch_type, kDispatchFComputeEx);
-  } else if (csr && out_stype == kCSRStorage) {
+  }
+  if (!dispatched && csr && out_stype == kCSRStorage) {
     // csr
     dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
                                      dispatch_type, kDispatchFComputeEx);

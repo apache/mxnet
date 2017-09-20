@@ -375,28 +375,28 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto& param_stype = static_cast<NDArrayStorageType>(param.stype);
   bool dispatched = false;
   // dns -> dns, dns -> rsp, dns -> csr
-  if (in_stype == kDefaultStorage) {
-    if (param_stype == kDefaultStorage) {
-      // dns -> dns
-      dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                       dispatch_type, kDispatchFCompute);
-    } else if (param_stype == kRowSparseStorage || param_stype == kCSRStorage) {
-      // dns -> rsp, dns -> csr
-      dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                       dispatch_type, kDispatchFComputeEx);
-    }
-  } else if (in_stype == kRowSparseStorage) {
+  if (!dispatched && in_stype == kDefaultStorage && param_stype == kDefaultStorage) {
+    // dns -> dns
+    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+                                     dispatch_type, kDispatchFCompute);
+  }
+  if (!dispatched && in_stype == kDefaultStorage &&
+    (param_stype == kRowSparseStorage || param_stype == kCSRStorage)) {
+    // dns -> rsp, dns -> csr
+    dispatched = dispatch_on_storage(out_attrs, param_stype,
+                                     dispatch_type, kDispatchFComputeEx);
+  }
+  if (!dispatched && in_stype == kRowSparseStorage &&
+      (param_stype == kRowSparseStorage || param_stype == kDefaultStorage)) {
     // rsp -> rsp, rsp -> dns
-    if (param_stype == kRowSparseStorage || param_stype == kDefaultStorage) {
-      dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                       dispatch_type, kDispatchFComputeEx);
-    }
-  } else if (in_stype == kCSRStorage) {
+    dispatched = dispatch_on_storage(out_attrs, param_stype,
+                                     dispatch_type, kDispatchFComputeEx);
+  }
+  if (!dispatched && in_stype == kCSRStorage &&
+      (param_stype == kCSRStorage || param_stype == kDefaultStorage)) {
     // csr -> csr, csr -> dns
-    if (param_stype == kCSRStorage || param_stype == kDefaultStorage) {
-      dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                       dispatch_type, kDispatchFComputeEx);
-    }
+    dispatched = dispatch_on_storage(out_attrs, param_stype,
+                                     dispatch_type, kDispatchFComputeEx);
   }
   if (!dispatched) {
     LOG(FATAL) << "Not implemented: "
