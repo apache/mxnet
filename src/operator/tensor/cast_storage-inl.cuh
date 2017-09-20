@@ -103,10 +103,10 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
                                     mshadow::Stream<gpu>::GetStream(s));
 
       // Allocate temp storage for marking non-zero rows and for cub's prefix sum
+      CHECK_GT(ctx.requested.size(), 0);
+      mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+        .get_space_typed<gpu, 1, char>(Shape1(num_rows * sizeof(RType) + temp_storage_bytes), s);
 
-      SparseTempStorage<char> sparseTempStorage(ctx);
-      auto workspace = sparseTempStorage.get_space_typed<gpu, 1>(
-        Shape1(num_rows * sizeof(RType) + temp_storage_bytes));
       row_flg = reinterpret_cast<RType*>(workspace.dptr_);
       d_temp_storage = workspace.dptr_ + num_rows * sizeof(RType);
 
@@ -512,9 +512,9 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                       mshadow::Stream<gpu>::GetStream(s));
 
         // Allocate temporary storage
-        SparseTempStorage<char> sparseTempStorage(ctx);
-        auto workspace = sparseTempStorage.get_space_typed<gpu, 1>(Shape1(temp_storage_bytes));
-
+        CHECK_GT(ctx.requested.size(), 0);
+        auto workspace = ctx.requested[0].
+          get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
         d_temp_storage = workspace.dptr_;
 
         // Compute indptr through inclusive prefix sum

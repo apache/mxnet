@@ -36,7 +36,7 @@ NNVM_REGISTER_OP(_backward_add)
                     ElemwiseBinaryOp::BackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
                     mshadow_op::identity>);
 
-NNVM_REGISTER_OP(_sub)
+NNVM_REGISTER_OP(elemwise_sub)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::minus>);
 
 NNVM_REGISTER_OP(_backward_sub)
@@ -44,7 +44,7 @@ NNVM_REGISTER_OP(_backward_sub)
                     ElemwiseBinaryOp::BackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
                     mshadow_op::negation>);
 
-NNVM_REGISTER_OP(_mul)
+NNVM_REGISTER_OP(elemwise_mul)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::mul>);
 
 NNVM_REGISTER_OP(_backward_mul)
@@ -52,7 +52,7 @@ NNVM_REGISTER_OP(_backward_mul)
                     ElemwiseBinaryOp::BackwardUseInWithHalf2<gpu, mshadow_op::right,
                     mshadow_op::left>);
 
-NNVM_REGISTER_OP(_div)
+NNVM_REGISTER_OP(elemwise_div)
 .set_attr<FCompute>("FCompute<gpu>",
                     ElemwiseBinaryOp::ElemwiseBinaryOp::ComputeWithHalf2<gpu, mshadow::op::div>);
 

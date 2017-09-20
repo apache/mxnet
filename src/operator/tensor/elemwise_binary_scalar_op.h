@@ -278,6 +278,7 @@ class BinaryScalarOp : public UnaryOp {
     if (req[0] == kNullOp) return;
     if ((in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) ||
         (in_stype == kCSRStorage && out_stype == kCSRStorage)) {
+      // csr -> csr, or rsp -> rsp
       UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
     } else if (out_stype == kDefaultStorage && typeid(xpu) == typeid(cpu) &&
               (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {

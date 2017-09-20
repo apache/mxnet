@@ -550,10 +550,13 @@ class ElemwiseBinaryOp : public OpBase {
   .add_argument("lhs", "NDArray-or-Symbol", "first input")          \
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
-/*! \brief Binary launch, with FComputeEx for csr and rsp available */
+/*! \brief Binary launch, with FComputeEx for csr and rsp available
+ *  Note: the option for csr is set to false since there's no unit test for csr yet.
+ *  We should add it back when the tests are added.
+ */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)                       \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                        \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true, true>) \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true, false>) \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
