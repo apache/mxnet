@@ -75,7 +75,7 @@ class KVStore {
     neg_threshold_ = neg_threshold;
   }
 
-  std::string& GetCompressParams() {
+  std::string GetCompressParams() {
     std::string rval = compress_;
     if (compress_ == "2bit") {
       rval += "," + std::to_string(pos_threshold_) + "," + std::to_string(neg_threshold_);

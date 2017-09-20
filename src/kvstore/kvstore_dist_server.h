@@ -140,13 +140,13 @@ class KVStoreDistServer {
     controller_ = controller;
   }
 
-  void load_compress_params(std::string& params) {
+  void load_compress_params(const std::string& params) {
     std::vector<std::string> elems;
     split(params, ',', std::back_inserter(elems));
     compress_ = elems[0];
     if (elems.size() > 1) {
-      pos_threshold_ = strtof(elems[1]);
-      neg_threshold_ = strtof(elems[2]);
+      pos_threshold_ = strtof(elems[1].c_str(), NULL);
+      neg_threshold_ = strtof(elems[2].c_str(), NULL);
     }
   }
 
