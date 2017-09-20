@@ -190,7 +190,7 @@ class KVStoreDist : public KVStoreLocal {
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
-        PSKV* pskv = new_EncodeKey(key, size);
+        PSKV& pskv = EncodeKey(key, size, false);
 #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
@@ -199,7 +199,7 @@ class KVStoreDist : public KVStoreLocal {
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
         CHECK_NOTNULL(ps_worker_)->ZPull(
-          pskv->keys, vals, &(pskv->lens), kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
+          pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
       };
 
       CHECK_NOTNULL(Engine::Get())->PushAsync(
@@ -337,7 +337,7 @@ class KVStoreDist : public KVStoreLocal {
           } else {
             size = small_buf.shape().Size();
           }
-          PSKV* pskv = new_EncodeKey(key, size);
+          PSKV& pskv = EncodeKey(key, size, true);
 
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
@@ -351,7 +351,7 @@ class KVStoreDist : public KVStoreLocal {
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
-              pskv->keys, vals, pskv->lens, 0, [cb]() { cb(); });
+              pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
         };
         Engine::Get()->PushAsync(
             push_to_servers,
@@ -476,56 +476,13 @@ class KVStoreDist : public KVStoreLocal {
    */
   std::mutex mu_;
 
-  inline PSKV* new_EncodeKey(int key, size_t size) {
-    PSKV* pskv = new PSKV;
-    auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
-    int num_servers = krs.size();
-    CHECK_GT(num_servers, 0);
-
-    // a simple heuristic for load balance
-    if (size < bigarray_bound_) {
-      // send it to a single random picked server
-      int server = (key * 9973) % num_servers;
-      ps::Key ps_key = krs[server].begin() + key;
-      CHECK_LT(ps_key, krs[server].end());
-      pskv->keys.push_back(ps_key);
-      pskv->lens.push_back(size);
-      pskv->size = size;
-    } else {
-      // parition it to all servers
-      pskv->size = 0;
-      for (int i = 0; i < num_servers; ++i) {
-        size_t part_size =
-            static_cast<size_t>(round(static_cast<double>(size)/num_servers*(i+1))) -
-            static_cast<size_t>(round(static_cast<double>(size)/num_servers*i));
-        ps::Key ps_key = krs[i].begin() + key;
-        CHECK_LT(ps_key, krs[i].end());
-        pskv->keys.push_back(ps_key);
-        pskv->lens.push_back(part_size);
-        pskv->size += part_size;
-      }
-      CHECK_EQ(static_cast<size_t>(pskv->size), size);
-    }
-    return pskv;
-  }
-
   /**
    * \brief convert to keys in ps
    */
   inline PSKV& EncodeKey(int key, size_t size, bool is_push) {
-
     mu_.lock();
-    PSKV& pskv = push_ps_kv_[key];
-    if (!is_push) {
-      pskv = pull_ps_kv_[key];
-    }
+    PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
     mu_.unlock();
-
-    if (is_push) {
-      std::cout << "[push]  key: " << key << " pskv_size: " << pskv.size << " arg size: " << size << std::endl;
-    } else {
-      std::cout << "[pull]  key: " << key << " pskv_size: " << pskv.size << " arg size: " << size << std::endl;
-    }
     if (!pskv.keys.empty()) {
       // For compress, we cannt check here
       CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
