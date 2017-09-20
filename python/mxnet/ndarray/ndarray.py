@@ -475,7 +475,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int or slice
+        key : int or slice, or array like
             Indexing key.
 
         Examples
@@ -504,35 +504,47 @@ fixed-size items.
                 raise ValueError("NDArray only supports slicing with step size 1.")
             if key.start is not None or key.stop is not None:
                 return self._slice(key.start, key.stop)
-            else:
-                return self
+            return self
         elif isinstance(key, tuple):
             shape = self.shape
-            oshape = []
-            begin = []
-            end = []
+            assert len(key) > 0, "Cannot slice with empty indices"
             assert len(shape) >= len(key), \
                 "Slicing dimensions exceeds array dimensions, %d vs %d"%(
                     len(key), len(shape))
-            i = -1
-            for i, slice_i in enumerate(key):
-                if isinstance(slice_i, integer_types):
-                    begin.append(slice_i)
-                    end.append(slice_i+1)
-                elif isinstance(slice_i, py_slice):
-                    if slice_i.step is not None:
-                        raise ValueError("NDArray only supports slicing with step size 1.")
-                    begin.append(0 if slice_i.start is None else slice_i.start)
-                    end.append(shape[i] if slice_i.stop is None else slice_i.stop)
-                    oshape.append(end[i] - begin[i])
-                else:
-                    raise ValueError(
-                        "NDArray does not support slicing with key %s of type %s."%(
-                            str(slice_i), str(type(slice_i))))
-            oshape.extend(shape[i+1:])
-            if len(oshape) == 0:
-                oshape.append(1)
-            return op.slice(self, begin, end).reshape(oshape)
+            if isinstance(key[0], (NDArray, np.ndarray, list)):
+                indices = []
+                dtype = 'int32'
+                for idx_i in key:
+                    if not isinstance(idx_i, NDArray):
+                        idx_i = array(idx_i, ctx=self.context, dtype=dtype)
+                    else:
+                        dtype = idx_i.dtype
+                    indices.append(idx_i)
+                indices = op.stack(*indices)
+                return op.gather_nd(self, indices)
+            else:
+                oshape = []
+                begin = []
+                end = []
+                i = -1
+                for i, slice_i in enumerate(key):
+                    if isinstance(slice_i, integer_types):
+                        begin.append(slice_i)
+                        end.append(slice_i+1)
+                    elif isinstance(slice_i, py_slice):
+                        if slice_i.step is not None:
+                            raise ValueError("NDArray only supports slicing with step size 1.")
+                        begin.append(0 if slice_i.start is None else slice_i.start)
+                        end.append(shape[i] if slice_i.stop is None else slice_i.stop)
+                        oshape.append(end[i] - begin[i])
+                    else:
+                        raise ValueError(
+                            "NDArray does not support slicing with key %s of type %s."%(
+                                str(slice_i), str(type(slice_i))))
+                oshape.extend(shape[i+1:])
+                if len(oshape) == 0:
+                    oshape.append(1)
+                return op.slice(self, begin, end).reshape(oshape)
         else:
             raise ValueError(
                 "NDArray does not support slicing with key %s of type %s."%(
@@ -1287,6 +1299,11 @@ fixed-size items.
         dtype : numpy.dtype or str
             The type of the returned array.
 
+        Returns
+        -------
+        NDArray, CSRNDArray or RowSparseNDArray
+            The copied array after casting to the specified type.
+
         Examples
         --------
         >>> x = mx.nd.zeros((2,3), dtype='float32')
@@ -1315,7 +1332,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray, CSRNDArray, RowSparseNDArray
+        NDArray, CSRNDArray or RowSparseNDArray
             The copied array. If ``other`` is an ``NDArray``, then the return value
             and ``other`` will point to the same ``NDArray``.
 
@@ -1349,7 +1366,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray
+        NDArray, CSRNDArray or RowSparseNDArray
             The copied array
 
         Examples
@@ -1375,7 +1392,7 @@ fixed-size items.
 
         Returns
         -------
-        NDArray
+        NDArray, CSRNDArray or RowSparseNDArray
             The target array.
 
 

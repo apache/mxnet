@@ -556,7 +556,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     }
     if (log_verbose_) {
       LOG(INFO) << "\tassign data entry\t" << eid << " as stype "
-                << data_entry_[eid].storage_type() << " (input)";
+                << common::stype_string(data_entry_[eid].storage_type()) << " (input)";
     }
   }
 
@@ -1090,7 +1090,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
     }
     if (log_verbose_) {
-      LOG(INFO) << "\tinit head_g entry\t" << data_eid << "\tas stype " << stype;
+      LOG(INFO) << "\tinit head_g entry\t" << data_eid << "\tas stype "
+                << common::stype_string(stype);
     }
   }
   // get maximum bytes in each pool
@@ -1136,7 +1137,6 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   for (size_t i : sorted_pool_index) {
     const Context& ctx = pool_info[i].ctx;
     size_t bytes = pool_info[i].bytes;
-    NDArrayStorageType storage_type = pool_info[i].stype;
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
@@ -1193,7 +1193,6 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
-  const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.
@@ -1204,14 +1203,17 @@ void GraphExecutor::InitCachedOps() {
         LOG(INFO) << "node " << nid << " var";
       } else {
         LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
+        const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
         auto exec = op_execs[nid];
         for (const auto& e : inode.inputs) {
           auto eid = idx.entry_id(e);
-          LOG(INFO) << "\t\tinput " << eid << " stype: " << vstorage_type[eid];
+          LOG(INFO) << "\t\tinput " << eid << " stype: "
+                    << common::stype_string(vstorage_type[eid]);
         }
         for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
           uint32_t eid = idx.entry_id(nid, index);
-          LOG(INFO) << "\t\toutput " << eid << " stype: " << vstorage_type[eid];
+          LOG(INFO) << "\t\toutput " << eid << " stype: "
+                    << common::stype_string(vstorage_type[eid]);
         }
       }
     }
@@ -1335,8 +1337,8 @@ void GraphExecutor::InitOpSegs() {
     num_nodes_threshold = std::numeric_limits<size_t>::max();
   }
 
-  // create forward segments for training
-  if (prefer_bulk_exec > 0) {
+  if (prefer_bulk_exec) {
+    // create forward segments for training
     size_t topo_start = 0;
     for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
       auto &node = graph_.indexed_graph()[nid].source;
@@ -1354,17 +1356,15 @@ void GraphExecutor::InitOpSegs() {
     if (topo_start != num_forward_nodes_) {
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
     }
-  }
 
-  // create backward segments for training
-  if (prefer_bulk_exec) {
+    // create backward segments for training
     // get all gradient variables
     std::unordered_set<engine::VarHandle> grad_vars;
     for (auto &kv : grad_store_) {
       grad_vars.insert(kv.second.var());
     }
     auto &idx = graph_.indexed_graph();
-    size_t topo_start = num_forward_nodes_;
+    topo_start = num_forward_nodes_;
     for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
       auto &op_node = op_nodes_[nid];
       if (op_node.skip_exec_node || op_node.exec == nullptr) {
@@ -1393,6 +1393,7 @@ void GraphExecutor::InitOpSegs() {
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, total_num_nodes);
     }
   }
+
   return;
 }
 

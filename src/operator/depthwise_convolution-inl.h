@@ -33,6 +33,8 @@
 #include <cub/cub.cuh>
 #include "./depthwise_convolution_tf.cuh"
 
+#define ROUND_TO_MULTIPLE(x, m) ((((x) + (m) - 1) / (m)) * (m))
+
 namespace mxnet {
 namespace op {
 using namespace tf::depthwise_conv;
@@ -103,7 +105,6 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
   const int out_pixels = out_height * out_width;
   const int in_pixels = in_height * in_width;
   const int batch_channel_num = channel * args.batch;
-  const int candidate_reduce_thread_num = out_pixels % blockDim.x;
 
   for (int b = blockIdx.x; b < batch_channel_num; b += gridDim.x) {
     const int local_batch = b / channel;
@@ -112,14 +113,15 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
     const int out_grad_offset_temp = (local_batch * channel * out_pixels) +
         (local_channel * out_pixels);
 
-    for (int out_id = threadIdx.x; out_id < out_pixels; out_id += blockDim.x) {
-      const int reduce_thread_num = ((out_pixels - out_id) > candidate_reduce_thread_num) ?
-          blockDim.x : candidate_reduce_thread_num;
-
+    // Make sure all threads enter the loop so they get to the enclosed __syncthreads()
+    for (int out_id = threadIdx.x;
+         out_id < ROUND_TO_MULTIPLE(out_pixels,
+         blockDim.x); out_id += blockDim.x) {
       const int out_w = out_id % out_width;
       const int out_h = (out_id / out_width) % out_height;
       const int out_grad_offset = out_grad_offset_temp + (out_h * out_width) + (out_w);
-      const DType out_g = ldg(out_grad + out_grad_offset);
+      // Set out_g to 0 if the thread would normally have not entered the loop.
+      const DType out_g = out_id < out_pixels ? ldg(out_grad + out_grad_offset) : DType(0);
 
       const int in_h_start = out_h * stride_height - pad_height;
       const int in_w_start = out_w * stride_width - pad_width;
@@ -134,16 +136,18 @@ DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
           DType partial_grad = DType(0.0f);
           if (in_h >= 0 && in_h < in_height && in_w >= 0 && in_w < in_width) {
             const int input_offset = input_offset_temp + in_w;
-            partial_grad = ldg(input + input_offset) * out_g;
+            // Set partial_grad to 0 if the thread would normally not have entered the loop.
+            partial_grad = out_id < out_pixels ? ldg(input + input_offset) * out_g : DType(0);
           }
           // reduce all valid partial grad in a block
           typedef cub::BlockReduce<DType, mshadow::cuda::kBaseThreadNum> BlockReduceT;
           __shared__ typename BlockReduceT::TempStorage temp_storage_reduce;
-          DType aggregate = BlockReduceT(temp_storage_reduce).Sum(partial_grad, reduce_thread_num);
+          DType aggregate = BlockReduceT(temp_storage_reduce).Sum(partial_grad, blockDim.x);
           if (threadIdx.x == 0) {
             DType* addr = filter_grad + f_w + filter_offset_h + filter_offset_temp;
             atomicAdd(addr, aggregate);
           }
+          // The presense of __syncthreads() here means all threads must enter enclosing for-loops.
           __syncthreads();
         }  // for filter_width
       }  // for filter_height

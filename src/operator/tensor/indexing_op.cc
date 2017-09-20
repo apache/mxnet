@@ -29,6 +29,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
+DMLC_REGISTER_PARAMETER(ScatterNDParam);
 
 NNVM_REGISTER_OP(Embedding)
 .describe(R"code(Maps integer indices to vector representations (embeddings).
@@ -246,6 +247,114 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("indices", "NDArray-or-Symbol", "array of locations where to set on_value")
 .add_arguments(OneHotParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(gather_nd)
+.describe(R"code(Gather elements or slices from `data` and store to a tensor whose
+shape is defined by `indices`. `gather_nd` and `scatter_nd` are inverse functions
+to each other.
+
+Given `data` with shape `(X_0, X_1, ..., X_{N-1})` and indices with shape
+`(M, Y_0, ..., Y_{K-1})`, the output will have shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})`,
+where `M <= N`. If `M == N`, output shape will simply be `(Y_0, ..., Y_{K-1})`.
+
+The elements in output is defined as follows::
+
+  output[y_0, ..., y_{K-1}, x_M, ..., x_{N-1}] = data[indices[0, y_0, ..., y_{K-1}],
+                                                      ...,
+                                                      indices[M-1, y_0, ..., y_{K-1}],
+                                                      x_M, ..., x_{N-1}]
+
+Examples::
+
+  data = [[0, 1], [2, 3]]
+  indices = [[1, 1, 0], [0, 1, 0]]
+  gather_nd(data, indices) = [2, 3, 0]
+
+)code")
+.set_num_outputs(1)
+.set_num_inputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", GatherNDShape)
+.set_attr<nnvm::FInferType>("FInferType", GatherNDType)
+.set_attr<FCompute>("FCompute<cpu>", GatherNDForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("scatter_nd");
+    p->attrs.name = n->attrs.name + "_backward";
+    p->inputs.push_back(ograds[0]);
+    p->inputs.push_back(n->inputs[1]);
+    p->control_deps.emplace_back(n);
+    auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
+                         {n->inputs[1]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
+    return ret;
+  })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.add_argument("data", "NDArray-or-Symbol", "data")
+.add_argument("indices", "NDArray-or-Symbol", "indices");
+
+
+NNVM_REGISTER_OP(scatter_nd)
+.describe(R"code(Scatters data into a new tensor according to indices.
+`gather_nd` and `scatter_nd` are inverse functions to each other.
+
+Given `data` with shape `(Y_0, ..., Y_{K-1}, X_M, ..., X_{N-1})` and indices with shape
+`(M, Y_0, ..., Y_{K-1})`, the output will have shape `(X_0, X_1, ..., X_{N-1})`,
+where `M <= N`. If `M == N`, data shape should simply be `(Y_0, ..., Y_{K-1})`.
+
+The elements in output is defined as follows::
+
+  output[indices[0, y_0, ..., y_{K-1}],
+         ...,
+         indices[M-1, y_0, ..., y_{K-1}],
+         x_M, ..., x_{N-1}] = data[y_0, ..., y_{K-1}, x_M, ..., x_{N-1}]
+
+all other entries in output are 0.
+
+Examples::
+
+  data = [2, 3, 0]
+  indices = [[1, 1, 0], [0, 1, 0]]
+  scatter_nd(data, indices) = [[0, 0], [2, 3]]
+
+)code")
+.set_num_outputs(1)
+.set_num_inputs(2)
+.set_attr_parser(ParamParser<ScatterNDParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
+.set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
+.set_attr<FCompute>("FCompute<cpu>", ScatterNDForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto p = nnvm::Node::Create();
+    p->attrs.op = nnvm::Op::Get("gather_nd");
+    p->attrs.name = n->attrs.name + "_backward";
+    p->inputs.push_back(ograds[0]);
+    p->inputs.push_back(n->inputs[1]);
+    p->control_deps.emplace_back(n);
+    auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
+                         {n->inputs[1]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
+    return ret;
+  })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.add_argument("data", "NDArray-or-Symbol", "data")
+.add_argument("indices", "NDArray-or-Symbol", "indices")
+.add_arguments(ScatterNDParam::__FIELDS__());
+
 
 }  // namespace op
 }  // namespace mxnet

@@ -15,5 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Contrib NDArray API of MXNet."""
+"""Contrib Symbol API of MXNet."""
 __all__ = []

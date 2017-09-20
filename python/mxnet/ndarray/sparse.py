@@ -52,7 +52,7 @@ from .ndarray import array as _array
 from . import op
 
 # When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import
+# pylint: disable=unused-import, too-many-lines
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.ndarray import _set_ndarray_class
@@ -190,7 +190,7 @@ class BaseSparseNDArray(NDArray):
             The type of the returned array.
         Examples
         --------
-        >>> x = mx.nd.zeros('row_sparse', (2,3), dtype='float32')
+        >>> x = mx.nd.sparse.zeros('row_sparse', (2,3), dtype='float32')
         >>> y = x.astype('int32')
         >>> y.dtype
         <type 'numpy.int32'>
@@ -346,7 +346,7 @@ class CSRNDArray(BaseSparseNDArray):
 
         Examples
         --------
-        >>> src = mx.nd.zeros((3,3), stype='csr')
+        >>> src = mx.nd.sparse.zeros('csr', (3,3))
         >>> src.asnumpy()
         array([[ 0.,  0.,  0.],
                [ 0.,  0.,  0.],
@@ -556,7 +556,7 @@ class RowSparseNDArray(BaseSparseNDArray):
 
         Examples
         --------
-        >>> x = mx.nd.zeros((2, 3), stype='row_sparse')
+        >>> x = mx.nd.sparse.zeros('row_sparse', (2, 3))
         >>> x[:].asnumpy()
         array([[ 0.,  0.,  0.],
                [ 0.,  0.,  0.]], dtype=float32)
@@ -591,7 +591,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                [ 0.,  0.,  0.],
                [ 4.,  5.,  6.]], dtype=float32)
         >>> # assign RowSparseNDArray with same storage type
-        >>> x = mx.nd.zeros('row_sparse', (3,3))
+        >>> x = mx.nd.sparse.zeros('row_sparse', (3,3))
         >>> x[:] = src
         >>> x.asnumpy()
         array([[ 1.,  0.,  2.],
@@ -723,7 +723,7 @@ def _prepare_src_array(src, dtype, default_dtype):
 
 def csr_matrix(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=None,
                indices_type=None):
-    """Creates a 2D array with compressed sparse row(CSR) format.
+    """Creates a 2D array with compressed sparse row (CSR) format.
 
     Parameters
     ----------
@@ -900,9 +900,9 @@ def zeros(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
         A created array
     Examples
     --------
-    >>> mx.nd.zeros((1,2), mx.cpu(), stype='csr')
+    >>> mx.nd.sparse.zeros('csr', (1,2))
     <CSRNDArray 1x2 @cpu(0)>
-    >>> mx.nd.zeros((1,2), mx.cpu(), 'float16', stype='row_sparse').asnumpy()
+    >>> mx.nd.sparse.zeros('row_sparse', (1,2), ctx=mx.cpu(), dtype='float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
     if stype == 'default':
@@ -922,6 +922,22 @@ def zeros(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
 
 def empty(stype, shape, ctx=None, dtype=None, aux_types=None):
     """Returns a new array of given shape and type, without initializing entries.
+
+    Parameters
+    ----------
+    stype: string
+        The storage type of the empty array, such as 'row_sparse', 'csr', etc
+    shape : int or tuple of int
+        The shape of the empty array.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`).
+
+    Returns
+    -------
+    CSRNDArray or RowSparseNDArray
+        A created array.
     """
     if isinstance(shape, int):
         shape = (shape, )
@@ -964,9 +980,9 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
     >>> csr = sp.csr_matrix((2, 100))
     >>> mx.nd.sparse.array(csr)
     <CSRNDArray 2x100 @cpu(0)>
-    >>> mx.nd.sparse.array(mx.nd.zeros((3, 2), stype='csr'))
+    >>> mx.nd.sparse.array(mx.nd.sparse.zeros('csr', (3, 2)))
     <CSRNDArray 3x2 @cpu(0)>
-    >>> mx.nd.sparse.array(mx.nd.zeros((3, 2), stype='row_sparse'))
+    >>> mx.nd.sparse.array(mx.nd.sparse.zeros('row_sparse', (3, 2)))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
     if isinstance(source_array, NDArray):

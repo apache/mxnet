@@ -67,7 +67,6 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
-  const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   // for now, only supports quantize from uint8 to float
   // TODO(ziheng) consider add MSHADOW_INTEGER_TYPE_SWITCH
   typedef uint8_t DstDType;
@@ -81,7 +80,6 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
 inline bool QuantizeShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
-  const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
 
@@ -99,7 +97,6 @@ inline bool QuantizeShape(const nnvm::NodeAttrs& attrs,
 inline bool QuantizeType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
-  const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
   CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)

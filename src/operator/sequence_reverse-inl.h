@@ -221,8 +221,8 @@ class SequenceReverseProp : public OperatorProperty {
         << "Input:[data, sequence_length]";
 
     const TShape &dshape = (*in_shape)[seq_reverse::kData];
-    CHECK_GT(dshape.ndim(), 2U)
-        << "The data array must be of rank 3 or greater.";
+    CHECK_GT(dshape.ndim(), 1U)
+        << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
     if (param_.use_sequence_length)
       SHAPE_ASSIGN_CHECK(*in_shape, seq_reverse::kSequenceLength,
@@ -243,10 +243,7 @@ class SequenceReverseProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at "
-                                       << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();
