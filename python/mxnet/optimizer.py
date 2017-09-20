@@ -683,23 +683,33 @@ class AdaGrad(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
         save_grad_stype = grad.stype
+
+        is_sparse = True if weight.stype == 'row_sparse' or grad.stype == 'row_sparse' else False
+
+        if is_sparse is True:
+            grad_indices_count = len(grad.indices)
+
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
         save_history_stype = history.stype
 
-        is_sparse = True if weight.stype != 'default' or grad.stype != 'default' else False
-
         if is_sparse:
-            history[:] = op.elemwise_add(history, op.square(grad))
-            assert history.stype == save_history_stype
-            srt = op.sqrt(_internal._scatter_plus_scalar(history, self.float_stable_eps))
-            assert srt.stype == save_history_stype
+            history = sparse.retain(history, grad.indices)
+            history[:] = sparse.elemwise_add(history, op.square(grad))
+            adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
+            srt = op.sqrt(adjusted_add)
             div = _internal._scatter_elemwise_div(grad, srt)
-            assert div.stype == grad.stype
             retained_weight = sparse.retain(weight, grad.indices)
-            weight[:] += (div + retained_weight * wd) * -lr
+            to_add = div + retained_weight * wd
+            retained_weight = sparse.elemwise_add(retained_weight,
+                                                  _internal._mul_scalar(to_add, -lr))
+            weight[:] = retained_weight
+            state[:] = history
+            assert state.stype == save_history_stype
+            assert len(weight.indices) == grad_indices_count
+            assert len(history.indices) == grad_indices_count
         else:
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)
