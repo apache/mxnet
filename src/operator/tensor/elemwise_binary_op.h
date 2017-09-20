@@ -532,6 +532,7 @@ class ElemwiseBinaryOp : public OpBase {
   }
 };  // class ElemwiseBinaryOp
 
+/*! \brief Binary launch */
 #define MXNET_OPERATOR_REGISTER_BINARY(name)                        \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(2)                                                \
@@ -549,14 +550,16 @@ class ElemwiseBinaryOp : public OpBase {
   .add_argument("lhs", "NDArray-or-Symbol", "first input")          \
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
-/*! \brief Binary launch */
+/*! \brief Binary launch, with FComputeEx for csr and rsp available */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)                       \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                        \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true, true>) \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
-/*! \brief Binary launch, dense result */
+/*! \brief Binary launch, dense result
+ *         FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
+ */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(__name$, __kernel$)                     \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                         \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)

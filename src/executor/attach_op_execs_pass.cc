@@ -294,39 +294,41 @@ Graph AttachOpExecs(Graph g) {
         state = fcreate_op_state[op](
             inode.source->attrs, vctx[i], ishape, itype);
       }
-      FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
-          op, "FStatefulCompute", vctx[i]);
-      if (fcompute != nullptr) {
-        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute,
-                                                           exec_type, mutate_index);
+      FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+          op, "FStatefulComputeEx", vctx[i]);
+      // FStatefulComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
+      if (fcompute_ex != nullptr && dispatch_types[i] == kDispatchFComputeEx) {
+        ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
       } else {
-        FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
-            op, "FStatefulComputeEx", vctx[i]);
-        CHECK(fcompute_ex != nullptr)
+        FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
+            op, "FStatefulCompute", vctx[i]);
+        CHECK(fcompute != nullptr)
             << "One of FStatefulCompute and FStatefulComputeEx must be registered "
             << "for stateful operator " << op->name;
-        ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
+        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute,
+                                                           exec_type, mutate_index);
       }
     } else if (is_layer_backward.get(op, false)) {
       CHECK_GE(inode.control_deps.size(), 1);
       uint32_t fwd_id = inode.control_deps[0];
       CHECK(vctx[fwd_id] == vctx[i]);
       CHECK(ret[fwd_id] != nullptr);
-      FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
-          op, "FStatefulCompute", vctx[i]);
-      if (fcompute != nullptr) {
-        ret[i] = std::make_shared<StatefulComputeExecutor>(
-            dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
-            fcompute, exec_type, mutate_index);
-      } else {
-        FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
-            op, "FStatefulComputeEx", vctx[i]);
-        CHECK(fcompute_ex != nullptr)
-            << "One of FStatefulCompute and FStatefulComputeEx must be registered "
-            << "for stateful operator " << op->name;
+      FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+          op, "FStatefulComputeEx", vctx[i]);
+      // FStatefulComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
+      if (fcompute_ex != nullptr && dispatch_types[i] == kDispatchFComputeEx) {
         ret[i] = std::make_shared<StatefulComputeExExecutor>(
             dynamic_cast<StatefulComputeExExecutor*>(ret[fwd_id].get())->state_,
             fcompute_ex, exec_type);
+      } else {
+        FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
+            op, "FStatefulCompute", vctx[i]);
+        CHECK(fcompute != nullptr)
+            << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+            << "for stateful operator " << op->name;
+        ret[i] = std::make_shared<StatefulComputeExecutor>(
+            dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
+            fcompute, exec_type, mutate_index);
       }
     } else {
       FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);

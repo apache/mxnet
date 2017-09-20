@@ -218,8 +218,10 @@ void SetShapeType(const nnvm::Op* op,
     CHECK(inferstorage[op](attrs, ctx.dev_mask(), dispatch_type,
                            &in_storage_types, &out_storage_types));
   } else {
-    CHECK(exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_type,
-                                   &in_storage_types, &out_storage_types));
+    // if infer storage attr is not present, apply the default infer storage function
+    bool success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_type,
+                                            &in_storage_types, &out_storage_types);
+    CHECK(success);
   }
   CHECK_EQ(out_storage_types.size(), ndoutputs.size());
   CHECK_NE(*dispatch_type, kDispatchUndefined);
@@ -410,7 +412,8 @@ void PushOperator(const OpStatePtr& state,
                   const std::vector<Resource>& requested,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs,
-                  const std::vector<uint32_t>& mutate_idx) {
+                  const std::vector<uint32_t>& mutate_idx,
+                  const int dispatch_type) {
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
@@ -420,8 +423,34 @@ void PushOperator(const OpStatePtr& state,
     exec_type = fexec_type[op](attrs);
   }
 
-  auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
-  if (fcompute != nullptr) {
+  auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
+  // FStatefulComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
+  if (fcompute_ex != nullptr && dispatch_type == kDispatchFComputeEx) {
+    const auto& run = [state, fcompute_ex, ndinputs, ndoutputs, requested, is_train, exec_type](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
+        SetWriteInplaceReq(ndinputs, ndoutputs, &req);
+        fcompute_ex(state, opctx, ndinputs, req, ndoutputs);
+        if (exec_type == ExecType::kSync) {
+          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
+        }
+      };
+    if (exec_type == ExecType::kLocal) {
+      run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+    } else {
+      Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+                               0, PROFILER_MESSAGE(op->name.c_str()));
+    }
+  } else {
+    auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
+    CHECK(fcompute != nullptr)
+        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+        << "for stateful operator " << op->name;
     CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
     Engine::Get()->PushAsync(
       [state, fcompute, ndinputs, ndoutputs, requested, is_train, exec_type, mutate_idx](
@@ -466,32 +495,6 @@ void PushOperator(const OpStatePtr& state,
         }
       }, ctx, read_vars, write_vars, FnProperty::kNormal,
       0, PROFILER_MESSAGE(op->name.c_str()));
-  } else {
-    auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
-        op, "FStatefulComputeEx", ctx);
-    CHECK(fcompute_ex != nullptr)
-        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
-        << "for stateful operator " << op->name;
-    const auto& run = [state, fcompute_ex, ndinputs, ndoutputs, requested, is_train, exec_type](
-          RunContext rctx,
-          engine::CallbackOnComplete on_complete) {
-        OpContext opctx{is_train, rctx, on_complete, requested};
-        std::vector<OpReqType> req(ndoutputs.size(), kWriteTo);
-        SetWriteInplaceReq(ndinputs, ndoutputs, &req);
-        fcompute_ex(state, opctx, ndinputs, req, ndoutputs);
-        if (exec_type == ExecType::kSync) {
-          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-            rctx.get_stream<gpu>()->Wait();
-          }
-          on_complete();
-        }
-      };
-    if (exec_type == ExecType::kLocal) {
-      run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
-    } else {
-      Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
-                               0, PROFILER_MESSAGE(op->name.c_str()));
-    }
   }
 }
 
@@ -527,6 +530,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
 
     FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
     FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
+    // FComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
     if (fn_ex && dispatch_type == kDispatchFComputeEx) {
       PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
@@ -548,7 +552,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
       write_vars.push_back(state.get_var());
       PushOperator(state, op, attrs, ctx, read_vars, write_vars,
-          requested, ndinputs, ndoutputs, mutate_idx);
+          requested, ndinputs, ndoutputs, mutate_idx, dispatch_type);
       if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordOp(
             std::move(attrs), &ndinputs, &ndoutputs, state,

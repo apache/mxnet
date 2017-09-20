@@ -102,11 +102,12 @@ enum class ExecType {
   kCrossDeviceCopy
 };
 
+/*! \brief the dispatch type of the operator */
 enum DispatchType {
   kDispatchUndefined = -1,
   // dispatch on FCompute or FStatefulCompute
   kDispatchFCompute,
-  // dispatch on FComputeEx or FStatefulComputeEx
+  // dispatch on FComputeEx or FStatefulComputeEx, if available
   kDispatchFComputeEx,
   // dispatch on FCompute or FStatefulCompute, and performs storage fallback
   kDispatchFComputeFallback,
@@ -238,8 +239,8 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
 /*!
  * \brief Resiger an NDArray compute function for simple stateless forward only operator
  *
- * \note Register under "FComputeEx<xpu, default>" and "FComputeEx<xpu, non-default>" 
- *       Dispatched only when operators process non-default storage inputs or outputs
+ * \note Register under "FComputeEx<xpu>" and "FComputeEx<xpu>"
+ *       Dispatched only when inferred dispatch_type is FDispatchComputeEx
  */
 using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                        const OpContext& ctx,
@@ -247,6 +248,12 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                        const std::vector<OpReqType>& req,
                                        const std::vector<NDArray>& outputs)>;
 
+/*!
+ * \brief Resiger a storage and dispatch type inference function based on
+ *        storage types of the inputs and outputs, and the dev_mask for the operator.
+ *
+ * \note Register under "FInferStorageType"
+ */
 using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               const int dev_mask,
                                               int* dispatch_type,

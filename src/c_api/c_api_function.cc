@@ -107,6 +107,24 @@ void Backward(const OpStatePtr& state,
   autograd::AutogradRuntime::Get()->SetIsRecording(prev_recording);
 }
 
+// infer storage function for custom op, which assigns kDefaultStorage for
+// all undefined stypes, and dispatch on kDispatchFComputeEx.
+inline bool CustomFunctionStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      int* dispatch_type,
+                                      std::vector<int> *iattr,
+                                      std::vector<int> *oattr) {
+  for (int& v : *oattr) {
+    if (v == -1) v = kDefaultStorage;
+  }
+  for (int& v : *iattr) {
+    if (v == -1) v = kDefaultStorage;
+  }
+  if (*dispatch_type == -1) {
+    *dispatch_type = kDispatchFComputeEx;
+  }
+  return true;
+}
 
 NNVM_REGISTER_OP(_CustomFunction)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -134,7 +152,8 @@ NNVM_REGISTER_OP(_CustomFunction)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
+.set_attr<FInferStorageType>("FInferStorageType", CustomFunctionStorageType);
 
 
 NNVM_REGISTER_OP(_backward_CustomFunction)
@@ -152,7 +171,8 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
     return ExecType::kLocal;
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
+.set_attr<FInferStorageType>("FInferStorageType", CustomFunctionStorageType);
 
 }  // namespace custom_function
 }  // namespace mxnet
