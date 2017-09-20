@@ -1,6 +1,6 @@
 var searchBox = $("#search-input-wrap");
 var TITLE = ['/get_started/', '/tutorials/', '/community/contribute.html', '/api/'];
-var DOC_TITLE = ['/FAQ/', '/architecture/', '/model_zoo/'];
+var DOC_TITLE = ['/faq/', '/architecture/', '/model_zoo/'];
 var APISubmenu, versionSubmenu, docSubmenu;
 $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'API') APISubmenu = $(this).clone();
