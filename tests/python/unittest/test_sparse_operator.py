@@ -18,6 +18,7 @@
 from mxnet.test_utils import *
 import sys
 import random
+import warnings
 
 def is_scalar(var):
     return False if hasattr(var, "__len__") else True
@@ -462,30 +463,31 @@ def test_elemwise_binary_ops():
                             print("{}, {}, {}, {}, {}, shape: {}".format(lhs_density, rhs_density,
                                                                          ograd_density, force_lr_overlap,
                                                                          force_grad_overlap, shape))
-
-                            check_elemwise_binary_ops('default', 'default', shape,
-                                                      lhs_density=lhs_density, rhs_density=rhs_density,
-                                                      force_lr_overlap=force_lr_overlap,
-                                                      force_grad_overlap=force_grad_overlap,
-                                                      ograd_density=ograd_density)
-                            check_elemwise_binary_ops('default', 'row_sparse', shape,
-                                                      lhs_density=lhs_density, rhs_density=rhs_density,
-                                                      force_lr_overlap=force_lr_overlap,
-                                                      force_grad_overlap=force_grad_overlap,
-                                                      ograd_density=ograd_density)
-                            check_elemwise_binary_ops('row_sparse', 'default', shape,
-                                                      lhs_density=lhs_density, rhs_density=rhs_density,
-                                                      force_lr_overlap=force_lr_overlap,
-                                                      force_grad_overlap=force_grad_overlap,
-                                                      ograd_density=ograd_density)
-                            check_elemwise_binary_ops('row_sparse', 'row_sparse', shape,
-                                                      lhs_grad_stype='row_sparse',
-                                                      rhs_grad_stype='row_sparse',
-                                                      lhs_density=lhs_density,
-                                                      rhs_density=rhs_density,
-                                                      force_lr_overlap=force_lr_overlap,
-                                                      force_grad_overlap=force_grad_overlap,
-                                                      ograd_density=ograd_density)
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore")
+                                check_elemwise_binary_ops('default', 'default', shape,
+                                                          lhs_density=lhs_density, rhs_density=rhs_density,
+                                                          force_lr_overlap=force_lr_overlap,
+                                                          force_grad_overlap=force_grad_overlap,
+                                                          ograd_density=ograd_density)
+                                check_elemwise_binary_ops('default', 'row_sparse', shape,
+                                                          lhs_density=lhs_density, rhs_density=rhs_density,
+                                                          force_lr_overlap=force_lr_overlap,
+                                                          force_grad_overlap=force_grad_overlap,
+                                                          ograd_density=ograd_density)
+                                check_elemwise_binary_ops('row_sparse', 'default', shape,
+                                                          lhs_density=lhs_density, rhs_density=rhs_density,
+                                                          force_lr_overlap=force_lr_overlap,
+                                                          force_grad_overlap=force_grad_overlap,
+                                                          ograd_density=ograd_density)
+                                check_elemwise_binary_ops('row_sparse', 'row_sparse', shape,
+                                                          lhs_grad_stype='row_sparse',
+                                                          rhs_grad_stype='row_sparse',
+                                                          lhs_density=lhs_density,
+                                                          rhs_density=rhs_density,
+                                                          force_lr_overlap=force_lr_overlap,
+                                                          force_grad_overlap=force_grad_overlap,
+                                                          ograd_density=ograd_density)
 
 def as_dense(arr):
     if arr.stype != 'default':
@@ -1018,59 +1020,61 @@ def test_sparse_mathematical_core():
             for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
                 for force_overlap in [False, True]:
                     print("{}, {}, {}".format(density, ograd_density, force_overlap))
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
 
-                    # Check unary ops (unary fwd, binary bwd)
-                    check_mathematical_core('default', force_overlap=force_overlap,
-                                            density=density, ograd_density=ograd_density)
-                    check_mathematical_core('row_sparse', force_overlap=force_overlap,
-                                            density=density, ograd_density=ograd_density)
-                    check_mathematical_core('row_sparse', output_grad_stype='default',
-                                            force_overlap=force_overlap,
-                                            density=density, ograd_density=ograd_density)
-                    check_mathematical_core('row_sparse', output_grad_stype='row_sparse',
-                                            force_overlap=force_overlap,
-                                            density=density, ograd_density=ograd_density)
-                    check_mathematical_core('csr', output_grad_stype='default',
-                                            force_overlap=force_overlap,
-                                            density=density, ograd_density=ograd_density)
-                    check_mathematical_core('csr', output_grad_stype='csr',
-                                            force_overlap=force_overlap,
-                                            density=density, ograd_density=ograd_density)
+                        # Check unary ops (unary fwd, binary bwd)
+                        check_mathematical_core('default', force_overlap=force_overlap,
+                                                density=density, ograd_density=ograd_density)
+                        check_mathematical_core('row_sparse', force_overlap=force_overlap,
+                                                density=density, ograd_density=ograd_density)
+                        check_mathematical_core('row_sparse', output_grad_stype='default',
+                                                force_overlap=force_overlap,
+                                                density=density, ograd_density=ograd_density)
+                        check_mathematical_core('row_sparse', output_grad_stype='row_sparse',
+                                                force_overlap=force_overlap,
+                                                density=density, ograd_density=ograd_density)
+                        check_mathematical_core('csr', output_grad_stype='default',
+                                                force_overlap=force_overlap,
+                                                density=density, ograd_density=ograd_density)
+                        check_mathematical_core('csr', output_grad_stype='csr',
+                                                force_overlap=force_overlap,
+                                                density=density, ograd_density=ograd_density)
 
-                    # Check binary with scalar ops
-                    check_binary_op_with_scalar('default',
-                                                density=density,
-                                                ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
-                    check_binary_op_with_scalar('row_sparse',
-                                                density=density,
-                                                ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
-                    check_binary_op_with_scalar('row_sparse', output_grad_stype='default',
-                                                density=density,
-                                                ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
-                    check_binary_op_with_scalar('row_sparse',
-                                                output_grad_stype='row_sparse',
-                                                density=density, ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
-                    check_binary_op_with_scalar('csr',
-                                                output_grad_stype='csr',
-                                                input_grad_stype='default',
-                                                density=density,
-                                                ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
-                    check_binary_op_with_scalar('csr',
-                                                output_grad_stype='csr',
-                                                input_grad_stype='csr',
-                                                density=density,
-                                                ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
-                    check_binary_op_with_scalar('csr',
-                                                output_grad_stype='default',
-                                                density=density,
-                                                ograd_density=ograd_density,
-                                                force_overlap=force_overlap)
+                        # Check binary with scalar ops
+                        check_binary_op_with_scalar('default',
+                                                    density=density,
+                                                    ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
+                        check_binary_op_with_scalar('row_sparse',
+                                                    density=density,
+                                                    ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
+                        check_binary_op_with_scalar('row_sparse', output_grad_stype='default',
+                                                    density=density,
+                                                    ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
+                        check_binary_op_with_scalar('row_sparse',
+                                                    output_grad_stype='row_sparse',
+                                                    density=density, ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
+                        check_binary_op_with_scalar('csr',
+                                                    output_grad_stype='csr',
+                                                    input_grad_stype='default',
+                                                    density=density,
+                                                    ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
+                        check_binary_op_with_scalar('csr',
+                                                    output_grad_stype='csr',
+                                                    input_grad_stype='csr',
+                                                    density=density,
+                                                    ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
+                        check_binary_op_with_scalar('csr',
+                                                    output_grad_stype='default',
+                                                    density=density,
+                                                    ograd_density=ograd_density,
+                                                    force_overlap=force_overlap)
 
 
 def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
