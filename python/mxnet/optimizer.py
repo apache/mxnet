@@ -588,7 +588,7 @@ class Adam(Optimizer):
     The optimizer updates the weight by::
 
         rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
-        m = beta1 * m + (1 - beta1) * rescaled_grad
+        m = beta1 * rho**(t-1) * m + (1 - beta1 * rho**(t-1)) * rescaled_grad
         v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
         w = w - learning_rate * m / (sqrt(v) + epsilon)
 
@@ -597,7 +597,7 @@ class Adam(Optimizer):
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
-            m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
+            m[row] = beta1 * rho**(t-1) * m[row] + (1 - beta1 * rho**(t-1)) * rescaled_grad[row]
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
             w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
 
@@ -608,18 +608,23 @@ class Adam(Optimizer):
 
     Parameters
     ----------
+    learning_rate : float, optional
+        Learning rate.
     beta1 : float, optional
         Exponential decay rate for the first moment estimates.
     beta2 : float, optional
         Exponential decay rate for the second moment estimates.
+    rho : float, optional
+        Shrinkage rate for beta1 when calculate the mean.
     epsilon : float, optional
         Small value to avoid division by 0.
     """
-    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 **kwargs):
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999,
+                 rho=1-1e-8, epsilon=1e-8, **kwargs):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
+        self.rho = rho
         self.epsilon = epsilon
 
     def create_state(self, index, weight):
@@ -639,8 +644,10 @@ class Adam(Optimizer):
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
+        rho = self.rho**(t-1)
 
-        kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
+        kwargs = {'beta1': self.beta1, 'beta2': self.beta2,
+                  'rho': rho, 'epsilon': self.epsilon,
                   'rescale_grad': self.rescale_grad}
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient

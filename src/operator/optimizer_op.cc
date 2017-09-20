@@ -147,13 +147,13 @@ are 1st and 2nd order moment estimates (mean and variance).
 .. math::
 
  g_t = \nabla J(W_{t-1})\\
- m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t\\
+ m_t = \beta_1 \cdot \rho^{t-1} m_{t-1} + (1 - \beta_1 \cdot \rho^{t-1}) g_t\\
  v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2\\
  W_t = W_{t-1} - \alpha \frac{ m_t }{ \sqrt{ v_t } + \epsilon }
 
 It updates the weights using::
 
- m = beta1*m + (1-beta1)*grad
+ m = beta1*(rho**(t-1))*m + (1-beta1*(rho**(t-1)))*grad
  v = beta2*v + (1-beta2)*(grad**2)
  w += - learning_rate * m / (sqrt(v) + epsilon)
 
@@ -161,7 +161,7 @@ If w, m and v are all of ``row_sparse`` storage type,
 only the row slices whose indices appear in grad.indices are updated (for w, m and v)::
 
  for row in grad.indices:
-     m[row] = beta1*m[row] + (1-beta1)*grad[row]
+     m[row] = beta1*(rho**(t-1))*m[row] + (1-beta1*(rho**(t-1)))*grad[row]
      v[row] = beta2*v[row] + (1-beta2)*(grad[row]**2)
      w[row] += - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
 
