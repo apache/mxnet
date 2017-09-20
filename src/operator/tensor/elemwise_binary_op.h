@@ -102,7 +102,6 @@ class ElemwiseBinaryOp : public OpBase {
     return index_out_min;
   }
 
-  template<typename DType>
   static inline bool IsSameArray(const NDArray& a1, const NDArray& a2) {
     return a1.var() == a2.var();
   }

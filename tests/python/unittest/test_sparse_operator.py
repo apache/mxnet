@@ -16,7 +16,6 @@
 # under the License.
 
 from mxnet.test_utils import *
-import sys
 import random
 
 def is_scalar(var):
@@ -488,14 +487,15 @@ def test_elemwise_binary_ops():
                                                       ograd_density=ograd_density)
 
 def as_dense(arr):
+    """Simple return same or cast-to-dense function"""
     if arr.stype != 'default':
         return mx.nd.cast_storage(arr, stype='default')
     else:
         return arr;
 
 
-# Make sure that 0's look like 0's when we do a comparison
 def do_normalize(l):
+    """Make sure that 0's look like 0's when we do a comparison"""
     it_l = np.nditer(l, flags=['f_index'])
 
     output = np.zeros(l.shape)
@@ -1532,6 +1532,149 @@ def test_sparse_elementwise_sum():
         for i in range(3):
             shape = tuple(np.random.randint(5, 10, size=dim))
             check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
+
+def test_scatter_ops():
+    def csr_get_seen_points(name, csr_array, verbose=False):
+        """Get a unique list of points int he CSR array as well as a
+        corresponding parallel list of points and values"""
+        seen_points = set()
+        seen_point_list = list()
+        values = list()
+        row_count = csr_array.shape[0]
+        row_pointers = csr_array.indptr.asnumpy()
+        col_indexes  = csr_array.indices.asnumpy()
+        data = csr_array.data.asnumpy()
+        for row in range(row_count):
+            start_pos = row_pointers[row]
+            end_pos = row_pointers[row + 1]
+            for col_index in range(start_pos, end_pos):
+                col = col_indexes[col_index]
+                val = data[col_index]
+                if verbose is True:
+                    print("{}: (row, col = ({}, {}) = {}".format(name, row, col, val))
+                seen_points.add((row, col))
+                seen_point_list.append((row, col))
+                values.append(val)
+        return seen_points, values, seen_point_list
+
+    def check_scatter_ops(name, shape, stype, forward_mxnet_call, forward_numpy_call,
+                          density=0.25, rhs_is_scalar=False, verbose=False):
+        lhs = mx.symbol.Variable('lhs', stype=stype)
+        if rhs_is_scalar is False:
+            rhs = mx.symbol.Variable('rhs', stype=stype)
+
+        if verbose is True:
+            print(name)
+        lhs_nd = create_sparse_array_zd(
+            shape, stype, density=density,
+            rsp_indices=gen_rsp_random_indices(
+                shape,
+                density=density,
+                force_indices=[(shape[0]/2)]  # force at least one overlap
+            ))
+
+        if rhs_is_scalar is False:
+            rhs_nd = create_sparse_array_zd(
+                shape, stype, density=density,
+                rsp_indices=gen_rsp_random_indices(
+                    shape,
+                    density=density,
+                    force_indices=[(shape[0]/2)]  # force at least one overlap
+                ))
+        else:
+            rhs_nd = 9
+            rhs = rhs_nd
+
+        lhs_np = lhs_nd.asnumpy()
+        rhs_np = rhs_nd if rhs_is_scalar is True else rhs_nd.asnumpy()
+
+        if verbose is True:
+            print("lhs = {}".format(lhs_np))
+            print("rhs = {}".format(rhs_np))
+
+        out_np = forward_numpy_call(lhs_np, rhs_np)
+
+        if verbose is True:
+            print("Numpy: out_np = {}".format(out_np))
+
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+
+        out = forward_mxnet_call(lhs, rhs)
+        exe_test = out.bind(default_context(), args=location)
+        exe_test.forward(is_train=False)
+        out_nd = exe_test.outputs[0]
+
+        if verbose is True:
+            print("Sym: out_nd = {}".format(out_nd.asnumpy()))
+
+        # For row_sparse, check that rows only exist for rows that are
+        # either int lhs or rhs, and if they exist, they should equal
+        # the numpy values
+        if stype == 'row_sparse':
+            seen_rows = set()
+            indices = lhs_nd.indices.asnumpy()
+            for i in range(len(indices)):
+                seen_rows.add(indices[i])
+            if rhs_is_scalar is False:
+                indices = rhs_nd.indices.asnumpy()
+                for i in range(len(indices)):
+                    seen_rows.add(indices[i])
+            assert len(out_nd.indices.asnumpy()) == len(seen_rows)
+            out_nd_np = out_nd.asnumpy()
+            for row in seen_rows:
+                row_nd = out_nd_np[row]
+                row_np = out_np[row]
+                almost_equal(row_nd, row_np, equal_nan=True)
+
+        else:
+            lhs_seen_points, _, _ = csr_get_seen_points("lhs", lhs_nd, verbose)
+            if rhs_is_scalar is False:
+                rhs_seen_points, _, _ = csr_get_seen_points("rhs", rhs_nd, verbose)
+            else:
+                rhs_seen_points = set()
+            input_seen_points = lhs_seen_points.union(rhs_seen_points)
+            out_seen_pounts, out_values, seen_point_list = csr_get_seen_points("out_nd", out_nd, verbose)
+            # Some may have been zero
+            assert len(out_seen_pounts) <= len(input_seen_points)
+            out_nd_np = out_nd.asnumpy()
+            val_index = 0
+            for row_col in seen_point_list:
+                row = row_col[0]
+                col = row_col[1]
+                val = out_values[val_index]
+                val_np = out_nd_np[row, col]
+                almost_equal(val, val_np, equal_nan=True)
+                val_index += 1
+
+    shape = (10, 5)
+
+    check_scatter_ops('_scatter_elemwise_div', shape, 'row_sparse',
+                      lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
+                      lambda l, r: l / r,
+                      verbose=False)
+    check_scatter_ops('_scatter_elemwise_div', shape, 'csr',
+                      lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
+                      lambda l, r: l / r,
+                      verbose=False, density=0.5)
+
+    check_scatter_ops('_scatter_plus', shape, 'row_sparse',
+                      lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
+                      lambda l, r: l + r,
+                      rhs_is_scalar=True, verbose=False)
+    check_scatter_ops('_scatter_plus', shape, 'csr',
+                      lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
+                      lambda l, r: l + r,
+                      rhs_is_scalar=True, verbose=False, density=0.5)
+
+    check_scatter_ops('_scatter_minus', shape, 'row_sparse',
+                      lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
+                      lambda l, r: l + r,
+                      rhs_is_scalar=True, verbose=False)
+    check_scatter_ops('_scatter_minus', shape, 'csr',
+                      lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
+                      lambda l, r: l + r,
+                      rhs_is_scalar=True, verbose=False, density=0.5)
+
 
 if __name__ == '__main__':
     import nose

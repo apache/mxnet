@@ -76,8 +76,8 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     } else if (lhs_is_dense) {
       output.CheckAndAlloc({mshadow::Shape1(num_rows_r)});
     } else {
-      lhs_in_place = IsSameArray<DType>(lhs, output);
-      rhs_in_place = IsSameArray<DType>(rhs, output);
+      lhs_in_place = IsSameArray(lhs, output);
+      rhs_in_place = IsSameArray(rhs, output);
       if (!lhs_in_place && !rhs_in_place) {
         output.CheckAndAlloc({mshadow::Shape1(num_rows_l + num_rows_r)});
       } else {
@@ -253,8 +253,10 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   const size_t lhs_nnz = lhs.storage_shape().Size();
   const size_t rhs_nnz = rhs.storage_shape().Size();
 
+  const size_t output_nnz_guess = IsSameArray(lhs, rhs) ? lhs_nnz : lhs_nnz + rhs_nnz;
+
   output.CheckAndAlloc({mshadow::Shape1(lhs.shape()[0] + 1),
-                        mshadow::Shape1(std::min(lhs_nnz + rhs_nnz, lhs.shape().Size()))});
+                        mshadow::Shape1(std::min(output_nnz_guess, lhs.shape().Size()))});
   DCHECK_EQ(output.aux_shape(csr::kIndPtr), lhs.aux_shape(csr::kIndPtr));
 
   const size_t alloc_size = nr_cols * sizeof(IType) + 2 * nr_cols * sizeof(DType);
