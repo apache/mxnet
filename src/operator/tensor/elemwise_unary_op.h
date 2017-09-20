@@ -70,7 +70,7 @@ class OpBase {
                                const NDArray* clone_from = nullptr) {
     if (req != kNullOp) {
       if (clone_from) {
-        const TShape ishape = clone_from->storage_shape();
+        const TShape& ishape = clone_from->storage_shape();
         TShape sshape = dest->storage_shape();
         CHECK(shape_assign(&sshape, ishape));
         dest->CheckAndAllocData(sshape);
@@ -113,7 +113,6 @@ class OpBase {
                                  const NDArray *dest,
                                  const OpReqType reqi,
                                  const NDArray& src) {
-    DCHECK_NE(dest->storage_type(), kDefaultStorage);
     DCHECK_EQ(dest->storage_type(), src.storage_type());
     AllocateGeometry(dest, reqi, &src);
     CopyGeometryBlobs(s, dest, reqi, src);
@@ -347,7 +346,8 @@ class UnaryOp : public OpBase {
                                 const std::vector<NDArray>& outputs) {
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
-    if (inputs[0].storage_type() == outputs[0].storage_type()) {
+    if (inputs[0].storage_type() == outputs[0].storage_type() &&
+      !common::ContainsDefaultStorage(inputs)) {
       MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>);
     } else {
       FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
@@ -365,7 +365,11 @@ class UnaryOp : public OpBase {
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
-    OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    if(inputs[0].storage_type() == outputs[0].storage_type()) {
+      OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    } else {
+      IdentityComputeEx<xpu>(attrs, ctx, { inputs[0] }, req, { outputs[0] });
+    }
   }
 };
 

@@ -485,6 +485,38 @@ def test_elemwise_binary_ops():
                                                       force_lr_overlap=force_lr_overlap,
                                                       force_grad_overlap=force_grad_overlap,
                                                       ograd_density=ograd_density)
+                            check_elemwise_binary_ops('csr', 'csr', shape,
+                                                      lhs_grad_stype='csr',
+                                                      rhs_grad_stype='csr',
+                                                      lhs_density=lhs_density,
+                                                      rhs_density=rhs_density,
+                                                      force_lr_overlap=force_lr_overlap,
+                                                      force_grad_overlap=force_grad_overlap,
+                                                      ograd_density=ograd_density)
+                            check_elemwise_binary_ops('csr', 'csr', shape,
+                                                      lhs_grad_stype='default',
+                                                      rhs_grad_stype='default',
+                                                      lhs_density=lhs_density,
+                                                      rhs_density=rhs_density,
+                                                      force_lr_overlap=force_lr_overlap,
+                                                      force_grad_overlap=force_grad_overlap,
+                                                      ograd_density=ograd_density)
+                            check_elemwise_binary_ops('default', 'csr', shape,
+                                                      lhs_grad_stype='csr',
+                                                      rhs_grad_stype='csr',
+                                                      lhs_density=lhs_density,
+                                                      rhs_density=rhs_density,
+                                                      force_lr_overlap=force_lr_overlap,
+                                                      force_grad_overlap=force_grad_overlap,
+                                                      ograd_density=ograd_density)
+                            check_elemwise_binary_ops('csr', 'default', shape,
+                                                      lhs_grad_stype='csr',
+                                                      rhs_grad_stype='csr',
+                                                      lhs_density=lhs_density,
+                                                      rhs_density=rhs_density,
+                                                      force_lr_overlap=force_lr_overlap,
+                                                      force_grad_overlap=force_grad_overlap,
+                                                      ograd_density=ograd_density)
 
 def as_dense(arr):
     """Simple return same or cast-to-dense function"""

@@ -376,23 +376,27 @@ void ElemwiseBinaryOp::ComputeEx(const nnvm::NodeAttrs &attrs,
           });
           break;
         case kCSRStorage:
-          MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIdx), IType, {
-            MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIndPtr), CType, {
-              MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-                CsrCsrOp<DType, IType, CType, OP>(
-                  s, attrs, ctx, inputs[0], inputs[1],
-                  req[0], outputs[0]);
+          if(common::ContainsOnlyStorage(inputs, kCSRStorage)
+             && common::ContainsOnlyStorage(outputs, kCSRStorage)) {
+            MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIdx), IType, {
+              MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIndPtr), CType, {
+                MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
+                  CsrCsrOp<DType, IType, CType, OP>(
+                    s, attrs, ctx, inputs[0], inputs[1],
+                    req[0], outputs[0]);
+                });
               });
             });
-          });
+          } else {
+            FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>, "ComputeEx");
+          }
           break;
         default:
           CHECK(false) << "Unsupported storage type for ComputeEx" << inputs[0].storage_type();
           break;
       }
     } else {
-      FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                           Compute<xpu, OP>, "ComputeEx");
+      FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>, "ComputeEx");
     }
   }
 }

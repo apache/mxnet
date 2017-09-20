@@ -403,8 +403,7 @@ class ElemwiseBinaryOp : public OpBase {
     using namespace mshadow::expr;
     if (req[0] != kNullOp) {
       // If any input is dense, fallback to FCompute
-      if (!common::ContainsDefaultStorage(inputs)) {
-        CHECK_EQ(inputs[0].storage_type(), kRowSparseStorage);
+      if (common::ContainsOnlyStorage(inputs, kRowSparseStorage)) {
         DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);  // op requires 0-input
                                                                   // returns 0-output
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);  // op requires 0-input
