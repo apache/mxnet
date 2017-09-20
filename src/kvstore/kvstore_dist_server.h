@@ -141,6 +141,7 @@ class KVStoreDistServer {
   }
 
   void load_compress_params(const std::string& params) {
+    std::cout<<params<<" received"<<std::endl;
     std::vector<std::string> elems;
     split(params, ',', std::back_inserter(elems));
     compress_ = elems[0];

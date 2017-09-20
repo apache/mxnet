@@ -57,8 +57,10 @@ class KVStoreDist : public KVStoreLocal {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
       ps::StartAsync("mxnet\0");
+      //what happens during recovery?
       if (!ps::Postoffice::Get()->is_recovery()) {
         if (get_rank() == 0) {
+	std::cout<<GetCompressParams()<<std::endl;
           SendCommandToServers(kSetCompress, GetCompressParams());
         }
         ps::Postoffice::Get()->Barrier(
