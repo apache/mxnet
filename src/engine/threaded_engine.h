@@ -288,8 +288,8 @@ class ThreadedEngine : public Engine {
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
     /*! \brief Set default OMP threads per kernel worker to default */
-    SetNumOMPThreadsPerWorker(DefaultOMPThreadsPerWorker());
-    CHECK_GT(GetNumOMPThreadsPerWorker(), 0);
+    set_num_omp_threads_per_worker(DefaultOMPThreadsPerWorker());
+    CHECK_GT(get_num_omp_threads_per_worker(), 0);
   }
   ~ThreadedEngine() {
     {
@@ -383,7 +383,7 @@ class ThreadedEngine : public Engine {
   /*! \brief Return the number of OMP threads that should be used per worker
    * \return Number of OMP threads that should be used per worker
    */
-  int GetNumOMPThreadsPerWorker() const override {
+  int get_num_omp_threads_per_worker() const override {
     return num_omp_threads_per_worker_;
   }
 
@@ -391,7 +391,7 @@ class ThreadedEngine : public Engine {
    * \param num_threads_per_worker Number of OMP threads to be used per worker
    * TODO(cjolivier01) Dynamically adjust based upon number of concurrent CPU jobs
    */
-  void SetNumOMPThreadsPerWorker(int num_omp_threads_per_worker) override {
+  void set_num_omp_threads_per_worker(int num_omp_threads_per_worker) override {
     num_omp_threads_per_worker_ = num_omp_threads_per_worker;
   }
 

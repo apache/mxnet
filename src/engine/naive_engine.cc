@@ -47,7 +47,7 @@ class NaiveEngine final : public Engine {
   };
 
   NaiveEngine() {
-    SetNumOMPThreadsPerWorker(ThreadedEngine::DefaultOMPThreadsPerWorker());
+    set_num_omp_threads_per_worker(ThreadedEngine::DefaultOMPThreadsPerWorker());
   }
   // virtual destructor
   virtual ~NaiveEngine() {
@@ -192,14 +192,14 @@ class NaiveEngine final : public Engine {
   /*! \brief Return the number of OMP threads that should be used per worker
    * \return Number of OMP threads that should be used per worker
    */
-  int GetNumOMPThreadsPerWorker() const override {
+  int get_num_omp_threads_per_worker() const override {
     return num_omp_threads_per_worker_;
   }
 
   /*! \brief Set the number of OMP threads that should be used per worker
    * \param num_threads_per_worker Number of OMP threads to be used per worker
    */
-  void SetNumOMPThreadsPerWorker(int num_threads_per_worker) override {
+  void set_num_omp_threads_per_worker(int num_threads_per_worker) override {
     num_omp_threads_per_worker_ = num_threads_per_worker;
   }
 
