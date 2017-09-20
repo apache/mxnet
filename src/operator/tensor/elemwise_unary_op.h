@@ -349,7 +349,6 @@ class UnaryOp : public OpBase {
     const auto in_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
     if (in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) {
-      // TODO should this check go into MapToFCompute ??
       if (inputs[0].storage_shape().Size()) {
         MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, KernelCompute<xpu, OP>);
       }
