@@ -53,7 +53,8 @@ class Executor(object):
     >>> c = 2 * a + b
     >>> texec = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
+    def __init__(self, handle, symbol, ctx,
+                 arg_arrays, grad_arrays, aux_arrays, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
         Parameters
@@ -68,9 +69,9 @@ class Executor(object):
         if not isinstance(handle, ExecutorHandle):
             raise TypeError("Handle type error")
         self.handle = handle
-        self.arg_arrays = []
-        self.grad_arrays = []
-        self.aux_arrays = []
+        self.arg_arrays = arg_arrays
+        self.grad_arrays = grad_arrays
+        self.aux_arrays = aux_arrays
         self.outputs = self._get_outputs()
         self._symbol = copy.deepcopy(symbol)
         self._arg_dict = None
