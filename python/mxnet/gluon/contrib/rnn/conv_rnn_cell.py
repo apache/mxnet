@@ -21,6 +21,7 @@
 
 from math import floor
 
+from ....base import numeric_types
 from ...rnn import HybridRecurrentCell
 
 
@@ -31,7 +32,7 @@ def _get_conv_out_size(dimensions, kernels, paddings, strides, dilations):
 
 class _BaseConvRNNCell(HybridRecurrentCell):
     """Abstract base class for convolutional RNNs"""
-    def __init__(self, hidden_channels, input_shape, activation,
+    def __init__(self, input_shape, hidden_channels, activation,
                  i2h_kernel, i2h_stride, i2h_pad, i2h_dilate,
                  h2h_kernel, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
@@ -51,16 +52,22 @@ class _BaseConvRNNCell(HybridRecurrentCell):
                    for spec in [i2h_kernel, i2h_stride, i2h_pad, i2h_dilate,
                                 h2h_kernel, h2h_dilate]), \
                "For {dims}D convolution, the convolution settings can only be either int " \
-               "or tuple of length {dims}".format(dims=dims)
+               "or list/tuple of length {dims}".format(dims=dims)
 
-        self._i2h_kernel = i2h_kernel if isinstance(i2h_kernel, tuple) else (i2h_kernel,) * dims
-        self._i2h_stride = i2h_stride if isinstance(i2h_stride, tuple) else (i2h_stride,) * dims
-        self._i2h_pad = i2h_pad if isinstance(i2h_pad, tuple) else (i2h_pad,) * dims
-        self._i2h_dilate = i2h_dilate if isinstance(i2h_dilate, tuple) else (i2h_dilate,) * dims
-        self._h2h_kernel = h2h_kernel if isinstance(h2h_kernel, tuple) else (h2h_kernel,) * dims
+        self._i2h_kernel = (i2h_kernel,) * dims if isinstance(i2h_kernel, numeric_types) \
+                           else i2h_kernel
+        self._i2h_stride = (i2h_stride,) * dims if isinstance(i2h_stride, numeric_types) \
+                           else i2h_stride
+        self._i2h_pad = (i2h_pad,) * dims if isinstance(i2h_pad, numeric_types) \
+                        else i2h_pad
+        self._i2h_dilate = (i2h_dilate,) * dims if isinstance(i2h_dilate, numeric_types) \
+                           else i2h_dilate
+        self._h2h_kernel = (h2h_kernel,) * dims if isinstance(h2h_kernel, numeric_types) \
+                           else h2h_kernel
         assert all(k % 2 == 1 for k in self._h2h_kernel), \
             "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
-        self._h2h_dilate = h2h_dilate if isinstance(h2h_dilate, tuple) else (h2h_dilate,) * dims
+        self._h2h_dilate = (h2h_dilate,) * dims if isinstance(h2h_dilate, numeric_types) \
+                           else h2h_dilate
         self._h2h_pad = tuple(d*(k-1)//2 for d, k in zip(self._h2h_dilate, self._h2h_kernel))
 
         self._channel_axis, \
@@ -164,13 +171,13 @@ class _BaseConvRNNCell(HybridRecurrentCell):
 
 
 class _ConvRNNCell(_BaseConvRNNCell):
-    def __init__(self, hidden_channels, input_shape, activation,
+    def __init__(self, input_shape, hidden_channels, activation,
                  i2h_kernel, i2h_stride, i2h_pad, i2h_dilate, h2h_kernel, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims, conv_layout, prefix, params):
-        super(_ConvRNNCell, self).__init__(hidden_channels=hidden_channels,
-                                           input_shape=input_shape,
+        super(_ConvRNNCell, self).__init__(input_shape=input_shape,
+                                           hidden_channels=hidden_channels,
                                            activation=activation,
                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -213,12 +220,12 @@ class Conv1DRNNCell(_ConvRNNCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCW' the shape should be (C, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -251,15 +258,15 @@ class Conv1DRNNCell(_ConvRNNCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3,), i2h_stride=(1,), i2h_pad=(1,), i2h_dilate=(1,),
                  h2h_kernel=(3,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCW',
                  prefix=None, params=None):
-        super(Conv1DRNNCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(Conv1DRNNCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -282,12 +289,12 @@ class Conv2DRNNCell(_ConvRNNCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCHW' the shape should be (C, H, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -320,15 +327,15 @@ class Conv2DRNNCell(_ConvRNNCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCHW',
                  prefix=None, params=None):
-        super(Conv2DRNNCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(Conv2DRNNCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -351,12 +358,12 @@ class Conv3DRNNCell(_ConvRNNCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCDHW' the shape should be (C, D, H, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -389,7 +396,7 @@ class Conv3DRNNCell(_ConvRNNCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3, 3, 3), i2h_stride=(1, 1, 1),
                  i2h_pad=(1, 1, 1), i2h_dilate=(1, 1, 1),
                  h2h_kernel=(3, 3, 3), h2h_dilate=(1, 1, 1),
@@ -397,8 +404,8 @@ class Conv3DRNNCell(_ConvRNNCell):
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCDHW',
                  prefix=None, params=None):
-        super(Conv3DRNNCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(Conv3DRNNCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -413,13 +420,13 @@ class Conv3DRNNCell(_ConvRNNCell):
 
 
 class _ConvLSTMCell(_BaseConvRNNCell):
-    def __init__(self, hidden_channels, input_shape, activation,
+    def __init__(self, input_shape, hidden_channels, activation,
                  i2h_kernel, i2h_stride, i2h_pad, i2h_dilate, h2h_kernel, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims, conv_layout, prefix, params):
-        super(_ConvLSTMCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(_ConvLSTMCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -481,12 +488,12 @@ class Conv1DLSTMCell(_ConvLSTMCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCW' the shape should be (C, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function used in c^\prime_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -519,15 +526,15 @@ class Conv1DLSTMCell(_ConvLSTMCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3,), i2h_stride=(1,), i2h_pad=(1,), i2h_dilate=(1,),
                  h2h_kernel=(3,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCW',
                  prefix=None, params=None):
-        super(Conv1DLSTMCell, self).__init__(hidden_channels=hidden_channels,
-                                             input_shape=input_shape,
+        super(Conv1DLSTMCell, self).__init__(input_shape=input_shape,
+                                             hidden_channels=hidden_channels,
                                              activation=activation,
                                              i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                              i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -558,12 +565,12 @@ class Conv2DLSTMCell(_ConvLSTMCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCHW' the shape should be (C, H, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function used in c^\prime_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -596,15 +603,15 @@ class Conv2DLSTMCell(_ConvLSTMCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCHW',
                  prefix=None, params=None):
-        super(Conv2DLSTMCell, self).__init__(hidden_channels=hidden_channels,
-                                             input_shape=input_shape,
+        super(Conv2DLSTMCell, self).__init__(input_shape=input_shape,
+                                             hidden_channels=hidden_channels,
                                              activation=activation,
                                              i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                              i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -635,12 +642,12 @@ class Conv3DLSTMCell(_ConvLSTMCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCDHW' the shape should be (C, D, H, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function used in c^\prime_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -673,7 +680,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3, 3, 3), i2h_stride=(1, 1, 1),
                  i2h_pad=(1, 1, 1), i2h_dilate=(1, 1, 1),
                  h2h_kernel=(3, 3, 3), h2h_dilate=(1, 1, 1),
@@ -681,8 +688,8 @@ class Conv3DLSTMCell(_ConvLSTMCell):
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCDHW',
                  prefix=None, params=None):
-        super(Conv3DLSTMCell, self).__init__(hidden_channels=hidden_channels,
-                                             input_shape=input_shape,
+        super(Conv3DLSTMCell, self).__init__(input_shape=input_shape,
+                                             hidden_channels=hidden_channels,
                                              activation=activation,
                                              i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                              i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -697,13 +704,13 @@ class Conv3DLSTMCell(_ConvLSTMCell):
 
 
 class _ConvGRUCell(_BaseConvRNNCell):
-    def __init__(self, hidden_channels, input_shape, activation,
+    def __init__(self, input_shape, hidden_channels, activation,
                  i2h_kernel, i2h_stride, i2h_pad, i2h_dilate, h2h_kernel, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims, conv_layout, prefix, params):
-        super(_ConvGRUCell, self).__init__(hidden_channels=hidden_channels,
-                                           input_shape=input_shape,
+        super(_ConvGRUCell, self).__init__(input_shape=input_shape,
+                                           hidden_channels=hidden_channels,
                                            activation=activation,
                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -766,12 +773,12 @@ class Conv1DGRUCell(_ConvGRUCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCW' the shape should be (C, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function used in n_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -804,15 +811,15 @@ class Conv1DGRUCell(_ConvGRUCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3,), i2h_stride=(1,), i2h_pad=(1,), i2h_dilate=(1,),
                  h2h_kernel=(3,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCW',
                  prefix=None, params=None):
-        super(Conv1DGRUCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(Conv1DGRUCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -838,12 +845,12 @@ class Conv2DGRUCell(_ConvGRUCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCHW' the shape should be (C, H, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function used in n_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -876,15 +883,15 @@ class Conv2DGRUCell(_ConvGRUCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
                  h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCHW',
                  prefix=None, params=None):
-        super(Conv2DGRUCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(Conv2DGRUCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -910,12 +917,12 @@ class Conv3DGRUCell(_ConvGRUCell):
 
     Parameters
     ----------
-    hidden_channels : int
-        Number of output channels.
     input_shape : tuple of int
         Input tensor shape at each time step for each sample, excluding dimension of the batch size
         and sequence length. Must be consistent with `conv_layout`.
         For example, for layout 'NCDHW' the shape should be (C, D, H, W).
+    hidden_channels : int
+        Number of output channels.
     activation : str or Block, default 'tanh'
         Type of activation function used in n_t.
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
@@ -948,7 +955,7 @@ class Conv3DGRUCell(_ConvGRUCell):
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, hidden_channels, input_shape, activation='tanh',
+    def __init__(self, input_shape, hidden_channels, activation='tanh',
                  i2h_kernel=(3, 3, 3), i2h_stride=(1, 1, 1),
                  i2h_pad=(1, 1, 1), i2h_dilate=(1, 1, 1),
                  h2h_kernel=(3, 3, 3), h2h_dilate=(1, 1, 1),
@@ -956,8 +963,8 @@ class Conv3DGRUCell(_ConvGRUCell):
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCDHW',
                  prefix=None, params=None):
-        super(Conv3DGRUCell, self).__init__(hidden_channels=hidden_channels,
-                                            input_shape=input_shape,
+        super(Conv3DGRUCell, self).__init__(input_shape=input_shape,
+                                            hidden_channels=hidden_channels,
                                             activation=activation,
                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,

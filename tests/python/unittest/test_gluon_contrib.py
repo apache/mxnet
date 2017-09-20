@@ -46,59 +46,50 @@ def check_rnn_forward(layer, inputs):
 
 
 def test_rnn_cells():
-    check_rnn_forward(contrib.rnn.Conv1DLSTMCell(10, input_shape=(5, 7)),
+    check_rnn_forward(contrib.rnn.Conv1DLSTMCell((5, 7), 10),
                       mx.nd.ones((8, 3, 5, 7)))
-    check_rnn_forward(contrib.rnn.Conv1DRNNCell(10, input_shape=(5, 7)),
+    check_rnn_forward(contrib.rnn.Conv1DRNNCell((5, 7), 10),
                       mx.nd.ones((8, 3, 5, 7)))
-    check_rnn_forward(contrib.rnn.Conv1DGRUCell(10, input_shape=(5, 7)),
+    check_rnn_forward(contrib.rnn.Conv1DGRUCell((5, 7), 10),
                       mx.nd.ones((8, 3, 5, 7)))
 
     net = mx.gluon.rnn.SequentialRNNCell()
-    net.add(contrib.rnn.Conv1DLSTMCell(10, input_shape=(5, 7)))
-    net.add(contrib.rnn.Conv1DRNNCell(11, input_shape=(10, 7)))
-    net.add(contrib.rnn.Conv1DGRUCell(12, input_shape=(11, 7)))
+    net.add(contrib.rnn.Conv1DLSTMCell((5, 7), 10))
+    net.add(contrib.rnn.Conv1DRNNCell((10, 7), 11))
+    net.add(contrib.rnn.Conv1DGRUCell((11, 7), 12))
     check_rnn_forward(net, mx.nd.ones((8, 3, 5, 7)))
 
 
 def test_convrnn():
-    cell = contrib.rnn.Conv1DRNNCell(hidden_channels=100, input_shape=(10, 50),
-                                   prefix='rnn_')
+    cell = contrib.rnn.Conv1DRNNCell((10, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 50))
 
-    cell = contrib.rnn.Conv2DRNNCell(hidden_channels=100, input_shape=(10, 20, 50),
-                                   prefix='rnn_')
+    cell = contrib.rnn.Conv2DRNNCell((10, 20, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 20, 50))
 
-    cell = contrib.rnn.Conv3DRNNCell(hidden_channels=100, input_shape=(10, 20, 30, 50),
-                                   prefix='rnn_')
+    cell = contrib.rnn.Conv3DRNNCell((10, 20, 30, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
 
 
 def test_convlstm():
-    cell = contrib.rnn.Conv1DLSTMCell(hidden_channels=100, input_shape=(10, 50),
-                                    prefix='rnn_')
+    cell = contrib.rnn.Conv1DLSTMCell((10, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 50))
 
-    cell = contrib.rnn.Conv2DLSTMCell(hidden_channels=100, input_shape=(10, 20, 50),
-                                    prefix='rnn_')
+    cell = contrib.rnn.Conv2DLSTMCell((10, 20, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 20, 50))
 
-    cell = contrib.rnn.Conv3DLSTMCell(hidden_channels=100, input_shape=(10, 20, 30, 50),
-                                    prefix='rnn_')
+    cell = contrib.rnn.Conv3DLSTMCell((10, 20, 30, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
 
 
 def test_convgru():
-    cell = contrib.rnn.Conv1DGRUCell(hidden_channels=100, input_shape=(10, 50),
-                                   prefix='rnn_')
+    cell = contrib.rnn.Conv1DGRUCell((10, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 50))
 
-    cell = contrib.rnn.Conv2DGRUCell(hidden_channels=100, input_shape=(10, 20, 50),
-                                   prefix='rnn_')
+    cell = contrib.rnn.Conv2DGRUCell((10, 20, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 20, 50))
 
-    cell = contrib.rnn.Conv3DGRUCell(hidden_channels=100, input_shape=(10, 20, 30, 50),
-                                   prefix='rnn_')
+    cell = contrib.rnn.Conv3DGRUCell((10, 20, 30, 50), 100, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 20, 30, 50))
 
 
