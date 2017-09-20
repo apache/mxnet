@@ -34,12 +34,12 @@
 namespace mxnet {
 namespace op {
 
+// infer storage function for _identity_attr_like_rhs op
 inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
                                            int* dispatch_type,
                                            std::vector<int> *in_attrs,
                                            std::vector<int> *out_attrs) {
-  // TODO(junwu): add ctx info into storage inference logic
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   auto& lhs_stype = in_attrs->at(0);
@@ -500,6 +500,7 @@ struct relu_grad {
 };
 }  // namespace kernel_launch_op
 
+/*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY(__name$)                      \
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
@@ -516,20 +517,23 @@ struct relu_grad {
 #define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
   .add_alias("_sparse_" #__name$)
 
-/*! \brief Unary compute */
-#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)              \
-  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
+/*! \brief Unary compute, with FComputeEx for csr and rsp available  */
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)                     \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                           \
   .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)  \
-  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
-#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$)              \
-  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)  \
-  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
+/*! \brief Unary compute, with FComputeEx for rsp available  */
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$)                         \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                           \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>) \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
-/*! \brief Unary compute, dense result */
+/*! \brief Unary compute, dense result.
+ *  FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
+ */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)

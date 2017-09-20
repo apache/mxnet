@@ -508,17 +508,27 @@ inline std::string operator_string(const nnvm::NodeAttrs& attrs,
   return result;
 }
 
+/*! \brief log storage fallback event
+ */
 inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
   thread_local std::unordered_set<std::string> warning_printed;
-  // TODO(haibin) use env var for printing
-  std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-  if (warning_printed.find(warning) == warning_printed.end()) {
-    LOG(INFO) << "\nstorage fallback detected:\n" << warning;
-    warning_printed.insert(warning);
+  thread_local bool log_verbose = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK_LOGGING", true);
+  if (log_verbose) {
+    std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+    if (warning_printed.find(warning) == warning_printed.end()) {
+      LOG(INFO) << "\nStorage fallback detected:\n" << warning
+                << "\nThe operator with default storage type will be dispatched for execution. "
+                << "You're seeing this warning message because the operator above is unable to "
+                << "process the given ndarrays with specified storage types and parameter. "
+                << "Temporary dense ndarrays are generated in order to execute the operator. "
+                << "You can set environment variable MXNET_EXEC_STORAGE_FALLBACK_LOGGING "
+                << "to 0 to suppress the warnings.";
+      warning_printed.insert(warning);
+    }
   }
 }
 

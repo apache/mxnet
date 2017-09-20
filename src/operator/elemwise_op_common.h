@@ -92,7 +92,8 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), n_in);
   CHECK_EQ(out_attrs->size(), n_out);
-  return ElemwiseStorageAttr<cpu_only, rsp, csr>(attrs, dev_mask, dispatch_type, in_attrs, out_attrs);
+  return ElemwiseStorageAttr<cpu_only, rsp, csr>(attrs, dev_mask, dispatch_type,
+                                                 in_attrs, out_attrs);
 }
 
 template<typename AttrType, bool (*is_none)(const AttrType&),

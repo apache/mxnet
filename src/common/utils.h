@@ -88,13 +88,9 @@ inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
 /*
  * \brief cast the NDArrays in `src` and store the result in NDArrays in `dst`.
  *        This is only used for storage fallback in executor.
- *        When storage_fallback is false, and `MXNET_EXEC_STORAGE_FALLBACK` == 0,
- *        storage fallback is disallowed.
  * \param src list of source NDArray to cast
  * \param dst list of destionation NDArray which hold the result of cast_storage operation
  * \param ctx operator context for cast_storage operation
- * \param storage_fallback whether storage_fallback is allowed. When set to false,
- *        its value depends on `MXNET_EXEC_STORAGE_FALLBACK`.
  */
 template <typename xpu>
 inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
@@ -107,7 +103,9 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
   }
 }
 
-// TODO doc
+/*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.
+ *         false is returned for empty inputs.
+ */
 inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
                                 const NDArrayStorageType stype) {
   if (!vstorage.empty()) {
@@ -119,6 +117,9 @@ inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
   return false;
 }
 
+/*! \brief returns true if the storage types of arrays in `ndarrays`
+ *         are the same as target `stype`. false is returned for empty inputs.
+ */
 inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
                                 const NDArrayStorageType stype) {
   if (!ndarrays.empty()) {

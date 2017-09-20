@@ -286,9 +286,6 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// The default storage type inference function.
-// If any input/output has non-default storage, then kDispatchFComputeFallback is inferred.
-// Otherwise, kDispatchFCompute is inferred.
 inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
                                int* dispatch_type,
