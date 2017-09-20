@@ -304,13 +304,13 @@ class ThreadedEngine : public Engine {
    */
   static int DefaultOMPThreadsPerWorker() {
 #ifdef _OPENMP
-    // TODO(cjolivier01): Programatically obtain hyperthreading count (if supported)
+    // If environment variable is set and it's not empty, then use omp_get_max_threads()
+    // (Check environment directly, since OMP_NUM_THREADS mnay have odd formatting (i.e. 3, 2"))
     // Taking max including omp_get_max_threads() in case this implementation of OMP accounts for
     // hyperthreading
-    const int env_max_threads = dmlc::GetEnv("OMP_NUM_THREADS", -1);
-    const int max_threads = env_max_threads == -1
-                            ? std::max(omp_get_max_threads(), omp_get_num_procs())
-                            : env_max_threads;
+    const char *s = getenv("OMP_NUM_THREADS");
+    const int max_threads = s && *s ? omp_get_max_threads() : std::max(omp_get_max_threads(),
+                                                                       omp_get_num_procs());
     return max_threads;
 #else
     return 0;
