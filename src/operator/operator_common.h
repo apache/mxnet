@@ -206,6 +206,24 @@ inline bool type_assign(int *y, const int& x) {
   }
 
 /*!
+ * \brief macro assign storage type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred storage type
+ */
+#define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
+  {                                                                         \
+    if (!type_assign(&(type_array)[index], type)) {                         \
+      std::ostringstream os;                                                \
+      os << "Storage type inconsistent, Provided="                          \
+         << common::stype_string((type_array)[index]) << ','                \
+         << " inferred storage type=" << common::stype_string(type);        \
+      throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
+    }                                                                       \
+  }
+
+/*!
  * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
  *  Use macro so we can see the error file more clearly
  * \param type_array the type array to store the result
@@ -219,7 +237,7 @@ inline bool type_assign(int *y, const int& x) {
       os << "Dispatch type inconsistent, Provided="                         \
          << common::dispatch_type_string((type_array)[index]) << ','        \
          << " inferred type=" << common::dispatch_type_string(type);        \
-      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
+      throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
 

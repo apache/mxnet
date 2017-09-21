@@ -538,7 +538,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       data_entry_[eid] = aux_states[aux_top];
       arg_shapes.push_back(aux_states[aux_top].shape());
       arg_dtypes.push_back(aux_states[aux_top].dtype());
-      arg_stypes.push_back(aux_states[aux_top].storage_type());
+      arg_stypes[eid] = aux_states[aux_top].storage_type();
       aux_state_map_.emplace(arg_name, aux_states[aux_top]);
       ++aux_top;
     } else {
@@ -575,7 +575,8 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
 
-  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(arg_stypes));
+  g = InferStorageType(std::move(g), StorageTypeVector(), "");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));

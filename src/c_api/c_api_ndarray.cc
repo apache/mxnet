@@ -287,6 +287,24 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
     CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
   }
 
+  // append extra resource requests for storage fallback at the end
+  if (dispatch_type == kDispatchFComputeFallback) {
+    // resource for inputs
+    for (const auto& nd : ndinputs) {
+      if (nd.storage_type() != kDefaultStorage) {
+        requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+        write_vars.push_back(requested.back().var);
+      }
+    }
+    // resource for outputs
+    for (const auto& nd : ndoutputs) {
+      if (nd.storage_type() != kDefaultStorage) {
+        requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+        write_vars.push_back(requested.back().var);
+      }
+    }
+  }
+
   for (auto& i : ndinputs) {
     read_vars.push_back(i.var());
   }
@@ -339,36 +357,26 @@ void PushFCompute(const FCompute& fn,
       std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
-      // populate input blobs and output blobs
-      SetupDefaultBlobs(ndinputs, &input_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
-      SetupDefaultBlobs(ndoutputs, &output_blobs, &post_temp_dst, &post_temp_src);
-      // add mutable inputs to post temp list
-      for (const auto idx : mutate_idx) {
-        auto map_iter = in_temp_idx_map.find(idx);
-        if (map_iter != in_temp_idx_map.end()) {
-          post_temp_src.push_back(pre_temp_dst[map_iter->second]);
-          post_temp_dst.push_back(ndinputs[idx]);
-        }
-      }
-      OpContext opctx{is_train, rctx,
-                      engine::CallbackOnComplete(),
-                      requested};
+      // pre-fcompute and post-fcompute storage fallback contexts
+      std::vector<OpContext> pre_vctx, post_vctx;
+      // setup blobs
+      SetupDefaultBlobs(ndinputs, ndoutputs, &input_blobs, &output_blobs,
+                        &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
+                        &in_temp_idx_map, mutate_idx);
+      // setup contexts
+      OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+      bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
+      SetupOpContext(pre_temp_src.size(), post_temp_src.size(),
+                     &opctx, &pre_vctx, &post_vctx);
+      // setup reqs
       std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-      if (ctx.dev_mask() == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-        CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
-        fn(attrs, opctx, input_blobs, req, output_blobs);
-        // cast to original storage type, if necessary
-        CastNonDefaultStorage<gpu>(post_temp_src, post_temp_dst, opctx);
+      // pre-fcompute fallback
+      CastNonDefaultStorage(pre_temp_src, pre_temp_dst, pre_vctx, is_gpu);
+      fn(attrs, opctx, input_blobs, req, output_blobs);
+      // post-fcompute fallback, cast to original storage type
+      CastNonDefaultStorage(post_temp_src, post_temp_dst, post_vctx, is_gpu);
+      if (is_gpu) {
         rctx.get_stream<gpu>()->Wait();
-#else
-        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-      } else {
-        CastNonDefaultStorage<cpu>(pre_temp_src, pre_temp_dst, opctx);
-        fn(attrs, opctx, input_blobs, req, output_blobs);
-        // cast to original storage type, if necessary
-        CastNonDefaultStorage<cpu>(post_temp_src, post_temp_dst, opctx);
       }
       on_complete();
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -456,39 +464,31 @@ void PushOperator(const OpStatePtr& state,
       [state, fcompute, ndinputs, ndoutputs, requested, is_train, exec_type, mutate_idx](
           RunContext rctx,
           engine::CallbackOnComplete on_complete) {
-        OpContext opctx{is_train, rctx, on_complete, requested};
-
         std::vector<TBlob> input_blobs, output_blobs;
         // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
         std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+        // pre-fcompute and post-fcompute storage fallback contexts
+        std::vector<OpContext> pre_vctx, post_vctx;
         // populate input blobs and output blobs
-        SetupDefaultBlobs(ndinputs, &input_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
-        SetupDefaultBlobs(ndoutputs, &output_blobs, &post_temp_dst, &post_temp_src);
-        // add mutable inputs to post temp list
-        for (const auto idx : mutate_idx) {
-          if (in_temp_idx_map.find(idx) != in_temp_idx_map.end()) {
-            post_temp_src.push_back(pre_temp_dst[in_temp_idx_map[idx]]);
-            post_temp_dst.push_back(ndinputs[idx]);
-          }
-        }
+        SetupDefaultBlobs(ndinputs, ndoutputs, &input_blobs, &output_blobs,
+                          &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
+                          &in_temp_idx_map, mutate_idx);
+        // setup contexts
+        OpContext opctx{is_train, rctx, on_complete, requested};
+        bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
+        SetupOpContext(pre_temp_src.size(), post_temp_src.size(),
+                       &opctx, &pre_vctx, &post_vctx);
+        // setup reqs
         std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
-        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-          CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
-          fcompute(state, opctx, input_blobs, req, output_blobs);
-          CastNonDefaultStorage<gpu>(post_temp_src, post_temp_dst, opctx);
-#else
-          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-        } else {
-          CastNonDefaultStorage<cpu>(pre_temp_src, pre_temp_dst, opctx);
-          fcompute(state, opctx, input_blobs, req, output_blobs);
-          CastNonDefaultStorage<cpu>(post_temp_src, post_temp_dst, opctx);
-        }
+        // pre-fcompute fallback
+        CastNonDefaultStorage(pre_temp_src, pre_temp_dst, pre_vctx, is_gpu);
+        fcompute(state, opctx, input_blobs, req, output_blobs);
+        // post-fcompute fallback, cast to original storage type, if necessary
+        CastNonDefaultStorage(post_temp_src, post_temp_dst, post_vctx, is_gpu);
         if (exec_type == ExecType::kSync) {
-          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+          if (is_gpu) {
             rctx.get_stream<gpu>()->Wait();
           }
           on_complete();

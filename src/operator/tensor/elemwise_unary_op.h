@@ -34,7 +34,7 @@
 namespace mxnet {
 namespace op {
 
-// infer storage function for _identity_attr_like_rhs op
+// infer storage function for _identity_with_attr_like_rhs op
 inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
                                            int* dispatch_type,
@@ -48,7 +48,7 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
 
   CHECK_NE(rhs_stype, kUndefinedStorage);
-  TYPE_ASSIGN_CHECK(&out_stype, 0, rhs_stype);
+  type_assign(&out_stype, rhs_stype);
   type_assign(&lhs_stype, rhs_stype);
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
       out_stype == kDefaultStorage) {
@@ -57,8 +57,8 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_type, kDispatchFCompute);
   }
   if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-      (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
-    // rsp, rsp -> rsp, or csr, csr -> csr
+      (lhs_stype == out_stype)) {
+    // rsp, _ -> rsp, or csr, _ -> csr
     dispatched = dispatch_on_storage(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_type, kDispatchFComputeEx);
   }
@@ -397,11 +397,11 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu>
-  static void IdentityAttrLikeRhsComputeEx(const nnvm::NodeAttrs& attrs,
-                                           const OpContext& ctx,
-                                           const std::vector<NDArray>& inputs,
-                                           const std::vector<OpReqType>& req,
-                                           const std::vector<NDArray>& outputs) {
+  static void IdentityComputeFirstItemEx(const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
@@ -410,8 +410,8 @@ class UnaryOp : public OpBase {
     const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-        (lhs_stype == out_stype) && (rhs_stype == out_stype)) {
-      // csr, csr -> csr, or rsp, rsp -> rsp
+        (lhs_stype == out_stype)) {
+      // csr, _ -> csr, or rsp, _ -> rsp
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     } else {
       LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);

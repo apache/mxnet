@@ -56,7 +56,7 @@ NNVM_REGISTER_OP(make_loss)
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityAttrLikeRhsComputeEx<gpu>);
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeFirstItemEx<gpu>);
 
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);

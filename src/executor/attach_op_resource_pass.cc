@@ -35,35 +35,56 @@ Graph AttachOpResources(Graph g) {
   auto& op_execs = nnvm::get<OpExecVector>(*g.attrs.at("op_execs"));
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& vdispatch = g.GetAttr<DispatchTypeVector>("dispatch_type");
+  const auto& vstype = g.GetAttr<StorageTypeVector>("storage_type");
   const auto& idx = g.indexed_graph();
   // Use global resource pool for each executor for now.
   std::map<Context, Resource> cached_temp;
   // Resource allocation
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
+    const auto dispatch_type = vdispatch[nid];
     if (inode.source->is_variable()) continue;
-    if (fresource.count(inode.source->op()) == 0) continue;
-    auto reqs = fresource[inode.source->op()](inode.source->attrs);
+    const Context &ctx = vctx[nid];
     auto& requested = op_execs[nid]->op_ctx.requested;
-    requested.clear();
-    if (vdispatch[nid] == kDispatchFComputeFallback) {
-      reqs.push_back(ResourceRequest::kTempSpace);
-    }
-    // Get the resource of temporal space.
-    for (const ResourceRequest& req : reqs) {
-      const Context &ctx = vctx[nid];
-      if (req.type == ResourceRequest::kTempSpace) {
-        if (cached_temp.count(ctx) != 0) {
-          requested.push_back(cached_temp.at(ctx));
+    if (fresource.count(inode.source->op()) != 0) {
+      auto reqs = fresource[inode.source->op()](inode.source->attrs);
+      requested.clear();
+      // Get the resource of temporal space.
+      for (const ResourceRequest& req : reqs) {
+        if (req.type == ResourceRequest::kTempSpace) {
+          if (cached_temp.count(ctx) != 0) {
+            requested.push_back(cached_temp.at(ctx));
+          } else {
+            Resource r = ResourceManager::Get()->Request(ctx, req);
+            requested.push_back(r);
+            cached_temp[ctx] = r;
+          }
+        } else if (req.type == ResourceRequest::kRandom) {
+          requested.push_back(ResourceManager::Get()->Request(ctx, req));
         } else {
-          Resource r = ResourceManager::Get()->Request(ctx, req);
-          requested.push_back(r);
-          cached_temp[ctx] = r;
+          LOG(FATAL) << "resource type not yet supported";
         }
-      } else if (req.type == ResourceRequest::kRandom) {
-        requested.push_back(ResourceManager::Get()->Request(ctx, req));
-      } else {
-        LOG(FATAL) << "resource type not yet supported";
+      }
+      CHECK_NE(vdispatch[nid], kDispatchUndefined);
+    }
+    // extra resource requests for storage fallback
+    if (vdispatch[nid] == kDispatchFComputeFallback) {
+      auto req = ResourceRequest::kTempSpace;
+      // resource for inputs
+      for (const auto& e : inode.inputs) {
+        const auto eid = idx.entry_id(e);
+        CHECK_NE(vstype[eid], kUndefinedStorage);
+        if (vstype[eid] != kDefaultStorage) {
+          requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        }
+      }
+      // resource for outputs
+      for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+        uint32_t eid = idx.entry_id(nid, index);
+        CHECK_NE(vstype[eid], kUndefinedStorage);
+        if (vstype[eid] != kDefaultStorage) {
+          requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        }
       }
     }
   }

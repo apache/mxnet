@@ -62,46 +62,25 @@ class StorageFallbackOpExecutor : public OpExecutor {
       pre_temp_src_.clear(); pre_temp_dst_.clear();
       post_temp_src_.clear(); post_temp_dst_.clear();
       in_temp_idx_map_.clear();
-      SetupDefaultBlobs(in_array, &in_data_, &pre_temp_src_, &pre_temp_dst_, &in_temp_idx_map_);
-      SetupDefaultBlobs(out_array, &out_data_, &post_temp_dst_, &post_temp_src_);
-      for (const auto idx : mutate_idx_) {
-        auto map_iter = in_temp_idx_map_.find(idx);
-        if (map_iter != in_temp_idx_map_.end()) {
-          post_temp_src_.push_back(pre_temp_dst_[map_iter->second]);
-          post_temp_dst_.push_back(in_array[idx]);
-        }
-      }
+      SetupDefaultBlobs(in_array, out_array, &in_data_, &out_data_,
+                        &pre_temp_src_, &pre_temp_dst_,
+                        &post_temp_src_, &post_temp_dst_,
+                        &in_temp_idx_map_, mutate_idx_);
+      SetupOpContext(pre_temp_src_.size(), post_temp_src_.size(),
+                     &op_ctx, &pre_vctx_, &post_vctx_);
       init_ = true;
     }
   }
 
   // storage fallback before fcompute is launched
   void PreFCompute(bool is_gpu) {
-    using namespace common;
     InitBlobs();
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      CastNonDefaultStorage<gpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-    } else {
-      CastNonDefaultStorage<cpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
-    }
+    common::CastNonDefaultStorage(pre_temp_src_, pre_temp_dst_, pre_vctx_, is_gpu);
   }
 
   // storage fallback after fcompute is completed
   void PostFCompute(bool is_gpu) {
-    using namespace common;
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      CastNonDefaultStorage<gpu>(post_temp_src_, post_temp_dst_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-    } else {
-      CastNonDefaultStorage<cpu>(post_temp_src_, post_temp_dst_, op_ctx);
-    }
+    common::CastNonDefaultStorage(post_temp_src_, post_temp_dst_, post_vctx_, is_gpu);
   }
 
   // default storage tensor blobs for fcompute
