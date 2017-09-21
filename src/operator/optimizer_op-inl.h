@@ -631,8 +631,8 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   float lr;
   float beta1;
   float beta2;
-  float rho;
   float epsilon;
+  float rho;
   float wd;
   float rescale_grad;
   float clip_gradient;
