@@ -1184,7 +1184,7 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
-  const auto& dispatch_types = graph_.GetAttr<DispatchTypeVector>("dispatch_type");
+  const auto& dispatch_modes = graph_.GetAttr<DispatchModeVector>("dispatch_mode");
 
 
   op_nodes_.resize(idx.num_nodes());
@@ -1196,7 +1196,7 @@ void GraphExecutor::InitCachedOps() {
         LOG(INFO) << "node " << nid << " var";
       } else {
         LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
-                  << ": " << common::dispatch_type_string(dispatch_types[nid]);
+                  << ": " << common::dispatch_mode_string(dispatch_modes[nid]);
         const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
         auto exec = op_execs[nid];
         for (const auto& e : inode.inputs) {

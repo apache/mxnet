@@ -44,19 +44,19 @@ namespace mxnet {
 using StorageTypeVector = std::vector<int>;
 
 /*!
-+ * \brief The result holder of dispatch type of each Node in the graph.
-+ * \note Stored under graph.attrs["dispatch_type"], provided by Pass "InferStorageType"
++ * \brief The result holder of dispatch mode of each Node in the graph.
++ * \note Stored under graph.attrs["dispatch_mode"], provided by Pass "InferStorageType"
 + *
 + * \code
 + *  Graph g = ApplyPass(src_graph, "InferStorageType");
-+ *  const DispatchTypeVector& dispatch_types = g.GetAttr<DispatchTypeVector>("dispatch_type");
-+ *  // get dispatch type by entry node id
-+ *  int node_type = dispatch_types[nid];
++ *  const DispatchModeVector& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
++ *  // get dispatch mode by entry node id
++ *  int node_type = dispatch_modes[nid];
 + * \endcode
 + *
 + * \sa FInferStorageType
 + */
-using DispatchTypeVector = std::vector<int>;
+using DispatchModeVector = std::vector<int>;
 
 }  // namespace mxnet
 

@@ -173,12 +173,12 @@ Graph InferStorageType(Graph graph,
 
 /*! \brief The default storage type inference function, which assigns all undefined
  *         storage types to kDefaultStorage. If all of input and output storage types
- *         are kDefaultStorage, kDispatchFCompute is assigned to dispatch_type. Otherwise,
- *         kDispatchFComputeFallback is assigned to dispatch_type.
+ *         are kDefaultStorage, kDispatchFCompute is assigned to dispatch_mode. Otherwise,
+ *         kDispatchFComputeFallback is assigned to dispatch_mode.
  */
 bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                         const int dev_mask,
-                        int* dispatch_type,
+                        int* dispatch_mode,
                         std::vector<int> *iattr,
                         std::vector<int> *oattr);
 

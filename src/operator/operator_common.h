@@ -246,8 +246,8 @@ inline bool type_assign(int *y, const int& x) {
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
       os << "Dispatch type inconsistent, Provided="                         \
-         << common::dispatch_type_string((type_array)[index]) << ','        \
-         << " inferred type=" << common::dispatch_type_string(type);        \
+         << common::dispatch_mode_string((type_array)[index]) << ','        \
+         << " inferred type=" << common::dispatch_mode_string(type);        \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -284,12 +284,12 @@ inline bool type_assign(int *y, const int& x) {
 #endif
 
 /*! \brief assign stype to target_stype, if successful,
- *         assign dispatch_type to target_dispatch
+ *         assign dispatch_mode to target_dispatch
  */
 inline bool dispatch_on_storage(int* stype,
                                 const NDArrayStorageType target_stype,
                                 int* dispatch,
-                                const DispatchType target_dispatch) {
+                                const DispatchMode target_dispatch) {
   if (type_assign(stype, target_stype)) {
     DISPATCH_TYPE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
     return true;
@@ -298,12 +298,12 @@ inline bool dispatch_on_storage(int* stype,
 }
 
 /*! \brief assign the stype vector to target_stype, if successful,
- *         assign dispatch_type to target_dispatch
+ *         assign dispatch_mode to target_dispatch
  */
 inline bool dispatch_on_storage(StorageTypeVector* stypes,
                                 const NDArrayStorageType target_stype,
                                 int* dispatch,
-                                const DispatchType target_dispatch) {
+                                const DispatchMode target_dispatch) {
   CHECK_GT(stypes->size(), 0);
   bool success = true;
   for (size_t i = 0; i < stypes->size(); i++) {
@@ -317,7 +317,7 @@ inline bool dispatch_on_storage(StorageTypeVector* stypes,
   return success;
 }
 
-/*! \brief update the stype vector to default storage and dispatch_type to fallback
+/*! \brief update the stype vector to default storage and dispatch_mode to fallback
  */
 inline void dispatch_fallback(StorageTypeVector* stypes, int* dispatch) {
   for (auto& stype : *stypes) {

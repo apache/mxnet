@@ -71,7 +71,7 @@ inline bool SparseRetainOpType(const nnvm::NodeAttrs& attrs,
 
 inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                 const int dev_mask,
-                                                int* dispatch_type,
+                                                int* dispatch_mode,
                                                 std::vector<int> *in_attrs,
                                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -83,7 +83,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && arr_stype == kRowSparseStorage && idx_stype == kDefaultStorage) {
     // rsp, dns -> rsp
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched) {
     LOG(FATAL) << "Not implemented: "
@@ -94,7 +94,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  const int dev_mask,
-                                                 int* dispatch_type,
+                                                 int* dispatch_mode,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -107,7 +107,7 @@ inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && ograd_stype == kDefaultStorage && idx_stype == kDefaultStorage) {
     if (type_assign(&arr_grad_stype, kRowSparseStorage) &&
         type_assign(&idx_grad_stype, kDefaultStorage)) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }

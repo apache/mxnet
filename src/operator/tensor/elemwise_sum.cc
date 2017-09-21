@@ -73,12 +73,12 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
 
 bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
-                                           int* dispatch_type,
+                                           int* dispatch_mode,
                                            std::vector<int> *in_attrs,
                                            std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
-  return ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_type,
+  return ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
                                                  in_attrs, out_attrs);
 }
 

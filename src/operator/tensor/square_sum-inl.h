@@ -44,7 +44,7 @@ namespace op {
 // infer storage function for _square_sum operator on cpu
 inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                              const int dev_mask,
-                                             int* dispatch_type,
+                                             int* dispatch_mode,
                                              std::vector<int>* in_attrs,
                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -58,12 +58,12 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     if (!dispatched && in_stype == kRowSparseStorage && param.axis[0] == 1 && param.keepdims) {
       // sum per row and keep dims
       dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                       dispatch_type, kDispatchFComputeEx);
+                                       dispatch_mode, kDispatchFComputeEx);
     }
     if (!dispatched && in_stype == kRowSparseStorage &&
         (param.axis[0] == 0 || (param.axis[0] == 1 && !param.keepdims))) {
         dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                         dispatch_type, kDispatchFComputeEx);
+                                         dispatch_mode, kDispatchFComputeEx);
     }
   }
   if (!dispatched) {
@@ -77,7 +77,7 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 // infer storage function for _backward_square_sum operator on cpu
 inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                               const int dev_mask,
-                                              int* dispatch_type,
+                                              int* dispatch_mode,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -91,7 +91,7 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     if (!dispatched && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
         in_stype == kRowSparseStorage) {
       dispatched = dispatch_on_storage(&grad_stype, kRowSparseStorage,
-                                       dispatch_type, kDispatchFComputeEx);
+                                       dispatch_mode, kDispatchFComputeEx);
     }
   }
   if (!dispatched) {

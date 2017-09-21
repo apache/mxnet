@@ -199,7 +199,7 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
 
 inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
-                                       int* dispatch_type,
+                                       int* dispatch_mode,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -215,22 +215,22 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose &&
       (rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage)) {
     // csr.T, rsp/dns -> rsp
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
       !param.transpose_a && !param.transpose_b) {
     // csr, rsp/dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -238,7 +238,7 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 
 inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                         const int dev_mask,
-                                        int* dispatch_type,
+                                        int* dispatch_mode,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
@@ -255,7 +255,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
       ograd_stype == kDefaultStorage) {
     if (type_assign(&lhs_grad_stype, kDefaultStorage) &&
         type_assign(&rhs_grad_stype, kDefaultStorage)) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFCompute);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFCompute);
       dispatched = true;
     }
   }
@@ -264,7 +264,7 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     // backward: csr.T, rsp/dns -> rsp, dns.T, rsp/dns -> dns
     if (type_assign(&rhs_grad_stype, kRowSparseStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
@@ -273,12 +273,12 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     // backward: csr, rsp/dns -> dns, dns, rsp/dns -> dns
     if (type_assign(&rhs_grad_stype, kDefaultStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

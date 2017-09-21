@@ -153,13 +153,13 @@ void SetContext(Context* p_ctx,
 #endif  // MXNET_USE_CUDA
 }
 
-// Set the shape, dtype, storage type and dispatch type via the attribute inference functions
+// Set the shape, dtype, storage type and dispatch mode via the attribute inference functions
 void SetShapeType(const nnvm::Op* op,
                   const nnvm::NodeAttrs& attrs,
                   const Context& ctx,
                   const std::vector<NDArray>& ndinputs,
                   std::vector<NDArray>* p_ndoutputs,
-                  int* dispatch_type) {
+                  int* dispatch_mode) {
   std::vector<NDArray>& ndoutputs = *p_ndoutputs;
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
@@ -216,16 +216,16 @@ void SetShapeType(const nnvm::Op* op,
     out_storage_types.push_back(i.storage_type());
   }
   if (inferstorage.count(op)) {
-    CHECK(inferstorage[op](attrs, ctx.dev_mask(), dispatch_type,
+    CHECK(inferstorage[op](attrs, ctx.dev_mask(), dispatch_mode,
                            &in_storage_types, &out_storage_types));
   } else {
     // if infer storage attr is not present, apply the default infer storage function
-    bool success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_type,
+    bool success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
                                             &in_storage_types, &out_storage_types);
     CHECK(success);
   }
   CHECK_EQ(out_storage_types.size(), ndoutputs.size());
-  CHECK_NE(*dispatch_type, kDispatchUndefined);
+  CHECK_NE(*dispatch_mode, kDispatchUndefined);
 
   for (size_t i = 0; i < ndoutputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
@@ -257,7 +257,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
                    const Context& ctx,
                    const std::vector<NDArray>& ndinputs,
                    const std::vector<NDArray>& ndoutputs,
-                   const int dispatch_type) {
+                   const int dispatch_mode) {
   static auto& mutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& tmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
 
@@ -274,7 +274,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
     int ntmp = 0;
     auto requests = tmp_resource[op](attrs);
     // extra resource request for storage fallback
-    if (dispatch_type == kDispatchFComputeFallback) {
+    if (dispatch_mode == kDispatchFComputeFallback) {
       requests.push_back(ResourceRequest::kTempSpace);
     }
     for (const auto& req : requests) {
@@ -293,7 +293,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
   }
 
   // append extra resource requests for storage fallback at the end
-  if (dispatch_type == kDispatchFComputeFallback) {
+  if (dispatch_mode == kDispatchFComputeFallback) {
     auto req = ResourceRequest::kTempSpace;
     // resources for inputs
     for (const auto& nd : ndinputs) {
@@ -430,7 +430,7 @@ void PushOperator(const OpStatePtr& state,
                   const std::vector<NDArray>& ndinputs,
                   const std::vector<NDArray>& ndoutputs,
                   const std::vector<uint32_t>& mutate_idx,
-                  const int dispatch_type) {
+                  const int dispatch_mode) {
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
@@ -441,8 +441,8 @@ void PushOperator(const OpStatePtr& state,
   }
 
   auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
-  // FStatefulComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
-  if (fcompute_ex != nullptr && dispatch_type == kDispatchFComputeEx) {
+  // FStatefulComputeEx is dispatched only when dispatch_mode is kDispatchFComputeEx
+  if (fcompute_ex != nullptr && dispatch_mode == kDispatchFComputeEx) {
     const auto& run = [state, fcompute_ex, ndinputs, ndoutputs, requested, is_train, exec_type](
           RunContext rctx,
           engine::CallbackOnComplete on_complete) {
@@ -527,20 +527,20 @@ void ImperativeInvokeImpl(const Context& default_ctx,
   } else {
     // TODO(piiswrong): infer ctx
     Context ctx;
-    int dispatch_type = -1;
+    int dispatch_mode = -1;
     SetContext(&ctx, attrs, ndinputs, ndoutputs, default_ctx);
-    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs, &dispatch_type);
+    SetShapeType(op, attrs, ctx, ndinputs, &ndoutputs, &dispatch_mode);
 
     std::vector<engine::VarHandle> read_vars, write_vars;
     std::vector<Resource> requested;
     std::vector<uint32_t> mutate_idx;
     SetDependency(&read_vars, &write_vars, &requested, &mutate_idx,
-        op, attrs, ctx, ndinputs, ndoutputs, dispatch_type);
+        op, attrs, ctx, ndinputs, ndoutputs, dispatch_mode);
 
     FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
     FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
-    // FComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
-    if (fn_ex && dispatch_type == kDispatchFComputeEx) {
+    // FComputeEx is dispatched only when dispatch_mode is kDispatchFComputeEx
+    if (fn_ex && dispatch_mode == kDispatchFComputeEx) {
       PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
           requested, ndinputs, ndoutputs);
       if (AutogradRuntime::Get()->IsRecording()) {
@@ -561,7 +561,7 @@ void ImperativeInvokeImpl(const Context& default_ctx,
           createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
       write_vars.push_back(state.get_var());
       PushOperator(state, op, attrs, ctx, read_vars, write_vars,
-          requested, ndinputs, ndoutputs, mutate_idx, dispatch_type);
+          requested, ndinputs, ndoutputs, mutate_idx, dispatch_mode);
       if (AutogradRuntime::Get()->IsRecording()) {
         AutogradRuntime::Get()->RecordOp(
             std::move(attrs), &ndinputs, &ndoutputs, state,

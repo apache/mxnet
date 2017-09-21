@@ -49,7 +49,7 @@ namespace op {
 template<bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
-                                int* dispatch_type,
+                                int* dispatch_mode,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   using namespace common;
@@ -59,20 +59,20 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns ... -> dns
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, ... -> rsp
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
-                                     dispatch_type, dispatch_ex);
+                                     dispatch_mode, dispatch_ex);
   }
   if (!dispatched && csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
     // csr, csr, ... -> csr
     dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
-                                     dispatch_type, dispatch_ex);
+                                     dispatch_mode, dispatch_ex);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -89,12 +89,12 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
 template<int n_in, int n_out, bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
-                                int* dispatch_type,
+                                int* dispatch_mode,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), n_in);
   CHECK_EQ(out_attrs->size(), n_out);
-  return ElemwiseStorageAttr<cpu_only, rsp, csr>(attrs, dev_mask, dispatch_type,
+  return ElemwiseStorageAttr<cpu_only, rsp, csr>(attrs, dev_mask, dispatch_mode,
                                                  in_attrs, out_attrs);
 }
 

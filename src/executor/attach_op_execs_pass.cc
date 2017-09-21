@@ -241,7 +241,7 @@ Graph AttachOpExecs(Graph g) {
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& saved_states = g.GetAttr<
     std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
-  const auto& dispatch_types = g.GetAttr<DispatchTypeVector>("dispatch_type");
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   // get the graph
   const auto& idx = g.indexed_graph();
@@ -260,7 +260,7 @@ Graph AttachOpExecs(Graph g) {
     if (fexec_type.count(op)) {
       exec_type = fexec_type[op](inode.source->attrs);
     }
-    CHECK_NE(dispatch_types[i], kDispatchUndefined);
+    CHECK_NE(dispatch_modes[i], kDispatchUndefined);
     if (fcreate_op_state.count(op)) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
@@ -278,8 +278,8 @@ Graph AttachOpExecs(Graph g) {
       }
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
-      // FStatefulComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
-      if (fcompute_ex != nullptr && dispatch_types[i] == kDispatchFComputeEx) {
+      // FStatefulComputeEx is dispatched only when dispatch_mode is kDispatchFComputeEx
+      if (fcompute_ex != nullptr && dispatch_modes[i] == kDispatchFComputeEx) {
         ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
       } else {
         FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
@@ -297,8 +297,8 @@ Graph AttachOpExecs(Graph g) {
       CHECK(ret[fwd_id] != nullptr);
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
-      // FStatefulComputeEx is dispatched only when dispatch_type is kDispatchFComputeEx
-      if (fcompute_ex != nullptr && dispatch_types[i] == kDispatchFComputeEx) {
+      // FStatefulComputeEx is dispatched only when dispatch_mode is kDispatchFComputeEx
+      if (fcompute_ex != nullptr && dispatch_modes[i] == kDispatchFComputeEx) {
         ret[i] = std::make_shared<StatefulComputeExExecutor>(
             dynamic_cast<StatefulComputeExExecutor*>(ret[fwd_id].get())->state_,
             fcompute_ex, exec_type);
@@ -315,7 +315,7 @@ Graph AttachOpExecs(Graph g) {
     } else {
       FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
       FComputeEx fcomp_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", vctx[i]);
-      if (fcomp_ex != nullptr && dispatch_types[i] == kDispatchFComputeEx) {
+      if (fcomp_ex != nullptr && dispatch_modes[i] == kDispatchFComputeEx) {
         ret[i] = std::make_shared<FComputeExExecutor>(
             inode.source->attrs, fcomp_ex, exec_type);
       } else if (fcompute != nullptr) {

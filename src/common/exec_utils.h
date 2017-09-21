@@ -85,6 +85,13 @@ inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
   }
 }
 
+/*
+ * \brief setup default-storage tblobs for input and output NDArrays.
+ *        If any NDArray has non-default storage,
+ *        it creates a temp NDArray with default storage and uses the temp tblob. The
+ *        function also records the indices of non-default source NDArrays and the indices of
+ *        their corresponding temporary NDArrays in the temp array.
+ */
 inline void SetupDefaultBlobs(const std::vector<NDArray> &ndinputs,
                               const std::vector<NDArray> &ndoutputs,
                               std::vector<TBlob> *input_blobs,
@@ -135,6 +142,7 @@ inline void SetupOpContext(const size_t pre_num_resource,
   op_ctx->requested.resize(num_resource_op);
 }
 
+// cast the NDArrays in `src` to NDArrays in `dst`, with op contexts in `ctx`
 inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
                                   const std::vector<NDArray>& dst,
                                   const std::vector<OpContext>& ctx,

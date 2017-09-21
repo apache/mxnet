@@ -36,7 +36,7 @@ namespace op {
 
 inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
                                     const int dev_mask,
-                                    int* dispatch_type,
+                                    int* dispatch_mode,
                                     std::vector<int> *in_attrs,
                                     std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
@@ -47,30 +47,30 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && in_stype == kDefaultStorage) {
     // dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && in_stype == kRowSparseStorage) {
     // rsp -> rsp
     dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
     // FComputeEx can handle dns output on cpu, too
     if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
   if (!dispatched && in_stype == kCSRStorage) {
     // csr -> csr
     dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
     // FComputeEx can handle dns output on cpu, too
     if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

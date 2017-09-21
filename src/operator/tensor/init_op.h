@@ -134,7 +134,7 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
 template<typename ParamType, bool rsp, bool csr>
 inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
                             const int dev_mask,
-                            int *dispatch_type,
+                            int *dispatch_mode,
                             std::vector<int> *in_attrs,
                             std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 0U);
@@ -145,20 +145,20 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && out_stype == kDefaultStorage) {
     // default
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && rsp && out_stype == kRowSparseStorage) {
     // rsp
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched && csr && out_stype == kCSRStorage) {
     // csr
     dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

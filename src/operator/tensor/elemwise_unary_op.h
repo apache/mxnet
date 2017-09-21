@@ -37,7 +37,7 @@ namespace op {
 // infer storage function for _identity_with_attr_like_rhs op
 inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
-                                           int* dispatch_type,
+                                           int* dispatch_mode,
                                            std::vector<int> *in_attrs,
                                            std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -54,16 +54,16 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
       out_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
       (lhs_stype == out_stype)) {
     // rsp, _ -> rsp, or csr, _ -> csr
     dispatched = dispatch_on_storage(&out_stype, static_cast<NDArrayStorageType>(out_stype),
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

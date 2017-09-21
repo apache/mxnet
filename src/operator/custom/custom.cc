@@ -347,7 +347,7 @@ void Backward(const OpStatePtr& state,
 // all undefined stypes, and dispatch on kDispatchFComputeEx.
 inline bool CustomStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
-                              int* dispatch_type,
+                              int* dispatch_mode,
                               std::vector<int> *iattr,
                               std::vector<int> *oattr) {
   for (int& v : *oattr) {
@@ -356,8 +356,8 @@ inline bool CustomStorageType(const nnvm::NodeAttrs& attrs,
   for (int& v : *iattr) {
     if (v == -1) v = kDefaultStorage;
   }
-  if (*dispatch_type == -1) {
-    *dispatch_type = kDispatchFComputeEx;
+  if (*dispatch_mode == -1) {
+    *dispatch_mode = kDispatchFComputeEx;
   }
   return true;
 }

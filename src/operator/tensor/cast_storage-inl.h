@@ -360,7 +360,7 @@ struct CastStorageParam : public dmlc::Parameter<CastStorageParam> {
 
 inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
                                         const int dev_mask,
-                                        int* dispatch_type,
+                                        int* dispatch_mode,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -378,25 +378,25 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && in_stype == kDefaultStorage && param_stype == kDefaultStorage) {
     // dns -> dns
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && in_stype == kDefaultStorage &&
     (param_stype == kRowSparseStorage || param_stype == kCSRStorage)) {
     // dns -> rsp, dns -> csr
     dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched && in_stype == kRowSparseStorage &&
       (param_stype == kRowSparseStorage || param_stype == kDefaultStorage)) {
     // rsp -> rsp, rsp -> dns
     dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched && in_stype == kCSRStorage &&
       (param_stype == kCSRStorage || param_stype == kDefaultStorage)) {
     // csr -> csr, csr -> dns
     dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
   }
   if (!dispatched) {
     LOG(FATAL) << "Not implemented: "

@@ -41,7 +41,7 @@ namespace op {
 
 inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
                                                    const int dev_mask,
-                                                   int *dispatch_type,
+                                                   int *dispatch_mode,
                                                    std::vector<int> *in_attrs,
                                                    std::vector<int> *out_attrs) {
   using namespace common;
@@ -52,21 +52,21 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
     dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
-                                     dispatch_type, kDispatchFComputeEx);
+                                     dispatch_mode, kDispatchFComputeEx);
     // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
     if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_type, 0, kDispatchFComputeEx);
+      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, kDispatchFComputeEx);
       dispatched = true;
     }
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -74,7 +74,7 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
 
 inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
-                                       int *dispatch_type,
+                                       int *dispatch_mode,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
@@ -88,7 +88,7 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_type, kDispatchFCompute);
+                                     dispatch_mode, kDispatchFCompute);
   }
   if (!dispatched) {
     if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
@@ -98,11 +98,11 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
       // rsp, dns -> rsp
       // dns, rsp -> rsp
       dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                       dispatch_type, dispatch_ex);
+                                       dispatch_mode, dispatch_ex);
     }
   }
   if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_type);
+    dispatch_fallback(out_attrs, dispatch_mode);
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

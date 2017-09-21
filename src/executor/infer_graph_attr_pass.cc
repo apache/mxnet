@@ -48,9 +48,9 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               const uint32_t nid,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs,
-                                              int* dispatch_type) {
+                                              int* dispatch_mode) {
   const ContextVector& ctxes = g.GetAttr<ContextVector>("context");
-  return finfer(attrs, ctxes[nid].dev_mask(), dispatch_type, in_attrs, out_attrs);
+  return finfer(attrs, ctxes[nid].dev_mask(), dispatch_mode, in_attrs, out_attrs);
 }
 
 /*!\brief
@@ -320,7 +320,7 @@ inline bool SameType(const nnvm::NodeAttrs& attrs,
 
 inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                                const int dev_mask,
-                               int* dispatch_type,
+                               int* dispatch_mode,
                                std::vector<int> *iattr,
                                std::vector<int> *oattr) {
   bool fallback = false;
@@ -332,12 +332,12 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
     if (v == -1) v = kDefaultStorage;
     if (v != kDefaultStorage) fallback = true;
   }
-  if (*dispatch_type == -1) {
+  if (*dispatch_mode == -1) {
     if (fallback) {
-      *dispatch_type = kDispatchFComputeFallback;
+      *dispatch_mode = kDispatchFComputeFallback;
       op::LogStorageFallback(attrs, dev_mask, iattr, oattr);
     } else {
-      *dispatch_type = kDispatchFCompute;
+      *dispatch_mode = kDispatchFCompute;
     }
   }
   return true;
@@ -389,10 +389,10 @@ nnvm::Graph InferStorageType(nnvm::Graph graph,
   if (storage_type_attr_key.length() != 0) {
     graph.attrs["storage_type_attr_key"] = std::make_shared<any>(std::move(storage_type_attr_key));
   }
-  // initialize unknown values for dispatch types
-  if (graph.attrs.count("dispatch_type") == 0) {
-    DispatchTypeVector dispatch_types(graph.indexed_graph().num_nodes(), -1);
-    graph.attrs["dispatch_type"] = std::make_shared<any>(std::move(dispatch_types));
+  // initialize unknown values for dispatch modes
+  if (graph.attrs.count("dispatch_mode") == 0) {
+    DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), -1);
+    graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
   }
 
   // for storage type, the backward attr is not necessarily the same as it's correspondence
@@ -402,7 +402,7 @@ nnvm::Graph InferStorageType(nnvm::Graph graph,
       "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
       "storage_type", "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      DefaultStorageType, false, "dispatch_type", 0);
+      DefaultStorageType, false, "dispatch_mode", static_cast<int>(kDispatchVariable));
 }
 
 }  // namespace exec
