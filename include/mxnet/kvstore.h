@@ -73,6 +73,7 @@ class KVStore {
     compress_ = compress;
     pos_threshold_ = pos_threshold;
     neg_threshold_ = neg_threshold;
+    std::cout<<"Just set"<<GetCompressParams()<<std::endl;
   }
 
   std::string GetCompressParams() {

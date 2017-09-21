@@ -59,10 +59,6 @@ class KVStoreDist : public KVStoreLocal {
       ps::StartAsync("mxnet\0");
       //what happens during recovery?
       if (!ps::Postoffice::Get()->is_recovery()) {
-        if (get_rank() == 0) {
-	std::cout<<GetCompressParams()<<std::endl;
-          SendCommandToServers(kSetCompress, GetCompressParams());
-        }
         ps::Postoffice::Get()->Barrier(
           ps::kWorkerGroup + ps::kServerGroup + ps::kScheduler);
       }
@@ -92,6 +88,16 @@ class KVStoreDist : public KVStoreLocal {
       CHECK_NOTNULL(server_)->set_updater(updater);
     } else {
       updater_ = updater;
+    }
+  }
+
+  void SetCompress(const std::string& compress,
+                     const float pos_threshold,
+                     const float neg_threshold) {
+    KVStore::SetCompress(compress, pos_threshold, neg_threshold);
+    if (get_rank() == 0) {
+      std::cout << GetCompressParams() << std::endl;
+      SendCommandToServers(kSetCompress, GetCompressParams());
     }
   }
 

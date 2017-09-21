@@ -376,6 +376,7 @@ class KVStore(object):
                                  and neg_threshold needs to be less than 0')
 
         if compress_params['compress'] == '2bit':
+            print 'Calling CPP KVStoreSetCompress'
             check_call(_LIB.MXKVStoreSetCompress(self.handle,
                                              c_str(compress_params['compress']),
                                              mx_float(compress_params['pos_threshold']),
