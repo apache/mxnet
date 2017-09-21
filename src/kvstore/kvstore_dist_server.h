@@ -31,6 +31,8 @@
 #include <functional>
 #include <future>
 #include <vector>
+#include <sstream>
+#include <cstdlib>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op.h"

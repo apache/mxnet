@@ -615,7 +615,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
         }, from.ctx(), const_vars, {ret.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
-      LOG(FATAL) << "Unsupported dequantization";
+      LOG(FATAL) << "Unsupported dequantization"<<compress<<std::endl;
     }
   } else {
 #if MXNET_USE_CUDA
@@ -626,7 +626,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
           }, from.ctx(), const_vars, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
         } else {
-          LOG(FATAL) << "Unsupported dequantization";
+          LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
         }
     } else {
       LOG(FATAL) << "unknown device mask";
