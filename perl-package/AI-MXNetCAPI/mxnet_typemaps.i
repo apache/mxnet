@@ -10,7 +10,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    len = av_top_index(tempav) + 1;
+    len = av_len(tempav) + 1;
     if(len!=0) 
     {
         $1 = (char **) safemalloc((len)*sizeof(char *));
@@ -209,7 +209,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     if(av_len)
     {
         $1 = (mx_uint *)safemalloc(av_len*sizeof(mx_uint));
@@ -239,7 +239,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     if(av_len)
     {
         $1 = (int *)safemalloc(av_len*sizeof(int));
@@ -271,7 +271,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     if(av_len)
     {
         $1 = ($1_type)safemalloc(av_len*sizeof($*1_type));
@@ -302,7 +302,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    len = av_top_index(tempav) + 1;
+    len = av_len(tempav) + 1;
     if(len)
     {
         $1 = (mx_float *)safemalloc(len*sizeof(mx_float));
@@ -550,7 +550,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     temp_array = NULL;
     if(av_len)
     {
@@ -569,7 +569,7 @@
 }
 
 %typemap(freearg) (int *out_size, NDArrayHandle** out_array) {
-    if(av_top_index((AV*)SvRV(ST(3))) > -1)
+    if(av_len((AV*)SvRV(ST(3))) > -1)
     {
         Safefree(*$2);
     }
@@ -579,7 +579,7 @@
 {
     SV **svs;
     int i = 0;
-    if(av_top_index((AV*)SvRV(ST(3))) == -1)
+    if(av_len((AV*)SvRV(ST(3))) == -1)
     {
         if(!result)
         {

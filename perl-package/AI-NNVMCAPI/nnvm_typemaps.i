@@ -10,7 +10,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    len = av_top_index(tempav) + 1;
+    len = av_len(tempav) + 1;
     if(len!=0) 
     {
         $1 = (char **) safemalloc((len)*sizeof(char *));
@@ -156,7 +156,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    len = av_top_index(tempav) + 1;
+    len = av_len(tempav) + 1;
     if(len)
     {
         $1 = ($1_type)safemalloc(len*sizeof($*1_type));
