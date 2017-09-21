@@ -30,8 +30,9 @@ namespace mxnet {
 namespace exec {
 
 Graph AttachOpResources(Graph g) {
-  auto& fresource =
+  static auto& fresource =
       nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+  static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   auto& op_execs = nnvm::get<OpExecVector>(*g.attrs.at("op_execs"));
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& vdispatch = g.GetAttr<DispatchTypeVector>("dispatch_type");
@@ -46,8 +47,10 @@ Graph AttachOpResources(Graph g) {
     if (inode.source->is_variable()) continue;
     const Context &ctx = vctx[nid];
     auto& requested = op_execs[nid]->op_ctx.requested;
-    if (fresource.count(inode.source->op()) != 0) {
-      auto reqs = fresource[inode.source->op()](inode.source->attrs);
+    const auto op = inode.source->op();
+    const auto op_attrs = inode.source->attrs;
+    if (fresource.count(op) != 0) {
+      auto reqs = fresource[op](op_attrs);
       requested.clear();
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
@@ -84,6 +87,16 @@ Graph AttachOpResources(Graph g) {
         CHECK_NE(vstype[eid], kUndefinedStorage);
         if (vstype[eid] != kDefaultStorage) {
           requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        }
+      }
+      // resource for mutatable inputs
+      if (fmutate.count(op)) {
+        const auto mutate_idx = fmutate[op](op_attrs);
+        for (const auto i : mutate_idx) {
+          uint32_t eid = idx.entry_id(inode.inputs[i]);
+          if (vstype[eid] != kDefaultStorage) {
+            requested.push_back(ResourceManager::Get()->Request(ctx, req));
+          }
         }
       }
     }

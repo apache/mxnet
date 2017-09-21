@@ -528,7 +528,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   data_entry_.resize(idx.num_node_entries());
   nnvm::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_dtypes;
-  StorageTypeVector arg_stypes;
+  StorageTypeVector arg_stypes(idx.num_node_entries(), -1);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -546,11 +546,18 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       data_entry_[eid] = in_args[arg_top];
       arg_shapes.push_back(in_args[arg_top].shape());
       arg_dtypes.push_back(in_args[arg_top].dtype());
-      arg_stypes.push_back(in_args[arg_top].storage_type());
+      arg_stypes[eid] = in_args[arg_top].storage_type();
       in_arg_map_.emplace(arg_name, in_args[arg_top]);
       if (kNullOp != grad_req_types[arg_top]) {
+        auto grad_oid = grad_store_.size() + num_forward_outputs_;
+        auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
+        arg_stypes[grad_eid] = arg_grad_store[arg_top].storage_type();
         grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_store[arg_top]);
         arg_grad_map_.emplace(arg_name, arg_grad_store[arg_top]);
+        if (log_verbose_) {
+          LOG(INFO) << "\tassign data entry\t" << grad_eid << " as "
+                    << common::stype_string(arg_stypes[grad_eid]) << " (grad)";
+        }
       }
       ++arg_top;
     }

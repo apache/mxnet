@@ -90,6 +90,17 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
+/*! \brief exception throwed by InferStorageType error */
+struct InferStorageTypeError : public dmlc::Error {
+  /*! \brief analyze message */
+  std::string msg;
+  /*! \brief corresponding input index */
+  int index;
+  // constructor
+  InferStorageTypeError(const std::string& msg_, int index)
+    : dmlc::Error(msg_), msg(msg_), index(index) {}
+};
+
 /*! \brief check if shape is empty or contains unknown (0) dim. */
 inline bool shape_is_none(const TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;

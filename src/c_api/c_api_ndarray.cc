@@ -33,6 +33,7 @@
 #include <string>
 #include "./c_api_common.h"
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 #include "../ndarray/autograd.h"
 #include "../executor/exec_pass.h"
 
@@ -264,6 +265,10 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
   std::vector<engine::VarHandle>& write_vars = *p_write_vars;
   std::vector<Resource>& requested = *p_requested;
   std::vector<uint32_t>& mutate_idx = *p_mutate_idx;
+  if (mutate.count(op)) {
+    mutate_idx = mutate[op](attrs);
+    std::sort(mutate_idx.begin(), mutate_idx.end());
+  }
 
   if (tmp_resource.count(op)) {
     int ntmp = 0;
@@ -289,18 +294,25 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
 
   // append extra resource requests for storage fallback at the end
   if (dispatch_type == kDispatchFComputeFallback) {
-    // resource for inputs
+    auto req = ResourceRequest::kTempSpace;
+    // resources for inputs
     for (const auto& nd : ndinputs) {
       if (nd.storage_type() != kDefaultStorage) {
-        requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
       }
     }
-    // resource for outputs
+    // resources for outputs
     for (const auto& nd : ndoutputs) {
       if (nd.storage_type() != kDefaultStorage) {
-        requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
+      }
+    }
+    // resources for mutable inputs
+    for (auto & i : mutate_idx) {
+      if (ndinputs[i].storage_type() != kDefaultStorage) {
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
       }
     }
   }
@@ -311,13 +323,10 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
   for (auto& i : ndoutputs) {
     write_vars.push_back(i.var());
   }
-  if (mutate.count(op)) {
-    mutate_idx = mutate[op](attrs);
-    std::sort(mutate_idx.begin(), mutate_idx.end());
-    for (auto & i : mutate_idx) {
-      write_vars.push_back(ndinputs[i].var());
-    }
+  for (auto & i : mutate_idx) {
+    write_vars.push_back(ndinputs[i].var());
   }
+
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
 }
 

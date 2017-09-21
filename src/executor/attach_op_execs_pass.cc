@@ -27,6 +27,7 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 #include "./exec_pass.h"
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
@@ -93,6 +94,8 @@ class StorageFallbackOpExecutor : public OpExecutor {
   std::unordered_map<uint32_t, uint32_t> in_temp_idx_map_;
   // indices of mutatable inputs
   std::vector<uint32_t> mutate_idx_;
+  // op contexts for pre-fcompute and post-fcompute storage fallback
+  std::vector<OpContext> pre_vctx_, post_vctx_;
   // whether blobs are initialized
   bool init_;
 };
