@@ -94,7 +94,7 @@ method _reshape_label_as_output(GluonClass $F, GluonInput $output, GluonInput $l
 use AI::MXNet::Gluon::Mouse;
 extends 'AI::MXNet::Gluon::HybridBlock';
 has 'weight'     => (is => 'rw', isa => 'Num');
-has 'batch_axis' => (is => 'rw', isa => 'Int');
+has 'batch_axis' => (is => 'rw', isa => 'Int', default => 0);
 
 use overload '""' => sub {
         my $self = shift;
@@ -514,11 +514,20 @@ method hybrid_forward(
 
 __PACKAGE__->register('AI::MXNet::Gluon::Loss');
 
-1;
 
-__END__
-class Huber(Loss):
-    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
+package AI::MXNet::Gluon::Huber;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'rho'        => (is => 'rw', isa => 'Num', default => 1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::Huber
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
        L2 loss in the center and L1 loss for deviations beyond rho:
 
     .. math::
@@ -543,21 +552,33 @@ class Huber(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, rho=1, weight=None, batch_axis=0, **kwargs):
-        super(Huber, self).__init__(weight, batch_axis, **kwargs)
-        self._rho = rho
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.abs(output - label)
-        loss = ((loss > self._rho) * (loss - 0.5 * self._rho) +
-                (0.5/self._rho) * (loss <= self._rho) * loss**2)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $F->abs($output - $label);
+    $loss = (($loss > $self->rho) * ($loss - 0.5 * $self->rho) +
+                (0.5/$self->rho) * ($loss <= $self->rho) * $loss**2);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class EpsilonInsensitive(Loss):
-    """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::EpsilonInsensitive;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'epsilon'        => (is => 'rw', isa => 'Num', default => 0.1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::EpsilonInsensitive
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
        L2 loss in the center and L1 loss for deviations beyond rho:
 
     .. math::
@@ -578,19 +599,30 @@ class EpsilonInsensitive(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, epsilon=0.1, weight=None, batch_axis=0, **kwargs):
-        super(EpsilonInsensitive, self).__init__(weight, batch_axis, **kwargs)
-        self._epsilon = epsilon
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.maximum(F.abs(output - label) - self._epsilon, F.zeros_like(output))
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = ($F->abs($output - $label) - $self->epsilon)->maximum($F->zeros_like($output));
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class SoftMargin(Loss):
-    """Calculates the soft-margin loss function used in SVMs:
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::SoftMargin;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::SoftMargin
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the soft-margin loss function used in SVMs:
 
     .. math::
         L = max(0, 1 - {output}_i {label}_i)
@@ -608,18 +640,30 @@ class SoftMargin(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(SoftMargin, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.maximum(1.0 - output * label, F.zeros_like(output))
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = (1.0 - $output * $label)->maximum($F->zeros_like($output));
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class SquaredSoftMargin(Loss):
-    """Calculates the soft-margin loss function used in SVMs:
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::SquaredSoftMargin;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::SquaredSoftMargin
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the soft-margin loss function used in SVMs:
 
     .. math::
         L = max(0, 1 - {output}_i {label}_i)^2
@@ -637,18 +681,30 @@ class SquaredSoftMargin(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(SquaredSoftMargin, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.maximum(1.0 - output * label, F.zeros_like(output))**2
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = ((1.0 - $output * $label)->maximum($F->zeros_like($output)))**2;
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class Exponential(Loss):
-    """Calculates the exponential hinge loss (quite obscure):
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::Exponential;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::Exponential
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the exponential hinge loss (quite obscure):
 
     .. math::
         L = \\exp(- {output}_i {label}_i)
@@ -666,18 +722,30 @@ class Exponential(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(Exponential, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.exp(-output * label)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $F->exp(-$output * $label);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class Logistic(Loss):
-    """Calculates the logistic loss (for binary losses only):
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::Logistic;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::Logistic
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the logistic loss (for binary losses only):
 
     .. math::
         L = \\log(1 + \\exp(- {output}_i {label}_i))
@@ -695,18 +763,31 @@ class Logistic(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(Logistic, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.log(1.0 + F.exp(-output * label))
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $F->log(1 + $F->exp(-$output * $label));
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class Quantile(Loss):
-    """Calculates Koenker's quantile regression loss function yielding an estimate of the
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::Quantile;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'tau' => (is => 'rw', isa => 'Num', default => 0.5);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::Quantile
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates Koenker's quantile regression loss function yielding an estimate of the
        appropriately chosen quantile rather than the mean (or median):
 
     .. math::
@@ -729,21 +810,31 @@ class Quantile(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, tau=0.5, weight=None, batch_axis=0, **kwargs):
-        super(Quantile, self).__init__(weight, batch_axis, **kwargs)
-        self._tau = tau
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = output - label
-        # loss = F.maximum(self._tau * loss, (self._tau - 1.0)* loss)
-        loss = F.maximum(self._tau * loss, (self._tau - 1.0)* loss)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $output - $label;
+    $loss = ($self->tau * $loss)->maximum(($self->tau - 1) * $loss);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class Langford(Loss):
-    """Calculates the Huberized soft-margin loss that is used in VW (Vowpal Wabbit).
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::Langford;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::Langford
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the Huberized soft-margin loss that is used in VW (Vowpal Wabbit).
        It is given by a squared loss for margin values of [-1, 0] and by a linear
        loss for values larger than that.
 
@@ -770,19 +861,31 @@ class Langford(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(Langford, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.maximum(F.zeros_like(output), 1 - output * label)
-        loss = (loss < 1.0) * 0.5 * (loss**2) + (loss >= 1.0) * (loss - 0.5)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $F->zeros_like($output)->maximum(1 - $output * $label);
+    $loss = ($loss < 1.0) * 0.5 * ($loss**2) + ($loss >= 1.0) * ($loss - 0.5);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class DualKL(Loss):
-    """Estimates the Kullback Leibler Divergence between two
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::DualKL;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::DualKL
+=cut
+
+=head1 DESCRIPTION
+
+    Estimates the Kullback Leibler Divergence between two
        distributions by convex duality. See Nguyen, Wainwright and
        Jordan (NGW), 2008 for a detailed derivation. In a nutshell it
        estimates:
@@ -816,18 +919,31 @@ class DualKL(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(DualKL, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = (label == -1) * F.exp(output) - (label == 1) * (output + 1)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = ($label == -1) * $F->exp($output) - ($label == 1) * ($output + 1);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class RelativeNovelty(Loss):
-    """Estimates a relative novelty detector. See the Song, Teo and
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::RelativeNovelty;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'rho' => (is => 'rw', isa => 'Num', default => 0.1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::RelativeNovelty
+=cut
+
+=head1 DESCRIPTION
+
+    Estimates a relative novelty detector. See the Song, Teo and
        Smola (STS), 2009 for details. The main point is to estimate
        the ratio dp/dq well via max(0, rho - log dp/dq). As with the
        KL divergence estimator, the Fenchel-Legendre dual is easier to
@@ -846,7 +962,7 @@ class RelativeNovelty(Loss):
     ----------
     rho : float
         Relative probability weight for the most prevalent part of the
-        probability distribution. It needs to be (0, 1).
+        probability distribution. It needs to be (0, 1). Defaults to 0.1
     weight : float or None
         Global scalar weight for loss.
     sample_weight : Symbol or None
@@ -856,20 +972,31 @@ class RelativeNovelty(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, rho=0.1, weight=None, batch_axis=0, **kwargs):
-        super(RelativeNovelty, self).__init__(weight, batch_axis, **kwargs)
-        self._rho = rho
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = -(output > 0) * (output + 1) - (output <= 0) * F.exp(output)
-        loss = (label == 1) * loss + (label == -1) * F.exp(output - self._rho)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = -($output > 0) * ($output + 1) - ($output <= 0) * $F->exp($output);
+    $loss = ($label == 1) * $loss + ($label == -1) * $F->exp($output - $self->rho);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class LogCosh(Loss):
-    """Calculates the smoothed L1 loss, aka log cosh loss in a
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::LogCosh;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::LogCosh
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the smoothed L1 loss, aka log cosh loss in a
        numerically stable manner (i.e. without exponentiating large
        values of the cosh function.
 
@@ -889,19 +1016,31 @@ class LogCosh(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(LogCosh, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.abs(label - output)
-        loss = loss + F.log(0.5 + 0.5 * F.exp(-2 * loss))
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $F->abs($label - $output);
+    $loss = $loss + $F->log(0.5 + 0.5 * $F->exp(-2 * $loss));
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class Poisson(Loss):
-    """Calculates the Poisson loss function (up to the normalization
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::Poisson;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::Poisson
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the Poisson loss function (up to the normalization
        by a factorial in the label, due to computational efficiency
        reasons).
 
@@ -926,18 +1065,32 @@ class Poisson(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(Poisson, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        label = _reshape_label_as_output(F, output, label)
-        loss = F.exp(output) - output * label
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    $label = __PACKAGE__->_reshape_label_as_output($F, $output, $label);
+    my $loss = $F->exp($output) - $output * $label;
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class MaxMargin(Loss):
-    """Calculates the MaxMargin loss, aka multiclass soft-margin
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::MaxMargin;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'axis'  => (is => 'rw', isa => 'Int', default => -1);
+has 'delta' => (is => 'rw', init_arg => undef);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::MaxMargin
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the MaxMargin loss, aka multiclass soft-margin
        loss. This requires access to a multiclass loss matrix delta
        which measures the cost for misclassifying label y as y'. This
        matrix can be specified at construction time. If it does not
@@ -967,29 +1120,44 @@ class MaxMargin(Loss):
         in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, delta=None, axis=-1, weight=None, batch_axis=0, **kwargs):
-        super(MaxMargin, self).__init__(weight, batch_axis, **kwargs)
-        self._axis = axis
-        self._delta = delta
-        super(MaxMargin, self).__init__(weight, batch_axis, **kwargs)
+=cut
 
-    def hybrid_forward(self, F, output, label, sample_weight=None):
-        # Check if the cost matrix has been defined. If not, use a
-        # dumb (0,1) loss. This is only executed once, the first time
-        # you invoke the loss.
-        if (self._delta is None):
-            classes = output.shape[self._axis]
-            self._delta = F.ones(shape=(classes, classes))
-            for i in range(classes):
-                self._delta[i, i] = 0
-        loss = -F.pick(output, label, axis=self._axis, keepdims=True)
-        loss += F.max(output + F.take(self._delta, label), axis=self._axis, keepdims=True)
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(GluonClass $F, GluonInput $output, GluonInput $label, Maybe[GluonInput] $sample_weight=)
+{
+    # Check if the cost matrix has been defined. If not, use a
+    # dumb (0,1) loss. This is only executed once, the first time
+    # you invoke the loss.
+    if (not defined $self->delta)
+    {
+        my $classes = $output->shape->[$self->axis];
+        $self->delta($F->ones(shape=>[$classes, $classes]));
+        for my $i (0..$classes-1)
+        {
+            $self->delta->slice($i, $i) .= 0;
+        }
+    }
+    my $loss = -$F->pick($output, $label, axis=>$self->axis, keepdims=>1);
+    $loss += $F->max($output + $F->take($self->delta, $label), axis=>$self->axis, keepdims=>1);
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
 
-class TripletLoss(Loss):
-    """Calculates the mean squared error between output and label:
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::TripletLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'margin'  => (is => 'rw', isa => 'Num', default => 1);
+has 'axis'    => (is => 'rw', isa => 'Int', default => 1);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::TripletLoss
+=cut
+
+=head1 DESCRIPTION
+
+    Calculates the mean squared error between output and label:
 
     .. math::
         L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert^2.
@@ -1000,7 +1168,7 @@ class TripletLoss(Loss):
     Parameters
     ----------
     margin : float
-        Margin of separation between correct and incorrect pair.
+        Margin of separation between correct and incorrect pair. Defaults to 1.
     weight : float or None
         Global scalar weight for loss.
     sample_weight : Symbol or None
@@ -1012,16 +1180,20 @@ class TripletLoss(Loss):
         The axis over which to sum distances.
     batch_axis : int, default 0
         The axis that represents mini-batch.
-    """
-    def __init__(self, margin=1, weight=1., axis=1, batch_axis=0, **kwargs):
-        super(TripletLoss, self).__init__(weight, batch_axis, **kwargs)
-        self._margin = margin
-        self._axis = axis
+=cut
 
-    def hybrid_forward(self, F, output1, output2, output3, sample_weight=None):
-        loss = F.sum((output1-output2)**2 - (output1-output3)**2, axis=self._axis) + self._margin
-        loss = F.maximum(loss, F.zeros_like(loss))
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+method hybrid_forward(
+    GluonClass $F,
+    GluonInput $output1, GluonInput $output2, GluonInput $output3,
+    Maybe[GluonInput] $sample_weight=
+)
+{
+    my $loss = $F->sum(($output1-$output2)**2 - ($output1-$output3)**2, axis=>self->axis) + $self->margin;
+    $loss = $loss->maximum($F->zeros_like($loss));
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $F->mean($loss, axis => $self->batch_axis, exclude => 1);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
 
 1;
