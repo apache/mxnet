@@ -18,12 +18,13 @@
  */
 
 /*!
- * \file sparse_utils.h
- * \brief Common utility functions for sparse executors.
+ * \file exec_utils.h
+ * \brief Common utility functions for executors.
  */
 #ifndef MXNET_COMMON_EXEC_UTILS_H_
 #define MXNET_COMMON_EXEC_UTILS_H_
 
+#include <vector>
 #include "../common/utils.h"
 
 namespace mxnet {
