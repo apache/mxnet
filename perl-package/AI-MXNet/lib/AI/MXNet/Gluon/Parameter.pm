@@ -170,7 +170,12 @@ method _check_and_get($arr_dict, $ctx)
     }
     if(@{ $self->_deferred_init })
     {
-        die 'DeferredInitializationError';
+        confess("DeferredInitializationError: ".
+            "Parameter ${\ $self->name } has not been initialized yet because initialization was ".
+            "deferred. Actual initialization happens during the first forward pass. ".
+            "Please pass one batch of data through the network before accessing Parameters. ".
+            "You can also avoid deferred initialization by specifying in_units, ".
+            "num_features, etc., for network layers.");
     }
     confess(
         "Parameter ${\ $self->name } has not been initialized. Note that ".
