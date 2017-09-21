@@ -54,7 +54,6 @@ inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
       if (idx_map != nullptr) {
         (*idx_map)[i] = temp_dst->size();
       }
-      LOG(INFO) << "Fallback for " << i;
       NDArray temp(nd.shape(), nd.ctx(), false, nd.dtype());
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);
