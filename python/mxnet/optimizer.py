@@ -620,7 +620,7 @@ class Adam(Optimizer):
         Small value to avoid division by 0.
     """
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999,
-                 rho=1-1e-8, epsilon=1e-8, **kwargs):
+                 rho=1.0, epsilon=1e-8, **kwargs):
         super(Adam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2

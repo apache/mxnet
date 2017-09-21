@@ -330,7 +330,7 @@ def test_sparse_sgd():
 
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
-    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, rho=1-1e-8,
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, rho=1.0,
                  epsilon=1e-8, decay_factor=(1 - 1e-8), sparse_update=False,
                  **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)

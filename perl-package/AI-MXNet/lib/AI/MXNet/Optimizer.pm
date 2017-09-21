@@ -645,7 +645,7 @@ __PACKAGE__->register;
         Default value is set to 1 - 1e-8.
     rho : float, optional
         Shrinkage rate for beta1 when calculate the mean.
-        Default value is set to 1 - 1e-8.
+        Default value is set to 1.0.
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
@@ -664,7 +664,7 @@ has '+learning_rate' => (default => 0.001);
 has 'beta1'    => (is => "rw", isa => "Num", default => 0.9);
 has 'beta2'    => (is => "rw", isa => "Num", default => 0.999);
 has 'epsilon'  => (is => "rw", isa => "Num", default => 1e-8);
-has 'rho'      => (is => "rw", isa => "Num", default => (1 - 1e-8));
+has 'rho'      => (is => "rw", isa => "Num", default => 1.0);
 has 'decay_factor'  => (is => "rw", isa => "Num", default => (1 - 1e-8));
 
 sub BUILD

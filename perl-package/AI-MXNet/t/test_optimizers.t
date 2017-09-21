@@ -8,7 +8,7 @@ extends 'AI::MXNet::Optimizer';
 has 'beta1' => (is => 'rw', default => 0.9);
 has 'beta2' => (is => 'rw', default => 0.999);
 has 'epsilon' => (is => 'rw', default => 1e-8);
-has 'rho' => (is => 'rw', default => (1-1e-8));
+has 'rho' => (is => 'rw', default => 1.0);
 has 'rescale_grad' => (is => 'rw', default => 1);
 has 'decay_factor' => (is => 'rw', default => (1-1e-8));
 around BUILDARGS => \&init;

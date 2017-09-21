@@ -649,7 +649,7 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
     .set_default(1e-8f)
     .describe("A small constant for numerical stability.");
     DMLC_DECLARE_FIELD(rho)
-    .set_default(1.0 - 1e-8f)
+    .set_default(1.0)
     .describe("Shrinkage rate for beta1.");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
