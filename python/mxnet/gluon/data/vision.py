@@ -221,7 +221,7 @@ class CIFAR100(CIFAR10):
     root : str, default '~/.mxnet/datasets/cifar100'
         Path to temp folder for storing data.
     fine_label : bool, default False
-        Whether to load the fine-grained or coarse-grained labels.
+        Whether to load the fine-grained (100 classes) or coarse-grained (20 super-classes) labels.
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None

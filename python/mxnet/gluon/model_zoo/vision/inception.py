@@ -23,7 +23,6 @@ __all__ = ['Inception3', 'inception_v3']
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...utils import _get_arg_dict
 from ..custom_layers import HybridConcurrent
 
 # Helpers
@@ -199,7 +198,7 @@ class Inception3(HybridBlock):
         return x
 
 # Constructor
-def inception_v3(pretrained=False, ctx=cpu(), **kwargs):
+def inception_v3(pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""Inception v3 model from
     `"Rethinking the Inception Architecture for Computer Vision"
     <http://arxiv.org/abs/1512.00567>`_ paper.
@@ -213,10 +212,8 @@ def inception_v3(pretrained=False, ctx=cpu(), **kwargs):
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
-    net_args = _get_arg_dict(kwargs, ('classes', 'prefix', 'params'))
-    net = Inception3(**net_args)
+    net = Inception3(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        model_zoo_args = _get_arg_dict(kwargs, ('root',))
-        net.load_params(get_model_file('inceptionv3', **model_zoo_args), ctx=ctx)
+        net.load_params(get_model_file('inceptionv3', root=root), ctx=ctx)
     return net

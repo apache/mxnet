@@ -214,7 +214,3 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
                               'the default repo.'.format(fname))
 
     return fname
-
-def _get_arg_dict(kwargs, arg_names):
-    arg_names = set(arg_names)
-    return {k: v for k, v in kwargs.items() if k in arg_names}

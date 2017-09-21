@@ -30,7 +30,6 @@ __all__ = ['ResNetV1', 'ResNetV2',
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...utils import _get_arg_dict
 
 # Helpers
 def _conv3x3(channels, stride, in_channels):
@@ -359,7 +358,7 @@ resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': Bottleneck
 
 
 # Constructor
-def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
+def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""ResNet V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
     ResNet V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -381,13 +380,11 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
     block_type, layers, channels = resnet_spec[num_layers]
     resnet_class = resnet_net_versions[version-1]
     block_class = resnet_block_versions[version-1][block_type]
-    net_args = _get_arg_dict(kwargs, ('classes', 'thumbnail', 'prefix', 'params'))
-    net = resnet_class(block_class, layers, channels, **net_args)
+    net = resnet_class(block_class, layers, channels, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        model_zoo_args = _get_arg_dict(kwargs, ('root',))
         net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version),
-                                       **model_zoo_args), ctx=ctx)
+                                       root=root), ctx=ctx)
     return net
 
 def resnet18_v1(**kwargs):

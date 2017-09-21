@@ -23,7 +23,6 @@ __all__ = ['AlexNet', 'alexnet']
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...utils import _get_arg_dict
 
 # Net
 class AlexNet(HybridBlock):
@@ -68,7 +67,7 @@ class AlexNet(HybridBlock):
         return x
 
 # Constructor
-def alexnet(pretrained=False, ctx=cpu(), **kwargs):
+def alexnet(pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""AlexNet model from the `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
 
     Parameters
@@ -80,10 +79,8 @@ def alexnet(pretrained=False, ctx=cpu(), **kwargs):
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
-    net_args = _get_arg_dict(kwargs, ('classes', 'prefix', 'params'))
-    net = AlexNet(**net_args)
+    net = AlexNet(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        model_zoo_args = _get_arg_dict(kwargs, ('root',))
-        net.load_params(get_model_file('alexnet', **model_zoo_args), ctx=ctx)
+        net.load_params(get_model_file('alexnet', root=root), ctx=ctx)
     return net

@@ -24,7 +24,6 @@ __all__ = ['MobileNet', 'mobilenet1_0', 'mobilenet0_75', 'mobilenet0_5', 'mobile
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...utils import _get_arg_dict
 
 # Helpers
 def _add_conv(out, channels=1, kernel=1, stride=1, pad=0, num_group=1):
@@ -76,7 +75,7 @@ class MobileNet(HybridBlock):
         return x
 
 # Constructor
-def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
+def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper.
@@ -94,15 +93,13 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
-    net_args = _get_arg_dict(kwargs, ('multiplier', 'classes', 'prefix', 'params'))
-    net = MobileNet(multiplier, **net_args)
+    net = MobileNet(multiplier, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
         version_suffix = '{0:.2f}'.format(multiplier)
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
-        model_zoo_args = _get_arg_dict(kwargs, ('root',))
-        net.load_params(get_model_file('mobilenet%s'%version_suffix, **model_zoo_args), ctx=ctx)
+        net.load_params(get_model_file('mobilenet%s'%version_suffix, root=root), ctx=ctx)
     return net
 
 def mobilenet1_0(**kwargs):

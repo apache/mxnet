@@ -23,7 +23,6 @@ __all__ = ['SqueezeNet', 'squeezenet1_0', 'squeezenet1_1']
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...utils import _get_arg_dict
 from ..custom_layers import HybridConcurrent
 
 # Helpers
@@ -108,7 +107,7 @@ class SqueezeNet(HybridBlock):
         return x
 
 # Constructor
-def get_squeezenet(version, pretrained=False, ctx=cpu(), **kwargs):
+def get_squeezenet(version, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
     SqueezeNet 1.1 model from the `official SqueezeNet repo
@@ -127,12 +126,10 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(), **kwargs):
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
-    net_args = _get_arg_dict(kwargs, ('classes', 'prefix', 'params'))
-    net = SqueezeNet(version, **net_args)
+    net = SqueezeNet(version, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        model_zoo_args = _get_arg_dict(kwargs, ('root',))
-        net.load_params(get_model_file('squeezenet%s'%version, **model_zoo_args), ctx=ctx)
+        net.load_params(get_model_file('squeezenet%s'%version, root=root), ctx=ctx)
     return net
 
 def squeezenet1_0(**kwargs):

@@ -23,7 +23,6 @@ __all__ = ['DenseNet', 'densenet121', 'densenet161', 'densenet169', 'densenet201
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...utils import _get_arg_dict
 from ..custom_layers import HybridConcurrent, Identity
 
 # Helpers
@@ -120,7 +119,7 @@ densenet_spec = {121: (64, 32, [6, 12, 24, 16]),
 
 
 # Constructor
-def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
+def get_densenet(num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""Densenet-BC model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
 
@@ -136,12 +135,10 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Location for keeping the model parameters.
     """
     num_init_features, growth_rate, block_config = densenet_spec[num_layers]
-    net_args = _get_arg_dict(kwargs, ('bn_size', 'dropout', 'classes', 'prefix', 'params'))
-    net = DenseNet(num_init_features, growth_rate, block_config, **net_args)
+    net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        model_zoo_args = _get_arg_dict(kwargs, ('root',))
-        net.load_params(get_model_file('densenet%d'%(num_layers), **model_zoo_args), ctx=ctx)
+        net.load_params(get_model_file('densenet%d'%(num_layers), root=root), ctx=ctx)
     return net
 
 def densenet121(**kwargs):
