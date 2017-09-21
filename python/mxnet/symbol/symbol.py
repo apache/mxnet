@@ -1663,9 +1663,6 @@ class Symbol(SymbolBase):
                                          ctypes.byref(handle)))
         executor = Executor(handle, self, ctx,
                             args, args_grad, aux_states, grad_req, group2ctx)
-        executor.arg_arrays = args
-        executor.grad_arrays = args_grad
-        executor.aux_arrays = aux_states
         return executor
 
     def gradient(self, wrt):
