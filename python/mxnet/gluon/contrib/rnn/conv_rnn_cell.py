@@ -32,13 +32,13 @@ def _get_conv_out_size(dimensions, kernels, paddings, strides, dilations):
 
 class _BaseConvRNNCell(HybridRecurrentCell):
     """Abstract base class for convolutional RNNs"""
-    def __init__(self, input_shape, hidden_channels, activation,
-                 i2h_kernel, i2h_stride, i2h_pad, i2h_dilate,
-                 h2h_kernel, h2h_dilate,
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims,
-                 conv_layout='NCHW',
+                 conv_layout, activation,
                  prefix=None, params=None):
         super(_BaseConvRNNCell, self).__init__(prefix=prefix, params=params)
 
@@ -49,15 +49,15 @@ class _BaseConvRNNCell(HybridRecurrentCell):
 
         # Convolution setting
         assert all(isinstance(spec, int) or len(spec) == dims
-                   for spec in [i2h_kernel, i2h_stride, i2h_pad, i2h_dilate,
+                   for spec in [i2h_kernel, stride, i2h_pad, i2h_dilate,
                                 h2h_kernel, h2h_dilate]), \
                "For {dims}D convolution, the convolution settings can only be either int " \
                "or list/tuple of length {dims}".format(dims=dims)
 
         self._i2h_kernel = (i2h_kernel,) * dims if isinstance(i2h_kernel, numeric_types) \
                            else i2h_kernel
-        self._i2h_stride = (i2h_stride,) * dims if isinstance(i2h_stride, numeric_types) \
-                           else i2h_stride
+        self._stride = (stride,) * dims if isinstance(stride, numeric_types) \
+                           else stride
         self._i2h_pad = (i2h_pad,) * dims if isinstance(i2h_pad, numeric_types) \
                         else i2h_pad
         self._i2h_dilate = (i2h_dilate,) * dims if isinstance(i2h_dilate, numeric_types) \
@@ -68,13 +68,13 @@ class _BaseConvRNNCell(HybridRecurrentCell):
             "Only support odd number, get h2h_kernel= %s" % str(h2h_kernel)
         self._h2h_dilate = (h2h_dilate,) * dims if isinstance(h2h_dilate, numeric_types) \
                            else h2h_dilate
-        self._h2h_pad = tuple(d*(k-1)//2 for d, k in zip(self._h2h_dilate, self._h2h_kernel))
 
         self._channel_axis, \
         self._in_channels, \
         i2h_param_shape, \
         h2h_param_shape, \
-        self._state_shape = self._decide_shapes(dims)
+        self._h2h_pad, \
+        self._state_shape = self._decide_shapes()
 
         self.i2h_weight = self.params.get('i2h_weight', shape=i2h_param_shape,
                                           init=i2h_weight_initializer,
@@ -89,7 +89,7 @@ class _BaseConvRNNCell(HybridRecurrentCell):
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
-    def _decide_shapes(self, dims):
+    def _decide_shapes(self):
         channel_axis = self._conv_layout.find('C')
         input_shape = self._input_shape
         in_channels = input_shape[channel_axis - 1]
@@ -99,17 +99,17 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         else:
             dimensions = input_shape[:-1]
 
-        h2h_strides = (1,) * dims
         total_out = hidden_channels * self._num_gates
 
         i2h_param_shape = (total_out,)
         h2h_param_shape = (total_out,)
         state_shape = (hidden_channels,)
         conv_out_size = _get_conv_out_size(dimensions,
-                                           self._h2h_kernel,
-                                           self._h2h_pad,
-                                           h2h_strides,
-                                           self._h2h_dilate)
+                                           self._i2h_kernel,
+                                           self._i2h_pad,
+                                           self._stride,
+                                           self._i2h_dilate)
+        h2h_pad = tuple(d*(k-1)//2 for d, k in zip(self._h2h_dilate, self._h2h_kernel))
         if channel_axis == 1:
             i2h_param_shape += (in_channels,) + self._i2h_kernel
             h2h_param_shape += (hidden_channels,) + self._h2h_kernel
@@ -119,7 +119,8 @@ class _BaseConvRNNCell(HybridRecurrentCell):
             h2h_param_shape += self._h2h_kernel + (hidden_channels,)
             state_shape = conv_out_size + state_shape
 
-        return channel_axis, in_channels, i2h_param_shape, h2h_param_shape, state_shape
+        return channel_axis, in_channels, i2h_param_shape, \
+               h2h_param_shape, h2h_pad, state_shape
 
     def __repr__(self):
         s = '{name}({mapping}'
@@ -144,7 +145,7 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         i2h = F.Convolution(data=inputs,
                             num_filter=self._hidden_channels*self._num_gates,
                             kernel=self._i2h_kernel,
-                            stride=self._i2h_stride,
+                            stride=self._stride,
                             pad=self._i2h_pad,
                             dilate=self._i2h_dilate,
                             weight=i2h_weight,
@@ -156,7 +157,7 @@ class _BaseConvRNNCell(HybridRecurrentCell):
                             kernel=self._h2h_kernel,
                             dilate=self._h2h_dilate,
                             pad=self._h2h_pad,
-                            stride=(1,)*len(self._h2h_kernel),
+                            stride=self._stride,
                             weight=h2h_weight,
                             bias=h2h_bias,
                             layout=self._conv_layout,
@@ -171,15 +172,15 @@ class _BaseConvRNNCell(HybridRecurrentCell):
 
 
 class _ConvRNNCell(_BaseConvRNNCell):
-    def __init__(self, input_shape, hidden_channels, activation,
-                 i2h_kernel, i2h_stride, i2h_pad, i2h_dilate, h2h_kernel, h2h_dilate,
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel, stride, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 dims, conv_layout, prefix, params):
+                 dims, conv_layout, activation, prefix, params):
         super(_ConvRNNCell, self).__init__(input_shape=input_shape,
                                            hidden_channels=hidden_channels,
                                            activation=activation,
-                                           i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
+                                           i2h_kernel=i2h_kernel, stride=stride,
                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
                                            i2h_weight_initializer=i2h_weight_initializer,
@@ -226,21 +227,16 @@ class Conv1DRNNCell(_ConvRNNCell):
         For example, for layout 'NCW' the shape should be (C, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3,)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1,)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1,)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1,)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0,)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1,)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3,)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1,)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -253,30 +249,35 @@ class Conv1DRNNCell(_ConvRNNCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCW' and 'NWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_rnn_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3,), i2h_stride=(1,), i2h_pad=(1,), i2h_dilate=(1,),
-                 h2h_kernel=(3,), h2h_dilate=(1,),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1,), i2h_pad=(0,), i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCW',
+                 conv_layout='NCW', activation='tanh',
                  prefix=None, params=None):
         super(Conv1DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=1,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
 
 
@@ -295,21 +296,16 @@ class Conv2DRNNCell(_ConvRNNCell):
         For example, for layout 'NCHW' the shape should be (C, H, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3, 3)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1, 1)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1, 1)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1, 1)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3, 3)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1, 1)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -322,30 +318,35 @@ class Conv2DRNNCell(_ConvRNNCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCHW' and 'NHWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_rnn_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1, 1), i2h_pad=(0, 0), i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCHW',
+                 conv_layout='NCHW', activation='tanh',
                  prefix=None, params=None):
         super(Conv2DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=2,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
 
 
@@ -364,21 +365,16 @@ class Conv3DRNNCell(_ConvRNNCell):
         For example, for layout 'NCDHW' the shape should be (C, D, H, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3, 3, 3)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1, 1, 1)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1, 1, 1)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1, 1, 1)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0, 0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1, 1)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3, 3, 3)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1, 1, 1)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -391,52 +387,58 @@ class Conv3DRNNCell(_ConvRNNCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCDHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCDHW' and 'NDHWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_rnn_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3, 3, 3), i2h_stride=(1, 1, 1),
-                 i2h_pad=(1, 1, 1), i2h_dilate=(1, 1, 1),
-                 h2h_kernel=(3, 3, 3), h2h_dilate=(1, 1, 1),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1, 1, 1), i2h_pad=(0, 0, 0),
+                 i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCDHW',
+                 conv_layout='NCDHW', activation='tanh',
                  prefix=None, params=None):
         super(Conv3DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=3,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
 
 
 class _ConvLSTMCell(_BaseConvRNNCell):
-    def __init__(self, input_shape, hidden_channels, activation,
-                 i2h_kernel, i2h_stride, i2h_pad, i2h_dilate, h2h_kernel, h2h_dilate,
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 dims, conv_layout, prefix, params):
+                 dims, conv_layout, activation, prefix, params):
         super(_ConvLSTMCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=dims,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
 
     def state_info(self, batch_size=0):
@@ -494,21 +496,16 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         For example, for layout 'NCW' the shape should be (C, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function used in c^\prime_t.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3,)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1,)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1,)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1,)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0,)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1,)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3,)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1,)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -521,30 +518,36 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCW' and 'NWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function used in c^\prime_t.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_lstm_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3,), i2h_stride=(1,), i2h_pad=(1,), i2h_dilate=(1,),
-                 h2h_kernel=(3,), h2h_dilate=(1,),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1,), i2h_pad=(0,),
+                 i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCW',
+                 conv_layout='NCW', activation='tanh',
                  prefix=None, params=None):
         super(Conv1DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
-                                             activation=activation,
-                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                             h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                             stride=stride, i2h_pad=i2h_pad,
+                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                              i2h_weight_initializer=i2h_weight_initializer,
                                              h2h_weight_initializer=h2h_weight_initializer,
                                              i2h_bias_initializer=i2h_bias_initializer,
                                              h2h_bias_initializer=h2h_bias_initializer,
                                              dims=1,
                                              conv_layout=conv_layout,
+                                             activation=activation,
                                              prefix=prefix, params=params)
 
 
@@ -571,21 +574,16 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         For example, for layout 'NCHW' the shape should be (C, H, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function used in c^\prime_t.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3, 3)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1, 1)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1, 1)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1, 1)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3, 3)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1, 1)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -598,30 +596,36 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCHW' and 'NHWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function used in c^\prime_t.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_lstm_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel=(3, 3), h2h_kernel=(3, 3),
+                 stride=(1, 1), i2h_pad=(0, 0),
+                 i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCHW',
+                 conv_layout='NCHW', activation='tanh',
                  prefix=None, params=None):
         super(Conv2DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
-                                             activation=activation,
-                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                             h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                             stride=stride, i2h_pad=i2h_pad,
+                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                              i2h_weight_initializer=i2h_weight_initializer,
                                              h2h_weight_initializer=h2h_weight_initializer,
                                              i2h_bias_initializer=i2h_bias_initializer,
                                              h2h_bias_initializer=h2h_bias_initializer,
                                              dims=2,
                                              conv_layout=conv_layout,
+                                             activation=activation,
                                              prefix=prefix, params=params)
 
 
@@ -648,21 +652,16 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         For example, for layout 'NCDHW' the shape should be (C, D, H, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function used in c^\prime_t.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3, 3, 3)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1, 1, 1)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1, 1, 1)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1, 1, 1)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0, 0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1, 1)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3, 3, 3)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1, 1, 1)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -675,52 +674,57 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCDHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCDHW' and 'NDHWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function used in c^\prime_t.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_lstm_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3, 3, 3), i2h_stride=(1, 1, 1),
-                 i2h_pad=(1, 1, 1), i2h_dilate=(1, 1, 1),
-                 h2h_kernel=(3, 3, 3), h2h_dilate=(1, 1, 1),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1, 1, 1), i2h_pad=(0, 0, 0),
+                 i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCDHW',
+                 conv_layout='NCDHW', activation='tanh',
                  prefix=None, params=None):
         super(Conv3DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
-                                             activation=activation,
-                                             i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                             i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                             h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                             stride=stride, i2h_pad=i2h_pad,
+                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                              i2h_weight_initializer=i2h_weight_initializer,
                                              h2h_weight_initializer=h2h_weight_initializer,
                                              i2h_bias_initializer=i2h_bias_initializer,
                                              h2h_bias_initializer=h2h_bias_initializer,
                                              dims=3,
                                              conv_layout=conv_layout,
+                                             activation=activation,
                                              prefix=prefix, params=params)
 
 
 class _ConvGRUCell(_BaseConvRNNCell):
-    def __init__(self, input_shape, hidden_channels, activation,
-                 i2h_kernel, i2h_stride, i2h_pad, i2h_dilate, h2h_kernel, h2h_dilate,
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel, stride, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 dims, conv_layout, prefix, params):
+                 dims, conv_layout, activation, prefix, params):
         super(_ConvGRUCell, self).__init__(input_shape=input_shape,
                                            hidden_channels=hidden_channels,
-                                           activation=activation,
-                                           i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                           i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                           h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                           i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                           stride=stride, i2h_pad=i2h_pad,
+                                           i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                            i2h_weight_initializer=i2h_weight_initializer,
                                            h2h_weight_initializer=h2h_weight_initializer,
                                            i2h_bias_initializer=i2h_bias_initializer,
                                            h2h_bias_initializer=h2h_bias_initializer,
                                            dims=dims,
                                            conv_layout=conv_layout,
+                                           activation=activation,
                                            prefix=prefix, params=params)
 
     def state_info(self, batch_size=0):
@@ -779,21 +783,16 @@ class Conv1DGRUCell(_ConvGRUCell):
         For example, for layout 'NCW' the shape should be (C, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function used in n_t.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3,)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1,)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1,)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1,)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0,)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1,)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3,)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1,)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -806,30 +805,36 @@ class Conv1DGRUCell(_ConvGRUCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCW' and 'NWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function used in n_t.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_gru_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3,), i2h_stride=(1,), i2h_pad=(1,), i2h_dilate=(1,),
-                 h2h_kernel=(3,), h2h_dilate=(1,),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1,), i2h_pad=(0,),
+                 i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCW',
+                 conv_layout='NCW', activation='tanh',
                  prefix=None, params=None):
         super(Conv1DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=1,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
 
 
@@ -851,21 +856,16 @@ class Conv2DGRUCell(_ConvGRUCell):
         For example, for layout 'NCHW' the shape should be (C, H, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function used in n_t.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3, 3)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1, 1)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1, 1)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1, 1)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3, 3)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1, 1)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -878,30 +878,36 @@ class Conv2DGRUCell(_ConvGRUCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCHW' and 'NHWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function used in n_t.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_gru_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3, 3), i2h_stride=(1, 1), i2h_pad=(1, 1), i2h_dilate=(1, 1),
-                 h2h_kernel=(3, 3), h2h_dilate=(1, 1),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1, 1), i2h_pad=(0, 0),
+                 i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCHW',
+                 conv_layout='NCHW', activation='tanh',
                  prefix=None, params=None):
         super(Conv2DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=2,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
 
 
@@ -923,21 +929,16 @@ class Conv3DGRUCell(_ConvGRUCell):
         For example, for layout 'NCDHW' the shape should be (C, D, H, W).
     hidden_channels : int
         Number of output channels.
-    activation : str or Block, default 'tanh'
-        Type of activation function used in n_t.
-        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
-        :func:`~mxnet.ndarray.Activation` for available choices.
-        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    i2h_kernel : int or tuple of int, default (3, 3, 3)
+    i2h_kernel : int or tuple of int
         Input convolution kernel sizes.
-    i2h_stride : int or tuple of int, default (1, 1, 1)
-        Input convolution stride sizes.
-    i2h_pad : int or tuple of int, default (1, 1, 1)
+    h2h_kernel : int or tuple of int
+        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
+    stride : int or tuple of int, default (1, 1, 1)
+        Input and state convolution stride sizes.
+    i2h_pad : int or tuple of int, default (0, 0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1, 1)
         Input convolution dilate.
-    h2h_kernel : int or tuple of int, default (3, 3, 3)
-        Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
     h2h_dilate : int or tuple of int, default (1, 1, 1)
         Recurrent convolution dilate.
     i2h_weight_initializer : str or Initializer
@@ -950,29 +951,34 @@ class Conv3DGRUCell(_ConvGRUCell):
         Initializer for the recurrent convolution bias vectors.
     conv_layout : str, default 'NCDHW'
         Layout for all convolution inputs, outputs and weights. Options are 'NCDHW' and 'NDHWC'.
+    activation : str or Block, default 'tanh'
+        Type of activation function used in n_t.
+        If argument type is string, it's equivalent to nn.Activation(act_type=str). See
+        :func:`~mxnet.ndarray.Activation` for available choices.
+        Alternatively, other activation blocks such as nn.LeakyReLU can be used.
     prefix : str, default 'conv_gru_'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
     """
-    def __init__(self, input_shape, hidden_channels, activation='tanh',
-                 i2h_kernel=(3, 3, 3), i2h_stride=(1, 1, 1),
-                 i2h_pad=(1, 1, 1), i2h_dilate=(1, 1, 1),
-                 h2h_kernel=(3, 3, 3), h2h_dilate=(1, 1, 1),
+    def __init__(self, input_shape, hidden_channels,
+                 i2h_kernel, h2h_kernel,
+                 stride=(1, 1, 1), i2h_pad=(0, 0, 0),
+                 i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCDHW',
+                 conv_layout='NCDHW', activation='tanh',
                  prefix=None, params=None):
         super(Conv3DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
-                                            activation=activation,
-                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
-                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
-                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
+                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
+                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
                                             i2h_bias_initializer=i2h_bias_initializer,
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=3,
                                             conv_layout=conv_layout,
+                                            activation=activation,
                                             prefix=prefix, params=params)
