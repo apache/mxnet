@@ -733,21 +733,28 @@ def test_ndarray_fluent():
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
                     'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'take',
                     'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
-                    'clip', 'abs' 'sign'])
-    def check_fluent_regular(func, kwargs, shape=(5, 17, 1)):
+                    'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
+                    'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
+                    'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square'])
+    def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.nd.random_uniform(shape=shape, ctx=default_context())
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
                 for r, f in zip(regular, fluent):
-                    assert almost_equal(r.asnumpy(), f.asnumpy())
+                    assert almost_equal(r.asnumpy(), f.asnumpy(), equal_nan=equal_nan)
             else:
-                assert almost_equal(regular.asnumpy(), fluent.asnumpy())
+                assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
-                 'ones_like', 'abs', 'sign']:
+                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
+                 'exp', 'expm1', 'square']:
         check_fluent_regular(func, {})
+
+    for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
+                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt']:
+        check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
         check_fluent_regular(func, {'axis': 1})
