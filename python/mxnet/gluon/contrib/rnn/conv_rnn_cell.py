@@ -25,16 +25,16 @@ from ....base import numeric_types
 from ...rnn import HybridRecurrentCell
 
 
-def _get_conv_out_size(dimensions, kernels, paddings, strides, dilations):
-    return tuple(int(floor((x+2*p-d*(k-1)-1)/s)+1) if x else 0 for x, k, p, s, d in
-                 zip(dimensions, kernels, paddings, strides, dilations))
+def _get_conv_out_size(dimensions, kernels, paddings, dilations):
+    return tuple(int(floor(x+2*p-d*(k-1)-1)+1) if x else 0 for x, k, p, d in
+                 zip(dimensions, kernels, paddings, dilations))
 
 
 class _BaseConvRNNCell(HybridRecurrentCell):
     """Abstract base class for convolutional RNNs"""
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride, i2h_pad, i2h_dilate, h2h_dilate,
+                 i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims,
@@ -49,15 +49,14 @@ class _BaseConvRNNCell(HybridRecurrentCell):
 
         # Convolution setting
         assert all(isinstance(spec, int) or len(spec) == dims
-                   for spec in [i2h_kernel, stride, i2h_pad, i2h_dilate,
+                   for spec in [i2h_kernel, i2h_pad, i2h_dilate,
                                 h2h_kernel, h2h_dilate]), \
                "For {dims}D convolution, the convolution settings can only be either int " \
                "or list/tuple of length {dims}".format(dims=dims)
 
         self._i2h_kernel = (i2h_kernel,) * dims if isinstance(i2h_kernel, numeric_types) \
                            else i2h_kernel
-        self._stride = (stride,) * dims if isinstance(stride, numeric_types) \
-                           else stride
+        self._stride = (1,) * dims
         self._i2h_pad = (i2h_pad,) * dims if isinstance(i2h_pad, numeric_types) \
                         else i2h_pad
         self._i2h_dilate = (i2h_dilate,) * dims if isinstance(i2h_dilate, numeric_types) \
@@ -107,7 +106,6 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         conv_out_size = _get_conv_out_size(dimensions,
                                            self._i2h_kernel,
                                            self._i2h_pad,
-                                           self._stride,
                                            self._i2h_dilate)
         h2h_pad = tuple(d*(k-1)//2 for d, k in zip(self._h2h_dilate, self._h2h_kernel))
         if channel_axis == 1:
@@ -173,14 +171,14 @@ class _BaseConvRNNCell(HybridRecurrentCell):
 
 class _ConvRNNCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
-                 i2h_kernel, h2h_kernel, stride, i2h_pad, i2h_dilate, h2h_dilate,
+                 i2h_kernel, h2h_kernel, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims, conv_layout, activation, prefix, params):
         super(_ConvRNNCell, self).__init__(input_shape=input_shape,
                                            hidden_channels=hidden_channels,
                                            activation=activation,
-                                           i2h_kernel=i2h_kernel, stride=stride,
+                                           i2h_kernel=i2h_kernel,
                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
                                            i2h_weight_initializer=i2h_weight_initializer,
@@ -231,8 +229,6 @@ class Conv1DRNNCell(_ConvRNNCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1,)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0,)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1,)
@@ -261,7 +257,7 @@ class Conv1DRNNCell(_ConvRNNCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1,), i2h_pad=(0,), i2h_dilate=(1,), h2h_dilate=(1,),
+                 i2h_pad=(0,), i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCW', activation='tanh',
@@ -269,7 +265,7 @@ class Conv1DRNNCell(_ConvRNNCell):
         super(Conv1DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
@@ -300,8 +296,6 @@ class Conv2DRNNCell(_ConvRNNCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1, 1)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1)
@@ -330,7 +324,7 @@ class Conv2DRNNCell(_ConvRNNCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1, 1), i2h_pad=(0, 0), i2h_dilate=(1, 1), h2h_dilate=(1, 1),
+                 i2h_pad=(0, 0), i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  conv_layout='NCHW', activation='tanh',
@@ -338,7 +332,7 @@ class Conv2DRNNCell(_ConvRNNCell):
         super(Conv2DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
@@ -369,8 +363,6 @@ class Conv3DRNNCell(_ConvRNNCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1, 1, 1)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0, 0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1, 1)
@@ -399,7 +391,7 @@ class Conv3DRNNCell(_ConvRNNCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1, 1, 1), i2h_pad=(0, 0, 0),
+                 i2h_pad=(0, 0, 0),
                  i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -408,7 +400,7 @@ class Conv3DRNNCell(_ConvRNNCell):
         super(Conv3DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
@@ -423,14 +415,14 @@ class Conv3DRNNCell(_ConvRNNCell):
 class _ConvLSTMCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride, i2h_pad, i2h_dilate, h2h_dilate,
+                 i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims, conv_layout, activation, prefix, params):
         super(_ConvLSTMCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
@@ -500,8 +492,6 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1,)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0,)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1,)
@@ -530,7 +520,7 @@ class Conv1DLSTMCell(_ConvLSTMCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1,), i2h_pad=(0,),
+                 i2h_pad=(0,),
                  i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -539,7 +529,7 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         super(Conv1DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
                                              i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                             stride=stride, i2h_pad=i2h_pad,
+                                             i2h_pad=i2h_pad,
                                              i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                              i2h_weight_initializer=i2h_weight_initializer,
                                              h2h_weight_initializer=h2h_weight_initializer,
@@ -578,8 +568,6 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1, 1)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1)
@@ -608,7 +596,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel=(3, 3), h2h_kernel=(3, 3),
-                 stride=(1, 1), i2h_pad=(0, 0),
+                 i2h_pad=(0, 0),
                  i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -617,7 +605,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         super(Conv2DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
                                              i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                             stride=stride, i2h_pad=i2h_pad,
+                                             i2h_pad=i2h_pad,
                                              i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                              i2h_weight_initializer=i2h_weight_initializer,
                                              h2h_weight_initializer=h2h_weight_initializer,
@@ -656,8 +644,6 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1, 1, 1)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0, 0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1, 1)
@@ -686,7 +672,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1, 1, 1), i2h_pad=(0, 0, 0),
+                 i2h_pad=(0, 0, 0),
                  i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -695,7 +681,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         super(Conv3DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
                                              i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                             stride=stride, i2h_pad=i2h_pad,
+                                             i2h_pad=i2h_pad,
                                              i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                              i2h_weight_initializer=i2h_weight_initializer,
                                              h2h_weight_initializer=h2h_weight_initializer,
@@ -709,14 +695,14 @@ class Conv3DLSTMCell(_ConvLSTMCell):
 
 class _ConvGRUCell(_BaseConvRNNCell):
     def __init__(self, input_shape, hidden_channels,
-                 i2h_kernel, h2h_kernel, stride, i2h_pad, i2h_dilate, h2h_dilate,
+                 i2h_kernel, h2h_kernel, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims, conv_layout, activation, prefix, params):
         super(_ConvGRUCell, self).__init__(input_shape=input_shape,
                                            hidden_channels=hidden_channels,
                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                           stride=stride, i2h_pad=i2h_pad,
+                                           i2h_pad=i2h_pad,
                                            i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                            i2h_weight_initializer=i2h_weight_initializer,
                                            h2h_weight_initializer=h2h_weight_initializer,
@@ -787,8 +773,6 @@ class Conv1DGRUCell(_ConvGRUCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1,)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0,)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1,)
@@ -817,7 +801,7 @@ class Conv1DGRUCell(_ConvGRUCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1,), i2h_pad=(0,),
+                 i2h_pad=(0,),
                  i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -826,7 +810,7 @@ class Conv1DGRUCell(_ConvGRUCell):
         super(Conv1DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
@@ -860,8 +844,6 @@ class Conv2DGRUCell(_ConvGRUCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1, 1)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1)
@@ -890,7 +872,7 @@ class Conv2DGRUCell(_ConvGRUCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1, 1), i2h_pad=(0, 0),
+                 i2h_pad=(0, 0),
                  i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -899,7 +881,7 @@ class Conv2DGRUCell(_ConvGRUCell):
         super(Conv2DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
@@ -933,8 +915,6 @@ class Conv3DGRUCell(_ConvGRUCell):
         Input convolution kernel sizes.
     h2h_kernel : int or tuple of int
         Recurrent convolution kernel sizes. Only odd-numbered sizes are supported.
-    stride : int or tuple of int, default (1, 1, 1)
-        Input and state convolution stride sizes.
     i2h_pad : int or tuple of int, default (0, 0, 0)
         Pad for input convolution.
     i2h_dilate : int or tuple of int, default (1, 1, 1)
@@ -963,7 +943,7 @@ class Conv3DGRUCell(_ConvGRUCell):
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
-                 stride=(1, 1, 1), i2h_pad=(0, 0, 0),
+                 i2h_pad=(0, 0, 0),
                  i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -972,7 +952,7 @@ class Conv3DGRUCell(_ConvGRUCell):
         super(Conv3DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
-                                            stride=stride, i2h_pad=i2h_pad,
+                                            i2h_pad=i2h_pad,
                                             i2h_dilate=i2h_dilate, h2h_dilate=h2h_dilate,
                                             i2h_weight_initializer=i2h_weight_initializer,
                                             h2h_weight_initializer=h2h_weight_initializer,
