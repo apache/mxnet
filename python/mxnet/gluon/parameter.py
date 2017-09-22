@@ -146,7 +146,12 @@ class Parameter(object):
                 "It was only initialized on %s."%(
                     self.name, str(ctx), str(self._ctx_list)))
         if self._deferred_init:
-            raise DeferredInitializationError
+            raise DeferredInitializationError(
+                "Parameter %s has not been initialized yet because initialization was " \
+                "deferred. Actual initialization happens during the first forward pass. " \
+                "Please pass one batch of data through the network before accessing Parameters. " \
+                "You can also avoid deferred initialization by specifying in_units, " \
+                "num_features, etc., for network layers."%(self.name))
         raise RuntimeError(
             "Parameter %s has not been initialized. Note that " \
             "you should initialize parameters and create Trainer " \
