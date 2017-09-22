@@ -289,7 +289,7 @@ class ThreadedEngine : public Engine {
 
     /*! \brief Set default OMP threads per kernel worker to default */
     set_num_omp_threads_per_worker(DefaultOMPThreadsPerWorker());
-    CHECK_GT(get_num_omp_threads_per_worker(), 0);
+    CHECK_GT(num_omp_threads_per_worker(), 0);
   }
   ~ThreadedEngine() {
     {
@@ -301,16 +301,17 @@ class ThreadedEngine : public Engine {
 
   /*! \brief Return default OMP thread count. Currently, this is whatever OMP shows as number
    * of procs
+   * \warning Do not call this in any performance-sensitive use-case since checking the environment
+   * is slow
    */
   static int DefaultOMPThreadsPerWorker() {
 #ifdef _OPENMP
-    // If environment variable is set and it's not empty, then use omp_get_max_threads()
-    // (Check environment directly, since OMP_NUM_THREADS mnay have odd formatting (i.e. 3, 2"))
-    // Taking max including omp_get_max_threads() in case this implementation of OMP accounts for
-    // hyperthreading
-    const char *s = getenv("OMP_NUM_THREADS");
-    const int max_threads = s && *s ? omp_get_max_threads() : std::max(omp_get_max_threads(),
-                                                                       omp_get_num_procs());
+    // If OMP_NUM_THREADS is set, use omp_get_max_threads(), which will be the value
+    // interpreted by the implemetation from the OMP_NUM_THREADS environment variable.
+    // Otherwise, return the number of processors, not counting hyperthreading.
+    // Test for set OMP_NUM_THREADS by checking against some nonsensical value
+    const int max_threads = dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN ?
+                            omp_get_num_threads() : omp_get_num_procs();
     return max_threads;
 #else
     return 0;
@@ -387,7 +388,7 @@ class ThreadedEngine : public Engine {
   /*! \brief Return the number of OMP threads that should be used per worker
    * \return Number of OMP threads that should be used per worker
    */
-  int get_num_omp_threads_per_worker() const override {
+  int num_omp_threads_per_worker() const override {
     return num_omp_threads_per_worker_;
   }
 

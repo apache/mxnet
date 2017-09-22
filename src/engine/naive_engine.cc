@@ -192,7 +192,7 @@ class NaiveEngine final : public Engine {
   /*! \brief Return the number of OMP threads that should be used per worker
    * \return Number of OMP threads that should be used per worker
    */
-  int get_num_omp_threads_per_worker() const override {
+  int num_omp_threads_per_worker() const override {
     return num_omp_threads_per_worker_;
   }
 
