@@ -47,11 +47,10 @@ Graph AttachOpResources(Graph g) {
     if (inode.source->is_variable()) continue;
     const Context &ctx = vctx[nid];
     auto& requested = op_execs[nid]->op_ctx.requested;
+    requested.clear();
     const auto op = inode.source->op();
-    const auto op_attrs = inode.source->attrs;
     if (fresource.count(op) != 0) {
-      auto reqs = fresource[op](op_attrs);
-      requested.clear();
+      auto reqs = fresource[op](inode.source->attrs);
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {
@@ -72,33 +71,7 @@ Graph AttachOpResources(Graph g) {
     }
     // extra resource requests for storage fallback
     if (vdispatch[nid] == kDispatchFComputeFallback) {
-      auto req = ResourceRequest::kTempSpace;
-      // resource for inputs
-      for (const auto& e : inode.inputs) {
-        const auto eid = idx.entry_id(e);
-        CHECK_NE(vstype[eid], kUndefinedStorage);
-        if (vstype[eid] != kDefaultStorage) {
-          requested.push_back(ResourceManager::Get()->Request(ctx, req));
-        }
-      }
-      // resource for outputs
-      for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-        uint32_t eid = idx.entry_id(nid, index);
-        CHECK_NE(vstype[eid], kUndefinedStorage);
-        if (vstype[eid] != kDefaultStorage) {
-          requested.push_back(ResourceManager::Get()->Request(ctx, req));
-        }
-      }
-      // resource for mutatable inputs
-      if (fmutate.count(op)) {
-        const auto mutate_idx = fmutate[op](op_attrs);
-        for (const auto i : mutate_idx) {
-          uint32_t eid = idx.entry_id(inode.inputs[i]);
-          if (vstype[eid] != kDefaultStorage) {
-            requested.push_back(ResourceManager::Get()->Request(ctx, req));
-          }
-        }
-      }
+      requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
     }
   }
   return g;

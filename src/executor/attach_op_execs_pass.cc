@@ -67,8 +67,6 @@ class StorageFallbackOpExecutor : public OpExecutor {
                         &pre_temp_src_, &pre_temp_dst_,
                         &post_temp_src_, &post_temp_dst_,
                         &in_temp_idx_map_, mutate_idx_);
-      SetupOpContext(pre_temp_src_.size(), post_temp_src_.size(),
-                     &op_ctx, &pre_vctx_, &post_vctx_);
       init_ = true;
     }
   }
@@ -76,12 +74,12 @@ class StorageFallbackOpExecutor : public OpExecutor {
   // storage fallback before fcompute is launched
   void PreFCompute(bool is_gpu) {
     InitBlobs();
-    common::CastNonDefaultStorage(pre_temp_src_, pre_temp_dst_, pre_vctx_, is_gpu);
+    common::CastNonDefaultStorage(pre_temp_src_, pre_temp_dst_, op_ctx, is_gpu);
   }
 
   // storage fallback after fcompute is completed
   void PostFCompute(bool is_gpu) {
-    common::CastNonDefaultStorage(post_temp_src_, post_temp_dst_, post_vctx_, is_gpu);
+    common::CastNonDefaultStorage(post_temp_src_, post_temp_dst_, op_ctx, is_gpu);
   }
 
   // default storage tensor blobs for fcompute
@@ -94,8 +92,6 @@ class StorageFallbackOpExecutor : public OpExecutor {
   std::unordered_map<uint32_t, uint32_t> in_temp_idx_map_;
   // indices of mutatable inputs
   std::vector<uint32_t> mutate_idx_;
-  // op contexts for pre-fcompute and post-fcompute storage fallback
-  std::vector<OpContext> pre_vctx_, post_vctx_;
   // whether blobs are initialized
   bool init_;
 };

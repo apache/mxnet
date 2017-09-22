@@ -73,6 +73,8 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (*dispatch_mode == kDispatchFComputeFallback) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

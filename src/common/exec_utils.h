@@ -116,52 +116,24 @@ inline void SetupDefaultBlobs(const std::vector<NDArray> &ndinputs,
   }
 }
 
-  /*! \brief RunContext related resources */
-  /*! \brief the callback when operation completes, used by asynchronize ops */
-  /*! \brief Resources requested by the operator */
-inline void SetupOpContext(const size_t pre_num_resource,
-                           const size_t post_num_resource,
-                           OpContext *op_ctx,
-                           std::vector<OpContext> *pre_vctx,
-                           std::vector<OpContext> *post_vctx) {
-  CHECK_GE(op_ctx->requested.size(), pre_num_resource + post_num_resource)
-           << "Not enough resource requested for storage fallback. pre_num_resource = "
-           << pre_num_resource << ", post_num_resource = " << post_num_resource;
-  size_t num_resource_op = op_ctx->requested.size() - pre_num_resource - post_num_resource;
-  size_t offset = 0;
-  for (; offset < pre_num_resource; offset++) {
-    OpContext ctx{op_ctx->is_train, op_ctx->run_ctx, op_ctx->async_on_complete,
-                  {op_ctx->requested[num_resource_op + offset]}};
-    pre_vctx->emplace_back(ctx);
-  }
-  for (; offset < pre_num_resource + post_num_resource; offset++) {
-    OpContext ctx{op_ctx->is_train, op_ctx->run_ctx, op_ctx->async_on_complete,
-                  {op_ctx->requested[num_resource_op + offset]}};
-    post_vctx->emplace_back(ctx);
-  }
-  op_ctx->requested.resize(num_resource_op);
-}
-
 // cast the NDArrays in `src` to NDArrays in `dst`, with op contexts in `ctx`
 inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
                                   const std::vector<NDArray>& dst,
-                                  const std::vector<OpContext>& ctx,
+                                  const OpContext& ctx,
                                   const bool is_gpu) {
   CHECK_EQ(dst.size(), src.size());
-  CHECK_EQ(ctx.size(), src.size());
   for (size_t i = 0; i < src.size(); i++) {
     if (is_gpu) {
 #if MXNET_USE_CUDA
-      CastStorageDispatch<gpu>(ctx[i], src[i], dst[i]);
+      CastStorageDispatch<gpu>(ctx, src[i], dst[i]);
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     } else {
-      CastStorageDispatch<cpu>(ctx[i], src[i], dst[i]);
+      CastStorageDispatch<cpu>(ctx, src[i], dst[i]);
     }
   }
 }
-
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_

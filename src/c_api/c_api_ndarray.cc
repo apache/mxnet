@@ -285,33 +285,13 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
         LOG(FATAL) << "resource type not yet supported";
       }
     }
-    CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
+    CHECK_LE(ntmp, 1) << "Only support 1 temp space request for the operator";
   }
 
   // append extra resource requests for storage fallback
   if (dispatch_mode == kDispatchFComputeFallback) {
-    auto req = ResourceRequest::kTempSpace;
-    // resources for inputs
-    for (const auto& nd : ndinputs) {
-      if (nd.storage_type() != kDefaultStorage) {
-        requested.push_back(ResourceManager::Get()->Request(ctx, req));
-        write_vars.push_back(requested.back().var);
-      }
-    }
-    // resources for outputs
-    for (const auto& nd : ndoutputs) {
-      if (nd.storage_type() != kDefaultStorage) {
-        requested.push_back(ResourceManager::Get()->Request(ctx, req));
-        write_vars.push_back(requested.back().var);
-      }
-    }
-    // resources for mutable inputs
-    for (auto & i : mutate_idx) {
-      if (ndinputs[i].storage_type() != kDefaultStorage) {
-        requested.push_back(ResourceManager::Get()->Request(ctx, req));
-        write_vars.push_back(requested.back().var);
-      }
-    }
+    requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+    write_vars.push_back(requested.back().var);
   }
 
   for (auto& i : ndinputs) {
@@ -364,7 +344,6 @@ void PushFCompute(const FCompute& fn,
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
       // pre-fcompute and post-fcompute storage fallback contexts
-      std::vector<OpContext> pre_vctx, post_vctx;
       // setup blobs
       SetupDefaultBlobs(ndinputs, ndoutputs, &input_blobs, &output_blobs,
                         &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
@@ -372,15 +351,13 @@ void PushFCompute(const FCompute& fn,
       // setup contexts
       OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
-      SetupOpContext(pre_temp_src.size(), post_temp_src.size(),
-                     &opctx, &pre_vctx, &post_vctx);
       // setup reqs
       std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
       // pre-fcompute fallback
-      CastNonDefaultStorage(pre_temp_src, pre_temp_dst, pre_vctx, is_gpu);
+      CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
       fn(attrs, opctx, input_blobs, req, output_blobs);
       // post-fcompute fallback, cast to original storage type
-      CastNonDefaultStorage(post_temp_src, post_temp_dst, post_vctx, is_gpu);
+      CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
       if (is_gpu) {
         rctx.get_stream<gpu>()->Wait();
       }
@@ -475,8 +452,6 @@ void PushOperator(const OpStatePtr& state,
         std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
-        // pre-fcompute and post-fcompute storage fallback contexts
-        std::vector<OpContext> pre_vctx, post_vctx;
         // populate input blobs and output blobs
         SetupDefaultBlobs(ndinputs, ndoutputs, &input_blobs, &output_blobs,
                           &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
@@ -484,15 +459,13 @@ void PushOperator(const OpStatePtr& state,
         // setup contexts
         OpContext opctx{is_train, rctx, on_complete, requested};
         bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
-        SetupOpContext(pre_temp_src.size(), post_temp_src.size(),
-                       &opctx, &pre_vctx, &post_vctx);
         // setup reqs
         std::vector<OpReqType> req(output_blobs.size(), kWriteTo);
         // pre-fcompute fallback
-        CastNonDefaultStorage(pre_temp_src, pre_temp_dst, pre_vctx, is_gpu);
+        CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
         fcompute(state, opctx, input_blobs, req, output_blobs);
         // post-fcompute fallback, cast to original storage type, if necessary
-        CastNonDefaultStorage(post_temp_src, post_temp_dst, post_vctx, is_gpu);
+        CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
         if (exec_type == ExecType::kSync) {
           if (is_gpu) {
             rctx.get_stream<gpu>()->Wait();

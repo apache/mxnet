@@ -1062,41 +1062,6 @@ def test_elemwise_add_ex():
                                   lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
-# TODO(haibin) randomize this test
-def test_elemwise_add_ex_multiple_stages():
-    if default_context().device_type == 'cpu':
-        # prep data
-        shape = (4, 2)
-        ds_np = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
-        sp_np1 = np.array([[5, 10], [0, 0], [0, 0], [0, 0]])
-        sp_np2 = np.array([[0, 0], [5, 10], [0, 0], [0, 0]])
-
-        val1 = mx.nd.array([[5, 10]]);
-        val2 = mx.nd.array([[5, 10]]);
-        idx1 = mx.nd.array([0], dtype=np.int64);
-        idx2 = mx.nd.array([1], dtype=np.int64);
-        sp_nd1 = mx.nd.sparse.row_sparse_array(val1, idx1, shape)
-        sp_nd2 = mx.nd.sparse.row_sparse_array(val2, idx2, shape)
-        ds_nd = mx.nd.array(ds_np)
-
-        # sparse + sparse = sparse
-        sp_data1 = mx.symbol.Variable('sp_data1', stype='row_sparse')
-        sp_data2 = mx.symbol.Variable('sp_data2', stype='row_sparse')
-        ds_data = mx.symbol.Variable('ds_data')
-        plus = mx.symbol.sparse.elemwise_add(sp_data1, sp_data2, name='plus')
-        # sparse + dense = dense
-        test = mx.symbol.sparse.elemwise_add(plus, ds_data)
-        check_symbolic_forward(test, {'sp_data1': sp_nd1, 'sp_data2': sp_nd2,
-                                      'ds_data': ds_nd}, [sp_np1 + sp_np2 + ds_np])
-
-        arr_grads = [mx.nd.zeros(shape) for i in range(3)]
-        exec_test = test.bind(default_context(), args={'sp_data1': sp_nd1, 'sp_data2': sp_nd2,
-                                                       'ds_data': ds_nd}, args_grad=arr_grads)
-        exec_test.forward(is_train=True)
-        assert_almost_equal(exec_test.outputs[0].asnumpy(), sp_np1 + sp_np2 + ds_np)
-        exec_test.backward(out_grads=exec_test.outputs)
-        assert_almost_equal(arr_grads[0].asnumpy(), arr_grads[1].asnumpy())
-
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
