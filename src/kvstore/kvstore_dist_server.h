@@ -143,7 +143,6 @@ class KVStoreDistServer {
   }
 
   void load_compress_params(const std::string& params) {
-    std::cout<<params<<" received"<<std::endl;
     std::vector<std::string> elems;
     split(params, ',', std::back_inserter(elems));
     compress_ = elems[0];
@@ -409,12 +408,12 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-     // std::cout << "server: compress shape: " << dshape.Size() << std::endl;
+      std::cout << "server: compress shape: " << dshape.Size() << std::endl;
       NDArray comp_buf = compress_buf_[key];
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
-        //std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
+        std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
         if (comp_buf.is_none()) {
           comp_buf = NDArray(dshape, Context());
         }

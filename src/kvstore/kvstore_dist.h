@@ -91,12 +91,10 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void SetCompress(const std::string& compress,
-                     const float pos_threshold,
+  virtual void SetCompress(const std::string& compress, const float pos_threshold,
                      const float neg_threshold) {
-    KVStore::SetCompress(compress, pos_threshold, neg_threshold);
+    KVStoreLocal::SetCompress(compress, pos_threshold, neg_threshold);
     if (get_rank() == 0) {
-      std::cout << GetCompressParams() << std::endl;
       SendCommandToServers(kSetCompress, GetCompressParams());
     }
   }
@@ -324,7 +322,6 @@ class KVStoreDist : public KVStoreLocal {
           neg_thre_ = neg_threshold_;
         }
       }
-
       // Compress
       if (compress_ == "2bit") {
         Quantize(send_buf, &small_buf, &res_buf,
@@ -332,6 +329,7 @@ class KVStoreDist : public KVStoreLocal {
            compress_,
            priority);
       }
+      std::cout<<"finished compress"<<std::endl;
 
       // push to servers
       if (storage_type == kDefaultStorage) {

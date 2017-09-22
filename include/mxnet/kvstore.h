@@ -67,13 +67,8 @@ class KVStore {
   /**
    * \brief set to use low-bit compression
    */
-  void SetCompress(const std::string& compress,
-                          const float pos_threshold,
-                          const float neg_threshold) {
-    compress_ = compress;
-    pos_threshold_ = pos_threshold;
-    neg_threshold_ = neg_threshold;
-  }
+  virtual void SetCompress(const std::string& compress, const float pos_threshold,
+                           const float neg_threshold) = 0;
 
   std::string GetCompressParams() {
     std::string rval = compress_;

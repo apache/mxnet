@@ -135,6 +135,13 @@ class KVStoreLocal : public KVStore {
     PullRowSparseImpl(keys, val_rowids, priority);
   }
 
+  virtual void SetCompress(const std::string& compress, const float pos_threshold,
+                   const float neg_threshold) {
+    compress_ = compress;
+    pos_threshold_ = pos_threshold;
+    neg_threshold_ = neg_threshold;
+  }
+
  private:
   virtual void InitImpl(const std::vector<int>& keys,
                         const std::vector<NDArray>& values) {

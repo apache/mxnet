@@ -181,9 +181,14 @@ def test_compressed():
     # init kv dns keys
     kv.init('99', mx.nd.ones(big_shape))
     kv.init('3', mx.nd.ones(shape))
+    kv.push('99', mx.nd.ones(big_shape)*(kv.rank+1))
+    # kv.push('99', mx.nd.ones(big_shape)*(kv.rank+1))
+    # kv.push('99', mx.nd.ones(big_shape)*(kv.rank+1))
 
     def check_default_keys(kv, my_rank, nworker):
-        nrepeat = 3
+
+        nrepeat = 2
+        print 'nrepeat',nrepeat
         for i in range(nrepeat):
             kv.push('3', mx.nd.ones(shape)*(my_rank+1))
             kv.push('99', mx.nd.ones(big_shape)*(my_rank+1))
@@ -196,9 +201,9 @@ def test_compressed():
         val2 = mx.nd.zeros(big_shape)
         kv.pull('99', out=val2)
         check_diff_to_scalar(val2, pos_threshold)
-
-    check_default_keys(kv, kv.rank, kv.num_workers)
+        print val, val2
+    # check_default_keys(kv, kv.rank, kv.num_workers)
 
 if __name__ == "__main__":
-    test_sync_push_pull()
+    #test_sync_push_pull()
     test_compressed()
