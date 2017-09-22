@@ -272,11 +272,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
 
   if (tmp_resource.count(op)) {
     int ntmp = 0;
-    auto requests = tmp_resource[op](attrs);
-    // extra resource request for storage fallback
-    if (dispatch_mode == kDispatchFComputeFallback) {
-      requests.push_back(ResourceRequest::kTempSpace);
-    }
+    const auto requests = tmp_resource[op](attrs);
     for (const auto& req : requests) {
       switch (req.type) {
        case ResourceRequest::kTempSpace:
@@ -292,7 +288,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
     CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
   }
 
-  // append extra resource requests for storage fallback at the end
+  // append extra resource requests for storage fallback
   if (dispatch_mode == kDispatchFComputeFallback) {
     auto req = ResourceRequest::kTempSpace;
     // resources for inputs
@@ -313,6 +309,7 @@ void SetDependency(std::vector<engine::VarHandle> *p_read_vars,
     for (auto & i : mutate_idx) {
       if (ndinputs[i].storage_type() != kDefaultStorage) {
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        write_vars.push_back(requested.back().var);
       }
     }
   }

@@ -28,7 +28,7 @@ namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_add, mshadow::op::plus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
-.add_alias("_add").add_alias("_plus").add_alias("_Plus").add_alias("_sparse_elemwise_add")
+.add_alias("_add").add_alias("_plus").add_alias("_Plus")
 .describe(R"code(Adds arguments element-wise.
 
 The storage type of ``elemwise_add`` output depends on storage types of inputs
