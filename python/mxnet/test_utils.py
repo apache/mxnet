@@ -1171,7 +1171,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None):
+                      raise_on_err=True, ground_truth=None, equal_nan=False):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1271,7 +1271,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             gtarr = gt[name].astype(dtypes[i]).asnumpy()
             arr = arr.asnumpy()
             try:
-                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                    equal_nan=equal_nan)
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
@@ -1297,7 +1298,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 gtarr = gt[name].astype(dtypes[i]).asnumpy()
                 arr = arr.asnumpy()
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                        equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
