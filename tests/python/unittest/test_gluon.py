@@ -73,8 +73,8 @@ def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
     model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh', in_units=256))
-    model.add(nn.Dense(32, in_units=64))
+    model.add(nn.Dense(64, activation='tanh', in_units=256),
+              nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
 
     # symbol
@@ -116,8 +116,8 @@ def test_symbol_block():
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh'))
-    model.add(nn.Dense(32, in_units=64))
+    model.add(nn.Dense(64, activation='tanh'),
+              nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
 
     model.initialize()
@@ -427,6 +427,12 @@ def test_block_attr_regular():
     b.c = c2
     assert b.c is c2 and b._children[0] is c2
 
+def test_sequential_warning():
+    with warnings.catch_warnings(record=True) as w:
+        b = gluon.nn.Sequential()
+        b.add(gluon.nn.Dense(20))
+        b.hybridize()
+        assert len(w) == 1
 
 def test_global_norm_clip():
     x1 = mx.nd.ones((3,3))
