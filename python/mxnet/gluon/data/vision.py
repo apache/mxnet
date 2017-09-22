@@ -266,7 +266,7 @@ class ImageFolderDataset(dataset.Dataset):
         self._flag = flag
         self._transform = transform
         self._exts = ['.jpg', '.jpeg', '.png']
-        self._list_iamges(self._root)
+        self._list_images(self._root)
 
     def _list_images(self, root):
         self.synsets = []
