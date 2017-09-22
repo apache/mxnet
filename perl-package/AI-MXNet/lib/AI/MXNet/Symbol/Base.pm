@@ -99,7 +99,7 @@ func _make_atomic_symbol_function($handle, $name)
                             $ret_type
     );
     my $creator = sub {
-        my $class = shift;
+        my $class = ref($_[0]) || shift;
         my (@args, %kwargs);
         if(
             @_
