@@ -158,6 +158,17 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   /*! \brief Tensor operation against a scalar with a dense result */
+  template<typename OP, typename DType, typename IType>
+  static void ComputeExDenseResultRsp(mshadow::Stream<gpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
+    LOG(FATAL) << "NOT IMPLEMENTED";
+  }
+
+  /*! \brief Tensor operation against a scalar with a dense result */
   template<typename OP, typename DType, typename IType, typename CType>
   static void ComputeExDenseResultCsr(mshadow::Stream<cpu> *stream,
                                       const nnvm::NodeAttrs &attrs,
@@ -216,6 +227,17 @@ class BinaryScalarOp : public UnaryOp {
         }
       }
     }
+  }
+
+  /*! \brief Tensor operation against a scalar with a dense result */
+  template<typename OP, typename DType, typename IType, typename CType>
+  static void ComputeExDenseResultCsr(mshadow::Stream<gpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
+    LOG(FATAL) << "NOT IMPLEMENTED";
   }
 
   template<typename xpu, typename OP, typename DType, typename IType>
