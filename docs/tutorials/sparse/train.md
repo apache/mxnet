@@ -1,3 +1,4 @@
+
 # Train a Linear Regression Model with Sparse Symbols
 In previous tutorials, we introduced `CSRNDArray` and `RowSparseNDArray`,
 the basic data structures for manipulating sparse data.
@@ -32,13 +33,14 @@ The `stype` attribute of a variable is used to indicate the storage type of the 
 By default, the `stype` of a variable is "default" which indicates the default dense storage format.
 We can specify the `stype` of a variable as "csr" or "row_sparse" to hold sparse arrays.
 
+
 ```python
 import mxnet as mx
-# create a variable to hold an NDArray
+# Create a variable to hold an NDArray
 a = mx.sym.Variable('a')
-# create a variable to hold a CSRNDArray
+# Create a variable to hold a CSRNDArray
 b = mx.sym.Variable('b', stype='csr')
-# create a variable to hold a RowSparseNDArray
+# Create a variable to hold a RowSparseNDArray
 c = mx.sym.Variable('c', stype='row_sparse')
 (a, b, c)
 ```
@@ -48,26 +50,30 @@ c = mx.sym.Variable('c', stype='row_sparse')
 The sparse symbols constructed above declare storage types of the arrays to hold.
 To evaluate them, we need to feed the free variables with sparse data.
 
-We can instantiate an executor from a sparse symbol by using the `simple_bind` method,
+You can instantiate an executor from a sparse symbol by using the `simple_bind` method,
 which allocate zeros to all free variables according to their storage types.
 The executor provides `forward` method for evaluation and an attribute
-`outputs` to get all the results.
+`outputs` to get all the results. Later, we will show the use of the `backward` method and other methods computing the gradients and updating parameters. A simple example first:
+
 
 ```python
 shape = (2,2)
-# instantiate an executor from sparse symbols
-var_exec = mx.sym.Group([b, c]).simple_bind(ctx=mx.cpu(), b=shape, c=shape)
-var_exec.forward()
-# sparse arrays of zeros are bound to b and c
-{'[b, c]': var_exec.outputs}
+# Instantiate an executor from sparse symbols
+b_exec = b.simple_bind(ctx=mx.cpu(), b=shape)
+c_exec = c.simple_bind(ctx=mx.cpu(), c=shape)
+b_exec.forward()
+c_exec.forward()
+# Sparse arrays of zeros are bound to b and c
+print(b_exec.outputs, c_exec.outputs)
 ```
 
-We can update the array held by the variable by accessing executor's `arg_dict` and assigning new values.
+You can update the array held by the variable by accessing executor's `arg_dict` and assigning new values.
+
 
 ```python
 var_exec.arg_dict['b'][:] = mx.nd.ones(shape).tostype('csr')
 var_exec.forward()
-# the array `b` holds are updated to be ones
+# The array `b` holds are updated to be ones
 eval_b = var_exec.outputs[0]
 {'eval_b': eval_b, 'eval_b.asnumpy()': eval_b.asnumpy()}
 ```
@@ -79,41 +85,38 @@ eval_b = var_exec.outputs[0]
 The following example builds a simple element-wise addition expression with different storage types.
 The sparse symbols are available in the `mx.sym.sparse` package.
 
+
 ```python
-# element-wise addition of variables with "default" stype
+# Element-wise addition of variables with "default" stype
 d = mx.sym.elemwise_add(a, a)
-# element-wise addition of variables with "csr" stype
+# Element-wise addition of variables with "csr" stype
 e = mx.sym.sparse.negative(b)
-# element-wise addition of variables with "row_sparse" stype
+# Element-wise addition of variables with "row_sparse" stype
 f = mx.sym.sparse.elemwise_add(c, c)
 {'d':d, 'e':e, 'f':f}
 ```
 
 ### Storage Type Inference
 
-What will be the output storage types of sparse symbols? In MXNet, for any sparse symbol, the result storage types are
-inferred based on storage types of inputs.
-You can read the [Sparse Symbol API](mxnet.io/api/python/symbol/sparse.html) documentation to find
-what output storage types are.
+What will be the output storage types of sparse symbols? In MXNet, for any sparse symbol, the result storage types are inferred based on storage types of inputs.
+You can read the [Sparse Symbol API](mxnet.io/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
+
 
 ```python
 add_exec = mx.sym.Group([d, e, f]).simple_bind(ctx=mx.cpu(), a=shape, b=shape, c=shape)
 add_exec.forward()
 dense_add = add_exec.outputs[0]
-# the output storage type of elemwise_add(csr, csr) will be inferred as "csr"
+# The output storage type of elemwise_add(csr, csr) will be inferred as "csr"
 csr_add = add_exec.outputs[1]
-# the output storage type of elemwise_add(row_sparse, row_sparse) will be inferred as "row_sparse"
+# The output storage type of elemwise_add(row_sparse, row_sparse) will be inferred as "row_sparse"
 rsp_add = add_exec.outputs[2]
 {'dense_add.stype': dense_add.stype, 'csr_add.stype':csr_add.stype, 'rsp_add.stype': rsp_add.stype}
 ```
 
 ### Storage Type Fallback
 
-For operators that don't specialize in certain sparse arrays, we can still use them with sparse inputs with some performance penalty.
-In MXNet, dense operators require all inputs and outputs to be in the dense format.
-If sparse inputs are provided, MXNet will convert sparse inputs into dense ones temporarily so that the dense operator can be used.
-If sparse outputs are provided, MXNet will convert the dense outputs generated by the dense operator into the provided sparse format.
-Warning messages will be printed when such a storage fallback event happens.
+For operators that don't specialize in certain sparse arrays, you can still use them with sparse inputs with some performance penalty. In MXNet, dense operators require all inputs and outputs to be in the dense format. If sparse inputs are provided, MXNet will convert sparse inputs into dense ones temporarily so that the dense operator can be used. If sparse outputs are provided, MXNet will convert the dense outputs generated by the dense operator into the provided sparse format. Warning messages will be printed when such a storage fallback event happens.
+
 
 ```python
 # `log` operator doesn't support sparse inputs at all, but we can fallback on the dense implementation
@@ -133,13 +136,15 @@ When the environment variable `MXNET_EXEC_LOG_LEVEL` is set to `INFO`, MXNet wil
 including storage types of operators' inputs and outputs in the graph. For example, we can inspect the storage types of
 a linear classification network with sparse operators as follows:
 
+
 ```python
-# set logging level for executor
+# Set logging level for executor
+import mxnet as mx
 import os
 os.environ['MXNET_EXEC_LOG_LEVEL'] = "INFO"
-# data in csr format
+# Data in csr format
 data = mx.sym.var('data', stype='csr', shape=(32, 10000))
-# weight in row_sparse format
+# Weight in row_sparse format
 weight = mx.sym.var('weight', stype='row_sparse', shape=(10000, 2))
 bias = mx.symbol.Variable("bias", shape=(2,))
 dot = mx.symbol.sparse.dot(data, weight)
@@ -151,18 +156,21 @@ executor = output.simple_bind(ctx=mx.cpu())
 
 ## Training with Module APIs
 
-In the following section we'll walk through how one can implement *linear regression* using sparse symbols and sparse optimizers.
+In the following section we'll walk through how one can implement **linear regression** using sparse symbols and sparse optimizers.
 
-The function we are trying to learn is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 100x<sub>100*, where *(x<sub>1</sub>,x<sub>2</sub>, ..., x<sub>100</sub>)* are input features and *y* is the corresponding label.
+The function you will explore is: *y = x<sub>1</sub>  +  2x<sub>2</sub> + ... 100x<sub>100*, where *(x<sub>1</sub>,x<sub>2</sub>, ..., x<sub>100</sub>)* are input features and *y* is the corresponding label.
 
 ### Preparing the Data
 
-In MXNet both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter)
+In MXNet, both [mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.LibSVMIter)
 and [mx.io.NDArrayIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.NDArrayIter)
 support loading sparse data in CSR format. In this example, we'll use the `NDArrayIter`.
 
+You may see some warnings from SciPy. You don't need to worry about those for this example.
+
+
 ```python
-# random training data
+# Random training data
 feature_dimension = 100
 train_data = mx.test_utils.rand_ndarray((1000, feature_dimension), 'csr', 0.01)
 target_weight = mx.nd.arange(1, feature_dimension + 1).reshape((feature_dimension, 1))
@@ -173,7 +181,8 @@ train_iter = mx.io.NDArrayIter(train_data, train_label, batch_size, last_batch_h
 
 ### Defining the Model
 
-Below we define a linear regression model specifying the storage type of the variables.
+Below is an example of a linear regression model specifying the storage type of the variables.
+
 
 ```python
 initializer = mx.initializer.Normal(sigma=0.01)
@@ -206,24 +215,26 @@ The above network uses the following symbols:
 
 Once we have defined the model structure, the next step is to create a module and initialize the parameters and optimizer.
 
+
 ```python
-# create module
+# Create module
 mod = mx.mod.Module(symbol=lro, data_names=['data'], label_names=['label'])
-# allocate memory by given the input data and label shapes
+# Allocate memory by given the input data and label shapes
 mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-# initialize parameters by random numbers
+# Initialize parameters by random numbers
 mod.init_params(initializer=initializer)
-# use SGD as the optimizer, which performs sparse update on "row_sparse" weight
+# Use SGD as the optimizer, which performs sparse update on "row_sparse" weight
 sgd = mx.optimizer.SGD(learning_rate=0.05, rescale_grad=1.0/batch_size, momentum=0.9)
 mod.init_optimizer(optimizer=sgd)
 ```
 
-Finally, we train the parameters of the model to fit the training data by using the `forward`, `backward` and `update` methods in Module.
+Finally, we train the parameters of the model to fit the training data by using the `forward`, `backward`, and `update` methods in Module.
+
 
 ```python
-# use mean square error as the metric
+# Use mean square error as the metric
 metric = mx.metric.create('MSE')
-# train 10 epochs
+# Train 10 epochs
 for epoch in range(10):
     train_iter.reset()
     metric.reset()
@@ -235,8 +246,11 @@ for epoch in range(10):
     print('Epoch %d, Metric = %s' % (epoch, metric.get()))
 ```
 
+
 ### Training the model with multiple machines
 
 To train a sparse model with multiple machines, please refer to the example in [mxnet/example/sparse/](https://github.com/apache/incubator-mxnet/tree/master/example/sparse)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+
+
