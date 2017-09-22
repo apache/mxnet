@@ -27,6 +27,7 @@
 
 #include <gtest/gtest.h>
 #include <mxnet/storage.h>
+#include <mxnet/ndarray.h>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -40,6 +41,7 @@ namespace test {
 
 extern bool unitTestsWithCuda;
 extern bool debugOutput;
+extern bool quick_test;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
@@ -129,7 +131,6 @@ inline index_t offset(const TShape& shape, const std::vector<size_t>& indices) {
   for (size_t i = 0; i < dim; ++i) {
     offset *= shape[i];
     if (indices.size() > i) {
-      CHECK_GE(indices[i], 0U);
       CHECK_LT(indices[i], shape[i]);
       offset += indices[i];
     }
@@ -169,37 +170,63 @@ inline std::string repeatedStr(const char *s, const signed int count,
   }
 }
 
+/*! \brief Pretty print a shape with optional label */
+template<typename StreamType>
+inline StreamType& print_shape(StreamType *_os, const std::string& label, const TShape& shape,
+                               const bool add_endl = true) {
+  if (!label.empty()) {
+    *_os << label << ": ";
+  }
+  *_os << "(";
+  for (size_t i = 0, n = shape.ndim(); i < n; ++i) {
+    if (i) {
+      *_os << ", ";
+    }
+    *_os << shape[i];
+  }
+  *_os << ")";
+  if (add_endl) {
+    *_os << std::endl;
+  } else {
+    *_os << " ";
+  }
+  return *_os << std::flush;
+}
+
 /*! \brief Pretty print a 1D, 2D, or 3D blob */
 template<typename DType, typename StreamType>
-inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
-                              bool doChannels = true, bool doBatches = true) {
-  StreamType& os = *_os;
+inline StreamType& print_blob_(StreamType *_os,
+                               const TBlob &blob,
+                               const bool doChannels = true,
+                               const bool doBatches = true,
+                               const bool add_endl = true) {
+  StreamType &os = *_os;
   const size_t dim = static_cast<size_t>(blob.ndim());
 
   if (dim == 1) {
-    // probably a tensor (mshadow::Tensor is deprecated)
+    // probably a 1d tensor (mshadow::Tensor is deprecated)
     TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
-    return print_blob<DType>(&os, changed, false, false);
+    return print_blob_<DType>(&os, changed, false, false, add_endl);
   } else if (dim == 2) {
-    // probably a tensor (mshadow::Tensor is deprecated)
+    // probably a 2d tensor (mshadow::Tensor is deprecated)
     TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     changed.shape_[3] = blob.shape_[1];
-    return print_blob<DType>(&os, changed, false, false);
+    return print_blob_<DType>(&os, changed, false, false, add_endl);
   }
   CHECK_GE(dim, 3U) << "Invalid dimension zero (0)";
 
   const size_t batchSize = blob.size(0);
 
   size_t channels = 1;
-  size_t depth  = 1;
+  size_t depth = 1;
   size_t height = 1;
-  size_t width  = 1;
+  size_t width = 1;
   if (dim > 1) {
     channels = blob.size(1);
     if (dim > 2) {
@@ -207,7 +234,7 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
         width = blob.size(2);
       } else if (dim == 4) {
         height = blob.size(2);
-        width  = blob.size(3);
+        width = blob.size(3);
       } else {
         depth = blob.size(2);
         if (dim > 3) {
@@ -220,7 +247,6 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
     }
   }
 
-  os << std::endl;
   for (size_t r = 0; r < height; ++r) {
     for (size_t thisBatch = 0; thisBatch < batchSize; ++thisBatch) {
       if (doBatches) {
@@ -237,17 +263,16 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
         }
       }
       for (size_t thisChannel = 0; thisChannel < channels; ++thisChannel) {
+        os << "[";
         for (size_t c = 0; c < width; ++c) {
           if (c) {
             os << ", ";
-          } else {
-            os << "[";
           }
           for (size_t dd = 0; dd < depth; ++dd) {
             DType val;
             switch (dim) {
               case 3:
-                val = data_at<DType>(&blob, {thisBatch, thisChannel, c });
+                val = data_at<DType>(&blob, {thisBatch, thisChannel, c});
                 break;
               case 4:
                 val = data_at<DType>(&blob, {thisBatch, thisChannel, r, c});
@@ -277,11 +302,143 @@ inline StreamType& print_blob(StreamType *_os, const TBlob &blob,
         os << " |" << std::flush;;
       }
     }
-    os << std::endl;
+    if (r < height - 1) {
+      os << std::endl;
+    }
   }
-  os << std::endl << std::flush;
+  if (!height) {
+    os << "[]";
+    if (add_endl) {
+      os << std::endl;
+    }
+  }
+  if (!add_endl) {
+    os << " ";
+  }
+  os << std::flush;
   return os;
 }
+
+template<typename StreamType>
+inline StreamType& print(StreamType *_os,
+                         const TBlob &blob,
+                         const bool doChannels = true,
+                         const bool doBatches = true,
+                         const bool add_endl = true) {
+  MSHADOW_TYPE_SWITCH(blob.type_flag_, DType, {
+    print_blob_<DType>(_os, blob, doChannels, doBatches, add_endl);
+  });
+  return *_os;
+}
+
+template<typename StreamType>
+inline StreamType& print(StreamType *_os, const std::string &label,
+                         const TBlob &blob,
+                         const bool doChannels = true,
+                         bool doBatches = true,
+                         const bool add_endl = true) {
+  if (!label.empty()) {
+    *_os << label << ": ";
+  }
+  return print(_os, blob, doChannels, doBatches, add_endl);
+}
+
+template<typename StreamType>
+inline StreamType& print(StreamType *_os, const std::string& label, const NDArray& arr) {
+  if (!label.empty()) {
+    *_os << label << ": ";
+  }
+  switch (arr.storage_type()) {
+    case kRowSparseStorage: {
+      // data
+      const TShape& shape = arr.shape();
+      print_shape(_os, "[row_sparse] main shape", shape, false);
+      const TShape& storage_shape = arr.storage_shape();
+      const bool is_one_row = storage_shape[0] < 2;
+      print_shape(_os, "storage shape", storage_shape, false);
+      print(_os, arr.data(), true, true, !is_one_row);
+
+      // indices
+      const TShape& indices_shape = arr.aux_shape(rowsparse::kIdx);
+      print_shape(_os, "indices shape", indices_shape, false);
+      print(_os, arr.aux_data(rowsparse::kIdx), true, true, false) << std::endl;
+      break;
+    }
+    case kCSRStorage: {
+      // data
+      const TShape& shape = arr.shape();
+      print_shape(_os, "[CSR] main shape", shape, false);
+      const TShape& storage_shape = arr.storage_shape();
+      const bool is_one_row = storage_shape[0] < 2;
+      print_shape(_os, "storage shape", storage_shape, false);
+      print(_os, arr.data(), true, true, !is_one_row);
+
+      // row ptrs
+      const TShape& ind_ptr_shape = arr.aux_shape(csr::kIndPtr);
+      print_shape(_os, "row ptrs shape", ind_ptr_shape, false);
+      print(_os, arr.aux_data(csr::kIndPtr), true, true, false) << std::endl;
+
+      // col indices
+      const TShape& indices_shape = arr.aux_shape(csr::kIdx);
+      print_shape(_os, "col indices shape", indices_shape, false);
+      print(_os, arr.aux_data(csr::kIdx), true, true, false) << std::endl;
+
+      break;
+    }
+    case kDefaultStorage: {
+      // data
+      const TShape& shape = arr.shape();
+      const bool is_one_row = shape[0] < 2;
+      print_shape(_os, "[dense] main shape", shape, !is_one_row);
+      print(_os, arr.data(), true, true, !is_one_row) << std::endl;
+      break;
+    }
+    default:
+      CHECK(false) << "Unsupported storage type:" << arr.storage_type();
+      break;
+  }
+  return *_os << std::flush;
+}
+
+inline void print(const std::string& label,
+                  const std::string& var,
+                  const std::vector<NDArray>& arrays) {
+  std::cout << label << std::endl;
+  for (size_t x = 0, n = arrays.size(); x < n; ++x) {
+    std::stringstream ss;
+    ss << var << "[" << x << "]";
+    test::print(&std::cout, ss.str(), arrays[x]);
+  }
+}
+
+inline void print(const std::string& label,
+                  const std::string& var,
+                  const std::vector<TBlob>& arrays) {
+  std::cout << label << std::endl;
+  for (size_t x = 0, n = arrays.size(); x < n; ++x) {
+    std::stringstream ss;
+    ss << var << "[" << x << "]";
+    test::print(&std::cout, ss.str(), arrays[x], true, true, false);
+  }
+}
+
+inline std::string demangle(const char *name) {
+  int status = -4;  // some arbitrary value to eliminate the compiler warning
+  std::unique_ptr<char, void(*)(void*)> res {
+    abi::__cxa_demangle(name, nullptr, nullptr, &status),
+    &std::free
+  };
+  return status ? name : res.get();
+}
+
+#define PRINT_NDARRAYS(__var)  test::print(__FUNCTION__, #__var, __var)
+#define PRINT_OP_AND_ARRAYS(__op, __var)  test::print(__FUNCTION__, \
+  static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
+  "<" << test::demangle(typeid(__op).name()) << ">"))->str(), __var)
+#define PRINT_OP2_AND_ARRAYS(__op1, __op2, __var)  test::print(__FUNCTION__, \
+  static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
+  "<" << test::demangle(typeid(__op1).name()) << ", " \
+  << test::demangle(typeid(__op2).name()) << ">"))->str(), __var)
 
 template<typename DType>
 inline size_t shapeMemorySize(const TShape& shape) {

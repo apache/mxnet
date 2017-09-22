@@ -607,7 +607,7 @@ struct square_root_grad {
   }
 };
 
-/*!\ \brief used for generate element sqrt */
+/*!\ \brief used for generate element rsqrt */
 struct reciprocal_square_root {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
@@ -619,6 +619,36 @@ struct reciprocal_square_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(-(DType(1.0f) / (DType(2.0f) * a * sqrtf(a))));
+  }
+};
+
+/*!\ \brief used for generate element cbrt */
+struct cube_root {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(cbrtf(a));
+  }
+};
+
+struct cube_root_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(DType(1.0f) / ( DType(3.0f) * a * a));
+  }
+};
+
+/*!\ \brief used for generate element rcbrt */
+struct reciprocal_cube_root {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(DType(1.0f)/cbrtf(a));
+  }
+};
+
+struct reciprocal_cube_root_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(-(DType(1.0f) / (DType(3.0f) * a * cbrtf(a))));
   }
 };
 

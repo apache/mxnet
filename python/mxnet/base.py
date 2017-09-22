@@ -72,6 +72,20 @@ class NotImplementedForSymbol(MXNetError):
         msg += ' is not implemented for Symbol and only available in NDArray.'
         return msg
 
+class NotSupportedForSparseNDArray(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotSupportedForSparseNDArray, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not supported for SparseNDArray and only available in NDArray.'
+        return msg
 
 class MXCallbackList(ctypes.Structure):
     """Structure that holds Callback information. Passed to CustomOpProp."""
@@ -293,6 +307,7 @@ def _notify_shutdown():
 
 atexit.register(_notify_shutdown)
 
+
 def add_fileline_to_docstring(module, incursive=True):
     """Append the definition position to each function contained in module.
 
@@ -328,6 +343,7 @@ def add_fileline_to_docstring(module, incursive=True):
         if inspect.isclass(obj) and incursive:
             add_fileline_to_docstring(obj, False)
 
+
 def _as_list(obj):
     """A utility function that converts the argument to a list if it is not already.
 
@@ -345,3 +361,84 @@ def _as_list(obj):
         return obj
     else:
         return [obj]
+
+
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_random_', '_sparse_']
+
+
+def _get_op_name_prefix(op_name):
+    """
+    Check whether the given op_name starts with any words in `_OP_NAME_PREFIX_LIST`.
+    If found, return the prefix; else, return an empty string.
+    """
+    for prefix in _OP_NAME_PREFIX_LIST:
+        if op_name.startswith(prefix):
+            return prefix
+    return ""
+
+
+# pylint: enable=too-many-locals, invalid-name
+def _init_op_module(root_namespace, module_name, make_op_func):
+    """
+    Registers op functions created by `make_op_func` under
+    `root_namespace.module_name.[submodule_name]`,
+    where `submodule_name` is one of `_OP_SUBMODULE_NAME_LIST`.
+
+    Parameters
+    ----------
+    root_namespace : str
+        Top level module name, `mxnet` in the current cases.
+    module_name : str
+        Second level module name, `ndarray` and `symbol` in the current cases.
+    make_op_func : str
+        Function for creating op functions for `ndarray` and `symbol` modules.
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+    op_names = []
+    for i in range(size.value):
+        op_names.append(py_str(plist[i]))
+
+    module_op = sys.modules["%s.%s.op" % (root_namespace, module_name)]
+    module_internal = sys.modules["%s.%s._internal" % (root_namespace, module_name)]
+    # contrib module in the old format (deprecated)
+    # kept here for backward compatibility
+    # use mx.nd.contrib or mx.sym.contrib from now on
+    contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
+    contrib_module_old = sys.modules[contrib_module_name_old]
+    submodule_dict = {}
+    for op_name_prefix in _OP_NAME_PREFIX_LIST:
+        submodule_dict[op_name_prefix] =\
+            sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        function = make_op_func(hdl, name)
+        op_name_prefix = _get_op_name_prefix(function.__name__)
+        if len(op_name_prefix) > 0:
+            # register op under mxnet.module_name.op_name_prefix[1:-1]
+            # e.g. mxnet.ndarray.sparse.dot, mxnet.symbol.linalg.gemm
+            function.__name__ = function.__name__[len(op_name_prefix):]
+            function.__module__ = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+            cur_module = submodule_dict[op_name_prefix]
+            setattr(cur_module, function.__name__, function)
+            cur_module.__all__.append(function.__name__)
+            # if op_name_prefix is '_contrib_', also need to register
+            # the op under mxnet.contrib.module_name for backward compatibility
+            if op_name_prefix == '_contrib_':
+                hdl = OpHandle()
+                check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+                function = make_op_func(hdl, name)
+                function.__name__ = function.__name__[len(op_name_prefix):]
+                function.__module__ = contrib_module_name_old
+                setattr(contrib_module_old, function.__name__, function)
+                contrib_module_old.__all__.append(function.__name__)
+        elif function.__name__.startswith('_'):
+            setattr(module_internal, function.__name__, function)
+            module_internal.__all__.append(function.__name__)
+        else:
+            setattr(module_op, function.__name__, function)
+            module_op.__all__.append(function.__name__)

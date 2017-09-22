@@ -45,7 +45,7 @@ def test_concurrent():
 
 def test_identity():
     model = Identity()
-    x = mx.nd.random_uniform(shape=(128, 33, 64))
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
     mx.test_utils.assert_almost_equal(model(x).asnumpy(),
                                       x.asnumpy())
 
@@ -57,7 +57,8 @@ def test_models():
                   'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',
                   'alexnet', 'inceptionv3',
                   'densenet121', 'densenet161', 'densenet169', 'densenet201',
-                  'squeezenet1.0', 'squeezenet1.1']
+                  'squeezenet1.0', 'squeezenet1.1',
+                  'mobilenet1.0', 'mobilenet0.75', 'mobilenet0.5', 'mobilenet0.25']
     pretrained_to_test = set(['squeezenet1.1'])
 
     for model_name in all_models:
@@ -68,7 +69,7 @@ def test_models():
         print(model)
         if not test_pretrain:
             model.collect_params().initialize()
-        model(mx.nd.random_uniform(shape=data_shape)).wait_to_read()
+        model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
 
 
 if __name__ == '__main__':

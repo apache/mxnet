@@ -76,12 +76,19 @@ DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
 .describe(R"code(Applies a linear transformation: :math:`Y = XW^T + b`.
 
-Shapes:
+If ``flatten`` is set to be true, then the shapes are:
 
-- **data**: `(batch_size, input_dim)`
-- **weight**: `(num_hidden, input_dim)`
+- **data**: `(batch_size, x1, x2, ..., xn)`
+- **weight**: `(num_hidden, x1 * x2 * ... * xn)`
 - **bias**: `(num_hidden,)`
 - **out**: `(batch_size, num_hidden)`
+
+If ``flatten`` is set to be false, then the shapes are:
+
+- **data**: `(x1, x2, ..., xn, input_dim)`
+- **weight**: `(num_hidden, input_dim)`
+- **bias**: `(num_hidden,)`
+- **out**: `(x1, x2, ..., xn, num_hidden)`
 
 The learnable parameters include both ``weight`` and ``bias``.
 

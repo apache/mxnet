@@ -29,17 +29,13 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(IFFTParam param, int dtype) {
-    LOG(FATAL) << "ifft is only available for GPU.";
-    return NULL;
+  LOG(FATAL) << "ifft is only available for GPU.";
+  return NULL;
 }
 
 Operator *IFFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                                     std::vector<int> *in_type) const {
-    std::vector<TShape> out_shape, aux_shape;
-    std::vector<int> out_type, aux_type;
-    CHECK(InferType(in_type, &out_type, &aux_type));
-    CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-    DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(IFFTParam);
@@ -54,6 +50,7 @@ Last dimension must be an even number.
 The output data has shape: (N, d/2) or (N1, N2, N3, d/2). It is only the real part of the result.
 
 Example::
+
    data = np.random.normal(0,1,(3,4))
    out = mx.contrib.ndarray.ifft(data = mx.nd.array(data,ctx = mx.gpu(0)))
 
