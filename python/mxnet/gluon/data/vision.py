@@ -268,7 +268,7 @@ class ImageFolderDataset(dataset.Dataset):
         self._exts = ['.jpg', '.jpeg', '.png']
         self._list_iamges(self._root)
 
-    def _list_iamges(self, root):
+    def _list_images(self, root):
         self.synsets = []
         self.items = []
 
