@@ -810,6 +810,7 @@ class VariationalDropoutCell(ModifierCell):
 
         if self.drop_states:
             states = list(states)
+            # state dropout only needs to be applied on h, which is always the first state.
             states[0] = states[0] * self.drop_states_mask
 
         if self.drop_inputs:
