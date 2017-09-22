@@ -486,7 +486,7 @@ void HandleInferStorageTypeError(const size_t num_forward_inputs,
       }
     }
   }
-  LOG(FATAL) << "InferStoragetType pass cannot decide storage type for the following arguments "
+  LOG(FATAL) << "InferStorageType pass cannot decide storage type for the following arguments "
                 "(-1 means unknown stype). Please consider providing them as inputs:\n"
              << oss.str();
 }
@@ -562,20 +562,20 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
 
   // expand arg_shapes and arg_dtypes to contain backward inputs
   arg_shapes.resize(idx.input_nodes().size(), TShape());
-  g = InferShape(std::move(g), arg_shapes, "__shape__");
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
 
   arg_dtypes.resize(idx.input_nodes().size(), -1);
-  g = InferType(std::move(g), arg_dtypes, "__dtype__");
+  g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
 
-  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));
@@ -959,19 +959,19 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       arg_stypes[i] = it3->second;
     }
   }
-  g = InferShape(std::move(g), arg_shapes, "__shape__");
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
 
-  g = InferType(std::move(g), arg_dtypes, "__dtype__");
+  g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
 
-  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));

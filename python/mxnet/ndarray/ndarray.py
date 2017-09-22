@@ -629,7 +629,6 @@ fixed-size items.
             stop = mx_uint(stop)
         else:
             stop = mx_uint(stop)
-
         check_call(_LIB.MXNDArraySlice(
             self.handle, start, stop, ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
@@ -1474,8 +1473,13 @@ fixed-size items.
         check_call(_LIB.MXAutogradBackwardEx(
             1, c_array(NDArrayHandle, [self.handle]),
             c_array(NDArrayHandle, ograd_handles),
+            0,
+            ctypes.c_void_p(0),
             ctypes.c_int(retain_graph),
-            ctypes.c_int(train_mode)))
+            ctypes.c_int(0),
+            ctypes.c_int(train_mode),
+            ctypes.c_void_p(0),
+            ctypes.c_void_p(0)))
 
     def tostype(self, stype):
         """Return a copy of the array with chosen storage type.

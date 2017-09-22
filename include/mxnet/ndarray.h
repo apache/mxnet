@@ -46,30 +46,6 @@
 #endif
 
 namespace mxnet {
-
-namespace autograd {
-class AGNode;
-
-using AGNodePtr = std::shared_ptr<AGNode>;
-
-class AGNodeEntry {
- public:
-  AGNodePtr ag_node;
-  uint32_t index;
-  uint32_t version;
-
-  void clear() {
-    ag_node.reset();
-    index = version = 0;
-  }
-
-  nnvm::NodeEntry nn_entry() const;
-  bool is_none() const;
-};
-
-class AutogradRuntime;
-}  // namespace autograd
-
 // enum for storage types
 namespace csr {
 enum CSRAuxType {kIndPtr, kIdx};
@@ -108,7 +84,8 @@ class NDArray {
   NDArray(const TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
-        shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
+        shape_(shape), dtype_(dtype), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -119,7 +96,8 @@ class NDArray {
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
           std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
           TShape storage_shape = TShape(mshadow::Shape1(0)))
-      : shape_(shape), dtype_(dtype), entry_({nullptr, 0, 0}) {
+      : shape_(shape), dtype_(dtype), storage_type_(stype),
+        entry_({nullptr, 0, 0}) {
       // Assign default aux types if not given
       if (aux_types.size() == 0) {
         if (stype == kRowSparseStorage) {
@@ -167,7 +145,8 @@ class NDArray {
    */
   NDArray(const TBlob &data, int dev_id)
       : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
-        dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
+        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -186,7 +165,7 @@ class NDArray {
   NDArray(const NDArrayStorageType stype, const TShape &shape,
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
-        dtype_(data.type_flag_), entry_({nullptr, 0, 0}) {
+        dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
@@ -283,6 +262,7 @@ class NDArray {
    * \return the context of NDArray, this function is only valid when the NDArray is not empty
    */
   inline Context ctx() const {
+    CHECK(!is_none());
     return ptr_->shandle.ctx;
   }
   /*!
@@ -297,8 +277,7 @@ class NDArray {
   }
 
   inline NDArrayStorageType storage_type() const {
-    if (is_none()) return kUndefinedStorage;
-    return ptr_->storage_type;
+    return storage_type_;
   }
   /*! \return whether this ndarray is not initialized */
   inline bool is_none() const {
@@ -434,11 +413,6 @@ class NDArray {
    */
   NDArray &operator/=(const real_t &src);
   /*!
-   * \brief return transpose of current NDArray
-   * \return a new transposed NDArray
-   */
-  NDArray T() const;
-  /*!
    * \brief return a new copy this NDArray
    * \param ctx the new context of this NDArray
    * \return the new copy
@@ -479,14 +453,25 @@ class NDArray {
    * \return sliced NDArray
    */
   NDArray Slice(index_t begin, index_t end) const;
-
+  /*!
+   * \brief Slice a NDArray. Supports recording with autograd
+   * \param begin begin index in first dim (inclusive)
+   * \param end end index in first dim (exclusive)
+   * \return sliced NDArray
+   */
+  NDArray SliceWithRecord(index_t begin, index_t end);
   /*!
    * \brief Index a NDArray
    * \param idx the index
    * \return idx-th sub array NDArray
    */
   NDArray At(index_t idx) const;
-
+  /*!
+   * \brief Index a NDArray
+   * \param idx the index
+   * \return idx-th sub array NDArray
+   */
+  NDArray AtWithRecord(index_t idx);
   /*!
    * \brief Generate a deep copy of aux_data(i) returned as
    * a default storage type NDArray
@@ -509,7 +494,7 @@ class NDArray {
   inline NDArray AsArray(const TShape &shape, int dtype) const {
     CHECK_EQ(storage_type(), kDefaultStorage)
              << "AsArray is intended only for kDefaultStorage.";
-    CHECK_GE(shape_.Size() * mshadow::mshadow_sizeof(dtype_),
+    CHECK_GE(ptr_->shandle.size,
              shape.Size() * mshadow::mshadow_sizeof(dtype))
         << "NDArray.AsArray: target memory size is bigger";
 #if MKL_EXPERIMENTAL == 1
@@ -530,21 +515,21 @@ class NDArray {
    */
   NDArray Reshape(const TShape &shape) const;
   /*!
+   * \brief Get an reshaped NDArray. Supports autograd recording
+   * \param shape new shape
+   * \return NDArray in new shape
+   */
+  NDArray ReshapeWithRecord(const TShape &shape);
+  /*!
    * \brief Return a copy of this NDArray without autograd history
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = autograd::AGNodeEntry{nullptr, 0, 0};
+    ret.entry_ = nnvm::NodeEntry{nullptr, 0, 0};
     return ret;
   }
 
-  nnvm::Symbol get_autograd_symbol() {
-    CHECK(!entry_.is_none())
-      << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
-    nnvm::Symbol ret;
-    ret.outputs.emplace_back(entry_.nn_entry());
-    return ret;
-  }
+  nnvm::Symbol get_autograd_symbol() const;
   /*!
    * \brief Allocate the space if it is delayed allocated.
    * This is an internal function used by system that normal user should not use
@@ -609,7 +594,7 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
-  friend class autograd::AutogradRuntime;
+  friend class Imperative;
   /*! \brief the real data chunk that backs NDArray */
   // shandle is used to store the actual values in the NDArray
   // aux_handles store the aux data(such as indices) if it's needed by non-default storage.
@@ -875,8 +860,10 @@ class NDArray {
   size_t byte_offset_ = 0;
   /*! \brief type of data */
   int dtype_ = -1;
+  /*! \brief storage type of data */
+  NDArrayStorageType storage_type_ = kUndefinedStorage;
   /*! \brief node entry for autograd */
-  autograd::AGNodeEntry entry_;
+  nnvm::NodeEntry entry_;
   /*!
    * \brief internal TBlob
    * \note When user access tblob_ by some const methods like

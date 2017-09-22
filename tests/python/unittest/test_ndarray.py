@@ -688,6 +688,34 @@ def test_cached():
     op(data, weight, bias, out=o2)
     assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
 
+    weight.attach_grad()
+    bias.attach_grad()
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward(retain_graph=True)
+        o.backward()
+
+    # try a different shape
+    data = mx.nd.ones((5, 2, 10, 10))
+    weight = mx.nd.ones((10, 2, 3, 3))
+    bias = mx.nd.ones((10,))
+    data.attach_grad()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
+
 def test_output():
     shape = (2,2)
     ones = mx.nd.ones(shape)
