@@ -60,19 +60,6 @@ parser.add_argument('--measure-only', default=None,
 parser.add_argument('--omit-row-sparse-push', action='store_true',
                     help="omit row_sparse_push")
 
-
-def get_libsvm_data(data_dir, data_name, url, data_origin_name):
-    if not os.path.isdir(data_dir):
-        os.system("mkdir " + data_dir)
-    os.chdir(data_dir)
-    if not os.path.exists(data_name):
-        import urllib
-        zippath = os.path.join(data_dir, data_origin_name)
-        urllib.urlretrieve(url, zippath)
-        os.system("bzip2 -d %r" % data_origin_name)
-    os.chdir("..")
-
-
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always return the same batch, used for speed testing"
     def __init__(self, real_iter):
@@ -123,7 +110,8 @@ datasets = { 'kdda' : kdda, 'avazu' : avazu , 'criteo': criteo }
 def get_sym(feature_dim):
     inputs = mx.symbol.Variable("data", stype='csr')
     norm_init = mx.initializer.Normal(sigma=0.01)
-    weights = mx.symbol.Variable("w", shape=(feature_dim, args.output_dim), init=norm_init, stype='row_sparse')
+    weights = mx.symbol.Variable("w", shape=(feature_dim, args.output_dim),
+                                 init=norm_init, stype='row_sparse')
     embed = mx.symbol.sparse.dot(inputs, weights)
     softmax_output = mx.symbol.Variable("softmax_label")
     model = mx.symbol.SoftmaxOutput(data=embed, label=softmax_output, name="out")
@@ -214,7 +202,7 @@ if __name__ == '__main__':
     data_dir = os.path.join(os.getcwd(), 'data')
     path = os.path.join(data_dir, metadata['data_name'])
     if not os.path.exists(path):
-        get_libsvm_data(data_dir, metadata['data_name'], metadata['url'],
+        get_bz2_data(data_dir, metadata['data_name'], metadata['url'],
                         metadata['data_origin_name'])
         assert os.path.exists(path)
 
