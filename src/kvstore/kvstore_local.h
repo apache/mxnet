@@ -51,13 +51,14 @@ class KVStoreLocal : public KVStore {
   /*
    * \param use_device_comm
    */
-  explicit KVStoreLocal(bool use_device_comm) : KVStore() {
+  explicit KVStoreLocal(bool use_device_comm, std::string& comp) : KVStore() {
     if (use_device_comm) {
       comm_ = new CommDevice();
     } else {
       comm_ = new CommCPU();
     }
     pinned_ctx_ = comm_->pinned_ctx();
+    compress_ = comp;
   }
 
   virtual ~KVStoreLocal() {
@@ -144,6 +145,7 @@ class KVStoreLocal : public KVStore {
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
+    comm_->SetCompress(compress_, pos_threshold_, neg_threshold_);
   }
 
   virtual void PushImpl(const std::vector<int>& keys,

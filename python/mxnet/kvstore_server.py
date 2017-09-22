@@ -57,7 +57,7 @@ class KVStoreServer(object):
                     raise
                 self.kvstore.set_optimizer(optimizer)
             else:
-                print("server %d, unknown command (%d, %s)" % (
+                print ("server %d, unknown command (%d, %s)" % (
                     self.kvstore.rank, cmd_id, cmd_body))
         return server_controller
 
@@ -77,7 +77,7 @@ def _init_kvstore_server_module():
     is_worker = ctypes.c_int()
     check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
     if is_worker.value == 0:
-        kvstore = create('dist')
+        kvstore = create('dist', '2bit')
         server = KVStoreServer(kvstore)
         server.run()
         sys.exit()

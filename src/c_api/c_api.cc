@@ -721,9 +721,21 @@ int MXDataIterGetPadNum(DataIterHandle handle, int *pad) {
 }
 
 int MXKVStoreCreate(const char *type,
+                    const char *compress,
                     KVStoreHandle *out) {
   API_BEGIN();
-  *out = KVStore::Create(type);
+  *out = KVStore::Create(type, compress);
+  API_END();
+}
+
+int MXKVStoreSetCompress(KVStoreHandle handle,
+                         const char *compress,
+                         const float pos_threshold,
+                         const float neg_threshold) {
+  API_BEGIN();
+  static_cast<KVStore*>(handle)->SetCompress(compress,
+                                             pos_threshold,
+                                             neg_threshold);
   API_END();
 }
 

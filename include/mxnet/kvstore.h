@@ -57,12 +57,24 @@ class KVStore {
    *   - 'dist_*' : multi-machines
    * \return a new created KVStore.
    */
-  static KVStore *Create(const char *type = "local");
+  static KVStore *Create(const char *type = "local",
+                         const char *compress = "none");
 
   /**
    * \brief return the type
    */
   inline const std::string& type() { return type_; }
+
+  /**
+   * \brief set to use low-bit compression
+   */
+  inline void SetCompress(const std::string& compress,
+                          const float pos_threshold,
+                          const float neg_threshold) {
+    compress_ = compress;
+    pos_threshold_ = pos_threshold;
+    neg_threshold_ = neg_threshold;
+  }
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -386,6 +398,21 @@ class KVStore {
    * \brief the kvstore type
    */
   std::string type_;
+
+  /**
+   * \brief whether using low-bit compression
+   */
+  std::string compress_ = "none";
+
+  /**
+   * \brief positive threshold
+   */
+  float pos_threshold_ = 0.1;
+
+  /**
+   * \brief negative threshold
+   */
+  float neg_threshold_ = -0.1;
 
   /**
    * \brief whether to do barrier when finalize

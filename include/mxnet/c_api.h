@@ -1511,7 +1511,22 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
+                              const char *compress,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Set to use low-bit compression
+ * \param handle handle to the kvstore
+ * \param compress set to use low-bit compression
+ * \param pos_threshold set the positive threshold in 2bit compress
+ * \param neg_threshold set the negative threshold in 2bit compress
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetCompress(KVStoreHandle handle,
+                                   const char *compress,
+                                   const float pos_threshold,
+                                   const float neg_threshold);
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore

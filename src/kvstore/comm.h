@@ -48,6 +48,7 @@ class Comm {
    */
   virtual void Init(int key, const NDArrayStorageType stype,
                     const TShape& shape, int dtype = mshadow::kFloat32) = 0;
+
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -79,8 +80,22 @@ class Comm {
     return pinned_ctx_;
   }
 
+  /**
+   * \brief set to use low-bit compression
+   */
+  void SetCompress(const std::string& compress,
+                   float const pos_threshold,
+                   float const neg_threshold) {
+    compress_ = compress;
+    pos_threshold_ = pos_threshold;
+    neg_threshold_ = neg_threshold;
+  }
+
  protected:
   Context pinned_ctx_;
+  std::string compress_ = "none";
+  float pos_threshold_;
+  float neg_threshold_;
 };
 
 /**
@@ -497,23 +512,86 @@ class CommDevice : public Comm {
 
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
-    CopyFromTo(src[0], &(buf.merged), priority);
-    reduce[0] = buf.merged;
 
     if (buf.copy_buf.empty()) {
       // TODO(mli) this results in large device memory usage for huge ndarray,
       // such as the largest fullc in VGG. consider to do segment reduce with
       // NDArray.Slice or gpu direct memory access. for the latter, we need to
       // remove some ctx check, and also it reduces 20% perf
-      buf.copy_buf.resize(src.size()-1);
-      for (size_t i = 0; i < src.size()-1; ++i) {
+      buf.copy_buf.resize(src.size());
+      buf.small_recv_buf.resize(src.size());
+      buf.small_send_buf.resize(src.size());
+      buf.residual.resize(src.size());
+      pos_thre.resize(src.size());
+      neg_thre.resize(src.size());
+
+      for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        // allocation small buffer for compressed data
+        if (compress_.compare("none") != 0) {
+          // Residual
+          buf.residual[i] = NDArray(
+            buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
+          buf.residual[i] = 0;
+          // recv buffer and send buffer
+          int bits = compress_ == "2bit" ? 16 : 32;
+          long int small_size = buf.merged.shape().Size() % bits == 0 ?
+                                 buf.merged.shape().Size() / bits + 3 :
+                                 buf.merged.shape().Size() / bits + 4;
+          buf.small_recv_buf[i] = NDArray(
+            TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
+          buf.small_send_buf[i] = NDArray(
+            TShape{small_size}, src[i].ctx(), false, buf.merged.dtype());
+          // The positive and negative threshold
+          if (compress_.compare("2bit") == 0) {
+            pos_thre[i] = NDArray(
+              TShape{1}, src[i].ctx(), false, buf.merged.dtype());
+            pos_thre[i] = pos_threshold_;
+            neg_thre[i] = NDArray(
+              TShape{1}, src[i].ctx(), false, buf.merged.dtype());
+            neg_thre[i] = neg_threshold_;
+          }
+        }
       }
     }
-    for (size_t i = 0; i < src.size()-1; ++i) {
-      CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
-      reduce[i+1] = buf.copy_buf[i];
+
+    for (size_t i = 0; i < src.size(); ++i) {
+      // compress before copy
+      if (compress_.compare("2bit") == 0) {
+        // TODO: New code: wrapper for NDArray quantize_2bit op
+        /*
+        Compress2Bit(src[i], buf.residual[i],
+                     pos_thre[i], neg_thre[i],
+                     &(buf.small_send_buf[i]), priority);
+        CopyFromTo(buf.small_send_buf[i],
+                   &(buf.small_recv_buf[i]),
+                   priority);
+        DeCompress2Bit(buf.small_recv_buf[i],
+                       &(buf.copy_buf[i]),
+                       priority);
+        */
+        Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]),
+                            pos_thre[i], neg_thre[i], compress_, priority);
+        CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
+        Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
+      } else if (compress_.compare("1bit") == 0) {
+        // TODO: New code: wrapper for NDArray quantize_1bit op
+        /*
+        Compress1Bit(src[i], buf.residual[i],
+                     &(buf.small_send_buf[i]),
+                     priority);
+        CopyFromTo(buf.small_send_buf[i],
+                   &(buf.small_recv_buf[i]),
+                   priority);
+        DeCompress1Bit(buf.small_recv_buf[i],
+                       &(buf.copy_buf[i]),
+                       priority);
+        */
+      } else {  // Do not compress
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+      }
+      reduce[i] = buf.copy_buf[i];
     }
 
     ElementwiseSum(reduce, &buf.merged);
@@ -630,8 +708,18 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
+    /// \brief the residual buffer
+    std::vector<NDArray> residual;
+    /// \brief the small buffer for compressed data in sender
+    std::vector<NDArray> small_send_buf;
+    /// \brief the small buffer for compressed data in receiver
+    std::vector<NDArray> small_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
+
+  // \brief the positive and negative threshold
+  std::vector<NDArray> pos_thre;
+  std::vector<NDArray> neg_thre;
   bool inited_;
 };
 

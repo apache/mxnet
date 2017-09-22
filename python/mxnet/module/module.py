@@ -484,7 +484,7 @@ class Module(BaseModule):
             self._sync_params_from_devices()
 
         (kvstore, update_on_kvstore) = \
-                _create_kvstore(kvstore, len(self._context), self._arg_params)
+                _create_kvstore(kvstore, len(self._context), self._arg_params, '2bit')
 
         batch_size = self._exec_group.batch_size
         if kvstore and 'dist' in kvstore.type and '_sync' in kvstore.type:

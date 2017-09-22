@@ -24,7 +24,7 @@ import pickle
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
+from .base import check_call, c_array, c_str, string_types, mx_uint, mx_float, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 
@@ -346,6 +346,20 @@ class KVStore(object):
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 
 
+    def set_compress(self, compress='none',
+                     pos_threshold=0.1,
+                     neg_threshold=-0.1):
+        """ Set to use low-bit compression
+
+        compress can be 'none', '2bit', or '1bit'.
+        """
+        if not isinstance(compress, string_types):
+            raise TypeError('compress must be a string')
+        check_call(_LIB.MXKVStoreSetCompress(self.handle,
+                                             c_str(compress),
+                                             mx_float(pos_threshold),
+                                             mx_float(neg_threshold)))
+
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
 
@@ -527,7 +541,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
-def create(name='local'):
+def create(name='local', compress='none'):
     """Creates a new KVStore.
 
     For single machine training, there are two commonly used types:
@@ -566,5 +580,6 @@ def create(name='local'):
         raise TypeError('name must be a string')
     handle = KVStoreHandle()
     check_call(_LIB.MXKVStoreCreate(c_str(name),
+                                    c_str(compress),
                                     ctypes.byref(handle)))
     return KVStore(handle)

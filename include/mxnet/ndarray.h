@@ -905,6 +905,12 @@ size_t num_aux_data(NDArrayStorageType stype);
  */
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
+void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
+              const NDArray &pos_threshold, const NDArray &neg_threshold,
+              std::string& compress, int priority);
+
+void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int priority);
+
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.
  * \param source the ndarray we want to sum
