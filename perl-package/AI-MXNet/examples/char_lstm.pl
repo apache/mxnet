@@ -133,7 +133,7 @@ method next()
         [$offset + 1 , $offset + $self->batch_size*$self->seq_size]
     )->reshape([$self->batch_size, $self->seq_size]);
     $self->seq_counter($self->seq_counter + 1);
-    if($self->seq_counter == $seq_size - 1)
+    if($self->seq_counter == $self->seq_size - 1)
     {
         $self->counter($self->counter + 1);
         $self->seq_counter(0);

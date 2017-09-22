@@ -81,6 +81,8 @@ from .squeezenet import *
 
 from .vgg import *
 
+from .mobilenet import *
+
 def get_model(name, **kwargs):
     """Returns a pre-defined model by name
 
@@ -124,6 +126,10 @@ def get_model(name, **kwargs):
               'squeezenet1.0': squeezenet1_0,
               'squeezenet1.1': squeezenet1_1,
               'inceptionv3': inception_v3,
+              'mobilenet1.0': mobilenet1_0,
+              'mobilenet0.75': mobilenet0_75,
+              'mobilenet0.5': mobilenet0_5,
+              'mobilenet0.25': mobilenet0_25
              }
     name = name.lower()
     if name not in models:

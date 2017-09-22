@@ -2,8 +2,12 @@ This is an example of using bidirection lstm to sort an array.
 
 Firstly, generate data by:
 
-    cd data
 	python gen_data.py
+
+Move generated txt files to data directory
+
+	mkdir data
+	mv *.txt data
 
 Then, train the model by:
 

@@ -756,30 +756,30 @@ var Search = {
 };
 
 $(document).ready(function() {
-  var searchBoxWidth = 140;
-  var searchBoxWidthModifier = 200;
-    
+  var searchBoxWidth = $('#search-input-wrap').width();
+  var searchBoxWidthModifier = 150; 
   var focusInputColor = "white";
   var focusIconColor = "dimgray";
   var focusPlaceColor = "searchBoxExp";
-  var normalInputColor = "#87CEFA";
+  var normalInputColor = "transparent";
   var normalIconColor = "white";
   var normalPlaceColor = "searchBoxNorm";
     
   function focusOut() {
-    $("#search-input-wrap").width(searchBoxWidth);
+    $("#search-input-wrap").css('width', '');
     $(".searchBox").width(searchBoxWidth);
     $(".searchBox").css("background-color", normalInputColor);
     $('#search-input-wrap input').css("background-color", normalInputColor);
     $(".searchBox .glyphicon-search").css("color", normalIconColor);
     $(".searchBox").addClass(normalPlaceColor);
     $(".searchBox").removeClass(focusPlaceColor);
+    $(".searchBox").css('width', '');
     $('#search-preview').hide();
   }
 
   Search.init();
   $('#search-input-wrap input').focus(function () {
-    var modifiedWidth = $(window).width() - searchBoxWidthModifier;
+    var modifiedWidth = Math.max($('#navContainer').width() - searchBoxWidthModifier, searchBoxWidth);
     $("#search-input-wrap").width(modifiedWidth);
     $(".searchBox").width(modifiedWidth);
     $(".searchBox").css("background-color", focusInputColor);

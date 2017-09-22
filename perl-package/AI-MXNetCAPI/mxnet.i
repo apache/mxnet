@@ -1203,6 +1203,12 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          const mx_uint num_provided_arg_dtypes,
                          const char** in, // provided_arg_dtype_names,
                          const int* in, // provided_arg_dtypes,
+
+//---------------        sparse related variables, ignored for now
+                         const mx_uint num_provided_arg_stypes,
+                         const char** provided_arg_stype_names,
+                         const int* provided_arg_stypes,
+//---------------
                          const mx_uint num_shared_arg_names,
                          const char** in, // shared_arg_name_list,
 //------------

@@ -274,26 +274,31 @@ inline int SMArch(int device_id) {
 
 /*!
  * \brief Determine whether a cuda-capable gpu's architecture supports float16 math.
+ *        Assume not if device_id is negative.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports float16 math.
  */
 inline bool SupportsFloat16Compute(int device_id) {
-  // Kepler and most Maxwell GPUs do not support fp16 compute
-  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
-  int computeCapabilityMinor = ComputeCapabilityMinor(device_id);
-  return (computeCapabilityMajor > 5) ||
-      (computeCapabilityMajor == 5 && computeCapabilityMinor >= 3);
+  if (device_id < 0) {
+    return false;
+  } else {
+    // Kepler and most Maxwell GPUs do not support fp16 compute
+    int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
+    return (computeCapabilityMajor > 5) ||
+           (computeCapabilityMajor == 5 && ComputeCapabilityMinor(device_id) >= 3);
+  }
 }
 
 /*!
  * \brief Determine whether a cuda-capable gpu's architecture supports Tensor Core math.
+ *        Assume not if device_id is negative.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports Tensor Core math.
  */
 inline bool SupportsTensorCore(int device_id) {
   // Volta (sm_70) supports TensorCore algos
-  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
-  return (computeCapabilityMajor >= 7);
+  return device_id >= 0 &&
+         ComputeCapabilityMajor(device_id) >=7;
 }
 
 // The policy if the user hasn't set the environment variable MXNET_CUDA_ALLOW_TENSOR_CORE

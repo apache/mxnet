@@ -138,7 +138,6 @@ inline void deformable_col2im(mshadow::Stream<cpu>* s,
   const TShape& pad, const TShape& stride,
   const TShape& dilation, const uint32_t deformable_group,
   DType* grad_im, OpReqType req) {
-  index_t num_spatial_axes = kernel_shape.ndim();
   LOG(FATAL) << "only implemented in GPU";
 }
 

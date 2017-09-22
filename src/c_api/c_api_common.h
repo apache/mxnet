@@ -76,12 +76,16 @@ struct MXAPIThreadLocalEntry {
   std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
   /*! \brief result holder for returning type flags */
   std::vector<int> arg_types, out_types, aux_types;
+  /*! \brief result holder for returning storage types */
+  std::vector<int> arg_storage_types, out_storage_types, aux_storage_types;
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
+  /*! \brief bool buffer */
+  std::vector<bool> save_inputs, save_outputs;
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
       const std::vector<TShape> &shapes,

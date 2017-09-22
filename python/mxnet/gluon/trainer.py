@@ -43,6 +43,12 @@ class Trainer(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
         :any:`mxnet.kvstore.create` for more information.
+
+    Properties
+    ----------
+    learning_rate: float
+        The current learning rate of the optimizer. Given an Optimizer object
+        optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
         if isinstance(params, (dict, ParameterDict)):
@@ -113,6 +119,31 @@ class Trainer(object):
 
         self._kv_initialized = True
 
+
+    @property
+    def learning_rate(self):
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning "
+                              "rate can be accessed.")
+        else:
+            return self._optimizer.learning_rate
+
+
+    def set_learning_rate(self, lr):
+        """Sets a new learning rate of the optimizer.
+
+        Parameters
+        ----------
+        lr : float
+            The new learning rate of the optimizer.
+        """
+        if not isinstance(self._optimizer, opt.Optimizer):
+            raise UserWarning("Optimizer has to be defined before its learning "
+                              "rate is mutated.")
+        else:
+            self._optimizer.set_learning_rate(lr)
+
+
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
         `autograd.compute_gradient` and outside of `record()` scope.
@@ -158,3 +189,38 @@ class Trainer(object):
                 if not ignore_stale_grad or arr._fresh_grad:
                     upd(i, grad, arr)
                     arr._fresh_grad = False
+
+    def save_states(self, fname):
+        """Saves trainer states (e.g. optimizer, momentum) to a file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to output states file.
+        """
+        assert self._optimizer is not None
+
+        if self._update_on_kvstore:
+            self._kvstore.save_optimizer_states(fname, dump_optimizer=True)
+        else:
+            with open(fname, 'wb') as fout:
+                fout.write(self._updaters[0].get_states(dump_optimizer=True))
+
+    def load_states(self, fname):
+        """Loads trainer states (e.g. optimizer, momentum) from a file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
+        """
+        if self._update_on_kvstore:
+            self._kvstore.load_optimizer_states(fname)
+            self._optimizer = self._kvstore._updater.optimizer
+        else:
+            with open(fname, 'rb') as f:
+                states = f.read()
+            for updater in self._updaters:
+                updater.set_states(states)
+                updater.optimizer = self._updaters[0].optimizer
+            self._optimizer = self._updaters[0].optimizer

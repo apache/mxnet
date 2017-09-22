@@ -144,7 +144,7 @@ def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False,
         num_classes, sizes=sizes, ratios=ratios, normalization=normalizations, \
         num_channels=num_channels, clip=False, interm_layer=0, steps=steps)
 
-    tmp = mx.contrib.symbol.MultiBoxTarget(
+    tmp = mx.symbol.contrib.MultiBoxTarget(
         *[anchor_boxes, label, cls_preds], overlap_threshold=.5, \
         ignore_label=-1, negative_mining_ratio=3, minimum_negative_samples=0, \
         negative_mining_thresh=.5, variances=(0.1, 0.1, 0.2, 0.2),
@@ -163,7 +163,7 @@ def get_symbol_train(num_classes=20, nms_thresh=0.5, force_suppress=False,
 
     # monitoring training status
     cls_label = mx.symbol.MakeLoss(data=cls_target, grad_scale=0, name="cls_label")
-    det = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
+    det = mx.symbol.contrib.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
         variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
     det = mx.symbol.MakeLoss(data=det, grad_scale=0, name="det_out")
@@ -202,7 +202,7 @@ def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=False,
 
     cls_prob = mx.symbol.SoftmaxActivation(data=cls_preds, mode='channel', \
         name='cls_prob')
-    out = mx.contrib.symbol.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
+    out = mx.symbol.contrib.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
         variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
     return out
