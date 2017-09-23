@@ -595,7 +595,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
-                 i2h_kernel=(3, 3), h2h_kernel=(3, 3),
+                 i2h_kernel, h2h_kernel,
                  i2h_pad=(0, 0),
                  i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
