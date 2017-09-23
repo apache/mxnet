@@ -148,6 +148,13 @@ Note that here we
 - `-n` number of worker nodes to run on
 - `-H` the host file which is required by `ssh` and `mpi`
 - `--kv-store` use either `dist_sync` or `dist_async`
+- If the `-s` argument is not passed, it will keep the number of servers same as number of workers
+- The launch.py tries to cycle through the hosts file to launch the servers and workers. For eg.
+  Lets say you have 5 hosts in the hosts file and you passed n as 3(and nothing for s).
+  It will try to launch 3 server processes for the first three hosts file and launch 3 worker
+  processes for fourth, fifth and first host.
+- If hosts file has exactly `n` number of worker nodes which is passed as an argument, it will launch
+  a server and worker process on each of the `n` hosts.
 
 
 ### Synchronize Directory
