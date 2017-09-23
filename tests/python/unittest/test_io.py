@@ -28,7 +28,6 @@ except ImportError:
     h5py = None
 import sys
 from common import get_data
-import unittest
 
 
 def test_MNISTIter():
@@ -237,8 +236,7 @@ def test_LibSVMIter():
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
-    
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
+
 def test_CSVIter():
     def check_CSVIter_synthetic():
         cwd = os.getcwd()
