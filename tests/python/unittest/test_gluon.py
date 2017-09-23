@@ -18,7 +18,11 @@
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.test_utils import assert_almost_equal
 import numpy as np
+from nose.tools import raises
+from copy import deepcopy
+import warnings
 
 
 def test_parameter():
@@ -67,10 +71,10 @@ def test_parameter_sharing():
 
 def test_basic():
     model = nn.Sequential()
-    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))
     model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh', in_units=128))
-    model.add(nn.Dense(32, in_units=64))
+    model.add(nn.Dense(64, activation='tanh', in_units=256),
+              nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
 
     # symbol
@@ -80,7 +84,7 @@ def test_basic():
 
     # ndarray
     model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
-    x = model(mx.nd.zeros((32, 10)))
+    x = model(mx.nd.zeros((32, 2, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
@@ -90,12 +94,30 @@ def test_basic():
     assert list(model.collect_params().values())[0]._grad is not None
 
 
+def test_dense():
+    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False, prefix='test_')
+    inputs = mx.sym.Variable('data')
+    outputs = model(inputs)
+    assert set(model.collect_params().keys()) == set(['test_weight', 'test_bias'])
+    assert outputs.list_outputs() == ['test_tanh_fwd_output']
+    args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
+    assert outs == [(2, 3, 128)]
+
+    model = nn.Dense(128, activation='relu', in_units=30, flatten=True, prefix='test2_')
+    inputs = mx.sym.Variable('data')
+    outputs = model(inputs)
+    assert set(model.collect_params().keys()) == set(['test2_weight', 'test2_bias'])
+    assert outputs.list_outputs() == ['test2_relu_fwd_output']
+    args, outs, auxs = outputs.infer_shape(data=(17, 2, 5, 3))
+    assert outs == [(17, 128)]
+
+
 def test_symbol_block():
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
-    model.add(nn.Dense(64, activation='tanh'))
-    model.add(nn.Dense(32, in_units=64))
+    model.add(nn.Dense(64, activation='tanh'),
+              nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
 
     model.initialize()
@@ -119,6 +141,9 @@ def check_layer_forward(layer, dshape):
         out = layer(x)
     out.backward()
 
+    np_out = out.asnumpy()
+    np_dx = x.grad.asnumpy()
+
     layer.hybridize()
 
     x = mx.nd.ones(shape=dshape)
@@ -126,6 +151,9 @@ def check_layer_forward(layer, dshape):
     with mx.autograd.record():
         out = layer(x)
     out.backward()
+
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
 def test_conv():
     layers1d = [
@@ -305,7 +333,7 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
 
 
 def test_split_data():
-    x = mx.nd.random_uniform(shape=(128, 33, 64))
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
 
     check_split_data(x, 8, 0)
     check_split_data(x, 3, 1)
@@ -329,9 +357,13 @@ def test_flatten():
 
 
 def test_trainer():
+    def dict_equ(a, b):
+        assert set(a) == set(b)
+        for k in a:
+            assert (a[k].asnumpy() == b[k].asnumpy()).all()
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0})
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
@@ -348,7 +380,84 @@ def test_trainer():
             y.backward()
     trainer.step(1)
 
-    assert (x.data(mx.cpu(1)).asnumpy() == -3).all()
+    assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
+
+    trainer.save_states('test.states')
+    states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
+             else deepcopy(trainer._updaters[0].states)
+    trainer.load_states('test.states')
+    if trainer._update_on_kvstore:
+        dict_equ(trainer._kvstore._updater.states, states)
+        assert trainer._optimizer == trainer._kvstore._updater.optimizer
+    else:
+        for updater in trainer._updaters:
+            dict_equ(updater.states, states)
+        assert trainer._optimizer == trainer._updaters[0].optimizer
+
+
+def test_block_attr_hidden():
+    b = gluon.Block()
+
+    # regular attributes can change types
+    b.a = None
+    b.a = 1
+
+@raises(TypeError)
+def test_block_attr_block():
+    b = gluon.Block()
+
+    # regular variables can't change types
+    b.b = gluon.Block()
+    b.b = (2,)
+
+@raises(TypeError)
+def test_block_attr_param():
+    b = gluon.Block()
+
+    # regular variables can't change types
+    b.b = gluon.Parameter()
+    b.b = (2,)
+
+def test_block_attr_regular():
+    b = gluon.Block()
+
+    # set block attribute also sets _children
+    b.c = gluon.Block()
+    c2 = gluon.Block()
+    b.c = c2
+    assert b.c is c2 and b._children[0] is c2
+
+def test_sequential_warning():
+    with warnings.catch_warnings(record=True) as w:
+        b = gluon.nn.Sequential()
+        b.add(gluon.nn.Dense(20))
+        b.hybridize()
+        assert len(w) == 1
+
+def test_global_norm_clip():
+    x1 = mx.nd.ones((3,3))
+    x2 = mx.nd.ones((4,4))
+    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+    assert norm == 5.0
+    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
+    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
+
+    x3 = mx.nd.array([1.0, 2.0, float('nan')])
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        gluon.utils.clip_global_norm([x1, x3], 2.0)
+        assert len(w) == 1
+
+
+def test_embedding():
+    layer = gluon.nn.Embedding(10, 100)
+    layer.initialize()
+    x = mx.nd.array([3,4,2,0,1])
+    with mx.autograd.record():
+        y = layer(x)
+        y.backward()
+    assert (layer.weight.grad()[:5] == 1).asnumpy().all()
+    assert (layer.weight.grad()[5:] == 0).asnumpy().all()
 
 
 if __name__ == '__main__':

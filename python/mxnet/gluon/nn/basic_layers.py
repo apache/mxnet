@@ -19,6 +19,8 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 
+import warnings
+
 from ..block import Block, HybridBlock
 from ..utils import _indent
 
@@ -37,9 +39,10 @@ class Sequential(Block):
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, block):
+    def add(self, *blocks):
         """Adds block on top of the stack."""
-        self.register_child(block)
+        for block in blocks:
+            self.register_child(block)
 
     def forward(self, x):
         for block in self._children:
@@ -55,11 +58,25 @@ class Sequential(Block):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __getitem__(self, i):
-        return self._children[i]
+    def __getitem__(self, key):
+        return self._children[key]
 
     def __len__(self):
         return len(self._children)
+
+    def hybridize(self, active=True):
+        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        non-hybrid children.
+
+        Parameters
+        ----------
+        active : bool, default True
+            Whether to turn hybrid on or off.
+        """
+        if self._children and all(isinstance(c, HybridBlock) for c in self._children):
+            warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
+                          'using HybridSequential for the best performance.')
+        super(Sequential, self).hybridize(active)
 
 
 class HybridSequential(HybridBlock):
@@ -76,9 +93,10 @@ class HybridSequential(HybridBlock):
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, block):
+    def add(self, *blocks):
         """Adds block on top of the stack."""
-        self.register_child(block)
+        for block in blocks:
+            self.register_child(block)
 
     def hybrid_forward(self, F, x):
         for block in self._children:
@@ -94,15 +112,15 @@ class HybridSequential(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __getitem__(self, i):
-        return self._children[i]
+    def __getitem__(self, key):
+        return self._children[key]
 
     def __len__(self):
         return len(self._children)
 
 
 class Dense(HybridBlock):
-    """Just your regular densely-connected NN layer.
+    r"""Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
     `output = activation(dot(input, weight) + bias)`
@@ -124,6 +142,11 @@ class Dense(HybridBlock):
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
         Whether the layer uses a bias vector.
+    flatten: bool
+        Whether the input tensor should be flattened.
+        If true, all but the first axis of input data are collapsed together.
+        If false, all but the last axis of input data are kept the same, and the transformation
+        applies on the last axis.
     weight_initializer : str or `Initializer`
         Initializer for the `kernel` weights matrix.
     bias_initializer: str or `Initializer`
@@ -138,16 +161,27 @@ class Dense(HybridBlock):
         See document of `Block`.
 
 
+    If ``flatten`` is set to be True, then the shapes are:
     Input shape:
-        A 2D input with shape `(batch_size, in_units)`.
+        An N-D input with shape
+        `(batch_size, x1, x2, ..., xn) with x1 * x2 * ... * xn equal to in_units`.
 
     Output shape:
         The output would have shape `(batch_size, units)`.
+
+    If ``flatten`` is set to be false, then the shapes are:
+    Input shape:
+        An N-D input with shape
+        `(x1, x2, ..., xn, in_units)`.
+
+    Output shape:
+        The output would have shape `(x1, x2, ..., xn, units)`.
     """
-    def __init__(self, units, activation=None, use_bias=True,
+    def __init__(self, units, activation=None, use_bias=True, flatten=True,
                  weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
+        self._flatten = flatten
         with self.name_scope():
             self._units = units
             self._in_units = in_units
@@ -166,12 +200,8 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        if bias is None:
-            act = F.FullyConnected(x, weight, no_bias=True, num_hidden=self._units,
-                                   name='fwd')
-        else:
-            act = F.FullyConnected(x, weight, bias, num_hidden=self._units,
-                                   name='fwd')
+        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                               flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act

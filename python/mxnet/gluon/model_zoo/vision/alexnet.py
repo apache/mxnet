@@ -67,7 +67,7 @@ class AlexNet(HybridBlock):
         return x
 
 # Constructor
-def alexnet(pretrained=False, ctx=cpu(), **kwargs):
+def alexnet(pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""AlexNet model from the `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
 
     Parameters
@@ -76,9 +76,11 @@ def alexnet(pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     net = AlexNet(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('alexnet'), ctx=ctx)
+        net.load_params(get_model_file('alexnet', root=root), ctx=ctx)
     return net

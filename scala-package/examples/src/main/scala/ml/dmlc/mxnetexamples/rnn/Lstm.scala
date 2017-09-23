@@ -77,8 +77,8 @@ object Lstm {
                                      i2hBias = Symbol.Variable(s"l${i}_i2h_bias"),
                                      h2hWeight = Symbol.Variable(s"l${i}_h2h_weight"),
                                      h2hBias = Symbol.Variable(s"l${i}_h2h_bias")))
-      lastStatesBuf.append(LSTMState(c = Symbol.Variable(s"l${i}_init_c"),
-                                     h = Symbol.Variable(s"l${i}_init_h")))
+      lastStatesBuf.append(LSTMState(c = Symbol.Variable(s"l${i}_init_c_beta"),
+                                     h = Symbol.Variable(s"l${i}_init_h_beta")))
     }
     val paramCells = paramCellsBuf.toArray
     val lastStates = lastStatesBuf.toArray
@@ -134,8 +134,8 @@ object Lstm {
                                            i2hBias = Symbol.Variable(s"l${i}_i2h_bias"),
                                            h2hWeight = Symbol.Variable(s"l${i}_h2h_weight"),
                                            h2hBias = Symbol.Variable(s"l${i}_h2h_bias"))
-      lastStates = lastStates :+ LSTMState(c = Symbol.Variable(s"l${i}_init_c"),
-                                           h = Symbol.Variable(s"l${i}_init_h"))
+      lastStates = lastStates :+ LSTMState(c = Symbol.Variable(s"l${i}_init_c_beta"),
+                                           h = Symbol.Variable(s"l${i}_init_h_beta"))
     }
     assert(lastStates.length == numLstmLayer)
 
