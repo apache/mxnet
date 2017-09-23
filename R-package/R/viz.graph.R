@@ -45,6 +45,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
       "MAERegressionOutput"=,
       "SVMOutput"=,
       "LogisticRegressionOutput"=,
+      "MakeLoss"=,
       "SoftmaxOutput" = "#b3de69",
       "#fccde5" # default value
     )
@@ -64,16 +65,18 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   
   model_list<- fromJSON(symbol$as.json())
   model_nodes<- model_list$nodes
-  model_nodes$id<- seq_len(nrow(model_nodes)) - 1
+  model_nodes$id<- seq_len(nrow(model_nodes))-1
   model_nodes$level<- model_nodes$ID
   
   # extract IDs from string list
-  tuple_str <- function(str) vapply(str_extract_all(str, "\\d+"), function(x) paste0(x, collapse="X"), character(1))
+  tuple_str <- function(str) vapply(str_extract_all(str, "\\d+"),
+                                    function(x) paste0(x, collapse="X"),
+                                    character(1))
   
   ### substitute op for heads
   op_id<- sort(unique(model_list$heads[1,]+1))
-  op_null<- model_nodes$op == "null"
-  op_substitute <- op_id[op_null]
+  op_null<- which(model_nodes$op=="null")
+  op_substitute<- intersect(op_id, op_null)
   model_nodes$op[op_substitute]<- model_nodes$name[op_substitute]
   
   model_nodes$color<- apply(model_nodes["op"], 1, get.color)
@@ -98,7 +101,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   
   model_nodes$label<- label_paste
   
-  id.to.keep <- model_nodes$id[! op_null]
+  id.to.keep <- model_nodes$id[!model_nodes$op=="null"]
   nodes_df <- model_nodes[model_nodes$id %in% id.to.keep, c("id", "label", "shape", "color")]
   
   ### remapping for DiagrammeR convention
@@ -107,17 +110,15 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   id_dic<- nodes_df$id_graph
   names(id_dic)<- as.character(nodes_df$id)
   
-  keepers <- ! lengths(model_nodes$inputs) == 0 & ! op_null
-  
-  edges_id<- model_nodes$id[keepers]
+  edges_id<- model_nodes$id[lengths(model_nodes$inputs)!=0 & model_nodes$op!="null"]
   edges_id<- id_dic[as.character(edges_id)]
-  edges<- model_nodes$inputs[keepers]
+  edges<- model_nodes$inputs[lengths(model_nodes$inputs)!=0 & model_nodes$op!="null"]
   edges<- sapply(edges, function(x)intersect(as.numeric(x[, 1]), id.to.keep), simplify = FALSE)
   names(edges)<- edges_id
   
   edges_df<- data.frame(
     from=unlist(edges),
-    to=rep(names(edges), times=lengths(edges)),
+    to=rep(names(edges), time=lengths(edges)),
     arrows = "to",
     color="black",
     from_name_output=paste0(model_nodes$name[unlist(edges)+1], "_output"), 
@@ -142,14 +143,12 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     set_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>% 
     add_global_graph_attrs("rankdir", value = direction, attr_type = "graph")
   
-  if (type=="vis"){
-    graph_render<- render_graph(graph = graph, output = "visNetwork", width = graph.width.px, height = graph.height.px) %>% visHierarchicalLayout(direction = direction, sortMethod = "directed")
-  } else {
-    graph_render<- render_graph(graph = graph, output = "graph", width = graph.width.px, height = graph.height.px)
-  }
-
-  # graph <-visNetwork(nodes = nodes_df, edges = edges_df, main = graph.title) %>%
-  #   visHierarchicalLayout(direction = "UD", sortMethod = "directed")
+  graph_render <- if (type=="vis"){
+                    render_graph(graph = graph, output = "visNetwork", width = graph.width.px, height = graph.height.px) %>%
+                      visHierarchicalLayout(direction = direction, sortMethod = "directed")
+                  } else {
+                    render_graph(graph = graph, output = "graph", width = graph.width.px, height = graph.height.px)
+                  }
   
   return(graph_render)
 }
