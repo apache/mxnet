@@ -136,3 +136,48 @@ class MultiFactorScheduler(LRScheduler):
             else:
                 return self.base_lr
         return self.base_lr
+    
+class GradualWarmupScheduler(LRScheduler):
+    def __init__(self, warmup_step = 100, begin_lr=0.01, stop_lr=0.1):
+        """Warmup the learning rate by a const value for first 'warmup_step' steps.
+
+        It returns a new learning rate by::
+
+            begin_lr + num_update * const_update
+
+        Parameters
+        ----------
+        warmup_step : int
+            Changes the learning rate for first 'warmup_step' updates.
+        begin_lr : float, optional
+            The learning rate at begin.
+        stop_lr : float, optional
+            Stop updating the learning rate if it is less than this value.
+        """
+        super(GradualWarmupScheduler, self).__init__()
+        if stop_lr <= begin_lr:
+             raise ValueError("stop_lr must larger than begin_lr")
+        self.warmup_step = warmup_step
+        self.begin_lr = begin_lr
+        self.stop_lr = stop_lr
+        self.const_update = (self.stop_lr - self.begin_lr) / self.warmup_step
+        self.cur_step = 0
+
+    def __call__(self, num_update):    
+        """
+        Call to schedule current learning rate
+        Parameters
+        ----------
+        num_update: int
+            the maximal number of updates applied to a weight.
+        """
+        if num_update <= self.warmup_step and num_update > self.cur_step:
+            self.base_lr = num_update * self.const_update + self.begin_lr
+            self.cur_step = num_update
+            if num_update == self.warmup_step or self.base_lr >= self.stop_lr:
+                 self.base_lr = self.stop_lr
+                 logging.info("Update[%d]: now learning rate arrived at %0.5e, will not "
+                             "change in the future", num_update, self.base_lr)
+        else:
+            return self.base_lr   
+        return self.base_lr      
