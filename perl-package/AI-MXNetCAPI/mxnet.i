@@ -668,10 +668,15 @@ int MXAutogradBackward(mx_uint num_output,
  * \return 0 when success, -1 when failure happens
  */
 int MXAutogradBackwardEx(mx_uint num_output,
-                                   NDArrayHandle* in,
-                                   NDArrayHandle* in,
+                                   NDArrayHandle *in,
+                                   NDArrayHandle *in,
+                                   mx_uint num_variables,
+                                   NDArrayHandle *in,
                                    int retain_graph,
-                                   int is_train);
+                                   int create_graph,
+                                   int is_train,
+                                   NDArrayHandle **out_grad,
+                                   int **out_stype);
 
 /*
  * \brief get the graph constructed by autograd.

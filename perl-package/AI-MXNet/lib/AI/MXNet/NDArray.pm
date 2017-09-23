@@ -1518,7 +1518,10 @@ method backward(Maybe[AI::MXNet::NDArray] :$out_grad=, Bool :$retain_graph=0, Bo
             1,
             [$self->handle],
             [defined $out_grad ? $out_grad->handle : undef],
+            0,
+            [],
             $retain_graph,
+            0,
             $train_mode
         )
     )

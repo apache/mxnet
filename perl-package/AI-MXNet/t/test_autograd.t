@@ -21,7 +21,7 @@ use AI::MXNet qw(mx);
 use AI::MXNet::AutoGrad qw(autograd);
 use AI::MXNet::TestUtils qw(same);
 use AI::MXNet::Base;
-use Test::More tests => 72;
+use Test::More tests => 74;
 
 sub autograd_assert
 {
@@ -173,7 +173,7 @@ sub test_out_grads
 
     autograd->record(sub {
         my ($a, $b, $c) = @{ $x };
-        autograd->backward([$a, $b, $c], [$da, $db, $dc]);
+        autograd->backward([$a, $b, $c], head_grads => [$da, $db, $dc]);
     });
     ok(($dx->aspdl == pdl(
         [[1,1,1,1,1],
@@ -352,3 +352,19 @@ sub test_get_symbol
 }
 
 test_get_symbol();
+
+sub test_gradient
+{
+    my $x = mx->nd->ones([1]);
+    $x->attach_grad;
+    my $z;
+    mx->autograd->record(sub {
+        $z = mx->nd->elemwise_add($x->exp, $x);
+    });
+    my $dx = mx->autograd->grad($z, $x, create_graph=>1);
+    ok(abs($dx->asscalar - 3.71828175) < 1e-7);
+    $dx->backward;
+    ok(abs($x->grad->asscalar - 2.71828175) < 1e-7);
+}
+
+test_gradient();

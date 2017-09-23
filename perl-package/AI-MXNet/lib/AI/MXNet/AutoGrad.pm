@@ -155,54 +155,36 @@ method mark_variables(
 
 =head2 backward
 
-     Compute the gradients of outputs w.r.t variables.
+    Compute the gradients of heads w.r.t previously marked variables.
 
-     Parameters
-     ----------
-     outputs: array ref of NDArray
-     out_grads: array ref of NDArray or undef
-     retain_graph: bool, defaults to false
-     train_mode: bool, defaluts to true
+    Parameters
+    ----------
+    $heads: ArrayRef[AI::MXNet::NDArray]
+        Output NDArray(s)
+    :$head_grads=: Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray|Undef]]
+        Gradients with respect to heads.
+    :$retain_graph=0: bool, optional
+        Whether to retain graph.
+    :$train_mode=1: bool, optional
+        Whether to do backward for training or predicting.
 =cut
-
 method backward(
-    ArrayRef[AI::MXNet::NDArray] $outputs,
-    Maybe[ArrayRef[AI::MXNet::NDArray|Undef]] $out_grads=,
-    Bool $retain_graph=0,
-    Bool $train_mode=1
+    AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray] $heads,
+    Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray|Undef]] :$head_grads=,
+    Bool :$retain_graph=0,
+    Bool :$train_mode=1
 )
 {
-    my @output_handles = map { $_->handle } @{ $outputs };
-    if(not defined $out_grads)
-    {
-        check_call(
-            AI::MXNetCAPI::AutogradBackwardEx(
-                scalar(@output_handles),
-                \@output_handles,
-                [],
-                $retain_graph,
-                $train_mode
-            )
-        );
-        return;
-    }
-
-    my @ograd_handles;
-    for my $arr (@$out_grads)
-    {
-        push @ograd_handles, (defined $arr ? $arr->handle : undef);
-    }
-    assert(
-        (@ograd_handles == @output_handles),
-        "outputs and out_grads must have the same length"
-    );
-
+    my ($head_handles, $hgrad_handles) = _parse_head($heads, $head_grads);
     check_call(
         AI::MXNetCAPI::AutogradBackwardEx(
-            scalar(@output_handles),
-            \@output_handles,
-            \@ograd_handles,
+            scalar(@{ $head_handles }),
+            $head_handles,
+            $hgrad_handles,
+            0,
+            [],
             $retain_graph,
+            0,
             $train_mode
         )
     );
@@ -270,28 +252,96 @@ method grad_and_loss(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
 
 =head2 grad
 
-    Return function that computes gradient of arguments.
+    Compute the gradients of heads w.r.t variables. Gradients will be
+    returned as new NDArrays instead of stored into `variable.grad`.
+    Supports recording gradient graph for computing higher order gradients.
+
+    .. Note: Currently only a very limited set of operators support higher order
+    gradients.
 
     Parameters
     ----------
-    func: a perl sub
-        The forward (loss) function.
-    argnum: an int or arry ref of int
-        The index of argument to calculate gradient for.
+    $heads: NDArray or array ref of NDArray
+        Output NDArray(s)
+    $variables: NDArray or list of NDArray
+        Input variables to compute gradients for.
+    :$head_grads=: NDArray or list of NDArray or undef
+        Gradients with respect to heads.
+    :$retain_graph=: bool
+        Whether to keep computation graph to differentiate again, instead
+        of clearing history and release memory. Defaults to the same value
+        as create_graph.
+    :$create_graph=0: bool
+        Whether to record gradient graph for computing higher order
+    $train_mode=1: bool, optional
+        Whether to do backward for training or prediction.
 
     Returns
     -------
-    grad_func: a perl function
-        A function that would compute the gradient of arguments.
+    NDArray or list of NDArray:
+        Gradients with respect to variables.
+
+    Examples
+    --------
+    >>> $x = mx->nd->ones([1]);
+    >>> $x->attach_grad();
+    >>> mx->autograd->record(sub {
+            $z = mx->nd->elemwise_add(mx->nd->exp($x), $x);
+        });
+    >>> $dx = mx->autograd->grad($z, [$x], create_graph=>1)
+    >>> $dx->backward();
+    >>> print($dx->grad->aspdl)
+    [3.71828175]
 =cut
 
-
-method grad(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
+method grad(
+    AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray] $heads,
+    AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray] $variables,
+    Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray|Undef]] :$head_grads=,
+    Bool :$retain_graph=,
+    Bool :$create_graph=0,
+    Bool :$train_mode=1
+)
 {
-    my $grad_with_loss_func = __PACKAGE__->grad_and_loss($func, $argnum);
-    return sub {
-        return ($grad_with_loss_func->(@_))[0];
-    };
+    my ($head_handles, $hgrad_handles) = _parse_head($heads, $head_grads);
+    my @var_handles;
+    if(blessed $variables)
+    {
+        @var_handles = ($variables->handle);
+    }
+    else
+    {
+        assert(scalar(@{ $variables }), "variables cannot be an empty array.");
+        @var_handles = map { $_->handle } @{ $variables };
+    }
+
+    $retain_graph //= $create_graph;
+
+    my ($grad_vars, $grad_stypes)
+        =
+    check_call(
+        AI::MXNetCAPI::AutogradBackwardEx(
+            scalar(@{ $head_handles }),
+            $head_handles,
+            $hgrad_handles,
+            scalar(@var_handles),
+            \@var_handles,
+            $retain_graph,
+            $create_graph,
+            $train_mode
+        )
+    );
+
+    my @ret;
+    zip(sub {
+        my ($handle, $stype) = @_;
+        push @ret, AI::MXNet::NDArray->new(handle => $handle, stype => $stype);
+    }, $grad_vars, $grad_stypes);
+    if(blessed $variables)
+    {
+        return $ret[0];
+    }
+    return \@ret;
 }
 
 =head2 train_mode
@@ -398,6 +448,30 @@ method get_symbol(AI::MXNet::NDArray $x)
 {
     my $handle = scalar(check_call(AI::MXNetCAPI::AutogradGetSymbol($x->handle)));
     return AI::MXNet::Symbol->new(handle => $handle);
+}
+
+# parse head gradient for backward and grad.
+func _parse_head($heads, $head_grads)
+{
+    if(blessed $heads)
+    {
+        $heads = [$heads];
+    }
+    if(blessed $head_grads)
+    {
+        $head_grads = [$head_grads];
+    }
+    my @head_handles = map { $_->handle } @{ $heads };
+    my @hgrad_handles;
+    if(defined $head_grads)
+    {
+        assert(
+            (@{ $heads } == @{ $head_grads }),
+            "heads and head_grads must be lists of the same length"
+        );
+        @hgrad_handles = map { defined($_) ? $_->handle : undef } @{ $head_grads };
+    }
+    return (\@head_handles, \@hgrad_handles);
 }
 
 1;

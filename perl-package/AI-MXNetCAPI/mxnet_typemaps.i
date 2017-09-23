@@ -322,7 +322,7 @@
 }
 
 %typemap(in,numinputs=0) (NDArrayHandle *out) (NDArrayHandle temp),
-                         (FunctionHandle* out) (FunctionHandle temp), 
+                         (FunctionHandle* out) (FunctionHandle temp),
                          (SymbolHandle *out) (SymbolHandle temp),
                          (ExecutorHandle *out) (ExecutorHandle temp),
                          (DataIterHandle *out) (ExecutorHandle temp),
@@ -531,6 +531,72 @@
             svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXNDArray, 0);
         }
         myav = av_make(*$1,svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (NDArrayHandle **out_grad) (NDArrayHandle* temp)
+{
+    int vars = SvIV(ST(3));
+    if(vars)
+    {
+        $1 = &temp;
+    }
+    else
+    {
+        $1 = NULL;
+    }
+}
+
+%typemap(argout) (NDArrayHandle** out_grad)
+{
+    if(!result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        int len = SvIV(ST(3));
+        svs = (SV **)safemalloc(len*sizeof(SV *));
+        for (i = 0; i < len ; i++) {
+            svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$1)[i]), SWIGTYPE_p_MXNDArray, 0);
+        }
+        myav = av_make(len,svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (int **out_stype) (int *temp)
+{
+    int vars = SvIV(ST(3));
+    if(vars)
+    {
+        $1 = &temp;
+    }
+    else
+    {
+        $1 = NULL;
+    }
+}
+
+%typemap(argout) (int** out_stype)
+{
+    if(!result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        int len = SvIV(ST(3));
+        svs = (SV **)safemalloc(len*sizeof(SV *));
+        for (i = 0; i < len ; i++) {
+            svs[i] = newSViv((*$1)[i]);
+        }
+        myav = av_make(len,svs);
         Safefree(svs);
         $result = newRV_noinc((SV*)myav);
         sv_2mortal($result);
