@@ -153,7 +153,7 @@ Note that here we
   Lets say you have `5` hosts in the hosts file and you passed n as `3`(and nothing for s).
   The script will launch `3` server processes for the first three hosts in the hosts file and launch `3` worker
   processes for fourth, fifth and first host.
-- If hosts file has exactly `n` number of worker nodes which is passed as an argument, it will launch
+- If hosts file has exactly `n` number of worker nodes which is passed as an argument with `-n`, it will launch
   a server and worker process on each of the `n` hosts.
 
 
