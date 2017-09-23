@@ -17,10 +17,10 @@
 
 use strict;
 use warnings;
-use Test::More tests => 56;
+use Test::More tests => 77;
 use AI::MXNet 'mx';
 use AI::MXNet::Gluon 'gluon';
-use AI::MXNet::TestUtils 'allclose';
+use AI::MXNet::TestUtils qw/allclose almost_equal/;
 use AI::MXNet::Base;
 use Scalar::Util 'blessed';
 
@@ -211,15 +211,35 @@ test_zoneout();
 
 sub check_rnn_forward
 {
-    my ($layer, $inputs) = @_;
+    my ($layer, $inputs, $deterministic) = @_;
+    $deterministic //= 1;
     $inputs->attach_grad();
     $layer->collect_params()->initialize();
+    my $out;
     mx->autograd->record(sub {
-        ($layer->unroll(3, $inputs, merge_outputs=>1))[0]->backward();
-        mx->autograd->backward(($layer->unroll(3, $inputs, merge_outputs=>0))[0]);
+        $out = ($layer->unroll(3, $inputs, merge_outputs=>0))[0];
+        mx->autograd->backward($out);
+        $out = ($layer->unroll(3, $inputs, merge_outputs=>1))[0];
+        $out->backward;
     });
-    mx->nd->waitall();
-    ok(1);
+
+    my $pdl_out = $out->aspdl;
+    my $pdl_dx = $inputs->grad->aspdl;
+
+    $layer->hybridize;
+
+    mx->autograd->record(sub {
+        $out = ($layer->unroll(3, $inputs, merge_outputs=>0))[0];
+        mx->autograd->backward($out);
+        $out = ($layer->unroll(3, $inputs, merge_outputs=>1))[0];
+        $out->backward;
+    });
+
+    if($deterministic)
+    {
+        ok(almost_equal($pdl_out, $out->aspdl, 1e-3));
+        ok(almost_equal($pdl_dx, $inputs->grad->aspdl, 1e-3));
+    }
 }
 
 sub test_rnn_cells
@@ -232,13 +252,14 @@ sub test_rnn_cells
         gluon->rnn->LSTMCell(100, input_size=>200)
     );
     check_rnn_forward($bilayer, mx->nd->ones([8, 3, 200]));
-    check_rnn_forward(gluon->rnn->DropoutCell(0.5), mx->nd->ones([8, 3, 200]));
+    check_rnn_forward(gluon->rnn->DropoutCell(0.5), mx->nd->ones([8, 3, 200]), 0);
     check_rnn_forward(
         gluon->rnn->ZoneoutCell(
             gluon->rnn->LSTMCell(100, input_size=>200),
             0.5, 0.2
         ),
-        mx->nd->ones([8, 3, 200])
+        mx->nd->ones([8, 3, 200]),
+        0
     );
     my $net = gluon->rnn->SequentialRNNCell();
     $net->add(gluon->rnn->LSTMCell(100, input_size=>200));
@@ -253,8 +274,10 @@ sub check_rnn_layer_forward
 {
     my ($layer, $inputs, $states) = @_;
     $layer->collect_params()->initialize();
+    $inputs->attach_grad;
+    my $out;
     mx->autograd->record(sub {
-        my $out = $layer->($inputs, $states);
+        $out = $layer->($inputs, $states);
         if(defined $states)
         {
             ok(@$out == 2);
@@ -266,7 +289,27 @@ sub check_rnn_layer_forward
         }
         $out->backward();
     });
-    mx->nd->waitall();
+
+    my $pdl_out = $out->aspdl;
+    my $pdl_dx = $inputs->grad->aspdl;
+    $layer->hybridize;
+
+    mx->autograd->record(sub {
+        $out = $layer->($inputs, $states);
+        if(defined $states)
+        {
+            ok(@$out == 2);
+            $out = $out->[0]
+        }
+        else
+        {
+            ok(blessed $out and $out->isa('AI::MXNet::NDArray'));
+        }
+        $out->backward();
+    });
+
+    ok(almost_equal($pdl_out, $out->aspdl, 1e-3));
+    ok(almost_equal($pdl_dx, $inputs->grad->aspdl, 1e-3));
 }
 
 sub test_rnn_layers

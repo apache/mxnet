@@ -188,7 +188,7 @@ After you build the shared library, run the following command from the MXNet sou
 ```bash
     brew install swig
     sudo sh -c 'curl -L https://cpanmin.us | perl - App::cpanminus'
-    sudo cpanm -q -n PDL Mouse Function::Parameters
+    sudo cpanm -q -n PDL Mouse Function::Parameters Hash::Ordered
 
     MXNET_HOME=${PWD}
     export PERL5LIB=${HOME}/perl5/lib/perl5

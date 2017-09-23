@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
 use strict;
 use warnings;
 use Hash::Ordered;
@@ -114,7 +115,8 @@ has 'init'                => (is => 'rw', isa => 'Maybe[Initializer]');
 has 'allow_deferred_init' => (is => 'rw', isa => 'Bool', default => 0);
 has 'differentiable'      => (is => 'rw', isa => 'Bool', default => 1);
 has [qw/_var _data _grad
-    _deferred_init _ctx_list/]      => (is => 'rw', init_arg => undef);
+    _deferred_init
+    _ctx_list _ctx_map/]  => (is => 'rw', init_arg => undef);
 
 method grad_req(Maybe[GradReq] $req=)
 {
@@ -128,10 +130,7 @@ method grad_req(Maybe[GradReq] $req=)
     if($req eq 'null' and defined $self->_grad)
     {
         $self->_grad(undef);
-        for my $ctx ($self->_data->keys)
-        {
-            $self->_data->set($ctx => $self->_data->get($ctx)->detach);
-        }
+        $self->_data([map { $_->detach } @{ $self->_data }]);
     }
     elsif(defined $self->_data)
     {
@@ -139,29 +138,33 @@ method grad_req(Maybe[GradReq] $req=)
     }
 }
 
-method _check_and_get($arr_dict, $ctx)
+method _check_and_get($arr_list, $ctx)
 {
-    if(defined $arr_dict)
+    if(defined $arr_list)
     {
         if(ref $ctx eq 'ARRAY')
         {
-            return [$arr_dict->values()];
+            return $arr_list;
         }
         if(not defined $ctx)
         {
-            if(@{ $self->_ctx_list } == 1)
+            if(@{ $arr_list } == 1)
             {
-                $ctx = $self->_ctx_list->[0];
+                return $arr_list->[0];
             }
             else
             {
                 $ctx = AI::MXNet::Context->current_ctx;
             }
         }
-        my $ret = $arr_dict->get($ctx);
-        if(defined $ret)
+        my $idx;
+        if(ref $self->_ctx_map->[$ctx->device_type_id])
         {
-            return $ret;
+            $idx = $self->_ctx_map->[$ctx->device_type_id][$ctx->device_id];
+        }
+        if(defined $idx)
+        {
+            return $arr_list->[$idx];
         }
         confess(
             "Parameter ${\ $self->name } was not initialized on context $ctx. ".
@@ -279,14 +282,24 @@ method _finish_deferred_init()
 }
 
 # Sets data and grad.
-method _init_impl($data, $ctx)
+method _init_impl($data, $ctx_list)
 {
-    $self->_data(Hash::Ordered->new);
-    $self->_ctx_list([@{ $ctx }]);
-    for my $i (@{ $ctx })
-    {
-        $self->_data->set("$i" => $data->copyto($i));
-    }
+    $self->_ctx_list([@{ $ctx_list }]);
+    $self->_ctx_map([]);
+    enumerate(sub {
+        my ($i, $ctx) = @_;
+        while(@{ $self->_ctx_map } <= $ctx->device_type_id)
+        {
+            push @{ $self->_ctx_map }, [];
+        }
+        my $dev_list = $self->_ctx_map->[$ctx->device_type_id];
+        while(@{ $dev_list } <= $ctx->device_id)
+        {
+            push @{ $dev_list }, undef;
+        }
+        $dev_list->[$ctx->device_id] = $i;
+    }, $self->_ctx_list);
+    $self->_data([map { $data->copyto($_) } @{ $self->_ctx_list }]);
     $self->_init_grad;
 }
 
@@ -298,11 +311,7 @@ method _init_grad()
         $self->_grad(undef);
         return;
     }
-    $self->_grad(Hash::Ordered->new);
-    for my $i ($self->_data->keys)
-    {
-        $self->_grad->set($i => AI::MXNet::NDArray->zeros_like($self->_data->get($i)));
-    }
+    $self->_grad([map { AI::MXNet::NDArray->zeros_like($_) } @{ $self->_data }]);
     AI::MXNet::AutoGrad->mark_variables($self->list_data, $self->list_grad, grad_reqs => $self->grad_req);
 }
 
@@ -553,7 +562,7 @@ method list_ctx()
 method zero_grad()
 {
     return unless defined $self->_grad;
-    map { $_ .= 0 } $self->_grad->values;
+    map { $_ .= 0 } @{ $self->_grad };
 }
 
 =head2 var
@@ -656,7 +665,7 @@ method _get_impl($name)
     return undef;
 }
 
-=head get 
+=head get
 
         Retrieves a 'AI::MXNet::Gluon::Parameter' with name '$self->prefix.$name'. If not found,
         'get' will first try to retrieve it from 'shared' dict. If still not

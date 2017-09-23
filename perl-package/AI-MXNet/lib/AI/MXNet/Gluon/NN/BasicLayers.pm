@@ -601,6 +601,10 @@ has [qw/input_dim
 has 'dtype'              => (is => 'ro', isa => 'Dtype', default => 'float32');
 has 'weight_initalizer'  => (is => 'ro', isa => 'Maybe[Initializer]');
 has [qw/_kwargs weight/] => (is => 'rw', init_arg => undef);
+method python_constructor_arguments()
+{
+    ['input_dim', 'output_dim'];
+}
 
 sub BUILD
 {

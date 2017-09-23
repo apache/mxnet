@@ -207,14 +207,16 @@ method set(AcceptableInput $value, $reverse=)
 method asscalar()
 {
     confess("ndarray size must be 1") unless $self->size == 1;
-    $self->wait_to_read;
-    my $perl_pack_type = DTYPE_MX_TO_PERL->{$self->dtype};
-    my $length = {qw/f 4 d 8 S 2 C 1 l 4/}->{$perl_pack_type};
-    return
-    (map {
-            $perl_pack_type eq 'S' ? AI::MXNetCAPI::_half_to_float($_) : $_
-         } unpack("$perl_pack_type", check_call(AI::MXNetCAPI::NDArrayGetData($self->handle, $length)))
-    )[0];
+    return $self->aspdl->at(0);
+    ## code below works happily on CPU/segfaults on GPU
+    #$self->wait_to_read;
+    #my $perl_pack_type = DTYPE_MX_TO_PERL->{$self->dtype};
+    #my $length = {qw/f 4 d 8 S 2 C 1 l 4/}->{$perl_pack_type};
+    #return
+    #(map {
+    #        $perl_pack_type eq 'S' ? AI::MXNetCAPI::_half_to_float($_) : $_
+    #     } unpack("$perl_pack_type", check_call(AI::MXNetCAPI::NDArrayGetData($self->handle, $length)))
+    #)[0];
 }
 
 method _sync_copyfrom(ArrayRef|PDL|PDL::Matrix $source_array)
@@ -1518,7 +1520,10 @@ method backward(Maybe[AI::MXNet::NDArray] :$out_grad=, Bool :$retain_graph=0, Bo
             1,
             [$self->handle],
             [defined $out_grad ? $out_grad->handle : undef],
+            0,
+            [],
             $retain_graph,
+            0,
             $train_mode
         )
     )

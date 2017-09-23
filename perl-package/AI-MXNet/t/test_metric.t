@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use JSON::PP;
 use AI::MXNet 'mx';
 
@@ -37,6 +37,7 @@ sub test_metrics
     check_metric('f1');
     check_metric('perplexity', -1);
     check_metric('pearsonr');
+    check_metric('confidence', 2, [0.5, 0.9]);
     my $composite = mx->metric->create(['acc', 'f1']);
     check_metric($composite);
 }

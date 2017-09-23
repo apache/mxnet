@@ -47,7 +47,7 @@ use AI::MXNet::Contrib;
 use AI::MXNet::CachedOp;
 use AI::MXNet::AutoGrad;
 use AI::MXNet::Gluon;
-our $VERSION = '1.0102';
+our $VERSION = '1.1';
 
 sub import
 {

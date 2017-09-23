@@ -546,4 +546,29 @@ method install_monitor(AI::MXNet::Monitor $mon)
     }
 }
 
+=head2 save_checkpoint
+
+    Save current progress to a checkpoint.
+    Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
+
+    Parameters
+    ----------
+    prefix : str
+        The file prefix to checkpoint to
+    epoch : int
+        The current epoch number
+    save_optimizer_states : bool
+        Whether to save optimizer states for later training
+=cut
+
+
+method save_checkpoint(Str $prefix, Int $epoch, Bool $save_optimizer_states=0)
+{
+    my %buckets = %{ $self->_buckets };
+    while(my ($key, $module) = each %buckets)
+    {
+        $module->save_checkpoint("${prefix}_$key", $epoch, $save_optimizer_states);
+    }
+}
+
 1;

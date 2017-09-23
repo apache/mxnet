@@ -23,7 +23,6 @@ use Archive::Tar;
 use IO::Zlib;
 use IO::File;
 use Mouse;
-use Cwd;
 use AI::MXNet::Function::Parameters;
 has 'root'           => (is => 'ro', isa => 'Str', required => 1);
 has 'train'          => (is => 'ro', isa => 'Bool', required => 1);
@@ -193,6 +192,7 @@ package AI::MXNet::Gluon::Data::Vision::DownloadedDataSet::CIFAR10;
 use Mouse;
 use AI::MXNet::Gluon::Utils qw(download);
 use AI::MXNet::Base;
+use Cwd;
 extends 'AI::MXNet::Gluon::Data::Vision::DownloadedDataSet';
 
 =head1 NAME
@@ -231,10 +231,10 @@ has '_file_hashes' => (is => 'ro', default => sub { +{
 method _read_batch(Str $filename)
 {
     my $data = join('', IO::File->new($filename)->getlines);
-    $data = PDL->new_from_specification(PDL::Type->new(0), length($data))->reshape(3073, length($data/3073));
+    $data = PDL->new_from_specification(PDL::Type->new(0), length($data))->reshape(3073, length($data)/3073);
     $data = AI::MXNet::NDArray->array($data, dtype => 'uint8');
     return (
-        $data->slice('X', [1, -1])->sever->reshape([-1, 3, 32, 32])->transpose(0, 2, 3, 1),
+        $data->slice('X', [1, -1])->sever->reshape([-1, 3, 32, 32])->transpose([0, 2, 3, 1]),
         $data->slice('X', 0)->astype('int32')
     );
 }
@@ -245,9 +245,9 @@ method _get_data()
     if(grep { not -f $_->[1] or not check_sha1($_->[1], $self->_file_hashes->{ $_->[0] }) } @file_paths)
     {
         my $filename = download(
-            'https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz',
+            'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/cifar10/cifar-10-binary.tar.gz',
             path => $self->root,
-            sha1_hash => 'e8aa088b9774a44ad217101d2e2569f823d2d491'
+            sha1_hash => 'fab780a1e191a7eda0f345501ccd62d20f7ed891'
         );
         my $tar = Archive::Tar->new($filename);
         my $cwd = cwd();
@@ -261,7 +261,7 @@ method _get_data()
         my (@data, @label);
         for my $i (1..5)
         {
-            my $filename = join('/', $self->root, "cifar-10-batches-bin/data_batch_$i.bin");
+            my $filename = join('/', $self->root, "data_batch_$i.bin");
             my ($data, $label) = $self->_read_batch($filename);
             push @data, $data;
             push @label, $label;
@@ -271,7 +271,7 @@ method _get_data()
     }
     else
     {
-        my $filename = join('/', $self->root, "cifar-10-batches-bin/test_batch.bin");
+        my $filename = join('/', $self->root, "test_batch.bin");
         ($data, $label) = $self->_read_batch($filename);
     }
     $self->data(\@{$data});

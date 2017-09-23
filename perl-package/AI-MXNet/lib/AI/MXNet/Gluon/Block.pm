@@ -143,7 +143,7 @@ use AI::MXNet::Gluon::Mouse;
 =cut
 
 method _flatten(
-    GluonInput $args
+    $args
 )
 {
     if(blessed $args and $args->isa('AI::MXNet::NDArray'))
@@ -168,8 +168,7 @@ method _flatten(
 }
 
 method _regroup(
-    GluonInput $args,
-    Int|ArrayRef[Int] $fmt
+    $args, $fmt
 )
 {
     my $in_symbol = (blessed $args and $args->isa('AI::MXNet::Symbol'));
@@ -537,17 +536,18 @@ method _get_graph(@args)
 {
     if(not @{ $self->_cached_graph })
     {
-        my $args = \@args;
+        my $args = [@args];
         my ($in_format, $out_format);
         ($args, $in_format) = __PACKAGE__->_flatten($args);
         $self->_in_format($in_format);
-        my @inputs = map { AI::MXNet::Symbol->var("input_$_") } 0 .. @args-1;
+        my @inputs = map { AI::MXNet::Symbol->var("input_$_") } 0 .. @$args-1;
         my ($grouped_inputs) = __PACKAGE__->_regroup(\@inputs, $self->_in_format);
         my %params = map { $_ => $self->_reg_params->{$_}->var } keys %{ $self->_reg_params };
-        my $out;
+        my @out;
         $self->name_scope(sub {
-            $out = $self->hybrid_forward('AI::MXNet::Symbol', @{ $grouped_inputs }, %params);
+            @out = $self->hybrid_forward('AI::MXNet::Symbol', @{ $grouped_inputs }, %params);
         });
+        my $out = @out > 1 ? [@out] : $out[0];
         ($out, $out_format) = __PACKAGE__->_flatten($out);
         $self->_out_format($out_format);
         @{ $self->_cached_graph } = (\@inputs, AI::MXNet::Symbol->Group($out));
@@ -643,20 +643,28 @@ method _call_cached_op(@args)
             confess($@);
         }
     }
-    my $args = \@args;
+    my $args = [@args];
     my $fmt;
     ($args, $fmt) = __PACKAGE__->_flatten($args);
     assert((Dumper($fmt) eq Dumper($self->_in_format)), "Invalid input format");
     for (@{ $self->_in_idx })
     {
-        $cargs[$_->[0]] = $args[$_->[1]];
+        $cargs[$_->[0]] = $args->[$_->[1]];
     }
     my $out = $self->_cached_op->(@cargs);
     if(blessed $out and $out->isa('AI::MXNet::NDArray'))
     {
         $out = [$out];
     }
-    return (__PACKAGE__->_regroup($out, $self->_out_format))[0];
+    my $ret = (__PACKAGE__->_regroup($out, $self->_out_format))[0];
+    if(ref($ret) eq 'ARRAY' and wantarray)
+    {
+        return @$ret;
+    }
+    else
+    {
+        return $ret;
+    }
 }
 
 =head2 forward
@@ -845,7 +853,15 @@ method forward($x, @args)
         $in{$k->name} = $v;
     }, $self->_cached_graph->[0], $args);
     $ret->_compose(%in);
-    return (__PACKAGE__->_regroup($ret, $self->_out_format))[0];
+    $ret = (__PACKAGE__->_regroup($ret, $self->_out_format))[0];
+    if(ref($ret) eq 'ARRAY' and wantarray)
+    {
+        return @$ret;
+    }
+    else
+    {
+        return $ret;
+    }
 }
 
 method hybrid_forward(@args)
