@@ -349,7 +349,7 @@ int MXNDArraySlice(NDArrayHandle handle,
                    NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  *ptr = static_cast<NDArray*>(handle)->Slice(
+  *ptr = static_cast<NDArray*>(handle)->SliceWithRecord(
       slice_begin, slice_end);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
@@ -360,7 +360,7 @@ int MXNDArrayAt(NDArrayHandle handle,
                 NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  *ptr = static_cast<NDArray*>(handle)->At(idx);
+  *ptr = static_cast<NDArray*>(handle)->AtWithRecord(idx);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }
@@ -396,7 +396,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   if (pos >= 0) {
     new_shape[pos] = arr->shape().Size() / size;
   }
-  *ptr = arr->Reshape(new_shape);
+  *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }

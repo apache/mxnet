@@ -903,28 +903,28 @@ def test_batchnorm_training():
             mean_std = [mx.nd.array(rolling_mean).tostype(stype), mx.nd.array(rolling_std).tostype(stype)]
 
             test = mx.symbol.BatchNorm_v1(data, fix_gamma=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm_v1(data, fix_gamma=True, use_global_stats=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm_v1(data, fix_gamma=False)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
             # Test varying channel axis
             dim = len(shape)
@@ -3958,9 +3958,6 @@ def _gelqf_second_output(a):
     return mx.sym.broadcast_add(l, bogus_scal)
 
 def test_laop_2():
-    # Operators implemented for CPU only currently
-    if default_context() != mx.cpu():
-        return
     np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-7
@@ -4009,6 +4006,11 @@ def test_laop_2():
             check_grad(test_syrk2, [a_batch])
 
     # Tests for linalg_gelqf
+    # Currently disabled on GPU as they need cuda8
+    # and MxNet builds use cuda 7.5
+    if default_context() != mx.cpu():
+        return
+ 
     test_gelqf2 = _gelqf_combined_symbol(data1)  # Outputs (dot(Q, Q.T), dot(L, Q))
     test_gelqf_q = _gelqf_first_output(data1)  # Output Q (L is not dangling)
     test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)
@@ -4087,6 +4089,34 @@ def test_dropout():
     assert exe.outputs[0].asnumpy().min() == 0
     exe.backward([mx.nd.ones((10, 10))], is_train=False)
     assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
+
+
+def test_scatter_gather_nd():
+    def check(data, idx):
+        data.attach_grad()
+        with mx.autograd.record():
+            y = mx.nd.gather_nd(data, idx)
+            y.backward(y)
+        npidx = tuple(i.asnumpy() for i in idx)
+        assert (data.asnumpy()[npidx] == y.asnumpy()).all()
+        npdata = np.zeros_like(data.asnumpy())
+        npdata[npidx] = y.asnumpy()
+        assert (npdata == data.grad.asnumpy()).all()
+        assert (mx.nd.scatter_nd(y, idx, shape=data.shape).asnumpy() == data.grad.asnumpy()).all()
+
+    data = mx.nd.arange(360, dtype='int32').reshape((3,4,5,6))
+    idx = mx.nd.array([[1,1,2], [3, 3, 0], [3,2,1]], dtype='int32')
+
+    check(data, idx)
+
+    idx = mx.nd.array([[1,1,2], [3,3,0], [3,2,1], [5,2,4]], dtype='int32')
+
+    check(data, idx)
+
+    data = mx.nd.array([2, 3, 0])
+    idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
+
+    assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
 
 if __name__ == '__main__':

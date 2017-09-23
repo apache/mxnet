@@ -20,13 +20,13 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network cells."""
-from __future__ import print_function
 
 from ... import symbol, ndarray
 from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from .. import tensor_types
+from ..nn import LeakyReLU
 
 
 def _cells_state_info(cells, batch_size):
@@ -231,6 +231,8 @@ class RecurrentCell(Block):
         """Get activation function. Convert if is string"""
         if isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
+        elif isinstance(activation, LeakyReLU):
+            return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
         else:
             return activation(inputs, **kwargs)
 
