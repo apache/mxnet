@@ -29,7 +29,6 @@ except ImportError:
 import sys
 from common import get_data
 
-
 def test_MNISTIter():
     # prepare data
     get_data.GetMNIST_ubyte()
