@@ -228,6 +228,9 @@ MXNET_DLL int MXDumpProfile();
 /*! \brief Set the number of OMP threads to use */
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 
+/*! \brief Get the MXNet version number as an integer */
+MXNET_DLL int MXGetVersion();
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
