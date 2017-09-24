@@ -546,13 +546,11 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_set<std::string> warning_printed;
-  static thread_local bool log_verbose;
+  thread_local std::unordered_set<std::string> warning_printed;
 #else
-  static MX_THREAD_LOCAL std::unordered_set<std::string> warning_printed;
-  static MX_THREAD_LOCAL bool log_verbose;
+  MX_THREAD_LOCAL std::unordered_set<std::string> warning_printed;
 #endif
-  log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
   if (log_verbose) {
     std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
     if (warning_printed.find(warning) == warning_printed.end()) {
