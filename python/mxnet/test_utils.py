@@ -28,6 +28,7 @@ import sys
 import os
 import errno
 import logging
+import bz2
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -1408,6 +1409,20 @@ def get_mnist():
         path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
+
+def get_bz2_data(data_dir, data_name, url, data_origin_name):
+    download(url, dirname=data_dir, overwrite=False)
+    os.chdir(data_dir)
+    if not os.path.exists(data_name):
+        bz_file = bz2.BZ2File(data_origin_name, 'rb')
+        with open(data_name, 'wb') as fout:
+            try:
+                content = bz_file.read()
+                fout.write(content)
+            finally:
+                bz_file.close()
+        os.remove(data_origin_name)
+    os.chdir("..")
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
