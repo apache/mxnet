@@ -28,8 +28,8 @@ addons:
       - g++-4.8
 
 before_install:
-  - export TRAVIS=test/travis
-  - source $TRAVIS/setup_env.sh
+  - export TRAVIS_DIR=test/travis
+  - source ${TRAVIS_DIR}/setup_env.sh
 
 notifications:
   email: false
@@ -38,11 +38,10 @@ script:
   # bump the time limit of no ouput
   # the `travis_wait` wrapper can be removed once this issue fixed:
   # https://github.com/JuliaLang/julia/pull/23601
-  - travis_wait 60 $TRAVIS/run_test.sh
+  - travis_wait 60 ${TRAVIS_DIR}/run_test.sh
 
 after_success:
-  - source $TRAVIS/run_coverage.sh
+  - source ${TRAVIS_DIR}/run_coverage.sh
   - echo $TRAVIS_JULIA_VERSION
   - julia -e 'Pkg.add("Documenter")'
   - julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'
-
