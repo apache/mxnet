@@ -1,3 +1,12 @@
+# v0.3.0 (TBD)
+
+## API Changes
+
+* `reshape` of NDArray share the same interface with Base (#272).
+    * `reshape(NDArray, dim; reverse=false)`
+    * `reshape(NDArray, dim...; reverse=false)`
+    * `Reshape` deprecated.
+
 # v0.2.2 (2017.05.14)
 * Updated supported version of MXNet to 0.9.4.
 * Improved build-system with support for auto-detecting GPU support.

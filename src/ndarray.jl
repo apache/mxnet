@@ -934,6 +934,31 @@ function save(filename::String, data::Dict{Base.Symbol,NDArray})
           filename, length(names), arrays, names)
 end
 
+import Base: reshape
+
+"""
+    reshape(arr::NDArray, dim...; reverse=false)
+    reshape(arr::NDArray, dim; reverse=false)
+"""
+reshape{N}(arr::NDArray, dim::NTuple{N, Integer}; reverse::Bool=false) =
+    _reshape(arr, dim, reverse)
+reshape{N}(arr::NDArray, dim::Vararg{Integer, N}; reverse::Bool=false) =
+    _reshape(arr, dim, reverse)
+
+@inline function _reshape{N}(arr::NDArray, dim::NTuple{N, Integer}, reverse::Bool)
+  op_handle = _get_cached_libmx_op_handle("reshape")
+  n_output = Ref(Cint(0))
+  hdls_ref = Ref{Ptr{MX_handle}}(C_NULL)
+  @mxcall(:MXImperativeInvoke,
+          (MX_handle, Cint, Ptr{MX_handle}, Ref{Cint}, Ref{Ptr{MX_handle}},
+           Cint, char_pp, char_pp),
+          op_handle, 1, [arr.handle], n_output, hdls_ref,
+          2, ["shape", "reverse"], [dump_mx_param(dim), dump_mx_param(!reverse)])
+  #                                                       not a typo  ^^^^^^^^
+  @assert n_output[] == 1
+  NDArray(MX_NDArrayHandle(unsafe_load(hdls_ref[], 1)))
+end
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -993,7 +1018,6 @@ Upon calling, the output arguments will be automatically initialized with empty 
 Those functions always return the output arguments. If there is only one output (the typical situation), that
 object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
 """
-
 function _get_ndarray_function_def(name :: String)
   func_name = Symbol(name)
 
@@ -1076,7 +1100,9 @@ function _get_ndarray_function_def(name :: String)
 end
 
 macro _import_ndarray_functions()
-  names = _get_libmx_op_names()
+  black_list = ["reshape"]  # do not import these funcs
+  names = filter(n -> ∉(lowercase(n), black_list), _get_libmx_op_names())
+
   func_exprs = map(names) do name
     op_handle = _get_libmx_op_handle(name)
 
@@ -1086,7 +1112,7 @@ macro _import_ndarray_functions()
     func_name = Symbol(name)
     expr = quote
       # TODO the explicit exclusion of take will no longer be necessary when it is removed from Base
-      $((isdefined(Base, func_name) && func_name ≠ :take)? :(import Base.$func_name) : :())
+      $((isdefined(Base, func_name) && func_name ≠ :take) ? :(import Base.$func_name) : :())
       $func_def
       @doc $desc ->
       $func_def2
