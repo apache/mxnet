@@ -545,8 +545,15 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
-  thread_local std::unordered_set<std::string> warning_printed;
-  thread_local bool log_verbose = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK_LOGGING", true);
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_set<std::string> warning_printed;
+  static thread_local bool log_verbose =
+    dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+#else
+  static MX_THREAD_LOCAL std::unordered_set<std::string> warning_printed;
+  static MX_THREAD_LOCAL bool log_verbose =
+    dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+#endif
   if (log_verbose) {
     std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
     if (warning_printed.find(warning) == warning_printed.end()) {
@@ -555,7 +562,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                 << "You're seeing this warning message because the operator above is unable to "
                 << "process the given ndarrays with specified storage types and parameter. "
                 << "Temporary dense ndarrays are generated in order to execute the operator. "
-                << "You can set environment variable MXNET_EXEC_STORAGE_FALLBACK_LOGGING "
+                << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
                 << "to 0 to suppress the warnings.";
       warning_printed.insert(warning);
     }
