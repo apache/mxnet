@@ -58,13 +58,44 @@ sub test_cached
     my $data = mx->nd->ones([3, 4, 10, 10]);
     my $weight = mx->nd->ones([10, 4, 3, 3]);
     my $bias = mx->nd->ones([10]);
-    my $o1 = &{$op}($data, $weight, $bias);
+    my $o1 = $op->($data, $weight, $bias);
     $bias .= 2;
-    my $o2 = &{$op}($data, $weight, $bias);
+    my $o2 = $op->($data, $weight, $bias);
     ok(almost_equal($o2->aspdl, $o1->aspdl+1));
     $o2 .= 0;
-    &{$op}($data, $weight, $bias, out=>$o2);
+    $op->($data, $weight, $bias, out=>$o2);
     ok(almost_equal($o2->aspdl, $o1->aspdl+1));
+
+    $weight->attach_grad();
+    $bias->attach_grad();
+    my $o;
+    mx->autograd->record(sub {
+        $bias = $bias + 1;
+        $o = $op->($data, $weight, $bias);
+        $o = $o * 2;
+        $o->backward();
+    });
+
+    mx->autograd->record(sub {
+        $bias = $bias + 1;
+        $o = $op->($data, $weight, $bias);
+        $o = $o * 2;
+        $o->backward(retain_graph=>1);
+        $o->backward();
+    });
+
+    # try a different shape
+    $data = mx->nd->ones([5, 2, 10, 10]);
+    $weight = mx->nd->ones([10, 2, 3, 3]);
+    $bias = mx->nd->ones([10]);
+    $data->attach_grad;
+
+    mx->autograd->record(sub {
+        $bias = $bias + 1;
+        $o = $op->($data, $weight, $bias);
+        $o = $o * 2;
+        $o->backward();
+    });
 }
 
 sub test_ndarray_slice

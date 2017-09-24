@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 41;
+use Test::More tests => 117;
 use AI::MXNet qw(mx);
 use AI::MXNet::Gluon qw(gluon);
 use AI::MXNet::Gluon::NN qw(nn);
@@ -77,7 +77,6 @@ package main;
 sub test_parameter_sharing
 {
     my $net1 = Net->new(prefix=>'net1_');
-    use Data::Dumper;
     my $net2 = Net->new(prefix=>'net2_', params=>$net1->collect_params());
     $net1->collect_params()->initialize();
     $net2->(mx->nd->zeros([3, 5]));
@@ -169,6 +168,8 @@ sub check_layer_forward
         $out = $layer->($x);
     });
     $out->backward();
+    my $pdl_out = $out->aspdl;
+    my $pdl_dx  = $x->grad->aspdl;
 
     $layer->hybridize();
 
@@ -178,6 +179,9 @@ sub check_layer_forward
         $out = $layer->($x);
     });
     $out->backward();
+
+    ok(almost_equal($pdl_out, $out->aspdl, 1e-5));
+    ok(almost_equal($pdl_dx, $x->grad->aspdl, 1e-5));
 }
 
 sub test_conv
@@ -539,3 +543,19 @@ sub test_block_attr_regular
 }
 
 test_block_attr_regular();
+
+sub test_embedding
+{
+    my $layer = gluon->nn->Embedding(10, 100);
+    $layer->initialize();
+    my $x = mx->nd->array([3,4,2,0,1]);
+    my $y;
+    mx->autograd->record(sub {
+        $y = $layer->($x);
+        $y->backward();
+    });
+    ok(($layer->weight->grad->slice([0,4]) == 1)->aspdl->all);
+    ok(($layer->weight->grad->slice([5, -1]) == 0)->aspdl->all);
+}
+
+test_embedding();

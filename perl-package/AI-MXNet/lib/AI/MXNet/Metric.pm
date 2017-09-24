@@ -248,6 +248,11 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             $pred_label = AI::MXNet::NDArray->argmax_channel($pred_label);
         }
         AI::MXNet::Metric::check_label_shapes($label, $pred_label);
+        $pred_label = $pred_label->as_in_context($label->context);
+        if($pred_label->dtype ne $label->dtype)
+        {
+            $pred_label = $pred_label->astype($label->dtype);
+        }
         my $sum = ($pred_label->reshape([-1]) == $label->reshape([-1]))->sum->asscalar;
         $self->sum_metric($self->sum_metric + $sum);
         $self->num_inst($self->num_inst + $pred_label->size);

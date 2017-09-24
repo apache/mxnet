@@ -290,6 +290,7 @@ method unroll(
 
     my $states = $begin_state;
     my $outputs = [];
+    use Data::Dumper;
     for my $i (0..$length-1)
     {
         my $output;
