@@ -555,12 +555,11 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const Context& ctx,
     node_start = node_range.first;
   }
 #if DMLC_CXX11_THREAD_LOCAL
-  thread_local bool log_verbose =
-    dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
+  static thread_local bool log_verbose;
 #else
-  MX_THREAD_LOCAL bool log_verbose =
-    dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
+  static MX_THREAD_LOCAL bool log_verbose;
 #endif
+  log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
   if (log_verbose) {
     for (uint32_t nid = node_start; nid < node_end; ++nid) {
       const auto& inode = idx[nid];
