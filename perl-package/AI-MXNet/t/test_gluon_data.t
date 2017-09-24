@@ -25,7 +25,7 @@ use AI::MXNet::TestUtils qw(almost_equal);
 use AI::MXNet::Base;
 use File::Path qw(make_path);
 use IO::File;
-use Test::More tests => 51;
+use Test::More tests => 52;
 
 sub test_array_dataset
 {
@@ -112,7 +112,7 @@ sub test_datasets
 {
     ok(gluon->data->vision->MNIST(root=>'data/mnist')->len == 60000);
     ok(gluon->data->vision->FashionMNIST(root=>'data/fashion-mnist')->len == 60000);
-    #ok(gluon->data->vision->CIFAR10(root=>'data', train=>0)->len == 10000);
+    ok(gluon->data->vision->CIFAR10(root=>'data/cifar10', train=>0)->len == 10000);
 }
 
 test_datasets();

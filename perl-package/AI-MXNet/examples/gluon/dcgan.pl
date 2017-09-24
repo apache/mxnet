@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -25,6 +24,8 @@ use AI::MXNet::AutoGrad qw(autograd);
 use AI::MXNet::Gluon::NN qw(nn);
 use AI::MXNet::Base;
 use Getopt::Long qw(HelpMessage);
+use Time::HiRes qw(time);
+use PDL::IO::Pic;
 
 my $batch_size = 64;
 my $nz  = 100;
@@ -34,8 +35,8 @@ my $nepoch = 25;
 my $lr =0.0002;
 my $beta1 = 0.5;
 my $nc = 3;
-my $ctx = mx->cpu();
-
+## change to my $ctx = mx->cpu(); if needed
+my $ctx = mx->gpu();
 
 my $train_data = gluon->data->DataLoader(
     gluon->data->vision->MNIST('./data', train=>1, transform => \&transformer),
@@ -52,8 +53,7 @@ sub transformer
     my ($data, $label) = @_;
     # resize to 64x64
     $data = mx->image->imresize($data, 64, 64);
-    # transpose from (64, 64, 3) to (3, 64, 64)
-    $data = mx->nd->transpose($data, [2,0,1]);
+    $data = $data->reshape([1, 64, 64]);
     # normalize to [-1, 1]
     $data = $data->astype('float32')/128 - 1;
     # if image is greyscale, repeat 3 times to get RGB image.
@@ -64,6 +64,21 @@ sub transformer
     return ($data, $label);
 }
 
+sub visualize
+{
+    my ($data, $fake, $iter) = @_;
+    mkdir "data_images";
+    mkdir "data_images/$iter";
+    mkdir "fake_images";
+    mkdir "fake_images/$iter";
+    for my $i (0..$batch_size-1)
+    {
+        my $d = ((pdl_shuffle($data->at($i)->at(0)->aspdl, [reverse(0..63)]) + 1)*128)->byte;
+        my $f = ((pdl_shuffle($fake->at($i)->at(0)->aspdl, [reverse(0..63)]) + 1)*128)->byte;
+        $d->wpic("data_images/$iter/$i.jpg");
+        $f->wpic("fake_images/$iter/$i.jpg");
+    }
+}
 
 # build the generator
 my $netG = nn->Sequential();
@@ -122,7 +137,6 @@ $netD->initialize(mx->init->Normal(0.02), ctx=>$ctx);
 # trainer for the generator and the discriminator
 my $trainerG = gluon->Trainer($netG->collect_params(), 'adam', {learning_rate => $lr, beta1 => $beta1});
 my $trainerD = gluon->Trainer($netD->collect_params(), 'adam', {learning_rate => $lr, beta1 => $beta1});
-
 # ============printing==============
 my $real_label = mx->nd->ones([$batch_size], ctx=>$ctx);
 my $fake_label = mx->nd->zeros([$batch_size], ctx=>$ctx);
@@ -135,9 +149,10 @@ for my $epoch (0..$nepoch-1)
 {
     my $tic = time;
     my $btic = time;
+    my $fake; my $data;
     while(defined(my $d = <$train_data>))
     {
-        my $data = $d->[0];
+        $data = $d->[0];
         ############################
         # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
         ###########################
@@ -145,7 +160,7 @@ for my $epoch (0..$nepoch-1)
         $data = $data->as_in_context($ctx);
         my $noise = mx->nd->random->normal(0, 1, shape=>[$batch_size, $nz, 1, 1], ctx=>$ctx);
 
-        my ($output, $fake, $errD, $errG);
+        my ($output, $errD, $errG);
         autograd->record(sub {
             $output = $netD->($data);
             $output = $output->reshape([$batch_size, 2]);
@@ -173,20 +188,19 @@ for my $epoch (0..$nepoch-1)
         });
 
         $trainerG->step($batch_size);
-
         my ($name, $acc) = $metric->get();
-        AI::MXNet::Logging->info("speed: %.2f samples/s", $batch_size / time);
-        AI::MXNet::Logging->info("discriminator loss = %f, generator loss = %f, binary training acc = %f at iter %d epoch %d",
-            mx->nd->mean($errD)->asscalar(), mx->nd->mean($errG)->asscalar(), $acc, $iter, $epoch);
-        #if iter % 1 == 0:
-        #    visual('gout', fake->asnumpy(), name=os->path->join(outf,'fake_img_iter_%d->png' %iter))
-        #    visual('data', data->asnumpy(), name=os->path->join(outf,'real_img_iter_%d->png' %iter))
-
+        if(not $iter%100)
+        {
+            AI::MXNet::Logging->info("speed: %.2f samples/s", $batch_size / (time-$btic));
+            AI::MXNet::Logging->info("discriminator loss = %f, generator loss = %f, binary training acc = %f at iter %d epoch %d",
+                mx->nd->mean($errD)->asscalar(), mx->nd->mean($errG)->asscalar(), $acc, $iter, $epoch);
+        }
         $iter++;
         $btic = time;
     }
-    my ($name, $acc) = metric->get();
+    my ($name, $acc) = $metric->get();
     $metric->reset();
+    visualize($data, $fake, $epoch);
     AI::MXNet::Logging->info("\nbinary training acc at epoch %d: %s=%f", $epoch, $name, $acc);
     AI::MXNet::Logging->info("time: %f", time - $tic);
 }
