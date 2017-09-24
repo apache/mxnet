@@ -381,7 +381,7 @@ class CTCLoss(Loss):
                                  blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)
 
-class Huber(Loss):
+class HuberLoss(Loss):
     """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
        L2 loss in the center and L1 loss for deviations beyond rho:
 
@@ -420,7 +420,7 @@ class Huber(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class EpsilonInsensitive(Loss):
+class EpsilonInsensitiveLoss(Loss):
     """Calculates Huber's robust loss function yielding a trimmed mean estimator, i.e.
        L2 loss in the center and L1 loss for deviations beyond rho:
 
@@ -453,7 +453,7 @@ class EpsilonInsensitive(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class SoftMargin(Loss):
+class SoftMarginLoss(Loss):
     """Calculates the soft-margin loss function used in SVMs:
 
     .. math::
@@ -482,7 +482,7 @@ class SoftMargin(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class SquaredSoftMargin(Loss):
+class SquaredSoftMarginLoss(Loss):
     """Calculates the soft-margin loss function used in SVMs:
 
     .. math::
@@ -511,7 +511,7 @@ class SquaredSoftMargin(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class Exponential(Loss):
+class ExponentialLoss(Loss):
     """Calculates the exponential hinge loss (quite obscure):
 
     .. math::
@@ -540,7 +540,7 @@ class Exponential(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class Logistic(Loss):
+class LogisticLoss(Loss):
     """Calculates the logistic loss (for binary losses only):
 
     .. math::
@@ -569,7 +569,7 @@ class Logistic(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class Quantile(Loss):
+class QuantileLoss(Loss):
     """Calculates Koenker's quantile regression loss function yielding an estimate of the
        appropriately chosen quantile rather than the mean (or median):
 
@@ -606,7 +606,7 @@ class Quantile(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class Langford(Loss):
+class LangfordLoss(Loss):
     """Calculates the Huberized soft-margin loss that is used in VW (Vowpal Wabbit).
        It is given by a squared loss for margin values of [-1, 0] and by a linear
        loss for values larger than that.
@@ -645,7 +645,7 @@ class Langford(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class DualKL(Loss):
+class DualKLLoss(Loss):
     """Estimates the Kullback Leibler Divergence between two
        distributions by convex duality. See Nguyen, Wainwright and
        Jordan (NGW), 2008 for a detailed derivation. In a nutshell it
@@ -690,7 +690,7 @@ class DualKL(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class RelativeNovelty(Loss):
+class RelativeNoveltyLoss(Loss):
     """Estimates a relative novelty detector. See the Song, Teo and
        Smola (STS), 2009 for details. The main point is to estimate
        the ratio dp/dq well via max(0, rho - log dp/dq). As with the
@@ -732,7 +732,7 @@ class RelativeNovelty(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class LogCosh(Loss):
+class LogCoshLoss(Loss):
     """Calculates the smoothed L1 loss, aka log cosh loss in a
        numerically stable manner (i.e. without exponentiating large
        values of the cosh function.
@@ -764,7 +764,7 @@ class LogCosh(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class Poisson(Loss):
+class PoissonLoss(Loss):
     """Calculates the Poisson loss function (up to the normalization
        by a factorial in the label, due to computational efficiency
        reasons).
@@ -800,7 +800,7 @@ class Poisson(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-class MaxMargin(Loss):
+class MaxMarginLoss(Loss):
     """Calculates the MaxMargin loss, aka multiclass soft-margin
        loss. This requires access to a multiclass loss matrix delta
        which measures the cost for misclassifying label y as y'. This
