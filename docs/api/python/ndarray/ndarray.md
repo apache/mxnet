@@ -214,6 +214,61 @@ The `ndarray` package provides several classes:
     NDArray.__pow__
 ```
 
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sin
+    NDArray.cos
+    NDArray.tan
+    NDArray.arcsin
+    NDArray.arccos
+    NDArray.arctan
+    NDArray.degrees
+    NDArray.radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sinh
+    NDArray.cosh
+    NDArray.tanh
+    NDArray.arcsinh
+    NDArray.arccosh
+    NDArray.arctanh
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.exp
+    NDArray.expm1
+    NDArray.log
+    NDArray.log10
+    NDArray.log2
+    NDArray.log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sqrt
+    NDArray.rsqrt
+    NDArray.square
+```
+
 ### In-place arithmetic operations
 
 ```eval_rst
@@ -435,7 +490,6 @@ The `ndarray` package provides several classes:
     ceil
     trunc
 ```
-
 
 ### Exponents and logarithms
 

@@ -106,13 +106,17 @@ class L2Loss(Loss):
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=1., batch_axis=0, **kwargs):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
@@ -136,13 +140,17 @@ class L1Loss(Loss):
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
@@ -171,13 +179,17 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         log-sum-exp trick.
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, from_sigmoid=False, weight=None, batch_axis=0, **kwargs):
         super(SigmoidBinaryCrossEntropyLoss, self).__init__(weight, batch_axis, **kwargs)
@@ -228,13 +240,23 @@ class SoftmaxCrossEntropyLoss(Loss):
         of unnormalized numbers.
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor. The batch axis and softmax axis should be consistent
+        with the value used in the constructor.
+        `label` is the truth tensor. When `sparse_label` is true, `label` should have one less
+        dimension (axis) than `output` tensor. Otherwise, the shape of `label` must be the same as
+        output. For example, when `sparse_label` is true, if `output` has shape
+        `(batch_size, x1, x2, c)` and axis is `-1`, `label` should have shape
+        `(batch_size, x1, x2)`. If `sparse_label` is false, `label` should have shape
+        `(batch_size, x1, x2, c)`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, axis=-1, sparse_label=True, from_logits=False, weight=None,
                  batch_axis=0, **kwargs):
@@ -277,13 +299,17 @@ class KLDivLoss(Loss):
         of unnormalized numbers.
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, from_logits=True, weight=None, batch_axis=0, **kwargs):
         super(KLDivLoss, self).__init__(weight, batch_axis, **kwargs)
@@ -311,12 +337,6 @@ class CTCLoss(Loss):
         Layout of the labels.
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
-        This should be used as the fifth argument when calling this loss.
 
     Input shapes:
         `data` is an activation tensor (i.e. before softmax).
@@ -392,21 +412,23 @@ class Huber(Loss):
                            \\text{ otherwise }
             \\end{cases}
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     rho : float
         Threshold for trimmed mean estimator. By default set to 1
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, rho=1, weight=None, batch_axis=0, **kwargs):
         super(Huber, self).__init__(weight, batch_axis, **kwargs)
@@ -427,21 +449,23 @@ class EpsilonInsensitive(Loss):
     .. math::
         L = \\mathrm{max}(0, |{output}_i - {label}_i| - \\epsilon)
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     epsilon : float
         Threshold for trimmed epsilon-insensitivity parameter. By default set to 0.1
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, epsilon=0.1, weight=None, batch_axis=0, **kwargs):
         super(EpsilonInsensitive, self).__init__(weight, batch_axis, **kwargs)
@@ -459,19 +483,21 @@ class SoftMargin(Loss):
     .. math::
         L = max(0, 1 - {output}_i {label}_i)
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(SoftMargin, self).__init__(weight, batch_axis, **kwargs)
@@ -488,19 +514,21 @@ class SquaredSoftMargin(Loss):
     .. math::
         L = max(0, 1 - {output}_i {label}_i)^2
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(SquaredSoftMargin, self).__init__(weight, batch_axis, **kwargs)
@@ -523,13 +551,17 @@ class Exponential(Loss):
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(Exponential, self).__init__(weight, batch_axis, **kwargs)
@@ -546,19 +578,21 @@ class Logistic(Loss):
     .. math::
         L = \\log(1 + \\exp(- {output}_i {label}_i))
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(Logistic, self).__init__(weight, batch_axis, **kwargs)
@@ -576,8 +610,6 @@ class Quantile(Loss):
     .. math::
         L = {max}(\\tau ({output}_i - {label}_i), (1-\\tau) ({label}_i - {output}_i)
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     tau : float
@@ -586,13 +618,17 @@ class Quantile(Loss):
         This must be in the range (0,1).
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, tau=0.5, weight=None, batch_axis=0, **kwargs):
         super(Quantile, self).__init__(weight, batch_axis, **kwargs)
@@ -621,19 +657,21 @@ class Langford(Loss):
           \\text{ otherwise }
           \\end{cases}
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(Langford, self).__init__(weight, batch_axis, **kwargs)
@@ -667,19 +705,21 @@ class DualKL(Loss):
              -f-1 & \text{ if } y = 1
           \\end{cases}
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(DualKL, self).__init__(weight, batch_axis, **kwargs)
@@ -704,8 +744,6 @@ class RelativeNovelty(Loss):
             \\exp(f) & \\text{ if } y = 1 \\text{ and } f <= 0
           \\end{cases}
 
-    output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     rho : float
@@ -713,13 +751,17 @@ class RelativeNovelty(Loss):
         probability distribution. It needs to be (0, 1).
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, rho=0.1, weight=None, batch_axis=0, **kwargs):
         super(RelativeNovelty, self).__init__(weight, batch_axis, **kwargs)
@@ -740,19 +782,21 @@ class LogCosh(Loss):
     .. math::
         L = \\log 2 \\cosh ({output}_i - {label}_i)
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(LogCosh, self).__init__(weight, batch_axis, **kwargs)
@@ -770,26 +814,28 @@ class Poisson(Loss):
        reasons).
 
        NOTE THAT THIS IS DIFFERENT FROM THE POISSON LOSS IN PYTORCH
-       AND KERAS INSOFAR AS IT USES THE EPXONENTIAL VERSION. THAT ONE
+       AND KERAS INSOFAR AS IT USES THE EXPONENTIAL VERSION. THAT ONE
        DOESN'T SUFFER FROM LOG 0 PROBLEMS.
 
     .. math::
         L = -\\log p({label}_i|{output}_i)
           = \\log {label}_i! + \\exp({output}_i) - {output}_i {label}_i
 
-    Output and label must have the same shape. This is a scalar loss function.
-
     Parameters
     ----------
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(Poisson, self).__init__(weight, batch_axis, **kwargs)
@@ -824,13 +870,17 @@ class MaxMargin(Loss):
         The axis to sum over when taking the maximum.
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output` is the prediction tensor.
+        `label` is the truth tensor and should have the same shape as `output`.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, delta=None, axis=-1, weight=None, batch_axis=0, **kwargs):
         super(MaxMargin, self).__init__(weight, batch_axis, **kwargs)
@@ -858,24 +908,25 @@ class TripletLoss(Loss):
     .. math::
         L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert^2.
 
-    Output and label can have arbitrary shape as long as they have the same
-    number of elements.
-
     Parameters
     ----------
     margin : float
         Margin of separation between correct and incorrect pair.
     weight : float or None
         Global scalar weight for loss.
-    sample_weight : Symbol or None
-        Per sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has
-        shape (64, 10) and you want to weight each sample
-        in the batch, `sample_weight` should have shape (64, 1).
     axis : int, default 1
         The axis over which to sum distances.
     batch_axis : int, default 0
         The axis that represents mini-batch.
+
+    Input shapes:
+        `output1`, `output2` and `output3` are the prediction tensors. They should all have the
+        same number of elements.
+        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
+        the same shape as loss. For example, if loss has shape (64, 10) and you want
+        to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
+    Output shape:
+        The loss output has the shape (batch_size,).
     """
     def __init__(self, margin=1, weight=1., axis=1, batch_axis=0, **kwargs):
         super(TripletLoss, self).__init__(weight, batch_axis, **kwargs)
