@@ -96,8 +96,6 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
     for (size_t i = 0; i < shape_args.size(); ++i) {
       rshape[idx.entry_id(idx.input_nodes()[i], 0)] = shape_args[i];
     }
-    // erase the provided arguments
-    ret.attrs.erase(input_name);
   }
 
   // get the shape hints
@@ -119,6 +117,27 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
     // erase the provided arguments
     ret.attrs.erase(attr_key_name);
   }
+
+  // limit inference to part of the graph
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (ret.attrs.count("node_range")) {
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
+    node_start = range.first;
+    node_end = range.second;
+    CHECK_GE(node_start, 0);
+    CHECK_LE(node_end, idx.num_nodes());
+    ret.attrs.erase("node_range");
+  }
+  uint32_t entry_start = 0, entry_end = idx.num_node_entries();
+  if (ret.attrs.count("entry_range")) {
+    const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("entry_range");
+    entry_start = range.first;
+    entry_end = range.second;
+    CHECK_GE(entry_start, 0);
+    CHECK_LE(entry_end, idx.num_node_entries());
+    ret.attrs.erase("entry_range");
+  }
+
   // Temp space for shape inference.
   std::vector<AttrType> ishape, oshape;
 
@@ -227,22 +246,22 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   };
 
   size_t last_num_unknown;
-  size_t num_unknown = rshape.size();
+  size_t num_unknown = entry_end - entry_start;
   int i = 0;
   do {
     if (i % 2 == 0) {
-      for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+      for (uint32_t nid = node_start; nid < node_end; ++nid) {
         infer_step(nid, false);
       }
     } else {
       // backward inference
-      for (uint32_t i = idx.num_nodes(); i != 0; --i) {
+      for (uint32_t i = node_end; i != node_start; --i) {
         infer_step(i - 1, false);
       }
     }
     last_num_unknown = num_unknown;
     num_unknown = 0;
-    for (size_t j = 0; j < idx.num_node_entries(); ++j) {
+    for (size_t j = entry_start; j < entry_end; ++j) {
       if (fis_none(rshape[j])) {
         ++num_unknown;
       }
@@ -299,8 +318,8 @@ inline bool DefaultType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-nnvm::Graph InferShape(nnvm::Graph graph,
-                       nnvm::ShapeVector shape_inputs,
+nnvm::Graph InferShape(nnvm::Graph&& graph,
+                       nnvm::ShapeVector&& shape_inputs,
                        const std::string& shape_attr_key) {
   using dmlc::any;
   if (shape_inputs.size() != 0) {
@@ -317,8 +336,8 @@ nnvm::Graph InferShape(nnvm::Graph graph,
       nullptr, true);
 }
 
-nnvm::Graph InferType(nnvm::Graph graph,
-                      nnvm::DTypeVector dtype_inputs,
+nnvm::Graph InferType(nnvm::Graph&& graph,
+                      nnvm::DTypeVector&& dtype_inputs,
                       const std::string& dtype_attr_key) {
   using dmlc::any;
   if (dtype_inputs.size() != 0) {
@@ -335,8 +354,8 @@ nnvm::Graph InferType(nnvm::Graph graph,
       SameType, true);
 }
 
-nnvm::Graph InferStorageType(nnvm::Graph graph,
-                             StorageTypeVector storage_type_inputs,
+nnvm::Graph InferStorageType(nnvm::Graph&& graph,
+                             StorageTypeVector&& storage_type_inputs,
                              const std::string& storage_type_attr_key) {
   using dmlc::any;
   if (storage_type_inputs.size() != 0) {

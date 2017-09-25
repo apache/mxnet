@@ -94,6 +94,10 @@ def get_model(name, **kwargs):
         Whether to load the pretrained weights for model.
     classes : int
         Number of classes for the output layer.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
 
     Returns
     -------

@@ -676,6 +676,40 @@ def test_forward_reshape():
     assert mod.get_outputs()[0].shape == (3, 5)
 
 
+def test_forward_update_metric_pad():
+    d = mx.sym.Variable('data')
+    fc = mx.sym.FullyConnected(data=d, num_hidden=2)
+    sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
+
+    dshape = (10, 2)
+    data = [mx.nd.zeros(dshape)]
+    lshape = (10,)
+    label = [mx.nd.array(([0] * 8) + ([1] * 2))]
+
+    eval_metric = mx.metric.Accuracy()
+    mod = mx.mod.Module(symbol=sym, data_names=['data'],
+                        label_names=['softmax_label'])
+    mod.bind(data_shapes=[('data', dshape)],
+             label_shapes=[('softmax_label', lshape)])
+    mod.init_params(initializer=mx.initializer.Zero())
+    mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
+
+    # Test that accuracy is 0.8 without padding
+    pad = None
+    data_batch = mx.io.DataBatch(data=data, label=label, pad=pad)
+    mod.forward(data_batch)
+    mod.update_metric(eval_metric, data_batch.label)
+    assert eval_metric.get()[1] == 0.8
+
+    # Test that accuracy is 1.0 with padding
+    pad = 2
+    eval_metric.reset()
+    data_batch = mx.io.DataBatch(data=data, label=label, pad=pad)
+    mod.forward(data_batch)
+    mod.update_metric(eval_metric, data_batch.label)
+    assert eval_metric.get()[1] == 1.0
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
