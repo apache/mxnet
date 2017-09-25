@@ -202,8 +202,8 @@ def check_rnn_forward(layer, inputs, deterministic=True):
         out.backward()
 
     if deterministic:
-        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3)
-        mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3)
+        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
+        mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 
 def test_rnn_cells():
@@ -253,8 +253,8 @@ def check_rnn_layer_forward(layer, inputs, states=None):
             assert isinstance(out, mx.nd.NDArray)
         out.backward()
 
-    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3)
-    mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3)
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
+    mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
