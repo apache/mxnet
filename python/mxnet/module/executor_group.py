@@ -583,9 +583,9 @@ class DataParallelExecutorGroup(object):
             if islice.stop > valid_stop:
                 islice = slice(islice.start, valid_stop)
             oslice = slice(0, islice.stop - islice.start)
-            for label, laxis, output, oaxis in \
-                    zip(labels, self.label_layouts, texec.outputs, self.output_layouts):
+            for label, laxis in zip(labels, self.label_layouts):
                 labels_slice.append(_slice_axis(label, laxis, islice))
+            for output, oaxis in zip(texec.outputs, self.output_layouts):
                 outputs_slice.append(_slice_axis(output, oaxis, oslice))
             labels_ = OrderedDict(zip(self.label_names, labels_slice))
             preds = OrderedDict(zip(self.output_names, outputs_slice))

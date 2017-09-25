@@ -28,6 +28,7 @@ import sys
 import os
 import errno
 import logging
+import bz2
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -1171,7 +1172,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None):
+                      raise_on_err=True, ground_truth=None, equal_nan=False):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1271,7 +1272,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             gtarr = gt[name].astype(dtypes[i]).asnumpy()
             arr = arr.asnumpy()
             try:
-                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                    equal_nan=equal_nan)
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
@@ -1297,7 +1299,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 gtarr = gt[name].astype(dtypes[i]).asnumpy()
                 arr = arr.asnumpy()
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                        equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
@@ -1406,6 +1409,21 @@ def get_mnist():
         path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
+
+def get_bz2_data(data_dir, data_name, url, data_origin_name):
+    """Download and extract bz2 data."""
+    download(url, dirname=data_dir, overwrite=False)
+    os.chdir(data_dir)
+    if not os.path.exists(data_name):
+        bz_file = bz2.BZ2File(data_origin_name, 'rb')
+        with open(data_name, 'wb') as fout:
+            try:
+                content = bz_file.read()
+                fout.write(content)
+            finally:
+                bz_file.close()
+        os.remove(data_origin_name)
+    os.chdir("..")
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
