@@ -146,6 +146,72 @@ function test_reshape()
 
   @test size(out) == (2, 3, 4)
   @test copy(out) == reshape(1:24, 2, 3, 4)
+
+  info("SymbolicNode::reshape::reverse")
+
+  A = mx.zeros(10, 5, 4)
+  x = mx.Variable(:x)
+  y = mx.reshape(x, -1, 0, reverse=true)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (50, 4)
+
+  info("SymbolicNode::reshape::0")
+
+  A = mx.zeros(2, 3, 4)
+  x = mx.Variable(:x)
+  y = mx.reshape(x, 4, 0, 2)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (4, 3, 2)
+
+  info("SymbolicNode::reshape::-1")
+
+  A = mx.zeros(2, 3, 4)
+  x = mx.Variable(:x)
+  y = mx.reshape(x, 6, 1, -1)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (6, 1, 4)
+
+  info("SymbolicNode::reshape::-2")
+
+  A = mx.zeros(2, 3, 4, 2)
+  x = mx.Variable(:x)
+  y = mx.reshape(x, 3, 2, -2)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (3, 2, 4, 2)
+
+  info("SymbolicNode::reshape::-3")
+
+  A = mx.zeros(2, 3, 4, 5)
+  x = mx.Variable(:x)
+  y = mx.reshape(x, -3, -3)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (6, 20)
+
+  info("SymbolicNode::reshape::-4")
+
+  A = mx.zeros(2, 3, 4)
+  x = mx.Variable(:x)
+  y = mx.reshape(x, 0, 0, -4, 2, 2)
+  e = mx.bind(y, mx.cpu(), Dict(:x => A))
+  mx.forward(e)
+  out = e.outputs[1]
+
+  @test size(out) == (2, 3, 2, 2)
 end
 
 function test_dot()
