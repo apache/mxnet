@@ -1423,7 +1423,7 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
     url : str
         URL to download data from
     data_origin_name : str
-        Name of the original b2 file
+        Name of the downloaded b2 file
 
     Examples
     --------
