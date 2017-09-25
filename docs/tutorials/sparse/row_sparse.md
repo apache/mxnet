@@ -5,38 +5,47 @@
 
 Many real world datasets deal with high dimensional sparse feature vectors. When learning
 the weights of models with sparse datasets, the derived gradients of the weights could be sparse.
-For example, let's say we learn a linear model ``Y = XW + b``, where ``X`` are sparse feature vectors:
 
+Let's say we perform a matrix multiplication of ``X``  and ``W``, where ``X`` is a 2x2 matrix, and ``W`` is a 2x1 matrix. Let ``Y`` be the matrix multiplication of the two matrices:
 
 ```python
 import mxnet as mx
-shape = (3, 10)
-# `X` only contains 4 non-zeros
-data = [6, 7, 8, 9]
-indptr = [0, 2, 3, 4]
-indices = [0, 4, 0, 0]
-X = mx.nd.sparse.csr_matrix(data, indptr, indices, shape)
-# the content of `X`
-X.asnumpy()
+X = mx.nd.array([[1,0]])
+W = mx.nd.array([[3,4,5], [6,7,8]])
+Y = mx.nd.dot(X, W)
+{'X': X, 'W': W, 'Y': Y}
 ```
 
-For some columns in `X`, they do not have any non-zero value, therefore the gradient for the weight `W` will have many row slices of all zeros corresponding to the zero columns in `X`.
+As you can see,
 
+```
+Y[0][0] = X[0][0] * W[0][0] + X[0][1] * W[1][0] = 1 * 3 + 0 * 6 = 3
+Y[0][1] = X[0][0] * W[0][1] + X[0][1] * W[1][1] = 1 * 4 + 0 * 7 = 4
+Y[0][2] = X[0][0] * W[0][2] + X[0][1] * W[1][2] = 1 * 5 + 0 * 8 = 5
+```
+
+What about dY / dW, the gradient for ``W``? Let's call it ``grad_W``. To start with, the shape of ``grad_W`` is the same as that of ``W`` as we are taking the derivatives with respect to ``W``, which is 2x3. Then we calculate each entry in ``grad_W`` as follows:
+
+```
+grad_W[0][0] = X[0][0] = 1
+grad_W[0][1] = X[0][0] = 1
+grad_W[0][2] = X[0][0] = 1
+grad_W[1][0] = X[0][1] = 0
+grad_W[1][1] = X[0][1] = 0
+grad_W[1][2] = X[0][1] = 0
+```
+
+As a matter of fact, you can calculate ``grad_W`` by multiplying the transpose of ``X`` with a matrix of ones:
 
 ```python
-W = mx.nd.random_uniform(shape=(10, 2))
-b = mx.nd.zeros((3, 1))
-# attach a gradient placeholder for W
-W.attach_grad(stype='row_sparse')
-with mx.autograd.record():
-    Y = mx.nd.dot(X, W) + b
-
-Y.backward()
-# the content of the gradients of `W`
-{'W.grad': W.grad, 'W.grad.asnumpy()': W.grad.asnumpy()}
+grad_W = mx.nd.dot(X, mx.nd.ones_like(Y), transpose_a=True)
+grad_W
 ```
 
-Storing and manipulating such sparse matrices with many row slices of all zeros in the default dense structure results in wasted memory and processing on the zeros. More importantly, many gradient based optimization methods such as SGD, [AdaGrad](https://stanford.edu/~jduchi/projects/DuchiHaSi10_colt.pdf) and [Adam](https://arxiv.org/pdf/1412.6980.pdf)
+As you can see, row 0 of ``grad_W`` contains non-zero values while row 1 of ``grad_W`` does not. Why did that happen?
+If you look at how ``grad_W`` is calculated, notice that since column 1 of ``X`` is filled with zeros, row 1 of ``grad_W`` is filled with zeros too.
+
+In the real world, gradients for parameters that interact with sparse inputs ususally have gradients where many row slices are completely zeros. Storing and manipulating such sparse matrices with many row slices of all zeros in the default dense structure results in wasted memory and processing on the zeros. More importantly, many gradient based optimization methods such as SGD, [AdaGrad](https://stanford.edu/~jduchi/projects/DuchiHaSi10_colt.pdf) and [Adam](https://arxiv.org/pdf/1412.6980.pdf)
 take advantage of sparse gradients and prove to be efficient and effective. 
 **In MXNet, the ``RowSparseNDArray`` stores the matrix in ``row sparse`` format, which is designed for arrays of which most row slices are all zeros.**
 In this tutorial, we will describe what the row sparse format is and how to use RowSparseNDArray for sparse gradient updates in MXNet.
@@ -45,7 +54,7 @@ In this tutorial, we will describe what the row sparse format is and how to use 
 
 To complete this tutorial, we need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started/install.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -170,7 +179,7 @@ d = mx.nd.array(a, dtype=np.float16)
 
 ## Inspecting Arrays
 
-Also as with `CSRNDArray`, you can inspect the contents of a `RowSparseNDArray` by filling
+As with `CSRNDArray`, you can inspect the contents of a `RowSparseNDArray` by filling
 its contents into a dense `numpy.ndarray` using the `asnumpy` function.
 
 
@@ -234,7 +243,7 @@ a.copyto(d)
 ```
 
 If the storage types of source array and destination array do not match,
-the storage type of destination array will not change when copying with `copyto` or the slice operator `[]`.
+the storage type of destination array will not change when copying with `copyto` or the slice operator `[]`. The source array will be temporarily converted to desired storage type before the copy.
 
 
 ```python
@@ -243,7 +252,7 @@ f = mx.nd.sparse.zeros('row_sparse', (2,2))
 g = mx.nd.ones(e.shape)
 e[:] = g
 g.copyto(f)
-{'e.stype':e.stype, 'f.stype':f.stype}
+{'e.stype':e.stype, 'f.stype':f.stype, 'g.stype':g.stype}
 ```
 
 ## Retain Row Slices
@@ -262,7 +271,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](mxnet.io/api/python/ndarray.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](https://mxnet.io/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
 ```python
@@ -289,21 +298,21 @@ c = a + mx.nd.ones((5, 2))  # c will be a dense NDArray
 {'b.stype':b.stype, 'c.stype':c.stype}
 ```
 
-* For operators that don't specialize in sparse arrays, you can still use them with sparse inputs with some performance penalty.
+For operators that don't specialize in sparse arrays, you can still use them with sparse inputs with some performance penalty.
 In MXNet, dense operators require all inputs and outputs to be in the dense format.
 
-* If sparse inputs are provided, MXNet will convert sparse inputs into dense ones temporarily so that the dense operator can be used.
+If sparse inputs are provided, MXNet will convert sparse inputs into dense ones temporarily so that the dense operator can be used.
 
-* If sparse outputs are provided, MXNet will convert the dense outputs generated by the dense operator into the provided sparse format.
+If sparse outputs are provided, MXNet will convert the dense outputs generated by the dense operator into the provided sparse format.
 
-* For operators that don't specialize in sparse arrays, you can still use them with sparse inputs with some performance penalty.
+For operators that don't specialize in sparse arrays, you can still use them with sparse inputs with some performance penalty.
 
 
 ```python
 e = mx.nd.sparse.zeros('row_sparse', a.shape)
 d = mx.nd.log(a) # dense operator with a sparse input
 e = mx.nd.log(a, out=e) # dense operator with a sparse output
-{'a.stype':a.stype, 'd':d, 'e':e} # stypes of a and e will be not changed
+{'a.stype':a.stype, 'd.stype':d.stype, 'e.stype':e.stype} # stypes of a and e will be not changed
 ```
 
 Note that warning messages will be printed when such a storage fallback event happens (work in progress).
@@ -353,7 +362,7 @@ sgd.update(0, weight, grad, momentum)
 ```
 
 Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.SGD)
-and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.Adam) support sparse update in MXNet.
+and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.optimizer.Adam) support sparse updates in MXNet.
 
 ## Advanced Topics
 

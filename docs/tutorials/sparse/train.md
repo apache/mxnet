@@ -25,7 +25,7 @@ pip install jupyter requests
 
 ## Variables
 
-Variables are placeholder for arrays. We can use them to hold sparse arrays, too.
+Variables are placeholder for arrays. We can use them to hold sparse arrays too.
 
 ### Variable Storage Types
 
@@ -71,10 +71,10 @@ You can update the array held by the variable by accessing executor's `arg_dict`
 
 
 ```python
-var_exec.arg_dict['b'][:] = mx.nd.ones(shape).tostype('csr')
-var_exec.forward()
+b_exec.arg_dict['b'][:] = mx.nd.ones(shape).tostype('csr')
+b_exec.forward()
 # The array `b` holds are updated to be ones
-eval_b = var_exec.outputs[0]
+eval_b = b_exec.outputs[0]
 {'eval_b': eval_b, 'eval_b.asnumpy()': eval_b.asnumpy()}
 ```
 
@@ -219,7 +219,7 @@ Once we have defined the model structure, the next step is to create a module an
 ```python
 # Create module
 mod = mx.mod.Module(symbol=lro, data_names=['data'], label_names=['label'])
-# Allocate memory by given the input data and label shapes
+# Allocate memory by giving the input data and label shapes
 mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
 # Initialize parameters by random numbers
 mod.init_params(initializer=initializer)

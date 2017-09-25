@@ -39,7 +39,7 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    :maxdepth: 1
 
    sparse/csr
-   sparse/rowsparse
+   sparse/row_sparse
    sparse/train
 ```
 

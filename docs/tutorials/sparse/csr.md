@@ -8,12 +8,12 @@ Storing and manipulating such large sparse matrices in the default dense structu
 and each row is sparse (i.e. with only a few nonzeros).**
 
 ## Advantages of Compressed Sparse Row NDArray (CSRNDArray)
-For matrices of high sparsity (e.g. ~1% non-zeros), there are two primary advantages of `CSRNDArray` over the existing `NDArray`:
+For matrices of high sparsity (e.g. ~1% non-zeros = ~1% density), there are two primary advantages of `CSRNDArray` over the existing `NDArray`:
 
 - memory consumption is reduced significantly
 - certain operations are much faster (e.g. matrix-vector multiplication)
 
-You may be familiar with the CSR storage format in [SciPy](https://www.scipy.org/) and will note the similarities in MXNet's implementation. However there are some additional competitive features in `CSRNDArray` inherited from `NDArray`, such as lazy evaluation and automatic parallelization that are not available in SciPy's flavor of CSR.
+You may be familiar with the CSR storage format in [SciPy](https://www.scipy.org/) and will note the similarities in MXNet's implementation. However there are some additional competitive features in `CSRNDArray` inherited from `NDArray`, such as non-blocking asynchronous evaluation and automatic parallelization that are not available in SciPy's flavor of CSR. You can find further explainations for evaluation and parallization strategy in MXNet in the [NDArray tutorial](https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html#lazy-evaluation-and-automatic-parallelization).
 
 The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holder for storage type info, to `NDArray`. You can query **ndarray.stype** now in addition to the oft-queried attributes such as **ndarray.shape**, **ndarray.dtype**, and **ndarray.context**. For a typical dense NDArray, the value of `stype` is **"default"**. For a `CSRNDArray`, the value of stype is **"csr"**.
 
@@ -21,7 +21,7 @@ The introduction of `CSRNDArray` also brings a new attribute, `stype` as a holde
 
 To complete this tutorial, you will need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/get_started/install.html)
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/get_started/install.html)
 - [Jupyter](http://jupyter.org/)
     ```
     pip install jupyter
@@ -68,7 +68,7 @@ and duplicated column indices for the same row are not allowed.
 
 There are a few different ways to create a `CSRNDArray`, but first let's recreate the matrix we just discussed using the `data`, `indices`, and `indptr` we calculated.
 
-* We can create a CSRNDArray with data, indices and indptr by using the `csr_matrix` function:
+You can create a CSRNDArray with data, indices and indptr by using the `csr_matrix` function:
 
 
 ```python
@@ -76,8 +76,8 @@ import mxnet as mx
 # Create a CSRNDArray with python lists
 shape = (3, 4)
 data_list = [7, 8, 9]
-indptr_list = [0, 2, 2, 3]
 indices_list = [0, 2, 1]
+indptr_list = [0, 2, 2, 3]
 a = mx.nd.sparse.csr_matrix(data_list, indptr_list, indices_list, shape)
 # Inspect the matrix
 a.asnumpy()
@@ -96,7 +96,7 @@ b.asnumpy()
 
 
 ```python
-# Compare the two
+# Compare the two. They are exactly the same.
 {'a':a.asnumpy(), 'b':b.asnumpy()}
 ```
 
@@ -113,6 +113,14 @@ try:
     print('d:{}'.format(d.asnumpy()))
 except ImportError:
     print("scipy package is required")
+```
+
+You can create a CSRNDArray from a dense NDArray by using the `tostype` function, which is explained further in the [Storage Type Conversion](#storage-type-conversion) section:
+
+```python
+dense = mx.nd.array([[7., 0., 8., 0.], [0., 0., 0., 0.], [0., 9., 0., 0.]])
+csr = dense.tostype('csr')
+csr.asnumpy()
 ```
 
 You can also create a CSRNDArray from another using the `array` function specifying the element data type with the option `dtype`,
@@ -215,7 +223,7 @@ f = mx.nd.sparse.zeros('csr', (2,2))
 g = mx.nd.ones(e.shape)
 e[:] = g
 g.copyto(f)
-{'e.stype':e.stype, 'f.stype':f.stype}
+{'e.stype':e.stype, 'f.stype':f.stype, 'g.stype':g.stype}
 ```
 
 ## Indexing and Slicing
@@ -234,7 +242,7 @@ Note that accessing individual elements in a CSRNDArray is currently not support
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in `mx.nd.sparse`. You can read the [mxnet.ndarray.sparse API documentation](mxnet.io/api/python/ndarray.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in `mx.nd.sparse`. You can read the [mxnet.ndarray.sparse API documentation](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
 ```python
@@ -268,7 +276,7 @@ If sparse outputs are provided, MXNet will convert the dense outputs generated b
 e = mx.nd.sparse.zeros('csr', a.shape)
 d = mx.nd.log(a) # dense operator with a sparse input
 e = mx.nd.log(a, out=e) # dense operator with a sparse output
-{'a.stype':a.stype, 'd':d, 'e':e} # stypes of a and e will be not changed
+{'a.stype':a.stype, 'd.stype':d.stype, 'e.stype':e.stype} # stypes of a and e will be not changed
 ```
 
 Note that warning messages will be printed when such a storage fallback event happens (work in progress).
@@ -336,3 +344,6 @@ try:
 except mx.MXNetError as err:
     sys.stderr.write(str(err))
 ```
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
+
