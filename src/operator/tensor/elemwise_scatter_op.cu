@@ -16,18 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include "elemwise_binary_scalar_op.h"
+#include "./elemwise_binary_scalar_op.h"
+#include "./elemwise_scatter_op.h"
 
 namespace mxnet {
 namespace op {
 
+NNVM_REGISTER_OP(_scatter_elemwise_div)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseScatterBinaryOp::Compute<gpu, mshadow::op::div>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseScatterBinaryOp::ComputeEx<gpu, mshadow::op::div>);
+
 NNVM_REGISTER_OP(_scatter_plus_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<cpu, mshadow::op::plus>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::plus>);
+.set_attr<FCompute>("FCompute<gpu>",
+                    ElemwiseScatterBinaryScalarOp::Compute<gpu, mshadow::op::plus>)
+.set_attr<FComputeEx>("FComputeEx<gpu>",
+                      ElemwiseScatterBinaryScalarOp::ComputeEx<gpu, mshadow::op::plus>);
 
 NNVM_REGISTER_OP(_scatter_minus_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<cpu, mshadow::op::minus>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::minus>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow::op::minus>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, mshadow::op::minus>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -18,31 +18,80 @@
  */
 #include "./elemwise_binary_op-inl.h"
 #include "./elemwise_binary_scalar_op.h"
+#include "./elemwise_scatter_op.h"
 
 namespace mxnet {
 namespace op {
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_scatter_elemwise_div, mshadow::op::div)
-.describe(R"code(Divides arguments element-wise.  If the inputs are sparse, then
-only the values which exist in the sparse arrays are computed.  The 'missing' values are ignored.
-For dense input, this operator behaves exactly like elemwise_div.
+static bool StorageTypeRspOrDenseOutput(const nnvm::NodeAttrs &attrs,
+                                        const Context &ctx,
+                                        std::vector<int> *in_attrs,
+                                        std::vector<int> *out_attrs) {
+  if((*in_attrs)[0] == kRowSparseStorage) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
+    return true;
+  }
+  return ElemwiseStorageTypeDenseOutput<1>(attrs, ctx, in_attrs, out_attrs);
+}
 
-The storage type of ``scatter_div`` output depends on storage types of inputs
+/*! \brief _scatter_elemwise_div */
+MXNET_OPERATOR_REGISTER_BINARY(_scatter_elemwise_div)
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseScatterBinaryOp::Compute<cpu, mshadow::op::div>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseScatterBinaryOp::ComputeEx<cpu, mshadow::op::div>)
+.describe(R"code(Divides arguments element-wise.  If the left-hand-side input is 'row_sparse', then
+only the values which exist in the left-hand sparse array are computed.  The 'missing' values
+are ignored.
 
-- scatter_div(row_sparse, row_sparse) = row_sparse
-- otherwise, ``scatter_div`` generates output with default storage
+The storage type of ``_scatter_elemwise_div`` output depends on storage types of inputs
+
+- _scatter_elemwise_div(row_sparse, row_sparse) = row_sparse
+- _scatter_elemwise_div(row_sparse, dense) = row_sparse
+- _scatter_elemwise_div(row_sparse, csr) = row_sparse
+- otherwise, ``_scatter_elemwise_div`` behaves exactly like elemwise_div and generates output
+with default storage
 
 )code")
+.set_attr<FInferStorageType>("FInferStorageType", StorageTypeRspOrDenseOutput)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 
+/*! \brief _scatter_plus_scalar */
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_scatter_plus_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::plus>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::plus>)
+.describe(R"code(Adds a scalar to a tensor element-wise.  If the left-hand-side input is
+'row_sparse' or 'csr', then only the values which exist in the left-hand sparse array are computed.
+The 'missing' values are ignored.
+
+The storage type of ``_scatter_plus_scalar`` output depends on storage types of inputs
+
+- _scatter_plus_scalar(row_sparse, scalar) = row_sparse
+- _scatter_plus_scalar(csr, scalar) = csr
+- otherwise, ``_scatter_plus_scalar`` behaves exactly like _plus_scalar and generates output
+with default storage
+
+)code")
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseScatterBinaryScalarOp::Compute<cpu, mshadow::op::plus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>",
+                      ElemwiseScatterBinaryScalarOp::ComputeEx<cpu, mshadow::op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
+/*! \brief _scatter_minus_scalar */
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_scatter_minus_scalar)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::minus>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::minus>)
+  .describe(R"code(Subtracts a scalar to a tensor element-wise.  If the left-hand-side input is
+'row_sparse' or 'csr', then only the values which exist in the left-hand sparse array are computed.
+The 'missing' values are ignored.
+
+The storage type of ``_scatter_minus_scalar`` output depends on storage types of inputs
+
+- _scatter_minus_scalar(row_sparse, scalar) = row_sparse
+- _scatter_minus_scalar(csr, scalar) = csr
+- otherwise, ``_scatter_minus_scalar`` behaves exactly like _minus_scalar and generates output
+with default storage
+
+)code")
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseScatterBinaryScalarOp::Compute<cpu, mshadow::op::minus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>",
+                      ElemwiseScatterBinaryScalarOp::ComputeEx<cpu, mshadow::op::minus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 }  // namespace op

@@ -695,8 +695,9 @@ class AdaGrad(Optimizer):
         save_history_stype = history.stype
 
         if is_sparse:
-            history = sparse.retain(history, grad.indices)
-            history[:] = sparse.elemwise_add(history, op.square(grad))
+            history[:] = sparse.elemwise_add(sparse.square(grad),
+                                             sparse.retain(history, grad.indices))
+            assert len(history.indices) == grad_indices_count
             adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
             srt = op.sqrt(adjusted_add)
             div = _internal._scatter_elemwise_div(grad, srt)

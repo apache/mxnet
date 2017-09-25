@@ -175,6 +175,31 @@ class BinaryScalarOp : public UnaryOp {
     }
   }
 
+#ifdef __CUDACC__
+  /*! \brief Tensor operation against a scalar with a dense result */
+  template<typename OP, typename DType, typename IType, typename CType>
+  static void ComputeExDenseResultCSR(mshadow::Stream<gpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
+    mxnet::op::FCompExFallback<gpu>(attrs, ctx, { input }, { req }, { output },
+                                    Compute<gpu, OP>, "ComputeExDenseResultCSR");
+  }
+
+  template<typename OP, typename DType, typename IType>
+  static void ComputeExDenseResultRSP(mshadow::Stream<gpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
+    mxnet::op::FCompExFallback<gpu>(attrs, ctx, { input }, { req }, { output },
+                                    Compute<gpu, OP>, "ComputeExDenseResultRSP");
+  }
+#endif  // __CUDACC__
+
   template<typename xpu, typename OP, typename DType, typename IType>
   static void ComputeExDenseResult(const nnvm::NodeAttrs &attrs,
                                    const OpContext &ctx,
@@ -239,17 +264,11 @@ class BinaryScalarOp : public UnaryOp {
         UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
       }
     } else {
-      if (typeid(xpu) == typeid(gpu)) {
-        mxnet::op::FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                                        Compute<xpu, OP>,
-                                        "ComputeEx");
-      } else {
-        MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
-          MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            ComputeExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
-          });
+      MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
+        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
+          ComputeExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
         });
-      }
+      });
     }
   }
 

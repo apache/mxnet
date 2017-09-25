@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file elementwise_unary_op-inl.h
+ * \file elementwise_unary_op.h
  * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_

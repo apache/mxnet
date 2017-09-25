@@ -1593,30 +1593,37 @@ def test_scatter_ops():
                 values.append(val)
         return seen_points, values, seen_point_list
 
-    def check_scatter_ops(name, shape, stype, forward_mxnet_call, forward_numpy_call,
+    def check_scatter_ops(name, shape, lhs_stype, rhs_stype, forward_mxnet_call, forward_numpy_call,
                           density=0.25, rhs_is_scalar=False, verbose=False):
-        lhs = mx.symbol.Variable('lhs', stype=stype)
+        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
         if rhs_is_scalar is False:
-            rhs = mx.symbol.Variable('rhs', stype=stype)
+            rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
 
         if verbose is True:
             print(name)
-        lhs_nd = create_sparse_array_zd(
-            shape, stype, density=density,
-            rsp_indices=gen_rsp_random_indices(
-                shape,
-                density=density,
-                force_indices=[(shape[0]/2)]  # force at least one overlap
-            ))
 
-        if rhs_is_scalar is False:
-            rhs_nd = create_sparse_array_zd(
-                shape, stype, density=density,
+        if lhs_stype != 'default':
+            lhs_nd = create_sparse_array_zd(
+                shape, lhs_stype, density=density,
                 rsp_indices=gen_rsp_random_indices(
                     shape,
                     density=density,
                     force_indices=[(shape[0]/2)]  # force at least one overlap
                 ))
+        else:
+            lhs_nd = rand_ndarray(shape, 'default')
+
+        if rhs_is_scalar is False:
+            if rhs_stype != 'default':
+                rhs_nd = create_sparse_array_zd(
+                    shape, rhs_stype, density=density,
+                    rsp_indices=gen_rsp_random_indices(
+                        shape,
+                        density=density,
+                        force_indices=[(shape[0]/2)]  # force at least one overlap
+                    ))
+            else:
+                rhs_nd = rand_ndarray(shape, 'default')
         else:
             rhs_nd = 9
             rhs = rhs_nd
@@ -1646,23 +1653,23 @@ def test_scatter_ops():
         # For row_sparse, check that rows only exist for rows that are
         # either int lhs or rhs, and if they exist, they should equal
         # the numpy values
-        if stype == 'row_sparse':
+        if lhs_stype == 'default':
+            almost_equal(out_nd.asnumpy(), out_np, equal_nan=True)
+        elif lhs_stype == 'row_sparse':
             seen_rows = set()
             indices = lhs_nd.indices.asnumpy()
             for i in range(len(indices)):
                 seen_rows.add(indices[i])
-            if rhs_is_scalar is False:
-                indices = rhs_nd.indices.asnumpy()
-                for i in range(len(indices)):
-                    seen_rows.add(indices[i])
             assert len(out_nd.indices.asnumpy()) == len(seen_rows)
             out_nd_np = out_nd.asnumpy()
             for row in seen_rows:
                 row_nd = out_nd_np[row]
                 row_np = out_np[row]
                 almost_equal(row_nd, row_np, equal_nan=True)
-
+        elif lhs_stype == 'csr' and rhs_is_scalar is False:
+            almost_equal(out_nd.asnumpy(), out_np, equal_nan=True)
         else:
+            assert rhs_is_scalar
             lhs_seen_points, _, _ = csr_get_seen_points("lhs", lhs_nd, verbose)
             if rhs_is_scalar is False:
                 rhs_seen_points, _, _ = csr_get_seen_points("rhs", rhs_nd, verbose)
@@ -1684,33 +1691,27 @@ def test_scatter_ops():
 
     shape = (10, 5)
 
-    check_scatter_ops('_scatter_elemwise_div', shape, 'row_sparse',
-                      lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
-                      lambda l, r: l / r,
-                      verbose=False)
-    check_scatter_ops('_scatter_elemwise_div', shape, 'csr',
-                      lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
-                      lambda l, r: l / r,
-                      verbose=False, density=0.5)
+    for lhs_stype in ['row_sparse', 'default', 'csr']:
+        for rhs_stype in ['row_sparse', 'default', 'csr']:
+            print("op: {}, lhs_stype: {}, rhs_stype: {}".format('_scatter_elemwise_div',
+                                                                lhs_stype, rhs_stype))
+            check_scatter_ops('_scatter_elemwise_div', shape, lhs_stype, rhs_stype,
+                              lambda l, r: mx.sym._internal._scatter_elemwise_div(l, r),
+                              lambda l, r: l / r,
+                              verbose=False)
 
-    check_scatter_ops('_scatter_plus', shape, 'row_sparse',
-                      lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
-                      lambda l, r: l + r,
-                      rhs_is_scalar=True, verbose=False)
-    check_scatter_ops('_scatter_plus', shape, 'csr',
-                      lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
-                      lambda l, r: l + r,
-                      rhs_is_scalar=True, verbose=False, density=0.5)
+    for lhs_stype in ['row_sparse', 'default', 'csr']:
+        print("op: {}, lhs_stype: {}".format('_scatter_plus', lhs_stype))
+        check_scatter_ops('_scatter_plus', shape, lhs_stype, 'scalar',
+                          lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
+                          lambda l, r: l + r,
+                          rhs_is_scalar=True, verbose=False)
 
-    check_scatter_ops('_scatter_minus', shape, 'row_sparse',
-                      lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
-                      lambda l, r: l + r,
-                      rhs_is_scalar=True, verbose=False)
-    check_scatter_ops('_scatter_minus', shape, 'csr',
-                      lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
-                      lambda l, r: l + r,
-                      rhs_is_scalar=True, verbose=False, density=0.5)
-
+        print("op: {}, lhs_stype: {}".format('_scatter_minus', lhs_stype))
+        check_scatter_ops('_scatter_minus', shape, lhs_stype, 'scalar',
+                          lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
+                          lambda l, r: l + r,
+                          rhs_is_scalar=True, verbose=False, density=0.5)
 
 if __name__ == '__main__':
     import nose

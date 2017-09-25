@@ -42,7 +42,8 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
                                 const NDArray &output,
                                 const bool lhs_may_be_dense,
                                 const bool rhs_may_be_dense,
-                                const bool allow_inplace) {
+                                const bool allow_inplace,
+                                const bool scatter) {
   using namespace mshadow;
   using namespace mshadow::expr;
 
@@ -71,7 +72,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   if (is_dense_result) {
     output.CheckAndAlloc();
   } else {
-    if (rhs_is_dense) {
+    if (rhs_is_dense || scatter) {
       output.CheckAndAlloc({mshadow::Shape1(num_rows_l)});
     } else if (lhs_is_dense) {
       output.CheckAndAlloc({mshadow::Shape1(num_rows_r)});
@@ -170,6 +171,10 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       });
     } else {
       // Right only
+      if(scatter) {
+        ++iter_r;
+        continue;  // skip '++iter_out' below
+      }
       if (!is_dense_result) {
         indices_out[iter_out] = idx_r;
       }
@@ -179,7 +184,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
           s, rvalue.shape_.Size(), out[iter_out].dptr_, rvalue.dptr_);
       });
     }
-    iter_out++;
+    ++iter_out;
   }
   // Evaluate the remaining rows beyond the l and r value row intersetion
   while (iter_l < num_rows_l && !lhs_is_dense && !rhs_in_place) {
@@ -195,7 +200,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
         s, lvalue.shape_.Size(), out[iter_out++].dptr_, lvalue.dptr_);
     });
   }
-  while (iter_r < num_rows_r && !rhs_is_dense && !lhs_in_place) {
+  while (iter_r < num_rows_r && !rhs_is_dense && !lhs_in_place && !scatter) {
     if (!is_dense_result) {
       indices_out[iter_out] = indices_r[iter_r];
     } else {
@@ -221,7 +226,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     DCHECK_LE(iter_out, num_rows_l + num_rows_r);  // Make sure that we didn't overrun
     nnvm::TShape new_shape = output.aux_shape(rowsparse::kIdx);
     CHECK_LE(iter_out, new_shape.Size());
-    if (!rhs_is_dense && !lhs_is_dense && !lhs_in_place && !rhs_in_place) {
+    if (!rhs_is_dense && !lhs_is_dense && !lhs_in_place && !rhs_in_place && !scatter) {
       // Reduce the first-dimension size by the number of common rows
       new_shape[0] -= num_common_rows;
       output.set_aux_shape(rowsparse::kIdx, new_shape);
@@ -371,7 +376,7 @@ void ElemwiseBinaryOp::ComputeEx(const nnvm::NodeAttrs &attrs,
               RspRspOp<DType, IType, OP>(
                 s, attrs, ctx, inputs[0], inputs[1],
                 req[0], outputs[0],
-                false, false, false);
+                false, false, false, false);
             });
           });
           break;
