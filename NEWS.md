@@ -1,5 +1,9 @@
 # v0.3.0 (TBD)
 
+## New API
+
+* `deepcopy` for NDArray (#273)
+
 ## API Changes
 
 * `reshape` of NDArray share the same interface with Base (#272).
@@ -7,12 +11,14 @@
     * `reshape(NDArray, dim...; reverse=false)`
     * `Reshape` deprecated.
 
-  * `reshape` of SymbolicNode share the same interface with Base
-    and additional keyword argument (#279).
+* `reshape` of SymbolicNode share the same interface with Base
+  and additional keyword argument (#279).
 
     * `reshape(SymbolicNode, dim; reverse=false, name)`
     * `reshape(SymbolicNode, dim...; reverse=false, name)`
     * `Reshape` deprecated.
+
+* `srand!` deprecated, please use `srand` (#282)
 
 # v0.2.2 (2017.05.14)
 * Updated supported version of MXNet to 0.9.4.
