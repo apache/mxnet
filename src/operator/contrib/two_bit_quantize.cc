@@ -50,7 +50,7 @@ In two bit compress, every 16 float data in original array
 will be packed into one float data in output array.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
-.set_num_outputs(2)
+.set_num_outputs(0)
 .set_attr<nnvm::FInferShape>("FInferShape", Quantize2BitShape)
 .set_attr<nnvm::FInferType>("FInferType", Quantize2BitType)
 .set_attr<FCompute>("FCompute<cpu>", Quantize2BitCompute<cpu>)

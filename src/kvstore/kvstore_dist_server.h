@@ -146,11 +146,9 @@ class KVStoreDistServer {
     std::vector<std::string> elems;
     split(params, ',', std::back_inserter(elems));
     compress_ = elems[0];
-    std::cout<<"Setting compress as "<<compress_<<std::endl;
     if (elems.size() > 1) {
       pos_threshold_ = strtof(elems[1].c_str(), NULL);
       neg_threshold_ = strtof(elems[2].c_str(), NULL);
-      std::cout<<"Setting thresholds as "<<pos_threshold_<<" " << neg_threshold_<<std::endl;
     }
   }
 
@@ -411,12 +409,9 @@ class KVStoreDistServer {
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
       NDArray comp_buf = compress_buf_[key];
+      recved.WaitToRead();
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
-        long int original_size1  = (long int)(*(recv_blob.dptr<float>()+1));
-        long int original_size3  = (long int)(*(recv_blob.dptr<float>()+3));
-        long int original_size0  = (long int)(*(recv_blob.dptr<float>()+0));
-        std::cout<<original_size0<<" "<<original_size1<< " "<<original_size<<" "<<original_size3<<std::endl;
         dshape = TShape{original_size};
         std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
         if (comp_buf.is_none()) {

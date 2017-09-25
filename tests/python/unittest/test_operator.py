@@ -3491,6 +3491,14 @@ def test_quantization_op():
     assert same(qa.asnumpy(), qa_real.asnumpy())
     assert same(a_.asnumpy(),  a_real.asnumpy())
 
+def test_two_bit_quantization_op():
+    grad = mx.nd.array([-6.3, -2.1, 3.4, 1.2, 10.5, 5.1, -3.2, 2.0, -8.9, 0])
+    residual = mx.nd.array([-3.1, 1.2, -1.3, 5.4, -2.1, 2.9, 3.0, -7.0, -2.9, -100.3])
+    neg_threshold = mx.nd.array([-4.0])
+    pos_threshold = mx.nd.array([4.0])
+    out = mx.contrib.nd.create_2bit(grad)
+    mx.contrib.ndarray.quantize_2bit(grad, residual, neg_threshold, pos_threshold, out)
+    assert same(out, [ -4.00000000e+00   4.00000000e+00   1.00000000e+01   7.40468810e-39])
 
 def test_reciprocal_op():
     data_tmp = np.random.rand(3, 4) * 10 - 5
