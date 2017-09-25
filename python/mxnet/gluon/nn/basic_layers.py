@@ -19,6 +19,8 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 
+import warnings
+
 from ..block import Block, HybridBlock
 from ..utils import _indent
 
@@ -37,9 +39,10 @@ class Sequential(Block):
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, block):
+    def add(self, *blocks):
         """Adds block on top of the stack."""
-        self.register_child(block)
+        for block in blocks:
+            self.register_child(block)
 
     def forward(self, x):
         for block in self._children:
@@ -55,11 +58,25 @@ class Sequential(Block):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __getitem__(self, i):
-        return self._children[i]
+    def __getitem__(self, key):
+        return self._children[key]
 
     def __len__(self):
         return len(self._children)
+
+    def hybridize(self, active=True):
+        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        non-hybrid children.
+
+        Parameters
+        ----------
+        active : bool, default True
+            Whether to turn hybrid on or off.
+        """
+        if self._children and all(isinstance(c, HybridBlock) for c in self._children):
+            warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
+                          'using HybridSequential for the best performance.')
+        super(Sequential, self).hybridize(active)
 
 
 class HybridSequential(HybridBlock):
@@ -76,9 +93,10 @@ class HybridSequential(HybridBlock):
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, block):
+    def add(self, *blocks):
         """Adds block on top of the stack."""
-        self.register_child(block)
+        for block in blocks:
+            self.register_child(block)
 
     def hybrid_forward(self, F, x):
         for block in self._children:
@@ -94,8 +112,8 @@ class HybridSequential(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __getitem__(self, i):
-        return self._children[i]
+    def __getitem__(self, key):
+        return self._children[key]
 
     def __len__(self):
         return len(self._children)

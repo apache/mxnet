@@ -75,7 +75,7 @@ class MobileNet(HybridBlock):
         return x
 
 # Constructor
-def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
+def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper.
@@ -90,6 +90,8 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     net = MobileNet(multiplier, **kwargs)
     if pretrained:
@@ -97,7 +99,7 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(), **kwargs):
         version_suffix = '{0:.2f}'.format(multiplier)
         if version_suffix in ('1.00', '0.50'):
             version_suffix = version_suffix[:-1]
-        net.load_params(get_model_file('mobilenet%s'%version_suffix), ctx=ctx)
+        net.load_params(get_model_file('mobilenet%s'%version_suffix, root=root), ctx=ctx)
     return net
 
 def mobilenet1_0(**kwargs):

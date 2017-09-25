@@ -180,13 +180,30 @@ def test_zoneout():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-def check_rnn_forward(layer, inputs):
+def check_rnn_forward(layer, inputs, deterministic=True):
     inputs.attach_grad()
     layer.collect_params().initialize()
     with mx.autograd.record():
-        layer.unroll(3, inputs, merge_outputs=True)[0].backward()
-        mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
-    mx.nd.waitall()
+        out = layer.unroll(3, inputs, merge_outputs=False)[0]
+        mx.autograd.backward(out)
+        out = layer.unroll(3, inputs, merge_outputs=True)[0]
+        out.backward()
+
+    np_out = out.asnumpy()
+    np_dx = inputs.grad.asnumpy()
+
+    layer.hybridize()
+
+    with mx.autograd.record():
+        out = layer.unroll(3, inputs, merge_outputs=False)[0]
+        mx.autograd.backward(out)
+        out = layer.unroll(3, inputs, merge_outputs=True)[0]
+        out.backward()
+
+    if deterministic:
+        mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3)
+        mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3)
+
 
 
 def test_rnn_cells():
@@ -198,11 +215,11 @@ def test_rnn_cells():
                                        gluon.rnn.LSTMCell(100, input_size=200))
     check_rnn_forward(bilayer, mx.nd.ones((8, 3, 200)))
 
-    check_rnn_forward(gluon.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)))
+    check_rnn_forward(gluon.rnn.DropoutCell(0.5), mx.nd.ones((8, 3, 200)), False)
 
     check_rnn_forward(gluon.rnn.ZoneoutCell(gluon.rnn.LSTMCell(100, input_size=200),
                                          0.5, 0.2),
-                      mx.nd.ones((8, 3, 200)))
+                      mx.nd.ones((8, 3, 200)), False)
 
     net = gluon.rnn.SequentialRNNCell()
     net.add(gluon.rnn.LSTMCell(100, input_size=200))
@@ -212,6 +229,7 @@ def test_rnn_cells():
 
 def check_rnn_layer_forward(layer, inputs, states=None):
     layer.collect_params().initialize()
+    inputs.attach_grad()
     with mx.autograd.record():
         out = layer(inputs, states)
         if states is not None:
@@ -220,7 +238,24 @@ def check_rnn_layer_forward(layer, inputs, states=None):
         else:
             assert isinstance(out, mx.nd.NDArray)
         out.backward()
-    mx.nd.waitall()
+
+    np_out = out.asnumpy()
+    np_dx = inputs.grad.asnumpy()
+
+    layer.hybridize()
+
+    with mx.autograd.record():
+        out = layer(inputs, states)
+        if states is not None:
+            assert isinstance(out, tuple) and len(out) == 2
+            out = out[0]
+        else:
+            assert isinstance(out, mx.nd.NDArray)
+        out.backward()
+
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3)
+    mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3)
+
 
 def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
