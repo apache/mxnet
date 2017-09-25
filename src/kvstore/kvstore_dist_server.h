@@ -146,9 +146,11 @@ class KVStoreDistServer {
     std::vector<std::string> elems;
     split(params, ',', std::back_inserter(elems));
     compress_ = elems[0];
+    std::cout<<"Setting compress as "<<compress_<<std::endl;
     if (elems.size() > 1) {
       pos_threshold_ = strtof(elems[1].c_str(), NULL);
       neg_threshold_ = strtof(elems[2].c_str(), NULL);
+      std::cout<<"Setting thresholds as "<<pos_threshold_<<" " << neg_threshold_<<std::endl;
     }
   }
 
@@ -408,7 +410,6 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-      std::cout << "server: compress shape: " << dshape.Size() << std::endl;
       NDArray comp_buf = compress_buf_[key];
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));

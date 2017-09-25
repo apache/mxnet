@@ -94,9 +94,9 @@ class KVStoreDist : public KVStoreLocal {
   virtual void SetCompress(const std::string& compress, const float pos_threshold,
                      const float neg_threshold) {
     KVStoreLocal::SetCompress(compress, pos_threshold, neg_threshold);
-    if (get_rank() == 0) {
+//    if (get_rank() == 0) {
       SendCommandToServers(kSetCompress, GetCompressParams());
-    }
+//    }
   }
 
   void Barrier() override {
@@ -271,7 +271,6 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devcies
       int key = uniq_keys[i];
@@ -314,11 +313,11 @@ class KVStoreDist : public KVStoreLocal {
         if (pos_thre_.is_none()) {
           // positive threshold
           pos_thre_ = NDArray(TShape{1}, send_buf.ctx(),
-            false, send_buf.dtype());
+            false, mshadow::kFloat32);
           pos_thre_ = pos_threshold_;
           // negative threshold
           neg_thre_ = NDArray(TShape{1}, send_buf.ctx(),
-            false, send_buf.dtype());
+            false, mshadow::kFloat32);
           neg_thre_ = neg_threshold_;
         }
       }
@@ -328,9 +327,8 @@ class KVStoreDist : public KVStoreLocal {
            pos_thre_, neg_thre_,
            compress_,
            priority);
+        small_buf.WaitToRead();
       }
-      std::cout<<"finished compress"<<std::endl;
-
       // push to servers
       if (storage_type == kDefaultStorage) {
       auto push_to_servers =
@@ -356,7 +354,7 @@ class KVStoreDist : public KVStoreLocal {
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
-              pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
+              pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
         };
         Engine::Get()->PushAsync(
             push_to_servers,
