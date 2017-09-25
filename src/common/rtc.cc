@@ -33,6 +33,7 @@ CudaModule::Chunk::Chunk(
     const std::vector<std::string>& options,
     const std::vector<std::string>& exports) {
   NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, NULL, NULL));
+  for (const auto& i : exports) exports_.insert(i);
 #if CUDA_VERSION >= 8000
   for (const auto& func : exports) {
     NVRTC_CALL(nvrtcAddNameExpression(prog_, func.c_str()));
@@ -85,19 +86,27 @@ CUfunction CudaModule::Chunk::GetFunction(
     mod_[ctx.dev_id] = module;
   }
   CUfunction function;
-  CUDA_DRIVER_CALL(cuModuleGetFunction(&function, module, mangled_name.c_str()));
+  auto err = cuModuleGetFunction(&function, module, mangled_name.c_str());
+  if (err == CUDA_ERROR_NOT_FOUND) {
+    LOG(FATAL) << "Cannot find cuda kernel with name '" << mangled_name
+               << "'. Please either prepend kernel definition "
+               << "with 'extern \"C\"' or add its name to exports "
+               << "when creating CudaModule.";
+  }
+  CUDA_DRIVER_CALL(err);
   return function;
 }
 
 
 std::shared_ptr<CudaModule::Kernel> CudaModule::GetKernel(
     const std::string& name, const std::vector<ArgType>& signature) {
-#if CUDA_VERSION >= 8000
-  const char * c_mangled_name;
-  NVRTC_CALL(nvrtcGetLoweredName(ptr_->prog_, name.c_str(), &c_mangled_name));
-  std::string mangled_name(c_mangled_name);
-#else
   std::string mangled_name = name;
+#if CUDA_VERSION >= 8000
+  if (ptr_->exports_.count(name)) {
+    const char * c_mangled_name;
+    NVRTC_CALL(nvrtcGetLoweredName(ptr_->prog_, name.c_str(), &c_mangled_name));
+    mangled_name = c_mangled_name;
+  }
 #endif
   return std::shared_ptr<Kernel>(new Kernel(ptr_, mangled_name, signature));
 }

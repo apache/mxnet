@@ -29,6 +29,7 @@
 #include <memory>
 #include <utility>
 #include <unordered_map>
+#include <unordered_set>
 #include "./ndarray.h"
 
 namespace mxnet {
@@ -62,6 +63,8 @@ class CudaModule {
     char* ptx_;
     /*! \brief lazily loaded cuda module */
     std::unordered_map<int, CUmodule> mod_;
+    /*! \brief exported names */
+    std::unordered_set<std::string> exports_;
   };
   /*! \brief pointer to Chunk */
   std::shared_ptr<Chunk> ptr_;
