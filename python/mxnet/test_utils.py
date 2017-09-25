@@ -1411,8 +1411,28 @@ def get_mnist():
             'test_data':test_img, 'test_label':test_lbl}
 
 def get_bz2_data(data_dir, data_name, url, data_origin_name):
-    """Download and extract bz2 data."""
+    """Download and extract bz2 data.
+
+    Parameters
+    ----------
+
+    data_dir : str
+        Absolute or relative path of the directory name to store datasets in
+    data_name : str
+        Name of the output file to extract the bz2 contents to
+    url : str
+        URL to download data from
+    data_origin_name : str
+        Name of the original b2 file
+
+    Examples
+    --------
+    >>> get_bz2_data("data_dir", "avazu-app.t",
+                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/avazu-app.t.bz2", "avazu-app.t.bz2")
+    """
+
     download(url, dirname=data_dir, overwrite=False)
+    cwd = os.path.abspath(os.getcwd())
     os.chdir(data_dir)
     if not os.path.exists(data_name):
         bz_file = bz2.BZ2File(data_origin_name, 'rb')
@@ -1423,7 +1443,7 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
             finally:
                 bz_file.close()
         os.remove(data_origin_name)
-    os.chdir("..")
+    os.chdir(cwd)
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
