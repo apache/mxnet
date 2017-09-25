@@ -96,7 +96,6 @@ std::shared_ptr<CudaModule::Kernel> CudaModule::GetKernel(
   const char * c_mangled_name;
   NVRTC_CALL(nvrtcGetLoweredName(ptr_->prog_, name.c_str(), &c_mangled_name));
   std::string mangled_name(c_mangled_name);
-  free(c_mangled_name);
 #else
   std::string mangled_name = name;
 #endif
