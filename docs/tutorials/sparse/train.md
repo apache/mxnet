@@ -19,9 +19,9 @@ pip install jupyter requests
 
 - Basic knowledge of Symbol in MXNet. See the detailed tutorial for Symbol in [Symbol - Neural network graphs and auto-differentiation](https://mxnet.incubator.apache.org/tutorials/basic/symbol.html).
 
-- Basic knowledge of CSRNDArray in MXNet. See the detailed tutorial for CSRNDArray in [TODO(haibin) Add Link Here](http://ec2-54-187-32-207.us-west-2.compute.amazonaws.com/tutorials/sparse/csr.html).
+- Basic knowledge of CSRNDArray in MXNet. See the detailed tutorial for CSRNDArray in [CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
 
-- Basic knowledge of RowSparseNDArray in MXNet. See the detailed tutorial for RowSparseNDArray in [TODO(haibin) Add Link Here](http://ec2-54-187-32-207.us-west-2.compute.amazonaws.com/tutorials/sparse/rowsparse.html).
+- Basic knowledge of RowSparseNDArray in MXNet. See the detailed tutorial for RowSparseNDArray in [RowSparseNDArray - NDArray for Sparse Gradient Updates](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/row_sparse.html).
 
 ## Variables
 
@@ -99,7 +99,7 @@ f = mx.sym.sparse.elemwise_add(c, c)
 ### Storage Type Inference
 
 What will be the output storage types of sparse symbols? In MXNet, for any sparse symbol, the result storage types are inferred based on storage types of inputs.
-You can read the [Sparse Symbol API](mxnet.io/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
+You can read the [Sparse Symbol API](https://mxnet.io/versions/master/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
 
 
 ```python
