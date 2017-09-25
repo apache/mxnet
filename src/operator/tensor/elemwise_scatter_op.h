@@ -24,6 +24,7 @@
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_SCATTER_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_SCATTER_OP_H_
 
+#include <vector>
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_scalar_op.h"
 #include "sparse_retain-inl.h"
@@ -177,7 +178,7 @@ class ElemwiseScatterBinaryScalarOp : public BinaryScalarOp {
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
     CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
-    if(outputs[0].storage_type() == inputs[0].storage_type()) {
+    if (outputs[0].storage_type() == inputs[0].storage_type()) {
       BinaryScalarOp::ComputeEx<gpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
       ScatterWrap<cpu>(attrs, ctx, inputs, req,
@@ -216,5 +217,4 @@ class ElemwiseScatterBinaryScalarOp : public BinaryScalarOp {
 }  // namespace op
 }  // namespace mxnet
 
-#endif // MXNET_OPERATOR_TENSOR_ELEMWISE_SCATTER_OP_H_
-
+#endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_SCATTER_OP_H_

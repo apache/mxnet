@@ -279,6 +279,7 @@ class ElemwiseBinaryOp : public OpBase {
       }
     }
   }
+
  protected:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename DType, typename IType, typename OP>

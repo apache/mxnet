@@ -171,7 +171,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       });
     } else {
       // Right only
-      if(scatter) {
+      if (scatter) {
         ++iter_r;
         continue;  // skip '++iter_out' below
       }

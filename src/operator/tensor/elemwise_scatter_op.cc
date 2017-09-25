@@ -27,7 +27,7 @@ static bool StorageTypeRspOrDenseOutput(const nnvm::NodeAttrs &attrs,
                                         const Context &ctx,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
-  if((*in_attrs)[0] == kRowSparseStorage) {
+  if ((*in_attrs)[0] == kRowSparseStorage) {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
     return true;
   }
