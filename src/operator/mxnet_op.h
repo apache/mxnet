@@ -244,6 +244,7 @@ template<typename OP>
 struct Kernel<OP, cpu> {
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+#ifdef _OPENMP
     const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
     if (omp_cores <= 1) {
       // Zero means not to use OMP, but don't interfere with external OMP behavior
@@ -257,6 +258,11 @@ struct Kernel<OP, cpu> {
       }
     }
   }
+#else
+  for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+  }
+#endif
 };
 
 
