@@ -93,7 +93,7 @@ CUfunction CudaModule::Chunk::GetFunction(
 std::shared_ptr<CudaModule::Kernel> CudaModule::GetKernel(
     const std::string& name, const std::vector<ArgType>& signature) {
 #if CUDA_VERSION >= 8000
-  char * c_mangled_name;
+  const char * c_mangled_name;
   NVRTC_CALL(nvrtcGetLoweredName(ptr_->prog_, name.c_str(), &c_mangled_name));
   std::string mangled_name(c_mangled_name);
   free(c_mangled_name);
