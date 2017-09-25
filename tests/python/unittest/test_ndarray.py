@@ -674,7 +674,6 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-@unittest.skip("test fails due to an issue introduced by autograd backward refactoring")
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
