@@ -613,19 +613,6 @@ end
 
 import Base: reshape
 
-reshape{N}(sym::SymbolicNode, dim::NTuple{N, Integer}; kwargs...) =
-  _reshape(sym, dim, kwargs...)
-reshape(sym::SymbolicNode, dim::Integer...; kwargs...) =
-  _reshape(sym, dim, kwargs...)
-
-@inline function _reshape{N}(sym::SymbolicNode, dim::NTuple{N, Integer};
-                             reverse::Bool=false, name::String="")
-  op = _get_cached_libmx_op_handle("reshape")
-  node = _create_atomic_symbol(op.value, ["shape"], [dump_mx_param(dim)])
-  name = get!(DEFAULT_NAME_MANAGER, name, "reshape")
-  _compose!(node, name=name, data=sym)
-end
-
 """
     reshape(sym::SymbolicNode, dim; reverse=false, name)
     reshape(sym::SymbolicNode, dim...; reverse=false, name)
@@ -676,7 +663,7 @@ The significance of each is explained below:
 
   Example:
 
-  - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
+  - input shape = (2,3,4), shape = (-4,1,2,-2), output shape = (1,2,3,4)
   - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
 
 If the argument `reverse` is set to `1`, then the special values are inferred
@@ -688,7 +675,19 @@ from right to left.
     output shape would be (40,5)
   - with `reverse=true`, output shape will be (50,4).
 """
-reshape
+reshape{N}(sym::SymbolicNode, dim::NTuple{N, Integer}; kwargs...) =
+  _reshape(sym, dim; kwargs...)
+reshape(sym::SymbolicNode, dim::Integer...; kwargs...) =
+  _reshape(sym, dim; kwargs...)
+
+@inline function _reshape{N}(sym::SymbolicNode, dim::NTuple{N, Integer};
+                             reverse::Bool=false, name::String="")
+  op = _get_cached_libmx_op_handle("reshape")
+  node = _create_atomic_symbol(op.value, ["shape", "reverse"],
+                               [dump_mx_param(dim), dump_mx_param(!reverse)])
+  name = get!(DEFAULT_NAME_MANAGER, name, "reshape")
+  _compose!(node, name=name, data=sym)
+end
 
 ################################################################################
 # Atomic SymbolicNode functions dynamically imported from libmxnet
