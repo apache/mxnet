@@ -94,9 +94,9 @@ class KVStoreDist : public KVStoreLocal {
   virtual void SetCompress(const std::string& compress, const float pos_threshold,
                      const float neg_threshold) {
     KVStoreLocal::SetCompress(compress, pos_threshold, neg_threshold);
-    if (get_rank() == 0) {
+//    if (get_rank() == 0) {
       SendCommandToServers(kSetCompress, GetCompressParams());
-    }
+//    }
   }
 
   void Barrier() override {
@@ -271,7 +271,6 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devcies
       int key = uniq_keys[i];
@@ -322,14 +321,20 @@ class KVStoreDist : public KVStoreLocal {
           neg_thre_ = neg_threshold_;
         }
       }
+      std::cout<<"send_buf size is "<<send_buf.shape().Size()<<std::endl;
+      std::cout<<"small_buf size is "<<small_buf.shape().Size()<<std::endl;
+      std::cout<<"res_buf size is "<<res_buf.shape().Size()<<std::endl;
       // Compress
       if (compress_ == "2bit") {
         Quantize(send_buf, &small_buf, &res_buf,
            pos_thre_, neg_thre_,
            compress_,
            priority);
+        std::cout<<"init threshold struct has "<<*(small_buf.data().dptr<float>())<<" "
+                 <<*(small_buf.data().dptr<float>()+1)<<" "
+                 <<*(small_buf.data().dptr<float>()+2)<<std::endl;
       }
-      std::cout<<"finished compress"<<std::endl;
+      std::cout<<"finished compress with "<<compress_<<std::endl;
 
       // push to servers
       if (storage_type == kDefaultStorage) {
@@ -356,7 +361,7 @@ class KVStoreDist : public KVStoreLocal {
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
-              pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
+              pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
         };
         Engine::Get()->PushAsync(
             push_to_servers,

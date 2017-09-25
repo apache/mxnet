@@ -412,6 +412,10 @@ class KVStoreDistServer {
       NDArray comp_buf = compress_buf_[key];
       if (compress_ != "none") {
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
+        long int original_size1  = (long int)(*(recv_blob.dptr<float>()+1));
+        long int original_size3  = (long int)(*(recv_blob.dptr<float>()+3));
+        long int original_size0  = (long int)(*(recv_blob.dptr<float>()+0));
+        std::cout<<original_size0<<" "<<original_size1<< " "<<original_size<<" "<<original_size3<<std::endl;
         dshape = TShape{original_size};
         std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
         if (comp_buf.is_none()) {

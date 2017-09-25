@@ -50,16 +50,21 @@ In two bit compress, every 16 float data in original array
 will be packed into one float data in output array.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
-.set_num_outputs(0)
+.set_num_outputs(2)
 .set_attr<nnvm::FInferShape>("FInferShape", Quantize2BitShape)
 .set_attr<nnvm::FInferType>("FInferType", Quantize2BitType)
 .set_attr<FCompute>("FCompute<cpu>", Quantize2BitCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_quantize_2bit"})
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+[](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2,4};
+})
 .add_argument("gradient_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_argument("residual_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
-.add_argument("neg_shreshold", "NDArray-or-Symbol", "The negative shreshold")
-.add_argument("compressed_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
-.add_argument("pos_shreshold", "NDArray-or-Symbol", "The positive shreshold");
+.add_argument("neg_threshold", "NDArray-or-Symbol", "The negative shreshold")
+.add_argument("pos_shreshold", "NDArray-or-Symbol", "The positive shreshold")
+.add_argument("compressed_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`");
+
 
 NNVM_REGISTER_OP(_contrib_create_2bit)
 .describe(R"code(Tp generate a compressed array with right shape.
