@@ -125,6 +125,8 @@ DataIterHandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
+CudaModuleHandle = ctypes.c_void_p
+CudaKernelHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
