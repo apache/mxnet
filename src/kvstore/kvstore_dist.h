@@ -313,11 +313,11 @@ class KVStoreDist : public KVStoreLocal {
         if (pos_thre_.is_none()) {
           // positive threshold
           pos_thre_ = NDArray(TShape{1}, send_buf.ctx(),
-            false, send_buf.dtype());
+            false, mshadow::kFloat32);
           pos_thre_ = pos_threshold_;
           // negative threshold
           neg_thre_ = NDArray(TShape{1}, send_buf.ctx(),
-            false, send_buf.dtype());
+            false, mshadow::kFloat32);
           neg_thre_ = neg_threshold_;
         }
       }
@@ -330,12 +330,7 @@ class KVStoreDist : public KVStoreLocal {
            pos_thre_, neg_thre_,
            compress_,
            priority);
-        std::cout<<"init threshold struct has "<<*(small_buf.data().dptr<float>())<<" "
-                 <<*(small_buf.data().dptr<float>()+1)<<" "
-                 <<*(small_buf.data().dptr<float>()+2)<<std::endl;
       }
-      std::cout<<"finished compress with "<<compress_<<std::endl;
-
       // push to servers
       if (storage_type == kDefaultStorage) {
       auto push_to_servers =

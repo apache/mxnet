@@ -181,6 +181,7 @@ def test_compressed():
     # init kv dns keys
     kv.init('99', mx.nd.zeros(big_shape))
     kv.init('3', mx.nd.zeros(shape))
+
     def verify_residual(pos_threshold):
       kv.push('99', mx.nd.ones(big_shape)*0.1)
       val=mx.nd.zeros(big_shape)
@@ -198,14 +199,16 @@ def test_compressed():
       val4 = mx.nd.zeros(big_shape)
       kv.pull('99',val4)
       check_diff_to_scalar(val4, pos_threshold)
+
     def check_zero():
       kv.push('99', mx.nd.zeros(big_shape))
       val = mx.nd.zeros(big_shape)
       kv.pull('99', val)
       check_diff_to_scalar(val, 0)
-#    check_zero()
- #   verify_residual(pos_threshold)
+
+    check_zero()
+    verify_residual(pos_threshold)
     
 if __name__ == "__main__":
-#    test_sync_push_pull()
+    #test_sync_push_pull()
     test_compressed()
