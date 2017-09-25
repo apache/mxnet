@@ -28,7 +28,6 @@
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_scalar_op.h"
 #include "sparse_retain-inl.h"
-#include "../../../tests/cpp/include/test_util.h"
 
 namespace mxnet {
 namespace op {
