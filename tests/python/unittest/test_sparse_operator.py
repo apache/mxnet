@@ -1498,8 +1498,8 @@ def test_sparse_elementwise_sum():
         inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
         out = mx.symbol.sparse.add_n(*inputs, name='esum')
         arr = []
-        arr_grad = [mx.nd.empty(shape) for _ in range(n)]
-        densities = [0, 0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0]
+        arr_grad = [mx.nd.empty(shape, stype=stype) for _ in range(n)]
+        densities = [0, 0.01, 0.5, 1.0]
         for i in range(n):
             arr.append(rand_ndarray(shape, stype, densities[np.random.randint(0, len(densities))]))
 

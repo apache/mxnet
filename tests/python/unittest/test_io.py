@@ -177,26 +177,6 @@ def test_NDArrayIter_csr():
         begin += batch_size
 
 def test_LibSVMIter():
-    def get_data(data_dir, data_name, url, data_origin_name):
-        if not os.path.isdir(data_dir):
-            os.system("mkdir " + data_dir)
-        os.chdir(data_dir)
-        if (not os.path.exists(data_name)):
-            if sys.version_info[0] >= 3:
-                from urllib.request import urlretrieve
-            else:
-                from urllib import urlretrieve
-            zippath = os.path.join(data_dir, data_origin_name)
-            urlretrieve(url, zippath)
-            import bz2
-            bz_file = bz2.BZ2File(data_origin_name, 'rb')
-            with open(data_name, 'wb') as fout:
-                try:
-                    content = bz_file.read()
-                    fout.write(content)
-                finally:
-                    bz_file.close()
-        os.chdir("..")
 
     def check_libSVMIter_synthetic():
         cwd = os.getcwd()
@@ -239,7 +219,7 @@ def test_LibSVMIter():
         batch_size = 128
         num_examples = news_metadata['num_examples']
         data_dir = os.path.join(os.getcwd(), 'data')
-        get_data(data_dir, news_metadata['name'], news_metadata['url'],
+        get_bz2_data(data_dir, news_metadata['name'], news_metadata['url'],
                  news_metadata['origin_name'])
         path = os.path.join(data_dir, news_metadata['name'])
         data_train = mx.io.LibSVMIter(data_libsvm=path, data_shape=(news_metadata['feature_dim'],),
