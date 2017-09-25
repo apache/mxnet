@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
@@ -76,8 +93,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
     return (kv, update_on_kvstore)
 
-def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names,
-                        update_on_kvstore):
+def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
@@ -101,10 +117,11 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
-    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
             continue
+        index = i
         if kvstore:
             name = param_names[index]
             # push gradient, priority is negative index
@@ -114,7 +131,7 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
-            # use a better solution latter
+            # use a better solution later
             w, g = p
             updater(index*num_device+k, g, w)
 

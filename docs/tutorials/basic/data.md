@@ -19,7 +19,7 @@ $ pip install opencv-python requests matplotlib jupyter
 
 ```
 $ git clone https://github.com/dmlc/mxnet ~/mxnet
-$ MXNET_HOME = '~/mxnet'
+$ export MXNET_HOME='~/mxnet'
 ```
 
 ## MXNet Data Iterator  
@@ -30,7 +30,7 @@ Iterators provide an abstract interface for traversing various types of iterable
  without needing to expose details about the underlying data source.
 
 In MXNet, data iterators return a batch of data as `DataBatch` on each call to `next`.
-A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the iterator. At the end of the data stream when there is no more data to read, the iterator raises ``StopIteration`` exception like Python `iter`.  
+A `DataBatch` often contains *n* training examples and their corresponding labels. Here *n* is the `batch_size` of the iterator. At the end of the data stream when there is no more data to read, the iterator raises ``StopIteration`` exception like Python `iter`. 
 The structure of `DataBatch` is defined [here](http://mxnet.io/api/python/io.html#mxnet.io.DataBatch).
 
 Information such as name, shape, type and layout on each training example and their corresponding label can be provided as `DataDesc` data descriptor objects via the `provide_data` and `provide_label` properties in `DataBatch`.
@@ -325,7 +325,7 @@ tar.close()
 **Note:** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
 
 ```python
-img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG').read())
+img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG', 'rb').read())
 plt.imshow(img.asnumpy()); plt.show()
 ```
 
@@ -366,7 +366,7 @@ Now let's convert them into record io format using the `im2rec.py` utility scrip
 First, we need to make a list that contains all the image files and their categories:
 
 ```python
-os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
+os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%os.environ['MXNET_HOME'])
 ```
 
 The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case, there is only one label for each image but you can modify the list to add in more for multi-label training.
@@ -375,7 +375,7 @@ Then we can use this list to create our record io file:
 
 
 ```python
-os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%MXNET_HOME)
+os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%os.environ['MXNET_HOME'])
 ```
 
 The record io files are now saved at here (./data)

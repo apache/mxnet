@@ -1,7 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file batchnorm_test.cc
- * \brief operator unit test utility functions
+ * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
 */
 
@@ -424,7 +442,7 @@ static StreamType& PRT(
   *os << test::op::BasicOperatorData<DType, AccReal>::bvt2String(bvt) << ": " << idx
       << ": ";
   const TBlob& blob = obj.getBlobVect(bvt)[idx];
-  MSHADOW_REAL_TYPE_SWITCH(blob.type_flag_, DTypeX, { test::print_blob<DTypeX>(os, blob); });
+  test::print(os, blob);
   return *os;
 }
 
@@ -698,14 +716,18 @@ static void timingTest(const std::string& label,
                        const bool stochastic,
                        const test::op::kwargs_t& kwargs,
                        const int dim = 0,
-                       const size_t count = 1) {
+                       size_t count = 1) {
   std::cout << std::endl << std::flush;
 
 #ifdef NDEBUG
-  const size_t COUNT = 50;
+  size_t COUNT = 50;
 #else
-  const size_t COUNT = 5;
+  size_t COUNT = 5;
 #endif
+  if (mxnet::test::quick_test) {
+    COUNT = 2;
+    count = 1;
+  }
 
   test::perf::TimingInstrument timing;
 
@@ -793,10 +815,13 @@ TEST(BATCH_NORM, TestStochasticTiming_2D) {
 /*! \brief Performance tests */
 TEST(BATCH_NORM, TestTiming_2D) {
 #ifdef NDEBUG
-  const size_t THISCOUNT = 10;
+  size_t THISCOUNT = 10;
 #else
-  const size_t THISCOUNT = 2;
+  size_t THISCOUNT = 2;
 #endif
+  if (mxnet::test::quick_test) {
+    THISCOUNT = 1;
+  }
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
@@ -874,8 +899,8 @@ TEST(BATCH_NORM, TestIterAll) {
           kwargs.push_back({ "cudnn_off", "True" });
         }
         for (TShape shape : shapes) {
-          for (int g1 = 0; g1 < 2U; ++g1) {
-            for (int g2 = 0; g2 < 2U; ++g2) {
+          for (int g1 = 0; g1 < 2; ++g1) {
+            for (int g2 = 0; g2 < 2; ++g2) {
               for (int type : v2_types) {
                 MSHADOW_REAL_TYPE_SWITCH_EX(
                   type, DType, AccReal,
@@ -1317,7 +1342,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
   typedef float AccReal;
 
   const std::vector<std::vector<DType>> myData =
-    { { 1.0f, 1.0f, 1.0, 1.0 },
+    { { 1.0f, 1.0f, 1.0f, 1.0f },
       { 2.0f, 2.0f, 2.0f, 2.0f },
       { 3.0f, 3.0f, 3.0f, 3.0f } };
 
@@ -1339,7 +1364,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
 
 /*! \brief Insert the channel field `channelCount` into the shape at `channelAxis` position */
 static TShape MakeShape(const std::vector<index_t>& shape,
-                        signed int channelAxis,
+                        unsigned int channelAxis,
                         const size_t channelCount) {
   if (channelAxis < 0) {
     channelAxis += shape.size() + 1;
@@ -1351,7 +1376,7 @@ static TShape MakeShape(const std::vector<index_t>& shape,
     newShape[x] = index_t(shape[x]);
   }
   newShape[channelAxis] = index_t(channelCount);
-  for (int x = channelAxis + 1; x < dim; ++x) {
+  for (index_t x = channelAxis + 1; x < dim; ++x) {
     newShape[x] = shape[x - 1];
   }
   return newShape;
@@ -1452,7 +1477,7 @@ static void runChannelAxisTest(
   ChannelAxisTestData<DType>::print("blob 2 output grad", info_c2.data_->c_.blob_out_grad_[0]);
 
   // Run both operators forward and backwards several times
-  for (int x = 0; x < numberOfPasses; ++x) {
+  for (index_t x = 0; x < numberOfPasses; ++x) {
     info_c1.data_->forward();
     info_c2.data_->forward();
 
@@ -1521,8 +1546,8 @@ TEST(BATCH_NORM, TestChannelAxis) {
       kwargs.push_back({"use_global_stats", tof[x2]});
       for (size_t x3 = 0; x3 < 2U; ++x3) {
         kwargs.push_back({"cudnn_off", tof[x3]});
-        for (int g1 = 0; g1 < 2U; ++g1) {
-          for (int g2 = 0; g2 < 2U; ++g2) {
+        for (index_t g1 = 0; g1 < 2U; ++g1) {
+          for (index_t g2 = 0; g2 < 2U; ++g2) {
             for (const std::vector<index_t> &simpleShape : shapes) {
               const int dim = static_cast<int>(simpleShape.size());
               for (signed int channelAxis = -dim, shapeDim = dim;

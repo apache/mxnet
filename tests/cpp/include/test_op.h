@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file test_op.h
  * \brief operator unit test utility functions
  * \author Chris Olivier
@@ -44,6 +62,26 @@ namespace op {
 #define MXNET_CUDA_ONLY(__i$) ((void)0)
 #endif
 
+#if MXNET_USE_CUDA
+struct GPUStreamScope {
+  explicit inline GPUStreamScope(OpContext *opContext)
+    : opContext_(*opContext) {
+    CHECK_EQ(opContext_.run_ctx.stream == nullptr, true)
+      << "Invalid runtime context stream state";
+    opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true);
+    CHECK_EQ(opContext_.run_ctx.stream != nullptr, true)
+      << "Unable to allocate a GPU stream";
+  }
+  inline ~GPUStreamScope() {
+    if (opContext_.run_ctx.stream) {
+      mshadow::DeleteStream<gpu>(static_cast<mshadow::Stream<gpu> *>(opContext_.run_ctx.stream));
+      opContext_.run_ctx.stream = nullptr;
+    }
+  }
+  OpContext& opContext_;
+};
+#endif  // MXNET_USE_CUDA
+
 /*!
  * \brief Manage test blobs and context, and universal logic
  * Create an operator from its "Prop" class and sets up the operator
@@ -52,24 +90,6 @@ namespace op {
  */
 template <typename DType, typename AccReal>
 class BasicOperatorData {
-  struct GPUStreamScope {
-    explicit inline GPUStreamScope(OpContext *opContext)
-    : opContext_(*opContext) {
-      CHECK_EQ(opContext_.run_ctx.stream == nullptr, true)
-        << "Invalid runtime context stream state";
-      opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true);
-      CHECK_EQ(opContext_.run_ctx.stream != nullptr, true)
-        << "Unable to allocate a GPU stream";
-    }
-    inline ~GPUStreamScope() {
-      if (opContext_.run_ctx.stream) {
-        mshadow::DeleteStream<gpu>(static_cast<mshadow::Stream<gpu> *>(opContext_.run_ctx.stream));
-        opContext_.run_ctx.stream = nullptr;
-      }
-    }
-    OpContext& opContext_;
-  };
-
  public:
   /*! \brief Manage test blobs and context */
   BasicOperatorData(const bool isGPU, const TShape& topShape)
@@ -600,26 +620,23 @@ class Validator {
   /*! \brief Compare blob data */
   static bool compare(const TBlob& b1, const TBlob& b2) {
     if (b1.shape_ == b2.shape_) {
-      MSHADOW_REAL_TYPE_SWITCH(
-        b1.type_flag_,
-        DTypeX,
-        {
-          CHECK_EQ(b1.type_flag_, b2.type_flag_)
-            << "Can't compare blobs of different data types";
-          const DTypeX *d1 = b1.dptr<DTypeX>();
-          const DTypeX *d2 = b2.dptr<DTypeX>();
-          CHECK_NE(d1, d2);  // don't compare the same memory
-          for (size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
-            const DTypeX v1 = *d1++;
-            const DTypeX v2 = *d2++;
-            const DType kErrorBound = ErrorBound(&b1, v1, v2);
-            EXPECT_NEAR(v1, v2, kErrorBound);
-            if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
-              on_failure(i, n, v1, v2, kErrorBound);
-            }
+      MSHADOW_REAL_TYPE_SWITCH(b1.type_flag_, DTypeX, {
+        CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
+        const DTypeX *d1 = b1.dptr<DTypeX>();
+        const DTypeX *d2 = b2.dptr<DTypeX>();
+        CHECK_NE(d1, d2);  // don't compare the same memory
+        for (size_t i = 0, n = b1.Size(), warningCount = 0; i < n; ++i) {
+          const DTypeX v1 = *d1++;
+          const DTypeX v2 = *d2++;
+          const DType kErrorBound = ErrorBound(&b1, v1, v2);
+          EXPECT_NEAR(v1, v2, kErrorBound);
+          if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
+            on_failure(i, n, v1, v2, kErrorBound);
+            return false;
           }
-          return true;
-        });
+        }
+      });
+      return true;
     }
     return false;
   }
@@ -659,13 +676,8 @@ class Validator {
     const TBlob& b1 = bv1[idx];
     const TBlob& b2 = bv2[idx];
     if (print && test::debugOutput) {
-      MSHADOW_REAL_TYPE_SWITCH(
-        b1.type_flag_,
-        DTypeX,
-        {
-          test::print_blob<DTypeX>(&(std::cout << "Blob 1:"), b1, true, true);
-          test::print_blob<DTypeX>(&(std::cout << "Blob 2:"), b2, true, true);
-        });
+      test::print(&(std::cout << "Blob 1:"), b1, true, true);
+      test::print(&(std::cout << "Blob 2:"), b2, true, true);
     }
     return compare(b1, b2);
   }
@@ -682,20 +694,7 @@ static test::op::OpInfo<OperatorProp, DType, AccReal> createOpAndInfoF(const boo
   test::op::OpInfo<OperatorProp, DType, AccReal> info;
   info.data_ = std::make_shared<OperatorData>(isGPU, inputShape);
   info.prop_ = std::make_shared<OperatorProp>();
-  // Note, assuming floating point
-  switch (sizeof(DType)) {
-    case sizeof(float):
-      info.in_type_ = {mshadow::kFloat32};
-      break;
-    case sizeof(double):
-      info.in_type_ = {mshadow::kFloat64};
-      break;
-    case sizeof(mshadow::half::half_t::half_):
-      info.in_type_ = {mshadow::kFloat16};
-      break;
-    default:
-      break;
-  }
+  info.in_type_ = { mshadow::DataType<DType>::kFlag };
   info.prop_->Init(kwargs);
   info.data_->initForward(*info.prop_, &info.in_type_);
   return info;

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::InitDesc;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -104,7 +121,7 @@ method register()
     {
         my $existing = $init_registry{ $name };
         warn(
-            "WARNING: New initializer $self.$name" 
+            "WARNING: New initializer $self.$name"
             ."is overriding existing initializer $existing.$name"
         );
     }
@@ -134,9 +151,18 @@ method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
     my $init = $desc->attrs->{ __init__ };
     if($init)
     {
-      my ($klass, $kwargs) = @{ decode_json($init) };
-      $self->get_init_registry->{ lc $klass }->new(%{ $kwargs })->_init_weight("$desc", $arr);
-      $self->_verbose_print($desc, $init, $arr);
+        my ($klass, $kwargs);
+        if(exists $self->get_init_registry->{ lc $init })
+        {
+            $klass = $init;
+            $kwargs = {};
+        }
+        else
+        {
+            ($klass, $kwargs) = @{ decode_json($init) };
+        }
+        $self->get_init_registry->{ lc $klass }->new(%{ $kwargs })->_init_weight("$desc", $arr);
+        $self->_verbose_print($desc, $init, $arr);
     }
     else
     {
@@ -381,7 +407,7 @@ method call(Str $name, AI::MXNet::NDArray $arr)
     {
         if($name =~ /$pattern/)
         {
-            &{$self->map->{$pattern}}($name, $arr);
+            $self->map->{$pattern}->($name, $arr);
             return;
         }
     }
@@ -401,6 +427,12 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 
 __PACKAGE__->register;
 
+package AI::MXNet::Zeros;
+use Mouse;
+extends 'AI::MXNet::Zero';
+
+__PACKAGE__->register;
+
 package AI::MXNet::One;
 use Mouse;
 extends 'AI::MXNet::Initializer';
@@ -408,6 +440,12 @@ method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 {
     $arr .= 1;
 }
+
+__PACKAGE__->register;
+
+package AI::MXNet::Ones;
+use Mouse;
+extends 'AI::MXNet::One';
 
 __PACKAGE__->register;
 
@@ -586,6 +624,8 @@ has "factor_type" => (is => "ro", isa => enum([qw/avg in out/]), default => 'avg
 method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 {
     my @shape = @{ $arr->shape };
+    confess(__PACKAGE__." initializer can not be applied on less than 2D tensor")
+        if @shape < 2;
     my $hw_scale = 1;
     if(@shape > 2)
     {
@@ -700,6 +740,8 @@ package AI::MXNet::LSTMBias;
 use Mouse;
 extends 'AI::MXNet::Initializer';
 has 'forget_bias' => (is => 'ro', isa => 'Num', required => 1);
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
+method python_constructor_arguments() { ['forget_bias'] }
 
 method _init_weight(Str $name, AI::MXNet::NDArray $arr)
 {
@@ -784,7 +826,7 @@ method _init_weight($name, $arr)
         }
         else
         {
-            &{$self->init}($desc, $args->{$name});
+            $self->init->($desc, $args->{$name});
         }
     }
 

@@ -41,7 +41,7 @@ Exporter* Exporter::Get() {
 void Exporter::InitRcppModule() {
   using namespace Rcpp;  // NOLINT(*)
   Exporter::Get()->scope_ = ::getCurrentScope();
-  function("mxnet.internal.export", &Exporter::Export,
+  function("mx.internal.export", &Exporter::Export,
            Rcpp::List::create(_["path"]),
            "Internal function of mxnet, used to export generated functions file.");
 }

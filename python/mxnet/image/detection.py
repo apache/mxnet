@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=unused-import
 """Read images and perform augmentations for object detection."""
 
@@ -10,7 +27,7 @@ import numpy as np
 
 from ..base import numeric_types
 from .. import ndarray as nd
-from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
+from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .image import RandomOrderAug, ColorJitterAug, LightingAug, ColorNormalizeAug
 from .image import ResizeAug, ForceResizeAug, CastAug, HueJitterAug, RandomGrayAug
@@ -64,7 +81,7 @@ class DetBorrowAug(DetAugmenter):
 
     def __call__(self, src, label):
         """Augmenter implementation body"""
-        src = self.augmenter(src)[0]
+        src = self.augmenter(src)
         return (src, label)
 
 
@@ -226,7 +243,7 @@ class DetRandomCropAug(DetAugmenter):
         if valid_objects.size < 1:
             return False
         intersects = self._intersect(label[valid_objects, 1:], x1, y1, x2, y2)
-        coverages = self._calculate_areas(intersects) / object_areas
+        coverages = self._calculate_areas(intersects) / object_areas[valid_objects]
         coverages = coverages[np.where(coverages > 0)[0]]
         if coverages.size > 0 and np.amin(coverages) > self.min_object_covered:
             return True
@@ -258,7 +275,7 @@ class DetRandomCropAug(DetAugmenter):
         from math import sqrt
 
         if not self.enabled or height <= 0 or width <= 0:
-            return None
+            return ()
         min_area = self.area_range[0] * height * width
         max_area = self.area_range[1] * height * width
         for _ in range(self.max_attempts):
@@ -300,7 +317,7 @@ class DetRandomCropAug(DetAugmenter):
                 new_label = self._update_labels(label, (x, y, w, h), height, width)
                 if new_label is not None:
                     return (x, y, w, h, new_label)
-        return None
+        return ()
 
 
 class DetRandomPadAug(DetAugmenter):
@@ -369,7 +386,7 @@ class DetRandomPadAug(DetAugmenter):
         """Generate random padding region"""
         from math import sqrt
         if not self.enabled or height <= 0 or width <= 0:
-            return None
+            return ()
         min_area = self.area_range[0] * height * width
         max_area = self.area_range[1] * height * width
         for _ in range(self.max_attempts):
@@ -394,7 +411,7 @@ class DetRandomPadAug(DetAugmenter):
             x = random.randint(0, max(0, w - width))
             new_label = self._update_labels(label, (x, y, w, h), height, width)
             return (x, y, w, h, new_label)
-        return None
+        return ()
 
 
 def CreateMultiRandCropAugmenter(min_object_covered=0.1, aspect_ratio_range=(0.75, 1.33),
@@ -466,15 +483,15 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
                        rand_mirror=False, mean=None, std=None, brightness=0, contrast=0,
                        saturation=0, pca_noise=0, hue=0, inter_method=2, min_object_covered=0.1,
                        aspect_ratio_range=(0.75, 1.33), area_range=(0.05, 3.0),
-                       min_eject_coverage=0.3, max_attempts=50, pad_val=(128, 128, 128)):
+                       min_eject_coverage=0.3, max_attempts=50, pad_val=(127, 127, 127)):
     """Create augmenters for detection.
 
     Parameters
     ----------
     data_shape : tuple of int
-        shape for output data
+        Shape for output data
     resize : int
-        resize shorter edge if larger than 0 at the begining
+        Resize shorter edge if larger than 0 at the begining
     rand_crop : float
         [0, 1], probability to apply random cropping
     rand_pad : float
@@ -482,23 +499,23 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
     rand_gray : float
         [0, 1], probability to convert to grayscale for all channels
     rand_mirror : bool
-        whether apply horizontal flip to image with probability 0.5
+        Whether to apply horizontal flip to image with probability 0.5
     mean : np.ndarray or None
-        mean pixel values for [r, g, b]
+        Mean pixel values for [r, g, b]
     std : np.ndarray or None
-        standard deviations for [r, g, b]
+        Standard deviations for [r, g, b]
     brightness : float
-        brightness jittering range (percent)
+        Brightness jittering range (percent)
     contrast : float
-        contrast jittering range
+        Contrast jittering range (percent)
     saturation : float
-        saturation jittering range
+        Saturation jittering range (percent)
     hue : float
-        hue jittering range
+        Hue jittering range (percent)
     pca_noise : float
-        pca noise level
+        Pca noise level (percent)
     inter_method : int, default=2(Area-based)
-        interpolation method for all resizing operations
+        Interpolation method for all resizing operations
 
         Possible values:
         0: Nearest Neighbors Interpolation.
@@ -533,7 +550,7 @@ def CreateDetAugmenter(data_shape, resize=0, rand_crop=0, rand_pad=0, rand_gray=
         Number of attempts at generating a cropped/padded region of the image of the
         specified constraints. After max_attempts failures, return the original image.
     pad_val: float
-        pixel value to be filled when padding is enabled. pad_val will automatically
+        Pixel value to be filled when padding is enabled. pad_val will automatically
         be subtracted by mean and divided by std if applicable.
 
     Examples
@@ -610,7 +627,7 @@ class ImageDetIter(ImageIter):
     Parameters
     ----------
     aug_list : list or None
-        augmenter list for generating distorted images
+        Augmenter list for generating distorted images
     batch_size : int
         Number of examples per batch.
     data_shape : tuple
@@ -640,7 +657,7 @@ class ImageDetIter(ImageIter):
     data_name : str
         Data name for provided symbols.
     label_name : str
-        name for detection labels
+        Name for detection labels
     kwargs : ...
         More arguments for creating augmenter. See mx.image.CreateDetAugmenter.
     """
@@ -706,7 +723,7 @@ class ImageDetIter(ImageIter):
         obj_width = int(raw[1])
         if (raw.size - header_width) % obj_width != 0:
             msg = "Label shape %s inconsistent with annotation width %d." \
-                %(str(raw.shape, obj_width))
+                %(str(raw.shape), obj_width)
             raise RuntimeError(msg)
         out = np.reshape(raw[header_width:], (-1, obj_width))
         # remove bad ground-truths
@@ -721,9 +738,9 @@ class ImageDetIter(ImageIter):
         Parameters
         ----------
         data_shape : tuple or None
-            reshape the data_shape to the new shape if not None
+            Reshape the data_shape to the new shape if not None
         label_shape : tuple or None
-            reshape label shape to new shape if not None
+            Reshape label shape to new shape if not None
         """
         if data_shape is not None:
             self.check_data_shape(data_shape)
@@ -754,7 +771,7 @@ class ImageDetIter(ImageIter):
                     continue
                 for datum in [data]:
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = self.postprocess_data(datum)
+                    batch_data[i] = self.postprocess_data(datum)
                     num_object = label.shape[0]
                     batch_label[i][0:num_object] = nd.array(label)
                     if num_object < batch_label[i].shape[0]:

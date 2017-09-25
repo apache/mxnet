@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
  * \brief
  * \author Bing Xu, Siyi Li, Chi Zhang
@@ -22,6 +40,9 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
+#include "./dot-inl.h"
+#include "./init_op.h"
+#include "./matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -663,6 +684,198 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
                                                inputs[0].dptr<IType>(), depth,
                                                static_cast<DType>(on_value));
       });
+    });
+  });
+}
+
+inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
+                          std::vector<TShape> *in_attrs,
+                          std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  // The shape of indices
+  const TShape& dshape = (*in_attrs)[0];
+  const TShape& ishape = (*in_attrs)[1];
+
+  if (shape_is_none(dshape) || shape_is_none(ishape)) return false;
+
+  CHECK_GT(ishape.ndim(), 1)
+    << "gather_nd requires index tensor to have at least 2 dimensions";
+
+  CHECK_LE(ishape[0], dshape.ndim())
+    << "Number of indices exceeds data dimension";
+
+  CHECK_LE(ishape[0], 10)
+    << "gather_nd supports indexing along at most 10 dimensions.";
+
+  TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0]);
+
+  for (size_t i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
+  for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
+    oshape[ishape.ndim()-1+i] = dshape[ishape[0] + i];
+  }
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
+inline bool GatherNDType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int>* in_attrs,
+                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return true;
+}
+
+struct gather_nd {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, OpReqType req, int N, int M, int K,
+                                  const mshadow::Shape<10> strides,
+                                  DType* out, const DType* data,
+                                  const IType* indices) {
+    int offset = 0;
+    for (int j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    }
+    for (int j = 0; j < K; ++j) {
+      KERNEL_ASSIGN(out[i*K + j], req, data[offset+j]);
+    }
+  }
+};
+
+template<typename xpu>
+void GatherNDForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TShape& dshape = inputs[0].shape_;
+  const TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = dshape.ProdShape(M, dshape.ndim());
+  mshadow::Shape<10> strides;
+  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) strides[i] = stride;
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      Kernel<gather_nd, xpu>::Launch(
+          s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
+          inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
+    });
+  });
+}
+
+
+struct ScatterNDParam : public dmlc::Parameter<ScatterNDParam> {
+  TShape shape;
+  DMLC_DECLARE_PARAMETER(ScatterNDParam) {
+    DMLC_DECLARE_FIELD(shape)
+      .describe("Shape of output.");
+  }
+};
+
+inline bool ScatterNDShape(const nnvm::NodeAttrs& attrs,
+                           std::vector<TShape> *in_attrs,
+                           std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const auto& params = dmlc::get<ScatterNDParam>(attrs.parsed);
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, params.shape);
+
+  const TShape& dshape = (*in_attrs)[0];
+  const TShape& ishape = (*in_attrs)[1];
+  const TShape& oshape = (*out_attrs)[0];
+
+  if (shape_is_none(dshape) || shape_is_none(ishape) || shape_is_none(oshape)) return false;
+
+  CHECK_GT(ishape.ndim(), 1)
+    << "scatter_nd requires index tensor to have at least 2 dimensions";
+
+  CHECK_LE(ishape[0], oshape.ndim())
+    << "Number of indices exceeds output dimension in operator scatter_nd";
+
+  CHECK_LE(ishape[0], 10)
+    << "scatter_nd supports indexing along at most 10 dimensions.";
+
+  bool valid = dshape.ndim() == ishape.ndim() - 1 + oshape.ndim() - ishape[0];
+
+  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+    valid = valid && dshape[i] == ishape[i+1];
+  }
+  for (int i = 0; i < oshape.ndim() - ishape[0]; ++i) {
+    valid = valid && dshape[ishape.ndim()-1+i] == oshape[ishape[0] + i];
+  }
+
+  CHECK(valid)
+    << "Invalid data, indices, and output shape combination for scatter_nd: "
+    << dshape << ", " << ishape << ", " << oshape;
+
+  return true;
+}
+
+inline bool ScatterNDType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return true;
+}
+
+struct scatter_nd {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, OpReqType req, int N, int M, int K,
+                                  const mshadow::Shape<10> strides,
+                                  DType* out, const DType* data,
+                                  const IType* indices) {
+    int offset = 0;
+    for (int j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    }
+    for (int j = 0; j < K; ++j) {
+      KERNEL_ASSIGN(out[offset+j], req, data[i*K + j]);
+    }
+  }
+};
+
+template<typename xpu>
+void ScatterNDForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TShape& oshape = outputs[0].shape_;
+  const TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = oshape.ProdShape(M, oshape.ndim());
+  mshadow::Shape<10> strides;
+  for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    if (req[0] == kWriteTo) {
+      Kernel<fill, xpu>::Launch(s, oshape.Size(), outputs[0].dptr<DType>(),
+                                static_cast<DType>(0));
+    }
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      Kernel<scatter_nd, xpu>::Launch(
+          s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
+          inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
 }

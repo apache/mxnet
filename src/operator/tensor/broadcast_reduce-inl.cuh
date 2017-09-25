@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce-inl.cuh
@@ -120,7 +139,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       } else {
         if (idx < N) {
           assign(&small[idx + m0*N], addto, val);
-        }        
+        }
       }
     }
   }
@@ -204,7 +223,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       } else {
         if (idx < N) {
           assign(&small[idx + m0*N], addto, val);
-        }        
+        }
       }
     }
   }
@@ -217,7 +236,7 @@ __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
   const int small_in_stride, const DType* __restrict small_in, DType *small_out) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    
+
     DType val;
     Reducer::SetInitValue(val);
     for (int k = 0; k < M; k++) {
@@ -265,7 +284,7 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
 // Returns the stride with which the fastest dimension is moving.
 // Used to detect memory access scatter.
 template<int ndim>
-MSHADOW_XINLINE int fastest_stride(const Shape<ndim>& small, const Shape<ndim>& big, 
+MSHADOW_XINLINE int fastest_stride(const Shape<ndim>& small, const Shape<ndim>& big,
   const Shape<ndim>& big_stride) {
   for (int i = ndim-1; i >= 0; --i) {
     if (big[i] != 1) {

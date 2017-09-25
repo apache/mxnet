@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file bilinear_sampler.cc
  * \brief
  * \author Xu Dong
@@ -154,10 +172,10 @@ MXNET_REGISTER_OP_PROPERTY(BilinearSampler, BilinearSamplerProp)
 .add_arguments(BilinearSamplerParam::__FIELDS__())
 .describe(R"code(Applies bilinear sampling to input feature map.
 
-Bilinear Sampling is the key of  [NIPS2015] \"Spatial Transformer Networks\". The usage of the operator is very similar to remap function in OpenCV, 
+Bilinear Sampling is the key of  [NIPS2015] \"Spatial Transformer Networks\". The usage of the operator is very similar to remap function in OpenCV,
 except that the operator has the backward pass.
 
-Given :math:`data` and :math:`grid`, then the output is computed by 
+Given :math:`data` and :math:`grid`, then the output is computed by
 
 .. math::
   x_{src} = grid[batch, 0, y_{dst}, x_{dst}] \\
@@ -165,11 +183,11 @@ Given :math:`data` and :math:`grid`, then the output is computed by
   output[batch, channel, y_{dst}, x_{dst}] = G(data[batch, channel, y_{src}, x_{src})
 
 :math:`x_{dst}`, :math:`y_{dst}` enumerate all spatial locations in :math:`output`, and :math:`G()` denotes the bilinear interpolation kernel.
-The out-boundary points will be padded with zeros.The shape of the output will be (data.shape[0], data.shape[1], grid.shape[2], grid.shape[3]). 
+The out-boundary points will be padded with zeros.The shape of the output will be (data.shape[0], data.shape[1], grid.shape[2], grid.shape[3]).
 
-The operator assumes that :math:`data` has 'NCHW' layout and :math:`grid` has been normalized to [-1, 1]. 
+The operator assumes that :math:`data` has 'NCHW' layout and :math:`grid` has been normalized to [-1, 1].
 
-BilinearSampler often cooperates with GridGenerator which generates sampling grids for BilinearSampler. 
+BilinearSampler often cooperates with GridGenerator which generates sampling grids for BilinearSampler.
 GridGenerator supports two kinds of transformation: ``affine`` and ``warp``.
 If users want to design a CustomOp to manipulate :math:`grid`, please firstly refer to the code of GridGenerator.
 
@@ -180,7 +198,7 @@ Example 1::
                   [1, 8, 8, 9],
                   [0, 4, 1, 5],
                   [1, 0, 1, 3]]]])
-  
+
   affine_matrix = array([[2, 0, 0],
                          [0, 2, 0]])
 
@@ -214,7 +232,7 @@ Example 2::
                           [0, 0, 0, 0],
                           [0, 0, 0, 0],
                           [0, 0, 0, 0]]]])
-  
+
   grid = GridGenerator(data=warp_matrix, transform_type='warp')
   out = BilinearSampler(data, grid)
 

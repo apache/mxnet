@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::NDArray::Base;
 use strict;
 use warnings;
@@ -44,11 +61,13 @@ func _make_ndarray_function($handle, $func_name)
                             $ret_type
     );
     my @arguments;
+    my %arguments = (out => 1, name => 1);
     for my $i (0..(@$arg_names-1))
     {
         if(not $arg_types->[$i] =~ /^(?:NDArray|Symbol|ndarray\-or\-symbol)/)
         {
             push @arguments, $arg_names->[$i];
+            $arguments{ $arg_names->[$i] } = 1;
         }
     }
     my $generic_ndarray_function = sub
@@ -59,12 +78,16 @@ func _make_ndarray_function($handle, $func_name)
         {
             %kwargs = %{ pop(@_) };
         }
-        @args = @_;
-        if(ref $class)
+        else
         {
-            @args = ($class) if not @args;
-            $class = ref $class;
+            while(@_ >= 2 and not ref $_[-2] and exists $arguments{ $_[-2] })
+            {
+                my $v = pop(@_);
+                my $k = pop(@_);
+                $kwargs{ $k } = $v;
+            }
         }
+        @args = @_;
         my @ndargs;
         my @pos_args;
         for my $i (@args)
@@ -85,6 +108,7 @@ func _make_ndarray_function($handle, $func_name)
         @kwargs{ @arguments[0..$#pos_args] } = @pos_args;
         my $original_output;
         my $output_vars;
+        delete $kwargs{name};
         if(grep { $_ eq 'out' } keys %kwargs)
         {
             $output_vars = delete $kwargs{out};
@@ -98,9 +122,14 @@ func _make_ndarray_function($handle, $func_name)
         {
             $output_vars = [];
         }
+        if(blessed($class) and $class->isa(__PACKAGE__) and not @{ $output_vars })
+        {
+            @ndargs = ($class->handle) if not @ndargs;
+            $class = ref $class;
+        }
         for my $key (keys %kwargs)
         {
-            $kwargs{ $key } = "(" .join(", ", @{ $kwargs{ $key } }) .")" 
+            $kwargs{ $key } = "(" .join(", ", @{ $kwargs{ $key } }) .")"
                 if ref $kwargs{ $key } eq 'ARRAY';
         }
         my $out = check_call(AI::MXNetCAPI::ImperativeInvoke(

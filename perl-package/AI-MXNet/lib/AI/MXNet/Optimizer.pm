@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Optimizer;
 use strict;
 use warnings;
@@ -33,7 +50,7 @@ method register()
     {
         my $existing = $opt_registry{ $name };
         warn(
-            "WARNING: New optimizer $self.$name" 
+            "WARNING: New optimizer $self.$name"
             ."is overriding existing optimizer $existing.$name"
         );
     }
@@ -91,6 +108,7 @@ has 'clip_gradient'       => (is => "rw", isa => "Maybe[Num]");
 has 'param_idx2name'      => (is => "rw", isa => "HashRef[Str]", default => sub { +{} });
 has 'idx2name'            => (is => "rw", isa => "HashRef[Str]");
 has 'sym'                 => (is => "rw", isa => "Maybe[AI::MXNet::Symbol]");
+has 'param_dict'          => (is => "rw", isa => "HashRef", default => sub { +{} });
 
 sub BUILD
 {
@@ -200,14 +218,18 @@ method _get_lr(Index $index)
     my $lr;
     if($self->lr_scheduler)
     {
-        $lr = &{$self->lr_scheduler}($self->num_update);
+        $lr = $self->lr_scheduler->($self->num_update);
     }
     else
     {
         $lr = $self->lr;
     }
 
-    if(exists $self->lr_mult->{ $index })
+    if(exists $self->param_dict->{ $index })
+    {
+        $lr *= $self->param_dict->{ $index }->lr_mult;
+    }
+    elsif(exists $self->lr_mult->{ $index })
     {
         $lr *= $self->lr_mult->{ $index };
     }
@@ -221,7 +243,11 @@ method _get_lr(Index $index)
 method _get_wd(Index $index)
 {
     my $wd = $self->wd;
-    if(exists $self->wd_mult->{ $index })
+    if(exists $self->param_dict->{ $index })
+    {
+        $wd *= $self->param_dict->{ $index }->wd_mult;
+    }
+    elsif(exists $self->wd_mult->{ $index })
     {
         $wd *= $self->wd_mult->{ $index };
     }
@@ -280,7 +306,7 @@ has 'multi_precision' => (is => "ro", isa => "Bool", default => 0);
 sub BUILD
 {
     my $self = shift;
-    $self->kwargs({ rescale_grad => $self->rescale_grad });
+    $self->kwargs({});
     if($self->momentum)
     {
         $self->kwargs->{momentum} = $self->momentum;
@@ -334,6 +360,7 @@ method update(
         out => $weight,
         lr  => $lr,
         wd  => $wd,
+        rescale_grad => $self->rescale_grad,
         %{ $self->kwargs }
     };
     my $use_multi_precision = ref($state) eq 'ARRAY';
@@ -435,7 +462,7 @@ method update(
     Index                     $index,
     AI::MXNet::NDArray        $weight,
     AI::MXNet::NDArray        $grad,
-    Maybe[AI::MXNet::NDArray] $state
+    Maybe[AI::MXNet::NDArray|ArrayRef[Maybe[AI::MXNet::NDArray]]] $state
 )
 {
     my $lr = $self->_get_lr($index);
@@ -505,7 +532,7 @@ method update(
     if($self->clip_gradient)
     {
         $grad = AI::MXNet::NDArray->clip(
-            $grad, 
+            $grad,
             -$self->clip_gradient,
             $self->clip_gradient
         );
@@ -566,7 +593,7 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
 }
 
 method update(
-    Index $index, 
+    Index $index,
     AI::MXNet::NDArray $weight,
     AI::MXNet::NDArray $grad,
     AI::MXNet::NDArray|Undef $state
@@ -651,7 +678,6 @@ sub BUILD
 {
     my $self = shift;
     $self->kwargs({
-        rescale_grad => $self->rescale_grad,
         beta1   => $self->beta1,
         beta2   => $self->beta2,
         epsilon => $self->epsilon
@@ -678,7 +704,7 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
 }
 
 method update(
-    Index $index, 
+    Index $index,
     AI::MXNet::NDArray $weight,
     AI::MXNet::NDArray $grad,
     ArrayRef[AI::MXNet::NDArray] $state
@@ -698,6 +724,7 @@ method update(
             out => $weight,
             lr  => $lr,
             wd  => $wd,
+            rescale_grad => $self->rescale_grad,
             %{ $self->kwargs }
         }
     );
@@ -748,7 +775,7 @@ has '+learning_rate'       => (default => 0.05);
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return AI::MXNet::NDArray->zeros(
-                $weight->shape, 
+                $weight->shape,
                 ctx => $weight->context
     );  # history
 }
@@ -850,7 +877,6 @@ sub BUILD
 {
     my $self = shift;
     $self->kwargs({
-        rescale_grad => $self->rescale_grad,
         gamma1       => $self->gamma1,
         epsilon      => $self->epsilon
     });
@@ -916,6 +942,7 @@ method update(
                 out => $weight,
                 lr  => $lr,
                 wd  => $wd,
+                rescale_grad => $self->rescale_grad,
                 %{ $self->kwargs }
             }
         );
@@ -928,6 +955,7 @@ method update(
                 out => $weight,
                 lr  => $lr,
                 wd  => $wd,
+                rescale_grad => $self->rescale_grad,
                 %{ $self->kwargs }
             }
         );
@@ -1025,7 +1053,7 @@ extends 'AI::MXNet::Optimizer';
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return AI::MXNet::NDArray->zeros(
-                $weight->shape, 
+                $weight->shape,
                 ctx => $weight->context
     );
 }
@@ -1334,16 +1362,38 @@ method sync_state_context(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]]
     return $state;
 }
 
+=head2 set_states
+
+    Sets updater states.
+=cut
+
 method set_states($states)
 {
     my $thawed_states = thaw($states);
+    my ($optimizer);
+    if(ref $thawed_states eq 'ARRAY')
+    {
+        ($thawed_states, $optimizer) = @{ $thawed_states };
+        $self->optimizer($optimizer);
+    }
     $self->states($thawed_states);
     %{ $self->states_synced } = map { $_ => 0 } keys %{ $thawed_states };
 }
 
-method get_states()
+=head2 get_states
+
+        Gets updater states.
+
+        Parameters
+        ----------
+        dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
+=cut
+
+method get_states(Bool $dump_optimizer=0)
 {
-    return freeze($self->states);
+    return freeze($dump_optimizer ? [$self->states, $self->optimizer] : $self->states);
 }
 
 package AI::MXNet::Optimizer;

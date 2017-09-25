@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  * \file multibox_prior.cc
  * \brief generate multibox prior boxes cpu implementation
  * \author Joshua Zhang
@@ -28,7 +46,7 @@ inline void MultiBoxPriorForward(const Tensor<cpu, 2, DType> &out,
       // ratio = 1, various sizes
       for (int i = 0; i < num_sizes; ++i) {
         float size = sizes[i];
-        float w = size / 2;
+        float w = size * in_height / in_width / 2;
         float h = size / 2;
         out[count][0] = center_x - w;  // xmin
         out[count][1] = center_y - h;  // ymin
@@ -40,7 +58,7 @@ inline void MultiBoxPriorForward(const Tensor<cpu, 2, DType> &out,
       float size = sizes[0];
       for (int j = 1; j < num_ratios; ++j) {
         float ratio = sqrtf(ratios[j]);
-        float w = size * ratio / 2;
+        float w = size * in_height / in_width * ratio / 2;
         float h = size / ratio / 2;
         out[count][0] = center_x - w;  // xmin
         out[count][1] = center_y - h;  // ymin

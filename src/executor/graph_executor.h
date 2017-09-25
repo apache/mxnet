@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  * \file graph_executor.h
  * \brief Executor to execute the computation graph.
  */
@@ -8,6 +26,7 @@
 
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/imperative.h>
 #include <mxnet/operator.h>
 #include <mxnet/executor.h>
 #include <nnvm/graph.h>
@@ -26,21 +45,18 @@ namespace exec {
 class GraphExecutor;
 }
 
-// forward declaration
-namespace autograd {
-class AutogradRuntime;
-}
-
 namespace exec {
 
 using nnvm::Graph;
 
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v);
+
 // graph executors
 class GraphExecutor : public Executor {
  public:
-  friend class autograd::AutogradRuntime;
   using Executor::MonitorCallback;
 
+  GraphExecutor();
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -78,6 +94,7 @@ class GraphExecutor : public Executor {
             const std::vector<Context>& aux_state_ctxes,
             const std::unordered_map<std::string, TShape>& arg_shape_map,
             const std::unordered_map<std::string, int>& arg_dtype_map,
+            const std::unordered_map<std::string, int>& arg_stype_map,
             const std::vector<OpReqType>& grad_req_types,
             const std::unordered_set<std::string>& shared_arg_names,
             std::vector<NDArray>* in_arg_vec,
@@ -89,6 +106,7 @@ class GraphExecutor : public Executor {
               = nnvm::NodeEntryMap<NDArray>());
 
  protected:
+  friend class mxnet::Imperative;
   // Information about operational node
   struct OpNode {
     // The name of the operator
@@ -123,6 +141,7 @@ class GraphExecutor : public Executor {
   void InitArguments(const nnvm::IndexedGraph& idx,
                      const nnvm::ShapeVector& inferred_shapes,
                      const nnvm::DTypeVector& inferred_dtypes,
+                     const StorageTypeVector& inferred_stypes,
                      const std::vector<Context>& in_arg_ctxes,
                      const std::vector<Context>& arg_grad_ctxes,
                      const std::vector<Context>& aux_state_ctxes,
@@ -135,6 +154,7 @@ class GraphExecutor : public Executor {
   void InitArguments(const nnvm::IndexedGraph& idx,
                      const nnvm::ShapeVector& inferred_shapes,
                      const nnvm::DTypeVector& inferred_dtypes,
+                     const StorageTypeVector& inferred_stypes,
                      const std::vector<Context>& in_arg_ctxes,
                      const std::vector<Context>& arg_grad_ctxes,
                      const std::vector<Context>& aux_state_ctxes,
@@ -183,7 +203,8 @@ class GraphExecutor : public Executor {
   std::vector<OpNode> op_nodes_;
   // internal data entry of each node
   std::vector<NDArray> data_entry_;
-  // internal data pool of allocated entries
+  // internal data pool of allocated entries.
+  // these allocated entries can be used for static memory sharing between executors.
   std::vector<NDArray> data_pool_;
   // output arrays
   std::vector<NDArray> output_arrays_;
@@ -215,6 +236,8 @@ class GraphExecutor : public Executor {
   bool prefer_bulk_execution_;
   // cached segment operator
   std::vector<CachedSegOpr> cached_seg_opr_;
+  // verbose logging
+  bool log_verbose_ = false;
 };
 
 }  // namespace exec

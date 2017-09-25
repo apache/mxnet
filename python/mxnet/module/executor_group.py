@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes,too-many-locals
 # pylint: disable=too-many-branches,too-many-statements,too-many-arguments
 """Executor group is a convenient tool for managing a group of executors."""
@@ -77,6 +94,18 @@ def _merge_multi_context(outputs, major_axis):
             # first one, without checking they are actually the same
             rets.append(tensors[0])
     return rets
+
+
+def _slice_axis(arr, axis, islice):
+    """Slices array along axis"""
+    if axis == 0:
+        # slicing NDArray along axis 0 can avoid copying
+        return arr[islice]
+    elif axis > 0:
+        # pylint: disable=no-member
+        return nd.slice(arr, axis=axis, begin=islice.start, end=islice.stop)
+        # pylint: enable=no-member
+    return arr
 
 
 class DataParallelExecutorGroup(object):
@@ -189,6 +218,7 @@ class DataParallelExecutorGroup(object):
 
         # initialize some instance variables
         self.batch_size = None
+        self.cur_batch_pad = None
         self.slices = None
         self.execs = []
         self._default_execs = None
@@ -383,6 +413,8 @@ class DataParallelExecutorGroup(object):
 
         """
         _load_data(data_batch, self.data_arrays, self.data_layouts)
+        self.cur_batch_pad = getattr(data_batch, 'pad', None)
+
         if is_train is None:
             is_train = self.for_training
 
@@ -540,28 +572,23 @@ class DataParallelExecutorGroup(object):
             The metric used for evaluation.
         labels : list of NDArray
             Typically comes from `label` of a `DataBatch`.
-        begin : int
-            Starting index of used outputs.
-        end : int or None
-            Ending index of used outputs.
         """
+        pad = self.cur_batch_pad or 0
+        valid_stop = self.batch_size - pad
         for texec, islice in zip(self.execs, self.slices):
             labels_slice = []
-            for label, axis in zip(labels, self.label_layouts):
-                if axis == 0:
-                    # slicing NDArray along axis 0 can avoid copying
-                    labels_slice.append(label[islice])
-                elif axis > 0:
-                    # pylint: disable=no-member
-                    label_my_slice = nd.slice_axis(label, axis=axis, begin=islice.start,
-                                                   end=islice.stop).as_in_context(label.context)
-                    # pylint: enable=no-member
-                    labels_slice.append(label_my_slice)
-                else:
-                    labels_slice.append(label)
-
+            outputs_slice = []
+            if islice.start >= valid_stop:
+                break
+            if islice.stop > valid_stop:
+                islice = slice(islice.start, valid_stop)
+            oslice = slice(0, islice.stop - islice.start)
+            for label, laxis in zip(labels, self.label_layouts):
+                labels_slice.append(_slice_axis(label, laxis, islice))
+            for output, oaxis in zip(texec.outputs, self.output_layouts):
+                outputs_slice.append(_slice_axis(output, oaxis, oslice))
             labels_ = OrderedDict(zip(self.label_names, labels_slice))
-            preds = OrderedDict(zip(self.output_names, texec.outputs))
+            preds = OrderedDict(zip(self.output_names, outputs_slice))
             eval_metric.update_dict(labels_, preds)
 
     def _bind_ith_exec(self, i, data_shapes, label_shapes, shared_group):

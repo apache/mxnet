@@ -459,6 +459,13 @@ int MXNDArrayGetContext(NDArrayHandle handle,
                                   int *out,
                                   int *out);
 /*!
+ * \brief return gradient buffer attached to this NDArray
+ * \param handle NDArray handle
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out);
+
+/*!
  * \brief detach and ndarray from computation graph by clearing entry_
  * \param handle NDArray handle
  * \return 0 when success, -1 when failure happens
@@ -591,12 +598,35 @@ int MXImperativeInvoke(AtomicSymbolCreator in,
                                  const char **keys,
                                  const char **vals);
 /*!
+  * \brief set whether to record operator for autograd
+ * \param is_recording 1 when recording, 0 when not recording.
+ * \param prev returns the previous status before this set.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradSetIsRecording(int is_recording, int* out);
+
+/*!
  * \brief set whether to record operator for autograd
  * \param is_train 1 when training, 0 when testing
  * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
  */
 int MXAutogradSetIsTraining(int is_training, int* out);
+
+/*!
+ * \brief get whether autograd recording is on
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradIsRecording(bool* out);
+
+/*!
+ * \brief get whether training mode is on
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradIsTraining(bool* out);
+
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
@@ -627,6 +657,33 @@ int MXAutogradBackward(mx_uint num_output,
                                  NDArrayHandle* in,
                                  NDArrayHandle* in,
                                  int retain_graph);
+
+/*!
+ * \brief compute the gradient of outputs w.r.t variabels
+ * \param num_output number of output NDArray
+ * \param output_handles output NDArrays
+ * \param ograd_handles head gradient for NDArrays
+ * \param retain_graph whether to keep the graph after backward
+ * \param is_train whether to do backward for training or inference
+ * \return 0 when success, -1 when failure happens
+ */
+int MXAutogradBackwardEx(mx_uint num_output,
+                                   NDArrayHandle *in,
+                                   NDArrayHandle *in,
+                                   mx_uint num_variables,
+                                   NDArrayHandle *in,
+                                   int retain_graph,
+                                   int create_graph,
+                                   int is_train,
+                                   NDArrayHandle **out_grad,
+                                   int **out_stype);
+
+/*
+ * \brief get the graph constructed by autograd.
+ * \param handle ndarray handle
+ * \param out output symbol handle
+ */
+int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out);
 
  /*!
   * \brief create cached operator
@@ -1070,6 +1127,21 @@ int MXExecutorBackward(ExecutorHandle handle,
                                  NDArrayHandle *in);
 
 /*!
+ * \brief Excecutor run backward
+ *
+ * \param handle execute handle
+ * \param len lenth
+ * \param head_grads NDArray handle for heads' gradient
+ * \param is_train int value to indicate whether the backward pass is for evaluation
+ *
+ * \return 0 when success, -1 when failure happens
+ */
+int MXExecutorBackwardEx(ExecutorHandle handle,
+                                   mx_uint len,
+                                   NDArrayHandle *in,
+                                   int is_train);
+
+/*!
  * \brief Get executor's head NDArray
  *
  * \param handle executor handle
@@ -1196,6 +1268,12 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          const mx_uint num_provided_arg_dtypes,
                          const char** in, // provided_arg_dtype_names,
                          const int* in, // provided_arg_dtypes,
+
+//---------------        sparse related variables, ignored for now
+                         const mx_uint num_provided_arg_stypes,
+                         const char** provided_arg_stype_names,
+                         const int* provided_arg_stypes,
+//---------------
                          const mx_uint num_shared_arg_names,
                          const char** in, // shared_arg_name_list,
 //------------
@@ -1335,7 +1413,6 @@ int MXDataIterGetLabel(DataIterHandle handle,
 int MXInitPSEnv(mx_uint num_vars,
                           const char **keys,
                           const char **vals);
-
 
 /*!
  * \brief Create a kvstore

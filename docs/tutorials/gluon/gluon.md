@@ -102,7 +102,8 @@ To compute loss and backprop for one iteration, we do:
 label = mx.nd.arange(10)  # dummy label
 with autograd.record():
     output = net(data)
-    loss = gluon.loss.softmax_cross_entropy_loss(output, label)
+    L = gluon.loss.SoftmaxCrossEntropyLoss()
+    loss = L(output, label)
     loss.backward()
 print('loss:', loss)
 print('grad:', net.fc1.weight.grad())
@@ -127,9 +128,10 @@ this is a commonly used functionality, gluon provide a `Trainer` class for it:
 ```python
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.01})
 
-with record():
+with autograd.record():
     output = net(data)
-    loss = gluon.loss.softmax_cross_entropy_loss(output, label)
+    L = gluon.loss.SoftmaxCrossEntropyLoss()
+    loss = L(output, label)
     loss.backward()
 
 # do the update. Trainer needs to know the batch size of data to normalize

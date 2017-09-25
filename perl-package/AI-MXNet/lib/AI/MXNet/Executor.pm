@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Executor;
 use strict;
 use warnings;
@@ -9,7 +26,7 @@ use AI::MXNet::Function::Parameters;
 
 has 'handle'            => (is => 'ro', isa => 'ExecutorHandle', required => 1);
 has 'arg_arrays'        => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]');
-has 'grad_arrays'       => (is => 'rw', isa => 'Maybe[ArrayRef[Undef|AI::MXNet::NDArray]]'); 
+has 'grad_arrays'       => (is => 'rw', isa => 'Maybe[ArrayRef[Undef|AI::MXNet::NDArray]]');
 has 'aux_arrays'        => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]');
 has '_symbol'           => (is => 'rw', init_arg => 'symbol',    isa => 'AI::MXNet::Symbol');
 has '_ctx'              => (is => 'rw', init_arg => 'ctx',       isa => 'AI::MXNet::Context' );
@@ -21,7 +38,7 @@ has [qw/_arg_dict
         _aux_dict
         _output_dict
         outputs
-        _output_dirty/] => (is => 'rw', init_arg => undef);
+    /]                  => (is => 'rw', init_arg => undef);
 =head1 NAME
 
     AI::MXNet::Executor - The actual executing object of MXNet.
@@ -174,14 +191,6 @@ method forward(Int $is_train=0, %kwargs)
             $is_train
         )
     );
-    if($self->_output_dirty)
-    {
-        AI::MXNet::Logging->warning(
-            "Calling forward the second time after forward(is_train=1) "
-            ."without calling backward first. Is this intended?"
-        );
-    }
-    $self->_output_dirty($is_train);
     return $self->outputs;
 }
 
@@ -195,9 +204,17 @@ method forward(Int $is_train=0, %kwargs)
         The gradient on the outputs to be propagated back.
         This parameter is only needed when bind is called
         on outputs that are not a loss function.
+
+    is_train : bool, default 1
+        Whether this backward is for training or inference. Note that in rare
+        cases you want to call backward with is_train=0 to get gradient
+        during inference.
 =cut
 
-method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|HashRef[AI::MXNet::NDArray]] $out_grads=)
+method backward(
+    Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|HashRef[AI::MXNet::NDArray]] $out_grads=,
+    Bool $is_train=1
+)
 {
     $out_grads //= [];
     if(blessed $out_grads)
@@ -209,20 +226,13 @@ method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|HashRef[AI
         $out_grads = [ @{ $out_grads }{ @{ $self->symbol->list_outputs() } } ];
     }
     check_call(
-        AI::MXNetCAPI::ExecutorBackward(
+        AI::MXNetCAPI::ExecutorBackwardEx(
             $self->handle,
             scalar(@{ $out_grads }),
-            [map { $_->handle } @{ $out_grads }]
+            [map { $_->handle } @{ $out_grads }],
+            $is_train
         )
     );
-    if(not $self->_output_dirty)
-    {
-        AI::MXNet::Logging->warning(
-            "Calling backward without calling forward(is_train=True) "
-            ."first. Behavior is undefined."
-        );
-    }
-    $self->_output_dirty(0);
 }
 
 =head2 set_monitor_callback
@@ -420,7 +430,7 @@ method copy_params_from(
 method reshape(HashRef[Shape] $kwargs, Int :$partial_shaping=0, Int :$allow_up_sizing=0)
 {
     my ($arg_shapes, undef, $aux_shapes) = $self->_symbol->infer_shape(%{ $kwargs });
-    confess("Insufficient argument shapes provided.") 
+    confess("Insufficient argument shapes provided.")
         unless defined $arg_shapes;
     my %new_arg_dict;
     my %new_grad_dict;

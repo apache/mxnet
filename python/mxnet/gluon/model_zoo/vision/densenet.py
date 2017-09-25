@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable= arguments-differ
 """DenseNet, implemented in Gluon."""
@@ -102,7 +119,7 @@ densenet_spec = {121: (64, 32, [6, 12, 24, 16]),
 
 
 # Constructor
-def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
+def get_densenet(num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""Densenet-BC model from the
     `"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_ paper.
 
@@ -114,12 +131,14 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     num_init_features, growth_rate, block_config = densenet_spec[num_layers]
     net = DenseNet(num_init_features, growth_rate, block_config, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('densenet%d'%(num_layers)), ctx=ctx)
+        net.load_params(get_model_file('densenet%d'%(num_layers), root=root), ctx=ctx)
     return net
 
 def densenet121(**kwargs):
@@ -132,6 +151,8 @@ def densenet121(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(121, **kwargs)
 
@@ -145,6 +166,8 @@ def densenet161(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(161, **kwargs)
 
@@ -158,6 +181,8 @@ def densenet169(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(169, **kwargs)
 
@@ -171,5 +196,7 @@ def densenet201(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_densenet(201, **kwargs)

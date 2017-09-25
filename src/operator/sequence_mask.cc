@@ -1,23 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file sequence_mask.cc
  * \brief
  * \author Sebastian Bodenstein
 */
 #include "./sequence_mask-inl.h"
-
-namespace mshadow {
-
-template <typename DType>
-inline void SequenceMask(const Tensor<cpu, 3, DType> &dst,
-                         const Tensor<cpu, 1, DType> label, DType value) {
-  for (index_t b = 0; b < dst.size(1); ++b)
-    for (index_t s = label[b]; s < dst.size(0); ++s)
-      for (index_t r = 0; r < dst.size(2); ++r)
-        dst[s][b][r] = value;
-}
-
-}  // namespace mshadow
 
 namespace mxnet {
 namespace op {

@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2016 by Contributors
  * \file wl_sequence_mask-inl.h
  * \brief
  * \author Sebastian Bodenstien
@@ -18,7 +36,7 @@
 #include <utility>
 #include "./operator_common.h"
 #include "./mshadow_op.h"
-#include "./operator_common.h"
+#include "./nn/sequence_mask-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -72,7 +90,7 @@ class SequenceMaskOp : public Operator {
     if (param_.use_sequence_length) {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      SequenceMask(out, indices, static_cast<DType>(param_.value));
+      mxnet_op::SequenceMask(out, indices, static_cast<DType>(param_.value));
     }
   }
 
@@ -108,7 +126,7 @@ class SequenceMaskOp : public Operator {
     if (param_.use_sequence_length) {
       Tensor<xpu, 1, DType> indices =
           in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
-      SequenceMask(data_grad, indices, DType(0));
+      mxnet_op::SequenceMask(data_grad, indices, DType(0));
     }
   }
 
@@ -151,8 +169,8 @@ class SequenceMaskProp : public OperatorProperty {
         << "Input:[data, sequence_length]";
 
     const TShape &dshape = (*in_shape)[seq_mask::kData];
-    CHECK_GT(dshape.ndim(), 2U)
-        << "The data array must be of rank 3 or greater.";
+    CHECK_GT(dshape.ndim(), 1U)
+        << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
     if (param_.use_sequence_length)
       SHAPE_ASSIGN_CHECK(*in_shape, seq_mask::kSequenceLength,
@@ -173,10 +191,7 @@ class SequenceMaskProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at "
-                                       << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

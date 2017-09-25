@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
@@ -10,6 +27,7 @@ from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
 from .base import check_call, c_array, py_str
 from .ndarray import NDArray
+from .ndarray import _ndarray_cls
 from . import ndarray as nd
 
 # those functions are not used here, we just import them to keep backward compatibility
@@ -88,7 +106,9 @@ class Executor(object):
         handles = ctypes.POINTER(NDArrayHandle)()
         check_call(_LIB.MXExecutorOutputs(self.handle,
                                           ctypes.byref(out_size), ctypes.byref(handles)))
-        return [NDArray(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+        num_output = out_size.value
+        outputs = [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(num_output)]
+        return outputs
 
     def forward(self, is_train=False, **kwargs):
         """Calculate the outputs specified by the bound symbol.

@@ -1,4 +1,22 @@
 #!/usr/bin/env python
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import sys
 sys.path.insert(0, "../../python/")
 import mxnet as mx
@@ -19,7 +37,7 @@ data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for 
 def test_kvstore(kv_type):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', lr))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
 
@@ -45,7 +63,7 @@ test_kvstore('local_allreduce_device')
 def test_group_kvstore(kv_type):
     print(kv_type)
     kv = mx.kv.create(kv_type)
-    kv.set_optimizer(mx.optimizer.create('test', lr))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
     kv.init(keys, [mx.nd.zeros(s) for s in shapes])
     res = [np.zeros(s) for s in shapes]
     out = [[mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)] for s in shapes]

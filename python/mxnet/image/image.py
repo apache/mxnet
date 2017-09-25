@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=no-member, too-many-lines, redefined-builtin, protected-access, unused-import, invalid-name
 # pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Read individual image files and perform augmentations."""
@@ -17,18 +34,59 @@ except ImportError:
 
 from ..base import numeric_types
 from .. import ndarray as nd
-from .. import _ndarray_internal as _internal
-from .._ndarray_internal import _cvimresize as imresize
-from .._ndarray_internal import _cvcopyMakeBorder as copyMakeBorder
+from ..ndarray import _internal
+from ..ndarray._internal import _cvimresize as imresize
+from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .. import recordio
+
+
+def imread(filename, *args, **kwargs):
+    """Read and decode an image to an NDArray.
+
+    Note: `imread` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the image file to be loaded.
+    flag : {0, 1}, default 1
+        1 for three channel color output. 0 for grayscale output.
+    to_rgb : bool, default True
+        True for RGB formatted output (MXNet default).
+        False for BGR formatted output (OpenCV default).
+    out : NDArray, optional
+        Output buffer. Use `None` for automatic allocation.
+
+    Returns
+    -------
+    NDArray
+        An `NDArray` containing the image.
+
+    Example
+    -------
+    >>> mx.img.imread("flower.jpg")
+    <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> mx.img.imdecode("flower.jpg", flag=0)
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> mx.img.imdecode(str_image, to_rgb=0)
+    <NDArray 224x224x3 @cpu(0)>
+    """
+    return _internal._cvimread(filename, *args, **kwargs)
 
 
 def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
     Note: `imdecode` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with OpenCV for `imdecode` to work.
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -113,7 +171,7 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 
-def _get_interp_method(interp, sizes=None):
+def _get_interp_method(interp, sizes=()):
     """Get the interpolation method for resize functions.
     The major purpose of this function is to wrap a random interp method selection
     and a auto-estimation method.
@@ -464,7 +522,7 @@ class ResizeAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [resize_short(src, self.size, self.interp)]
+        return resize_short(src, self.size, self.interp)
 
 
 class ForceResizeAug(Augmenter):
@@ -485,7 +543,7 @@ class ForceResizeAug(Augmenter):
     def __call__(self, src):
         """Augmenter body"""
         sizes = (src.shape[0], src.shape[1], self.size[1], self.size[0])
-        return [imresize(src, *self.size, interp=_get_interp_method(self.interp, sizes))]
+        return imresize(src, *self.size, interp=_get_interp_method(self.interp, sizes))
 
 
 class RandomCropAug(Augmenter):
@@ -505,7 +563,7 @@ class RandomCropAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [random_crop(src, self.size, self.interp)[0]]
+        return random_crop(src, self.size, self.interp)[0]
 
 
 class RandomSizedCropAug(Augmenter):
@@ -532,7 +590,7 @@ class RandomSizedCropAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [random_size_crop(src, self.size, self.min_area, self.ratio, self.interp)[0]]
+        return random_size_crop(src, self.size, self.min_area, self.ratio, self.interp)[0]
 
 
 class CenterCropAug(Augmenter):
@@ -552,7 +610,7 @@ class CenterCropAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [center_crop(src, self.size, self.interp)[0]]
+        return center_crop(src, self.size, self.interp)[0]
 
 
 class RandomOrderAug(Augmenter):
@@ -573,10 +631,9 @@ class RandomOrderAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        src = [src]
         random.shuffle(self.ts)
         for t in self.ts:
-            src = [j for i in src for j in t(i)]
+            src = t(src)
         return src
 
 
@@ -596,7 +653,7 @@ class BrightnessJitterAug(Augmenter):
         """Augmenter body"""
         alpha = 1.0 + random.uniform(-self.brightness, self.brightness)
         src *= alpha
-        return [src]
+        return src
 
 
 class ContrastJitterAug(Augmenter):
@@ -619,7 +676,7 @@ class ContrastJitterAug(Augmenter):
         gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
         src *= alpha
         src += gray
-        return [src]
+        return src
 
 
 class SaturationJitterAug(Augmenter):
@@ -643,7 +700,7 @@ class SaturationJitterAug(Augmenter):
         gray *= (1.0 - alpha)
         src *= alpha
         src += gray
-        return [src]
+        return src
 
 
 class HueJitterAug(Augmenter):
@@ -670,14 +727,14 @@ class HueJitterAug(Augmenter):
         https://beesbuzz.biz/code/hsv_color_transforms.php
         """
         alpha = random.uniform(-self.hue, self.hue)
-        vsu = np.cos(alpha * np.pi)
-        vsw = np.sin(alpha * np.pi)
+        u = np.cos(alpha * np.pi)
+        w = np.sin(alpha * np.pi)
         bt = np.array([[1.0, 0.0, 0.0],
-                       [0.0, vsu, -vsw],
-                       [0.0, vsw, vsu]])
-        t = np.dot(np.dot(self.tyiq, bt), self.ityiq).T
+                       [0.0, u, -w],
+                       [0.0, w, u]])
+        t = np.dot(np.dot(self.ityiq, bt), self.tyiq).T
         src = nd.dot(src, nd.array(t))
-        return [src]
+        return src
 
 
 class ColorJitterAug(RandomOrderAug):
@@ -726,7 +783,7 @@ class LightingAug(Augmenter):
         alpha = np.random.normal(0, self.alphastd, size=(3,))
         rgb = np.dot(self.eigvec * alpha, self.eigval)
         src += nd.array(rgb)
-        return [src]
+        return src
 
 
 class ColorNormalizeAug(Augmenter):
@@ -746,7 +803,7 @@ class ColorNormalizeAug(Augmenter):
 
     def __call__(self, src):
         """Augmenter body"""
-        return [color_normalize(src, self.mean, self.std)]
+        return color_normalize(src, self.mean, self.std)
 
 
 class RandomGrayAug(Augmenter):
@@ -768,7 +825,7 @@ class RandomGrayAug(Augmenter):
         """Augmenter body"""
         if random.random() < self.p:
             src = nd.dot(src, self.mat)
-        return [src]
+        return src
 
 
 class HorizontalFlipAug(Augmenter):
@@ -787,7 +844,7 @@ class HorizontalFlipAug(Augmenter):
         """Augmenter body"""
         if random.random() < self.p:
             src = nd.flip(src, axis=1)
-        return [src]
+        return src
 
 
 class CastAug(Augmenter):
@@ -798,7 +855,7 @@ class CastAug(Augmenter):
     def __call__(self, src):
         """Augmenter body"""
         src = src.astype(np.float32)
-        return [src]
+        return src
 
 
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
@@ -809,31 +866,34 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     Parameters
     ----------
     data_shape : tuple of int
-        shape for output data
+        Shape for output data
     resize : int
-        resize shorter edge if larger than 0 at the begining
-    rand_resize : float
-        [0, 1], probability to apply random resizing
+        Resize shorter edge if larger than 0 at the begining
+    rand_crop : bool
+        Whether to enable random cropping other than center crop
+    rand_resize : bool
+        Whether to enable random sized cropping, require rand_crop to be enabled
     rand_gray : float
-        [0, 1], probability to convert to grayscale for all channels
+        [0, 1], probability to convert to grayscale for all channels, the number
+        of channels will not be reduced to 1
     rand_mirror : bool
-        whether apply horizontal flip to image with probability 0.5
+        Whether to apply horizontal flip to image with probability 0.5
     mean : np.ndarray or None
-        mean pixel values for [r, g, b]
+        Mean pixel values for [r, g, b]
     std : np.ndarray or None
-        standard deviations for [r, g, b]
+        Standard deviations for [r, g, b]
     brightness : float
-        brightness jittering range (percent)
+        Brightness jittering range (percent)
     contrast : float
-        contrast jittering range
+        Contrast jittering range (percent)
     saturation : float
-        saturation jittering range
+        Saturation jittering range (percent)
     hue : float
-        hue jittering range
+        Hue jittering range (percent)
     pca_noise : float
-        pca noise level
+        Pca noise level (percent)
     inter_method : int, default=2(Area-based)
-        interpolation method for all resizing operations
+        Interpolation method for all resizing operations
 
         Possible values:
         0: Nearest Neighbors Interpolation.
@@ -1088,18 +1148,17 @@ class ImageIter(io.DataIter):
         try:
             while i < batch_size:
                 label, s = self.next_sample()
-                data = [self.imdecode(s)]
+                data = self.imdecode(s)
                 try:
                     self.check_valid_image(data)
                 except RuntimeError as e:
                     logging.debug('Invalid image, skipping:  %s', str(e))
                     continue
                 data = self.augmentation_transform(data)
-                for datum in data:
-                    assert i < batch_size, 'Batch size must be multiples of augmenter output length'
-                    batch_data[i][:] = self.postprocess_data(datum)
-                    batch_label[i][:] = label
-                    i += 1
+                assert i < batch_size, 'Batch size must be multiples of augmenter output length'
+                batch_data[i] = self.postprocess_data(data)
+                batch_label[i] = label
+                i += 1
         except StopIteration:
             if not i:
                 raise StopIteration
@@ -1121,7 +1180,23 @@ class ImageIter(io.DataIter):
     def imdecode(self, s):
         """Decodes a string or byte string to an NDArray.
         See mx.img.imdecode for more details."""
-        return imdecode(s)
+        def locate():
+            """Locate the image file/index if decode fails."""
+            if self.seq is not None:
+                idx = self.seq[self.cur - 1]
+            else:
+                idx = self.cur - 1
+            if self.imglist is not None:
+                _, fname = self.imglist[idx]
+                msg = "filename: {}".format(fname)
+            else:
+                msg = "index: {}".format(idx)
+            return "Broken image " + msg
+        try:
+            img = imdecode(s)
+        except Exception as e:
+            raise RuntimeError("{}, {}".format(locate(), e))
+        return img
 
     def read_image(self, fname):
         """Reads an input image `fname` and returns the decoded raw bytes.
@@ -1137,7 +1212,7 @@ class ImageIter(io.DataIter):
     def augmentation_transform(self, data):
         """Transforms input data with specified augmentation."""
         for aug in self.auglist:
-            data = [ret for src in data for ret in aug(src)]
+            data = aug(data)
         return data
 
     def postprocess_data(self, datum):

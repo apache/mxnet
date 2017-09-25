@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=no-member, protected-access, unused-import, no-name-in-module
 """Random number interface of MXNet."""
@@ -5,13 +22,13 @@ from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call
-from ._ndarray_internal import _sample_uniform as uniform
-from ._ndarray_internal import _sample_normal as normal
-from ._ndarray_internal import _sample_gamma as gamma
-from ._ndarray_internal import _sample_exponential as exponential
-from ._ndarray_internal import _sample_poisson as poisson
-from ._ndarray_internal import _sample_negbinomial as negative_binomial
-from ._ndarray_internal import _sample_gennegbinomial as generalized_negative_binomial
+from .ndarray._internal import _sample_uniform as uniform
+from .ndarray._internal import _sample_normal as normal
+from .ndarray._internal import _sample_gamma as gamma
+from .ndarray._internal import _sample_exponential as exponential
+from .ndarray._internal import _sample_poisson as poisson
+from .ndarray._internal import _sample_negbinomial as negative_binomial
+from .ndarray._internal import _sample_gennegbinomial as generalized_negative_binomial
 
 def seed(seed_state):
     """Seeds the random number generators in MXNet.
@@ -31,19 +48,19 @@ def seed(seed_state):
 
     Example
     -------
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.36481571 -0.62203991]
      [-1.4962182  -0.08511394]]
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.09544981 -0.20014545]
      [-0.20808885  0.2527658 ]]
     >>>
     >>> mx.random.seed(128)
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     >>> mx.random.seed(128)
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     """

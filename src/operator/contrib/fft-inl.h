@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file fft-inl.h
  * \brief
  * \author Chen Zhu
@@ -36,6 +54,7 @@ struct FFTParam : public dmlc::Parameter<FFTParam> {
   }
 };
 
+#if MXNET_USE_CUDA
 template<typename xpu, typename DType>
 class FFTOp : public Operator {
  public:
@@ -84,7 +103,6 @@ class FFTOp : public Operator {
                 Shape1(param_.compute_size*dim_*2), s);
     Tensor<xpu, 2, DType> complex_data = Tensor<xpu, 2, DType>(workspace.dptr_,
                                               Shape2(param_.compute_size, dim_*2), s);
-    #if MSHADOW_USE_CUDNN
     // start fft
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
@@ -117,7 +135,6 @@ class FFTOp : public Operator {
       CHECK_EQ(cufftExecC2C(plan_remain, in_tmp, out_tmp, CUFFT_FORWARD), CUFFT_SUCCESS);
       cufftDestroy(plan_remain);
     }
-    #endif
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -152,7 +169,6 @@ class FFTOp : public Operator {
     // In this solution, out_grad must comes from a fft of real signal,
     // so that it is Hermitian symmetric, giving a real output
     // but if it is not, remember that we have implemented complex_take_real, and use this
-    #if MSHADOW_USE_CUDNN
     cufftHandle plan;
     cufftPlanMany(&plan, 1, &dim_, nullptr, 0, 0, nullptr, 0, 0, CUFFT_C2C, param_.compute_size);
     for (size_t idx = 0; idx < num_compute; ++idx) {
@@ -185,7 +201,6 @@ class FFTOp : public Operator {
              req[fft::kData], complex_toreal(complex_data));
       cufftDestroy(plan_remain);
     }
-    #endif
     // for bp, we should not divide it
     // but for comparison with np.fft.ifft, we should do it.
     // gdata /= dim_;
@@ -193,9 +208,11 @@ class FFTOp : public Operator {
 
  private:
   FFTParam param_;
-  int dim_, stride_, num_compute, n_ffts;
+  int dim_, stride_, n_ffts;
+  size_t num_compute;
   bool init_cufft_;
 };  // class FFTOp
+#endif  // MXNET_USE_CUDA
 
 // Declare Factory Function, used for dispatch specialization
 template<typename xpu>
@@ -244,9 +261,7 @@ class FFTProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

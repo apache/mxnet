@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
@@ -11,12 +29,15 @@
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
 #include <mxnet/operator.h>
+#include <mxnet/ndarray.h>
+#include <mxnet/op_attr_types.h>
 #include <mxnet/base.h>
 #include <istream>
 #include <ostream>
 #include <string>
 #include <vector>
 #include "../common/cuda_utils.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -68,7 +89,7 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unkown (0) dim. */
+/*! \brief check if shape is empty or contains unknown (0) dim. */
 inline bool shape_is_none(const TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
@@ -183,6 +204,37 @@ inline bool type_assign(int *y, const int& x) {
     }                                                                       \
   }
 
+/*!
+ * \brief macro check if type is the same as expected.
+ * \param type the type to be checked
+ * \param expected the expected type
+ */
+#define UNIFORM_TYPE_CHECK(type, expected, arg)                         \
+  {                                                                     \
+    CHECK_EQ(type, expected) << "This layer requires uniform type. "    \
+                             << "Expected '" << type_string(expected)   \
+                             << "' v.s. given '" << type_string(type)   \
+                             << "' at '" << arg << "'";                 \
+  }
+
+/*!
+ * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the storage type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred storage type
+ */
+#define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
+  {                                                                         \
+    if (!type_assign(&(type_array)[index], type)) {                         \
+      std::ostringstream os;                                                \
+      os << "Storage type inconsistent, Provided="                          \
+         << common::stype_string((type_array)[index]) << ','                \
+         << " inferred storage type=" << common::stype_string(type);        \
+      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
+    }                                                                       \
+  }
+
 // helper macro to implement bind dispatch
 #if MXNET_USE_CUDA
 #define DO_BIND_DISPATCH(Method, ...)                                \
@@ -282,7 +334,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const char* op_name, const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
-    const std::unordered_map<std::string, std::string> dict) {
+    const std::unordered_map<std::string, std::string>& dict) {
   if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
@@ -314,6 +366,101 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   }
   attrs->parsed = std::move(param);
 }
+
+/*! \brief Perform storage fallback to invoke fcompute.
+ *  \param attrs attributes of the operator
+ *  \param ctx operator context
+ *  \param inputs inputs of fcompute
+ *  \param req req of fcompute
+ *  \param outputs outputs of fcompute
+ *  \param fcompute
+ *  \param fname name of the operator
+ *  \param mutate_idx the indices of mutable inputs
+ */
+template <typename xpu>
+void FCompExFallback(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs,
+                     FCompute fcompute,
+                     const std::string& fname,
+                     std::vector<uint32_t> mutate_idx = {}) {
+  using namespace mxnet::common;
+  std::vector<TBlob> in_blobs, out_blobs;
+  std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
+  // mapping from index in input_blobs to index in pre_temp_dst
+  std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+  SetupDefaultBlobs(inputs, &in_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
+  SetupDefaultBlobs(outputs, &out_blobs, &post_temp_dst, &post_temp_src);
+  for (const auto idx : mutate_idx) {
+    auto map_iter = in_temp_idx_map.find(idx);
+    if (map_iter != in_temp_idx_map.end()) {
+      post_temp_src.push_back(pre_temp_dst[map_iter->second]);
+      post_temp_dst.push_back(inputs[idx]);
+    }
+  }
+  CastNonDefaultStorage<xpu>(pre_temp_src, pre_temp_dst, ctx, true);
+  fcompute(attrs, ctx, in_blobs, req, out_blobs);
+  CastNonDefaultStorage<xpu>(post_temp_src, post_temp_dst, ctx, true);
+}
+
+#define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \
+  {                                                                                \
+    CHECK(rsp.storage_shape()[0] == rsp.shape()[0]) << func                        \
+          << " for RowSparse " << param << " is only implemented for "             \
+          << "RowSparse " << param << " with all rows containing non-zeros. "      \
+          << "Expects " << param << ".values.shape[0] (" << rsp.storage_shape()[0] \
+          << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
+  }
+
+/*! \brief Temporary storage for Alpha release of Sparse Tensors. Please do not use, as this
+ * function will be removed
+ */
+template<typename DType>
+class SparseTempStorage {
+  inline DType *Alloc(const size_t count) {
+    CHECK_GT(count, 0U);  // You've probably made a mistake
+    CHECK_EQ(handle_.dptr, static_cast<void *>(nullptr));
+    Storage *storage = mxnet::Storage::Get();
+    if (storage) {
+      handle_ = storage->Alloc(count * sizeof(DType), op_ctx_.run_ctx.ctx);
+    }
+    return static_cast<DType *>(handle_.dptr);
+  }
+  inline void Free() {
+    if (handle_.dptr) {
+      Storage *storage = mxnet::Storage::Get();
+      if (storage) {
+        storage->DirectFree(handle_);
+        handle_.dptr = nullptr;
+      }
+    }
+  }
+  inline DType *dptr() {
+    return static_cast<DType *>(handle_.dptr);
+  }
+
+ public:
+  explicit inline SparseTempStorage(const OpContext& op_ctx)
+    : op_ctx_(op_ctx) {
+    handle_.dptr = nullptr;
+  }
+  inline ~SparseTempStorage() {
+    Free();
+  }
+  template<typename xpu, int ndim>
+  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(const mshadow::Shape<ndim>& shape) {
+    if (!dptr()) {
+      Alloc(shape.Size());
+    }
+    return mshadow::Tensor<xpu, ndim, DType>(dptr(), shape, op_ctx_.run_ctx.get_stream<xpu>());
+  }
+
+ private:
+  const OpContext& op_ctx_;
+  Storage::Handle  handle_;
+};
 
 }  // namespace op
 }  // namespace mxnet

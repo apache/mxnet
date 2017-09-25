@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=no-member, too-many-lines
 
@@ -373,13 +390,13 @@ class Accuracy(EvalMetric):
         for label, pred_label in zip(labels, preds):
             if pred_label.shape != label.shape:
                 pred_label = ndarray.argmax(pred_label, axis=self.axis)
-            pred_label = pred_label.asnumpy().astype('int32')
-            label = label.asnumpy().astype('int32')
+            label = label.astype('int32')
+            pred_label = pred_label.astype('int32').as_in_context(label.context)
 
             check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label.flat == label.flat).sum()
-            self.num_inst += len(pred_label.flat)
+            self.sum_metric += ndarray.sum(label == pred_label).asscalar()
+            self.num_inst += label.size
 
 
 @register
@@ -837,10 +854,14 @@ class RMSE(EvalMetric):
 class CrossEntropy(EvalMetric):
     """Computes Cross Entropy loss.
 
-    The cross entropy is given by
+    The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
-        -y\\log \\hat{y} + (1-y)\\log (1-\\hat{y})
+       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
+
+    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
+    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
+    class :math:`k`.
 
     Parameters
     ----------
@@ -865,7 +886,7 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-8, name='cross-entropy',
+    def __init__(self, eps=1e-12, name='cross-entropy',
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, eps=eps,

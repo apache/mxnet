@@ -6,13 +6,11 @@
   <parent>
     <groupId>ml.dmlc.mxnet</groupId>
     <artifactId>mxnet-parent_2.11</artifactId>
-    <version>0.10.1-SNAPSHOT</version>
+    <version>0.11.1-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-core_2.11</artifactId>
-  <version>0.10.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Core</name>
 
   <profiles>
@@ -73,13 +71,13 @@
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-init_${scala.binary.version}</artifactId>
-      <version>${project.version}</version>
+      <version>0.11.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>ml.dmlc.mxnet</groupId>
       <artifactId>mxnet-macros_${scala.binary.version}</artifactId>
-      <version>${project.version}</version>
+      <version>0.11.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

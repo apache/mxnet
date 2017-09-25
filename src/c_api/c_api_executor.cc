@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2016 by Contributors
  * \file c_api_executor.cc
  * \brief C API of mxnet
  */
@@ -180,6 +198,9 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
  * \param num_provided_arg_dtypes number of user provided in_arg and axu_state dtypes
  * \param provided_arg_dtype_names argument name list of provided dtypes
  * \param provided_arg_dtypes data of provided dtypes
+ * \param num_provided_arg_stypes number of user provided in_arg and axu_state storage types
+ * \param provided_arg_stype_names argument name list of provided storage types
+ * \param provided_arg_stypes data of provided storage types
  * \param num_shared_arg_names number of parameter names passed from _bind_ith_exec
  * \param shared_arg_name_list parameter name list passed from _bind_ith_exec
  * \param shared_buffer_len number of shared data arrays passed from _bind_ith_exec
@@ -212,6 +233,9 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          const mx_uint num_provided_arg_dtypes,
                          const char** provided_arg_dtype_names,
                          const int* provided_arg_dtypes,
+                         const mx_uint num_provided_arg_stypes,
+                         const char** provided_arg_stype_names,
+                         const int* provided_arg_stypes,
                          const mx_uint num_shared_arg_names,
                          const char** shared_arg_name_list,
                          int* shared_buffer_len,
@@ -236,7 +260,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 
   // attr_dict for setting up type_dict and arg/aux ctx
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>> attr_dict;
-  if (nullptr == provided_arg_dtypes || nullptr != g2c_keys) {
+  if (nullptr == provided_arg_dtypes || nullptr != g2c_keys || nullptr == provided_arg_stypes) {
     std::vector<std::tuple<std::string, std::string, std::string>> attrs =
       sym->ListAttrsRecursive();
     attr_dict.reserve(attrs.size());
@@ -259,6 +283,23 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
     arg_dtype_map.reserve(num_provided_arg_dtypes);
     for (mx_uint i = 0; i < num_provided_arg_dtypes; ++i) {
       arg_dtype_map[provided_arg_dtype_names[i]] = provided_arg_dtypes[i];
+    }
+  }
+
+  // setup arg_stype_map
+  std::unordered_map<std::string, int> arg_stype_map;
+  if (nullptr == provided_arg_stypes) {  // use attr_dict
+    for (const auto& arg_name : in_arg_names) {
+      const auto it = attr_dict.find(arg_name);
+      if (it == attr_dict.end() || !it->second.count("__storage_type__")) {
+        arg_stype_map[arg_name] = kDefaultStorage;
+      }
+    }
+  } else {  // use user input type_dict
+    // create stype map for in_args and aux_states
+    arg_stype_map.reserve(num_provided_arg_stypes);
+    for (mx_uint i = 0; i < num_provided_arg_stypes; ++i) {
+      arg_stype_map[provided_arg_stype_names[i]] = provided_arg_stypes[i];
     }
   }
 
@@ -381,9 +422,6 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
 
   // create shared_buffer_map
   std::unordered_map<std::string, NDArray> shared_buffer_map;
-  std::vector<NDArray> shared_exec_in_args;
-  std::vector<NDArray> shared_exec_arg_grads;
-  std::vector<NDArray> shared_exec_aux_states;
   bool use_shared_buffer = (*shared_buffer_len >= 0);
   if (*shared_buffer_len > 0) {
     // create shared_buffer_map
@@ -402,9 +440,10 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   std::vector<NDArray> aux_state_vec;
 
   *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
-                              aux_state_ctx_vec, arg_shape_map, arg_dtype_map, grad_req_type_vec,
-                              shared_arg_name_set, &in_arg_vec, &arg_grad_vec, &aux_state_vec,
-                              use_shared_buffer? &shared_buffer_map : nullptr,
+                              aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
+                              grad_req_type_vec, shared_arg_name_set, &in_arg_vec,
+                              &arg_grad_vec, &aux_state_vec,
+                              use_shared_buffer ? &shared_buffer_map : nullptr,
                               reinterpret_cast<Executor*>(shared_exec_handle));
 
   // copy ndarray ptrs to ret->handles so that front end

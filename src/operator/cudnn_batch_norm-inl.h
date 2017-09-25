@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cudnn_batch_norm-inl.h
  * \brief
  * \author Junyuan Xie
@@ -94,7 +112,7 @@ class CuDNNBatchNormOp : public Operator {
 
     Tensor<gpu, 4, DType> y =
       out_data[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
-#if CUDNN_VERSION >= 7000
+#if CUDNN_VERSION >= 7002
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
     auto mode = CUDNN_BATCHNORM_SPATIAL;
@@ -183,7 +201,7 @@ class CuDNNBatchNormOp : public Operator {
       out_grad[cudnnbatchnorm::kOut].get_with_shape<gpu, 4, DType>(shape_, s);
 
 #if CUDNN_VERSION >= 4007
-#if CUDNN_VERSION >= 7000
+#if CUDNN_VERSION >= 7002
     auto mode = CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
 #else
     auto mode = CUDNN_BATCHNORM_SPATIAL;

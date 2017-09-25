@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file deconvolution-inl.h
  * \brief
  * \author Wei Wu
@@ -16,6 +34,7 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./linalg.h"
 
 
 namespace mxnet {
@@ -125,7 +144,52 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   index_t DilatedKernelSize(int dim) const {
     return 1 + (kernel[dim] - 1) * dilate[dim];
   }
+
+  bool operator==(const DeconvolutionParam& other) const {
+    return this->kernel == other.kernel &&
+           this->stride == other.stride &&
+           this->dilate == other.dilate &&
+           this->pad == other.pad &&
+           this->adj == other.adj &&
+           this->target_shape == other.target_shape &&
+           this->num_filter == other.num_filter &&
+           this->num_group == other.num_group &&
+           this->workspace == other.workspace &&
+           this->no_bias == other.no_bias &&
+           this->cudnn_tune == other.cudnn_tune &&
+           this->cudnn_off == other.cudnn_off &&
+           this->layout == other.layout;
+  }
 };
+
+}  // namespace op
+}  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::DeconvolutionParam> {
+  size_t operator()(const mxnet::op::DeconvolutionParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.kernel);
+    ret = dmlc::HashCombine(ret, val.stride);
+    ret = dmlc::HashCombine(ret, val.dilate);
+    ret = dmlc::HashCombine(ret, val.pad);
+    ret = dmlc::HashCombine(ret, val.adj);
+    ret = dmlc::HashCombine(ret, val.target_shape);
+    ret = dmlc::HashCombine(ret, val.num_filter);
+    ret = dmlc::HashCombine(ret, val.num_group);
+    ret = dmlc::HashCombine(ret, val.workspace);
+    ret = dmlc::HashCombine(ret, val.no_bias);
+    ret = dmlc::HashCombine(ret, val.cudnn_tune);
+    ret = dmlc::HashCombine(ret, val.cudnn_off);
+    ret = dmlc::HashCombine(ret, val.layout);
+    return ret;
+  }
+};
+}  // namespace std
+
+namespace mxnet {
+namespace op {
 
 template<typename xpu, typename DType>
 class DeconvolutionOp : public Operator {
@@ -209,7 +273,9 @@ class DeconvolutionOp : public Operator {
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
                                               gstride * (gid + 1));
-        tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        // Legacy approach shown here for comparison:
+        //   tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
       if (o_pad[0] == 0 && o_pad[1] == 0) {
         out.Slice(i, i + step) = pack_col2patch(temp_col,
@@ -238,7 +304,7 @@ class DeconvolutionOp : public Operator {
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
       Tensor<xpu, 1, DType> bias = in_data[deconv::kBias].get<xpu, 1, DType>(s);
-      out += broadcast<1>(bias, out.shape_);
+      out += mshadow::expr::broadcast<1>(bias, out.shape_);
     }
   }
 
@@ -317,16 +383,23 @@ class DeconvolutionOp : public Operator {
         Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         if (i == 0) {
           Tensor<xpu, 2, DType> tmp_gwmat = gwmat[gid];
-          Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          // Legacy approach shown here for comparison:
+          //   Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          linalg_gemm(temp_dst[gid], tmpc, tmp_gwmat, false, true, s, req[deconv::kWeight]);
         } else {
-          gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          // Legacy approach shown here for comparison:
+          //   gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          linalg_gemm(temp_dst[gid], tmpc, gwmat[gid], false, true, s, kAddTo);
         }
       }
-      if (req[deconv::kData] == kWriteTo || req[deconv::kData] == kWriteInplace
-                                         || req[deconv::kData] == kAddTo) {
+      if (req[deconv::kData] == kWriteTo ||
+          req[deconv::kData] == kWriteInplace ||
+          req[deconv::kData] == kAddTo) {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
-          temp_dst[gid] = dot(wmat[gid], tmpc);
+          // Legacy approach shown here for comparison:
+          //   temp_dst[gid] = dot(wmat[gid], tmpc);
+          linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
         }
         Assign(gdata.Slice(i, i + step),
                req[deconv::kData],
@@ -627,9 +700,7 @@ class DeconvolutionProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

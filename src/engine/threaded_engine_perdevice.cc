@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine_perdevice.cc
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
@@ -54,7 +72,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
  protected:
   void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
     const Context& ctx = opr_block->ctx;
-    if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
+    if ((opr_block->opr->prop == FnProperty::kAsync ||
+         opr_block->opr->prop == FnProperty::kDeleteVar) && pusher_thread) {
       if (ctx.dev_mask() == gpu::kDevMask) {
         #if MXNET_USE_CUDA
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
@@ -77,7 +96,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
               return blk;
             });
           if (ptr) {
-            ptr->task_queue.Push(opr_block, opr_block->priority);
+            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+              ptr->task_queue.PushFront(opr_block, opr_block->priority);
+            } else {
+              ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
           }
         }
       } else {
@@ -100,7 +123,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
               return blk;
             });
           if (ptr) {
-            ptr->task_queue.Push(opr_block, opr_block->priority);
+            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+              ptr->task_queue.PushFront(opr_block, opr_block->priority);
+            } else {
+              ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
           }
         } else {
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
@@ -114,7 +141,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
               return blk;
             });
           if (ptr) {
-            ptr->task_queue.Push(opr_block, opr_block->priority);
+            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+              ptr->task_queue.PushFront(opr_block, opr_block->priority);
+            } else {
+              ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
           }
         }
       }
@@ -165,9 +196,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       // allocate stream
       mshadow::SetDevice<gpu>(ctx.dev_id);
       if (is_copy_worker) {
-        stream = mshadow::NewStream<gpu>(false, false);
+        stream = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
       } else {
-        stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0);
+        stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
       }
     } while (false);
     // execute task

@@ -1,9 +1,26 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
 import os
 
-from ... import recordio, image
+from ... import recordio, ndarray
 
 class Dataset(object):
     """Abstract dataset class. All datasets should have this interface.
@@ -35,7 +52,10 @@ class ArrayDataset(Dataset):
     def __init__(self, data, label):
         assert len(data) == len(label)
         self._data = data
-        self._label = label
+        if isinstance(label, ndarray.NDArray) and len(label.shape) == 1:
+            self._label = label.asnumpy()
+        else:
+            self._label = label
 
     def __getitem__(self, idx):
         return self._data[idx], self._label[idx]
@@ -63,27 +83,3 @@ class RecordFileDataset(Dataset):
 
     def __len__(self):
         return len(self._record.keys)
-
-
-class ImageRecordDataset(RecordFileDataset):
-    """A dataset wrapping over a RecordIO file containing images.
-
-    Each sample is an image and its corresponding label.
-
-    Parameters
-    ----------
-    filename : str
-        Path to rec file.
-    flag : {0, 1}, default 1
-        If 0, always convert images to greyscale.
-
-        If 1, always convert images to colored (RGB).
-    """
-    def __init__(self, filename, flag=1):
-        super(ImageRecordDataset, self).__init__(filename)
-        self._flag = flag
-
-    def __getitem__(self, idx):
-        record = super(ImageRecordDataset, self).__getitem__(idx)
-        header, img = recordio.unpack(record)
-        return image.imdecode(img, self._flag), header.label

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable= arguments-differ
 """ResNets, implemented in Gluon."""
@@ -341,7 +358,7 @@ resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': Bottleneck
 
 
 # Constructor
-def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
+def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""ResNet V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
     ResNet V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -357,6 +374,8 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     block_type, layers, channels = resnet_spec[num_layers]
     resnet_class = resnet_net_versions[version-1]
@@ -364,7 +383,8 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(), **kwargs):
     net = resnet_class(block_class, layers, channels, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version)), ctx=ctx)
+        net.load_params(get_model_file('resnet%d_v%d'%(num_layers, version),
+                                       root=root), ctx=ctx)
     return net
 
 def resnet18_v1(**kwargs):
@@ -377,6 +397,8 @@ def resnet18_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 18, **kwargs)
 
@@ -390,6 +412,8 @@ def resnet34_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 34, **kwargs)
 
@@ -403,6 +427,8 @@ def resnet50_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 50, **kwargs)
 
@@ -416,6 +442,8 @@ def resnet101_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 101, **kwargs)
 
@@ -429,6 +457,8 @@ def resnet152_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(1, 152, **kwargs)
 
@@ -442,6 +472,8 @@ def resnet18_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 18, **kwargs)
 
@@ -455,6 +487,8 @@ def resnet34_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 34, **kwargs)
 
@@ -468,6 +502,8 @@ def resnet50_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 50, **kwargs)
 
@@ -481,6 +517,8 @@ def resnet101_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 101, **kwargs)
 
@@ -494,5 +532,7 @@ def resnet152_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_resnet(2, 152, **kwargs)

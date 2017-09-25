@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file inst_vector.h
  * \brief holder of a sequence of DataInst in CPU
  *        that are not necessarily of same shape
@@ -150,20 +168,20 @@ struct TBlobBatch {
   }
   /*! \brief destructor */
   ~TBlobBatch() {
-    delete inst_index;
+    delete[] inst_index;
   }
 };  // struct TBlobBatch
 
-class TBlobContainer : public mshadow::TBlob {
+class TBlobContainer : public TBlob {
  public:
   TBlobContainer(void)
-    : mshadow::TBlob(), tensor_container_(nullptr) {}
+    : TBlob(), tensor_container_(nullptr) {}
   ~TBlobContainer() {
     if (tensor_container_) {
       release();
     }
   }
-  void resize(const mshadow::TShape &shape, int type_flag) {
+  void resize(const TShape &shape, int type_flag) {
     if (tensor_container_) {
       CHECK_EQ(this->type_flag_, type_flag);
       this->shape_ = shape;
@@ -173,13 +191,12 @@ class TBlobContainer : public mshadow::TBlob {
       this->shape_ = shape;
       create();
     }
-    this->stride_ = shape_[shape_.ndim() - 1];
   }
 
  private:
   void create() {
     CHECK(tensor_container_ == nullptr);
-    CHECK_EQ(this->dev_mask_, mshadow::cpu::kDevMask);
+    CHECK_EQ(this->dev_mask(), mshadow::cpu::kDevMask);
     MSHADOW_TYPE_SWITCH(this->type_flag_, DType, {
         auto tensor_container = new mshadow::TensorContainer<mshadow::cpu, 1, DType>(false);
         tensor_container->Resize(mshadow::Shape1(shape_.Size()));

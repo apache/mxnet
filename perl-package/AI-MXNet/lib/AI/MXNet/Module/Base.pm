@@ -1,3 +1,22 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+use strict;
+use warnings;
 package AI::MXNet::BatchEndParam;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -64,12 +83,13 @@ method _check_names_match(
 )
 {
     return if (not @$data_shapes and @$data_names == 1 and  $data_names->[0] eq 'softmax_label');
-    my @actual = map { @{$_}[0] } @{ $data_shapes };
-    if("@$data_names" ne "@actual")
+    my @actual = sort map { @{$_}[0] } @{ $data_shapes };
+    my @data_names = sort @$data_names;
+    if("@data_names" ne "@actual")
     {
         my $msg = sprintf(
             "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)",
-            $name, $name, "@$data_shapes", "@$data_names"
+            $name, $name, "@actual", "@data_names"
         );
         if($throw)
         {
@@ -266,7 +286,7 @@ method score(
             );
             for my $callback (@{ _as_list($batch_end_callback) })
             {
-                &{$callback}($batch_end_params);
+                $callback->($batch_end_params);
             }
         }
         $actual_num_batch++;
@@ -281,7 +301,7 @@ method score(
         );
         for my $callback (@{ _as_list($score_end_callback) })
         {
-            &{callback}($params);
+            $callback->($params);
         }
     }
     return $eval_metric->get_name_value;
@@ -467,7 +487,7 @@ method fit(
     EvalMetric                         :$eval_metric='acc',
     Maybe[Callback]|ArrayRef[Callback] :$epoch_end_callback=,
     Maybe[Callback]|ArrayRef[Callback] :$batch_end_callback=,
-    Str                                :$kvstore='local',
+    KVStore                            :$kvstore='local',
     Optimizer                          :$optimizer='sgd',
     HashRef                            :$optimizer_params={ learning_rate => 0.01 },
     Maybe[Callback]|ArrayRef[Callback] :$eval_end_callback=,
@@ -550,7 +570,7 @@ method fit(
                 );
                 for my $callback (@{ _as_list($batch_end_callback) })
                 {
-                    &{$callback}($batch_end_params);
+                    $callback->($batch_end_params);
                 }
             }
             $nbatch++;
@@ -572,7 +592,7 @@ method fit(
         {
             for my $callback (@{ _as_list($epoch_end_callback) })
             {
-                &{$callback}($epoch, $self->get_symbol, $arg_params, $aux_params);
+                $callback->($epoch, $self->get_symbol, $arg_params, $aux_params);
             }
         }
         #----------------------------------------

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Convert caffe prototxt to symbol
 """
 from __future__ import print_function
@@ -128,6 +145,16 @@ def _parse_proto(prototxt_fname):
         param_string = ''
         skip_layer = False
         name = re.sub('[-/]', '_', layer.name)
+        for k in range(len(layer.bottom)):
+            if layer.bottom[k] in _output_name:
+                _output_name[layer.bottom[k]]['count'] = _output_name[layer.bottom[k]]['count']+1
+            else:
+                _output_name[layer.bottom[k]] = {'count':0}
+        for k in range(len(layer.top)):
+            if layer.top[k] in _output_name:
+                _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
+            else:
+                _output_name[layer.top[k]] = {'count':0, 'name':name}
         if layer.type == 'Convolution' or layer.type == 4:
             type_string = 'mx.symbol.Convolution'
             param_string = _convert_conv_param(layer.convolution_param)
@@ -143,6 +170,11 @@ def _parse_proto(prototxt_fname):
         if layer.type == 'ReLU' or layer.type == 18:
             type_string = 'mx.symbol.Activation'
             param_string = "act_type='relu'"
+            param = layer.relu_param
+            if hasattr(param, 'negative_slope'):
+                if param.negative_slope > 0:
+                    type_string = 'mx.symbol.LeakyReLU'
+                    param_string = "act_type='leaky', slope=%f" % param.negative_slope
             need_flatten[name] = need_flatten[mapping[layer.bottom[0]]]
         if layer.type == 'TanH' or layer.type == 23:
             type_string = 'mx.symbol.Activation'
@@ -253,17 +285,6 @@ def _parse_proto(prototxt_fname):
         for j in range(len(layer.top)):
             mapping[layer.top[j]] = name
         output_name = name
-        for k in range(len(layer.bottom)):
-            if layer.bottom[k] in _output_name:
-                _output_name[layer.bottom[k]]['count'] = _output_name[layer.bottom[k]]['count']+1
-            else:
-                _output_name[layer.bottom[k]] = {'count':0}
-        for k in range(len(layer.top)):
-            if layer.top[k] in _output_name:
-                _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
-            else:
-                _output_name[layer.top[k]] = {'count':0, 'name':name}
-
     output_name = []
     for i in _output_name:
         if 'name' in _output_name[i] and _output_name[i]['count'] == 0:

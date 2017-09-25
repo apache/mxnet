@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Inception, implemented in Gluon."""
@@ -181,7 +198,7 @@ class Inception3(HybridBlock):
         return x
 
 # Constructor
-def inception_v3(pretrained=False, ctx=cpu(), **kwargs):
+def inception_v3(pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""Inception v3 model from
     `"Rethinking the Inception Architecture for Computer Vision"
     <http://arxiv.org/abs/1512.00567>`_ paper.
@@ -192,9 +209,11 @@ def inception_v3(pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     net = Inception3(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('inceptionv3'), ctx=ctx)
+        net.load_params(get_model_file('inceptionv3', root=root), ctx=ctx)
     return net

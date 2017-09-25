@@ -2,6 +2,11 @@ require(mxnet)
 
 source("get_data.R")
 
+if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+  mx.ctx.default(new = mx.gpu())
+  message("Using GPU for testing.")
+}
+
 print_inferred_shape <- function(net) {
   slist <- mx.symbol.infer.shape(symbol = net, data = c(168, 168, 1, 2))
   print(slist$out.shapes)
@@ -85,7 +90,7 @@ context("Image segmentation")
 test_that("UNET", {
   list.of.packages <- c("imager")
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-  if(length(new.packages)) install.packages(new.packages)
+  if(length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org/")
   GetISBI_data()
   library(imager)
   IMG_SIZE <- 168
@@ -116,7 +121,7 @@ test_that("UNET", {
   train.y.array = train.y
   dim(train.y.array) = c(IMG_SIZE, IMG_SIZE, 1, 30)
   
-  devices <- mx.cpu()
+  devices <- mx.ctx.default()
   mx.set.seed(0)
   
   net <- get_unet()

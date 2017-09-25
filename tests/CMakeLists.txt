@@ -28,7 +28,13 @@ if(GTEST_FOUND)
 
   include_directories(cpp/include)
 
+  if (NOT PRIVATE_RUNTIME_DIR)
+   set(PRIVATE_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+  endif()
+
   add_executable(${PROJECT_NAME}_unit_tests ${UNIT_TEST_SOURCE})
+  set_property(TARGET ${PROJECT_NAME}_unit_tests
+               PROPERTY RUNTIME_OUTPUT_DIRECTORY ${PRIVATE_RUNTIME_DIR})
 
   if(UNITTEST_STATIC_LINK)
     target_link_libraries(${PROJECT_NAME}_unit_tests
@@ -37,6 +43,7 @@ if(GTEST_FOUND)
       ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
       dmlc
       ${mxnet_LINKER_LIBS}
+      ${pslite_LINKER_LIBS}
       )
   else()
     target_link_libraries(${PROJECT_NAME}_unit_tests
@@ -46,6 +53,7 @@ if(GTEST_FOUND)
       ${nnvm_LINKER_LIBS}
       ${mxnet_LINKER_LIBS}
       mxnet
+      ${pslite_LINKER_LIBS}
       )
   endif()
 

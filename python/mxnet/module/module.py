@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=too-many-instance-attributes, too-many-arguments, protected-access, too-many-branches
 # pylint: disable=too-many-public-methods
 """A `Module` implement the `BaseModule` API by wrapping a `Symbol` and one or
@@ -8,7 +25,6 @@ import logging
 import warnings
 
 from .. import context as ctx
-from .. import ndarray as nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
@@ -16,6 +32,7 @@ from ..model import _create_kvstore, _initialize_kvstore, _update_params, _updat
 from ..model import load_checkpoint
 from ..initializer import Uniform, InitDesc
 from ..io import DataDesc
+from ..ndarray import zeros
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
 
@@ -410,20 +427,19 @@ class Module(BaseModule):
         else:
             assert self._arg_params is None and self._aux_params is None
             param_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(shape=x[0].shape, dtype=x[0].dtype, stype=x[0].stype)
                 for x in self._exec_group.param_arrays
             ]
             self._arg_params = {name:arr for name, arr in zip(self._param_names, param_arrays)}
 
             aux_arrays = [
-                nd.zeros(x[0].shape, dtype=x[0].dtype)
+                zeros(x[0].shape, dtype=x[0].dtype)
                 for x in self._exec_group.aux_arrays
             ]
             self._aux_params = {name:arr for name, arr in zip(self._aux_names, aux_arrays)}
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
-
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshapes the module for new input shapes.
@@ -466,6 +482,7 @@ class Module(BaseModule):
 
         if self._params_dirty:
             self._sync_params_from_devices()
+
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
 

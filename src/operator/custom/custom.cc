@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file custom.cc
  * \brief
  * \author Junyuan Xie
@@ -7,8 +25,8 @@
 #include "./custom-inl.h"
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/imperative.h>
 
-#include "../../ndarray/autograd.h"
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
@@ -207,9 +225,8 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
                        const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
-  size_t total = params.num_args + params.num_outs + params.num_auxs;
-  std::vector<uint32_t*> shapes(total);
-  std::vector<int> ndims(total);
+  std::vector<uint32_t*> shapes(params.num_args);
+  std::vector<int> ndims(params.num_args);
   size_t buff_size = 0;
   for (const auto& i : in_shape) buff_size += i.ndim();
   std::vector<uint32_t> buff(buff_size);
@@ -228,7 +245,7 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   MXCallbackList *op_info = new MXCallbackList;
   CHECK(reinterpret_cast<CustomOpCreateFunc>(
       params.info->callbacks[kCustomOpPropCreateOperator])(
-          os.str().c_str(), shapes.size(), shapes.data(), ndims.data(), in_type.data(),
+          os.str().c_str(), params.num_args, shapes.data(), ndims.data(), in_type.data(),
           op_info, params.info->contexts[kCustomOpPropCreateOperator]));
 
   CustomParam state = params;
@@ -268,13 +285,15 @@ void Forward(const OpStatePtr& state,
     tags.push_back(4);
   }
 
-  bool old = autograd::AutogradRuntime::Get()->SetIsTraining(false);
+  bool prev_recording = Imperative::Get()->set_is_recording(false);
+  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
 
   CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpForward])(
     ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
     static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpForward]));
 
-  autograd::AutogradRuntime::Get()->SetIsTraining(old);
+  Imperative::Get()->set_is_training(prev_training);
+  Imperative::Get()->set_is_recording(prev_recording);
 }
 
 
@@ -312,13 +331,15 @@ void Backward(const OpStatePtr& state,
     tags.push_back(4);
   }
 
-  bool old = autograd::AutogradRuntime::Get()->SetIsTraining(false);
+  bool prev_recording = Imperative::Get()->set_is_recording(false);
+  bool prev_training = Imperative::Get()->set_is_training(ctx.is_train);
 
   CHECK(reinterpret_cast<CustomOpFBFunc>(params.info->callbacks[kCustomOpBackward])(
-    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()), 1,
-    params.info->contexts[kCustomOpBackward]));
+    ptrs.size(), ptrs.data(), tags.data(), reinterpret_cast<const int*>(req.data()),
+    static_cast<int>(ctx.is_train), params.info->contexts[kCustomOpBackward]));
 
-  autograd::AutogradRuntime::Get()->SetIsTraining(old);
+  Imperative::Get()->set_is_training(prev_training);
+  Imperative::Get()->set_is_recording(prev_recording);
 }
 
 

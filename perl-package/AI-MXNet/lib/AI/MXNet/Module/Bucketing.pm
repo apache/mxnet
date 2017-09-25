@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Module::Bucketing;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -139,7 +156,7 @@ sub BUILD
     $self->_fixed_param_names([]) unless defined $original_params->{fixed_param_names};
     $self->_state_names([]) unless defined $original_params->{state_names};
     $self->_params_dirty(0);
-    my ($symbol, $data_names, $label_names) = &{$self->_sym_gen}($self->_default_bucket_key);
+    my ($symbol, $data_names, $label_names) = $self->_sym_gen->($self->_default_bucket_key);
     $self->_check_input_names($symbol, $data_names//[], "data", 1);
     $self->_check_input_names($symbol, $label_names//[], "label", 0);
     $self->_check_input_names($symbol, $self->_state_names, "state", 1);
@@ -162,7 +179,7 @@ method data_names()
     }
     else
     {
-        return (&{$self->_sym_gen}($self->_default_bucket_key))[1];
+        return ($self->_sym_gen->($self->_default_bucket_key))[1];
     }
 }
 
@@ -174,7 +191,7 @@ method output_names()
     }
     else
     {
-        my ($symbol) = &{$self->_sym_gen}($self->_default_bucket_key);
+        my ($symbol) = $self->_sym_gen->($self->_default_bucket_key);
         return $symbol->list_ouputs;
     }
 }
@@ -339,7 +356,7 @@ method bind(
     $self->inputs_need_grad($inputs_need_grad);
     $self->binded(1);
 
-    my ($symbol, $data_names, $label_names) = &{$self->_sym_gen}($bucket_key//$self->_default_bucket_key);
+    my ($symbol, $data_names, $label_names) = $self->_sym_gen->($bucket_key//$self->_default_bucket_key);
     my $module = AI::MXNet::Module->new(
             symbol            => $symbol,
             data_names        => $data_names,
@@ -393,7 +410,7 @@ method switch_bucket(
     assert($self->binded, 'call bind before switching bucket');
     if(not exists $self->_buckets->{ $bucket_key })
     {
-        my ($symbol, $data_names, $label_names) = &{$self->_sym_gen}($bucket_key);
+        my ($symbol, $data_names, $label_names) = $self->_sym_gen->($bucket_key);
         my $module = AI::MXNet::Module->new(
             symbol         => $symbol,
             data_names     => $data_names,
@@ -526,6 +543,31 @@ method install_monitor(AI::MXNet::Monitor $mon)
     for my $mod (values %{ $self->_buckets })
     {
         $mod->install_monitor($mon);
+    }
+}
+
+=head2 save_checkpoint
+
+    Save current progress to a checkpoint.
+    Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
+
+    Parameters
+    ----------
+    prefix : str
+        The file prefix to checkpoint to
+    epoch : int
+        The current epoch number
+    save_optimizer_states : bool
+        Whether to save optimizer states for later training
+=cut
+
+
+method save_checkpoint(Str $prefix, Int $epoch, Bool $save_optimizer_states=0)
+{
+    my %buckets = %{ $self->_buckets };
+    while(my ($key, $module) = each %buckets)
+    {
+        $module->save_checkpoint("${prefix}_$key", $epoch, $save_optimizer_states);
     }
 }
 

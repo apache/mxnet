@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Base container class for all neural network models."""
@@ -47,6 +64,8 @@ class _BlockScope(object):
         return current._block.prefix+prefix, params
 
     def __enter__(self):
+        if self._block._empty_prefix:
+            return
         self._old_scope = _BlockScope._current
         _BlockScope._current = self
         self._name_scope = _name.Prefix(self._block.prefix)
@@ -54,6 +73,8 @@ class _BlockScope(object):
         return self
 
     def __exit__(self, ptype, value, trace):
+        if self._block._empty_prefix:
+            return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
         _BlockScope._current = self._old_scope
@@ -140,6 +161,7 @@ class Block(object):
             dense1 = nn.Dense(20, params=dense0.collect_params())
     """
     def __init__(self, prefix=None, params=None):
+        self._empty_prefix = prefix == ''
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
         self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
@@ -155,9 +177,23 @@ class Block(object):
 
     def __setattr__(self, name, value):
         """Registers parameters."""
+
+        if hasattr(self, name):
+            existing = getattr(self, name)
+            if isinstance(existing, (Parameter, Block)) and not isinstance(value, type(existing)):
+                raise TypeError('Changing attribute type for {name} from {type1} to {type2}' \
+                                'is not allowed.'.format(name=name,
+                                                         type1=type(existing),
+                                                         type2=type(value)))
+            if isinstance(existing, Block):
+                for i, c in enumerate(self._children):
+                    if c is existing:
+                        self._children[i] = value
+        else:
+            if isinstance(value, Block):
+                self.register_child(value)
+
         super(Block, self).__setattr__(name, value)
-        if isinstance(value, Block):
-            self.register_child(value)
 
     def _alias(self):
         return self.__class__.__name__.lower()
@@ -442,7 +478,7 @@ class SymbolBlock(HybridBlock):
                    internals['model_dense1_relu_fwd_output']]
     >>> # Create SymbolBlock that shares parameters with alexnet
     >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
-    >>> x = mx.nd.random_normal(shape=(16, 3, 224, 224))
+    >>> x = mx.nd.random.normal(shape=(16, 3, 224, 224))
     >>> print(feat_model(x))
     """
     def __init__(self, outputs, inputs, params=None):

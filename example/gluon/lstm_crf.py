@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 from mxnet import autograd as ag, ndarray as nd, gluon
 from mxnet.gluon import Block, nn, rnn
@@ -45,13 +62,13 @@ class BiLSTM_CRF(Block):
 
             # Matrix of transition parameters.  Entry i,j is the score of
             # transitioning *to* i *from* j.
-            self.transitions = nd.random_normal(shape=(self.tagset_size, self.tagset_size))
+            self.transitions = nd.random.normal(shape=(self.tagset_size, self.tagset_size))
 
             self.hidden = self.init_hidden()
 
     def init_hidden(self):
-        return [nd.random_normal(shape=(2, 1, self.hidden_dim // 2)),
-                nd.random_normal(shape=(2, 1, self.hidden_dim // 2))]
+        return [nd.random.normal(shape=(2, 1, self.hidden_dim // 2)),
+                nd.random.normal(shape=(2, 1, self.hidden_dim // 2))]
 
     def _forward_alg(self, feats):
         # Do the forward algorithm to compute the partition function
