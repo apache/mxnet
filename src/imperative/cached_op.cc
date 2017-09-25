@@ -267,6 +267,12 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
     stypes[i] = state.buff[i].storage_type();
   }
 
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    shapes[bwd_input_eid_[i]] = inputs[i]->shape();
+    dtypes[bwd_input_eid_[i]] = inputs[i]->dtype();
+    stypes[bwd_input_eid_[i]] = inputs[i]->storage_type();
+  }
+
   std::pair<uint32_t, uint32_t> node_range, entry_range;
   node_range = {num_forward_nodes, idx.num_nodes()};
   entry_range = {num_forward_entries, idx.num_node_entries()};
