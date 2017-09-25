@@ -1427,8 +1427,9 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
 
     Examples
     --------
-    >>> get_bz2_data("data_dir", "avazu-app.t",
-                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/avazu-app.t.bz2", "avazu-app.t.bz2")
+    >>> get_bz2_data("data_dir", "kdda.t",
+                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
+                     "kdda.t.bz2")
     """
 
     download(url, dirname=data_dir, overwrite=False)
