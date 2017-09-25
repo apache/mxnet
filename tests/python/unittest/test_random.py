@@ -88,7 +88,7 @@ def check_with_device(device, dtype):
                 'symbol': mx.sym.random.negative_binomial,
                 'ndop': mx.nd.random.negative_binomial,
                 'params': { 'k': 3, 'p': 0.4 },
-                'inputs': [ ('k', [ [ 20, 49 ], [ 15 , 16 ] ]) , ('p', [ [ 0.4 , 0.77 ], [ 0.5, 0.84 ] ]) ],
+                'inputs': [ ('k', [ [ 3, 4 ], [ 5 , 6 ] ]) , ('p', [ [ 0.4 , 0.77 ], [ 0.5, 0.84 ] ]) ],
                 'checks': [
                     ('mean', lambda x, params: np.mean(x.astype(np.float64)) - params['k'] * (1.0 - params['p']) /  params['p'], tol),
                     ('std', lambda x, params: np.std(x.astype(np.float64)) - np.sqrt(params['k'] * (1.0 - params['p']))/params['p'], tol)
@@ -140,7 +140,8 @@ def check_with_device(device, dtype):
                 for j in range(2):
                     stats = {k : v[i][j] for k, v in symbdic['inputs']}
                     for check_name, check_func, tol in symbdic['checks']:
-                        assert np.abs(check_func(ret2[i,j], stats)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
+                        err = np.abs(check_func(ret2[i,j], stats))
+                        assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
 
 
         # check symbolic
