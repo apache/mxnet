@@ -64,7 +64,7 @@ __pycache__
 *.d
 build
 cmake-build*
-data
+#data
 recommonmark
 deps
 
