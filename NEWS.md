@@ -7,6 +7,13 @@
     * `reshape(NDArray, dim...; reverse=false)`
     * `Reshape` deprecated.
 
+  * `reshape` of SymbolicNode share the same interface with Base
+    and additional keyword argument (#279).
+
+    * `reshape(SymbolicNode, dim; reverse=false, name)`
+    * `reshape(SymbolicNode, dim...; reverse=false, name)`
+    * `Reshape` deprecated.
+
 # v0.2.2 (2017.05.14)
 * Updated supported version of MXNet to 0.9.4.
 * Improved build-system with support for auto-detecting GPU support.
