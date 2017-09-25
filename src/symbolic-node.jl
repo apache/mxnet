@@ -220,6 +220,51 @@ function get_name(self :: mx.SymbolicNode)
     return Symbol(unsafe_string(name[]))
 end
 
+import Base: print
+
+function print(io :: IO, sym :: SymbolicNode)
+  out = Ref{mx.char_p}(C_NULL)
+  @mx.mxcall(:MXSymbolPrint, (mx.MX_SymbolHandle, Ref{mx.char_p}), sym.handle, out)
+  print(io, unsafe_string(out[]))
+end
+
+print(sym :: SymbolicNode) = print(STDOUT, sym)
+
+"""
+    print([io :: IO], sym :: SymbolicNode)
+
+Print the content of symbol, used for debug.
+
+```julia
+julia> layer = @mx.chain mx.Variable(:data)           =>
+         mx.FullyConnected(name=:fc1, num_hidden=128) =>
+         mx.Activation(name=:relu1, act_type=:relu)
+MXNet.mx.SymbolicNode(MXNet.mx.MX_SymbolHandle(Ptr{Void} @0x000055b29b9c3520))
+
+julia> print(layer)
+Symbol Outputs:
+        output[0]=relu1(0)
+Variable:data
+Variable:fc1_weight
+Variable:fc1_bias
+--------------------
+Op:FullyConnected, Name=fc1
+Inputs:
+        arg[0]=data(0) version=0
+        arg[1]=fc1_weight(0) version=0
+        arg[2]=fc1_bias(0) version=0
+Attrs:
+        num_hidden=128
+--------------------
+Op:Activation, Name=relu1
+Inputs:
+        arg[0]=fc1(0)
+Attrs:
+        act_type=relu
+```
+"""
+print
+
 """
     grad(self :: SymbolicNode, wrt :: Vector{SymbolicNode})
 
