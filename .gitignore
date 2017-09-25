@@ -64,7 +64,7 @@ __pycache__
 *.d
 build
 cmake-build*
-#data
+data
 recommonmark
 deps
 
@@ -85,7 +85,7 @@ R-package/R/mxnet_generated.R
 *.zip
 *ubyte
 *.bin
-*.txt
+#*.txt
 !CMakeLists.txt
 
 # ipython notebook
