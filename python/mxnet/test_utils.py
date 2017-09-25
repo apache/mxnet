@@ -1417,9 +1417,9 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
     ----------
 
     data_dir : str
-        Absolute or relative path of the directory name to store datasets in
+        Absolute or relative path of the directory name to store bz2 files
     data_name : str
-        Name of the output file to extract the bz2 contents to
+        Name of the output file in which bz2 contents will be extracted
     url : str
         URL to download data from
     data_origin_name : str
