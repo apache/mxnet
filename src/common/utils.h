@@ -82,11 +82,11 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const int x) {
   switch (x) {
-    case kDispatchFCompute:
+    case static_cast<int>(DispatchMode::kFCompute):
       return "fcompute";
-    case kDispatchFComputeEx:
+    case static_cast<int>(DispatchMode::kFComputeEx):
       return "fcompute_ex";
-    case kDispatchFComputeFallback:
+    case static_cast<int>(DispatchMode::kFComputeFallback):
       return "fcompute_fallback";
   }
   return "unknown";

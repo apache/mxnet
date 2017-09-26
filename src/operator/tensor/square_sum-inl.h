@@ -58,12 +58,12 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     if (!dispatched && in_stype == kRowSparseStorage && param.axis[0] == 1 && param.keepdims) {
       // sum per row and keep dims
       dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
-                                       dispatch_mode, kDispatchFComputeEx);
+                                       dispatch_mode, DispatchMode::kFComputeEx);
     }
     if (!dispatched && in_stype == kRowSparseStorage &&
         (param.axis[0] == 0 || (param.axis[0] == 1 && !param.keepdims))) {
         dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                         dispatch_mode, kDispatchFComputeEx);
+                                         dispatch_mode, DispatchMode::kFComputeEx);
     }
   }
   if (!dispatched) {
@@ -91,7 +91,7 @@ inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     if (!dispatched && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
         in_stype == kRowSparseStorage) {
       dispatched = dispatch_on_storage(&grad_stype, kRowSparseStorage,
-                                       dispatch_mode, kDispatchFComputeEx);
+                                       dispatch_mode, DispatchMode::kFComputeEx);
     }
   }
   if (!dispatched) {

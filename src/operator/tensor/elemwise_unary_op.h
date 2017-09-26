@@ -54,13 +54,13 @@ inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
       out_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_mode, kDispatchFCompute);
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
       (lhs_stype == out_stype)) {
     // rsp, _ -> rsp, or csr, _ -> csr
     dispatched = dispatch_on_storage(&out_stype, static_cast<NDArrayStorageType>(out_stype),
-                                     dispatch_mode, kDispatchFComputeEx);
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);

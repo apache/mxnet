@@ -58,9 +58,9 @@ OpStatePtr Imperative::InvokeOp(
   FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
   FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
 
-  // FComputeEx is dispatched only when dispatch_mode is kDispatchFComputeEx
-  CHECK_NE(dispatch_mode, kDispatchUndefined);
-  bool dispatch_fcompex = dispatch_mode == kDispatchFComputeEx;
+  // FComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
+  CHECK_NE(dispatch_mode, static_cast<int>(DispatchMode::kUndefined));
+  bool dispatch_fcompex = dispatch_mode == static_cast<int>(DispatchMode::kFComputeEx);
   if (fn_ex && dispatch_fcompex) {
     PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
         requested, inputs, outputs, req);
@@ -478,6 +478,7 @@ std::vector<NDArray*> Imperative::Backward(
       for (size_t j = 0; j < info.outputs.size(); ++j) {
         size_t eid = idx.entry_id(i, j);
         arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
+
         if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
       }
     }

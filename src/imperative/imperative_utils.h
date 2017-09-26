@@ -147,7 +147,7 @@ inline void SetShapeType(const Context& ctx,
     CHECK(success);
   }
   CHECK_EQ(out_storage_types.size(), outputs.size());
-  CHECK_NE(*dispatch_mode, kDispatchUndefined);
+  CHECK_NE(*dispatch_mode, static_cast<int>(DispatchMode::kUndefined));
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
@@ -210,7 +210,7 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   }
 
   // append extra resource requests for storage fallback
-  if (dispatch_mode == kDispatchFComputeFallback) {
+  if (dispatch_mode == static_cast<int>(DispatchMode::kFComputeFallback)) {
     requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
     write_vars.push_back(requested.back().var);
   }
@@ -355,7 +355,7 @@ inline void PushOperator(const OpStatePtr& state,
 
   auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
   auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
-  if (fcompute_ex != nullptr && dispatch_mode == kDispatchFComputeEx) {
+  if (fcompute_ex != nullptr && dispatch_mode == static_cast<int>(DispatchMode::kFComputeEx)) {
     const auto& run = [state, fcompute_ex, inputs, outputs, requested, is_train,
                        exec_type, req](
           RunContext rctx,

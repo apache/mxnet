@@ -357,10 +357,10 @@ inline bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (*dispatch_mode == -1) {
     if (fallback) {
-      *dispatch_mode = kDispatchFComputeFallback;
+      *dispatch_mode = static_cast<int>(DispatchMode::kFComputeFallback);
       op::LogStorageFallback(attrs, dev_mask, iattr, oattr);
     } else {
-      *dispatch_mode = kDispatchFCompute;
+      *dispatch_mode = static_cast<int>(DispatchMode::kFCompute);
     }
   }
   return true;
@@ -425,7 +425,7 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
       "FInferStorageType", "storage_type_inputs", "storage_type_attr_key",
       "storage_type", "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
-      DefaultStorageType, false, "dispatch_mode", static_cast<int>(kDispatchVariable));
+      DefaultStorageType, false, "dispatch_mode", static_cast<int>(DispatchMode::kVariable));
 }
 
 }  // namespace exec

@@ -67,10 +67,10 @@ Graph AttachOpResources(Graph g) {
           LOG(FATAL) << "resource type not yet supported";
         }
       }
-      CHECK_NE(vdispatch[nid], kDispatchUndefined);
+      CHECK(vdispatch[nid] != static_cast<int>(DispatchMode::kUndefined));
     }
     // extra resource requests for storage fallback
-    if (vdispatch[nid] == kDispatchFComputeFallback) {
+    if (vdispatch[nid] == static_cast<int>(DispatchMode::kFComputeFallback)) {
       requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
     }
   }

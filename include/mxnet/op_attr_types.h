@@ -103,16 +103,16 @@ enum class ExecType {
 };
 
 /*! \brief the dispatch mode of the operator */
-enum DispatchMode {
-  kDispatchUndefined = -1,
+enum class DispatchMode {
+  kUndefined = -1,
   // dispatch on FCompute or FStatefulCompute
-  kDispatchFCompute,
+  kFCompute,
   // dispatch on FComputeEx or FStatefulComputeEx, if available
-  kDispatchFComputeEx,
+  kFComputeEx,
   // dispatch on FCompute or FStatefulCompute, and performs storage fallback
-  kDispatchFComputeFallback,
+  kFComputeFallback,
   // special dispatch mode for variables
-  kDispatchVariable,
+  kVariable,
 };
 
 /*!

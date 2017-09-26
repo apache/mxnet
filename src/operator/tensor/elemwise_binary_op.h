@@ -51,10 +51,10 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   auto& rhs_grad_stype = out_attrs->at(1);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? kDispatchFComputeFallback : kDispatchFComputeEx;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_mode, kDispatchFCompute);
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
@@ -63,14 +63,14 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
     // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
     if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
-      DISPATCH_TYPE_ASSIGN_CHECK(dispatch_mode, 0, dispatch_ex);
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, dispatch_ex);
       dispatched = true;
     }
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == kDispatchFComputeFallback) {
+  if (*dispatch_mode == static_cast<int>(DispatchMode::kFComputeFallback)) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -88,11 +88,11 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? kDispatchFComputeFallback : kDispatchFComputeEx;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
-                                     dispatch_mode, kDispatchFCompute);
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched) {
     if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
@@ -108,7 +108,7 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == kDispatchFComputeFallback) {
+  if (*dispatch_mode == static_cast<int>(DispatchMode::kFComputeFallback)) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

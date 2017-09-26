@@ -242,13 +242,13 @@ inline bool type_assign(int *y, const int& x) {
  * \param index the index of in the array
  * \param type the inferred dispatch type
  */
-#define DISPATCH_TYPE_ASSIGN_CHECK(type_array, index, type)                 \
+#define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
   {                                                                         \
-    if (!type_assign(&(type_array)[index], type)) {                         \
+    if (!type_assign(&(type_array)[index], static_cast<int>(type))) {                         \
       std::ostringstream os;                                                \
-      os << "Dispatch type inconsistent, Provided="                         \
+      os << "Dispatch mode inconsistent, Provided="                         \
          << common::dispatch_mode_string((type_array)[index]) << ','        \
-         << " inferred type=" << common::dispatch_mode_string(type);        \
+         << " inferred mode=" << common::dispatch_mode_string(static_cast<int>(type));        \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -292,7 +292,7 @@ inline bool dispatch_on_storage(int* stype,
                                 int* dispatch,
                                 const DispatchMode target_dispatch) {
   if (type_assign(stype, target_stype)) {
-    DISPATCH_TYPE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
     return true;
   }
   return false;
@@ -313,7 +313,7 @@ inline bool dispatch_on_storage(StorageTypeVector* stypes,
     }
   }
   if (success) {
-    DISPATCH_TYPE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
   }
   return success;
 }
@@ -324,7 +324,7 @@ inline void dispatch_fallback(StorageTypeVector* stypes, int* dispatch) {
   for (auto& stype : *stypes) {
     type_assign(&stype, kDefaultStorage);
   }
-  DISPATCH_TYPE_ASSIGN_CHECK(dispatch, 0, kDispatchFComputeFallback);
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, DispatchMode::kFComputeFallback);
 }
 
 // make a new node with operator op_name. Inputs are not filled.

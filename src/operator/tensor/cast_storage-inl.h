@@ -378,25 +378,25 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && in_stype == kDefaultStorage && param_stype == kDefaultStorage) {
     // dns -> dns
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_mode, kDispatchFCompute);
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && in_stype == kDefaultStorage &&
     (param_stype == kRowSparseStorage || param_stype == kCSRStorage)) {
     // dns -> rsp, dns -> csr
     dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                     dispatch_mode, kDispatchFComputeEx);
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched && in_stype == kRowSparseStorage &&
       (param_stype == kRowSparseStorage || param_stype == kDefaultStorage)) {
     // rsp -> rsp, rsp -> dns
     dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                     dispatch_mode, kDispatchFComputeEx);
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched && in_stype == kCSRStorage &&
       (param_stype == kCSRStorage || param_stype == kDefaultStorage)) {
     // csr -> csr, csr -> dns
     dispatched = dispatch_on_storage(out_attrs, param_stype,
-                                     dispatch_mode, kDispatchFComputeEx);
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
     LOG(FATAL) << "Not implemented: "

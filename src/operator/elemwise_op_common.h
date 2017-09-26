@@ -55,11 +55,11 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   using namespace common;
   bool dispatched = false;
   const bool invalid_ctx = cpu_only && dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? kDispatchFComputeFallback : kDispatchFComputeEx;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns ... -> dns
     dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
-                                     dispatch_mode, kDispatchFCompute);
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, ... -> rsp
@@ -74,7 +74,7 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == kDispatchFComputeFallback) {
+  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
