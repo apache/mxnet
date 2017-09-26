@@ -22,7 +22,7 @@ sys.path.insert(0, "../../python")
 import mxnet as mx
 import numpy as np
 # reuse the bucket_io library
-sys.path.insert(0, "../rnn/old")
+sys.path.insert(0, "../rnn")
 from bucket_io import BucketSentenceIter, default_build_vocab
 
 """
