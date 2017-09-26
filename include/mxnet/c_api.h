@@ -1921,7 +1921,7 @@ MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creato
  */
 MXNET_DLL int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
                                      int num_outputs, NDArrayHandle *outputs,
-                                     MXCallbackList *callbacks);
+                                     struct MXCallbackList *callbacks);
 
 #ifdef __cplusplus
 }
