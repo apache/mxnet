@@ -918,23 +918,23 @@ class CrossEntropy(EvalMetric):
             self.num_inst += label.shape[0]
 
 @register
-@alias('log_loss')
-class LogarithmicLoss(EvalMetric):
-    """Computes logarithmic loss.
+@alias('nll_loss')
+class NegativeLogLikelihood(EvalMetric):
+    """Computes the negative log-likelihood loss.
 
-    The cross entropy over a batch of sample size :math:`N` is given by
+    The negative log-likelihoodd loss over a batch of sample size :math:`N` is given by
 
     .. math::
        -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
 
-    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
-    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
-    class :math:`k`.
+    where :math:`K` is the number of classes, :math:`y_{nk}` is the prediceted probability for
+    :math:`k`-th class for :math:`n`-th sample. :math:`t_{nk}=1` if and only if sample
+    :math:`n` belongs to class :math:`k`.
 
     Parameters
     ----------
     eps : float
-        Cross Entropy loss is undefined for predicted value is 0 or 1,
+        Negative log-likelihood loss is undefined for predicted value is 0,
         so predicted values are added with the small constant.
     name : str
         Name of this metric instance for display.
@@ -949,16 +949,16 @@ class LogarithmicLoss(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> log_loss = mx.metric.LogarithmicLoss()
-    >>> log_loss.update(labels, predicts)
-    >>> print log_loss.get()
-    ('log-loss', 0.57159948348999023)
+    >>> nll_loss = mx.metric.NegativeLogLikelihood()
+    >>> nll_loss.update(labels, predicts)
+    >>> print nll_loss.get()
+    ('nll-loss', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-12, name='log-loss',
+    def __init__(self, eps=1e-12, name='nll-loss',
                  output_names=None, label_names=None):
-        super(LogarithmicLoss, self).__init__(
-            name, eps=eps,
-            output_names=output_names, label_names=label_names)
+        super(NegativeLogLikelihood, self).__init__(
+              name, eps=eps,
+              output_names=output_names, label_names=label_names)
         self.eps = eps
 
     def update(self, labels, preds):

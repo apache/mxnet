@@ -35,8 +35,8 @@ def test_metrics():
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
 
-def test_log_loss():
-    metric = mx.metric.create('log_loss')
+def test_nll_loss():
+    metric = mx.metric.create('nll_loss')
     pred = mx.nd.array([[0.2, 0.3, 0.5], [0.6, 0.1, 0.3]])
     label = mx.nd.array([2, 1])
     metric.update([label], [pred])
