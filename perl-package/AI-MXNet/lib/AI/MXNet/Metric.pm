@@ -248,12 +248,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             $pred_label = AI::MXNet::NDArray->argmax_channel($pred_label);
         }
         AI::MXNet::Metric::check_label_shapes($label, $pred_label);
-        $pred_label = $pred_label->as_in_context($label->context);
-        if($pred_label->dtype ne $label->dtype)
-        {
-            $pred_label = $pred_label->astype($label->dtype);
-        }
-        my $sum = ($pred_label->reshape([-1]) == $label->reshape([-1]))->sum->asscalar;
+        my $sum = ($pred_label->aspdl->flat == $label->aspdl->flat)->sum;
         $self->sum_metric($self->sum_metric + $sum);
         $self->num_inst($self->num_inst + $pred_label->size);
     }, $labels, $preds);
@@ -610,12 +605,6 @@ has '+name'   => (default => 'loss');
     ----------
     name : str
         Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
 =cut
 
 method update($labels, ArrayRef[AI::MXNet::NDArray] $preds)
@@ -625,6 +614,105 @@ method update($labels, ArrayRef[AI::MXNet::NDArray] $preds)
         $self->sum_metric($self->sum_metric + $pred->sum->asscalar);
         $self->num_inst($self->num_inst + $pred->size);
     }
+}
+
+package AI::MXNet::Confidence;
+use Mouse;
+
+=head1 NAME
+
+    AI::MXNet::Confidence
+=cut
+
+=head1 DESCRIPTION
+
+    Accuracy by confidence buckets.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    num_classes: Int
+        number of classes
+    confidence_thresholds: ArrayRef[Num]
+        confidence buckets
+    For example
+    my $composite_metric  = AI::MXNet::CompositeEvalMetric->new;
+    $composite_metric->add(mx->metric->create('acc'));
+    $composite_metric->add(
+        AI::MXNet::Confidence->new(
+            num_classes => 2,
+            confidence_thresholds => [ 0.5, 0.7, 0.8, 0.9 ],
+        )
+    );
+=cut
+
+extends 'AI::MXNet::EvalMetric';
+has 'num_classes', is => 'ro', isa => 'Int', required => 1;
+has 'confidence_thresholds', is => 'ro', isa => 'ArrayRef[Num]', required => 1;
+has '+name'   => (default => 'confidence');
+has '+sum_metric', isa => 'PDL';
+has '+num_inst', isa => 'PDL';
+method python_constructor_arguments() { ['num_classes', 'confidence_thresholds'] }
+
+sub _hot
+{
+    my($m, $n) = @_;
+    my $md = $m->dim(-1);
+    my $hot = PDL->zeros($n, $md);
+    $hot->index2d($m->flat(), PDL->sequence($md)) .= 1;
+    return $hot;
+}
+
+sub reset
+{
+    my($self) = @_;
+    my $nt = @{$self->confidence_thresholds};
+    my $n = $self->num_classes;
+    $self->sum_metric(PDL->zeroes($nt, $n));
+    $self->num_inst(PDL->zeroes($nt, $n));
+    return;
+}
+
+sub update
+{
+    my($self, $labels, $preds) = @_;
+    my $n = $self->num_classes;
+    my $ct = PDL->new($self->confidence_thresholds);
+    my $nt = $ct->nelem;
+    for(0 .. @$labels - 1)
+    {
+        my $label = _hot($labels->[$_]->aspdl, $n);
+        my $pred = $preds->[$_]->aspdl;
+        for my $c (0 .. $n - 1)
+        {
+            my $ls = $label->slice($c);
+            my $pm = $pred->slice($c) > $ct;
+            $self->sum_metric->slice(":,$c") += ($pm & $ls);
+            $self->num_inst->slice(":,$c") += $pm;
+        }
+    }
+    return;
+}
+
+sub get
+{
+    my($self) = @_;
+    my(@names, @values);
+    my $val = $self->sum_metric / $self->num_inst;
+    my $ct = $self->confidence_thresholds;
+    my $n = $self->num_classes;
+    for my $c (0 .. $n - 1)
+    {
+        for my $t (0 .. @$ct - 1)
+        {
+            my $sm = $self->sum_metric->at($t, $c);
+            my $ni = $self->num_inst->at($t, $c);
+            push @names, "P(v=$c|Conf>$ct->[$t])=($sm/$ni)";
+            push @values, $val->at($t, $c);
+        }
+    }
+    return(\@names, \@values);
 }
 
 =head1 NAME
@@ -702,6 +790,7 @@ my %metrics = qw/
     pearsoncorrelation  AI::MXNet::PearsonCorrelation
     loss                AI::MXNet::Loss
     compositeevalmetric AI::MXNet::CompositeEvalMetric
+    confidence          AI::MXNet::Confidence
 /;
 
 method create(Metric|ArrayRef[Metric] $metric, @kwargs)
