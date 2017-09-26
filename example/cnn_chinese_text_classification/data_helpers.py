@@ -46,11 +46,25 @@ def clean_str(string):
     return string.strip().lower()
 
 
+def get_chinese_text():
+    if not os.path.isdir("data/"):
+        os.system("mkdir data/")
+    if (not os.path.exists('data/pos.txt')) or \
+       (not os.path.exists('data/neg')):
+        os.system("wget -q https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/chinese_text.zip -P data/")
+        os.chdir("./data")
+        os.system("unzip -u chinese_text.zip")
+        os.chdir("..")
+
+
 def load_data_and_labels():
     """
     Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
+    # download dataset
+    get_chinese_text()
+
     # Load data from files
     positive_examples = list(codecs.open("./data/pos.txt", "r", "utf-8").readlines())
     positive_examples = [s.strip() for s in positive_examples]

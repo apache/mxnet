@@ -48,7 +48,7 @@ parser.add_argument('--gpus', type=str, default='',
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. ')
 parser.add_argument('--kv-store', type=str, default='local',
                     help='key-value store type')
-parser.add_argument('--num-epochs', type=int, default=200,
+parser.add_argument('--num-epochs', type=int, default=150,
                     help='max num of epochs')
 parser.add_argument('--batch-size', type=int, default=50,
                     help='the batch size.')
