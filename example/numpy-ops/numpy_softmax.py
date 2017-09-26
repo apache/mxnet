@@ -18,7 +18,6 @@
 # pylint: skip-file
 import sys
 import os
-sys.path.insert(0, "../../python/")
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
 from get_data import mnist_iterator
