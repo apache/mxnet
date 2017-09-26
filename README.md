@@ -1,8 +1,8 @@
 Apache MXNet (incubating) for Deep Learning
 =====
 
-[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
-[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.io/)
+[![Build Status](https://builds.apache.org/job/incubator-mxnet/job/master/badge/icon)](https://builds.apache.org/job/incubator-mxnet/job/master/)
+[![Documentation Status](https://builds.apache.org/job/incubator-mxnet-build-site/badge/icon)](https://mxnet.incubator.apache.org/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
@@ -22,7 +22,7 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
-* [Version 0.11.0-rc2 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.11.0.rc2) - MXNet 0.11.0-rc2 Release.
+* [Version 0.11.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.11.0) - MXNet 0.11.0 Release.
 * [Apache Incubator](http://incubator.apache.org/projects/mxnet.html) - We are now an Apache Incubator project.
 * [Version 0.10.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.10.0) - MXNet 0.10.0 Release.
 * [Version 0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.

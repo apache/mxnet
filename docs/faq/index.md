@@ -1,4 +1,4 @@
-# MXNet How To
+# MXNet FAQ
 
 This section addresses common questions about how to use _MXNet_. These include performance issues, e.g., how to train with multiple GPUs.
 They also include workflow questions, e.g., how to visualize a neural network computation graph.
