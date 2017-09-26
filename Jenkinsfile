@@ -11,15 +11,19 @@ max_time = 120
 // assign any caught errors here
 err = null
 
-//Method to Kill PR Builds that are running currently when a new build is triggered.
+//Method to Kill old PR Builds that are running currently when a new build is triggered.
+//env.JOB_NAME looks something like "incubator-mxnet/PR-7893". Thus, projectName is incubator-mxnet
+//env.JOB_BASE_NAME is either the name of the branch or for a PR something like "PR-7893"
+//Once the project and the current PR (or branch) is known, search for all builds within it.
+//Abort the build if it is older than the current build.
 def abortPreviousRunningBuilds() {
-  def hi = Hudson.instance
-  def pname = env.JOB_NAME.split('/')[0]
+  def hudsonInstance = Hudson.instance
+  def projectName = env.JOB_NAME.split('/')[0]
 
-  hi.getItem(pname).getItem(env.JOB_BASE_NAME).getBuilds().each{ build ->
+  hudsonInstance.getItem(projectName).getItem(env.JOB_BASE_NAME).getBuilds().each{ build ->
     def exec = build.getExecutor()
 
-    if (build.number != currentBuild.number && exec != null) {
+    if (build.number < currentBuild.number && exec != null) {
       exec.interrupt(
         Result.ABORTED,
         new CauseOfInterruption.UserInterruption(
@@ -27,8 +31,6 @@ def abortPreviousRunningBuilds() {
         )
       )
       println("Aborted previous running build #${build.number}")
-    } else {
-      println("Build is not running or is current build, not aborting - #${build.number}")
     }
   }
 }
@@ -141,7 +143,9 @@ try {
     stage("Sanity Check") {
       timeout(time: max_time, unit: 'MINUTES') {
         node('mxnetlinux') {
-          abortPreviousRunningBuilds()
+          if (env.BRANCH_NAME != "master") {
+            abortPreviousRunningBuilds()
+          }
           ws('workspace/sanity') {
             init_git()
             sh "python tools/license_header.py check"
