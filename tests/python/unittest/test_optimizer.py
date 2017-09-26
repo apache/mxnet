@@ -331,11 +331,12 @@ def test_sparse_sgd():
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), sparse_update=False, **kwargs):
+                 rho=1.0, decay_factor=(1 - 1e-8), sparse_update=False, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
+        self.rho = rho
         self.decay_factor = decay_factor
         self.sparse_update = sparse_update
 
@@ -390,8 +391,8 @@ class PyAdam(mx.optimizer.Optimizer):
             if self.clip_gradient is not None:
                 mx.nd.clip(grad[row], -self.clip_gradient, self.clip_gradient, out=grad[row])
             # update mean
-            mean[row] *= self.beta1
-            mean[row] += grad[row] * (1. - self.beta1)
+            mean[row] *= self.beta1 * self.rho**(t-1)
+            mean[row] += grad[row] * (1. - self.beta1 * self.rho**(t-1))
             # update variance
             variance[row] *= self.beta2
             variance[row] += (1 - self.beta2) * mx.nd.square(grad[row], out=grad[row])

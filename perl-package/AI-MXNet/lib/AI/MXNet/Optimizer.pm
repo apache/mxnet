@@ -643,7 +643,9 @@ __PACKAGE__->register;
         Default value is set to 1e-8.
     decay_factor : float, optional
         Default value is set to 1 - 1e-8.
-
+    rho : float, optional
+        Shrinkage rate for beta1 when calculate the mean.
+        Default value is set to 1.0.
     wd : float, optional
         L2 regularization coefficient add to all the weights
     rescale_grad : float, optional
@@ -662,6 +664,7 @@ has '+learning_rate' => (default => 0.001);
 has 'beta1'    => (is => "rw", isa => "Num", default => 0.9);
 has 'beta2'    => (is => "rw", isa => "Num", default => 0.999);
 has 'epsilon'  => (is => "rw", isa => "Num", default => 1e-8);
+has 'rho'      => (is => "rw", isa => "Num", default => 1.0);
 has 'decay_factor'  => (is => "rw", isa => "Num", default => (1 - 1e-8));
 
 sub BUILD
@@ -707,6 +710,7 @@ method update(
     my $t = $self->_index_update_count->{$index};
     my $coef1 = 1 - $self->beta1**$t;
     my $coef2 = 1 - $self->beta2**$t;
+    my $rho   = $self->rho**($t-1);
     $lr *= sqrt($coef2)/$coef1;
     my ($mean, $var) = @{ $state };
     AI::MXNet::NDArray->adam_update(
@@ -715,6 +719,7 @@ method update(
             out => $weight,
             lr  => $lr,
             wd  => $wd,
+            rho => $rho,
             %{ $self->kwargs }
         }
     );

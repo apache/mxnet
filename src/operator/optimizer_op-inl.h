@@ -632,6 +632,7 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   float beta1;
   float beta2;
   float epsilon;
+  float rho;
   float wd;
   float rescale_grad;
   float clip_gradient;
@@ -647,6 +648,9 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
     DMLC_DECLARE_FIELD(epsilon)
     .set_default(1e-8f)
     .describe("A small constant for numerical stability.");
+    DMLC_DECLARE_FIELD(rho)
+    .set_default(1.0)
+    .describe("Shrinkage rate for beta1.");
     DMLC_DECLARE_FIELD(wd)
     .set_default(0.0f)
     .describe("Weight decay augments the objective function with a "
@@ -685,12 +689,13 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
       scalar<DType>(param.wd) * weight;
 
     if (param.clip_gradient >= 0.0f) {
-      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) *
+      mean = scalar<DType>(param.beta1*param.rho)*mean + scalar<DType>(1.f-param.beta1*param.rho) *
           F<clip>(grad, DType(param.clip_gradient));
       var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2)*F<square>(
           F<clip>(grad, DType(param.clip_gradient)));
     } else {
-      mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) * grad;
+      mean = scalar<DType>(param.beta1*param.rho)*mean +
+             scalar<DType>(1.f-param.beta1*param.rho) * grad;
       var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2) * F<square>(grad);
     }
     Assign(out, req[0],
@@ -712,7 +717,8 @@ struct AdamDnsRspDnsKernel {
   MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType beta1, const DType beta2,
-    const DType lr, const DType wd, const DType epsilon, const DType rescale_grad) {
+    const DType rho, const DType lr, const DType wd, const DType epsilon,
+    const DType rescale_grad) {
     using nnvm::dim_t;
     using namespace mshadow_op;
     const dim_t row_offset = grad_idx[i] * row_length;
@@ -723,12 +729,13 @@ struct AdamDnsRspDnsKernel {
       const dim_t grad_i = i * row_length + j;
       const DType grad_rescaled = grad_data[grad_i] * rescale_grad + weight_data[data_i] * wd;
       if (clip_gradient >= 0.0f) {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) *
+        mean_data[data_i] = beta1 * rho * mean_data[data_i] + (1.f - beta1 * rho) *
                             clip::Map(grad_rescaled, clip_gradient);
         var_data[data_i] =  beta2 * var_data[data_i] + (1.f - beta2) * square::Map(
                             clip::Map(grad_rescaled, clip_gradient));
       } else {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
+        mean_data[data_i] = beta1 * rho * mean_data[data_i] +
+                            (1.f - beta1 * rho) * grad_rescaled;
         var_data[data_i] = beta2 * var_data[data_i] +
                            (1.f - beta2) * grad_rescaled * grad_rescaled;
       }
@@ -771,9 +778,9 @@ inline void AdamUpdateDnsRspDnsImpl(const AdamParam& param,
         Kernel<AdamDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
           out_data, mean_data, var_data, weight_data, grad_idx, grad_val,
           static_cast<DType>(param.clip_gradient), static_cast<DType>(param.beta1),
-          static_cast<DType>(param.beta2), static_cast<DType>(param.lr),
-          static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
-          static_cast<DType>(param.rescale_grad));
+          static_cast<DType>(param.beta2), static_cast<DType>(param.rho),
+          static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+          static_cast<DType>(param.epsilon), static_cast<DType>(param.rescale_grad));
       });
     });
   });
