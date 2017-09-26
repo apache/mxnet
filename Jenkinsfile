@@ -138,15 +138,10 @@ def python3_gpu_ut(docker_type) {
 }
 
 try {
-    stage("Purge") {
-        node('mxnetlinux') {
-            abortPreviousRunningBuilds()
-        }
-    }
-
     stage("Sanity Check") {
       timeout(time: max_time, unit: 'MINUTES') {
         node('mxnetlinux') {
+          abortPreviousRunningBuilds()
           ws('workspace/sanity') {
             init_git()
             sh "python tools/license_header.py check"
