@@ -134,3 +134,12 @@ imported by running:
 
    metric/metric.md
 ```
+
+## Run-Time Compilation API
+
+```eval_rst
+.. toctree::
+   :maxdepth 1
+
+   rtc/rtc.md
+```
