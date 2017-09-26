@@ -84,6 +84,10 @@ typedef void *KVStoreHandle;
 typedef void *RecordIOHandle;
 /*! \brief handle to MXRtc*/
 typedef void *RtcHandle;
+/*! \brief handle to rtc cuda module*/
+typedef void *CudaModuleHandle;
+/*! \brief handle to rtc cuda kernel*/
+typedef void *CudaKernelHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -1922,6 +1926,59 @@ MXNET_DLL int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creato
 MXNET_DLL int MXCustomFunctionRecord(int num_inputs, NDArrayHandle *inputs,
                                      int num_outputs, NDArrayHandle *outputs,
                                      struct MXCallbackList *callbacks);
+/*
+ * \brief create cuda rtc module
+ * \param source cuda source code
+ * \param num_options number of compiler flags
+ * \param options compiler flags
+ * \param num_exports number of exported function names
+ * \param exported function names
+ * \param out handle to created module
+ */
+MXNET_DLL int MXRtcCudaModuleCreate(const char* source, int num_options,
+                                    const char** options, int num_exports,
+                                    const char** exports, CudaModuleHandle *out);
+/*
+ * \brief delete cuda rtc module
+ * \param handle handle to cuda module
+ */
+MXNET_DLL int MXRtcCudaModuleFree(CudaModuleHandle handle);
+/*
+ * \brief get kernel from module
+ * \param handle handle to cuda module
+ * \param name name of kernel function
+ * \param num_args number of arguments
+ * \param is_ndarray whether argument is ndarray
+ * \param is_const whether argument is constant
+ * \param arg_types data type of arguments
+ * \param out created kernel
+ */
+MXNET_DLL int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name,
+                                    int num_args, int* is_ndarray, int* is_const,
+                                    int* arg_types, CudaKernelHandle *out);
+/*
+ * \brief delete kernel
+ * \param handle handle to previously created kernel
+ */
+MXNET_DLL int MXRtcCudaKernelFree(CudaKernelHandle handle);
+/*
+ * \brief launch cuda kernel
+ * \param handle handle to kernel
+ * \param dev_id (GPU) device id
+ * \param args pointer to arguments
+ * \param grid_dim_x grid dimension x
+ * \param grid_dim_y grid dimension y
+ * \param grid_dim_z grid dimension z
+ * \param block_dim_x block dimension x
+ * \param block_dim_y block dimension y
+ * \param block_dim_z block dimension z
+ * \param shared_mem size of dynamically allocated shared memory
+ */
+MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
+                                  mx_uint grid_dim_x, mx_uint grid_dim_y,
+                                  mx_uint grid_dim_z, mx_uint block_dim_x,
+                                  mx_uint block_dim_y, mx_uint block_dim_z,
+                                  mx_uint shared_mem);
 
 #ifdef __cplusplus
 }
