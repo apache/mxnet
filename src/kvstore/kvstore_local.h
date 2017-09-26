@@ -136,11 +136,10 @@ class KVStoreLocal : public KVStore {
   }
 
   virtual void SetCompress(const std::string& compress, const float pos_threshold,
-                   const float neg_threshold) {
+                   const float neg_threshold) override {
     compress_ = compress;
     pos_threshold_ = pos_threshold;
     neg_threshold_ = neg_threshold;
-    std::cout<<"Set compress thresholds as "<<pos_threshold_<< " "<<neg_threshold_<<std::endl;
   }
 
  private:

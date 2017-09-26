@@ -558,6 +558,8 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   int b = to->ctx().dev_mask();
   std::vector<Engine::VarHandle> const_vars;
   const_vars.push_back(from.var());
+  const_vars.push_back(pos_threshold.var());
+  const_vars.push_back(neg_threshold.var());
   std::vector<Engine::VarHandle> mutable_vars;
   mutable_vars.push_back(ret.var());
   mutable_vars.push_back(res.var());
@@ -611,7 +613,6 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   std::vector<TBlob> inputs(2);
   inputs[0] = from.data();
   inputs[1] = to->data();
-
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([inputs](RunContext ctx) {

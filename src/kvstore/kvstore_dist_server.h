@@ -31,8 +31,7 @@
 #include <functional>
 #include <future>
 #include <vector>
-#include <sstream>
-#include <cstdlib>
+#include <bitset>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op.h"
@@ -47,16 +46,6 @@ static const int kDefaultPushPull = 0;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
 static const int kSetCompress = 2;
-
-template<typename Out>
-void split(const std::string &s, char delim, Out result) {
-  std::stringstream ss;
-  ss.str(s);
-  std::string item;
-  while (std::getline(ss, item, delim)) {
-    *(result++) = item;
-  }
-}
 
 /**
  * \brief executor runs a function using the thread called \ref Start
@@ -142,16 +131,6 @@ class KVStoreDistServer {
     controller_ = controller;
   }
 
-  void load_compress_params(const std::string& params) {
-    std::vector<std::string> elems;
-    split(params, ',', std::back_inserter(elems));
-    compress_ = elems[0];
-    if (elems.size() > 1) {
-      pos_threshold_ = strtof(elems[1].c_str(), NULL);
-      neg_threshold_ = strtof(elems[2].c_str(), NULL);
-    }
-  }
-
   void set_updater(const KVStore::Updater& updater)  {
     CHECK(updater);
     updater_ = updater;
@@ -176,7 +155,7 @@ class KVStoreDistServer {
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
     } else if (recved.head == kSetCompress) {
-      load_compress_params(recved.body);
+      compress_ = recved.body;
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -312,14 +291,14 @@ class KVStoreDistServer {
           // instead of calling BinaryComputeRspRsp directly
           using namespace mshadow;
           Engine::Get()->PushSync([recved, merged, out](RunContext ctx) {
-              std::vector<NDArray> inputs, outputs;
-              inputs.push_back(recved);
-              inputs.push_back(merged.array);
-              outputs.push_back(out);
-              op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
-                {}, {}, inputs, {kWriteTo}, outputs);
-            }, recved.ctx(), const_vars, {out.var()},
-            FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+                                    std::vector<NDArray> inputs, outputs;
+                                    inputs.push_back(recved);
+                                    inputs.push_back(merged.array);
+                                    outputs.push_back(out);
+                                    op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
+                                      {}, {}, inputs, {kWriteTo}, outputs);
+                                  }, recved.ctx(), const_vars, {out.var()},
+                                  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
           CopyFromTo(out, &merged.array, 0);
         }
         merged.request.push_back(req_meta);
@@ -387,7 +366,6 @@ class KVStoreDistServer {
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
-
     CHECK_EQ(req_meta.cmd, kDefaultPushPull);
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
@@ -408,14 +386,16 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-      NDArray comp_buf = compress_buf_[key];
-      recved.WaitToRead();
+      NDArray decomp_buf = decomp_buf_[key];
       if (compress_ != "none") {
+//        float neg = (*(recv_blob.dptr<float>()));
+//        float pos = (*(recv_blob.dptr<float>()+1));
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
+//        std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>(recv_blob.dptr<float>()+3));
+//        std::cout<<"Server received"<<pos<<" " <<neg<<" "<<original_size<<" "<<foo<<std::endl;
         dshape = TShape{original_size};
-        std::cout << "server: Uncompress shape: " << dshape.Size() << std::endl;
-        if (comp_buf.is_none()) {
-          comp_buf = NDArray(dshape, Context());
+        if (decomp_buf.is_none()) {
+          decomp_buf = NDArray(dshape, Context());
         }
       }
       if (stored.is_none()) {
@@ -428,6 +408,7 @@ class KVStoreDistServer {
         }
         server->Response(req_meta);
         stored.WaitToRead();
+//        std::cout<<"stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
@@ -438,25 +419,35 @@ class KVStoreDistServer {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
-            Dequantize(recved, &comp_buf, compress_, 0);
-            CopyFromTo(comp_buf, &merged.array, 0);
+            Dequantize(recved, &decomp_buf, compress_, 0);
+            CopyFromTo(decomp_buf, &merged.array, 0);
           }
         } else {
           if (compress_ == "none") {
             merged.array += recved;
           } else {
-            Dequantize(recved, &comp_buf, compress_, 0);
-            merged.array += comp_buf;
+            Dequantize(recved, &decomp_buf, compress_, 0);
+            merged.array += decomp_buf;
           }
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
+        stored.WaitToRead();
+//        std::cout<<"stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       } else {
         // async push
-        exec_.Exec([this, key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(key, recved, &stored);
+        if (compress_ == "none") {
+          exec_.Exec([this, key, &recved, &stored]() {
+              CHECK(updater_);
+              updater_(key, recved, &stored);
           });
+        } else {
+          Dequantize(recved, &decomp_buf, compress_, 0);
+          exec_.Exec([this, key, &decomp_buf, &stored]() {
+              CHECK(updater_);
+              updater_(key, decomp_buf, &stored);
+          });
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       }
@@ -479,15 +470,29 @@ class KVStoreDistServer {
   }
 
   /**
-   * \brief user defined
+   * \brief user defined mode for push
    */
   bool sync_mode_;
   KVStore::Controller controller_;
   KVStore::Updater updater_;
 
+  /**
+   * \brief store_ contains the value at kvstore for each key
+   */
   std::unordered_map<int, NDArray> store_;
+
+  /**
+   * \brief merge_buf_ is a buffer used if sync_mode is true. It represents
+   * values from different workers being merged. The store will be updated
+   * to this value when values from all workers are pushed into this buffer.
+   */
   std::unordered_map<int, MergeBuf> merge_buf_;
-  std::unordered_map<int, NDArray> compress_buf_;
+
+  /**
+   * \brief decomp_buf_ is a buffer into which compressed values are
+   * decompressed before merging to the store
+   */
+  std::unordered_map<int, NDArray> decomp_buf_;
 
   Executor exec_;
   ps::KVServer<float>* ps_server_;
@@ -495,18 +500,11 @@ class KVStoreDistServer {
   // whether to LOG verbose information
   bool log_verbose_;
 
-  // set to use gradient compression
-  std::string compress_;
-
   /**
-   * \brief positive threshold for 2bit compression
+   * \brief compress_ refers to whether values sent to kvstore server are
+   * in quantized form. It can be 'none' or '2bit' for now.
    */
-  float pos_threshold_ = 0.1;
-
-  /**
-   * \brief negative threshold for 2bit compression
-   */
-  float neg_threshold_ = -0.1;
+  std::string compress_ = "none";
 
 };
 

@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <bitset>
 #include <utility>
 #include "./kvstore_local.h"
 #include "mxnet/engine.h"
@@ -92,11 +93,11 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual void SetCompress(const std::string& compress, const float pos_threshold,
-                     const float neg_threshold) {
+                     const float neg_threshold) override {
     KVStoreLocal::SetCompress(compress, pos_threshold, neg_threshold);
-//    if (get_rank() == 0) {
-      SendCommandToServers(kSetCompress, GetCompressParams());
-//    }
+    if (get_rank() == 0) {
+      SendCommandToServers(kSetCompress, compress_);
+    }
   }
 
   void Barrier() override {
@@ -271,88 +272,93 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
-      // merge over devcies
+      // merge over devices
       int key = uniq_keys[i];
       const auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
-
-      auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
+      auto& comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
         // make sure the previous push/pull is completed
-        send_buf.WaitToWrite();
-        send_buf = merged;  // avoid memory copy
+        comm_buf.WaitToWrite();
+        comm_buf = merged;  // avoid memory copy
       } else {
-        if (send_buf.is_none()) {
+        if (comm_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
-            send_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
+            comm_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
           } else {
-            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, merged.dtype());
+            comm_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, merged.dtype());
           }
         }
-        CopyFromTo(merged, &send_buf);
+        CopyFromTo(merged, &comm_buf);
       }
 
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
 
-      // Init the small buffer and residual_ buffer for quantize
-      if (small_buf.is_none() && compress_ != "none") {
-        int bits = compress_ == "2bit" ? 16 : 32;
-        long int small_size = merged.shape().Size() % bits == 0 ?
-                      merged.shape().Size() / bits + 3 :
-                      merged.shape().Size() / bits + 4;
-        // small buffer for quantize
-        small_buf = NDArray(TShape{small_size},
-                    send_buf.ctx(), false, send_buf.dtype());
-        // residual buffer for quantize
-        res_buf = NDArray(merged.shape(), send_buf.ctx(),
-                  false, send_buf.dtype());
-        res_buf = 0;
-        if (pos_thre_.is_none()) {
-          // positive threshold
-          pos_thre_ = NDArray(TShape{1}, send_buf.ctx(),
-            false, mshadow::kFloat32);
-          pos_thre_ = pos_threshold_;
-          // negative threshold
-          neg_thre_ = NDArray(TShape{1}, send_buf.ctx(),
-            false, mshadow::kFloat32);
-          neg_thre_ = neg_threshold_;
+      // Compress
+      if (compress_ != "none") {
+        // Init the small buffer and residual_ buffer for quantize
+        if (small_buf.is_none()) {
+          int bits = compress_ == "2bit" ? 16 : 32;
+          long int small_size = merged.shape().Size() % bits == 0 ?
+                        merged.shape().Size() / bits + 3 :
+                        merged.shape().Size() / bits + 4;
+          // small buffer for quantize
+          small_buf = NDArray(TShape{small_size}, comm_buf.ctx(), false, comm_buf.dtype());
+          // residual buffer for quantize
+          res_buf = NDArray(merged.shape(), comm_buf.ctx(), false, comm_buf.dtype());
+          res_buf = 0;
+          if (pos_thre_.is_none()) {
+            // positive threshold
+            pos_thre_ = NDArray(TShape{1}, comm_buf.ctx(), false, mshadow::kFloat32);
+            pos_thre_ = pos_threshold_;
+            // negative threshold
+            neg_thre_ = NDArray(TShape{1}, comm_buf.ctx(), false, mshadow::kFloat32);
+            neg_thre_ = neg_threshold_;
+          }
+        }
+
+        if (compress_ == "2bit") {
+          Quantize(comm_buf, &small_buf, &res_buf, pos_thre_, neg_thre_, compress_, priority);
+//          small_buf.WaitToRead();
+//          std::cout<<"Original data is "<<*((float *) comm_buf.data().dptr_)<<std::endl;
+//          std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
+//          std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
+//                   << *(((float *) small_buf.data().dptr_)+1) << " "
+//                   << *(((float *) small_buf.data().dptr_)+2) << " "
+//                   << foo << " " << *(((float *) small_buf.data().dptr_)+3) << std::endl;
+//          std::cout<<"Res buf is "<< *((float *) res_buf.data().dptr_) <<std::endl;
+        } else {
+          LOG(FATAL) << "Unsupported quantization";
         }
       }
-      std::cout<<"send_buf size is "<<send_buf.shape().Size()<<std::endl;
-      std::cout<<"small_buf size is "<<small_buf.shape().Size()<<std::endl;
-      std::cout<<"res_buf size is "<<res_buf.shape().Size()<<std::endl;
-      // Compress
-      if (compress_ == "2bit") {
-        Quantize(send_buf, &small_buf, &res_buf,
-           pos_thre_, neg_thre_,
-           compress_,
-           priority);
+
+      NDArray send_buf;
+      if (compress_=="none") {
+        comm_buf.WaitToWrite();
+        send_buf = comm_buf;
+      } else {
+        small_buf.WaitToWrite();
+        send_buf = small_buf;
       }
+
       // push to servers
       if (storage_type == kDefaultStorage) {
       auto push_to_servers =
-          [this, key, send_buf, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+          [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
-          size_t size = 0;
-          if (compress_ == "none") {
-            size = send_buf.shape().Size();
-          } else {
-            size = small_buf.shape().Size();
-          }
-          PSKV& pskv = EncodeKey(key, size, true);
 
-#if MKL_EXPERIMENTAL == 1
-          mkl_set_tblob_eager_mode(send_buf.data());
-#endif
+          size_t size = 0;
           real_t* data = nullptr;
-          if (compress_ == "none") {
-            data = send_buf.data().dptr<real_t>();
-          } else {
-            data = small_buf.data().dptr<real_t>();
-          }
+          size = send_buf.shape().Size();
+          data = send_buf.data().dptr<real_t>();
+#if MKL_EXPERIMENTAL == 1
+            mkl_set_tblob_eager_mode(send_buf.data());
+#endif
+          PSKV& pskv = EncodeKey(key, size, true);
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(

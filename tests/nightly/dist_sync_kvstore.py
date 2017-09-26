@@ -174,41 +174,55 @@ def test_sync_push_pull():
 
 
 def test_compressed():
-    kv = mx.kv.create('dist_sync')
-    pos_threshold = 0.5
-    neg_threshold = -0.5
-    kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
-    # init kv dns keys
-    kv.init('99', mx.nd.zeros(big_shape))
-    kv.init('3', mx.nd.zeros(shape))
+    def init_kv(type):
+        kv = mx.kv.create(type)
+        pos_threshold = 0.5
+        neg_threshold = -0.5
+        kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
+        # init kv dns keys
+        kv.init('99', mx.nd.zeros(big_shape))
+        kv.init('3', mx.nd.zeros(shape))
+        my_rank = kv.rank
+        nworker = kv.num_workers
+        return kv, pos_threshold, neg_threshold, my_rank, nworker
 
-    def verify_residual(pos_threshold):
-      kv.push('99', mx.nd.ones(big_shape)*0.1)
-      val=mx.nd.zeros(big_shape)
-      kv.pull('99',val)
-      check_diff_to_scalar(val, 0)
-      kv.push('99', mx.nd.ones(big_shape)*(pos_threshold-0.1))
-      val2 = mx.nd.zeros(big_shape)
-      kv.pull('99',val2)
-      check_diff_to_scalar(val2, pos_threshold)
-      kv.push('99', mx.nd.ones(big_shape)*0.2)
-      val3= mx.nd.zeros(big_shape)
-      kv.pull('99', val3)
-      check_diff_to_scalar(val3, 0)
-      kv.push('99', mx.nd.ones(big_shape)*(pos_threshold-0.2))
-      val4 = mx.nd.zeros(big_shape)
-      kv.pull('99',val4)
-      check_diff_to_scalar(val4, pos_threshold)
+    def verify_residual(kv, pos_threshold):
+        for d in [('99', big_shape), ('3', shape)]:
+            kv.push(d[0], mx.nd.ones(d[1])*0.4)
+            val=mx.nd.zeros(d[1])
+            kv.pull(d[0],val)
+            check_diff_to_scalar(val, 0)
+            kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold - 0.4))
+            val2 = mx.nd.zeros(d[1])
+            kv.pull(d[0],val2)
+            check_diff_to_scalar(val2, pos_threshold)
+            kv.push(d[0], mx.nd.ones(d[1])*0.2)
+            val3= mx.nd.zeros(d[1])
+            kv.pull(d[0], val3)
+            check_diff_to_scalar(val3, 0)
+            kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold-0.2))
+            val4 = mx.nd.zeros(d[1])
+            kv.pull(d[0],val4)
+            check_diff_to_scalar(val4, pos_threshold)
 
-    def check_zero():
+    def check_ones(kv, pos):
+        kv.push('99',mx.nd.ones(big_shape)*pos*2)
+        val = mx.nd.zeros(big_shape)
+        kv.pull('99', val)
+        check_diff_to_scalar(val, pos)
+
+    def check_zero(kv):
       kv.push('99', mx.nd.zeros(big_shape))
       val = mx.nd.zeros(big_shape)
       kv.pull('99', val)
       check_diff_to_scalar(val, 0)
 
-    check_zero()
-    verify_residual(pos_threshold)
+    for type in ['dist_sync']:
+        kv, pos, neg, rank, nworker = init_kv(type)
+        check_zero(kv)
+        verify_residual(kv, pos)
+        check_ones(kv, pos)
     
 if __name__ == "__main__":
-    #test_sync_push_pull()
+    test_sync_push_pull()
     test_compressed()

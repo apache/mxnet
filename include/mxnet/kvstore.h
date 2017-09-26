@@ -70,14 +70,6 @@ class KVStore {
   virtual void SetCompress(const std::string& compress, const float pos_threshold,
                            const float neg_threshold) = 0;
 
-  std::string GetCompressParams() {
-    std::string rval = compress_;
-    if (compress_ == "2bit") {
-      rval += "," + std::to_string(pos_threshold_) + "," + std::to_string(neg_threshold_);
-    }
-    return rval;
-  }
-
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
