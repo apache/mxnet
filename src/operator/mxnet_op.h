@@ -257,12 +257,12 @@ struct Kernel<OP, cpu> {
         OP::Map(i, args...);
       }
     }
-  }
 #else
-  for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
-  }
+    }
 #endif
+  }
 };
 
 
