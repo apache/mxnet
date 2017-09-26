@@ -83,7 +83,7 @@ inline void SetShapeType(const Context& ctx,
                   const nnvm::NodeAttrs& attrs,
                   const std::vector<NDArray*>& inputs,
                   const std::vector<NDArray*>& outputs,
-                  int* dispatch_mode) {
+                  DispatchMode* dispatch_mode) {
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
@@ -147,7 +147,7 @@ inline void SetShapeType(const Context& ctx,
     CHECK(success);
   }
   CHECK_EQ(out_storage_types.size(), outputs.size());
-  CHECK_NE(*dispatch_mode, static_cast<int>(DispatchMode::kUndefined));
+  CHECK(*dispatch_mode != DispatchMode::kUndefined);
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
@@ -178,7 +178,7 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
                    std::vector<engine::VarHandle> *p_write_vars,
                    std::vector<Resource> *p_requested,
                    std::vector<uint32_t> *p_mutate_idx,
-                   const int dispatch_mode) {
+                   const DispatchMode dispatch_mode) {
   static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& ftmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
 
@@ -210,7 +210,7 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   }
 
   // append extra resource requests for storage fallback
-  if (dispatch_mode == static_cast<int>(DispatchMode::kFComputeFallback)) {
+  if (dispatch_mode == DispatchMode::kFComputeFallback) {
     requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
     write_vars.push_back(requested.back().var);
   }
@@ -282,9 +282,9 @@ inline void PushFCompute(const FCompute& fn,
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
       // setup blobs
-      SetupDefaultBlobs(inputs, outputs, &input_blobs, &output_blobs,
-                        &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
-                        &in_temp_idx_map, mutate_idx);
+      SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
+                             &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
+                             &in_temp_idx_map, mutate_idx);
       // setup context
       OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
@@ -341,7 +341,7 @@ inline void PushOperator(const OpStatePtr& state,
                   const std::vector<NDArray*>& p_outputs,
                   const std::vector<uint32_t>& mutate_idx,
                   const std::vector<OpReqType>& req,
-                  const int dispatch_mode) {
+                  const DispatchMode dispatch_mode) {
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
@@ -355,7 +355,7 @@ inline void PushOperator(const OpStatePtr& state,
 
   auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
   auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
-  if (fcompute_ex != nullptr && dispatch_mode == static_cast<int>(DispatchMode::kFComputeEx)) {
+  if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
     const auto& run = [state, fcompute_ex, inputs, outputs, requested, is_train,
                        exec_type, req](
           RunContext rctx,
@@ -392,9 +392,9 @@ inline void PushOperator(const OpStatePtr& state,
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
         // populate input blobs and output blobs
-        SetupDefaultBlobs(inputs, outputs, &input_blobs, &output_blobs,
-                          &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
-                          &in_temp_idx_map, mutate_idx);
+        SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
+                               &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
+                               &in_temp_idx_map, mutate_idx);
         // setup contexts
         bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
         // pre-fcompute fallback

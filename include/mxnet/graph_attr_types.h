@@ -25,6 +25,7 @@
 #define MXNET_GRAPH_ATTR_TYPES_H_
 
 #include <vector>
+#include <mxnet/op_attr_types.h>
 
 namespace mxnet {
 
@@ -56,7 +57,7 @@ using StorageTypeVector = std::vector<int>;
 + *
 + * \sa FInferStorageType
 + */
-using DispatchModeVector = std::vector<int>;
+using DispatchModeVector = std::vector<DispatchMode>;
 
 }  // namespace mxnet
 

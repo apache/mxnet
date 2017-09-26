@@ -71,7 +71,7 @@ inline bool SparseRetainOpType(const nnvm::NodeAttrs& attrs,
 
 inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                 const int dev_mask,
-                                                int* dispatch_mode,
+                                                DispatchMode* dispatch_mode,
                                                 std::vector<int> *in_attrs,
                                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -82,7 +82,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   auto &out_stype = out_attrs->at(sr::kOut);
   if (!dispatched && arr_stype == kRowSparseStorage && idx_stype == kDefaultStorage) {
     // rsp, dns -> rsp
-    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
@@ -94,7 +94,7 @@ inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  const int dev_mask,
-                                                 int* dispatch_mode,
+                                                 DispatchMode* dispatch_mode,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);

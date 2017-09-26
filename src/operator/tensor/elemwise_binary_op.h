@@ -41,7 +41,7 @@ namespace op {
 
 inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
                                                    const int dev_mask,
-                                                   int *dispatch_mode,
+                                                   DispatchMode* dispatch_mode,
                                                    std::vector<int> *in_attrs,
                                                    std::vector<int> *out_attrs) {
   using namespace common;
@@ -53,12 +53,12 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
-    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-    dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, dispatch_ex);
     // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
     if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
@@ -70,7 +70,7 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == static_cast<int>(DispatchMode::kFComputeFallback)) {
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;
@@ -78,7 +78,7 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
 
 inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
                                        const int dev_mask,
-                                       int *dispatch_mode,
+                                       DispatchMode* dispatch_mode,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
@@ -91,7 +91,7 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched) {
@@ -101,14 +101,14 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
       // rsp, rsp -> rsp
       // rsp, dns -> rsp
       // dns, rsp -> rsp
-      dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+      dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                        dispatch_mode, dispatch_ex);
     }
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
   }
-  if (*dispatch_mode == static_cast<int>(DispatchMode::kFComputeFallback)) {
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
     LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
   }
   return true;

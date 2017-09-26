@@ -40,7 +40,7 @@ OpStatePtr Imperative::InvokeOp(
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs,
     const std::vector<OpReqType>& req,
-    const int dispatch_mode,
+    const DispatchMode dispatch_mode,
     OpStatePtr state) {
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -59,8 +59,8 @@ OpStatePtr Imperative::InvokeOp(
   FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
 
   // FComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
-  CHECK_NE(dispatch_mode, static_cast<int>(DispatchMode::kUndefined));
-  bool dispatch_fcompex = dispatch_mode == static_cast<int>(DispatchMode::kFComputeEx);
+  CHECK(dispatch_mode != DispatchMode::kUndefined);
+  bool dispatch_fcompex = dispatch_mode == DispatchMode::kFComputeEx;
   if (fn_ex && dispatch_fcompex) {
     PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
         requested, inputs, outputs, req);
@@ -100,7 +100,7 @@ OpStatePtr Imperative::Invoke(
   }
 
   // TODO(piiswrong): infer ctx
-  int dispatch_mode = -1;
+  DispatchMode dispatch_mode = DispatchMode::kUndefined;
   Context ctx = GetContext(attrs, inputs, outputs, default_ctx);
   SetShapeType(ctx, attrs, inputs, outputs, &dispatch_mode);
   std::vector<OpReqType> req;
@@ -270,7 +270,7 @@ void Imperative::RunGraph(
     std::vector<OpReqType>&& array_reqs,
     std::vector<uint32_t>&& ref_count,
     std::vector<OpStatePtr> *p_states,
-    const std::vector<int> &dispatch_modes) {
+    const DispatchModeVector &dispatch_modes) {
   using namespace nnvm;
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");

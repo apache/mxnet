@@ -183,6 +183,22 @@ inline bool type_assign(int *y, const int& x) {
 }
 
 /*!
+ * \brief Assign x to y. Checks for compatiblity when y is not DispatchMode::kUndefined.
+ * \param y target mode.
+ * \param x source mode.
+ * \return whether x and y are compatible.
+ */
+inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
+  if (*y == DispatchMode::kUndefined) {
+    *y = x;
+    return true;
+  } else if (*y != x && x != DispatchMode::kUndefined) {
+    return false;
+  }
+  return true;
+}
+
+/*!
  * \brief macro assign shape to out if out is unknown otherwise check consistency
  *  Use macro so we can see the error file more clearly
  * \param shape_array the shape array to store the result
@@ -244,11 +260,11 @@ inline bool type_assign(int *y, const int& x) {
  */
 #define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
   {                                                                         \
-    if (!type_assign(&(type_array)[index], static_cast<int>(type))) {                         \
+    if (!dispatch_mode_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
       os << "Dispatch mode inconsistent, Provided="                         \
          << common::dispatch_mode_string((type_array)[index]) << ','        \
-         << " inferred mode=" << common::dispatch_mode_string(static_cast<int>(type));        \
+         << " inferred mode=" << common::dispatch_mode_string(type);        \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -287,9 +303,9 @@ inline bool type_assign(int *y, const int& x) {
 /*! \brief assign stype to target_stype, if successful,
  *         assign dispatch_mode to target_dispatch
  */
-inline bool dispatch_on_storage(int* stype,
+inline bool storage_type_assign(int* stype,
                                 const NDArrayStorageType target_stype,
-                                int* dispatch,
+                                DispatchMode* dispatch,
                                 const DispatchMode target_dispatch) {
   if (type_assign(stype, target_stype)) {
     DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
@@ -301,9 +317,9 @@ inline bool dispatch_on_storage(int* stype,
 /*! \brief assign the stype vector to target_stype, if successful,
  *         assign dispatch_mode to target_dispatch
  */
-inline bool dispatch_on_storage(StorageTypeVector* stypes,
+inline bool storage_type_assign(StorageTypeVector* stypes,
                                 const NDArrayStorageType target_stype,
-                                int* dispatch,
+                                DispatchMode* dispatch,
                                 const DispatchMode target_dispatch) {
   CHECK_GT(stypes->size(), 0);
   bool success = true;
@@ -320,7 +336,7 @@ inline bool dispatch_on_storage(StorageTypeVector* stypes,
 
 /*! \brief update the stype vector to default storage and dispatch_mode to fallback
  */
-inline void dispatch_fallback(StorageTypeVector* stypes, int* dispatch) {
+inline void dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
   for (auto& stype : *stypes) {
     type_assign(&stype, kDefaultStorage);
   }

@@ -28,6 +28,7 @@
 #include <mxnet/imperative.h>
 
 #include "./c_api_common.h"
+#include "../operator/operator_common.h"
 
 namespace mxnet {
 namespace custom_function {
@@ -109,20 +110,18 @@ void Backward(const OpStatePtr& state,
 
 // infer storage function for custom op, which assigns kDefaultStorage for
 // all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
-inline bool CustomFunctionStorageType(const nnvm::NodeAttrs& attrs,
-                                      const int dev_mask,
-                                      int* dispatch_mode,
-                                      std::vector<int> *iattr,
-                                      std::vector<int> *oattr) {
+inline bool InferStorageType(const nnvm::NodeAttrs& attrs,
+                             const int dev_mask,
+                             DispatchMode* dispatch_mode,
+                             std::vector<int> *iattr,
+                             std::vector<int> *oattr) {
   for (int& v : *oattr) {
     if (v == -1) v = kDefaultStorage;
   }
   for (int& v : *iattr) {
     if (v == -1) v = kDefaultStorage;
   }
-  if (*dispatch_mode == -1) {
-    *dispatch_mode = static_cast<int>(DispatchMode::kFComputeEx);
-  }
+  op::dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
   return true;
 }
 
@@ -153,7 +152,7 @@ NNVM_REGISTER_OP(_CustomFunction)
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
-.set_attr<FInferStorageType>("FInferStorageType", CustomFunctionStorageType);
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
 
 
 NNVM_REGISTER_OP(_backward_CustomFunction)
@@ -172,7 +171,7 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
-.set_attr<FInferStorageType>("FInferStorageType", CustomFunctionStorageType);
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
 
 }  // namespace custom_function
 }  // namespace mxnet

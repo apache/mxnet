@@ -49,7 +49,7 @@ namespace op {
 template<bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
-                                int* dispatch_mode,
+                                DispatchMode* dispatch_mode,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   using namespace common;
@@ -58,17 +58,17 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns ... -> dns
-    dispatched = dispatch_on_storage(out_attrs, kDefaultStorage,
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
     // rsp, rsp, ... -> rsp
-    dispatched = dispatch_on_storage(out_attrs, kRowSparseStorage,
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                      dispatch_mode, dispatch_ex);
   }
   if (!dispatched && csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
     // csr, csr, ... -> csr
-    dispatched = dispatch_on_storage(out_attrs, kCSRStorage,
+    dispatched = storage_type_assign(out_attrs, kCSRStorage,
                                      dispatch_mode, dispatch_ex);
   }
   if (!dispatched) {
@@ -91,7 +91,7 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
 template<int n_in, int n_out, bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
-                                int* dispatch_mode,
+                                DispatchMode* dispatch_mode,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), n_in);

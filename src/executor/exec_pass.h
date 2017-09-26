@@ -178,7 +178,7 @@ Graph InferStorageType(Graph&& graph,
  */
 bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                         const int dev_mask,
-                        int* dispatch_mode,
+                        DispatchMode* dispatch_mode,
                         std::vector<int> *iattr,
                         std::vector<int> *oattr);
 

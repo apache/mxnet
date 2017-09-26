@@ -36,7 +36,7 @@ namespace op {
 
 inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
                                     const int dev_mask,
-                                    int* dispatch_mode,
+                                    DispatchMode* dispatch_mode,
                                     std::vector<int> *in_attrs,
                                     std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
@@ -46,12 +46,12 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   if (!dispatched && in_stype == kDefaultStorage) {
     // dns -> dns
-    dispatched = dispatch_on_storage(&out_stype, kDefaultStorage,
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && in_stype == kRowSparseStorage) {
     // rsp -> rsp
-    dispatched = dispatch_on_storage(&out_stype, kRowSparseStorage,
+    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
     // FComputeEx can handle dns output on cpu, too
     if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
@@ -61,7 +61,7 @@ inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched && in_stype == kCSRStorage) {
     // csr -> csr
-    dispatched = dispatch_on_storage(&out_stype, kCSRStorage,
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
     // FComputeEx can handle dns output on cpu, too
     if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {

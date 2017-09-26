@@ -68,40 +68,22 @@ inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
 }
 
 /*
- * \brief cast the NDArrays in `src` and store the result in NDArrays in `dst`.
- *        This is only used for storage fallback in executor.
- * \param src list of source NDArray to cast
- * \param dst list of destionation NDArray which hold the result of cast_storage operation
- * \param ctx operator context for cast_storage operation
- */
-template <typename xpu>
-inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
-                                  const std::vector<NDArray>& dst,
-                                  const OpContext& ctx) {
-  CHECK_GE(dst.size(), src.size());
-  if (src.size() == 0) return;
-  for (size_t i = 0; i < src.size(); i++) {
-    CastStorageDispatch<xpu>(ctx, src[i], dst[i]);
-  }
-}
-
-/*
  * \brief setup default-storage tblobs for input and output NDArrays.
  *        If any NDArray has non-default storage,
  *        it creates a temp NDArray with default storage and uses the temp tblob. The
  *        function also records the indices of non-default source NDArrays and the indices of
  *        their corresponding temporary NDArrays in the temp array.
  */
-inline void SetupDefaultBlobs(const std::vector<NDArray> &ndinputs,
-                              const std::vector<NDArray> &ndoutputs,
-                              std::vector<TBlob> *input_blobs,
-                              std::vector<TBlob> *output_blobs,
-                              std::vector<NDArray> *pre_temp_src,
-                              std::vector<NDArray> *pre_temp_dst,
-                              std::vector<NDArray> *post_temp_src,
-                              std::vector<NDArray> *post_temp_dst,
-                              std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
-                              const std::vector<uint32_t> &mutate_idx) {
+inline void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
+                                   const std::vector<NDArray> &ndoutputs,
+                                   std::vector<TBlob> *input_blobs,
+                                   std::vector<TBlob> *output_blobs,
+                                   std::vector<NDArray> *pre_temp_src,
+                                   std::vector<NDArray> *pre_temp_dst,
+                                   std::vector<NDArray> *post_temp_src,
+                                   std::vector<NDArray> *post_temp_dst,
+                                   std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
+                                   const std::vector<uint32_t> &mutate_idx) {
   // populate input blobs
   SetupDefaultBlobs(ndinputs, input_blobs, pre_temp_src, pre_temp_dst, in_temp_idx_map);
   // populate output blobs
@@ -116,7 +98,13 @@ inline void SetupDefaultBlobs(const std::vector<NDArray> &ndinputs,
   }
 }
 
-// cast the NDArrays in `src` to NDArrays in `dst`, with op contexts in `ctx`
+/*
+ * \brief cast the NDArrays in `src` and store the result in NDArrays in `dst`.
+ *        This is only used for storage fallback in executor.
+ * \param src list of source NDArray to cast
+ * \param dst list of destionation NDArray which hold the result of cast_storage operation
+ * \param ctx operator context for cast_storage operation
+ */
 inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
                                   const std::vector<NDArray>& dst,
                                   const OpContext& ctx,

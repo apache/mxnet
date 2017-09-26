@@ -63,10 +63,10 @@ class StorageFallbackOpExecutor : public OpExecutor {
       pre_temp_src_.clear(); pre_temp_dst_.clear();
       post_temp_src_.clear(); post_temp_dst_.clear();
       in_temp_idx_map_.clear();
-      SetupDefaultBlobs(in_array, out_array, &in_data_, &out_data_,
-                        &pre_temp_src_, &pre_temp_dst_,
-                        &post_temp_src_, &post_temp_dst_,
-                        &in_temp_idx_map_, mutate_idx_);
+      SetupDefaultBlobsInOut(in_array, out_array, &in_data_, &out_data_,
+                             &pre_temp_src_, &pre_temp_dst_,
+                             &post_temp_src_, &post_temp_dst_,
+                             &in_temp_idx_map_, mutate_idx_);
       init_ = true;
     }
   }
@@ -256,7 +256,7 @@ Graph AttachOpExecs(Graph g) {
     if (fexec_type.count(op)) {
       exec_type = fexec_type[op](inode.source->attrs);
     }
-    CHECK_NE(dispatch_modes[i], static_cast<int>(DispatchMode::kUndefined));
+    CHECK(dispatch_modes[i] != DispatchMode::kUndefined);
     if (fcreate_op_state.count(op)) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
@@ -275,7 +275,7 @@ Graph AttachOpExecs(Graph g) {
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
-      if (fcompute_ex != nullptr && dispatch_modes[i] == static_cast<int>(DispatchMode::kFComputeEx)) {
+      if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
         ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
       } else {
         FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
@@ -294,7 +294,7 @@ Graph AttachOpExecs(Graph g) {
       FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
           op, "FStatefulComputeEx", vctx[i]);
       // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
-      if (fcompute_ex != nullptr && dispatch_modes[i] == static_cast<int>(DispatchMode::kFComputeEx)) {
+      if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
         ret[i] = std::make_shared<StatefulComputeExExecutor>(
             dynamic_cast<StatefulComputeExExecutor*>(ret[fwd_id].get())->state_,
             fcompute_ex, exec_type);
@@ -311,7 +311,7 @@ Graph AttachOpExecs(Graph g) {
     } else {
       FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
       FComputeEx fcomp_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", vctx[i]);
-      if (fcomp_ex != nullptr && dispatch_modes[i] == static_cast<int>(DispatchMode::kFComputeEx)) {
+      if (fcomp_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
         ret[i] = std::make_shared<FComputeExExecutor>(
             inode.source->attrs, fcomp_ex, exec_type);
       } else if (fcompute != nullptr) {

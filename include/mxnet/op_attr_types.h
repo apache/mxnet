@@ -258,7 +258,7 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
  */
 using FInferStorageType = std::function<bool (const NodeAttrs& attrs,
                                               const int dev_mask,
-                                              int* dispatch_mode,
+                                              DispatchMode* dispatch_mode,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs)>;
 
