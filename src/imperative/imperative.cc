@@ -304,7 +304,7 @@ void Imperative::RunGraph(
       req.push_back(array_reqs[eid]);
       CHECK(!ndoutputs.back()->is_none());
     }
-    const auto dispatch_mode = dispatch_modes[i];
+    const DispatchMode dispatch_mode = dispatch_modes[i];
     if (node.source->op() == bwd_cached_op) {
       const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
