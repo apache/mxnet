@@ -1,6 +1,6 @@
 MXNet Change Log
 ================
-## 0.11.0-rc2
+## 0.11.0
 ### - Major Features
   - Apple Core ML model converter
   - Support for Keras v1.2.2
