@@ -167,11 +167,10 @@ def test_sync_push_pull():
         check_diff_to_scalar(val, expected, rank=my_rank)
 
     check_default_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    # check_big_row_sparse_keys(kv, my_rank, nworker)
+    check_row_sparse_keys(kv, my_rank, nworker)
+    check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+    check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done')
-
 
 def test_compressed():
     def init_kv(type):

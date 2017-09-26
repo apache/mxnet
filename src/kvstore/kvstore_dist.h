@@ -272,7 +272,6 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-    std::cout<<grouped_vals[0].data()->shape().Size()<<std::endl;
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
@@ -336,48 +335,46 @@ class KVStoreDist : public KVStoreLocal {
         }
       }
 
-      NDArray send_buf;
-      if (compress_=="none") {
-        comm_buf.WaitToWrite();
-        send_buf = comm_buf;
-      } else {
-        small_buf.WaitToWrite();
-        send_buf = small_buf;
-      }
-
       // push to servers
       if (storage_type == kDefaultStorage) {
-      auto push_to_servers =
-          [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
-          // convert to ps keys
-
-          size_t size = 0;
-          real_t* data = nullptr;
-          size = send_buf.shape().Size();
-          data = send_buf.data().dptr<real_t>();
-#if MKL_EXPERIMENTAL == 1
-            mkl_set_tblob_eager_mode(send_buf.data());
-#endif
-          PSKV& pskv = EncodeKey(key, size, true);
-          // do push. false means no delete
-          ps::SArray<real_t> vals(data, size, false);
-          CHECK_NOTNULL(ps_worker_)->ZPush(
-              pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
-        };
-        Engine::Get()->PushAsync(
-            push_to_servers,
-            pinned_ctx_,
-            {send_buf.var()},
-            {},
-            FnProperty::kNormal,
-            priority,
-            PROFILER_MESSAGE("KVStoreDistDefaultPush"));
+        if (compress_ == "none") {
+          PushDefault(key, comm_buf, priority);
+        } else {
+          PushDefault(key, small_buf, priority);
+        }
       } else if (storage_type == kRowSparseStorage) {
-        PushRowSparse(key, send_buf, priority);
+        PushRowSparse(key, comm_buf, priority);
       } else {
         LOG(FATAL) << "unknown storage type";
       }
     }
+  }
+
+  void PushDefault(int key, NDArray &send_buf, int priority){
+    auto push_to_servers =
+        [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+            // convert to ps keys
+            size_t size = 0;
+            real_t* data = nullptr;
+            size = send_buf.shape().Size();
+            data = send_buf.data().dptr<real_t>();
+#if MKL_EXPERIMENTAL == 1
+            mkl_set_tblob_eager_mode(send_buf.data());
+#endif
+            PSKV& pskv = EncodeKey(key, size, true);
+            // do push. false means no delete
+            ps::SArray<real_t> vals(data, size, false);
+            CHECK_NOTNULL(ps_worker_)->ZPush(
+                pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
+        };
+    Engine::Get()->PushAsync(
+        push_to_servers,
+        pinned_ctx_,
+        {send_buf.var()},
+        {},
+        FnProperty::kNormal,
+        priority,
+        PROFILER_MESSAGE("KVStoreDistDefaultPush"));
   }
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
