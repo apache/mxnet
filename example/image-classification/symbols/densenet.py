@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-'''
+"""
 Adapted from https://github.com/bruinxiong/densenet.mxnet/blob/master/symbol_densenet.py
 Implemented the following paper:
 Gao Huang, Zhang Liu, Laurend van der Maaten. "Densely Connected Convolutional Networks"
-'''
+"""
 import mxnet as mx
 import math
 
