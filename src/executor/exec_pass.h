@@ -96,6 +96,12 @@ using OpExecVector = std::vector<std::shared_ptr<OpExecutor> >;
 using ContextVector = std::vector<Context>;
 
 /*!
+ * \brief per node device mask vector
+ * \node stored under "dev_mask"
+ */
+using DevMaskVector = std::vector<int>;
+
+/*!
  * \brief Attach OpExecutor to the graph attributes.
  *
  * \param g input graph

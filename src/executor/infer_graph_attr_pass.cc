@@ -49,8 +49,8 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs,
                                               DispatchMode* dispatch_mode) {
-  const ContextVector& ctxes = g.GetAttr<ContextVector>("context");
-  return finfer(attrs, ctxes[nid].dev_mask(), dispatch_mode, in_attrs, out_attrs);
+  const DevMaskVector& dev_masks = g.GetAttr<DevMaskVector>("dev_mask");
+  return finfer(attrs, dev_masks[nid], dispatch_mode, in_attrs, out_attrs);
 }
 
 /*!\brief
@@ -415,6 +415,19 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
   if (graph.attrs.count("dispatch_mode") == 0) {
     DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
     graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
+  }
+  // initialize unknown values for dispatch modes
+  if (graph.attrs.count("dispatch_mode") == 0) {
+    DispatchModeVector dispatch_modes(graph.indexed_graph().num_nodes(), DispatchMode::kUndefined);
+    graph.attrs["dispatch_mode"] = std::make_shared<any>(std::move(dispatch_modes));
+  }
+  // initialize the dev_mask vector from the context vector
+  if (graph.attrs.count("dev_mask") == 0) {
+    CHECK_GT(graph.attrs.count("context"), 0);
+    DevMaskVector dev_masks(graph.indexed_graph().num_nodes());
+    const ContextVector& vctx = graph.GetAttr<ContextVector>("context");
+    for (size_t i = 0; i < vctx.size(); i++) dev_masks[i] = vctx[i].dev_mask();
+    graph.attrs["dev_mask"] = std::make_shared<any>(std::move(dev_masks));
   }
 
   // for storage type, the backward attr is not necessarily the same as it's correspondence

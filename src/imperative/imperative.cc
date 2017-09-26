@@ -519,7 +519,7 @@ std::vector<NDArray*> Imperative::Backward(
     stypes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) stypes.emplace_back(i->storage_type());
     CheckAndInferStorageType(
-        &graph, default_ctx, std::move(stypes), false,
+        &graph, default_ctx.dev_mask(), std::move(stypes), false,
         node_range, entry_range);
   }
 

@@ -414,9 +414,9 @@ inline void PushOperator(const OpStatePtr& state,
 }
 
 inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
-                        bool use_inputs,
-                        std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                        std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                               bool use_inputs,
+                               std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                               std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
@@ -458,9 +458,9 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
 
 
 inline bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
-                       bool use_inputs,
-                       std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                       std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                              bool use_inputs,
+                              std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                              std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
@@ -500,26 +500,26 @@ inline bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
   return false;
 }
 
-inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const Context& ctx,
+inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const int dev_mask,
                                      StorageTypeVector&& storage_types, bool use_inputs,
                                      std::pair<uint32_t, uint32_t> node_range = {0, 0},
                                      std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
-  bool ctx_match = false;
-  if (g.attrs.count("context")) {
-    const auto& prev_vctx = g.GetAttr<exec::ContextVector>("context");
-    if (prev_vctx.size() && prev_vctx[0].dev_mask() == ctx.dev_mask()) ctx_match = true;
+  bool dev_match = false;
+  if (g.attrs.count("dev_mask")) {
+    const auto& prev_vdev = g.GetAttr<exec::DevMaskVector>("dev_mask");
+    if (prev_vdev.size() && prev_vdev[0] == dev_mask) dev_match = true;
   }
-  if (!ctx_match) {
-    exec::ContextVector vctx(g.indexed_graph().num_nodes(), ctx);
-    g.attrs["context"] = std::make_shared<dmlc::any>(std::move(vctx));
+  if (!dev_match) {
+    exec::DevMaskVector vdev(g.indexed_graph().num_nodes(), dev_mask);
+    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(vdev));
   }
 
-  if (ctx_match && use_inputs) {
+  if (dev_match && use_inputs) {
     if (g.attrs.count("storage_type_inputs") &&
         g.GetAttr<StorageTypeVector>("storage_type_inputs") == storage_types) return true;
-  } else if (ctx_match && g.attrs.count("storage_type")) {
+  } else if (dev_match && g.attrs.count("storage_type")) {
     const auto& prev_storage_types = g.GetAttr<StorageTypeVector>("storage_type");
     CHECK_EQ(prev_storage_types.size(), storage_types.size());
     bool match = true;
