@@ -1411,6 +1411,7 @@ def get_mnist():
             'test_data':test_img, 'test_label':test_lbl}
 
 def get_bz2_data(data_dir, data_name, url, data_origin_name):
+    """Download and extract bz2 data."""
     download(url, dirname=data_dir, overwrite=False)
     os.chdir(data_dir)
     if not os.path.exists(data_name):
