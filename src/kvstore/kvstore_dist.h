@@ -272,7 +272,7 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-
+    std::cout<<grouped_vals[0].data()->shape().Size()<<std::endl;
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
