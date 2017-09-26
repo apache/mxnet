@@ -51,7 +51,8 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   auto& rhs_grad_stype = out_attrs->at(1);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
   if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
@@ -88,7 +89,8 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,

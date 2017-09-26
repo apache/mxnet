@@ -55,7 +55,8 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
   using namespace common;
   bool dispatched = false;
   const bool invalid_ctx = cpu_only && dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     // dns, dns ... -> dns
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,

@@ -24,8 +24,8 @@
 #ifndef MXNET_GRAPH_ATTR_TYPES_H_
 #define MXNET_GRAPH_ATTR_TYPES_H_
 
-#include <vector>
 #include <mxnet/op_attr_types.h>
+#include <vector>
 
 namespace mxnet {
 
