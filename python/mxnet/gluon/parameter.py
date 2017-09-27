@@ -297,8 +297,7 @@ class Parameter(object):
             ctx = [context.current_context()]
         if isinstance(ctx, Context):
             ctx = [ctx]
-        if init is None:
-            init = default_init if self.init is None else self.init
+        init = default_init if self.init is None else self.init
         if not self.shape or np.prod(self.shape) <= 0:
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init)
