@@ -682,6 +682,9 @@ class BaseModule(object):
         >>> # An example of loading module parameters.
         >>> mod.load_params('myfile')
         """
+        if self.optimizer_initialized:
+            raise RuntimeError("The optimizer is not expected to be initialized " \
+                               "before parameters are loaded")
         save_dict = ndarray.load(fname)
         arg_params = {}
         aux_params = {}

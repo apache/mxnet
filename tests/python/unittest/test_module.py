@@ -111,6 +111,11 @@ def test_save_load():
     assert mod._symbol.tojson() == mod2._symbol.tojson()
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._updater.states, mod2._updater.states)
+    try:
+        mod2.load_params('test')
+        assert(False)
+    except RuntimeError as e:
+        pass
 
     # multi device
     mod = mx.mod.Module(sym, ('data',), context=[mx.cpu(0), mx.cpu(1)])
