@@ -23,6 +23,9 @@ more `Executor` for data parallelization.
 
 import logging
 import warnings
+import os
+import json
+import zipfile
 
 from .. import context as ctx
 from .. import optimizer as opt
@@ -170,6 +173,77 @@ class Module(BaseModule):
             state_name = '%s-%04d.states' % (prefix, epoch)
             self.save_optimizer_states(state_name)
             logging.info('Saved optimizer state to \"%s\"', state_name)
+
+    def export_serving(self, prefix, epoch, signature, save_optimizer_states=False, use_synset=False):
+        """Export current progress to a zip file used by MXNet model serving.
+
+        Parameters
+        ----------
+        prefix : str
+            The file prefix to export to.
+        epoch : int
+            The current epoch number.
+        signature : dict
+            A dictionary containing model input and output information.
+            Data names or data shapes of inputs and outputs can be automatically
+            collected from module. User needs to specify inputs and outputs MIME
+            type for http request. Currently only 'image/jpeg' and 'application/json'
+            are supported. All inputs should have the same type. This also applies for
+            outputs.
+            An example signature would be:
+                signature = { "input_type": "image/jpeg", "output_type": "application/json" }
+        save_optimizer_states : bool
+            Whether to save optimizer states to continue training.
+        use_synset : bool
+            Whether to include synset file for classification model. The synset.txt should be
+            in the same directory of training script.
+
+        Examples
+        --------
+        >>> signature = { "input_type": "image/jpeg", "output_type": "application/json" }
+        >>> model.export_serving(prefix='resnet-18', epoch=100, signature=signature)
+        Exported model to "resnet-18.zip"
+        """
+        VALID_MIME_TYPE = ['image/jpeg', 'application/json']
+        SIG_FILE_NAME = 'signature.json'
+        SYNSET_FILE_NAME = 'synset.txt'
+        assert 'input_type' in signature and 'output_type' in signature, \
+            "input_type and output_type are required in signature."
+        assert isinstance(signature['input_type'], str) and \
+               isinstance(signature['output_type'], str), \
+            "Value of input_type and output_type should be string"
+        assert signature['input_type'] in VALID_MIME_TYPE and \
+               signature['output_type'] in VALID_MIME_TYPE, \
+            "Valid type should be picked from %s" % (VALID_MIME_TYPE)
+
+        signature['inputs'] = list()
+        signature['outputs'] = list()
+        for name, shape in self.data_shapes:
+            signature['inputs'].append({
+                'data_name': name,
+                'data_shape': list(shape)
+            })
+        for name, shape in self.output_shapes:
+            signature['outputs'].append({
+                'data_name': name,
+                'data_shape': list(shape)
+            })
+        with open(SIG_FILE_NAME, 'w') as sig:
+            json.dump(signature, sig)
+        self.save_checkpoint(prefix, epoch, save_optimizer_states)
+
+        file_list = ['%s-symbol.json' % (prefix), '%s-%04d.params' % (prefix, epoch), SIG_FILE_NAME]
+        if save_optimizer_states:
+            file_list.append('%s-%04d.states' % (prefix, epoch))
+        if use_synset:
+            assert os.path.isfile(SYNSET_FILE_NAME), 'use_synset is set as True but %s is not found.' \
+                                                     % (SYNSET_FILE_NAME)
+            file_list.append(SYNSET_FILE_NAME)
+        with zipfile.ZipFile('%s.zip' % (prefix), 'w') as zp:
+            for item in file_list:
+                zp.write(item)
+        logging.info('Exported model to \"%s.zip\"', prefix)
+
 
     def _reset_bind(self):
         """Internal function to reset binded state."""
