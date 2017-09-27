@@ -515,7 +515,7 @@ def test_factorization_machine_module():
         mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
         # allocate memory by given the input data and lable shapes
         mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-        # initialize parameters by random numbers
+        # initialize parameters by uniform random numbers
         mod.init_params(initializer=init)
         if optimizer == 'sgd':
             # use Sparse SGD with learning rate 0.1 to train
@@ -545,7 +545,7 @@ def test_factorization_machine_module():
             raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
         # use accuracy as the metric
         metric = mx.metric.create('MSE')
-        # train 'num_epochs' epochs
+        # train 'num_epochs' epoch
         for epoch in range(num_epochs):
             train_iter.reset()
             metric.reset()
