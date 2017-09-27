@@ -268,7 +268,7 @@ struct Kernel<OP, cpu> {
 
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
-__global__ void mxnet_generic_kernel(const int N, Args... args) {
+__global__ void mxnet_generic_kernel(int N, Args... args) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
     OP::Map(i, args...);
   }
@@ -277,7 +277,7 @@ __global__ void mxnet_generic_kernel(const int N, Args... args) {
 template<typename OP>
 struct Kernel<OP, gpu> {
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<gpu> *s, const int N, Args... args) {
+  inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel<OP, Args...>

@@ -36,7 +36,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <algorithm>
 #include "./engine_impl.h"
 #include "./profiler.h"
 #include "../common/object_pool.h"

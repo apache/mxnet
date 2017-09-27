@@ -22,6 +22,7 @@
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
 #include <dmlc/base.h>
+#include <dmlc/omp.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <dmlc/concurrency.h>
