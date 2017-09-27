@@ -363,7 +363,6 @@ if(USE_CUDA)
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
-  add_definitions(-DMXNET_USE_NVRTC=1)
   if(CUDA_LIBRARY_PATH)
     if(IS_CONTAINER_BUILD)
       # In case of building on a production-like build container which may not have Cuda installed
