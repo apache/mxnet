@@ -130,7 +130,27 @@ def test_symbol_block():
     assert len(smodel(mx.nd.zeros((16, 10)))) == 14
 
     out = smodel(mx.sym.var('in'))
-    assert len(out.get_internals().list_outputs()) == len(outputs.list_outputs())
+    assert len(out) == len(outputs.list_outputs())
+
+    class Net(nn.HybridBlock):
+        def __init__(self, model):
+            super(Net, self).__init__()
+            self.model = model
+
+        def hybrid_forward(self, F, x):
+            out = self.model(x)
+            return F.add_n(*[i.sum() for i in out])
+
+    net = Net(smodel)
+    net.hybridize()
+    assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
+
+    inputs = mx.sym.var('data')
+    outputs = model(inputs)
+    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    net = Net(smodel)
+    net.hybridize()
+    assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
 
 def check_layer_forward(layer, dshape):
