@@ -78,14 +78,14 @@ method __enter__()
     $self->_old_scope($_current);
     $_current = $self;
     AI::MXNet::Symbol::Prefix->new(prefix => $self->_block->prefix);
-    $self->_name_scope($mx::NameManager);
-    $mx::NameManager = AI::MXNet::Symbol::Prefix->new(prefix => $self->_block->prefix);;
+    $self->_name_scope(AI::MXNet::Symbol::NameManager->current);
+    AI::MXNet::Symbol::NameManager->set_current(AI::MXNet::Symbol::Prefix->new(prefix => $self->_block->prefix));
     return $self;
 }
 
 method __exit__()
 {
-    $mx::NameManager = $self->_name_scope;
+    AI::MXNet::Symbol::NameManager->set_current($self->_name_scope);
     $self->_name_scope(undef);
     $_current = $self->_old_scope;
 }

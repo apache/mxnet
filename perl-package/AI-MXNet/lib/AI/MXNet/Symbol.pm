@@ -1468,5 +1468,6 @@ sub  _ufunc_helper
 }
 
 sub contrib { 'AI::MXNet::Contrib::Symbol' }
+sub random  { 'AI::MXNet::Symbol::Random' }
 
 1;

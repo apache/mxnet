@@ -43,6 +43,7 @@ class_type 'AI::MXNet::KVStore';
 class_type 'AI::MXNet::Gluon::Block';
 class_type 'AI::MXNet::Gluon::Data::Set';
 class_type 'AI::MXNet::Gluon::RNN::HybridRecurrentCell';
+class_type 'AI::MXNet::Symbol::NameManager';
 subtype "AcceptableInput" => as "Num|PDL|PDL::Matrix|AI::MXNet::NDArray|AI::MXNet::NDArray::Slice|ArrayRef";
 subtype "Index"           => as "Int";
 subtype "DimSize"         => as "Int" => where { $_ >= 0 };

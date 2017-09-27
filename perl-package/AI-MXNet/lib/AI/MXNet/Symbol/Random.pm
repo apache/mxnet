@@ -15,14 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Logging;
-## TODO
+package AI::MXNet::Symbol::Random;
 use strict;
 use warnings;
-use Mouse;
-our $silent = 0;
-sub warning { return if $silent; shift; warn sprintf(shift, @_) . "\n" };
-*debug   = *info = *warning;
-sub get_logger { __PACKAGE__->new }
+use Scalar::Util qw/blessed/;
+
+sub AUTOLOAD {
+    my $sub = $AI::MXNet::Symbol::Random::AUTOLOAD;
+    $sub =~ s/.*:://;
+    shift;
+    if(grep { blessed($_) } @_)
+    {
+        $sub = "_sample_$sub";
+    }
+    else
+    {
+        $sub = "_random_$sub";
+    }
+    return AI::MXNet::Symbol->$sub(@_);
+}
 
 1;

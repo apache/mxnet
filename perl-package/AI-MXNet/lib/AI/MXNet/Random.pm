@@ -18,6 +18,7 @@
 package AI::MXNet::Random;
 use strict;
 use warnings;
+use Scalar::Util qw/blessed/;
 use AI::MXNet::Base;
 use AI::MXNet::NDArray::Base;
 use AI::MXNet::Function::Parameters;
@@ -60,9 +61,26 @@ method seed(Int $seed_state)
 sub AUTOLOAD {
     my $sub = $AI::MXNet::Random::AUTOLOAD;
     $sub =~ s/.*:://;
-    $sub = "_random_$sub";
     shift;
-    return AI::MXNet::NDArray->$sub(@_);
+    if(grep { blessed($_) and $_->isa('AI::MXNet::NDArray') } @_)
+    {
+        $sub = "_sample_$sub";
+        return AI::MXNet::NDArray->$sub(@_);
+    }
+    else
+    {
+        $sub = "_random_$sub";
+    }
+    my %defaults = (
+        ctx => AI::MXNet::Context->current_ctx,
+        shape => [1],
+    );
+    while(@_ >= 2 and not ref $_[-2] and exists )
+    if(not (grep { $_ eq 'ctx' }))
+    {
+        push @defaults, ctx => AI::MXNet::Context->current_ctx;
+    }
+    if(not )
 }
 
 1;
