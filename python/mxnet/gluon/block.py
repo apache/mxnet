@@ -487,8 +487,8 @@ class SymbolBlock(HybridBlock):
         self._params = ParameterDict('', params)
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
-        if isinstance(outputs, symbol.Symbol) and len(outputs.list_outputs()) == 1:
-            outputs = [outputs]
+        if isinstance(outputs, (list, tuple)) and len(outputs) == 1:
+            outputs = outputs[0]
 
         syms, self._in_format = _flatten(inputs)
         out, self._out_format = _flatten(outputs)
@@ -523,7 +523,7 @@ class SymbolBlock(HybridBlock):
         assert in_fmt == self._in_format, "Invalid input format"
         ret = copy.copy(self._cached_graph[1])
         ret._compose(**{k.name: v for k, v in zip(self._cached_graph[0], args)})
-        return _regroup(ret, self._out_format)[0]
+        return _regroup(list(ret), self._out_format)[0]
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError

@@ -19,6 +19,7 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
+import unittest 
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 
@@ -673,7 +674,7 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8049")
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
