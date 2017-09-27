@@ -512,14 +512,14 @@ def test_factorization_machine_module():
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
     # allocate memory by given the input data and lable shapes
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-    # initialize parameters by uniform random numbers
+    # initialize parameters by random numbers
     mod.init_params(initializer=init)
-    # use Sparse SGD with learning rate 0.1 to train
+    # use sparse Adam with learning rate 0.1 to train
     adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001, rescale_grad=1.0/batch_size)
     mod.init_optimizer(optimizer=adam)
-    # use accuracy as the metric
+    # use MSE as the metric
     metric = mx.metric.create('MSE')
-    # train 10 epoch
+    # train 10 epochs
     for epoch in range(10):
         train_iter.reset()
         metric.reset()
