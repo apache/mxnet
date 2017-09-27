@@ -136,7 +136,11 @@ int MXSetNumOMPThreads(int thread_num) {
   API_END();
 }
 
-int MXGetVersion() { return static_cast<int>(MXNET_VERSION); }
+int MXGetVersion(int *version) {
+  API_BEGIN();
+  *version = static_cast<int>(MXNET_VERSION);
+  API_END();
+}
 
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
