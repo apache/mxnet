@@ -104,7 +104,7 @@ train, val = MNISTIterator(batch_size=100, input_shape = (784,))
 logging.basicConfig(level=logging.DEBUG)
 
 model = mx.model.FeedForward(
-    ctx = mx.cpu(0), symbol = mlp, num_epoch = 20,
+    ctx = mx.gpu(0), symbol = mlp, num_epoch = 20,
     learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
 
 model.fit(X=train, eval_data=val)
