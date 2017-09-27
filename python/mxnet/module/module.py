@@ -174,7 +174,8 @@ class Module(BaseModule):
             self.save_optimizer_states(state_name)
             logging.info('Saved optimizer state to \"%s\"', state_name)
 
-    def export_serving(self, prefix, epoch, signature, save_optimizer_states=False, use_synset=False):
+    def export_serving(self, prefix, epoch, signature, save_optimizer_states=False,
+                       use_synset=False):
         """Export current progress to a zip file used by MXNet model serving.
 
         Parameters
@@ -204,17 +205,17 @@ class Module(BaseModule):
         >>> model.export_serving(prefix='resnet-18', epoch=100, signature=signature)
         Exported model to "resnet-18.zip"
         """
-        VALID_MIME_TYPE = ['image/jpeg', 'application/json']
-        SIG_FILE_NAME = 'signature.json'
-        SYNSET_FILE_NAME = 'synset.txt'
+        valid_mime_type = ['image/jpeg', 'application/json']
+        sig_file_name = 'signature.json'
+        synset_file_name = 'synset.txt'
         assert 'input_type' in signature and 'output_type' in signature, \
             "input_type and output_type are required in signature."
         assert isinstance(signature['input_type'], str) and \
                isinstance(signature['output_type'], str), \
             "Value of input_type and output_type should be string"
-        assert signature['input_type'] in VALID_MIME_TYPE and \
-               signature['output_type'] in VALID_MIME_TYPE, \
-            "Valid type should be picked from %s" % (VALID_MIME_TYPE)
+        assert signature['input_type'] in valid_mime_type and \
+               signature['output_type'] in valid_mime_type, \
+            "Valid type should be picked from %s" % (valid_mime_type)
 
         signature['inputs'] = list()
         signature['outputs'] = list()
@@ -228,20 +229,20 @@ class Module(BaseModule):
                 'data_name': name,
                 'data_shape': list(shape)
             })
-        with open(SIG_FILE_NAME, 'w') as sig:
+        with open(sig_file_name, 'w') as sig:
             json.dump(signature, sig)
         self.save_checkpoint(prefix, epoch, save_optimizer_states)
 
-        file_list = ['%s-symbol.json' % (prefix), '%s-%04d.params' % (prefix, epoch), SIG_FILE_NAME]
+        file_list = ['%s-symbol.json' % (prefix), '%s-%04d.params' % (prefix, epoch), sig_file_name]
         if save_optimizer_states:
             file_list.append('%s-%04d.states' % (prefix, epoch))
         if use_synset:
-            assert os.path.isfile(SYNSET_FILE_NAME), 'use_synset is set as True but %s is not found.' \
-                                                     % (SYNSET_FILE_NAME)
-            file_list.append(SYNSET_FILE_NAME)
-        with zipfile.ZipFile('%s.zip' % (prefix), 'w') as zp:
+            assert os.path.isfile(synset_file_name), \
+                'use_synset is set as True but %s is not found.' % (synset_file_name)
+            file_list.append(synset_file_name)
+        with zipfile.ZipFile('%s.zip' % (prefix), 'w') as zip_file:
             for item in file_list:
-                zp.write(item)
+                zip_file.write(item)
         logging.info('Exported model to \"%s.zip\"', prefix)
 
 
