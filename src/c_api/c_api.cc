@@ -136,9 +136,9 @@ int MXSetNumOMPThreads(int thread_num) {
   API_END();
 }
 
-int MXGetVersion(int *version) {
+int MXGetVersion(int *out) {
   API_BEGIN();
-  *version = static_cast<int>(MXNET_VERSION);
+  *out = static_cast<int>(MXNET_VERSION);
   API_END();
 }
 

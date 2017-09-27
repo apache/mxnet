@@ -233,7 +233,7 @@ MXNET_DLL int MXSetNumOMPThreads(int thread_num);
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXGetVersion(int *version);
+MXNET_DLL int MXGetVersion(int *out);
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
