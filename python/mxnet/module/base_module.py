@@ -683,8 +683,8 @@ class BaseModule(object):
         >>> mod.load_params('myfile')
         """
         if self.optimizer_initialized:
-            raise RuntimeError("The optimizer is expected to be initialized " \
-                               "after parameters are loaded")
+            raise RuntimeError("The optimizer is not expected to be initialized " \
+                               "before parameters are loaded")
         save_dict = ndarray.load(fname)
         arg_params = {}
         aux_params = {}
