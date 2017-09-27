@@ -245,7 +245,6 @@ class Module(BaseModule):
                 zip_file.write(item)
         logging.info('Exported model to \"%s.zip\"', prefix)
 
-
     def _reset_bind(self):
         """Internal function to reset binded state."""
         self.binded = False
