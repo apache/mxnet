@@ -539,6 +539,13 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
 
     assert_almost_equal(a, b, rtol, atol, names)
 
+def assert_exception(f, exception_type, *args, **kwargs):
+    """Test that function f will throw an exception of type given by `exception_type`"""
+    try:
+        f(*args, **kwargs)
+        assert(False)
+    except exception_type:
+        return
 
 def retry(n):
     """Retry n times before failing for stochastic test cases."""
