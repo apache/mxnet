@@ -21,6 +21,7 @@ export LD_LIBRARY_PATH=${MXNET_HOME}/lib
 export PERL5LIB=${MXNET_HOME}/perl5/lib/perl5
 
 ldd ${MXNET_HOME}/lib/libmxnet.so
+
 cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
 perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
 make install || exit -1
