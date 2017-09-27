@@ -23,6 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+import unittest
 
 
 def np_softmax(x, axis=-1):
@@ -884,6 +885,7 @@ def test_nearest_upsampling():
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8044")
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
         for shape in [(2, 3), (2, 3, 2, 2)]:
