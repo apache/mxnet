@@ -155,6 +155,7 @@ class KVStoreDistServer {
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
     } else if (recved.head == kSetCompress) {
+      std::cout<<"Setting compress"<<std::endl;
       compress_ = recved.body;
     } else {
       // let the main thread to execute ctrl, which is necessary for python
@@ -180,6 +181,8 @@ class KVStoreDistServer {
   inline void ApplyUpdates(const int key, MergeBuf *merged, NDArray *stored,
                            ps::KVServer<real_t>* server) {
     if (merged->request.size() == (size_t) ps::NumWorkers()) {
+      std::cout<<"merged buf should be cleared now as size = "<<ps::NumWorkers()<<std::endl;
+      std::cout<<*((float *)merged->array.data().dptr_)<<std::endl;
       // let the main thread to execute updater_, which is necessary for python
       if (updater_) {
         exec_.Exec([this, key, merged, stored](){
@@ -197,6 +200,8 @@ class KVStoreDistServer {
         server->Response(req);
       }
       merged->request.clear();
+      std::cout<<"size of request buf"<<merged->request.size()<<std::endl;
+
       stored->WaitToRead();
     } else {
       merged->array.WaitToRead();
@@ -376,7 +381,7 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
-
+    std::cout<<"For key"<<key<<std::endl;
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
@@ -408,7 +413,7 @@ class KVStoreDistServer {
         }
         server->Response(req_meta);
         stored.WaitToRead();
-//        std::cout<<"stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
+        std::cout<<"stored is inited to "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
@@ -433,7 +438,7 @@ class KVStoreDistServer {
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
         stored.WaitToRead();
-//        std::cout<<"stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
+        std::cout<<"stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       } else {
         // async push
         if (compress_ == "none") {
@@ -456,6 +461,7 @@ class KVStoreDistServer {
       ps::KVPairs<real_t> response;
       CHECK(!stored.is_none()) << "init " << key << " first";
       auto len = stored.shape().Size();
+      std::cout<<"pull stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       response.keys = req_data.keys;
       response.lens = {len};
       // TODO(mli) try to remove this CopyFrom

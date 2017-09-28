@@ -322,14 +322,15 @@ class KVStoreDist : public KVStoreLocal {
 
         if (compress_ == "2bit") {
           Quantize(comm_buf, &small_buf, &res_buf, pos_thre_, neg_thre_, compress_, priority);
-//          small_buf.WaitToRead();
-//          std::cout<<"Original data is "<<*((float *) comm_buf.data().dptr_)<<std::endl;
-//          std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
-//          std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
-//                   << *(((float *) small_buf.data().dptr_)+1) << " "
-//                   << *(((float *) small_buf.data().dptr_)+2) << " "
-//                   << foo << " " << *(((float *) small_buf.data().dptr_)+3) << std::endl;
-//          std::cout<<"Res buf is "<< *((float *) res_buf.data().dptr_) <<std::endl;
+          small_buf.WaitToRead();
+          res_buf.WaitToRead();
+          std::cout<<"Original data is "<<*((float *) comm_buf.data().dptr_)<<std::endl;
+          std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
+          std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
+                   << *(((float *) small_buf.data().dptr_)+1) << " "
+                   << *(((float *) small_buf.data().dptr_)+2) << " "
+                   << foo << " " << *(((float *) small_buf.data().dptr_)+3) << std::endl;
+          std::cout<<"Res buf is "<< *((float *) res_buf.data().dptr_) <<std::endl;
         } else {
           LOG(FATAL) << "Unsupported quantization";
         }
@@ -351,26 +352,33 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   void PushDefault(int key, NDArray &send_buf, int priority){
+    std::vector<Engine::VarHandle> const_vars;
+    auto& comm_buf = comm_buf_[key];
+    const_vars.push_back(comm_buf.var());
+    if (compress_ != "none") {
+      //if compress is set, then send_buf is different from comm_buf
+      const_vars.push_back(send_buf.var());
+    }
     auto push_to_servers =
         [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
-            // convert to ps keys
-            size_t size = 0;
-            real_t* data = nullptr;
-            size = send_buf.shape().Size();
-            data = send_buf.data().dptr<real_t>();
+          // convert to ps keys
+          size_t size = 0;
+          real_t* data = nullptr;
+          size = send_buf.shape().Size();
+          data = send_buf.data().dptr<real_t>();
 #if MKL_EXPERIMENTAL == 1
-            mkl_set_tblob_eager_mode(send_buf.data());
+          mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-            PSKV& pskv = EncodeKey(key, size, true);
-            // do push. false means no delete
-            ps::SArray<real_t> vals(data, size, false);
-            CHECK_NOTNULL(ps_worker_)->ZPush(
-                pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
+          PSKV& pskv = EncodeKey(key, size, true);
+          // do push. false means no delete
+          ps::SArray<real_t> vals(data, size, false);
+          CHECK_NOTNULL(ps_worker_)->ZPush(
+              pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
         };
     Engine::Get()->PushAsync(
         push_to_servers,
         pinned_ctx_,
-        {send_buf.var()},
+        const_vars,
         {},
         FnProperty::kNormal,
         priority,

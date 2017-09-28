@@ -41,20 +41,31 @@ big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
 def init_kv():
     kv = mx.kv.create('dist_sync')
     # init kv dns keys
-    kv.init(keys, [mx.nd.ones(shape)] * len(keys))
-    kv.init('99', mx.nd.ones(big_shape))
+    # kv.init(keys, [mx.nd.ones(shape)] * len(keys))
+    # kv.init('99', mx.nd.ones(big_shape))
     # init kv row_sparse keys
-    kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
-    kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
+    # kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
+    # kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
     # worker info
     my_rank = kv.rank
     nworker = kv.num_workers
     # init updater on servers
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
     return kv, my_rank, nworker
 
+def init_kv_compressed(kv):
+    pos_threshold = 0.5
+    neg_threshold = -0.5
+    kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
+    kv.set_optimizer(mx.optimizer.create('test'))
+    # init kv compression keys
+    kv.init('221', mx.nd.zeros(big_shape))
+    kv.init('21', mx.nd.zeros(shape))
+    return kv, pos_threshold, neg_threshold
+
 def test_sync_push_pull():
-    kv, my_rank, nworker = init_kv()
+    # kv, my_rank, nworker = init_kv()
+
     def check_default_keys(kv, my_rank, nworker):
         nrepeat = 3
         for i in range(nrepeat):
@@ -166,27 +177,8 @@ def test_sync_push_pull():
             expected[row] = updated_val[row]
         check_diff_to_scalar(val, expected, rank=my_rank)
 
-    check_default_keys(kv, my_rank, nworker)
-    check_row_sparse_keys(kv, my_rank, nworker)
-    check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    check_big_row_sparse_keys(kv, my_rank, nworker)
-    print('worker ' + str(my_rank) + ' is done')
-
-def test_compressed():
-    def init_kv(type):
-        kv = mx.kv.create(type)
-        pos_threshold = 0.5
-        neg_threshold = -0.5
-        kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
-        # init kv dns keys
-        kv.init('99', mx.nd.zeros(big_shape))
-        kv.init('3', mx.nd.zeros(shape))
-        my_rank = kv.rank
-        nworker = kv.num_workers
-        return kv, pos_threshold, neg_threshold, my_rank, nworker
-
     def verify_residual(kv, pos_threshold):
-        for d in [('99', big_shape), ('3', shape)]:
+        for d in [('221', big_shape), ('21', shape)]:
             kv.push(d[0], mx.nd.ones(d[1])*0.4)
             val=mx.nd.zeros(d[1])
             kv.pull(d[0],val)
@@ -205,23 +197,28 @@ def test_compressed():
             check_diff_to_scalar(val4, pos_threshold)
 
     def check_ones(kv, pos):
-        kv.push('99',mx.nd.ones(big_shape)*pos*2)
+        kv.push('221',mx.nd.ones(big_shape)*pos*2)
         val = mx.nd.zeros(big_shape)
-        kv.pull('99', val)
+        kv.pull('221', val)
         check_diff_to_scalar(val, pos)
 
     def check_zero(kv):
-      kv.push('99', mx.nd.zeros(big_shape))
-      val = mx.nd.zeros(big_shape)
-      kv.pull('99', val)
-      check_diff_to_scalar(val, 0)
+        kv.push('221', mx.nd.zeros(big_shape))
+        val = mx.nd.ones(big_shape)
+        kv.pull('221', val)
+        check_diff_to_scalar(val, 0)
 
-    for type in ['dist_sync']:
-        kv, pos, neg, rank, nworker = init_kv(type)
-        check_zero(kv)
-        verify_residual(kv, pos)
-        check_ones(kv, pos)
-    
+    # check_default_keys(kv, my_rank, nworker)
+    # check_row_sparse_keys(kv, my_rank, nworker)
+    # check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+    # check_big_row_sparse_keys(kv, my_rank, nworker)
+    # print('worker ' + str(my_rank) + ' is done with non compression tests')
+
+    # kv, pos, neg = init_kv_compressed(kv)
+    # check_zero(kv)
+    # verify_residual(kv, pos)
+    # check_ones(kv, pos)
+    # print('worker ' + str(my_rank) + ' is done with compression tests')
+
 if __name__ == "__main__":
     test_sync_push_pull()
-    test_compressed()
