@@ -400,7 +400,6 @@ try {
                       try {
                         sh "${docker_run} gpu ./perl-package/test.sh"
                       } catch (exc) {
-                        error "Perl GPU test failed."
                       }
                     }
                 }
