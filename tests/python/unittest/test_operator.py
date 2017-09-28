@@ -236,6 +236,55 @@ def test_regression():
                      lambda x, y : x - y)
 
 
+def check_softmax_grad():
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=default_context())
+    grad_x = mx.nd.zeros((1,4), ctx=default_context())
+    label_nd = mx.nd.array([1], ctx=default_context())
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = mx.nd.softmax(x_nd).asnumpy()
+    print(softmax_out)
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.zeros((1,4))
+    expected_grad_out[0, k] = -1
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
+def check_smoothed_softmax_grad():
+    alpha = 0.2
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=default_context())
+    grad_x = mx.nd.zeros((1,4), ctx=default_context())
+    label_nd = mx.nd.array([1], ctx=default_context())
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False, smooth_alpha=alpha)
+    ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = mx.nd.softmax(x_nd).asnumpy()
+    print(softmax_out)
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.full((1,4), fill_value=-alpha/(4-1))
+    expected_grad_out[0, k] = - (1 - alpha)
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
 def check_softmax_with_ignore_label(xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
@@ -290,6 +339,8 @@ def test_softmax():
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
     check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
     check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
+    check_smoothed_softmax_grad()
+    check_smoothed_softmax_grad()
 
 
 def test_python_op():
