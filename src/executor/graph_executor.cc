@@ -201,7 +201,15 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
         // To put in plain text: v is gradient vector that get pushed in the order
         // that can generate them, which means if v[i] is not yet pushed,
         // all previous gradient cannot depend on it.
-        v[i].node->control_deps.push_back(ret.node);
+        // Note: For a symbol like the following:
+        // data = mx.sym.Variable('data')
+        // sym = data + data + data + data + data + data + data
+        // the node entries v passed in here are of the same node of
+        // op _identity_with_attr_like_rhs. We should skip adding a node
+        // to its own control_deps.
+        if (v[i-1].node != v[i].node) {
+          v[i].node->control_deps.push_back(ret.node);
+        }
 
         std::ostringstream os;
         os << "sum_grad_" << i;
