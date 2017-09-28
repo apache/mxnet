@@ -155,8 +155,8 @@ class KVStoreDistServer {
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
     } else if (recved.head == kSetCompress) {
-      std::cout<<"Setting compress"<<std::endl;
       compress_ = recved.body;
+      std::cout<<"Setting compress to "<<compress_<<std::endl;
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -181,13 +181,11 @@ class KVStoreDistServer {
   inline void ApplyUpdates(const int key, MergeBuf *merged, NDArray *stored,
                            ps::KVServer<real_t>* server) {
     if (merged->request.size() == (size_t) ps::NumWorkers()) {
-      std::cout<<"merged buf should be cleared now as size = "<<ps::NumWorkers()<<std::endl;
-      //std::cout<<"merged buf data is "<<*((float *)merged->array.data().dptr_)<<std::endl;
       // let the main thread to execute updater_, which is necessary for python
       if (updater_) {
-        exec_.Exec([this, key, merged, stored](){
+  exec_.Exec([this, key, merged, stored](){
             CHECK(updater_);
-            updater_(key, merged->array, stored);
+           updater_(key, merged->array, stored);
           });
       } else {
         // if no updater, just copy
@@ -200,9 +198,7 @@ class KVStoreDistServer {
         server->Response(req);
       }
       merged->request.clear();
-      //std::cout<<"size of request buf"<<merged->request.size()<<std::endl;
       stored->WaitToRead();
-	//std::cout<<"stored now has "<<*((float *)stored->data().dptr_)<<std::endl;
     } else {
       merged->array.WaitToRead();
     }
@@ -381,7 +377,7 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
-    std::cout<<"For key"<<key<<std::endl;
+    
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
@@ -393,16 +389,13 @@ class KVStoreDistServer {
       NDArray recved = NDArray(recv_blob, 0);
       NDArray decomp_buf = decomp_buf_[key];
       if (compress_ != "none") {
-//        float neg = (*(recv_blob.dptr<float>()));
-//        float pos = (*(recv_blob.dptr<float>()+1));
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
-//        std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>(recv_blob.dptr<float>()+3));
-//        std::cout<<"Server received"<<pos<<" " <<neg<<" "<<original_size<<" "<<foo<<std::endl;
         dshape = TShape{original_size};
         if (decomp_buf.is_none()) {
           decomp_buf = NDArray(dshape, Context());
         }
       }
+ 
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
@@ -413,7 +406,6 @@ class KVStoreDistServer {
         }
         server->Response(req_meta);
         stored.WaitToRead();
-        std::cout<<"stored is inited to "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
@@ -424,8 +416,6 @@ class KVStoreDistServer {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
-           std::cout<<"Should be this case"<<std::endl;
-           std::cout<<"recved has data : "<<*((float *) recved.data().dptr_+3)<<std::endl;
             Dequantize(recved, &decomp_buf, compress_, 0);
             CopyFromTo(decomp_buf, &merged.array, 0);
           }
@@ -437,11 +427,8 @@ class KVStoreDistServer {
             merged.array += decomp_buf;
           }
         }
-  
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
-        stored.WaitToRead();
-        std::cout<<"stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       } else {
         // async push
         if (compress_ == "none") {
@@ -464,7 +451,6 @@ class KVStoreDistServer {
       ps::KVPairs<real_t> response;
       CHECK(!stored.is_none()) << "init " << key << " first";
       auto len = stored.shape().Size();
-      std::cout<<"pull stored is "<<*((float *)stored.data().dptr_)<<" " <<*((float *)stored.data().dptr_+1)<<" " <<*((float *)stored.data().dptr_+2)<<std::endl;
       response.keys = req_data.keys;
       response.lens = {len};
       // TODO(mli) try to remove this CopyFrom

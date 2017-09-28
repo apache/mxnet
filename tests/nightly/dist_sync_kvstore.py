@@ -50,7 +50,7 @@ def init_kv():
     my_rank = kv.rank
     nworker = kv.num_workers
     # init updater on servers
-    #kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
     return kv, my_rank, nworker
 
 def init_kv_compressed(kv):
@@ -187,21 +187,24 @@ def test_sync_push_pull():
             kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold - 0.4))
             val2 = mx.nd.zeros(d[1])
             kv.pull(d[0],val2)
-            check_diff_to_scalar(val2, pos_threshold)
+            curval = pos_threshold * 2
+            check_diff_to_scalar(val2, curval)
             kv.push(d[0], mx.nd.ones(d[1])*0.2)
             val3= mx.nd.zeros(d[1])
             kv.pull(d[0], val3)
-            check_diff_to_scalar(val3, 0)
+            check_diff_to_scalar(val3, curval)
             kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold-0.2))
             val4 = mx.nd.zeros(d[1])
             kv.pull(d[0],val4)
-            check_diff_to_scalar(val4, pos_threshold)
+            curval += pos_threshold*2
+            check_diff_to_scalar(val4, curval)
 
     def check_ones(kv, pos):
-        kv.push('221',mx.nd.ones(big_shape)*pos*2)
+        kv.push('221',mx.nd.ones(big_shape)*pos*4)
         val = mx.nd.zeros(big_shape)
         kv.pull('221', val)
-        check_diff_to_scalar(val, pos)
+	curval = pos*2*3
+        check_diff_to_scalar(val, curval)
 
     def check_zero(kv):
         kv.push('221', mx.nd.zeros(big_shape))
@@ -209,11 +212,11 @@ def test_sync_push_pull():
         kv.pull('221', val)
         check_diff_to_scalar(val, 0)
 
-    #check_default_keys(kv, my_rank, nworker)
-    #check_row_sparse_keys(kv, my_rank, nworker)
-    #check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    #check_big_row_sparse_keys(kv, my_rank, nworker)
-    #print('worker ' + str(my_rank) + ' is done with non compression tests')
+    check_default_keys(kv, my_rank, nworker)
+    check_row_sparse_keys(kv, my_rank, nworker)
+    check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+    check_big_row_sparse_keys(kv, my_rank, nworker)
+    print('worker ' + str(my_rank) + ' is done with non compression tests')
 
     kv, pos, neg = init_kv_compressed(kv)
     check_zero(kv)

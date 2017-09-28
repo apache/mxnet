@@ -272,12 +272,14 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
       const auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
       const auto storage_type = merged.storage_type();
+
       auto& comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
         // make sure the previous push/pull is completed
@@ -296,7 +298,6 @@ class KVStoreDist : public KVStoreLocal {
 
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
-      // Compress
       if (compress_ != "none") {
         // Init the small buffer and residual_ buffer for quantize
         if (small_buf.is_none()) {
@@ -321,15 +322,15 @@ class KVStoreDist : public KVStoreLocal {
 
         if (compress_ == "2bit") {
           Quantize(comm_buf, &small_buf, &res_buf, pos_thre_, neg_thre_, compress_, priority);
-          small_buf.WaitToRead();
-          res_buf.WaitToRead();
-          std::cout<<"Original data is "<<*((float *) comm_buf.data().dptr_)<<std::endl;
-          std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
-          std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
-                   << *(((float *) small_buf.data().dptr_)+1) << " "
-                   << *(((float *) small_buf.data().dptr_)+2) << " "
-                   << foo << " " << *(((float *) small_buf.data().dptr_)+3) << std::endl;
-          std::cout<<"Res buf is "<< *((float *) res_buf.data().dptr_) <<std::endl;
+        //  small_buf.WaitToRead();
+          //res_buf.WaitToRead();
+          //std::cout<<"Original data is "<<*((float *) comm_buf.data().dptr_)<<std::endl;
+          //std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
+          //std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
+            //       << *(((float *) small_buf.data().dptr_)+1) << " "
+              //     << *(((float *) small_buf.data().dptr_)+2) << " "
+                //   << foo << " " << *(((float *) small_buf.data().dptr_)+3) << std::endl;
+          //std::cout<<"Res buf is "<< *((float *) res_buf.data().dptr_) <<std::endl;
         } else {
           LOG(FATAL) << "Unsupported quantization";
         }
