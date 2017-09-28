@@ -203,7 +203,7 @@ def test_sync_push_pull():
         kv.push('221',mx.nd.ones(big_shape)*pos*4)
         val = mx.nd.zeros(big_shape)
         kv.pull('221', val)
-	curval = pos*2*3
+        curval = pos*2*3
         check_diff_to_scalar(val, curval)
 
     def check_zero(kv):
