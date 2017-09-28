@@ -29,6 +29,7 @@ mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 
+
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
 if("$ENV{VERBOSE}" STREQUAL "1")
