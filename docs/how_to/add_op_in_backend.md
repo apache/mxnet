@@ -46,9 +46,9 @@ respectively. We normally put pure tensor related operators
 the directory `src/operator/tensor`, and neural network operators
 (e.g. `Convolution`, `Pooling`, etc.) under `src/operator/nn`.
 You may have noticed that many neural network operators including
-`Convolution` and `Pooling` are saved directly under `src/operator`.
+`Convolution` and `Pooling` are currently saved under `src/operator`.
 We plan to move them to `src/operator/nn` for better file organization
-and clearer hierarchy.
+and clearer hierarchy in the future.
 
 Next, we are going to
 1. Define the parameter struct
@@ -109,7 +109,8 @@ the rules you defined in order to allocate memory space for the output tensor.
 
 One important thing to note that inference functions should be capable of
 performing **mutual inference**, i.e.
-inferring one argument's attribute from another argument's attribute.
+inferring one argument's attribute from another argument's attribute if
+possible according to the definition of the operator.
 This is very useful for a computational graph to deduce unknown attributes
 for a neural network in symbolic programming. Users can view the computational
 graph as a symbol with every element initialized for running data
@@ -194,7 +195,7 @@ the function should return `false` to notify the caller about shape inference fa
 for general element-wise operators with the following interface. Users can
 instantiate this function with `n_in=1` and `n_out=1` to replace the above
 function `QuadraticOpShape` in operator registration (explained later).
-The function `QuadraticOpShape` posted here is for illustration purpose only.
+The function `QuadraticOpShape` posted here is for the purpose of illustration only.
 ```cpp
 template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
@@ -325,7 +326,7 @@ compilers. It enables CPU and GPU computing to share the same piece of code.
 into the same line of code. It's named `KERNEL_ASSIGN` because we call
 the code blocks running parallel computation kernels.
 On CPUs, the kernels are normally wrapped by the OpenMP `parallel` directive;
-while on GPUs, they the kernels launched by CUDA library.
+while on GPUs, they are the kernel functions launched by CUDA library.
 
 ```cpp
 template<int req>
@@ -514,7 +515,7 @@ of the input tensor will not be overwritten by the output.
 - Line 21: Add user input parameters `a`, `b`, and `c` as the attributes of the operator.
 - Line 22: Register an operator named `_backward_quadratic` for backward pass
 of the operator `quadratic`. The underscore prefix in the operator name indicates
-that this is an operator not exposed to frontend and only used in backend. The convention
+that this is an operator not exposed to users. The convention
 of naming an internally used backward operator is prepending the prefix `_backward_`
 to the corresponding forward operator name.
 - Line 23: Set the parameter parser for the operator `_backward_quadratic`.
@@ -540,11 +541,12 @@ NNVM_REGISTER_OP(_backward_quadratic)
 ### Unit Test
 Now we have finished implementing the operator `quadratic` in MXNet backend.
 If you use python, when you type `import mxnet as mx`, two python
-functions for calling your backend implementation are
+functions for invoking your backend implementation are
 generated on the fly: one is for imperative programming
-registered under module `mxnet.ndarray` or `mx.nd` for short;
+registered as `mxnet.ndarray.quadratic` or `mx.nd.quadratic` for short;
 the other one is for symbolic
-programming registered under module `mxnet.symbol` or `mx.sym` for short.
+programming registered under module `mxnet.symbol.quadratic`
+or `mx.sym.quadratic` for short.
 
 In order to unit test it in frontend, we need to add the following code
 to the python file `test_operator.py`. Note that while testing the
@@ -594,7 +596,7 @@ of passing incorrect expected results into `check_symbolic_backward`.
 ## Summary
 In this tutorial, we practiced implementing the operator `quadratic` in MXNet backend
 and unit testing the implementation in frontend. More specifically, we added parameter
-struct for user-input parameters, walked through shape and type inference work flow,
+struct for user-input parameters, walked through shape and type inference workflow,
 implemented forward and backward functions, and registered the operator
 using nnvm. Congratulations! You now know how to add operators.
 We welcome your contributions to MXNet.
