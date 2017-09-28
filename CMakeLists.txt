@@ -36,6 +36,7 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   set(CMAKE_VERBOISE_MAKEFILE ON)
 endif()
 
+
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
   add_definitions(-DDMLC_USE_CXX11)
