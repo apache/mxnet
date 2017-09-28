@@ -57,7 +57,7 @@ def GetCifar10():
         with zipfile.ZipFile(zip_file_path) as zf:
             zf.extractall('data')
 
-def mnist_iterator(batch_size, input_shape):
+def MNISTIterator(batch_size, input_shape):
     """return train and val iterators for mnist"""
     # download data
     GetMNIST_ubyte()
