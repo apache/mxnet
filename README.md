@@ -42,7 +42,6 @@ What's New
 * [Guide to Creating New Operators (Layers)](https://mxnet.incubator.apache.org/how_to/new_op.html)
 * [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
 * [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
-* [Training Deep Net on 14 Million Images on A Single Machine](http://mxnet-tqchen.readthedocs.io/en/latest/tutorials/imagenet_full.html)
 
 Contents
 --------
@@ -70,7 +69,7 @@ Ask Questions
 
 License
 -------
-© Contributors, 2015-2017. Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
+Licensed under an [Apache-2.0](https://github.com/dmlc/mxnet/blob/master/LICENSE) license.
 
 Reference Paper
 ---------------
