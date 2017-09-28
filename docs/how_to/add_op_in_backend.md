@@ -36,7 +36,21 @@ y = quadratic(data=x, a=1, b=2, c=3)
 y = [[6, 11], [18, 27]]
 ```
 To implement this, we first create three files: `quadratic_op-inl.h`,
-`quadratic_op.cc`, and `quadratic_op.cu`. Then we are going to
+`quadratic_op.cc`, and `quadratic_op.cu`. The header file's name
+is prefixed by the operator name and followed by `op` and `-inl`
+indicating that this is an operator implementation with inline
+functions shared by CPU and GPU computing. The CPU and GPU
+specific implementations reside in their own `.cc` and `.cu` files,
+respectively. We normally put pure tensor related operators
+(e.g. `tile`, `repeat`, etc.) under
+the directory `src/operator/tensor`, and neural network operators
+(e.g. `Convolution`, `Pooling`, etc.) under `src/operator/nn`.
+You may have noticed that many neural network operators including
+`Convolution` and `Pooling` are saved directly under `src/operator`.
+We plan to move them to `src/operator/nn` for better file organization
+and clearer hierarchy.
+
+Next, we are going to
 1. Define the parameter struct
 for registering `a`, `b`, and `c` in `quadratic_op-inl.h`.
 2. Define type and shape inference functions in `quadratic_op-inl.h`.
@@ -95,9 +109,18 @@ the rules you defined in order to allocate memory space for the output tensor.
 
 One important thing to note that inference functions should be capable of
 performing **mutual inference**, i.e.
-inferring input shape from output shape, inferring one argument's shape
-from another argument, etc. This is very useful in building the computational graphs
-for neural networks. Let's consider the following example.
+inferring one argument's attribute from another argument's attribute.
+This is very useful for a computational graph to deduce unknown attributes
+for a neural network in symbolic programming. Users can view the computational
+graph as a symbol with every element initialized for running data
+throughout the neural network, including memory allocation for each tensor,
+device placement for each operator, etc. Users normally just need
+to provide minimum necessary information, such as input data shapes, etc.,
+to the computational graph, and the graph will fill up the unknown attributes
+using the attribute inference functions defined in the operators building up
+the neural network.
+
+Let's consider the following example.
 ```python
 >>> import mxnet as mx
 >>> a = mx.sym.Variable('a', shape=(2, 0))
@@ -157,10 +180,15 @@ to assert when the vector's size is wrong.
 inferring the output shape from the input shape, the other one is for inferring
 the input shape from the output shape.
 If there are any unequal non-zero values in the same
-dimension of two shapes, such as (2, 3) and (3, 3), the macro would throw an
+dimension of two shapes, such as `(2, 3)` and `(3, 3)`, the macro would throw an
 exception with an error message for shape inference.
 5. At the end of the function body, we checked whether the output shape
-is completely known by testing whether its size is greater than 0. If not,
+is completely known by testing whether the shape is not empty and
+the shape's size is greater than `0`. Note that in MXNet, an empty shape
+means that the shape is unknown, and
+a `0` in a shape means that the size of that dimension is unknown. In both
+situations, the missing shape information must
+be inferred from other shapes. If it cannot be inferred,
 the function should return `false` to notify the caller about shape inference failure.
 6. MXNet provides a convenience function implementing the logic of mutual inference
 for general element-wise operators with the following interface. Users can
@@ -176,7 +204,7 @@ inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
 
 The same logic goes for data type inference. We will leave the analysis of
 the following code sample to users. Note that `-1` means the data type
-is unknown and must be inferred from other arguments or outputs.
+is unknown and must be inferred from other input or output data types.
 ```cpp
 inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int>* in_attrs,
@@ -239,16 +267,21 @@ void QuadraticOpForward(const nnvm::NodeAttrs& attrs,                         //
   });                                                                         // 21
 }                                                                             // 22
 ```
-- Line 1: `attrs` contains the user input parameters `a`, `b`, and `c`.
-- Line 2: `ctx` holds something called `stream` for
+- Line 1: `xpu` stands for a generic device type so that the function can be instantiated
+for both CPU and GPU computing using concrete types `cpu` and `gpu`. The instantiation happens
+at the time when the operator is registered in `.cc` and `.cu` files.
+- Line 2: `attrs` is a node attribute containing the user input parameters `a`, `b`, and `c`.
+Here the node represents a placeholder for the operator in the whole computational graph for
+the neural network.
+- Line 3: `ctx` holds something called `stream` for
 serializing asynchronous executions. Let's consider
 this example for understanding the functionality of `stream`.
 We want to launch several GPU kernels with the same `stream` from CPU.
 Even though the launching operation is non-blocking, the `stream` guarantees
 that the kernels execute in the same order on GPU as they are launched from CPU.
-- Line 3: `inputs` is a vector of input tensors (only one input tensor
+- Line 4: `inputs` is a vector of input tensors (only one input tensor
 for the `quadratic` operator).
-- Line 4: `req` is a vector of `OpReqType` values. Each value defines
+- Line 5: `req` is a vector of `OpReqType` values. Each value defines
 the way of writing calculated values to the output tensors.
 Therefore, the number of `req`s must be the same as the number of output tensors.
 MXNet currently supports three types of `req` in frontend: `null`, `write`, and `add`.
@@ -259,7 +292,7 @@ to the existing ones in the output tensor. Note that `null` and `add` are usuall
 seen in backward passes. The former is for skipping calculating
 the gradients of un-learnable parameters (such as index arrays),
 and the latter is for accumulating gradients throughout networks.
-- Line 5: `outputs` is a vector of output tensors (only one
+- Line 6: `outputs` is a vector of output tensors (only one
 output tensor for the `quadratic` operator).
 - Lines 7-9: Verify that the size of each vector is expected.
 Otherwise, stop moving forward and print error message.
@@ -271,9 +304,7 @@ that tensors of different dimensions can be put in a homogeneous container,
 such as `std::vector` and `std::list`. You can still
 get tensors of desired dimensions from a `TBlob` object through
 the interface `get_with_shape`.
-- Line 13: Get user input parameters from the node attribute. Here the node
-means a placeholder for the operator in the whole computational graph for
-the neural network.
+- Line 13: Get user input parameters from the node attribute.
 - Lines 15-21: This is the place where the mathematical formula of the operator
 is implemented. The macros `MSHADOW_TYPE_SWITCH` and `MXNET_ASSIGN_REQ_SWITCH` enable
 the code block to work for all the supported data types and `req` types in MXNet.
@@ -286,7 +317,15 @@ parallel computation on both CPU and GPU. This allows most of
 the simple operators to share the same piece of code for CPU and GPU as
 parallelization approaches are often identical on both types of devices.
 The kernel function is defined as the following, where the function
-`Map` is executed by each thread for each input element.
+`Map` is executed by each thread for each input element. To explain a little
+bit more on the two macros used in the kernel struct: (1) `MSHADOW_XINLINE` is
+a consolidated macro for inlining functions compiled by both CPU and GPU
+compilers. It enables CPU and GPU computing to share the same piece of code.
+(2) `KERNEL_ASSIGN` is a macro for unifying the statements of different `req`s
+into the same line of code. It's named `KERNEL_ASSIGN` because we call
+the code blocks running parallel computation kernels.
+On CPUs, the kernels are normally wrapped by the OpenMP `parallel` directive;
+while on GPUs, they the kernels launched by CUDA library.
 
 ```cpp
 template<int req>
@@ -306,7 +345,8 @@ layer. The whole process is often known as backward propagation. We are not
 going to delineate the principle of backward propagation here since users can find
 great details covered in other resources, such as
 [CS231n](http://cs231n.github.io/optimization-2/) and
-[How the backgropagation algorithm works](http://neuralnetworksanddeeplearning.com/chap2.html).
+[How the backgropagation algorithm works](htt eifjccfuukvuhebklkrfctiilickhnbvulbrthhfcljk
+p://neuralnetworksanddeeplearning.com/chap2.html).
 The problem we are going to solve here for the `quadratic` operator is that
 given a tensor representing the gradient of the loss function with respect
 to the output of the operator, calculate the gradient with respect to
@@ -320,7 +360,7 @@ given `dL/dy` and `y = a*x^2 + b*x + c`, where `L` represents the loss function 
 dL/dx = dL/dy * dy/dx = dL/dy * (2*a*x + b).
 ```
 The above equation indicates that `dL/dx` depends on the gradient
-of the output tensor and the input tensor.
+of the output tensor and value of the input tensor.
 The backward function's signature is the same as the forward function's.
 With the aforementioned information in mind,
 let's breakdown the following backward function line by line.
@@ -446,6 +486,10 @@ in the computational graph. MXNet would
 add the missing argument with name `quadratic0_data`, where the prefix
 `quadratic0` is the operator name appended with an index and the postfix
 `data` comes from the return value of the user defined `FListInputName` function.
+Users still can generate an executor for the `quand_func` like the following:
+```python
+quand_exe = quand_func.simple_bind(ctx=mx.cpu(), quandratic0_data=(1,))
+```
 - Line 12: Register shape inference function.
 - Line 13: Register type inference function.
 - Line 14: Register forward function.
@@ -470,7 +514,9 @@ of the input tensor will not be overwritten by the output.
 - Line 21: Add user input parameters `a`, `b`, and `c` as the attributes of the operator.
 - Line 22: Register an operator named `_backward_quadratic` for backward pass
 of the operator `quadratic`. The underscore prefix in the operator name indicates
-that this is an operator not exposed to frontend and only used in backend.
+that this is an operator not exposed to frontend and only used in backend. The convention
+of naming an internally used backward operator is prepending the prefix `_backward_`
+to the corresponding forward operator name.
 - Line 23: Set the parameter parser for the operator `_backward_quadratic`.
 - Line 24: Set the number of inputs.
 - Line 25: Set the number of outputs.
@@ -493,6 +539,13 @@ NNVM_REGISTER_OP(_backward_quadratic)
 
 ### Unit Test
 Now we have finished implementing the operator `quadratic` in MXNet backend.
+If you use python, when you type `import mxnet as mx`, two python
+functions for calling your backend implementation are
+generated on the fly: one is for imperative programming
+registered under module `mxnet.ndarray` or `mx.nd` for short;
+the other one is for symbolic
+programming registered under module `mxnet.symbol` or `mx.sym` for short.
+
 In order to unit test it in frontend, we need to add the following code
 to the python file `test_operator.py`. Note that while testing the
 forward pass is straightforward using `mx.nd.quadratic`, testing
