@@ -181,43 +181,6 @@ def test_zoneout():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-def test_vardrop():
-    def check_vardrop(drop_inputs, drop_states, drop_outputs):
-        cell = gluon.rnn.VariationalDropoutCell(gluon.rnn.RNNCell(100, prefix='rnn_'),
-                                                drop_outputs=drop_outputs,
-                                                drop_states=drop_states,
-                                                drop_inputs=drop_inputs)
-        cell.collect_params().initialize(init='xavier')
-        input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
-        with mx.autograd.record():
-            outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask1 = cell.drop_outputs_mask.asnumpy()
-            mx.nd.waitall()
-            outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mask2 = cell.drop_outputs_mask.asnumpy()
-        assert not almost_equal(mask1, mask2)
-        assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
-
-        inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
-        outputs, _ = cell.unroll(3, inputs, merge_outputs=False)
-        outputs = mx.sym.Group(outputs)
-
-        args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
-        assert outs == [(10, 100), (10, 100), (10, 100)]
-
-        cell.reset()
-        cell.hybridize()
-        with mx.autograd.record():
-            outputs3, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mx.nd.waitall()
-            outputs4, _ = cell.unroll(3, input_data, merge_outputs=True)
-        assert not almost_equal(outputs3.asnumpy(), outputs4.asnumpy())
-        assert not almost_equal(outputs1.asnumpy(), outputs3.asnumpy())
-
-    check_vardrop(0.5, 0.5, 0.5)
-    check_vardrop(0.5, 0, 0.5)
-
-
 def check_rnn_forward(layer, inputs, deterministic=True):
     inputs.attach_grad()
     layer.collect_params().initialize()
