@@ -43,6 +43,7 @@ def init_kv_with_str(stype='default'):
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
 
+
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0)
