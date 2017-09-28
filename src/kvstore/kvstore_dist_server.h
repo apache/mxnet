@@ -182,7 +182,7 @@ class KVStoreDistServer {
                            ps::KVServer<real_t>* server) {
     if (merged->request.size() == (size_t) ps::NumWorkers()) {
       std::cout<<"merged buf should be cleared now as size = "<<ps::NumWorkers()<<std::endl;
-      std::cout<<*((float *)merged->array.data().dptr_)<<std::endl;
+      //std::cout<<"merged buf data is "<<*((float *)merged->array.data().dptr_)<<std::endl;
       // let the main thread to execute updater_, which is necessary for python
       if (updater_) {
         exec_.Exec([this, key, merged, stored](){
@@ -200,9 +200,9 @@ class KVStoreDistServer {
         server->Response(req);
       }
       merged->request.clear();
-      std::cout<<"size of request buf"<<merged->request.size()<<std::endl;
-
+      //std::cout<<"size of request buf"<<merged->request.size()<<std::endl;
       stored->WaitToRead();
+	//std::cout<<"stored now has "<<*((float *)stored->data().dptr_)<<std::endl;
     } else {
       merged->array.WaitToRead();
     }
@@ -424,6 +424,8 @@ class KVStoreDistServer {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
+           std::cout<<"Should be this case"<<std::endl;
+           std::cout<<"recved has data : "<<*((float *) recved.data().dptr_+3)<<std::endl;
             Dequantize(recved, &decomp_buf, compress_, 0);
             CopyFromTo(decomp_buf, &merged.array, 0);
           }
@@ -435,6 +437,7 @@ class KVStoreDistServer {
             merged.array += decomp_buf;
           }
         }
+  
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
         stored.WaitToRead();

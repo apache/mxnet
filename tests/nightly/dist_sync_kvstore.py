@@ -41,30 +41,31 @@ big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
 def init_kv():
     kv = mx.kv.create('dist_sync')
     # init kv dns keys
-    # kv.init(keys, [mx.nd.ones(shape)] * len(keys))
-    # kv.init('99', mx.nd.ones(big_shape))
+    kv.init(keys, [mx.nd.ones(shape)] * len(keys))
+    kv.init('99', mx.nd.ones(big_shape))
     # init kv row_sparse keys
-    # kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
-    # kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
+    kv.init(rsp_keys, [mx.nd.ones(shape).tostype('row_sparse')] * len(rsp_keys))
+    kv.init('100', mx.nd.ones(big_shape).tostype('row_sparse'))
     # worker info
     my_rank = kv.rank
     nworker = kv.num_workers
     # init updater on servers
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
+    #kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
     return kv, my_rank, nworker
 
 def init_kv_compressed(kv):
     pos_threshold = 0.5
     neg_threshold = -0.5
     kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
-    kv.set_optimizer(mx.optimizer.create('test'))
+    #kv.set_optimizer(mx.optimizer.create('test'))
     # init kv compression keys
     kv.init('221', mx.nd.zeros(big_shape))
     kv.init('21', mx.nd.zeros(shape))
+    #kv.set_optimizer(mx.optimizer.create('test'))
     return kv, pos_threshold, neg_threshold
 
 def test_sync_push_pull():
-    # kv, my_rank, nworker = init_kv()
+    kv, my_rank, nworker = init_kv()
 
     def check_default_keys(kv, my_rank, nworker):
         nrepeat = 3
@@ -208,17 +209,17 @@ def test_sync_push_pull():
         kv.pull('221', val)
         check_diff_to_scalar(val, 0)
 
-    # check_default_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    # check_big_row_sparse_keys(kv, my_rank, nworker)
-    # print('worker ' + str(my_rank) + ' is done with non compression tests')
+    #check_default_keys(kv, my_rank, nworker)
+    #check_row_sparse_keys(kv, my_rank, nworker)
+    #check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+    #check_big_row_sparse_keys(kv, my_rank, nworker)
+    #print('worker ' + str(my_rank) + ' is done with non compression tests')
 
-    # kv, pos, neg = init_kv_compressed(kv)
-    # check_zero(kv)
-    # verify_residual(kv, pos)
-    # check_ones(kv, pos)
-    # print('worker ' + str(my_rank) + ' is done with compression tests')
+    kv, pos, neg = init_kv_compressed(kv)
+    check_zero(kv)
+    verify_residual(kv, pos)
+    check_ones(kv, pos)
+    print('worker ' + str(my_rank) + ' is done with compression tests')
 
 if __name__ == "__main__":
     test_sync_push_pull()

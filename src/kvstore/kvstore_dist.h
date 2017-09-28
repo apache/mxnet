@@ -296,7 +296,6 @@ class KVStoreDist : public KVStoreLocal {
 
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
-
       // Compress
       if (compress_ != "none") {
         // Init the small buffer and residual_ buffer for quantize
@@ -354,10 +353,10 @@ class KVStoreDist : public KVStoreLocal {
   void PushDefault(int key, NDArray &send_buf, int priority){
     std::vector<Engine::VarHandle> const_vars;
     auto& comm_buf = comm_buf_[key];
-    const_vars.push_back(comm_buf.var());
+    const_vars.push_back(send_buf.var());
     if (compress_ != "none") {
       //if compress is set, then send_buf is different from comm_buf
-      const_vars.push_back(send_buf.var());
+      const_vars.push_back(comm_buf.var());
     }
     auto push_to_servers =
         [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
