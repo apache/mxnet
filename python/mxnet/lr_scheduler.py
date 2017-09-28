@@ -92,98 +92,63 @@ class FactorScheduler(LRScheduler):
         return self.base_lr
 
 class MultiFactorScheduler(LRScheduler):
-    """Reduce the learning rate by given a list of steps.
+    def __init__(self, step, factor = 1, warmup_step = 0, begin_lr=0, stop_lr=0):
+        """Reduce the learning rate by given a list of steps.
 
-    Assume there exists *k* such that::
+        Assume there exists *k* such that::
 
-       step[k] <= num_update and num_update < step[k+1]
+            step[k] <= num_update and num_update < step[k+1]
 
-    Then calculate the new learning rate by::
+        Then calculate the new learning rate by::
 
-       base_lr * pow(factor, k+1)
+            base_lr * pow(factor, k+1)   
 
-    Parameters
-    ----------
-    step: list of int
-        The list of steps to schedule a change
-    factor: float
-        The factor to change the learning rate.
-    """
-    def __init__(self, step, factor=1):
-        super(MultiFactorScheduler, self).__init__()
-        assert isinstance(step, list) and len(step) >= 1
-        for i, _step in enumerate(step):
-            if i != 0 and step[i] <= step[i-1]:
-                raise ValueError("Schedule step must be an increasing integer list")
-            if _step < 1:
-                raise ValueError("Schedule step must be greater or equal than 1 round")
-        if factor > 1.0:
-            raise ValueError("Factor must be no more than 1 to make lr reduce")
-        self.step = step
-        self.cur_step_ind = 0
-        self.factor = factor
-        self.count = 0
-
-    def __call__(self, num_update):
-        # NOTE: use while rather than if  (for continuing training via load_epoch)
-        while self.cur_step_ind <= len(self.step)-1:
-            if num_update > self.step[self.cur_step_ind]:
-                self.count = self.step[self.cur_step_ind]
-                self.cur_step_ind += 1
-                self.base_lr *= self.factor
-                logging.info("Update[%d]: Change learning rate to %0.5e",
-                             num_update, self.base_lr)
-            else:
-                return self.base_lr
-        return self.base_lr
-    
-class GradualWarmupWithMultiFactorScheduler(LRScheduler):
-    def __init__(self, warmup_step = 100, begin_lr=0.01, stop_lr=0.1, multifactor_step = 100, factor = 1):
-        """Warmup the learning rate by a const value for first 'warmup_step' steps.
+        When warmup_step > 1, warmup the learning rate by a const value for first 'warmup_step' steps.
 
         It returns a new learning rate by::
 
-            begin_lr + num_update * const_update
-
-        Then reduce the learning rate by given a list of steps as MultiFactorScheduler.   
+            begin_lr + (num_update - 1) * const_update  
 
         Parameters
         ----------
+        step: list of int
+            The list of steps to schedule a change
+        factor: float
+            The factor to change the learning rate.    
         warmup_step : int
             Changes the learning rate for first 'warmup_step' updates.
         begin_lr : float, optional
             The learning rate at begin.
         stop_lr : float, optional
             Stop updating the learning rate if it is less than this value.
-        multifactor_step: list of int
-            The list of steps to schedule a change
-        factor: float
-            The factor to change the learning rate.    
         """
-        super(GradualWarmupWithMultiFactorScheduler, self).__init__()
-        if stop_lr <= begin_lr:
-             raise ValueError("stop_lr must larger than begin_lr")
-        assert isinstance(multifactor_step, list) and len(multifactor_step) >= 1
-        for i, _step in enumerate(multifactor_step):
-            if i != 0 and multifactor_step[i] <= multifactor_step[i-1]:
+        super(MultiFactorScheduler, self).__init__()
+        assert isinstance(step, list) and len(step) >= 1
+        for i, _step in enumerate(step):
+            if i != 0 and step[i] <= step[i-1]:
                 raise ValueError("Schedule step must be an increasing integer list")
             if _step < 1:
-                raise ValueError("Schedule step must be greater or equal than 1 round")
-        if multifactor_step[0] <= warmup_step:
-            raise ValueError("Multifactor_step must be greater than warmup_step")       
+                raise ValueError("Schedule step must be greater or equal than 1 round") 
         if factor > 1.0:
             raise ValueError("Factor must be no more than 1 to make lr reduce")  
 
-        #warmup parameter
-        self.warmup_step = warmup_step
-        self.begin_lr = begin_lr
-        self.stop_lr = stop_lr
-        self.const_update = (self.stop_lr - self.begin_lr) / self.warmup_step
-        self.cur_step = 0
         #multifactor parameter
-        self.multifactor_step = multifactor_step
+        self.step = step
         self.cur_step_ind = 0
         self.factor = factor
+        self.count = 0
+        
+        #warmup parameter
+        self.warmup_step = warmup_step
+        if warmup_step > 1:
+            if step[0] <= warmup_step:
+                raise ValueError("Schedule step must be greater than warmup_step")   
+            if stop_lr <= begin_lr:
+                raise ValueError("stop_lr must larger than begin_lr")   
+            self.begin_lr = begin_lr
+            self.stop_lr = stop_lr
+            self.const_update = (self.stop_lr - self.begin_lr) / (self.warmup_step - 1)
+            self.cur_step = 0
 
     def __call__(self, num_update):    
         """
@@ -193,9 +158,9 @@ class GradualWarmupWithMultiFactorScheduler(LRScheduler):
         num_update: int
             the maximal number of updates applied to a weight.
         """
-        if num_update <= self.warmup_step:
+        if self.warmup_step > 1 and num_update <= self.warmup_step:
             if num_update > self.cur_step:
-                self.base_lr = num_update * self.const_update + self.begin_lr
+                self.base_lr = (num_update - 1) * self.const_update + self.begin_lr
                 self.cur_step = num_update
                 if num_update == self.warmup_step or self.base_lr >= self.stop_lr:
                     self.base_lr = self.stop_lr
@@ -204,8 +169,10 @@ class GradualWarmupWithMultiFactorScheduler(LRScheduler):
             else:
                 return self.base_lr   
         else:
-            while self.cur_step_ind <= len(self.multifactor_step)-1:
-                if num_update > self.multifactor_step[self.cur_step_ind]:
+            # NOTE: use while rather than if  (for continuing training via load_epoch)
+            while self.cur_step_ind <= len(self.step)-1:
+                if num_update > self.step[self.cur_step_ind]:
+                    self.count = self.step[self.cur_step_ind]
                     self.cur_step_ind += 1
                     self.base_lr *= self.factor
                     logging.info("Update[%d]: Change learning rate to %0.5e",
