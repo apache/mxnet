@@ -24,7 +24,7 @@ from detect.detector import Detector
 from symbol.symbol_factory import get_symbol
 
 def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
-                 nms_thresh=0.5, force_suppress=True, nms_topk=400):
+                 nms_thresh=0.5, force_nms=True, nms_topk=400):
     """
     wrapper for initialize a detector
 
@@ -53,7 +53,7 @@ def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
         if isinstance(data_shape, tuple):
             data_shape = data_shape[0]
         net = get_symbol(net, data_shape, num_classes=num_class, nms_thresh=nms_thresh,
-            force_suppress=force_suppress, nms_topk=nms_topk)
+            force_suppress=force_nms, nms_topk=nms_topk)
     detector = Detector(net, prefix, epoch, data_shape, mean_pixels, ctx=ctx)
     return detector
 
@@ -88,7 +88,7 @@ def parse_args():
                         help='object visualize score threshold, default 0.6')
     parser.add_argument('--nms', dest='nms_thresh', type=float, default=0.5,
                         help='non-maximum suppression threshold, default 0.5')
-    parser.add_argument('--force', dest='force_suppress', type=bool, default=True,
+    parser.add_argument('--force', dest='force_nms', type=bool, default=True,
                         help='force non-maximum suppression on different class')
     parser.add_argument('--timer', dest='show_timer', type=bool, default=True,
                         help='show detection time')
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     detector = get_detector(network, prefix, args.epoch,
                             data_shape,
                             (args.mean_r, args.mean_g, args.mean_b),
-                            ctx, len(class_names), args.nms_thresh, args.force_suppress)
+                            ctx, len(class_names), args.nms_thresh, args.force_nms)
     # run detection
     detector.detect_and_visualize(image_list, args.dir, args.extension,
                                   class_names, args.thresh, args.show_timer)
