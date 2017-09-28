@@ -145,10 +145,12 @@ def get_symbol(num_classes, num_layers=121, reduction=0.5, drop_out=0.2, bottle_
 
     if num_layers == 121:
         units = [6, 12, 24, 16]
+    elif num_layers == 161:
+        units = [6, 12, 36, 24]
     elif num_layers == 169:
         units = [6, 12, 32, 32]
     elif num_layers == 201:
-        units = [6, 12, 48, 16]
+        units = [6, 12, 48, 32]
     elif num_layers == 264:
         units = [6, 12, 64, 48]
     else:
