@@ -144,7 +144,7 @@ class MultiFactorScheduler(LRScheduler):
             if step[0] <= warmup_step:
                 raise ValueError("Schedule step must be greater than warmup_step")   
             if stop_lr <= begin_lr:
-                raise ValueError("stop_lr must larger than begin_lr")   
+                raise ValueError("Stop lr must be greater than begin lr")   
             self.begin_lr = begin_lr
             self.stop_lr = stop_lr
             self.const_update = (self.stop_lr - self.begin_lr) / (self.warmup_step - 1)
