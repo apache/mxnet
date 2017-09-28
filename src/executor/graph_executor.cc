@@ -486,7 +486,7 @@ void HandleInferStorageTypeError(const size_t num_forward_inputs,
       }
     }
   }
-  LOG(FATAL) << "InferStoragetType pass cannot decide storage type for the following arguments "
+  LOG(FATAL) << "InferStorageType pass cannot decide storage type for the following arguments "
                 "(-1 means unknown stype). Please consider providing them as inputs:\n"
              << oss.str();
 }
@@ -556,26 +556,26 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
     }
     if (log_verbose_) {
       LOG(INFO) << "\tassign data entry\t" << eid << " as stype "
-                << data_entry_[eid].storage_type() << " (input)";
+                << common::stype_string(data_entry_[eid].storage_type()) << " (input)";
     }
   }
 
   // expand arg_shapes and arg_dtypes to contain backward inputs
   arg_shapes.resize(idx.input_nodes().size(), TShape());
-  g = InferShape(std::move(g), arg_shapes, "__shape__");
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
 
   arg_dtypes.resize(idx.input_nodes().size(), -1);
-  g = InferType(std::move(g), arg_dtypes, "__dtype__");
+  g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
 
-  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));
@@ -959,19 +959,19 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       arg_stypes[i] = it3->second;
     }
   }
-  g = InferShape(std::move(g), arg_shapes, "__shape__");
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
 
-  g = InferType(std::move(g), arg_dtypes, "__dtype__");
+  g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
 
-  g = InferStorageType(std::move(g), arg_stypes, "__storage_type__");
+  g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));
@@ -1090,7 +1090,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
     }
     if (log_verbose_) {
-      LOG(INFO) << "\tinit head_g entry\t" << data_eid << "\tas stype " << stype;
+      LOG(INFO) << "\tinit head_g entry\t" << data_eid << "\tas stype "
+                << common::stype_string(stype);
     }
   }
   // get maximum bytes in each pool
@@ -1136,7 +1137,6 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   for (size_t i : sorted_pool_index) {
     const Context& ctx = pool_info[i].ctx;
     size_t bytes = pool_info[i].bytes;
-    NDArrayStorageType storage_type = pool_info[i].stype;
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
@@ -1193,7 +1193,6 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
-  const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.
@@ -1204,14 +1203,17 @@ void GraphExecutor::InitCachedOps() {
         LOG(INFO) << "node " << nid << " var";
       } else {
         LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
+        const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
         auto exec = op_execs[nid];
         for (const auto& e : inode.inputs) {
           auto eid = idx.entry_id(e);
-          LOG(INFO) << "\t\tinput " << eid << " stype: " << vstorage_type[eid];
+          LOG(INFO) << "\t\tinput " << eid << " stype: "
+                    << common::stype_string(vstorage_type[eid]);
         }
         for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
           uint32_t eid = idx.entry_id(nid, index);
-          LOG(INFO) << "\t\toutput " << eid << " stype: " << vstorage_type[eid];
+          LOG(INFO) << "\t\toutput " << eid << " stype: "
+                    << common::stype_string(vstorage_type[eid]);
         }
       }
     }

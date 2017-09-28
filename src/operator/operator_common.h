@@ -89,7 +89,7 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unkown (0) dim. */
+/*! \brief check if shape is empty or contains unknown (0) dim. */
 inline bool shape_is_none(const TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
@@ -124,19 +124,6 @@ inline std::string type_string(const int& x) {
       return "uint8";
     case mshadow::kInt32:
       return "int32";
-  }
-  return "unknown";
-}
-
-/*! \brief get string representation of storage_type */
-inline std::string stype_string(const int& x) {
-  switch (x) {
-    case kDefaultStorage:
-      return "default";
-    case kCSRStorage:
-      return "csr";
-    case kRowSparseStorage:
-      return "row_sparse";
   }
   return "unknown";
 }
@@ -242,8 +229,8 @@ inline bool type_assign(int *y, const int& x) {
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
       os << "Storage type inconsistent, Provided="                          \
-         << stype_string((type_array)[index]) << ','                        \
-         << " inferred storage type=" << stype_string(type);                \
+         << common::stype_string((type_array)[index]) << ','                \
+         << " inferred storage type=" << common::stype_string(type);        \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -347,7 +334,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const char* op_name, const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
-    const std::unordered_map<std::string, std::string> dict) {
+    const std::unordered_map<std::string, std::string>& dict) {
   if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
@@ -427,6 +414,53 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
+/*! \brief Temporary storage for Alpha release of Sparse Tensors. Please do not use, as this
+ * function will be removed
+ */
+template<typename DType>
+class SparseTempStorage {
+  inline DType *Alloc(const size_t count) {
+    CHECK_GT(count, 0U);  // You've probably made a mistake
+    CHECK_EQ(handle_.dptr, static_cast<void *>(nullptr));
+    Storage *storage = mxnet::Storage::Get();
+    if (storage) {
+      handle_ = storage->Alloc(count * sizeof(DType), op_ctx_.run_ctx.ctx);
+    }
+    return static_cast<DType *>(handle_.dptr);
+  }
+  inline void Free() {
+    if (handle_.dptr) {
+      Storage *storage = mxnet::Storage::Get();
+      if (storage) {
+        storage->DirectFree(handle_);
+        handle_.dptr = nullptr;
+      }
+    }
+  }
+  inline DType *dptr() {
+    return static_cast<DType *>(handle_.dptr);
+  }
+
+ public:
+  explicit inline SparseTempStorage(const OpContext& op_ctx)
+    : op_ctx_(op_ctx) {
+    handle_.dptr = nullptr;
+  }
+  inline ~SparseTempStorage() {
+    Free();
+  }
+  template<typename xpu, int ndim>
+  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(const mshadow::Shape<ndim>& shape) {
+    if (!dptr()) {
+      Alloc(shape.Size());
+    }
+    return mshadow::Tensor<xpu, ndim, DType>(dptr(), shape, op_ctx_.run_ctx.get_stream<xpu>());
+  }
+
+ private:
+  const OpContext& op_ctx_;
+  Storage::Handle  handle_;
+};
 
 }  // namespace op
 }  // namespace mxnet

@@ -143,7 +143,6 @@ void linalg_batch_syrk(const Tensor<xpu, 3, DType>& A,
 // CPU/GPU-versions of LAPACK functions "gelqf", "orglq". Please refer to the
 // LAPACK documentation for further details.
 // Note:
-// - The current implementation works for CPU only
 // - Both functions have A as input and output parameter
 // - Both functions require extra workspace, passed as 1D tensor
 // - We call orglq after gelqf. Apart from A, they also communicate via the
@@ -163,6 +162,27 @@ void linalg_orglq(const Tensor<xpu, 2, DType>& A,
 template<typename xpu, typename DType>
 int linalg_gelqf_workspace_query(const Tensor<xpu, 2, DType>& A,
                                  Stream<xpu> *s = 0);
+
+//////////////////////////////// SYEVD ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "syevd". Please refer to the
+// LAPACK documentation for further details.
+// Note:
+// - The current implementation works for CPU only
+// - A is input and output parameter (overwritten by U)
+// - Input A is symmetric, we access the lower triangle only
+// - Requires two workspace arrays, one in DType, other in int.
+
+template<typename xpu, typename DType>
+void linalg_syevd(const Tensor<xpu, 2, DType>& A,
+                  const Tensor<xpu, 1, DType>& L,
+                  const Tensor<xpu, 1, DType>& work,
+                  const Tensor<xpu, 1, int>& iwork, Stream<xpu> *s = 0);
+
+// This function determines the amount of workspace needed for linalg_syevd
+template<typename xpu, typename DType>
+void linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A, int* lwork,
+                                  int* liwork, Stream<xpu> *s = 0);
 
 #include "linalg_impl.h"
 

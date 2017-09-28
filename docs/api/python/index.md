@@ -38,7 +38,7 @@ imported by running:
 .. toctree::
    :maxdepth: 1
 
-   symbol/ndarray.md
+   symbol/symbol.md
    symbol/random.md
    symbol/linalg.md
    symbol/sparse.md
@@ -133,4 +133,13 @@ imported by running:
    :maxdepth: 1
 
    metric/metric.md
+```
+
+## Run-Time Compilation API
+
+```eval_rst
+.. toctree::
+   :maxdepth 1
+
+   rtc/rtc.md
 ```

@@ -284,6 +284,64 @@ struct gelqf {
   }
 };
 
+// If (U, L) = syevd(A) [symmetric eigendecomposition], this helper acts on each row
+// of U, deciding whether its sign is flipped or not.
+// If u denotes a row, we choose the sign s.t. u_k > 0, where k = argmax|u_j|. In case
+// of a tie, the smaller index k decides.
+struct SyevdEigenVecSigns {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int n, DType* U, int ldu) {
+    DType* urow(U + (i*ldu));
+    DType maxval(fabs(urow[0])), uval(0.0);
+    int maxind(0);
+    for (int i = 1; i < n; ++i) {
+      uval = fabs(urow[i]);
+      if (uval > maxval) {
+        maxval = uval;
+        maxind = i;
+      }
+    }
+    if (urow[maxind] < 0.0) {
+      // Flip all signs
+      for (int i = 0; i < n; ++i) {
+        urow[i] = -urow[i];
+      }
+    }
+  }
+};
+
+// (U, L) = syevd(A) [symmetric eigendecomposition]
+// - Input A must be symmetric, only lower triangle is used
+// - U can overwrite A
+// - Needs workspace (both DType and int), size of which is determined by a
+//   workspace query
+struct syevd {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& U,
+                 const Tensor<xpu, 2, DType>& L, const OpContext& ctx,
+                 const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    linalg_check_batch_size(A.size(0), U.size(0), L.size(0));
+    if (A.dptr_ != U.dptr_) Copy(U, A, s);
+    // From here on, we work on U only
+    // Reserve workspaces (size determined by query)
+    int lwork(0), liwork(0);
+    linalg_syevd_workspace_query(U[0], &lwork, &liwork, s);
+    Tensor<xpu, 1, DType> work = ctx.requested[0]
+      .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
+    Tensor<xpu, 1, int> iwork = ctx.requested[0]
+      .get_space_typed<xpu, 1, int>(Shape1(liwork), s);
+    // Loop over items in batch
+    for (index_t i = 0; i < U.size(0); ++i) {
+      linalg_syevd(U[i], L[i], work, iwork, s);
+    }
+    // Set signs of eigenvectors in a deterministic way
+    using namespace mxnet_op;
+    Kernel<SyevdEigenVecSigns, xpu>::Launch
+      (s, U.size(0)*U.size(1), U.size(1), U.dptr_, U.stride_);
+  }
+};
+
 // Backward operators (always using batch processing)
 
 struct gemm_backward {
@@ -455,11 +513,9 @@ struct trmm_backward {
 
 struct BackwardSumLogDiag {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int N, int stride, DType* dB, DType* A, DType* dA) {
-    const int offset(i * N * stride);
-    for ( int j = 0; j < N; ++j ) {
-      dA[offset+j*(stride+1)] = dB[i]/A[offset+j*(stride+1)];
-    }
+  MSHADOW_XINLINE static void Map(int i, int M, int stride, DType* dB, DType* A, DType* dA) {
+    const int matrix(i / M), row((i % M) / stride), col(i % stride);
+    dA[i] = (row == col ? dB[matrix]/A[i] : DType(0));
   }
 };
 struct sumlogdiag_backward {
@@ -472,10 +528,10 @@ struct sumlogdiag_backward {
     // this function as the LaOpCaller-adapters can only deal with a uniform
     // dimension for all tensor inputs. This doesn't matter as we will interpret
     // it correctly internally in this function.
+    // Note that A and dA may point to the same memory.
     using namespace mxnet_op;
-    Kernel<Scale, xpu>::Launch(s, dA.MSize(), DType(0), dA.dptr_);
     Kernel<BackwardSumLogDiag, xpu>::Launch
-         (s, A.size(0), A.size(1), A.stride_, dB.dptr_, A.dptr_, dA.dptr_);
+         (s, dA.MSize(), dA.size(1)*dA.stride_, dA.stride_, dB.dptr_, A.dptr_, dA.dptr_);
   }
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& dB, const Tensor<xpu, 3, DType>& A,
@@ -539,6 +595,79 @@ struct gelqf_backward {
             tempM.dptr_);
     gemm::op(tempM, Q, dA, DType(1.0), DType(1.0), false, false, s);
     trsm::op(L, dA, DType(1.0), false, true, s);
+  }
+};
+
+// Helper for syevd_backward. See technical report for details
+// Note: Could be parallelized more, but this is subdominant anyway
+template<typename DType>
+DType syevd_back_helper_eps(DType* X);
+
+template<> inline
+float syevd_back_helper_eps(float* X) {
+  return 1e-30;
+}
+
+template<> inline
+double syevd_back_helper_eps(double* X) {
+  return 1e-100;
+}
+
+struct SyevdBackHelper {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int k, int n, DType* X, int ldx, DType* L,
+                                  int ldl, DType* dL, int lddl, DType* Y,
+                                  int ldy) {
+    const int offx(k*n*ldx);
+    const int offy(k*n*ldy);
+    const int offl(k*ldl);
+    const int offdl(k*lddl);
+    DType denom(0.0), elem(0.0);
+    const DType eps(syevd_back_helper_eps(X));
+    // Lower and upper triangle: Loop i > j
+    for (int i = 1; i < n; ++i) {
+      for (int j = 0; j < i; ++j) {
+        denom = L[offl+i] - L[offl+j];  // Must be >=0
+        if (denom < eps) denom = eps;
+        denom *= 2.0;
+        elem = (X[offx+i*ldx+j] - X[offx+j*ldx+i])/denom;
+        Y[offy+i*ldy+j] = Y[offy+j*ldy+i] = elem;
+      }
+    }
+    // Diagonal
+    for (int i = 0; i < n; ++i) {
+      Y[offy+i*(ldy+1)] = dL[offdl+i];
+    }
+  }
+};
+
+// Have to reserve temporary storage tempM, same shape as dA.
+// dA may overwrite dU
+struct syevd_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& dU,
+                 const Tensor<xpu, 2, DType>& dL,
+                 const Tensor<xpu, 3, DType>& U,
+                 const Tensor<xpu, 2, DType>& L,
+                 const Tensor<xpu, 3, DType>& dA,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    // Backward of (U, L) = syevd(A):
+    //   dA = U**T * SyevdBackHelper(dU * U**T, L, dL) * U
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // Need temporal space, same shape as dA
+    Tensor<xpu, 3, DType> tempM = ctx.requested[0]
+      .get_space_typed<xpu, 3, DType>(dA.shape_, s);
+    // This copy is just to make sure there are no invalid values (NaN, infinity) in
+    // tempM. gemm multiplies tempM with 0, instead of setting entries to 0.
+    Copy(tempM, dU, s);
+    gemm::op(dU, U, tempM, DType(1.0), DType(0.0), false, true, s);
+    // SyevdBackHelper: tempM => dA
+    Kernel<SyevdBackHelper, xpu>::Launch
+      (s, dA.size(0), dA.size(1), tempM.dptr_, tempM.stride_, L.dptr_,
+       L.stride_, dL.dptr_, dL.stride_, dA.dptr_, dA.stride_);
+    gemm::op(U, dA, tempM, DType(1.0), DType(0.0), true, false, s);
+    gemm::op(tempM, U, dA, DType(1.0), DType(0.0), false, false, s);
   }
 };
 

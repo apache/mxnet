@@ -86,6 +86,12 @@ class Parameter(object):
         This can be set before or after initialization. Setting grad_req to null
         with `x.grad_req = 'null'` saves memory and computation when you don't
         need gradient w.r.t x.
+    lr_mult : float
+        Local learning rate multiplier for this Parameter. The actual learning rate
+        is calculated with `learning_rate * lr_mult`. You can set it with
+        `param.lr_mult = 2.0`
+    wd_mult : float
+        Local weight decay multiplier for this Parameter.
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
@@ -93,8 +99,11 @@ class Parameter(object):
         self._var = None
         self._data = None
         self._grad = None
+        self._ctx_list = None
+        self._ctx_map = None
         self._deferred_init = ()
         self._differentiable = differentiable
+        self._allow_deferred_init = allow_deferred_init
         self._grad_req = None
         self.name = name
         self.shape = shape
@@ -103,7 +112,6 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
-        self.allow_deferred_init = allow_deferred_init
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
@@ -124,29 +132,33 @@ class Parameter(object):
         self._grad_req = req
         if req == 'null' and self._grad is not None:
             self._grad = None
-            for ctx in self._data:
-                self._data[ctx] = self._data[ctx].detach()
+            self._data = [i.detach() for i in self._data]
         elif self._data is not None:
             self._init_grad()
 
-    def _check_and_get(self, arr_dict, ctx):
-        if arr_dict is not None:
+    def _check_and_get(self, arr_list, ctx):
+        if arr_list is not None:
             if ctx is list:
-                return list(arr_dict.values())
+                return arr_list
             if ctx is None:
-                if len(self._ctx_list) == 1:
-                    ctx = self._ctx_list[0]
+                if len(arr_list) == 1:
+                    return arr_list[0]
                 else:
                     ctx = context.current_context()
-            ret = arr_dict.get(ctx, None)
-            if ret is not None:
-                return ret
+            idx = self._ctx_map[ctx.device_typeid][ctx.device_id]
+            if idx is not None:
+                return arr_list[idx]
             raise RuntimeError(
                 "Parameter %s was not initialized on context %s. "
                 "It was only initialized on %s."%(
                     self.name, str(ctx), str(self._ctx_list)))
         if self._deferred_init:
-            raise DeferredInitializationError
+            raise DeferredInitializationError(
+                "Parameter %s has not been initialized yet because initialization was " \
+                "deferred. Actual initialization happens during the first forward pass. " \
+                "Please pass one batch of data through the network before accessing Parameters. " \
+                "You can also avoid deferred initialization by specifying in_units, " \
+                "num_features, etc., for network layers."%(self.name))
         raise RuntimeError(
             "Parameter %s has not been initialized. Note that " \
             "you should initialize parameters and create Trainer " \
@@ -204,12 +216,19 @@ class Parameter(object):
 
             self._init_impl(data, ctx)
 
-    def _init_impl(self, data, ctx):
+    def _init_impl(self, data, ctx_list):
         """Sets data and grad."""
-        self._data = OrderedDict()
-        self._ctx_list = list(ctx)
-        for i in ctx:
-            self._data[i] = data.copyto(i)
+        self._ctx_list = list(ctx_list)
+        self._ctx_map = []
+        for i, ctx in enumerate(self._ctx_list):
+            while len(self._ctx_map) <= ctx.device_typeid:
+                self._ctx_map.append([])
+            dev_list = self._ctx_map[ctx.device_typeid]
+            while len(dev_list) <= ctx.device_id:
+                dev_list.append(None)
+            dev_list[ctx.device_id] = i
+
+        self._data = [data.copyto(ctx) for ctx in self._ctx_list]
         self._init_grad()
 
     def _init_grad(self):
@@ -218,10 +237,7 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = OrderedDict()
-        for i in self._data:
-            self._grad[i] = ndarray.zeros_like(self._data[i])
-
+        self._grad = [ndarray.zeros_like(i) for i in self._data]
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def _reduce(self):
@@ -284,7 +300,7 @@ class Parameter(object):
         if init is None:
             init = default_init if self.init is None else self.init
         if not self.shape or np.prod(self.shape) <= 0:
-            if self.allow_deferred_init:
+            if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init)
                 return
             raise ValueError("Cannot initialize Parameter %s because it has " \
@@ -379,7 +395,7 @@ class Parameter(object):
         parameter is uninitialized or doesn't require gradient."""
         if self._grad is None:
             return
-        for i in self._grad.values():
+        for i in self._grad:
             i[:] = 0
 
     def var(self):

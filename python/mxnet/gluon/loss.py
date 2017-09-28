@@ -21,8 +21,6 @@
 from __future__ import absolute_import
 
 from .. import ndarray
-from ..contrib import symbol as symbol_contrib
-from ..contrib import ndarray as ndarray_contrib
 from ..base import numeric_types
 from .block import HybridBlock
 
@@ -377,11 +375,7 @@ class CTCLoss(Loss):
             data = F.swapaxes(data, 0, 1)
         if self._batch_axis == 1:
             label = F.swapaxes(label, 0, 1)
-        if F is ndarray:
-            F_contrib = ndarray_contrib
-        else:
-            F_contrib = symbol_contrib
-        loss = F_contrib.CTCLoss(data, label,
+        loss = F.contrib.CTCLoss(data, label,
                                  use_data_lengths=data_lengths is not None,
                                  use_label_lengths=label_lengths is not None,
                                  data_lengths=data_lengths, label_lengths=label_lengths,

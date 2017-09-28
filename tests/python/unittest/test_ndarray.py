@@ -19,6 +19,7 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
+import unittest 
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 
@@ -291,6 +292,9 @@ def test_ndarray_slice():
 
     assert A[1,2,3,4,5].asscalar() == A2[1,2,3,4,5]
 
+    a = mx.nd.array([[0, 1], [2, 3]])
+    assert (a[[1, 1, 0], [0, 1, 0]].asnumpy() == [2, 3, 0]).all()
+    assert (a[mx.nd.array([1, 1, 0]), mx.nd.array([0, 1, 0])].asnumpy() == [2, 3, 0]).all()
 
 
 def test_ndarray_crop():
@@ -670,7 +674,7 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8049")
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
@@ -684,6 +688,34 @@ def test_cached():
     o2[:] = 0
     op(data, weight, bias, out=o2)
     assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+
+    weight.attach_grad()
+    bias.attach_grad()
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward(retain_graph=True)
+        o.backward()
+
+    # try a different shape
+    data = mx.nd.ones((5, 2, 10, 10))
+    weight = mx.nd.ones((10, 2, 3, 3))
+    bias = mx.nd.ones((10,))
+    data.attach_grad()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
 
 def test_output():
     shape = (2,2)
@@ -702,21 +734,28 @@ def test_ndarray_fluent():
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
                     'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'take',
                     'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
-                    'clip', 'abs' 'sign'])
-    def check_fluent_regular(func, kwargs, shape=(5, 17, 1)):
+                    'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
+                    'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
+                    'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square'])
+    def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.nd.random_uniform(shape=shape, ctx=default_context())
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
                 for r, f in zip(regular, fluent):
-                    assert almost_equal(r.asnumpy(), f.asnumpy())
+                    assert almost_equal(r.asnumpy(), f.asnumpy(), equal_nan=equal_nan)
             else:
-                assert almost_equal(regular.asnumpy(), fluent.asnumpy())
+                assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
-                 'ones_like', 'abs', 'sign']:
+                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
+                 'exp', 'expm1', 'square']:
         check_fluent_regular(func, {})
+
+    for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
+                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt']:
+        check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
         check_fluent_regular(func, {'axis': 1})

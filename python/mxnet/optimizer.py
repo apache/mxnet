@@ -24,9 +24,9 @@ import logging
 import warnings
 import numpy
 from .base import py_str
-from .ndarray import (NDArray, zeros, clip, sqrt, sign, array, maximum, abs as NDabs)
+from .ndarray import (NDArray, zeros, clip, sqrt, array, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update)
+                      mp_sgd_update, mp_sgd_mom_update, ftrl_update)
 from .random import normal
 
 
@@ -395,8 +395,8 @@ class SGD(Optimizer):
     multi_precision: bool, optional
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients
-                in 32-bit precision even if actual weights used in the model have lower precision.
+       ``True`` makes internal 32-bit copy of the weights and applies gradients \
+                in 32-bit precision even if actual weights used in the model have lower precision.\
                 Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, multi_precision=False, **kwargs):
@@ -406,7 +406,6 @@ class SGD(Optimizer):
 
     def create_state(self, index, weight):
         momentum = None
-        weight_master_copy = None
         if self.multi_precision and weight.dtype == numpy.float16:
             weight_master_copy = array(weight, ctx=weight.context, dtype=numpy.float32)
             if self.momentum != 0.0:
@@ -812,12 +811,38 @@ class AdaDelta(Optimizer):
         weight[:] -= current_delta + wd * weight
 
 #pylint: disable=invalid-name
+#pylint: disable=line-too-long
 @register
 class Ftrl(Optimizer):
     """The Ftrl optimizer.
 
     Referenced from *Ad Click Prediction: a View from the Trenches*, available at
     http://dl.acm.org/citation.cfm?id=2488200.
+
+    eta :
+        .. math::
+           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^2}}
+
+    The optimizer updates the weight by::
+
+        rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+        z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
+        n += rescaled_grad**2
+        w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
+
+    If the storage types of weight, state and grad are all ``row_sparse``, \
+    sparse updates are applied by::
+
+        for row in grad.indices:
+            rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
+            z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
+            n[row] += rescaled_grad[row]**2
+            w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
+
+    For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
 
     Parameters
     ----------
@@ -827,9 +852,6 @@ class Ftrl(Optimizer):
         The initial learning rate.
     beta : float, optional
         Per-coordinate learning rate correlation parameter.
-    eta :
-        .. math::
-           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
     """
 
     def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, **kwargs):
@@ -839,8 +861,8 @@ class Ftrl(Optimizer):
         self.lr = learning_rate
 
     def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context),  # dn
-                zeros(weight.shape, weight.context))  # n
+        return (zeros(weight.shape, weight.context, stype=weight.stype),  # z
+                zeros(weight.shape, weight.context, stype=weight.stype))  # n
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -849,22 +871,16 @@ class Ftrl(Optimizer):
         wd = self._get_wd(index)
         lr = self._get_lr(index)
 
-        # preprocess grad
-        grad *= self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        kwargs = {'lamda1': self.lamda1, 'beta': self.beta, 'rescale_grad': self.rescale_grad}
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
 
         # accumulated g and delta initialization
-        dn, n = state
+        z, n = state
+        ftrl_update(weight, grad, z, n, out=weight,
+                    lr=lr, wd=wd, **kwargs)
 
-        #update dn, n
-        dn += grad - (sqrt(n + grad * grad) - sqrt(n)) * weight / lr
-        n += grad * grad
-
-        # update weight
-        weight[:] = (sign(dn) * self.lamda1 - dn) / \
-                    ((self.beta + sqrt(n)) / lr + wd) * (NDabs(dn) > self.lamda1)
-
+# pylint: enable=line-too-long
 @register
 class Adamax(Optimizer):
     """The AdaMax optimizer.
