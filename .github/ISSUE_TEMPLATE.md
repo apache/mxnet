@@ -1,10 +1,14 @@
 For bugs or installation issues, please provide the following information.
-The more information you provide, the more likely people will be able to help you.
+
+** What's the best way of getting help through issues? **
+Providing complete information in the most concise form in issues is the best way to get help from the community. This issue template serves as the checklist for providing information that are essential to solving most of the technical issues.
+
+Also here's a book to those who are interested in perfecting the skill of asking questions: http://www.catb.org/~esr/faqs/smart-questions.html
 
 ## Environment info
 Operating System:
 
-Compiler:
+Compiler: (gcc/clang/mingw/visual studio)
 
 Package used (Python/R/Scala/Julia):
 
