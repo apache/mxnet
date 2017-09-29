@@ -30,6 +30,8 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
+#include "./sampler.h"
+
 
 namespace mxnet {
 namespace op {
@@ -132,8 +134,43 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename xpu, typename IType, typename OType, typename Sampler, int inum>
+struct SamplerCaller;
 
-template<typename xpu, typename generator>
+template<typename xpu, typename IType, typename OType, typename Sampler>
+struct SamplerCaller<xpu, IType, OType, Sampler, 1> {
+  static void op(const int nParm,
+                 const int nSample,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const int seed,
+                       mshadow::Stream<xpu> *s) {
+    Sampler sampler;
+    sampler.Sample(nParm, nSample, sampler.OptSeedNum(),
+                   inputs[0].dptr<IType>(),
+                   outputs[0].dptr<OType>(),
+                   seed, s);
+  }
+};
+
+template<typename xpu, typename IType, typename OType, typename Sampler>
+struct SamplerCaller<xpu, IType, OType, Sampler, 2> {
+  static void op(const int nParm,
+                 const int nSample,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<TBlob>& outputs,
+                 const int seed,
+                       mshadow::Stream<xpu> *s) {
+    Sampler sampler;
+    sampler.Sample(nParm, nSample, sampler.OptSeedNum(),
+                   inputs[0].dptr<IType>(),
+                   inputs[1].dptr<IType>(),
+                   outputs[0].dptr<OType>(),
+                   seed, s);
+  }
+};
+
+template<typename xpu, typename Sampler, int inum>
 void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
@@ -147,43 +184,17 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& in0 = inputs[0];
-  const TBlob& in1 = (inputs.size() == 1 ? inputs[0] : inputs[1]);
   const TBlob& out = outputs[0];
   if (out.Size() == 0) return;
-  CHECK_EQ(in0.CheckContiguous(), true);
-  CHECK_EQ(in1.CheckContiguous(), true);
   CHECK_GT(in0.Size(), 0);
-  CHECK_EQ(out.CheckContiguous(), true);
   CHECK_EQ(out.Size() % in0.Size(), 0);
-  const int N(in0.Size()), M(out.Size()/in0.Size());
-
-  // Seed for the sampling process. In order to guarantee deterministic
-  // behaviour for single threaded cpu, this is taken from mshadow random generator.
+  const int nParm(in0.Size()), nSample(out.Size()/in0.Size());
   const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
 
   MSHADOW_TYPE_SWITCH(in0.type_flag_, IType, {
-    MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, OType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        // Get the output as a 2D-tensor with dimensions NxM
-        Tensor<xpu, 2, OType> samples = out.get_with_shape<xpu, 2, OType>(Shape2(N, M), s);
-        const IType *iptr1 = in0.dptr<IType>(), *iptr2 = in1.dptr<IType>();
-
-        // The seeds for the different generators are itself a random sequence. We don't
-        // want to create the same samples in case that we have two samplers with same
-        // input parameters.
-        std::mt19937 seed_generator(seed);
-        for (int i = 0; i < N; ++i) {
-          // Generate seed for this sampler. Must be mutexed as calling
-          // a random generator is not thread safe.
-          int seed = seed_generator();
-          typename generator::template Sampler<OType> sampler(iptr1[i], iptr2[i], seed);
-          // Get the sub-tensor that will hold the results of this sampler.
-          Tensor<xpu, 1, OType> slice = samples.Slice(i, i+1).FlatTo1D();
-          for (int j = 0; j < M; ++j) {
-            KERNEL_ASSIGN(slice[j], req_type, sampler());
-          }
-        }
-      });
+    MSHADOW_SGL_DBL_TYPE_SWITCH(out.type_flag_, OType, {
+        SamplerCaller<xpu, IType, OType, Sampler, inum>
+            ::op(nParm, nSample, inputs, outputs, seed, s);
     });
   });
 }
