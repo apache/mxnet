@@ -311,23 +311,33 @@ inline void PushFComputeEx(const FComputeEx& fn,
                     const std::vector<NDArray*>& p_inputs,
                     const std::vector<NDArray*>& p_outputs,
                     const std::vector<OpReqType>& req) {
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
+
   bool is_train = Imperative::Get()->is_training();
+  ExecType exec_type = ExecType::kSync;
+  if (fexec_type.count(op)) {
+    exec_type = fexec_type[op](attrs);
+  }
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushAsync([ctx, is_train, attrs, fn, inputs, outputs, requested, req](
+  const auto& run = [ctx, exec_type, is_train, attrs, fn, inputs, outputs, requested, req](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
-      std::vector<TBlob> input_blobs, output_blobs;
-      OpContext opctx{is_train, rctx,
-                      engine::CallbackOnComplete(),
-                      requested};
+      OpContext opctx{is_train, rctx, on_complete, requested};
       fn(attrs, opctx, inputs, req, outputs);
-      if (ctx.dev_mask() == gpu::kDevMask) {
-        rctx.get_stream<gpu>()->Wait();
+      if (exec_type == ExecType::kSync) {
+        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+          rctx.get_stream<gpu>()->Wait();
+        }
+        on_complete();
       }
-      on_complete();
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+    };
+  if (exec_type == ExecType::kLocal) {
+    run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+  } else {
+    Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
+  }
 }
 
 inline void PushOperator(const OpStatePtr& state,

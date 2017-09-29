@@ -352,7 +352,7 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   Imperative::Get()->RunGraph(
-      false, default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
+      false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states, dispatch_modes);
 
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
@@ -422,7 +422,7 @@ void Imperative::CachedOp::Backward(
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   Imperative::Get()->RunGraph(
-      retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
+      retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
       std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   if (retain_graph) {

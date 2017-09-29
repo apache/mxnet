@@ -207,6 +207,7 @@ void Imperative::RecordOp(
   node->attrs.name = "node_" + std::to_string(node_count_++);
   AGInfo& info = AGInfo::Create(node);
   info.state = state;
+  info.ctx = inputs[0]->ctx();
 
   if (p_save_inputs == nullptr) {
     p_save_inputs = &(local_buff->save_inputs);
@@ -263,7 +264,6 @@ void Imperative::RecordOp(
 
 void Imperative::RunGraph(
     const bool retain_graph,
-    const Context& default_ctx,
     const nnvm::IndexedGraph& idx,
     const std::vector<NDArray*> arrays,
     size_t node_start, size_t node_end,
@@ -288,6 +288,7 @@ void Imperative::RunGraph(
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) continue;
+    auto num_outputs = node.source->num_outputs();
     ndinputs.clear();
     ndinputs.reserve(node.inputs.size());
     for (const auto& j : node.inputs) {
@@ -295,15 +296,16 @@ void Imperative::RunGraph(
       CHECK(!ndinputs.back()->is_none()) << idx[j.node_id].source->attrs.name << " " << j.index;
     }
     ndoutputs.clear();
-    ndoutputs.reserve(node.source->num_outputs());
+    ndoutputs.reserve(num_outputs);
     req.clear();
-    req.reserve(node.source->num_outputs());
-    for (size_t j = 0; j < node.source->num_outputs(); ++j) {
+    req.reserve(num_outputs);
+    for (size_t j = 0; j < num_outputs; ++j) {
       size_t eid = idx.entry_id(i, j);
       ndoutputs.emplace_back(arrays[eid]);
       req.push_back(array_reqs[eid]);
       CHECK(!ndoutputs.back()->is_none());
     }
+    const Context& ctx = ndoutputs[0]->ctx();
     const DispatchMode dispatch_mode = dispatch_modes[i];
     if (node.source->op() == bwd_cached_op) {
       const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
@@ -320,19 +322,19 @@ void Imperative::RunGraph(
         arg_dtypes.emplace_back(ndinputs[i]->dtype());
       }
       states[i] = createop[node.source->op()](
-          node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode, states[i]);
+          node.source->attrs, ctx, arg_shapes, arg_dtypes);
+      InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode, states[i]);
       if (recording) RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, states[i]);
     } else if (is_layer_backward.get(node.source->op(), false)) {
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
       auto fwd_node_id = idx.node_id(fwd_node);
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs,
+      InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs,
                req, dispatch_mode, states[fwd_node_id]);
       if (recording) {
         RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, states[fwd_node_id]);
       }
     } else {
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode);
+      InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode);
       if (recording) RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs);
     }
 
@@ -544,13 +546,21 @@ std::vector<NDArray*> Imperative::Backward(
   const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
   const auto& dispatch_modes = graph.GetAttr<DispatchModeVector>("dispatch_mode");
-  for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
-    if (!arrays[i]->is_none()) continue;
-    if (stypes[i] == kDefaultStorage) {
-      *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
-    } else {
-      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
+
+  for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
+    auto num_outputs = idx[i].source->num_outputs();
+    const Context& ctx = idx[i].source->control_deps.size() ?
+                         AGInfo::Get(idx[i].source->control_deps[0]).ctx :
+                         default_ctx;
+    for (size_t j = 0; j < num_outputs; ++j) {
+      auto eid = idx.entry_id(i, j);
+      if (!arrays[eid]->is_none()) continue;
+      if (stypes[eid] == kDefaultStorage) {
+        *arrays[eid] = NDArray(shapes[eid], ctx, true, dtypes[eid]);
+      } else {
+        *arrays[eid] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                               shapes[eid], ctx, true, dtypes[eid]);
+      }
     }
   }
 
@@ -559,7 +569,7 @@ std::vector<NDArray*> Imperative::Backward(
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training = set_is_training(is_train);
 
-  RunGraph(retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
+  RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   set_is_recording(prev_recording);

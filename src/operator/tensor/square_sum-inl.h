@@ -278,7 +278,7 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
           Kernel<set_zero, xpu>::Launch(s, out_data_size, output->data().dptr<DType>());
         })
       } else if (output->storage_type() == kRowSparseStorage) {
-        FillZerosRspImpl<xpu>(s, output);
+        FillZerosRspImpl<xpu>(s, *output);
       } else {
         LOG(FATAL) << "SquareSumRspImpl only supports row-sparse/dense output storage type";
       }
@@ -348,7 +348,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(igrad->storage_type(), kRowSparseStorage);
   CHECK_EQ(req, kWriteTo);
   if (!input.storage_initialized()) {
-    FillZerosRspImpl<xpu>(s, igrad);
+    FillZerosRspImpl<xpu>(s, *igrad);
     return;
   }
 

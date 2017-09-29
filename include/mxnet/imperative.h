@@ -144,6 +144,7 @@ class Imperative {
   /*! \brief */
   class AGInfo {
    public:
+    Context ctx;
     OpReqType grad_req;
     OpStatePtr state;
     std::vector<NDArray> outputs;
@@ -189,7 +190,6 @@ class Imperative {
       std::vector<bool> *p_save_outputs);
   void RunGraph(
       const bool retain_graph,
-      const Context& default_ctx,
       const nnvm::IndexedGraph& idx,
       const std::vector<NDArray*> arrays,
       size_t node_start, size_t node_end,

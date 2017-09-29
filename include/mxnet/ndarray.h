@@ -893,6 +893,19 @@ size_t num_aux_data(NDArrayStorageType stype);
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 /*!
+ * \brief issue an copy operation from one NDArray to another
+ *  the two ndarray can sit on different devices
+ *  this operation will be scheduled by the engine
+ *
+ * \param from the ndarray we want to copy data from
+ * \param to the target ndarray
+ * \param priority Priority of the action.
+ * \note The function name explicitly marks the order of from and to
+ *     due to different possible convention carried by copy function.
+ */
+void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0);
+
+/*!
  * \brief Perform elementwise sum over each data from source, store result into out.
  * \param source the ndarray we want to sum
  * \param out the target ndarray
