@@ -100,7 +100,7 @@ class MultiFactorScheduler(LRScheduler):
 
     Then calculate the new learning rate by::
 
-        base_lr * pow(factor, k+1) 
+        base_lr * pow(factor, k+1)
 
     When warmup_step>1, warmup the learning rate by a const value for first warmup_step steps.
 
@@ -130,7 +130,7 @@ class MultiFactorScheduler(LRScheduler):
             if _step < 1:
                 raise ValueError("Schedule step must be greater or equal than 1 round")
         if factor > 1.0:
-            raise ValueError("Factor must be no more than 1 to make lr reduce") 
+            raise ValueError("Factor must be no more than 1 to make lr reduce")
 
         #multifactor parameter
         self.step = step
