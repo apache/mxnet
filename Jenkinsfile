@@ -370,10 +370,7 @@ try {
                     init_git()
                     unpack_lib('gpu')
                     timeout(time: max_time, unit: 'MINUTES') {
-                      try {
                         sh "${docker_run} gpu ./perl-package/test.sh"
-                      } catch (exc) {
-                      }
                     }
                 }
             }
