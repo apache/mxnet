@@ -31,6 +31,8 @@
 
 namespace mxnet {
 
+std::atomic<int> kvstore::KVStoreDist::app_id{0};
+
 KVStore* KVStore::Create(const char *type_name) {
   std::string tname = type_name;
   std::transform(tname.begin(), tname.end(), tname.begin(), ::tolower);

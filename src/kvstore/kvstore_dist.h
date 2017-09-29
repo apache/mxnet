@@ -54,7 +54,7 @@ class KVStoreDist : public KVStoreLocal {
   explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
-      ps_worker_ = new ps::KVWorker<real_t>(0);
+      ps_worker_ = new ps::KVWorker<real_t>(GetNewAppId());
       ps::StartAsync("mxnet\0");
       if (!ps::Postoffice::Get()->is_recovery()) {
         ps::Postoffice::Get()->Barrier(
@@ -423,6 +423,12 @@ class KVStoreDist : public KVStoreLocal {
    * \brief serizelize EncodeRowSparseKey and EncodeKey
    */
   std::mutex mu_;
+
+  static std::atomic<int> app_id;
+
+  int GetNewAppId() {
+    return app_id++;
+  }
 
   /**
    * \brief convert to keys in ps
