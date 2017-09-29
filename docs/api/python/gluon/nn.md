@@ -72,6 +72,7 @@ This document lists the neural network blocks in Gluon:
 .. automodule:: mxnet.gluon.nn
     :members:
     :imported-members:
+    :exclude-members: Block, HybridBlock, SymbolBlock, Sequential, HybridSequential
 ```
 
 <script>auto_index("api-reference");</script>

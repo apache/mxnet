@@ -132,7 +132,7 @@ def test_symbol_block():
     out = smodel(mx.sym.var('in'))
     assert len(out) == len(outputs.list_outputs())
 
-    class Net(gluon.HybridBlock):
+    class Net(nn.HybridBlock):
         def __init__(self, model):
             super(Net, self).__init__()
             self.model = model

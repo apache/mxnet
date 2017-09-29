@@ -266,7 +266,8 @@ class Parameter(object):
                 Normally :py:class:`gluon.Trainer` does this for you.
 
         default_init : Initializer
-            Default initializer is used when both :py:func:`init` and :py:meth:`Parameter.init` are ``None``.
+            Default initializer is used when both :py:func:`init`
+            and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
 
