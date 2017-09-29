@@ -92,36 +92,36 @@ class FactorScheduler(LRScheduler):
         return self.base_lr
 
 class MultiFactorScheduler(LRScheduler):
+    """Reduce the learning rate by given a list of steps.
+
+    Assume there exists *k* such that::
+
+        step[k] <= num_update and num_update < step[k+1]
+
+    Then calculate the new learning rate by::
+
+        base_lr * pow(factor, k+1) 
+
+    When warmup_step>1, warmup the learning rate by a const value for first warmup_step steps.
+
+    It returns a new learning rate by::
+
+        begin_lr + (num_update - 1) * const_update
+
+    Parameters
+    ----------
+    step: list of int
+        The list of steps to schedule a change.
+    factor: float
+        The factor to change the learning rate.
+    warmup_step : int
+        Changes the learning rate for first 'warmup_step' updates.
+    begin_lr : float, optional
+        The learning rate at begin.
+    stop_lr : float, optional
+        Stop updating the learning rate if it is less than this value.
+    """
     def __init__(self, step, factor=1, warmup_step=0, begin_lr=0, stop_lr=0):
-        """Reduce the learning rate by given a list of steps.
-
-        Assume there exists *k* such that::
-
-            step[k] <= num_update and num_update < step[k+1]
-
-        Then calculate the new learning rate by::
-
-            base_lr * pow(factor, k+1) 
-
-        When warmup_step>1, warmup the learning rate by a const value for first warmup_step steps.
-
-        It returns a new learning rate by::
-
-            begin_lr + (num_update - 1) * const_update
-
-        Parameters
-        ----------
-        step: list of int
-            The list of steps to schedule a change.
-        factor: float
-            The factor to change the learning rate.
-        warmup_step : int
-            Changes the learning rate for first 'warmup_step' updates.
-        begin_lr : float, optional
-            The learning rate at begin.
-        stop_lr : float, optional
-            Stop updating the learning rate if it is less than this value.
-        """
         super(MultiFactorScheduler, self).__init__()
         assert isinstance(step, list) and len(step) >= 1
         for i, _step in enumerate(step):
