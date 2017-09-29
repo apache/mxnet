@@ -58,13 +58,13 @@ method seed(Int $seed_state)
 }
 
 for my $method (
-        [qw/_sample_uniform uniform/],
-        [qw/_sample_normal normal/],
-        [qw/_sample_gamma gamma/],
-        [qw/_sample_exponential exponential/],
-        [qw/_sample_poisson poisson/],
-        [qw/_sample_negbinomial negative_binomial/],
-        [qw/_sample_gennegbinomial generalized_negative_binomial/],
+        [qw/_random_uniform uniform/],
+        [qw/_random_normal normal/],
+        [qw/_random_gamma gamma/],
+        [qw/_random_exponential exponential/],
+        [qw/_random_poisson poisson/],
+        [qw/_random_negbinomial negative_binomial/],
+        [qw/_random_gennegbinomial generalized_negative_binomial/],
 )
 {
     my ($nd_method_name, $rnd_method_name) = @{$method};
