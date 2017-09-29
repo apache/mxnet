@@ -30,6 +30,7 @@ except ImportError:
 import ctypes
 import warnings
 import operator
+from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_array, mx_real_t
@@ -306,8 +307,14 @@ fixed-size items.
         return lesser_equal(self, other)
 
     def __bool__(self):
-        raise ValueError("The truth value of an NDArray is ambiguous. " \
-                         "Please convert to number with asscalar() first.")
+        num_elements = reduce(operator.mul, self.shape, 1)
+        if num_elements == 0:
+            return False
+        elif num_elements == 1:
+            return bool(self.asscalar())
+        else:
+            raise ValueError("The truth value of an NDArray with multiple elements " \
+                             "is ambiguous.")
 
     __nonzero__ = __bool__
 
