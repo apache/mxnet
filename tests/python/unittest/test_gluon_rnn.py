@@ -20,6 +20,7 @@ from mxnet import gluon
 import numpy as np
 from numpy.testing import assert_allclose
 import unittest
+from mxnet.test_utils import almost_equal
 
 
 def test_rnn():
