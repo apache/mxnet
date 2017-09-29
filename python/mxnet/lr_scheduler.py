@@ -92,7 +92,7 @@ class FactorScheduler(LRScheduler):
         return self.base_lr
 
 class MultiFactorScheduler(LRScheduler):
-    def __init__(self, step, factor = 1, warmup_step = 0, begin_lr=0, stop_lr=0):
+    def __init__(self, step, factor=1, warmup_step=0, begin_lr=0, stop_lr=0):
         """Reduce the learning rate by given a list of steps.
 
         Assume there exists *k* such that::
