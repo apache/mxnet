@@ -23,9 +23,9 @@ class CompositeMatcher(gluon.HybridBlock):
             assert isinstance(matcher, (gluon.Block, gluon.HybridBlock))
         self._matchers = matchers
 
-    def foward(self, F, x, *args, **kwargs):
+    def hybrid_forward(self, F, x, *args, **kwargs):
         matches = [matcher(x) for matcher in self._matchers]
-        return self._compose_matches(matches)
+        return self._compose_matches(F, matches)
 
     def _compose_matches(self, F, matches):
         """Given multiple match results, compose the final match results.
@@ -43,7 +43,7 @@ class CompositeMatcher(gluon.HybridBlock):
         """
         result = matches[0]
         for match in matches[1:]:
-            result = F.where(result >= 0, result, match)
+            result = F.where(result > -0.5, result, match)
         return result
 
 

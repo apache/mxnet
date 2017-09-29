@@ -252,11 +252,11 @@ class SSDAugmentation(object):
     def __init__(self, data_shape, mean_pixel=[123, 117, 104]):
         self._augments = Compose([
             Cast(),
-            ToAbsoluteCoords(),
-            Expand(mean_pixel),
-            RandomSampleCrop(),
-            ToPercentCoords(),
-            image.det.DetHorizontalFlipAug(0.5),
+            # ToAbsoluteCoords(),
+            # Expand(mean_pixel),
+            # RandomSampleCrop(),
+            # ToPercentCoords(),
+            # image.det.DetHorizontalFlipAug(0.5),
             ForceResize(data_shape),
             # image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, None)),
             Transpose(),

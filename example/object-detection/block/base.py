@@ -25,7 +25,7 @@ class CornerToCenterBox(gluon.HybridBlock):
         height = ymax - ymin
         x = xmin + width / 2
         y = ymin + height / 2
-        if not split:
+        if not self._split:
             return F.concat(x, y, width, height, dim=2)
         else:
             return x, y, width, height
