@@ -146,7 +146,7 @@ class KVStoreDist : public KVStoreLocal {
       // wait until the push is finished
       for (const int key : keys) {
         comm_buf_[key].WaitToWrite();
-      }   
+      }
     } else {
       // do nothing
     }
