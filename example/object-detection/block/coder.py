@@ -3,11 +3,10 @@ Encoders are used during training, which assign training targets.
 Decoders are used during testing/validation, which convert predictions back to
 normal boxes, etc.
 """
-from __future__ import absolute_import
-
+from mxnet import nd
 from mxnet import gluon
-from .base import CornerToCenterBox
-from .registry import register, alias, create
+from block.base import CornerToCenterBox
+from block.registry import register, alias, create
 
 
 class BoxEncoder(gluon.Block):
@@ -15,19 +14,11 @@ class BoxEncoder(gluon.Block):
     def __init__(self):
         super(BoxEncoder, self).__init__()
 
-be_register = registry.get_register_func(BoxEncoder, 'box_encoder')
-be_alias = registry.get_alias_func(BoxEncoder, 'box_encoder')
-be_create = registry.get_create_func(BoxEncoder, 'box_encoder')
-
 
 class HybridBoxEncoder(gluon.HybridBlock):
     """A base class for hybrid box encoder."""
     def __init__(self):
         super(HybridBoxEncoder, self).__init__()
-
-hbe_register = registry.get_register_func(HybridBoxEncoder, 'hybrid_box_encoder')
-hbe_alias = registry.get_alias_func(HybridBoxEncoder, 'hybrid_box_encoder')
-hbe_create = registry.get_create_func(HybridBoxEncoder, 'hybrid_box_encoder')
 
 
 class BoxDecoder(gluon.Block):
@@ -35,19 +26,11 @@ class BoxDecoder(gluon.Block):
     def __init__(self):
         super(BoxDecoder, self).__init__()
 
-bd_register = registry.get_register_func(BoxDecoder, 'box_decoder')
-bd_alias = registry.get_alias_func(BoxDecoder, 'box_decoder')
-bd_create = registry.get_create_func(BoxDecoder, 'box_decoder')
-
 
 class HybridBoxDecoder(gluon.HybridBlock):
     """A base class for hybrid box decoder."""
     def __init__(self):
         super(HybridBoxDecoder, self).__init__()
-
-hbd_register = registry.get_register_func(HybridBoxDecoder, 'hybrid_box_decoder')
-hbd_alias = registry.get_alias_func(HybridBoxDecoder, 'hybrid_box_decoder')
-hbd_create = registry.get_create_func(HybridBoxDecoder, 'hybrid_box_decoder')
 
 
 class ClassEncoder(gluon.Block):
@@ -55,19 +38,11 @@ class ClassEncoder(gluon.Block):
     def __init__(self):
         super(ClassEncoder, self).__init__()
 
-ce_register = registry.get_register_func(ClassEncoder, 'class_encoder')
-ce_alias = registry.get_alias_func(ClassEncoder, 'class_encoder')
-ce_create = registry.get_create_func(ClassEncoder, 'class_encoder')
-
 
 class HybridClassEncoder(gluon.HybridBlock):
     """A base class for hybrid classification encoder."""
     def __init__(self):
         super(HybridClassEncoder, self).__init__()
-
-hce_register = registry.get_register_func(HybridClassEncoder, 'hybrid_class_encoder')
-hce_alias = registry.get_alias_func(HybridClassEncoder, 'hybrid_class_encoder')
-hce_create = registry.get_create_func(HybridClassEncoder, 'hybrid_class_encoder')
 
 
 class ClassDecoder(gluon.Block):
@@ -75,24 +50,16 @@ class ClassDecoder(gluon.Block):
     def __init__(self):
         super(ClassDecoder, self).__init__()
 
-cd_register = registry.get_register_func(ClassDecoder, 'class_decoder')
-cd_alias = registry.get_alias_func(ClassDecoder, 'class_decoder')
-cd_create = registry.get_create_func(ClassDecoder, 'class_decoder')
-
 
 class HybridClassDecoder(gluon.HybridBlock):
     """A base class for hybrid classification decoder."""
     def __init__(self):
         super(HybridClassDecoder, self).__init__()
 
-hcd_register = registry.get_register_func(HybridClassDecoder, 'hybrid_class_decoder')
-hcd_alias = registry.get_alias_func(HybridClassDecoder, 'hybrid_class_decoder')
-hcd_create = registry.get_create_func(HybridClassDecoder, 'hybrid_class_decoder')
-
 
 @register
 @alias('rcnn_box_encoder')
-class NormalizedBoxCenterEncoder(HybridBoxEncoder):
+class NormalizedBoxCenterEncoder(BoxEncoder):
     """
 
     """
@@ -103,15 +70,20 @@ class NormalizedBoxCenterEncoder(HybridBoxEncoder):
         with self.name_scope():
             self.corner_to_center = CornerToCenterBox(split=True)
 
-    def hybrid_forward(self, F, samples, matches, anchors, refs, *args, **kwargs):
-        g = self.corner_to_center(F.pick(refs, matches, axis=1), axis=2, num_outputs=4)
+    def forward(self, samples, matches, anchors, refs, *args, **kwargs):
+        F = nd
+        # TODO(zhreshold): batch_pick, take multiple elements?
+        ref_boxes = nd.repeat(refs.reshape((0, 1, -1, 4)), axis=1, repeats=matches.shape[1])
+        ref_boxes = nd.split(ref_boxes, axis=-1, num_outputs=4, squeeze_axis=True)
+        ref_boxes = nd.concat(*[F.pick(ref_boxes[i], matches, axis=2).reshape((0, -1, 1)) for i in range(4)], dim=2)
+        g = self.corner_to_center(ref_boxes)
         a = self.corner_to_center(anchors)
         t0 = (g[0] - a[0]) / a[2] / self._stds[0]
         t1 = (g[1] - a[1]) / a[3] / self._stds[1]
         t2 = F.log(g[2] / a[2]) / self._stds[2]
         t3 = F.log(g[3] / a[3]) / self._stds[3]
         codecs = F.concat(t0, t1, t2, t3, dim=2)
-        temp = F.tile(samples, reps=(1, 1, 4)) > 0.5
+        temp = F.tile(samples.reshape((0, -1, 1)), reps=(1, 1, 4)) > 0.5
         targets = F.where(temp, codecs, F.zeros_like(codecs))
         masks = F.where(temp, F.ones_like(temp), F.zeros_like(temp))
         return targets, masks
@@ -141,15 +113,17 @@ class NormalizedBoxCenterDecoder(HybridBoxDecoder):
 
 @register
 @alias('plus1_class_encoder')
-class MultiClassEncoder(HybridClassEncoder):
+class MultiClassEncoder(ClassEncoder):
     """
 
     """
     def __init__(self):
         super(MultiClassEncoder, self).__init__()
 
-    def hybrid_forward(self, F, samples, matches, refs, *args, **kwargs):
-        targets = F.where(samples > 0.5, F.pick(refs, matches, axis=1) + 1, F.zeros_like(refs))
+    def forward(self, samples, matches, refs, *args, **kwargs):
+        refs = nd.repeat(refs.reshape((0, 1, -1)), axis=1, repeats=matches.shape[1])
+        target_ids = nd.pick(refs, matches, axis=2) + 1
+        targets = nd.where(samples > 0.5, target_ids, nd.zeros_like(target_ids))
         return targets
 
 @register

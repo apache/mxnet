@@ -30,7 +30,7 @@ class NaiveSampler(HybridSampler):
     def __init__(self):
         super(NaiveSampler, self).__init__()
 
-    def hybrid_foward(self, x, *args, **kwargs):
+    def hybrid_forward(self, F, x, *args, **kwargs):
         marker = F.ones_like(x)
         y = F.where(x >= 0, marker, marker * -1)
         return y

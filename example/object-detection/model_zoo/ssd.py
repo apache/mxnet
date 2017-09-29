@@ -72,9 +72,11 @@ class SSDNet(Block):
 
 SSDConfig = namedtuple('SSDConfig', 'features num_filters scale ratios')
 
-_factory = {'resnet18_v1_512': SSDConfig(
-    ['stage3_activation1', 'stage4_activation1'], [512, 512, 256, 256],
-    [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5)}
+_factory = {
+    'resnet18_v1_512': SSDConfig(
+        ['stage3_activation1', 'stage4_activation1'], [512, 512, 256, 256],
+        [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5),
+}
 
 def get_ssd(name, base_size, classes,
             pretrained=(True, False), ctx=mx.cpu(), **kwargs):
@@ -91,7 +93,6 @@ def get_ssd(name, base_size, classes,
         # load trained ssd model
         pass
     return net
-
 
 def ssd_512_resnet18_v1(pretrained=(True, False), classes=20, ctx=mx.cpu(), **kwargs):
     """SSD architecture with ResNet v1 18 layers.
