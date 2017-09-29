@@ -27,11 +27,12 @@
 #include "./kvstore_local.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
+
+std::atomic<int> mxnet::kvstore::KVStoreDist::app_id{0};
 #endif  // MXNET_USE_DIST_KVSTORE
 
 namespace mxnet {
 
-std::atomic<int> kvstore::KVStoreDist::app_id{0};
 
 KVStore* KVStore::Create(const char *type_name) {
   std::string tname = type_name;
