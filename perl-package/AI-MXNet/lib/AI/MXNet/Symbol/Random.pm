@@ -24,7 +24,7 @@ sub AUTOLOAD {
     my $sub = $AI::MXNet::Symbol::Random::AUTOLOAD;
     $sub =~ s/.*:://;
     shift;
-    if(grep { blessed($_) } @_)
+    if(grep { blessed($_) and $_->isa('AI::MXNet::Symbol') } @_)
     {
         $sub = "_sample_$sub";
     }

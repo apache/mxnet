@@ -62,25 +62,50 @@ sub AUTOLOAD {
     my $sub = $AI::MXNet::Random::AUTOLOAD;
     $sub =~ s/.*:://;
     shift;
-    if(grep { blessed($_) and $_->isa('AI::MXNet::NDArray') } @_)
+    my %defaults = (
+        ctx   => AI::MXNet::Context->current_ctx,
+        shape => 1,
+        out   => 1
+    );
+    my @args;
+    my @tmp = @_;
+    if(ref $tmp[-1] eq 'HASH')
+    {
+        my @kwargs = %{ pop(@tmp) };
+        push @tmp, @kwargs;
+    }
+    while(@tmp >= 2 and not ref $tmp[-2])
+    {
+        if(exists $defaults{$tmp[-2]})
+        {
+            my $v = pop(@tmp);
+            my $k = pop(@tmp);
+            $defaults{$k} = $v if defined $v;
+        }
+        else
+        {
+            unshift @args, pop(@tmp);
+            unshift @args, pop(@tmp);
+        }
+    }
+    unshift @args, @tmp;
+    if(blessed($defaults{out}) and not ref $defaults{shape} and $defaults{shape} == 1)
+    {
+        delete $defaults{shape};
+    }
+    delete $defaults{out} unless blessed $defaults{out};
+    if(grep { blessed($_) and $_->isa('AI::MXNet::NDArray') } @args)
     {
         $sub = "_sample_$sub";
-        return AI::MXNet::NDArray->$sub(@_);
+        delete $defaults{shape};
+        delete $defaults{ctx};
+        return AI::MXNet::NDArray->$sub(@args, %defaults);
     }
     else
     {
         $sub = "_random_$sub";
     }
-    my %defaults = (
-        ctx => AI::MXNet::Context->current_ctx,
-        shape => [1],
-    );
-    while(@_ >= 2 and not ref $_[-2] and exists )
-    if(not (grep { $_ eq 'ctx' }))
-    {
-        push @defaults, ctx => AI::MXNet::Context->current_ctx;
-    }
-    if(not )
+    return AI::MXNet::NDArray->$sub(@args, %defaults);
 }
 
 1;
