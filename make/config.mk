@@ -30,8 +30,11 @@ DEV = 0
 # whether compile with debug
 DEBUG = 0
 
-# whether compiler with profiler
+# whether compile with profiler
 USE_PROFILER =
+
+# whether to turn on signal handler (e.g. segfault logger)
+USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
 ADD_LDFLAGS =
@@ -53,9 +56,6 @@ USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
 USE_CUDNN = 0
-
-# whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVRTC = 0
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use

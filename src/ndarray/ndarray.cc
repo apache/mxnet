@@ -28,12 +28,12 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/resource.h>
+#include <mxnet/imperative.h>
 #include <mshadow/tensor.h>
 #include "./ndarray_function.h"
 #include "../common/utils.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
-#include "./autograd.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -46,79 +46,83 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 namespace mxnet {
 
 NDArray NDArray::grad() const {
-  if (this->entry_.ag_node && this->entry_.ag_node->out_grads.size()) {
-    CHECK_EQ(this->entry_.ag_node->out_grads.size(), 1);
-    return this->entry_.ag_node->out_grads[0];
+  if (Imperative::AGInfo::IsNone(*this)) return NDArray();
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  if (info.out_grads.size()) {
+    CHECK_EQ(info.out_grads.size(), 1);
+    return info.out_grads[0];
   }
   return NDArray();
 }
 
-NDArray NDArray::Reshape(const TShape &shape) const {
-  using namespace autograd;
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
-  if (AutogradRuntime::Get()->IsTraining()) {
-    CHECK_GE(shape_.Size(), shape.Size())
-      << "NDArray.Reshape: target shape must have must have the same size as "
-      << "current shape when recording with autograd.";
-    NDArray ret = *this;
-    ret.shape_ = shape;
-    // fake a Reshape op
-    ret.entry_.clear();
-    const nnvm::Op* op = nnvm::Op::Get("Reshape");
-    nnvm::NodeAttrs attrs;
-    attrs.op = op;
-    std::ostringstream os;
-    os << shape;
-    attrs.dict.insert({"shape", os.str()});
-    op->attr_parser(&attrs);
-    std::vector<NDArray> inputs, outputs;
-    inputs.emplace_back(*this);
-    outputs.emplace_back(std::move(ret));
-    AutogradRuntime::Get()->RecordOp(std::move(attrs), &inputs, &outputs);
-    return outputs[0];
-  } else {
-    CHECK_GE(shape_.Size(), shape.Size())
-      << "NDArray.Reshape: target shape size is larger current shape";
-    NDArray ret = *this;
-    ret.shape_ = shape;
-    return ret;
-  }
+nnvm::Symbol NDArray::get_autograd_symbol() const {
+  CHECK(!Imperative::AGInfo::IsNone(*this))
+    << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
+  nnvm::Symbol ret;
+  ret.outputs.emplace_back(entry_);
+  return ret;
 }
 
-NDArray NDArray::Slice(index_t begin, index_t end) const {
-  using namespace autograd;
-  using namespace mshadow;
+NDArray NDArray::Reshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
+        storage_type() << " is not implemented yet";
+  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
+        storage_type() << " is not implemented yet";
+  CHECK_GE(shape_.Size(), shape.Size())
+    << "NDArray.Reshape: target shape size is larger current shape";
+  NDArray ret = this->Detach();
+  ret.shape_ = shape;
+  return ret;
+}
+
+NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
+  NDArray ret = this->Reshape(shape);
+  if (!Imperative::Get()->is_recording()) return ret;
+
+  CHECK_GE(shape_.Size(), shape.Size())
+    << "NDArray.Reshape: target shape must have must have the same size as "
+    << "current shape when recording with autograd.";
+  nnvm::NodeAttrs attrs;
+  attrs.op = nnvm::Op::Get("Reshape");;
+  std::ostringstream os;
+  os << shape;
+  attrs.dict.insert({"shape", os.str()});
+  attrs.op->attr_parser(&attrs);
+  std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
+  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  return ret;
+}
+
+
+NDArray NDArray::Slice(index_t begin, index_t end) const {
+  CHECK(!is_none()) << "NDArray is empty";
   CHECK_LE(begin, end)
       << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   CHECK_EQ(storage_type(), kDefaultStorage);
-  NDArray ret = *this;
-  auto stype = storage_type();
+  NDArray ret = this->Detach();
   size_t length = shape_.ProdShape(1, shape_.ndim());
   MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
   });
   ret.shape_[0] = end - begin;
-  if (AutogradRuntime::Get()->IsTraining()) {
-    // fake a slice_axis op
-    ret.entry_.clear();
-    const nnvm::Op* op = nnvm::Op::Get("slice_axis");
-    nnvm::NodeAttrs attrs;
-    attrs.op = op;
-    attrs.dict.insert({"axis", "0"});
-    attrs.dict.insert({"begin", std::to_string(begin)});
-    attrs.dict.insert({"end", std::to_string(end)});
-    op->attr_parser(&attrs);
-    std::vector<NDArray> inputs, outputs;
-    inputs.emplace_back(*this);
-    outputs.emplace_back(std::move(ret));
-    AutogradRuntime::Get()->RecordOp(std::move(attrs), &inputs, &outputs);
-    return outputs[0];
-  } else {
-    return ret;
-  }
+  return ret;
+}
+
+NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
+  NDArray ret = this->Slice(begin, end);
+  if (!Imperative::Get()->is_recording()) return ret;
+  // fake a slice_axis op
+  nnvm::NodeAttrs attrs;
+  attrs.op = nnvm::Op::Get("slice_axis");
+  attrs.dict.insert({"axis", "0"});
+  attrs.dict.insert({"begin", std::to_string(begin)});
+  attrs.dict.insert({"end", std::to_string(end)});
+  attrs.op->attr_parser(&attrs);
+  std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
+  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  return ret;
 }
 
 NDArray NDArray::At(index_t idx) const {
@@ -127,6 +131,17 @@ NDArray NDArray::At(index_t idx) const {
   NDArray ret = this->Slice(idx, idx+1);
   if (shape_.ndim() > 1) {
     return ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
+  } else {
+    return ret;
+  }
+}
+
+NDArray NDArray::AtWithRecord(index_t idx) {
+  CHECK(storage_type() == kDefaultStorage)
+      << "Storage type " << storage_type() << " doesn't support At()";
+  NDArray ret = this->SliceWithRecord(idx, idx+1);
+  if (shape_.ndim() > 1) {
+    return ret.ReshapeWithRecord(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
   } else {
     return ret;
   }
@@ -152,15 +167,17 @@ NDArray NDArray::data_ndarray() const {
 }
 
 bool NDArray::fresh_out_grad() const {
-  if (entry_.ag_node != nullptr) return entry_.ag_node->fresh_out_grad;
-  return false;
+  if (Imperative::AGInfo::IsNone(*this)) return false;
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  return info.fresh_out_grad;
 }
 
 
 void NDArray::set_fresh_out_grad(bool state) const {
-  CHECK(entry_.ag_node != nullptr)
+  CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray has not been marked as a variable and does not have gradient state";
-  entry_.ag_node->fresh_out_grad = state;
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  info.fresh_out_grad = state;
 }
 
 
@@ -449,8 +466,7 @@ void CopyFromToImpl(const NDArray from, NDArray *to, RunContext rctx) {
     << " to stype = " << to_stype << " is not supported";
   const auto from_ctx = from.ctx();
   const auto to_ctx = to->ctx();
-  auto s = rctx.get_stream<from_xpu>();
-  bool is_train = mxnet::autograd::AutogradRuntime::Get()->IsTraining();
+  bool is_train = Imperative::Get()->is_training();
   std::vector<Resource> requested;
   if (is_same<from_xpu, mshadow::gpu>::value && from_stype != to_stype) {
     requested.push_back(ResourceManager::Get()->Request(from_ctx,

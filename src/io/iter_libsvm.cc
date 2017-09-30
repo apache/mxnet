@@ -201,8 +201,9 @@ MXNET_REGISTER_IO_ITER(LibSVMIter)
 .describe(R"code(Returns the libsvm file iterator which returns sparse data with `csr`
 storage type. This iterator is experimental and should be used with care.
 
-The input data is stored in a format similar to libsvm file format, except that the indices
-are expected to be zero-based instead of one-based. Details of the libsvm format are available
+The input data is stored in a format similar to libsvm file format, except that the **indices
+are expected to be zero-based instead of one-based, and the column indices for each row are
+expected to be sorted in ascending order**. Details of the libsvm format are available
 at `https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/`
 
 In this function, the `data_shape` parameter is used to set the shape of each line of the data.

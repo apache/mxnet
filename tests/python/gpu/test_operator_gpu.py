@@ -1370,10 +1370,10 @@ def test_autograd_save_memory():
     x.backward()
 
 def test_gluon_ctc_consistency():
-    loss = mx.gluon.loss.CTCLoss(padding_mask=0)
+    loss = mx.gluon.loss.CTCLoss()
     data = mx.nd.arange(0, 4, repeat=40, ctx=mx.gpu(0)).reshape((2,20,4)).flip(axis=0)
-    cpu_label = mx.nd.array([[2,1,0,0],[3,2,2,0]], ctx=mx.cpu(0))
-    gpu_label = mx.nd.array([[2,1,0,0],[3,2,2,0]], ctx=mx.gpu(0))
+    cpu_label = mx.nd.array([[2,1,-1,-1],[3,2,2,-1]], ctx=mx.cpu(0))
+    gpu_label = mx.nd.array([[2,1,-1,-1],[3,2,2,-1]], ctx=mx.gpu(0))
 
     cpu_data = data.copy().as_in_context(mx.cpu(0))
     cpu_data.attach_grad()
@@ -1388,6 +1388,35 @@ def test_gluon_ctc_consistency():
         l_gpu.backward()
 
     assert_almost_equal(cpu_data.grad.asnumpy(), gpu_data.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+
+
+def test_cuda_rtc():
+    source = r'''
+    extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
+        int i = threadIdx.x + blockIdx.x * blockDim.x;
+        y[i] += alpha * x[i];
+    }
+
+    extern "C" __global__ void saxpy(const float *x, float *y, float alpha) {
+        extern __shared__ float smem[];
+        int i = threadIdx.x + blockIdx.x * blockDim.x;
+        smem[threadIdx.x] = x[i];
+        y[i] += alpha * smem[threadIdx.x];
+    }
+    '''
+    module = mx.rtc.CudaModule(source)
+    axpy = module.get_kernel("axpy", "const float *x, float *y, float alpha")
+    x = mx.nd.ones((10,), ctx=mx.gpu(0))
+    y = mx.nd.zeros((10,), ctx=mx.gpu(0))
+    axpy.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+    assert (y.asnumpy() == 3).all()
+
+    saxpy = module.get_kernel("saxpy", "const float *x, float *y, float alpha")
+    saxpy.launch([x, y, 4.0], mx.gpu(0), (1, 1, 1), (10, 1, 1), 10)
+    assert (y.asnumpy() == 7).all()
+
+    saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
+    assert (y.asnumpy() == 12).all()
 
 
 if __name__ == '__main__':

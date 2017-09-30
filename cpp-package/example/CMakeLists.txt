@@ -17,11 +17,13 @@ file(GLOB_RECURSE CPP_PACKAGE_HEADERS
   "${CPP_PACKAGE_INCLUDE_DIR}/*.hpp"
   )
 
-add_custom_target(
-  cpp_package_deploy_library ALL
-  DEPENDS mxnet
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mxnet> $<TARGET_FILE_DIR:mlp>
-)
+if (MSVC)
+ add_custom_target(
+   cpp_package_deploy_library ALL
+   DEPENDS mxnet
+   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mxnet> $<TARGET_FILE_DIR:mlp>
+ )
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 

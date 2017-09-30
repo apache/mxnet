@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, default_context
 
 
 def test_loss_ndarray():
@@ -52,13 +52,13 @@ def test_loss_ndarray():
     mx.test_utils.assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
 
 
-def get_net(num_hidden):
+def get_net(num_hidden, flatten=True):
     data = mx.symbol.Variable('data')
-    fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+    fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
     act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
+    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
     act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
-    fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden)
+    fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
     return fc3
 
 
@@ -162,20 +162,16 @@ def test_l1_loss():
 
 
 def test_ctc_loss():
-    loss = gluon.loss.CTCLoss(padding_mask=0)
-    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]))
+    loss = gluon.loss.CTCLoss()
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
-    loss = gluon.loss.CTCLoss(layout='TNC', padding_mask=0)
-    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]))
+    loss = gluon.loss.CTCLoss(layout='TNC')
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
-    loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN', padding_mask=0)
-    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[2,1,0,0],[3,2,2,0]]).T)
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
-
-    loss = gluon.loss.CTCLoss(padding_mask=-1)
-    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]))
+    loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN')
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]).T)
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
@@ -189,6 +185,24 @@ def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+
+
+def test_ctc_loss_train():
+    np.random.seed(1234)
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
+    label = mx.nd.arange(4, repeat=N).reshape((N, 4))
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+    output = get_net(5, False)
+    l = mx.symbol.Variable('label')
+    Loss = gluon.loss.CTCLoss(layout='NTC', label_layout='NT')
+    loss = Loss(output, l)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            optimizer='adam')
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
 def test_sample_weight_loss():
