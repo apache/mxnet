@@ -346,8 +346,7 @@ layer. The whole process is often known as backward propagation. We are not
 going to delineate the principle of backward propagation here since users can find
 great details covered in other resources, such as
 [CS231n](http://cs231n.github.io/optimization-2/) and
-[How the backgropagation algorithm works](htt eifjccfuukvuhebklkrfctiilickhnbvulbrthhfcljk
-p://neuralnetworksanddeeplearning.com/chap2.html).
+[How the backgropagation algorithm works](http://neuralnetworksanddeeplearning.com/chap2.html).
 The problem we are going to solve here for the `quadratic` operator is that
 given a tensor representing the gradient of the loss function with respect
 to the output of the operator, calculate the gradient with respect to
