@@ -14,7 +14,8 @@ from model_zoo.ssd import *
 from block.loss import *
 from block.target import *
 from block.loss import *
-from trainer.metric import Accuracy
+from trainer.metric import Accuracy, SmoothL1
+from trainer.debuger import super_print
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -50,6 +51,11 @@ momentum = 0.9
 log_interval = 1
 dtype = 'float32'
 
+# monitor
+# print(net.collect_params())
+# raise
+checker = net.collect_params()['conv0_weight']
+
 # training process
 def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     ctx = ctx_as_list(ctx)
@@ -59,6 +65,7 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     cls_loss = FocalLoss(num_class=num_class+1)
     box_loss = gluon.loss.L1Loss()
     cls_metric = Accuracy(axis=-1)
+    box_metric = SmoothL1()
 
     for epoch in range(epochs):
         tic = time.time()
@@ -68,6 +75,8 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
             label = gluon.utils.split_and_load(batch[1], ctx_list=ctx, batch_axis=0)
             outputs = []
             labels = []
+            box_preds = []
+            box_labels = []
             Ls = []
             with ag.record():
                 for x, y in zip(data, label):
@@ -75,19 +84,27 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                     y = nd.cast(y, dtype)
                     z = net(x)
                     cls_targets, box_targets, box_masks = target_generator(z, y)
+                    super_print(y, cls_targets, box_targets)
+                    raise
                     loss1 = cls_loss(z[0], cls_targets)
                     loss2 = box_loss((z[1] - box_targets) * box_masks, nd.zeros_like(box_targets))
-                    L = loss1 + loss2
+                    # L = loss1 + loss2
+                    L = loss2
                     Ls.append(L)
                     outputs.append(z[0])
                     labels.append(cls_targets)
+                    box_preds.append(z[1] * box_masks)
+                    box_labels.append(box_targets)
                 for L in Ls:
                     pass
                     L.backward()
-            trainer.step(batch[0].shape[0])
+            trainer.step(batch[0].shape[0], ignore_stale_grad=True)
             cls_metric.update(labels, outputs)
+            box_metric.update(box_labels, box_preds)
             if log_interval and not (i + 1) % log_interval:
+                print(checker.grad())
                 name, acc = cls_metric.get()
-                logging.info("Epoch [%d] Batch [%d], %s=%f"%(epoch, i, name, acc))
+                name1, mae = box_metric.get()
+                logging.info("Epoch [%d] Batch [%d], %s=%f, %s=%f"%(epoch, i, name, acc, name1, mae))
 
 train(net, train_data, val_data, 10)
