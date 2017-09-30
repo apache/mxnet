@@ -100,7 +100,6 @@ if __name__ == '__main__':
     data_iter = iter(train_data)
     for epoch in range(num_epoch):
         nbatch = 0
-        data_iter.reset()
         metric.reset()
         for batch in data_iter:
             nbatch += 1
@@ -121,4 +120,6 @@ if __name__ == '__main__':
         # evaluate metric on validation dataset
         score = mod.score(eval_data, ['log_loss'])
         logging.info('epoch %d, eval log loss = %s' % (epoch, score[0][1]))
+        # reset the iterator for next pass of data
+        data_iter.reset()
     logging.info('Training completed.')

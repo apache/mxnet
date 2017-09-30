@@ -32,6 +32,7 @@ def test_metrics():
     check_metric('f1')
     check_metric('perplexity', -1)
     check_metric('pearsonr')
+    check_metric('nll_loss')
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
 
