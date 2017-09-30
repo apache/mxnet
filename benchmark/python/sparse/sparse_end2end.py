@@ -253,7 +253,6 @@ if __name__ == '__main__':
         start_time_epoch = time.time()
         nbatch = 0
         end_of_batch = False
-        data_iter.reset()
         metric.reset()
         next_batch = next(data_iter)
         if kv is not None:
@@ -300,6 +299,7 @@ if __name__ == '__main__':
         logging.info('num_worker = {}, time cost per epoch = {}'.format(str(num_worker), str(time_cost_epoch)))
         if args.num_gpu < 1:
             logging.info('|cpu/{} cores| {} | {} | {} |'.format(str(num_cores), str(num_worker), str(average_cost_epoch), rank))
+        data_iter.reset()
     if profiler:
         mx.profiler.profiler_set_state('stop')
     end = time.time()
