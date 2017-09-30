@@ -223,7 +223,7 @@ When `num_parts` and `part_index` are provided, the data is split into `num_part
 and the iterator only reads the `part_index`-th partition. However, the partitions are not
 guaranteed to be even.
 
-`reset` is expected to be called only after a complete pass of data.
+``reset()`` is expected to be called only after a complete pass of data.
 
 Example::
 
