@@ -957,8 +957,8 @@ class NegativeLogLikelihood(EvalMetric):
     def __init__(self, eps=1e-12, name='nll-loss',
                  output_names=None, label_names=None):
         super(NegativeLogLikelihood, self).__init__(
-              name, eps=eps,
-              output_names=output_names, label_names=label_names)
+            name, eps=eps,
+            output_names=output_names, label_names=label_names)
         self.eps = eps
 
     def update(self, labels, preds):
