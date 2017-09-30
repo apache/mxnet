@@ -461,6 +461,7 @@ The `ndarray` package provides several classes:
     sqrt
     rsqrt
     square
+    reciprocal
 ```
 
 ### Logic functions
@@ -476,6 +477,7 @@ The `ndarray` package provides several classes:
     lesser
     lesser_equal
 ```
+
 ### Random sampling
 
 ```eval_rst

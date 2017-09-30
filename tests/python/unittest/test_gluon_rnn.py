@@ -19,6 +19,7 @@ import mxnet as mx
 from mxnet import gluon
 import numpy as np
 from numpy.testing import assert_allclose
+from mxnet.test_utils import almost_equal
 
 
 def test_rnn():
@@ -203,7 +204,6 @@ def check_rnn_forward(layer, inputs, deterministic=True):
     if deterministic:
         mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
-
 
 
 def test_rnn_cells():

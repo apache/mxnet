@@ -511,14 +511,25 @@ fixed-size items.
             assert len(shape) >= len(key), \
                 "Slicing dimensions exceeds array dimensions, %d vs %d"%(
                     len(key), len(shape))
-            if isinstance(key[0], (NDArray, np.ndarray, list)):
+            if isinstance(key[0], (NDArray, np.ndarray, list, tuple)):
                 indices = []
                 dtype = 'int32'
+                shape = None
                 for idx_i in key:
                     if not isinstance(idx_i, NDArray):
+                        assert isinstance(idx_i, (NDArray, np.ndarray, list, tuple)), \
+                            "Combining basic and advanced indexing is not supported " \
+                            "yet. Indices must be all NDArray or all slice, not a " \
+                            "mix of both."
                         idx_i = array(idx_i, ctx=self.context, dtype=dtype)
                     else:
                         dtype = idx_i.dtype
+                    if shape is None:
+                        shape = idx_i.shape
+                    else:
+                        assert shape == idx_i.shape, \
+                            "All index arrays must have the same shape: %s vs %s. " \
+                            "Broadcasting is not supported yet."%(shape, idx_i.shape)
                     indices.append(idx_i)
                 indices = op.stack(*indices)
                 return op.gather_nd(self, indices)
@@ -537,6 +548,11 @@ fixed-size items.
                         begin.append(0 if slice_i.start is None else slice_i.start)
                         end.append(shape[i] if slice_i.stop is None else slice_i.stop)
                         oshape.append(end[i] - begin[i])
+                    elif isinstance(slice_i, (NDArray, np.ndarray, list, tuple)):
+                        raise ValueError(
+                            "Combining basic and advanced indexing is not supported " \
+                            "yet. Indices must be all NDArray or all slice, not a " \
+                            "mix of both.")
                     else:
                         raise ValueError(
                             "NDArray does not support slicing with key %s of type %s."%(
