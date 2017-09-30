@@ -22,6 +22,7 @@ import pickle as pkl
 import unittest 
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
+import unittest
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""

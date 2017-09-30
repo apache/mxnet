@@ -34,6 +34,7 @@
 #include <string>
 #include "./c_api_common.h"
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 
 using namespace mxnet;
 
@@ -74,7 +75,7 @@ void SetNumOutputs(const nnvm::Op *op,
   }
   CHECK_EQ(num_inputs, infered_num_inputs)
     << "Operator " << op->name << " expects " << infered_num_inputs
-    << " inputs, but got " << num_inputs << "instead.";
+    << " inputs, but got " << num_inputs << " instead.";
   if (op->get_num_outputs != nullptr) {
     *infered_num_outputs = op->get_num_outputs(attrs);
   } else {
@@ -124,7 +125,6 @@ void SetNDInputsOutputs(const nnvm::Op* op,
     }
   }
 }
-
 
 void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
                             int num_inputs,

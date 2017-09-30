@@ -21,6 +21,7 @@
 #define MXNET_IMPERATIVE_H_
 
 #include <mxnet/op_attr_types.h>
+#include <mxnet/graph_attr_types.h>
 #include <mxnet/c_api.h>
 #include <nnvm/symbolic.h>
 #include <nnvm/op.h>
@@ -123,6 +124,7 @@ class Imperative {
                       const std::vector<NDArray*>& inputs,
                       const std::vector<NDArray*>& outputs,
                       const std::vector<OpReqType>& req,
+                      const DispatchMode dispatch_mode,
                       OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
@@ -193,7 +195,8 @@ class Imperative {
       size_t node_start, size_t node_end,
       std::vector<OpReqType>&& array_reqs,
       std::vector<uint32_t>&& ref_count,
-      std::vector<OpStatePtr> *p_states);
+      std::vector<OpStatePtr> *p_states,
+      const DispatchModeVector& dispatch_modes);
   /*! \brief indicate whether is training. */
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
