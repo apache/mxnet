@@ -4,7 +4,6 @@
     I32 len;
     int i;
     SV  **tv;
-    STRLEN len2;
     if (!SvROK($input))
         croak("Argument $argnum is not a reference.");
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
@@ -16,7 +15,7 @@
         $1 = (char **) safemalloc((len)*sizeof(char *));
         for (i = 0; i < len; i++) {
             tv = av_fetch(tempav, i, 0);
-            $1[i] = (char *) SvPV(*tv,len2);
+            $1[i] = (char *) SvPV_nolen(*tv);
         }
     }
     else
@@ -34,7 +33,6 @@
     char *key;
     SV *val;
     I32 len;
-    STRLEN len2;
     int hash_len;
     int i = 0;
     if (!SvROK($input))
@@ -50,7 +48,7 @@
         while ((val = hv_iternextsv(temphv, &key, &len)))
         {
             $1[i] = key;
-            $2[i] = SvPV(val, len2);
+            $2[i] = SvPV_nolen(val);
             ++i;
         }
     }
@@ -188,14 +186,12 @@
 
 %typemap(in) (const void *in), (void *in)
 {
-    STRLEN len;
-    $1 = (void *)SvPV($input, len);
+    $1 = (void *)SvPV_nolen($input);
 }
 
 %typemap(in) (const char *in)
 {
-    STRLEN len;
-    $1 = SvPV($input, len);
+    $1 = SvPV_nolen($input);
 }
 
 %typemap(in) (const mx_uint *in), (mx_uint *in)
@@ -203,7 +199,7 @@
     AV *tempav;
     int i;
     SV  **tv;
-    int av_len; 
+    int av_len;
     if (!SvROK($input))
         croak("Argument $argnum is not a reference.");
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
@@ -214,7 +210,7 @@
     {
         $1 = (mx_uint *)safemalloc(av_len*sizeof(mx_uint));
         for (i = 0; i < av_len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             $1[i] = (mx_uint)SvIV(*tv);
         }
     }
@@ -244,7 +240,7 @@
     {
         $1 = (int *)safemalloc(av_len*sizeof(int));
         for (i = 0; i < av_len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             $1[i] = (int)SvIV(*tv);
         }
     }
@@ -276,7 +272,7 @@
     {
         $1 = ($1_type)safemalloc(av_len*sizeof($*1_type));
         for (i = 0; i < av_len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             res = SWIG_ConvertPtr(*tv,SWIG_as_voidptrptr(&$1[i]), $*1_descriptor, 0);
             if (!SWIG_IsOK(res)) {
                 SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$*1_type""'"); 
@@ -289,6 +285,39 @@
     }
 }
 %typemap(freearg) (NDArrayHandle* in), (SymbolHandle* in)  {
+    Safefree($1);
+}
+
+%typemap(in) (void** cuda_kernel_args)
+{
+    AV *tempav;
+    int i;
+    SV  **tv;
+    int res;
+    int av_len;
+    if (!SvROK($input))
+        croak("Argument $argnum is not a reference.");
+        if (SvTYPE(SvRV($input)) != SVt_PVAV)
+        croak("Argument $argnum is not an array.");
+        tempav = (AV*)SvRV($input);
+    av_len = av_len(tempav) + 1;
+    if(av_len)
+    {
+        $1 = ($1_type)safemalloc(av_len*sizeof($*1_type));
+        for (i = 0; i < av_len; i++) {
+            tv = av_fetch(tempav, i, 0);
+            res = SWIG_ConvertPtr(*tv,SWIG_as_voidptrptr(&$1[i]), SWIGTYPE_p_MXNDArray, 0);
+            if (!SWIG_IsOK(res)) {
+                $1[i] = (void*)SvPV_nolen(*tv);
+            }
+        }
+    }
+    else
+    {
+       $1 = NULL;
+    }
+}
+%typemap(freearg) (void** cuda_kernel_args) {
     Safefree($1);
 }
 
@@ -329,12 +358,16 @@
                          (KVStoreHandle *out) (KVStoreHandle temp),
                          (RecordIOHandle *out) (RecordIOHandle temp),
                          (RtcHandle *out) (RtcHandle temp),
-                         (CachedOpHandle *out) (CachedOpHandle temp)
+                         (CachedOpHandle *out) (CachedOpHandle temp),
+                         (CudaModuleHandle *out) (CudaModuleHandle temp),
+                         (CudaKernelHandle *out) (CudaKernelHandle temp)
 {
     $1 = &temp;
 }
 %typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out),
-                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp)
+                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp),
+                 (CudaModuleHandle *out) (CudaModuleHandle temp), (CudaKernelHandle *out) (CudaKernelHandle temp)
+
 {
     if(!result)
     {

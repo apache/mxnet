@@ -25,7 +25,7 @@ use AI::MXNet::NDArray;
 use AI::MXNet::Symbol;
 use AI::MXNet::Executor;
 use AI::MXNet::Executor::Group;
-use AI::MXNet::Rtc;
+use AI::MXNet::CudaModule;
 use AI::MXNet::Random;
 use AI::MXNet::Initializer;
 use AI::MXNet::Optimizer;

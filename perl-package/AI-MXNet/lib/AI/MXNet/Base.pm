@@ -34,19 +34,24 @@ use List::Util qw(shuffle);
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
+
 use constant DTYPE_STR_TO_MX => {
     float32 => 0,
     float64 => 1,
     float16 => 2,
     uint8   => 3,
-    int32   => 4
+    int32   => 4,
+    int8    => 5,
+    int64   => 6
 };
 use constant DTYPE_MX_TO_STR => {
     0 => 'float32',
     1 => 'float64',
     2 => 'float16',
     3 => 'uint8',
-    4 => 'int32'
+    4 => 'int32',
+    5 => 'int8',
+    6 => 'int64'
 };
 use constant DTYPE_MX_TO_PDL => {
     0 => 6,
@@ -54,17 +59,22 @@ use constant DTYPE_MX_TO_PDL => {
     2 => 6,
     3 => 0,
     4 => 3,
+    5 => 0,
+    6 => 5,
     float32 => 6,
     float64 => 7,
     float16 => 6,
     uint8   => 0,
-    int32   => 3
+    int32   => 3,
+    int8    => 0,
+    int64   => 5
 };
 use constant DTYPE_PDL_TO_MX => {
     6 => 0,
     7 => 1,
     0 => 3,
     3 => 4,
+    5 => 6
 };
 use constant DTYPE_MX_TO_PERL => {
     0 => 'f',
@@ -72,11 +82,15 @@ use constant DTYPE_MX_TO_PERL => {
     2 => 'S',
     3 => 'C',
     4 => 'l',
+    5 => 'c',
+    6 => 'q',
     float32 => 'f',
     float64 => 'd',
     float16 => 'S',
     uint8   => 'C',
-    int32   => 'l'
+    int32   => 'l',
+    int8    => 'c',
+    int64   => 'q'
 };
 use constant GRAD_REQ_MAP => {
     null  => 0,

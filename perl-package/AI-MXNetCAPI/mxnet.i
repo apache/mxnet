@@ -120,6 +120,8 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
     SWIG_TypeClientData(SWIGTYPE_p_MXRecordIO, (void *)"RecordIOHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXRtc, (void *)"RtcHandle");
     SWIG_TypeClientData(SWIGTYPE_p_MXCachedOp, (void *)"CachedOpHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_MXCudaModuleHandle, (void *)"CudaModuleHandle");
+    SWIG_TypeClientData(SWIGTYPE_p_MXCudaKernelHandle, (void *)"CudaKernelHandle");
 %}
 
 /*! \brief manually define unsigned int */
@@ -153,6 +155,10 @@ typedef MXRecordIO *RecordIOHandle;
 typedef MXRtc *RtcHandle;
 /*! \brief handle to cached operator */
 typedef MXCachedOp *CachedOpHandle;
+/*! \brief handle to rtc cuda module*/
+typedef MXCudaModuleHandle *CudaModuleHandle;
+/*! \brief handle to rtc cuda kernel*/
+typedef MXCudaKernelHandle *CudaKernelHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                                        NDArrayHandle,
@@ -1706,4 +1712,57 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
 */
 int MXRtcFree(RtcHandle handle);
 
-int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator);
+/*
+ * \brief create cuda rtc module
+ * \param source cuda source code
+ * \param num_options number of compiler flags
+ * \param options compiler flags
+ * \param num_exports number of exported function names
+ * \param exported function names
+ * \param out handle to created module
+ */
+int MXRtcCudaModuleCreate(const char* source, int num_options,
+                                    const char** in, int num_exports,
+                                    const char** in, CudaModuleHandle *out);
+/*
+ * \brief delete cuda rtc module
+ * \param handle handle to cuda module
+ */
+int MXRtcCudaModuleFree(CudaModuleHandle handle);
+/*
+ * \brief get kernel from module
+ * \param handle handle to cuda module
+ * \param name name of kernel function
+ * \param num_args number of arguments
+ * \param is_ndarray whether argument is ndarray
+ * \param is_const whether argument is constant
+ * \param arg_types data type of arguments
+ * \param out created kernel
+ */
+int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name,
+                                    int num_args, int* in, int* in,
+                                    int* in, CudaKernelHandle *out);
+/*
+ * \brief delete kernel
+ * \param handle handle to previously created kernel
+ */
+int MXRtcCudaKernelFree(CudaKernelHandle handle);
+/*
+ * \brief launch cuda kernel
+ * \param handle handle to kernel
+ * \param dev_id (GPU) device id
+ * \param args pointer to arguments
+ * \param grid_dim_x grid dimension x
+ * \param grid_dim_y grid dimension y
+ * \param grid_dim_z grid dimension z
+ * \param block_dim_x block dimension x
+ * \param block_dim_y block dimension y
+ * \param block_dim_z block dimension z
+ * \param shared_mem size of dynamically allocated shared memory
+ */
+int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** cuda_kernel_args,
+                                  mx_uint grid_dim_x, mx_uint grid_dim_y,
+                                  mx_uint grid_dim_z, mx_uint block_dim_x,
+                                  mx_uint block_dim_y, mx_uint block_dim_z,
+                                  mx_uint shared_mem);
+

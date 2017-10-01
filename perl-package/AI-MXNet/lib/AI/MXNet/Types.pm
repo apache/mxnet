@@ -48,6 +48,7 @@ subtype "AcceptableInput" => as "Num|PDL|PDL::Matrix|AI::MXNet::NDArray|AI::MXNe
 subtype "Index"           => as "Int";
 subtype "DimSize"         => as "Int" => where { $_ >= 0 };
 subtype "Dropout"         => as "Num" => where { $_ >= 0 and $_ <= 1 };
+subtype "CudaKernelDim"   => as "ArrayRef[Num]" => where { @$_ == 3 };
 subtype "Shape"           => as "ArrayRef[DimSize]";
 subtype "WholeDim"        => as "Str" => where { $_ eq 'X' };
 subtype "Slice"           => as "ArrayRef[Index]|WholeDim|Index" => where { ref $_ ? @$_ > 0 : 1 };
