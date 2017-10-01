@@ -17,6 +17,7 @@ lib/AI/MXNet/Context.pm
 lib/AI/MXNet/Contrib.pm
 lib/AI/MXNet/Contrib/NDArray.pm
 lib/AI/MXNet/Contrib/Symbol.pm
+lib/AI/MXNet/CudaModule.pm
 lib/AI/MXNet/Executor.pm
 lib/AI/MXNet/Executor/Group.pm
 lib/AI/MXNet/Function/Parameters.pm
@@ -61,12 +62,12 @@ lib/AI/MXNet/RecordIO.pm
 lib/AI/MXNet/RNN.pm
 lib/AI/MXNet/RNN/Cell.pm
 lib/AI/MXNet/RNN/IO.pm
-lib/AI/MXNet/Rtc.pm
 lib/AI/MXNet/Symbol.pm
 lib/AI/MXNet/Symbol/AttrScope.pm
 lib/AI/MXNet/Symbol/Base.pm
 lib/AI/MXNet/Symbol/Doc.pm
 lib/AI/MXNet/Symbol/NameManager.pm
+lib/AI/MXNet/Symbol/Random.pm
 lib/AI/MXNet/TestUtils.pm
 lib/AI/MXNet/Types.pm
 lib/AI/MXNet/Util/Printable.pm
@@ -80,6 +81,7 @@ t/AI-MXNet.t
 t/test_attr.t
 t/test_autograd.t
 t/test_conv.t
+t/test_cuda_module.t
 t/test_executor.t
 t/test_gluon.t
 t/test_gluon_data.t

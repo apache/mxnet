@@ -25,7 +25,7 @@ use AI::MXNet::NDArray;
 use AI::MXNet::Symbol;
 use AI::MXNet::Executor;
 use AI::MXNet::Executor::Group;
-use AI::MXNet::Rtc;
+use AI::MXNet::CudaModule;
 use AI::MXNet::Random;
 use AI::MXNet::Initializer;
 use AI::MXNet::Optimizer;
@@ -70,6 +70,7 @@ sub import
             sub rnd { 'AI::MXNet::Random' }
             sub random { 'AI::MXNet::Random' }
             sub Context { shift; AI::MXNet::Context->new(\@_) }
+            sub context { 'AI::MXNet::Context' }
             sub cpu { AI::MXNet::Context->cpu(\$_[1]//0) }
             sub gpu { AI::MXNet::Context->gpu(\$_[1]//0) }
             sub kv { 'AI::MXNet::KVStore' }
@@ -86,13 +87,18 @@ sub import
             sub contrib { 'AI::MXNet::Contrib' }
             sub autograd { 'AI::MXNet::AutoGrad' }
             sub name { '$short_name' }
+            sub rtc { '$short_name' }
+            sub CudaModule { shift; AI::MXNet::CudaModule->new(\@_) }
             sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
             *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };
             \$${short_name}::AttrScope = AI::MXNet::Symbol::AttrScope->new;
             sub Prefix { AI::MXNet::Symbol::Prefix->new(prefix => \$_[1]) }
             *AI::MXNet::Symbol::NameManager::current = sub { \$${short_name}::NameManager; };
+            *AI::MXNet::Symbol::NameManager::set_current = sub { \$${short_name}::NameManager = \$_[1]; };
             \$${short_name}::NameManager = AI::MXNet::Symbol::NameManager->new;
             *AI::MXNet::Context::current_ctx = sub { \$${short_name}::Context; };
+            *AI::MXNet::Context::current_context = sub { \$${short_name}::Context; };
+            *AI::MXNet::Context::set_current = sub { \$${short_name}::Context = \$_[1]; };
             \$${short_name}::Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
             1;
 EOP

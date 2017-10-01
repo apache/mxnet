@@ -125,6 +125,8 @@ DataIterHandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
+CudaModuleHandle = ctypes.c_void_p
+CudaKernelHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
@@ -363,7 +365,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_random_', '_sparse_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_']
 
 
 def _get_op_name_prefix(op_name):

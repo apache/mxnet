@@ -483,7 +483,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     float min_ratio = std::max<float>(min_crop_aspect_ratio / img_aspect_ratio,
         new_scale * new_scale);
     float max_ratio = std::min<float>(max_crop_aspect_ratio / img_aspect_ratio,
-        1. / new_scale * new_scale);
+        1. / (new_scale * new_scale));
     float new_ratio = std::sqrt(std::uniform_real_distribution<float>(
         min_ratio, max_ratio)(*prnd));
     float new_width = std::min(1.f, new_scale * new_ratio);

@@ -128,8 +128,8 @@ void GetImageFile(const std::string image_file,
                mean_data++;
             }
             if (channels > 1) {
-                *ptr_image_g++ = static_cast<mx_float>(*data++) - mean_g;
                 *ptr_image_b++ = static_cast<mx_float>(*data++) - mean_b;
+                *ptr_image_g++ = static_cast<mx_float>(*data++) - mean_g;
             }
 
             *ptr_image_r++ = static_cast<mx_float>(*data++) - mean_r;;

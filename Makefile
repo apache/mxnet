@@ -272,7 +272,7 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcuda -lcufft
+	LDFLAGS += -lcuda -lcufft -lnvrtc
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
@@ -280,13 +280,6 @@ endif
 
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
-
-ifeq ($(USE_NVRTC), 1)
-	LDFLAGS += -lnvrtc
-	CFLAGS += -DMXNET_USE_NVRTC=1
-else
-	CFLAGS += -DMXNET_USE_NVRTC=0
-endif
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)

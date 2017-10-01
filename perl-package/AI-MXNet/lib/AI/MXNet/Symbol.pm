@@ -26,6 +26,7 @@ use strict;
 use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Symbol::Base;
+use AI::MXNet::Symbol::Random;
 use AI::MXNet::Types;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -1468,5 +1469,6 @@ sub  _ufunc_helper
 }
 
 sub contrib { 'AI::MXNet::Contrib::Symbol' }
+sub random  { 'AI::MXNet::Symbol::Random' }
 
 1;

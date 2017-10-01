@@ -294,14 +294,14 @@ def test_zero_prop2():
     assert False
 
 
-def test_simple_bind_special_case():
+def test_simple_bind_incomplete_shape_inference_in_one_forward_pass():
     """This is a special case that results in shape inference
     failure after moving simple_bind logic from frontend to backend.
     Added here for testing against the network similar to the following one.
 
     Network diagram:
     weight --> abs_op --> sum_op --
-                                   |--> add_op
+          \                        |--> add_op
     data   --> fc_op  --> sum_op --
 
     Given data's shape, if the shape inference starts from weight node,
@@ -317,6 +317,20 @@ def test_simple_bind_special_case():
     modified_weight = mx.sym.abs(fc.get_internals()['fc_weight'])
     net = mx.sym.sum(modified_weight) + mx.sym.sum(fc)
     net.simple_bind(ctx=mx.cpu(), data=data_shape)
+
+
+def test_simple_bind_gradient_graph_possible_with_cycle():
+    """This is a special case that results in a cycle in the gradient graph
+    before this bug was fixed. With the following symbol, the node entries
+    passed into function AggregateGradient(std::vector<nnvm::NodeEntry>&& v)
+    are the outputs of the same node. Therefore, adding a node to the
+    control_deps of itself must be skipped.
+    See GitHub issue:
+    https://github.com/apache/incubator-mxnet/issues/8029
+    for more details."""
+    data = mx.symbol.Variable('data')
+    res = data + data + data + data + data + data + data + data
+    res.simple_bind(ctx=mx.cpu(), data=(1,))
 
 
 if __name__ == '__main__':

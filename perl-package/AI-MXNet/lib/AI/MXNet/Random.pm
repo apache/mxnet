@@ -18,6 +18,7 @@
 package AI::MXNet::Random;
 use strict;
 use warnings;
+use Scalar::Util qw/blessed/;
 use AI::MXNet::Base;
 use AI::MXNet::NDArray::Base;
 use AI::MXNet::Function::Parameters;
@@ -60,9 +61,75 @@ method seed(Int $seed_state)
 sub AUTOLOAD {
     my $sub = $AI::MXNet::Random::AUTOLOAD;
     $sub =~ s/.*:://;
-    $sub = "_random_$sub";
     shift;
-    return AI::MXNet::NDArray->$sub(@_);
+    my %updated;
+    my %defaults = (
+        ctx   => AI::MXNet::Context->current_ctx,
+        shape => 1,
+        out   => 1
+    );
+    my @args;
+    my @tmp = @_;
+    if(ref $tmp[-1] eq 'HASH')
+    {
+        my @kwargs = %{ pop(@tmp) };
+        push @tmp, @kwargs;
+    }
+    while(@tmp >= 2 and not ref $tmp[-2])
+    {
+        if(exists $defaults{$tmp[-2]})
+        {
+            my $v = pop(@tmp);
+            my $k = pop(@tmp);
+            if(defined $v)
+            {
+                $updated{$k} = 1;
+                $defaults{$k} = $v;
+            }
+        }
+        else
+        {
+            unshift @args, pop(@tmp);
+            unshift @args, pop(@tmp);
+        }
+    }
+    unshift @args, @tmp;
+    if(blessed($defaults{out}) and not exists $updated{shape})
+    {
+        delete $defaults{shape};
+    }
+    delete $defaults{out} unless blessed $defaults{out};
+    if($sub eq 'exponential')
+    {
+        my $changed = 0;
+        for my $i (0..@args-1)
+        {
+            if(not ref $args[$i] and $args[$i] eq 'scale')
+            {
+                $args[$i] = 'lam';
+                $args[$i+1] = 1/$args[$i+1];
+                $changed = 1;
+            }
+        }
+        $args[0] = 1/$args[0] unless $changed;
+    }
+    if(grep { blessed($_) and $_->isa('AI::MXNet::NDArray') } @args)
+    {
+        if($sub eq 'normal')
+        {
+            my %mapping = qw/loc mu scale sigma/;
+            @args = map { (not ref $_ and exists $mapping{$_}) ? $mapping{$_} : $_ } @args
+        }
+        $sub = "_sample_$sub";
+        delete $defaults{shape} if not exists $updated{shape};
+        delete $defaults{ctx};
+        return AI::MXNet::NDArray->$sub(@args, %defaults);
+    }
+    else
+    {
+        $sub = "_random_$sub";
+    }
+    return AI::MXNet::NDArray->$sub(@args, %defaults);
 }
 
 1;
