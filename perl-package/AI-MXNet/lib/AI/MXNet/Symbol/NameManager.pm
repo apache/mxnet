@@ -75,12 +75,12 @@ method get(Maybe[Str] $name, Str $hint)
 
 method current()
 {
-    $AI::MXNet::Symbol::NameManagerNameManager;
+    $AI::MXNet::Symbol::NameManager;
 }
 
 method set_current(AI::MXNet::Symbol::NameManager $new)
 {
-    $AI::MXNet::Symbol::NameManagerNameManager = $new;
+    $AI::MXNet::Symbol::NameManager = $new;
 }
 
 $AI::MXNet::Symbol::NameManager = __PACKAGE__->new;

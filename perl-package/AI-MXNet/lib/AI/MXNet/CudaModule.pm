@@ -245,8 +245,8 @@ sub DEMOLISH
 method launch(
     ArrayRef[AI::MXNet::NDArray|Num] $args,
     AI::MXNet::Context $ctx,
-    CudaKernelDim $grid_dims,
-    CudaKernelDim $block_dims,
+    CudaKernelShape $grid_dims,
+    CudaKernelShape $block_dims,
     Int $shared_mem=0
 )
 {
