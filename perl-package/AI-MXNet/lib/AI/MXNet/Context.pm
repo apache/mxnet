@@ -144,6 +144,13 @@ method current_ctx()
     return $AI::MXNet::current_ctx;
 }
 
+method set_current(AI::MXNet::Context $current)
+{
+    $AI::MXNet::current_ctx = $current;
+}
+
+*current_context = \&current_ctx;
+
 method deepcopy()
 {
     return __PACKAGE__->new(

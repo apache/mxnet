@@ -77,7 +77,6 @@ method __enter__()
 {
     $self->_old_scope($_current);
     $_current = $self;
-    AI::MXNet::Symbol::Prefix->new(prefix => $self->_block->prefix);
     $self->_name_scope(AI::MXNet::Symbol::NameManager->current);
     AI::MXNet::Symbol::NameManager->set_current(AI::MXNet::Symbol::Prefix->new(prefix => $self->_block->prefix));
     return $self;
@@ -677,11 +676,25 @@ method forward($x, @args)
 {
     if(blessed $x and $x->isa('AI::MXNet::NDArray'))
     {
+        my @out;
+        my $out;
         my $ctx = $x->context;
-        local ($mx::Context) = $ctx;
+        my $current_ctx = AI::MXNet::Context->current_ctx;
+        AI::MXNet::Context->set_current($ctx);
         if($self->_active)
         {
-            return $self->_call_cached_op($x, @args);
+            if(wantarray)
+            {
+                my @out = $self->_call_cached_op($x, @args);
+                AI::MXNet::Context->set_current($current_ctx);
+                return @out;
+            }
+            else
+            {
+                my $out = $self->_call_cached_op($x, @args);
+                AI::MXNet::Context->set_current($current_ctx);
+                return $out;
+            }
         }
         my %params;
         eval {
@@ -700,7 +713,9 @@ method forward($x, @args)
                 confess($@);
             }
         }
-        return $self->hybrid_forward('AI::MXNet::NDArray', $x, @args, %params);
+        @out = $self->hybrid_forward('AI::MXNet::NDArray', $x, @args, %params);
+        AI::MXNet::Context->set_current($current_ctx);
+        return wantarray ? @out : $out[0];
     }
     assert(
         (blessed $x and $x->isa('AI::MXNet::Symbol')),
@@ -834,8 +849,23 @@ method forward($x, @args)
 {
     if(blessed $x and $x->isa('AI::MXNet::NDArray'))
     {
-        local($mx::Context) = $x->context;
-        return $self->_call_cached_op($x, @args);
+        my @out;
+        my $out;
+        my $ctx = $x->context;
+        my $current_ctx = AI::MXNet::Context->current_ctx;
+        AI::MXNet::Context->set_current($ctx);
+        if(wantarray)
+        {
+            my @out = $self->_call_cached_op($x, @args);
+            AI::MXNet::Context->set_current($current_ctx);
+            return @out;
+        }
+        else
+        {
+            my $out = $self->_call_cached_op($x, @args);
+            AI::MXNet::Context->set_current($current_ctx);
+            return $out;
+        }
     }
     assert(
         (blessed $x and $x->isa('AI::MXNet::Symbol')),

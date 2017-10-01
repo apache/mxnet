@@ -70,6 +70,7 @@ sub import
             sub rnd { 'AI::MXNet::Random' }
             sub random { 'AI::MXNet::Random' }
             sub Context { shift; AI::MXNet::Context->new(\@_) }
+            sub context { 'AI::MXNet::Context' }
             sub cpu { AI::MXNet::Context->cpu(\$_[1]//0) }
             sub gpu { AI::MXNet::Context->gpu(\$_[1]//0) }
             sub kv { 'AI::MXNet::KVStore' }
@@ -94,6 +95,8 @@ sub import
             *AI::MXNet::Symbol::NameManager::set_current = sub { \$${short_name}::NameManager = \$_[1]; };
             \$${short_name}::NameManager = AI::MXNet::Symbol::NameManager->new;
             *AI::MXNet::Context::current_ctx = sub { \$${short_name}::Context; };
+            *AI::MXNet::Context::current_context = sub { \$${short_name}::Context; };
+            *AI::MXNet::Context::set_current = sub { \$${short_name}::Context = \$_[1]; };
             \$${short_name}::Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
             1;
 EOP

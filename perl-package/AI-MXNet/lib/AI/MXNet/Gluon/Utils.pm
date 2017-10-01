@@ -266,7 +266,7 @@ func download(Str $url, Maybe[Str] :$path=, Bool :$overwrite=0, Maybe[Str] :$sha
         {
             make_path($dirname);
         }
-        print "Downloading $fname from $url ...\n";
+        warn "Downloading $fname from $url ...\n";
         my $response = HTTP::Tiny->new->get($url);
         Carp::confess("download of url failed! ($response->{status} $response->{reason})\n")
             unless $response->{success};

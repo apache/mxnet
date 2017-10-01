@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 117;
+use Test::More tests => 119;
 use AI::MXNet qw(mx);
 use AI::MXNet::Gluon qw(gluon);
 use AI::MXNet::Gluon::NN qw(nn);
@@ -136,6 +136,20 @@ sub test_dense
 
 test_dense();
 
+package Net2;
+use AI::MXNet::Gluon::Mouse;
+use AI::MXNet::Function::Parameters;
+extends 'AI::MXNet::Gluon::HybridBlock';
+has 'model' => (is => 'rw');
+
+method hybrid_forward($F, $x)
+{
+    my $out = $self->model->($x);
+    return $F->add_n(map { $_->sum } @{ $out });
+}
+
+package main;
+
 sub test_symbol_block
 {
     my $model = nn->HybridSequential();
@@ -150,9 +164,21 @@ sub test_symbol_block
     my $inputs = mx->sym->var('data');
     my $outputs = $model->($inputs)->get_internals();
     my $smodel = gluon->SymbolBlock($outputs, $inputs, params=>$model->collect_params);
+
     ok(@{ $smodel->(mx->nd->zeros([16, 10])) } == 14);
     my $out = $smodel->(mx->sym->var('in'));
-    ok(@{ $out->get_internals()->list_outputs() } == @{ $outputs->list_outputs() });
+    ok(@{ $out } == @{ $outputs->list_outputs() });
+
+    my $net = Net2->new(model => $smodel);
+    $net->hybridize();
+    ok(ref $net->(mx->nd->zeros([16, 10])) eq 'AI::MXNet::NDArray');
+
+    $inputs = mx->sym->var('data');
+    $outputs = $model->($inputs);
+    $smodel = gluon->SymbolBlock($outputs, $inputs, params=>$model->collect_params);
+    $net = Net2->new(model => $smodel);
+    $net->hybridize();
+    ok(ref $net->(mx->nd->zeros([16, 10])) eq 'AI::MXNet::NDArray');
 }
 
 test_symbol_block();

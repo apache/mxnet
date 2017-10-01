@@ -62,6 +62,7 @@ sub AUTOLOAD {
     my $sub = $AI::MXNet::Random::AUTOLOAD;
     $sub =~ s/.*:://;
     shift;
+    my %updated;
     my %defaults = (
         ctx   => AI::MXNet::Context->current_ctx,
         shape => 1,
@@ -80,7 +81,11 @@ sub AUTOLOAD {
         {
             my $v = pop(@tmp);
             my $k = pop(@tmp);
-            $defaults{$k} = $v if defined $v;
+            if(defined $v)
+            {
+                $updated{$k} = 1;
+                $defaults{$k} = $v;
+            }
         }
         else
         {
@@ -89,15 +94,34 @@ sub AUTOLOAD {
         }
     }
     unshift @args, @tmp;
-    if(blessed($defaults{out}) and not ref $defaults{shape} and $defaults{shape} == 1)
+    if(blessed($defaults{out}) and not exists $updated{shape})
     {
         delete $defaults{shape};
     }
     delete $defaults{out} unless blessed $defaults{out};
+    if($sub eq 'exponential')
+    {
+        my $changed = 0;
+        for my $i (0..@args-1)
+        {
+            if(not ref $args[$i] and $args[$i] eq 'scale')
+            {
+                $args[$i] = 'lam';
+                $args[$i+1] = 1/$args[$i+1];
+                $changed = 1;
+            }
+        }
+        $args[0] = 1/$args[0] unless $changed;
+    }
     if(grep { blessed($_) and $_->isa('AI::MXNet::NDArray') } @args)
     {
+        if($sub eq 'normal')
+        {
+            my %mapping = qw/loc mu scale sigma/;
+            @args = map { (not ref $_ and exists $mapping{$_}) ? $mapping{$_} : $_ } @args
+        }
         $sub = "_sample_$sub";
-        delete $defaults{shape};
+        delete $defaults{shape} if not exists $updated{shape};
         delete $defaults{ctx};
         return AI::MXNet::NDArray->$sub(@args, %defaults);
     }
