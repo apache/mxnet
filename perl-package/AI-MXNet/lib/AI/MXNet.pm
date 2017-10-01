@@ -87,6 +87,8 @@ sub import
             sub contrib { 'AI::MXNet::Contrib' }
             sub autograd { 'AI::MXNet::AutoGrad' }
             sub name { '$short_name' }
+            sub rtc { '$short_name' }
+            sub CudaModule { shift; AI::MXNet::CudaModule->new(\@_) }
             sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
             *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };
             \$${short_name}::AttrScope = AI::MXNet::Symbol::AttrScope->new;
