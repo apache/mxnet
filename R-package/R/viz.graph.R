@@ -123,8 +123,9 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     stringsAsFactors=F)
   edges_df$from<- id_dic[as.character(edges_df$from)]
   
-  nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", fillcolor=adjustcolor(nodes_df$color, alpha.f = 1))
-  edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, color="black")
+  nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", 
+                                fillcolor=adjustcolor(nodes_df$color, alpha.f = 1), fontcolor = "black")
+  edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, color="black", fontcolor = "black")
   
   if (!is.null(shape)){
     edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
