@@ -195,7 +195,7 @@ nnvm::Graph Imperative::CachedOp::GetForwardGraph(
   bool match = true;
   match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx(),
+  match &= CheckAndInferStorageType(&g, inputs[0]->ctx().dev_mask(),
                                     std::move(storage_type_inputs), true);
 
   if (!match) {
@@ -282,7 +282,7 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
                               node_range, entry_range);
   match &= CheckAndInferType(&g, std::move(dtypes), false,
                              node_range, entry_range);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx(), std::move(stypes),
+  match &= CheckAndInferStorageType(&g, inputs[0]->ctx().dev_mask(), std::move(stypes),
                                     false, node_range, entry_range);
 
   if (!match) {
@@ -305,7 +305,7 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
 }
 
 OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
-                                                const std::vector<NDArray*>& outputs) {
+                                         const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
   using namespace imperative;
   bool recording = Imperative::Get()->set_is_recording(false);
@@ -350,9 +350,10 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
 
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   Imperative::Get()->RunGraph(
       false, default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
-      std::move(ref_count), &states);
+      std::move(ref_count), &states, dispatch_modes);
 
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (arrays[i] == &buff[i]) continue;
@@ -419,9 +420,10 @@ void Imperative::CachedOp::Backward(
   AllocateMemory(g, idx, default_ctx, num_forward_entries, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
 
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   Imperative::Get()->RunGraph(
       retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
-      std::move(array_reqs), std::move(ref_count), &states);
+      std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   if (retain_graph) {
     buff.resize(num_forward_entries);

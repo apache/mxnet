@@ -40,6 +40,7 @@ OpStatePtr Imperative::InvokeOp(
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs,
     const std::vector<OpReqType>& req,
+    const DispatchMode dispatch_mode,
     OpStatePtr state) {
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -52,26 +53,27 @@ OpStatePtr Imperative::InvokeOp(
   std::vector<Resource> requested;
   std::vector<uint32_t> mutate_idx;
   SetDependency(attrs, ctx, inputs, outputs,
-      &read_vars, &write_vars, &requested, &mutate_idx);
+      &read_vars, &write_vars, &requested, &mutate_idx, dispatch_mode);
 
   FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
   FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
 
-  bool has_non_default = common::ContainsNonDefaultStorage(inputs) ||
-                         common::ContainsNonDefaultStorage(outputs);
-  if (fn && (!has_non_default || !fn_ex)) {
-    PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs, mutate_idx, req);
-  } else if (fn_ex) {
+  // FComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
+  CHECK(dispatch_mode != DispatchMode::kUndefined);
+  bool dispatch_fcompex = dispatch_mode == DispatchMode::kFComputeEx;
+  if (fn_ex && dispatch_fcompex) {
     PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
         requested, inputs, outputs, req);
+  } else if (fn) {
+    PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
+        requested, inputs, outputs, mutate_idx, req);
   } else if (createop.count(op) || is_layer_backward.get(op, false)) {
     if (!state) {
       state = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
     }
     write_vars.push_back(state.get_var());
     PushOperator(state, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs, mutate_idx, req);
+        requested, inputs, outputs, mutate_idx, req, dispatch_mode);
   } else {
     LOG(FATAL)
       << "Operator " << op->name << " is not implemented for "
@@ -98,12 +100,13 @@ OpStatePtr Imperative::Invoke(
   }
 
   // TODO(piiswrong): infer ctx
+  DispatchMode dispatch_mode = DispatchMode::kUndefined;
   Context ctx = GetContext(attrs, inputs, outputs, default_ctx);
-  SetShapeType(ctx, attrs, inputs, outputs);
+  SetShapeType(ctx, attrs, inputs, outputs, &dispatch_mode);
   std::vector<OpReqType> req;
   SetWriteInplaceReq(inputs, outputs, &req);
 
-  return InvokeOp(ctx, attrs, inputs, outputs, req);
+  return InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
 }
 
 void Imperative::MarkVariables(
@@ -266,7 +269,8 @@ void Imperative::RunGraph(
     size_t node_start, size_t node_end,
     std::vector<OpReqType>&& array_reqs,
     std::vector<uint32_t>&& ref_count,
-    std::vector<OpStatePtr> *p_states) {
+    std::vector<OpStatePtr> *p_states,
+    const DispatchModeVector &dispatch_modes) {
   using namespace nnvm;
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -300,7 +304,7 @@ void Imperative::RunGraph(
       req.push_back(array_reqs[eid]);
       CHECK(!ndoutputs.back()->is_none());
     }
-
+    const DispatchMode dispatch_mode = dispatch_modes[i];
     if (node.source->op() == bwd_cached_op) {
       const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
@@ -317,17 +321,18 @@ void Imperative::RunGraph(
       }
       states[i] = createop[node.source->op()](
           node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, states[i]);
+      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode, states[i]);
       if (recording) RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, states[i]);
     } else if (is_layer_backward.get(node.source->op(), false)) {
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
       auto fwd_node_id = idx.node_id(fwd_node);
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, states[fwd_node_id]);
+      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs,
+               req, dispatch_mode, states[fwd_node_id]);
       if (recording) {
         RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, states[fwd_node_id]);
       }
     } else {
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req);
+      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode);
       if (recording) RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs);
     }
 
@@ -473,6 +478,7 @@ std::vector<NDArray*> Imperative::Backward(
       for (size_t j = 0; j < info.outputs.size(); ++j) {
         size_t eid = idx.entry_id(i, j);
         arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
+
         if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
       }
     }
@@ -513,7 +519,7 @@ std::vector<NDArray*> Imperative::Backward(
     stypes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) stypes.emplace_back(i->storage_type());
     CheckAndInferStorageType(
-        &graph, default_ctx, std::move(stypes), false,
+        &graph, default_ctx.dev_mask(), std::move(stypes), false,
         node_range, entry_range);
   }
 
@@ -537,6 +543,7 @@ std::vector<NDArray*> Imperative::Backward(
   const auto& shapes = graph.GetAttr<ShapeVector>("shape");
   const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
+  const auto& dispatch_modes = graph.GetAttr<DispatchModeVector>("dispatch_mode");
   for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
     if (!arrays[i]->is_none()) continue;
     if (stypes[i] == kDefaultStorage) {
@@ -553,7 +560,7 @@ std::vector<NDArray*> Imperative::Backward(
   bool prev_training = set_is_training(is_train);
 
   RunGraph(retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
-           std::move(array_reqs), std::move(ref_count), &states);
+           std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   set_is_recording(prev_recording);
   set_is_training(prev_training);

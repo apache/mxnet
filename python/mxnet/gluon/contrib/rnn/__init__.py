@@ -19,6 +19,10 @@
 # pylint: disable=wildcard-import
 """Contrib recurrent neural network module."""
 
+from . import conv_rnn_cell, rnn_cell
+
 from .conv_rnn_cell import *
 
 from .rnn_cell import *
+
+__all__ = conv_rnn_cell.__all__ + rnn_cell.__all__

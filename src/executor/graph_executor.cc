@@ -487,7 +487,7 @@ void HandleInferStorageTypeError(const size_t num_forward_inputs,
     const int inferred_stype = inferred_stypes[eid];
     if (inferred_stype == -1) {
       const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << inferred_stype << ", ";
+      oss << arg_name << ": " << common::stype_string(inferred_stype) << ", ";
       if (--cnt == 0) {
         oss << "...";
         break;
@@ -536,7 +536,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   data_entry_.resize(idx.num_node_entries());
   nnvm::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_dtypes;
-  StorageTypeVector arg_stypes;
+  StorageTypeVector arg_stypes(idx.num_node_entries(), -1);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -546,7 +546,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       data_entry_[eid] = aux_states[aux_top];
       arg_shapes.push_back(aux_states[aux_top].shape());
       arg_dtypes.push_back(aux_states[aux_top].dtype());
-      arg_stypes.push_back(aux_states[aux_top].storage_type());
+      arg_stypes[eid] = aux_states[aux_top].storage_type();
       aux_state_map_.emplace(arg_name, aux_states[aux_top]);
       ++aux_top;
     } else {
@@ -554,16 +554,23 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
       data_entry_[eid] = in_args[arg_top];
       arg_shapes.push_back(in_args[arg_top].shape());
       arg_dtypes.push_back(in_args[arg_top].dtype());
-      arg_stypes.push_back(in_args[arg_top].storage_type());
+      arg_stypes[eid] = in_args[arg_top].storage_type();
       in_arg_map_.emplace(arg_name, in_args[arg_top]);
       if (kNullOp != grad_req_types[arg_top]) {
+        auto grad_oid = grad_store_.size() + num_forward_outputs_;
+        auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
+        arg_stypes[grad_eid] = arg_grad_store[arg_top].storage_type();
         grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_store[arg_top]);
         arg_grad_map_.emplace(arg_name, arg_grad_store[arg_top]);
+        if (log_verbose_) {
+          LOG(INFO) << "\tassign data entry\t" << grad_eid << " as "
+                    << common::stype_string(arg_stypes[grad_eid]) << " (grad)";
+        }
       }
       ++arg_top;
     }
     if (log_verbose_) {
-      LOG(INFO) << "\tassign data entry\t" << eid << " as stype "
+      LOG(INFO) << "\tassign data entry\t" << eid << " as "
                 << common::stype_string(data_entry_[eid].storage_type()) << " (input)";
     }
   }
@@ -583,7 +590,8 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
 
-  g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
+  g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(arg_stypes));
+  g = InferStorageType(std::move(g), std::move(StorageTypeVector()), "");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));
@@ -631,14 +639,16 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
       ++aux_top;
       if (log_verbose_) {
-        LOG(INFO) << "\tassign aux entry\t" << eid << "\t as stype " << inferred_stype;
+        LOG(INFO) << "\tassign aux entry\t" << eid << "\t as "
+                  << common::stype_string(inferred_stype);
       }
     } else {  // in_args
       EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
                        inferred_dtype, in_arg_vec);
       data_entry_[eid] = in_arg_vec->back();
       if (log_verbose_) {
-        LOG(INFO) << "\tassign data entry\t" << eid << "\tas stype " << inferred_stype;
+        LOG(INFO) << "\tassign data entry\t" << eid << "\tas "
+                  << common::stype_string(inferred_stype);
       }
       // Get the storage type for grad
       if (kNullOp == grad_req_types[arg_top]) {
@@ -651,7 +661,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
                          inferred_dtype, arg_grad_vec);
         if (log_verbose_) {
-          LOG(INFO) << "\tassign grad entry\t" << grad_eid << "\tas stype " << grad_stype;
+          LOG(INFO) << "\tassign grad entry\t" << grad_eid << "\tas "
+                    << common::stype_string(grad_stype);
         }
         grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         arg_grad_map_.emplace(arg_name, arg_grad_vec->back());
@@ -832,27 +843,7 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
                                     Executor* shared_exec,
                                     const nnvm::NodeEntryMap<NDArray>& feed_dict) {
   const auto& idx = g.indexed_graph();
-  // dispatch based on stype per operator
   const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
-  StorageTypeVector dispatch_stypes(idx.num_nodes(), kUndefinedStorage);
-  for (size_t nid = 0; nid < idx.num_nodes(); nid++) {
-      const auto& inode = idx[nid];
-      auto num_outputs = inode.source->num_outputs();
-      auto num_inputs = inode.inputs.size();
-      StorageTypeVector vs(num_inputs + num_outputs, kUndefinedStorage);
-      for (size_t i = 0; i < num_inputs; i++) {
-        auto e = inode.inputs[i];
-        vs[i] = vstorage_type[idx.entry_id(e)];
-        CHECK_NE(vs[i], kUndefinedStorage);
-      }
-      for (uint32_t i = 0; i < num_outputs; ++i) {
-        uint32_t eid = idx.entry_id(nid, i);
-        vs[i + num_inputs] = vstorage_type[eid];
-      }
-      bool contains_non_default = common::ContainsNonDefaultStorage(vs);
-      dispatch_stypes[nid] = contains_non_default ? kNonDefaultStorage : kDefaultStorage;
-  }
-  g.attrs["dispatch_stypes"] = std::make_shared<dmlc::any>(std::move(dispatch_stypes));
 
   // data entries for output gradients
   for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
@@ -1098,7 +1089,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
     }
     if (log_verbose_) {
-      LOG(INFO) << "\tinit head_g entry\t" << data_eid << "\tas stype "
+      LOG(INFO) << "\tinit head_grad entry\t" << data_eid << "\tas "
                 << common::stype_string(stype);
     }
   }
@@ -1185,7 +1176,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i]);
     }
     if (log_verbose_) {
-      LOG(INFO) << "\tinit data entry\t" << i << "\tas stype " << storage_type;
+      LOG(INFO) << "\tinit data entry\t" << i << "\tas " << common::stype_string(storage_type);
     }
   }
 }
@@ -1201,30 +1192,13 @@ void GraphExecutor::InitCachedOps() {
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
   const auto& addto_entry = graph_.GetAttr<std::vector<int> >("addto_entry");
   const auto& skip_plus_node = graph_.GetAttr<std::vector<int> >("skip_plus_node");
+  const auto& dispatch_modes = graph_.GetAttr<DispatchModeVector>("dispatch_mode");
+
 
   op_nodes_.resize(idx.num_nodes());
   // setup the array and requirements.
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
-    if (log_verbose_) {
-      if (inode.source->is_variable()) {
-        LOG(INFO) << "node " << nid << " var";
-      } else {
-        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
-        const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
-        auto exec = op_execs[nid];
-        for (const auto& e : inode.inputs) {
-          auto eid = idx.entry_id(e);
-          LOG(INFO) << "\t\tinput " << eid << " stype: "
-                    << common::stype_string(vstorage_type[eid]);
-        }
-        for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-          uint32_t eid = idx.entry_id(nid, index);
-          LOG(INFO) << "\t\toutput " << eid << " stype: "
-                    << common::stype_string(vstorage_type[eid]);
-        }
-      }
-    }
     if (inode.source->is_variable()) continue;
 #if MXNET_USE_PROFILER
     op_nodes_[nid].opr_name = inode.source->op()->name.c_str();

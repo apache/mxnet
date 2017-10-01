@@ -72,13 +72,14 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
 }
 
 bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                           const Context& ctx,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
                                            std::vector<int> *in_attrs,
                                            std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
-  return ElemwiseStorageAttr<int, type_is_none, type_assign, false, true>(
-      attrs, in_attrs, out_attrs);
+  return ElemwiseStorageAttr<false, true, false>(attrs, dev_mask, dispatch_mode,
+                                                 in_attrs, out_attrs);
 }
 
 void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -98,8 +99,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
   } else {
-    FCompExFallback<cpu>(attrs, op_ctx, inputs, req, outputs,
-                         ElementWiseSumCompute<cpu>, "ElementWiseSumCompute<cpu>");
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, op_ctx, inputs, req, outputs);
   }
 }
 
