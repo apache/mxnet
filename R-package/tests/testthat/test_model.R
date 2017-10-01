@@ -4,7 +4,7 @@ source("get_data.R")
 
 context("models")
 
-if (Sys.getenv("R_GPU_ENABLE") != "" & as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
+if (Sys.getenv("R_GPU_ENABLE") != "" && as.integer(Sys.getenv("R_GPU_ENABLE")) == 1) {
   mx.ctx.default(new = mx.gpu())
   message("Using GPU for testing.")
 }
@@ -173,7 +173,7 @@ test_that("Fine-tune", {
 
 test_that("Matrix Factorization", {
   GetMovieLens()
-  DF <- read.table("./data/ml-100k/u.data", header = F, sep = "\t")
+  DF <- read.table("./data/ml-100k/u.data", header = FALSE, sep = "\t")
   names(DF) <- c("user", "item", "score", "time")
   max_user <- max(DF$user)
   max_item <- max(DF$item)
@@ -280,7 +280,7 @@ test_that("Captcha", {
   fc22 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
   fc23 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
   fc24 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
-  fc2 <- mx.symbol.Concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
+  fc2 <- mx.symbol.concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
   label <- mx.symbol.transpose(data = label)
   label <- mx.symbol.Reshape(data = label, target_shape = c(0))
   captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")

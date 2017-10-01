@@ -52,7 +52,7 @@ mx.infer.buckets <- function(infer.data, model, ctx = mx.cpu()) {
   arg.params.fix <- arguments.ini[arg.params.fix.names]
   
   # Grad request
-  grad.req <- rep("null", length(arguments))
+  grad.req <- rep.int("null", length(arguments))
   
   # Arg array order
   update_names <- c(input.names, arg.params.fix.names, arg.params.names)
@@ -138,7 +138,7 @@ mx.infer.buckets.one <- function(infer.data,
   aux.params <- aux.params
   
   # Grad request
-  grad.req <- rep("null", length(arguments))
+  grad.req <- rep.int("null", length(arguments))
   
   # Arg array order
   update_names <- c(input.names, arg.params.fix.names, arg.params.names)

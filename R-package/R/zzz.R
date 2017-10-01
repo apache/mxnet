@@ -16,7 +16,10 @@ NULL
 
 .onLoad <- function(libname, pkgname) {
   # Require methods for older versions of R
-  require(methods)
+  if (! is.element("package:methods", search())) {
+    packageStartupMessage("Attaching package 'methods'.")
+    library(methods)
+  }
   library.dynam("libmxnet", pkgname, libname, local=FALSE)
   library.dynam("mxnet", pkgname, libname)
   loadModule("mxnet", TRUE)
