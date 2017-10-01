@@ -23,7 +23,7 @@ mx.init.uniform <- function(scale) {
     if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name, shape, ctx, allow.unknown))
     }
-    return (mx.runif(shape, -scale, scale, ctx))
+    return (mx.nd.random.uniform(low = -scale, high = scale, shape = shape))
   }
 }
 
@@ -37,7 +37,7 @@ mx.init.normal <- function(sd) {
     if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name, shape, ctx, allow.unknown))
     }
-    return (mx.rnorm(shape, 0, sd, ctx))
+    return (mx.nd.random.normal(loc = 0, scale = sd, shape = shape))
   }
 }
 
@@ -58,7 +58,7 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
     if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name, shape, ctx, allow.unknown))
     }
-
+    
     fan_out = shape[length(shape)]
     fan_in  = prod(shape[-length(shape)])
     factor_val  = 1
@@ -71,13 +71,13 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
     } else {
       stop("Not supported factor type. See usage of function mx.init.Xavier")
     }
-
+    
     scale = sqrt(magnitude / factor_val)
-
+    
     if (rnd_type == "uniform"){
-      return(mx.runif(shape, -scale, scale, ctx))
+      return(mx.nd.random.uniform(low = -scale, high = scale, shape = shape))
     } else if (rnd_type == "gaussian"){
-      return(mx.rnorm(shape, 0, scale, ctx))
+      return(mx.nd.random.normal(loc = 0, scale = scale, shape = shape))
     } else {
       stop("Not supported random type. See usage of function mx.init.Xavier")
     }
