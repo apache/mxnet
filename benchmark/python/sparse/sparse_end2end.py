@@ -84,7 +84,7 @@ avazu = {
     'data_name': 'avazu-app.t',
     'data_origin_name': 'avazu-app.t.bz2',
     'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/avazu-app.t.bz2",
-    'feature_dim': 1000000,
+    'feature_dim': 1000001,
     'lc': 1719304,
 }
 
@@ -92,7 +92,7 @@ kdda = {
     'data_name': 'kdda.t',
     'data_origin_name': 'kdda.t.bz2',
     'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
-    'feature_dim': 20216830,
+    'feature_dim': 20216831,
     'lc': 510302,
 }
 

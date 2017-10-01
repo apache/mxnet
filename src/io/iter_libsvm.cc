@@ -48,11 +48,11 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(LibSVMIterParam) {
     DMLC_DECLARE_FIELD(data_libsvm)
-        .describe("The input LibSVM file or a directory path.");
+        .describe("The input zero-base indexed LibSVM data file or a directory path.");
     DMLC_DECLARE_FIELD(data_shape)
         .describe("The shape of one example.");
     DMLC_DECLARE_FIELD(label_libsvm).set_default("NULL")
-        .describe("The input LibSVM file or a directory path. "
+        .describe("The input LibSVM label file or a directory path. "
                   "If NULL, all labels will be read from ``data_libsvm``.");
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
