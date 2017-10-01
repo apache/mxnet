@@ -41,7 +41,7 @@ gru.unroll <- function(num.gru.layer, seq.len, input.size,
     embed.weight <- mx.symbol.Variable("embed.weight")
     cls.weight <- mx.symbol.Variable("cls.weight")
     cls.bias <- mx.symbol.Variable("cls.bias")
-    param.cells <- lapply(1:num.gru.layer, function(i) {
+    param.cells <- lapply(seq_len(num.gru.layer), function(i) {
         cell <- list(gates.i2h.weight = mx.symbol.Variable(paste0("l", i, ".gates.i2h.weight")),
                      gates.i2h.bias = mx.symbol.Variable(paste0("l", i, ".gates.i2h.bias")),
                      gates.h2h.weight = mx.symbol.Variable(paste0("l", i, ".gates.h2h.weight")),
@@ -52,10 +52,7 @@ gru.unroll <- function(num.gru.layer, seq.len, input.size,
                      trans.h2h.bias = mx.symbol.Variable(paste0("l", i, ".trans.h2h.bias")))
         return (cell)
     })
-    last.states <- lapply(1:num.gru.layer, function(i) {
-        state <- list(h=mx.symbol.Variable(paste0("l", i, ".init.h")))
-        return (state)
-    })
+    last.states <- lapply(seq_len(num.gru.layer), function(i) list(h=mx.symbol.Variable(paste0("l", i, ".init.h"))))
 
     # embeding layer
     label <- mx.symbol.Variable("label")
@@ -65,11 +62,11 @@ gru.unroll <- function(num.gru.layer, seq.len, input.size,
     wordvec <- mx.symbol.SliceChannel(data=embed, num.outputs=seq.len, squeeze.axis=1)
 
     last.hidden <- list()
-    for (seqidx in 1:seq.len) {
+    for (seqidx in seq_len(seq.len)) {
         hidden <- wordvec[[seqidx]]
         # stack GRU
-        for (i in 1:num.gru.layer) {
-            dp <- ifelse(i==1, 0, dropout)
+        for (i in seq_len(num.gru.layer)) {
+            dp <- if (i == 1) 0 else dropout
             next.state <- gru(num.hidden, indata=hidden,
                               prev.state=last.states[[i]],
                               param=param.cells[[i]],
@@ -79,8 +76,7 @@ gru.unroll <- function(num.gru.layer, seq.len, input.size,
             last.states[[i]] <- next.state
         }
         # decoder
-        if (dropout > 0)
-            hidden <- mx.symbol.Dropout(data=hidden, p=dropout)
+        if (dropout > 0) hidden <- mx.symbol.Dropout(data=hidden, p=dropout)
         last.hidden <- c(last.hidden, hidden)
     }
     last.hidden$dim <- 0
@@ -106,7 +102,7 @@ gru.inference.symbol <- function(num.gru.layer, seq.len, input.size,
     cls.weight <- mx.symbol.Variable("cls.weight")
     cls.bias <- mx.symbol.Variable("cls.bias")
 
-    param.cells <- lapply(1:num.gru.layer, function(i) {
+    param.cells <- lapply(seq_len(num.gru.layer), function(i) {
         cell <- list(gates.i2h.weight = mx.symbol.Variable(paste0("l", i, ".gates.i2h.weight")),
                      gates.i2h.bias = mx.symbol.Variable(paste0("l", i, ".gates.i2h.bias")),
                      gates.h2h.weight = mx.symbol.Variable(paste0("l", i, ".gates.h2h.weight")),
@@ -117,10 +113,7 @@ gru.inference.symbol <- function(num.gru.layer, seq.len, input.size,
                      trans.h2h.bias = mx.symbol.Variable(paste0("l", i, ".trans.h2h.bias")))
         return (cell)
     })
-    last.states <- lapply(1:num.gru.layer, function(i) {
-        state <- list(h=mx.symbol.Variable(paste0("l", i, ".init.h")))
-        return (state)
-    })
+    last.states <- lapply(seq_len(num.gru.layer), function(i) list(h=mx.symbol.Variable(paste0("l", i, ".init.h"))))
 
     # embeding layer
     data <- mx.symbol.Variable("data")
@@ -128,8 +121,8 @@ gru.inference.symbol <- function(num.gru.layer, seq.len, input.size,
                                   weight=embed.weight, output_dim=num.embed, name="embed")
 
     # stack GRU
-    for (i in 1:num.gru.layer) {
-        dp <- ifelse(i==1, 0, dropout)
+    for (i in seq_len(num.gru.layer)) {
+        dp <- if (i == 1) 0 else dropout
         next.state <- gru(num.hidden, indata=hidden,
                           prev.state=last.states[[i]],
                           param=param.cells[[i]],
@@ -145,7 +138,7 @@ gru.inference.symbol <- function(num.gru.layer, seq.len, input.size,
     fc <- mx.symbol.FullyConnected(data=hidden, num_hidden=num.label,
                                    weight=cls.weight, bias=cls.bias, name='pred')
     sm <- mx.symbol.SoftmaxOutput(data=fc, name='sm')
-    unpack.h <- lapply(1:num.gru.layer, function(i) {
+    unpack.h <- lapply(seq_len(num.gru.layer), function(i) {
         state <- last.states[[i]]
         state.h <- mx.symbol.BlockGrad(state$h, name=paste0("l", i, ".last.h"))
         return (state.h)
@@ -213,10 +206,7 @@ mx.gru <- function( train.data, eval.data=NULL,
                            num.label=num.label,
                            dropout=dropout)
 
-    init.states.name <- lapply(1:num.gru.layer, function(i) {
-        state.h <- paste0("l", i, ".init.h")
-        return (state.h)
-    })
+    init.states.name <- as.list(paste0("l", seq_len(num.gru.layer), ".init.h"))
 
     # set up gru model
     model <- setup.rnn.model(rnn.sym=rnn.sym,
@@ -284,10 +274,7 @@ mx.gru.inference <- function(num.gru.layer,
                                  num.label=num.label,
                                  dropout=dropout)
 
-    init.states.name <- lapply(1:num.gru.layer, function(i) {
-        state.h <- paste0("l", i, ".init.h")
-        return (state.h)
-    })
+    init.states.name <- as.list(paste0("l", seq_len(num.gru.layer), ".init.h"))
 
     seq.len <- 1
     # set up gru model
@@ -311,10 +298,11 @@ mx.gru.inference <- function(num.gru.layer,
             mx.exec.update.arg.arrays(model$rnn.exec, rnn.input, match.name=TRUE)
         }
     }
-    init.states <- list()
-    for (i in 1:num.gru.layer) {
-        init.states[[paste0("l", i, ".init.h")]] <- model$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-    }
+
+    s <- paste0("l", seq_len(num.gru.layer), ".init.h")
+    names(s) <- s
+    init.states <- lapply(s, function(x) model$rnn.exec$ref.arg.arrays[[x]] * 0)
+
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
 
     return (model)
@@ -333,21 +321,21 @@ mx.gru.inference <- function(num.gru.layer,
 #'
 #' @export
 mx.gru.forward <- function(model, input.data, new.seq=FALSE) {
-    if (new.seq == TRUE) {
-        init.states <- list()
-        for (i in 1:model$num.rnn.layer) {
-            init.states[[paste0("l", i, ".init.h")]] <- model$rnn.exec$ref.arg.arrays[[paste0("l", i, ".init.h")]]*0
-        }
+    if (new.seq) {
+        s <- paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+        names(s) <- s
+        init.states <- lapply(s, function(x) model$rnn.exec$ref.arg.arrays[[x]] * 0)
         mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     }
-    dim(input.data) <- c(model$batch.size)
+    dim(input.data) <- model$batch.size
     data <- list(data=mx.nd.array(input.data))
     mx.exec.update.arg.arrays(model$rnn.exec, data, match.name=TRUE)
     mx.exec.forward(model$rnn.exec, is.train=FALSE)
-    init.states <- list()
-    for (i in 1:model$num.rnn.layer) {
-        init.states[[paste0("l", i, ".init.h")]] <- model$rnn.exec$ref.outputs[[paste0("l", i, ".last.h_output")]]
-    }
+    
+    s <- paste0("l", seq_len(model$num.rnn.layer), ".init.h")
+    names(s) <- s
+    init.states <- lapply(s, function(x) model$rnn.exec$ref.outputs[[sub(".init.h$", ".last.h_output", x)]])
+    
     mx.exec.update.arg.arrays(model$rnn.exec, init.states, match.name=TRUE)
     prob <- model$rnn.exec$ref.outputs[["sm_output"]]
     return (list(prob=prob, model=model))
