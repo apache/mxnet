@@ -4,11 +4,11 @@
 #' @param shape the shape of the array to be generated.
 #'
 mx.init.internal.default <- function(name, shape, ctx, allow.unknown=FALSE) {
-  if (endsWith(name, "bias")) return (mx.nd.zeros(shape, ctx))
-  if (endsWith(name, "gamma")) return (mx.nd.ones(shape, ctx))
-  if (endsWith(name, "beta")) return (mx.nd.zeros(shape, ctx))
-  if (endsWith(name, "moving_mean")) return (mx.nd.zeros(shape, ctx))
-  if (endsWith(name, "moving_var")) return (mx.nd.ones(shape, ctx))
+  if (endsWith(name, "bias")) return (mx.nd.zeros(shape))
+  if (endsWith(name, "gamma")) return (mx.nd.ones(shape))
+  if (endsWith(name, "beta")) return (mx.nd.zeros(shape))
+  if (endsWith(name, "moving_mean")) return (mx.nd.zeros(shape))
+  if (endsWith(name, "moving_var")) return (mx.nd.ones(shape))
   if (allow.unknown) return(NULL)
   stop(paste("Unkown initialization pattern for ", name))
 }
@@ -21,7 +21,7 @@ mx.init.internal.default <- function(name, shape, ctx, allow.unknown=FALSE) {
 mx.init.uniform <- function(scale) {
   function(name, shape, ctx, allow.unknown=FALSE) {
     if (!endsWith(name, "weight")) {
-      return (mx.init.internal.default(name, shape, ctx, allow.unknown))
+      return (mx.init.internal.default(name = name, shape = shape, allow.unknown = allow.unknown))
     }
     return (mx.nd.random.uniform(low = -scale, high = scale, shape = shape))
   }
@@ -35,7 +35,7 @@ mx.init.uniform <- function(scale) {
 mx.init.normal <- function(sd) {
   function(name, shape, ctx, allow.unknown=FALSE) {
     if (!endsWith(name, "weight")) {
-      return (mx.init.internal.default(name, shape, ctx, allow.unknown))
+      return (mx.init.internal.default(name = name, shape = shape, allow.unknown = allow.unknown))
     }
     return (mx.nd.random.normal(loc = 0, scale = sd, shape = shape))
   }
@@ -56,7 +56,7 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
                            magnitude = 3){
   function(name, shape, ctx, allow.unknown = FALSE){
     if (!endsWith(name, "weight")) {
-      return (mx.init.internal.default(name, shape, ctx, allow.unknown))
+      return (mx.init.internal.default(name = name, shape = shape, allow.unknown = allow.unknown))
     }
     
     fan_out = shape[length(shape)]
@@ -92,7 +92,7 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
 #' @param ctx mx.context The context of the weights
 #' @param skip.unknown Whether skip the unknown weight types
 #' @export
-mx.init.create <- function(initializer, shape.array, ctx, skip.unknown=TRUE) {
+mx.init.create <- function(initializer, shape.array, ctx=NULL, skip.unknown=TRUE) {
   if (length(shape.array) == 0) return(list())
   names = names(shape.array)
   ret <- lapply(1 : length(names), function(i) {
