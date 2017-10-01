@@ -81,6 +81,7 @@ t/AI-MXNet.t
 t/test_attr.t
 t/test_autograd.t
 t/test_conv.t
+t/test_cuda_module.t
 t/test_executor.t
 t/test_gluon.t
 t/test_gluon_data.t

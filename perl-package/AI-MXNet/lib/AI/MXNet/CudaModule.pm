@@ -238,7 +238,7 @@ sub DEMOLISH
             Grid dimensions for CUDA kernel.
         $block_dims : array ref of 3 integers
             Block dimensions for CUDA kernel.
-        :$shared_mem=0 : integer, optional
+        $shared_mem=0 : integer, optional
             Size of dynamically allocated shared memory. Defaults to 0.
 =cut
 
