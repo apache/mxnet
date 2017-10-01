@@ -246,6 +246,13 @@ int MXDumpProfile();
 /*! \brief Set the number of OMP threads to use */
 int MXSetNumOMPThreads(int thread_num);
 
+/*!
+ * \brief get the MXNet library version as an integer
+ * \param pointer to the integer holding the version number
+ * \return 0 when success, -1 when failure happens
+ */
+int MXGetVersion(int *out);
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------

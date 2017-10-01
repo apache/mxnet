@@ -93,7 +93,7 @@ our %DTYPE_CPP_TO_STR = qw(
 has 'source' => (is => 'rw', isa => 'Str', required => 1);
 has [qw/options exports/] => (is => 'rw', isa => 'Str|ArrayRef[Str]', default => sub { [] });
 has 'handle' => (is => 'rw', isa => 'CudaModuleHandle');
-around BUILDARGS => \&AI::MXNet::process_arguments;
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
 method python_constructor_arguments() { ['source', 'options', 'exports'] }
 
 sub BUILD

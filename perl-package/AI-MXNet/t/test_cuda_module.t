@@ -24,14 +24,14 @@ sub test_cuda_rtc
     my $x = mx->nd->ones([10], ctx=>mx->gpu(0));
     my $y = mx->nd->zeros([10], ctx=>mx->gpu(0));
     $axpy->launch([$x, $y, 3], mx->gpu(0), [1, 1, 1], [10, 1, 1]);
-    ok(($y->pdl == 3)->all);
+    ok(($y->aspdl == 3)->all);
 
     my $saxpy = $module->get_kernel("saxpy", "const float *x, float *y, float alpha");
     $saxpy->launch([$x, $y, 4], mx->gpu(0), [1, 1, 1], [10, 1, 1], 10);
-    ok(($y->pdl == 7)->all);
+    ok(($y->aspdl == 7)->all);
 
     $saxpy->launch([$x, $y, 5], mx->gpu(0), [2, 1, 1], [5, 1, 1], 5);
-    ok(($y->pdl == 12)->all);
+    ok(($y->aspdl == 12)->all);
 }
 
 SKIP: {
