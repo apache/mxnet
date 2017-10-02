@@ -48,7 +48,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     return name;
   }
   MKLDNNReluOp() : MKLDNNLayer<Dtype>()
-    , fwd_top_data(NULL), fwd_bottom_data(NULL)
+    , fwd_top_data(NULL), fwd_bottom_data(NULL), prv_mpd(NULL)
     , num_(0), width_(0), height_(0), channels_(0) {
     init_mkldnn_ = false;
   }
@@ -67,7 +67,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > bottom_prv_descriptor
       = get_mkldnn_prv_descriptor<Dtype>(in_data[activation::kData]);
     std::shared_ptr<memory::desc> bottom_data_md, top_data_md;
-    std::shared_ptr<memory::primitive_desc> usr_mpd(NULL), prv_mpd(NULL);
+    std::shared_ptr<memory::primitive_desc> usr_mpd(NULL);
 
     int32_t n = this->num_;
     int32_t iw = this->width_;
@@ -91,8 +91,10 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     relu_forward::desc fwd_inference_desc(prop_kind::forward_scoring,
       *bottom_data_md, negative_slope);
     fwd_inference_pd.reset(new relu_forward::primitive_desc(fwd_inference_desc, cpu_engine));
-    relu_forward::desc fwd_training_desc(prop_kind::forward_training,
-      *bottom_data_md, negative_slope);
+    /* relu_forward::desc fwd_training_desc(prop_kind::forward_training, */
+    /*   *bottom_data_md, negative_slope); */
+    // relu_forward is being deprecated, use new eltwise_forward
+    eltwise_forward::desc fwd_training_desc(prop_kind::forward_training, eltwise_relu, *bottom_data_md, negative_slope);
     fwd_training_pd.reset(new relu_forward::primitive_desc(fwd_training_desc, cpu_engine));
     fwd_bottom_data.reset(new MKLDNNData<Dtype>(usr_mpd, prv_mpd));
     fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
@@ -106,7 +108,6 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    if (!init_mkldnn_) {
         using namespace mshadow;
         using namespace mshadow::expr;
         CHECK_EQ(in_data.size(), 1);
@@ -134,6 +135,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
           out = mkl_experimental_direct_get<xpu, 4, Dtype>(out_data[activation::kOut], s);
         }
 
+    if (!init_mkldnn_) {
       LayerSetup(data);
       InitReLUFwd(in_data);
       init_mkldnn_ = true;
@@ -150,7 +152,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
         reluFwd.reset(new relu_forward(*fwd_inference_pd, *input_primitive, *output_memory));
       }
     } else {
-      fwd_bottom_data->sync_converted_prv(
+      fwd_bottom_data->sync_converted_prv(data.dptr_,
         false, in_data[activation::kData]);
         fwd_top_data->sync_output_memory(
           out_data[activation::kOut], fwd_top_data, in_place_);
@@ -158,7 +160,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     reluFwd.submit();
   }
 
-  void InitReLUBwd(const std::vector<TBlob> &out_grad) {
+  void InitReLUBwd(const std::vector<TBlob> &out_grad, const std::vector<TBlob> &in_data) {
     int32_t n = this->num_;
     int32_t iw = this->width_;
     int32_t ih = this->height_;
@@ -177,19 +179,26 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     std::shared_ptr<memory::primitive_desc> usr_diff_mpd;
     std::shared_ptr<memory::primitive_desc> prv_diff_mpd;
 
+    std::shared_ptr<memory::desc> default_md;
+    default_md.reset(new memory::desc({ { n, ic, ih, iw } }, mpcsn, memory::format::nchw));
     if (top_diff_is_prv) {
       std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > mem_descr
         = get_mkldnn_prv_descriptor<Dtype>(out_grad[activation::kOut]);
-      top_diff_md.reset(new memory::desc(mem_descr->prv_memory_pd()->desc()));
       usr_diff_mpd = mem_descr->usr_memory_pd();
       prv_diff_mpd = mem_descr->prv_memory_pd();
     } else {
-      top_diff_md.reset(new memory::desc({ { n, ic, ih, iw } }, mpcsn, memory::format::nchw));
-      usr_diff_mpd.reset(new memory::primitive_desc(*top_diff_md, cpu_engine));
+      if (prv_mpd != NULL) prv_diff_mpd = prv_mpd;
+      usr_diff_mpd.reset(new memory::primitive_desc(*default_md, cpu_engine));
     }
+    if (prv_diff_mpd != NULL)
+      top_diff_md.reset(new memory::desc(prv_diff_mpd->desc()));
+    else 
+      top_diff_md.reset(new memory::desc(*default_md));
     top_data_md = top_diff_md;
     bottom_diff_md = top_diff_md;
-    relu_backward::desc reluBwd_desc(*top_diff_md, *top_data_md, negative_slope);
+    /* relu_backward::desc reluBwd_desc(*top_diff_md, *top_data_md, negative_slope); */
+    // use eltwise instead of relu_backward
+    eltwise_backward::desc reluBwd_desc(eltwise_relu, *top_diff_md, *top_data_md, negative_slope);
     bwd_pd.reset(new relu_backward::primitive_desc(reluBwd_desc, cpu_engine,
       *fwd_training_pd));
     bwd_top_diff.reset(new MKLDNNData<Dtype>(usr_diff_mpd, prv_diff_mpd));
@@ -243,25 +252,35 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
       m_out_data = mkl_experimental_direct_get<xpu, 4, Dtype>(out_data[activation::kOut], s);
       m_in_grad = mkl_experimental_direct_get<xpu, 4, Dtype>(in_grad[activation::kData], s);
     }
-    if (bwd_pd == nullptr) {
-      InitReLUBwd(out_grad);
-    }
-    std::shared_ptr<memory> src_memory, diff_dst_memory, diff_src_memory;
-    src_memory = bwd_bottom_data->get_converted_prv(m_out_data.dptr_, false,
-      out_data[activation::kOut]);
+    in_place_b_ = (m_out_grad.dptr_ != m_in_grad.dptr_);
+if (bwd_pd == nullptr) {
+    InitReLUBwd(out_grad, in_data);
+    // use the src memory from forward call
+    /* src_memory = bwd_bottom_data->get_converted_prv(m_out_data.dptr_, false, */
+    /*   out_data[activation::kOut]); */
     diff_dst_memory = bwd_top_diff->get_converted_prv(m_out_grad.dptr_,
-      true, out_grad[activation::kOut]);
+      false, out_grad[activation::kOut]);
     diff_src_memory = bwd_bottom_diff->create_output_memory(m_in_grad.dptr_,
-      in_grad[activation::kData], bwd_bottom_diff);
-    MKLDNNPrimitive<Dtype> reluBwd;
-    reluBwd.reset(new relu_backward(*bwd_pd, *src_memory, *diff_dst_memory,
+      in_grad[activation::kData], bwd_bottom_diff, in_place_b_);
+    reluBwd.reset(new relu_backward(*bwd_pd, *input_primitive, *diff_dst_memory,
       *diff_src_memory));
+    } else {
+    // use the src memory from forward call
+    /* bwd_bottom_data->sync_converted_prv(false, */
+    /*   out_data[activation::kOut]); */
+    bwd_top_diff->sync_converted_prv(m_out_grad.dptr_,
+      false, out_grad[activation::kOut]);
+    bwd_bottom_diff->sync_output_memory(
+      in_grad[activation::kData], bwd_bottom_diff, in_place_b_);
+    }
     reluBwd.submit();
-  }
+
+}
 
  private:
   bool init_mkldnn_;
   bool in_place_;
+  bool in_place_b_;
 
   std::shared_ptr<MKLDNNData<Dtype> > fwd_top_data, fwd_bottom_data;
   std::shared_ptr<MKLDNNData<Dtype> > bwd_bottom_data, bwd_top_diff;
@@ -269,10 +288,12 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
   std::shared_ptr<relu_forward::primitive_desc> fwd_inference_pd;
   std::shared_ptr<relu_forward::primitive_desc> fwd_training_pd;
   std::shared_ptr<relu_backward::primitive_desc> bwd_pd;
+  std::shared_ptr<memory::primitive_desc> prv_mpd;
   int32_t num_, width_, height_, channels_;
   std::shared_ptr<memory> input_primitive;
   std::shared_ptr<memory> output_memory;
-  MKLDNNPrimitive<Dtype> reluFwd;
+  std::shared_ptr<memory> src_memory, diff_dst_memory, diff_src_memory;
+  MKLDNNPrimitive<Dtype> reluFwd, reluBwd;
 };  // class MKLDNNReluOp
 
 }  // namespace op

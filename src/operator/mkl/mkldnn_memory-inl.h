@@ -151,7 +151,7 @@ class MKLDNNMemoryDescriptor : public MKLDNNMemoryDescriptorBase<Dtype> {
     // in backward a conversion done already in the forward direction.
     std::shared_ptr<memory> get_converted_prv(Dtype* cpu_data,
       bool set_prv_ptr, const TBlob &blob);
-    void sync_converted_prv(bool set_prv_ptr, const TBlob &tblob);
+    void sync_converted_prv(Dtype* cpu_data, bool set_prv_ptr, const TBlob &tblob);
     std::shared_ptr<memory> create_output_memory(Dtype* cpu_data, const TBlob &blob,
         std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > thisData = nullptr, bool in_place = false);
     void sync_output_memory(const TBlob &blob,

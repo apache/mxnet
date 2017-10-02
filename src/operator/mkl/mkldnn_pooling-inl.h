@@ -179,7 +179,6 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    if (!init_mkldnn_) {
       using namespace mshadow;
       using namespace mshadow::expr;
       CHECK_EQ(in_data.size(), 1);
@@ -192,6 +191,7 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
         in_data[pool_enum::kData], s);
       Tensor<xpu, 4, Dtype> out = mkl_experimental_direct_get<xpu, 4, Dtype>(
         out_data[pool_enum::kOut], s);
+    if (!init_mkldnn_) {
       LayerSetUp(data, out);
       init_mkldnn_ = true;
 
@@ -210,7 +210,7 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
           *fwd_output_memory));
       }
     } else {
-      fwd_bottom_data->sync_converted_prv(false,
+      fwd_bottom_data->sync_converted_prv(data.dptr_, false,
         in_data[pool_enum::kData]);
       fwd_top_data->sync_output_memory(out_data[pool_enum::kOut],
         fwd_top_data);
