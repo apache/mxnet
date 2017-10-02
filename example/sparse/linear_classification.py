@@ -96,6 +96,7 @@ if __name__ == '__main__':
     # get the sparse weight parameter
     arg_params, _ = mod.get_params()
     weight = arg_params['weight']
+    speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
     data_iter = iter(train_data)
@@ -112,9 +113,9 @@ if __name__ == '__main__':
             mod.update()
             # update training metric
             mod.update_metric(metric, batch.label)
-            if nbatch % 100 == 0:
-                logging.info('epoch %d batch %d, train nll = %s' % \
-                             (epoch, nbatch, metric.get()[1][0]))
+            speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
+                                                       eval_metric=metric, locals=locals())
+            speedometer(speedometer_param)
         # evaluate metric on validation dataset
         score = mod.score(eval_data, ['nll_loss'])
         logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
