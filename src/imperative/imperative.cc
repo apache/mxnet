@@ -122,11 +122,13 @@ void Imperative::MarkVariables(
     info.outputs.emplace_back(variables[i]->Detach());
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+    info.ctx = variables[i]->ctx();
 
     gradients[i]->entry_ = nnvm::NodeEntry{
         nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
     AGInfo& grad_info = AGInfo::Create(gradients[i]->entry_.node);
     grad_info.outputs.emplace_back(gradients[i]->Detach());
+    grad_info.ctx = gradients[i]->ctx();
   }
 }
 
@@ -207,7 +209,7 @@ void Imperative::RecordOp(
   node->attrs.name = "node_" + std::to_string(node_count_++);
   AGInfo& info = AGInfo::Create(node);
   info.state = state;
-  info.ctx = inputs[0]->ctx();
+  info.ctx = outputs[0]->ctx();
 
   if (p_save_inputs == nullptr) {
     p_save_inputs = &(local_buff->save_inputs);
@@ -226,6 +228,7 @@ void Imperative::RecordOp(
       nnvm::NodeEntry entry{nnvm::Symbol::CreateVariable(
           "null" + std::to_string(variable_count_++)).outputs[0].node, 0, 0};
       AGInfo& input_info = AGInfo::Create(entry.node);
+      input_info.ctx = inputs[i]->ctx();
       if (save_inputs[i]) {
         input_info.outputs.emplace_back(*inputs[i]);
       } else {
@@ -380,6 +383,7 @@ std::vector<NDArray*> Imperative::Backward(
   for (size_t i = 0; i < outputs.size(); ++i) {
     ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
+    info.ctx = outputs[i]->ctx();
     if (ograds[i] != nullptr) {
       info.outputs.emplace_back(*ograds[i]);
     } else {
@@ -497,7 +501,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
 
   // Assign context
-  Context default_ctx = outputs[0]->ctx();
+  auto vctx = PlaceDevice(idx);
 
   // Infer shape type
   {
@@ -520,9 +524,11 @@ std::vector<NDArray*> Imperative::Backward(
     StorageTypeVector stypes;
     stypes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) stypes.emplace_back(i->storage_type());
-    CheckAndInferStorageType(
-        &graph, default_ctx.dev_mask(), std::move(stypes), false,
-        node_range, entry_range);
+    exec::DevMaskVector dev_mask;
+    dev_mask.reserve(idx.num_nodes());
+    for (const auto& i : vctx) dev_mask.emplace_back(i.dev_mask());
+    CheckAndInferStorageType(&graph, std::move(dev_mask), std::move(stypes), false,
+                             node_range, entry_range);
   }
 
   // Calculate ref count
@@ -549,17 +555,14 @@ std::vector<NDArray*> Imperative::Backward(
 
   for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
     auto num_outputs = idx[i].source->num_outputs();
-    const Context& ctx = idx[i].source->control_deps.size() ?
-                         AGInfo::Get(idx[i].source->control_deps[0]).ctx :
-                         default_ctx;
     for (size_t j = 0; j < num_outputs; ++j) {
       auto eid = idx.entry_id(i, j);
       if (!arrays[eid]->is_none()) continue;
       if (stypes[eid] == kDefaultStorage) {
-        *arrays[eid] = NDArray(shapes[eid], ctx, true, dtypes[eid]);
+        *arrays[eid] = NDArray(shapes[eid], vctx[i], true, dtypes[eid]);
       } else {
         *arrays[eid] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                               shapes[eid], ctx, true, dtypes[eid]);
+                               shapes[eid], vctx[i], true, dtypes[eid]);
       }
     }
   }

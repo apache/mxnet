@@ -1419,6 +1419,32 @@ def test_cuda_rtc():
     assert (y.asnumpy() == 12).all()
 
 
+def test_cross_device_autograd():
+    x = mx.nd.random.uniform(shape=(10,))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        y = mx.nd.tanh(x)
+        y = y.copyto(mx.gpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.cpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.gpu(0))
+        y = y.copyto(mx.gpu(0))
+
+        y.backward()
+
+    dx = x.grad.asnumpy()
+    x.grad[:] = 0
+
+    with mx.autograd.record():
+        y = x
+        for i in range(3):
+            y = mx.nd.tanh(y)
+        y.backward()
+
+    assert_almost_equal(dx, x.grad.asnumpy())
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

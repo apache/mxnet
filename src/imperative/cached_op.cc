@@ -195,7 +195,8 @@ nnvm::Graph Imperative::CachedOp::GetForwardGraph(
   bool match = true;
   match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx().dev_mask(),
+  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
+  match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
   if (!match) {
@@ -282,7 +283,8 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
                               node_range, entry_range);
   match &= CheckAndInferType(&g, std::move(dtypes), false,
                              node_range, entry_range);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx().dev_mask(), std::move(stypes),
+  exec::DevMaskVector dev_mask(idx.num_nodes(), inputs[0]->ctx().dev_mask());
+  match &= CheckAndInferStorageType(&g, std::move(dev_mask), std::move(stypes),
                                     false, node_range, entry_range);
 
   if (!match) {
