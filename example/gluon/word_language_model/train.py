@@ -18,13 +18,15 @@
 import argparse
 import time
 import math
+import os
 import mxnet as mx
 from mxnet import gluon, autograd
-import model
+from mxnet.test_utils import download
+
 import data
 
 parser = argparse.ArgumentParser(description='MXNet Autograd PennTreeBank RNN/LSTM Language Model')
-parser.add_argument('--data', type=str, default='./data/ptb.',
+parser.add_argument('--data', type=str, default='./data/',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='lstm',
                     help='type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)')
@@ -44,10 +46,18 @@ parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--dropout', type=float, default=0.2,
+parser.add_argument('--dropout', type=float, default=0,
                     help='dropout applied to layers (0 = no dropout)')
+parser.add_argument('--var-drop-in', type=float, default=0,
+                    help='(cell-only) variational dropout applied to inputs (0 = no dropout)')
+parser.add_argument('--var-drop-state', type=float, default=0,
+                    help='(cell-only) variational dropout applied to input states (0 = no dropout)')
+parser.add_argument('--var-drop-out', type=float, default=0,
+                    help='(cell-only) variational dropout applied to outputs (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
+parser.add_argument('--use-cell', action='store_true',
+                    help='Whether to use cell for rnn.')
 parser.add_argument('--cuda', action='store_true',
                     help='Whether to use gpu')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
@@ -66,6 +76,17 @@ if args.cuda:
     context = mx.gpu(0)
 else:
     context = mx.cpu(0)
+
+def download_ptb(path):
+    download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.train.txt',
+             dirname=path)
+    download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.valid.txt',
+             dirname=path)
+    download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.test.txt',
+             dirname=path)
+
+if not os.path.exists(args.data):
+    download_ptb(args.data)
 
 corpus = data.Corpus(args.data)
 
@@ -87,8 +108,23 @@ test_data = batchify(corpus.test, args.batch_size).as_in_context(context)
 
 
 ntokens = len(corpus.dictionary)
-model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid,
-                       args.nlayers, args.dropout, args.tied)
+
+# Variational dropout is currently only supported in Gluon RNN Cell API
+use_variational_drop = args.var_drop_in + args.var_drop_state + args.var_drop_out != 0
+assert not use_variational_drop or args.use_cell, \
+       'variational dropout is only available in cell API.'
+
+if not args.use_cell:
+    import model_layer as model
+    model = model.RNNModel(args.model, ntokens,
+                           args.emsize, args.nhid, args.nlayers,
+                           args.dropout, args.tied)
+else:
+    import model_cell as model
+    model = model.RNNModel(args.model, ntokens,
+                           args.emsize, args.nhid, args.nlayers,
+                           args.dropout, args.var_drop_in, args.var_drop_state, args.var_drop_out,
+                           args.tied)
 model.collect_params().initialize(mx.init.Xavier(), ctx=context)
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
                         {'learning_rate': args.lr,
@@ -161,7 +197,7 @@ def train():
         if val_L < best_val:
             best_val = val_L
             test_L = eval(test_data)
-            model.collect_params().save(args.save)
+            model.save_params(args.save)
             print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
         else:
             args.lr = args.lr*0.25
@@ -169,10 +205,10 @@ def train():
                                     {'learning_rate': args.lr,
                                      'momentum': 0,
                                      'wd': 0})
-            model.collect_params().load(args.save, context)
+            model.load_params(args.save, context)
 
 if __name__ == '__main__':
     train()
-    model.collect_params().load(args.save, context)
+    model.load_params(args.save, context)
     test_L = eval(test_data)
     print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))

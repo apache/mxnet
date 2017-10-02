@@ -22,28 +22,42 @@ Example runs and the results:
 
 ```
 python train.py --cuda --tied --nhid 650 --emsize 650 --dropout 0.5        # Test ppl of 75.3
-python train.py --cuda --tied --nhid 1500 --emsize 1500 --dropout 0.65      # Test ppl of 72.0
+python train.py --cuda --tied --nhid 1500 --emsize 1500 --dropout 0.65     # Test ppl of 72.0
+python train.py --cuda --tied --nhid 650 --emsize 650 --use-cell \
+                --var-drop-out 0.5 --var-drop-state 0.5                    # Test ppl of 73.0
+python train.py --cuda --tied --nhid 1500 --emsize 1500 --use-cell \
+                --var-drop-out 0.5 --var-drop-state 0.5                    # Test ppl of 71.7
 ```
 
 <br>
 
 `python train.py --help` gives the following arguments:
 ```
-Optional arguments:
-  -h, --help         show this help message and exit
-  --data DATA        location of the data corpus
-  --model MODEL      type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)
-  --emsize EMSIZE    size of word embeddings
-  --nhid NHID        number of hidden units per layer
-  --nlayers NLAYERS  number of layers
-  --lr LR            initial learning rate
-  --clip CLIP        gradient clipping
-  --epochs EPOCHS    upper epoch limit
-  --batch_size N     batch size
-  --bptt BPTT        sequence length
-  --dropout DROPOUT  dropout applied to layers (0 = no dropout)
-  --tied             tie the word embedding and softmax weights
-  --cuda             Whether to use gpu
-  --log-interval N   report interval
-  --save SAVE        path to save the final model
+optional arguments:
+  -h, --help            show this help message and exit
+  --data DATA           location of the data corpus
+  --model MODEL         type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)
+  --emsize EMSIZE       size of word embeddings
+  --nhid NHID           number of hidden units per layer
+  --nlayers NLAYERS     number of layers
+  --lr LR               initial learning rate
+  --clip CLIP           gradient clipping
+  --epochs EPOCHS       upper epoch limit
+  --batch_size N        batch size
+  --bptt BPTT           sequence length
+  --dropout DROPOUT     dropout applied to layers (0 = no dropout)
+  --var-drop-in VAR_DROP_IN
+                        (cell-only) variational dropout applied to inputs (0 =
+                        no dropout)
+  --var-drop-state VAR_DROP_STATE
+                        (cell-only) variational dropout applied to input
+                        states (0 = no dropout)
+  --var-drop-out VAR_DROP_OUT
+                        (cell-only) variational dropout applied to outputs (0
+                        = no dropout)
+  --tied                tie the word embedding and softmax weights
+  --use-cell            whether to use cell for rnn.
+  --cuda                Whether to use gpu
+  --log-interval N      report interval
+  --save SAVE           path to save the final model
 ```
