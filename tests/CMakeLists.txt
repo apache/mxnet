@@ -39,7 +39,6 @@ if(GTEST_FOUND)
   if(UNITTEST_STATIC_LINK)
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
-      rt
       ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
       dmlc
       ${mxnet_LINKER_LIBS}
@@ -48,7 +47,6 @@ if(GTEST_FOUND)
   else()
     target_link_libraries(${PROJECT_NAME}_unit_tests
       ${GTEST_LIBRARY}
-      rt
       dmlc
       ${nnvm_LINKER_LIBS}
       ${mxnet_LINKER_LIBS}

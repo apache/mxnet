@@ -41,39 +41,63 @@
 namespace mxnet {
 namespace op {
 
+// infer storage function for _square_sum operator on cpu
 inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                             const Context& ctx,
+                                             const int dev_mask,
+                                             DispatchMode* dispatch_mode,
                                              std::vector<int>* in_attrs,
                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  if (in_attrs->at(0) == kRowSparseStorage) {  // current impl
-    if (param.axis[0] == 1 && param.keepdims) {  // sum per row and keep dims
-      STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
-    } else {
-      STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
+  const auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  // current impl is only available on cpu
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    if (!dispatched && in_stype == kRowSparseStorage && param.axis[0] == 1 && param.keepdims) {
+      // sum per row and keep dims
+      dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
     }
-  } else {  // fallback
-    type_assign(&((*in_attrs)[0]), kDefaultStorage);
-    type_assign(&((*out_attrs)[0]), kDefaultStorage);
+    if (!dispatched && in_stype == kRowSparseStorage &&
+        (param.axis[0] == 0 || (param.axis[0] == 1 && !param.keepdims))) {
+        dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                         dispatch_mode, DispatchMode::kFComputeEx);
+    }
+  }
+  if (!dispatched) {
+    // nothing to fallback on
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
 
+// infer storage function for _backward_square_sum operator on cpu
 inline bool SquareSumBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                              const Context& ctx,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
                                               std::vector<int>* in_attrs,
                                               std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (in_attrs->at(0) == kDefaultStorage || in_attrs->at(0) == kRowSparseStorage) {
-    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, 1, kRowSparseStorage);
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
-  } else {  // fallback
-    type_assign(&((*in_attrs)[0]), kDefaultStorage);
-    type_assign(&((*in_attrs)[1]), kDefaultStorage);
-    type_assign(&((*out_attrs)[0]), kDefaultStorage);
+  const auto& ograd_stype = in_attrs->at(0);
+  const auto& in_stype = in_attrs->at(1);
+  auto& grad_stype = out_attrs->at(0);
+  bool dispatched = false;
+  // only implemented on cpu
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    if (!dispatched && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage) &&
+        in_stype == kRowSparseStorage) {
+      dispatched = storage_type_assign(&grad_stype, kRowSparseStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
+  }
+  if (!dispatched) {
+    // nothing to fallback on
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   }
   return true;
 }
@@ -418,9 +442,7 @@ void SquareSumOpForwardEx(const nnvm::NodeAttrs& attrs,
     NDArray output = outputs[0];
     SquareSumRspImpl(attrs, s, inputs[0], req[0], &output);
   } else {
-    LOG(FATAL) << "_square_sum op only supports row-sparse ndarray"
-                  " as input, while input stype = "
-               << istype;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -436,17 +458,14 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType ograd_stype = inputs[0].storage_type();
   const NDArrayStorageType input_stype = inputs[1].storage_type();
-  if (input_stype == kRowSparseStorage
-      && (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage)) {
+  if (input_stype == kRowSparseStorage &&
+      (ograd_stype == kDefaultStorage || ograd_stype == kRowSparseStorage)) {
     CHECK_EQ(inputs[1].shape().ndim(), 2U) << "_square_sum op only supports"
                                               " 2D ndarray as input";
     NDArray output = outputs[0];
     SquareSumRspGradImpl(attrs, s, inputs[0], inputs[1], req[0], &output);
   } else {
-    LOG(FATAL) << "_square_sum op backward only supports dense ndarray as ograd,"
-                  " row-sparse ndarray as input and row-sparse ndarray as igrad,"
-                  " while ograd_stype = " << ograd_stype
-               << " input_stype = " << input_stype;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 

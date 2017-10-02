@@ -150,14 +150,6 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
     return list(indices)
 
 
-def rand_bool():
-    return True if random.uniform(0, 1) <= 0.5 else False
-
-
-def rand_choice(a, b):
-    return a if random.uniform(0, 1) <= 0.5 else b
-
-
 def all_zero(var):
     return 0
 
@@ -315,23 +307,7 @@ def test_elemwise_binary_ops():
 
     def check_all(l, r, check_function):
         assert l.shape == r.shape
-
-        it_l = np.nditer(l, flags=['f_index'])
-        it_r = np.nditer(r, flags=['f_index'])
-
-        output = np.zeros(l.shape)
-        it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
-
-        while not it_l.finished:
-            val_l = it_l[0]
-            val_r = it_r[0]
-            if check_function(val_l, val_r):
-                it_out[0] = 1
-            it_l.iternext()
-            it_r.iternext()
-            it_out.iternext()
-
-        return output
+        return check_function(l, r)
 
     def gt(l, r):
         return check_all(l, r, lambda a, b: a > b)
@@ -489,30 +465,12 @@ def test_elemwise_binary_ops():
                                                           force_grad_overlap=force_grad_overlap,
                                                           ograd_density=ograd_density)
 
-def as_dense(arr):
-    if arr.stype != 'default':
-        return mx.nd.cast_storage(arr, stype='default')
-    else:
-        return arr;
-
-
 # Make sure that 0's look like 0's when we do a comparison
-def do_normalize(l):
-    it_l = np.nditer(l, flags=['f_index'])
-
-    output = np.zeros(l.shape)
-    it_out = np.nditer(output, flags=['f_index'], op_flags=['writeonly'])
-
-    while not it_l.finished:
-        val_l = it_l[0]
-        if np.isclose(val_l, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
-            val_l = 0
-        it_out[0] = val_l
-        it_l.iternext()
-        it_out.iternext()
-
-    return output
-
+def do_normalize(arr):
+    ret = arr.copy()
+    idx = np.isclose(arr, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True)
+    ret[idx] = 0
+    return ret
 
 def check_sparse_mathematical_core(name, stype,
                                    forward_mxnet_call, forward_numpy_call, backward_numpy_call=None,
@@ -1077,73 +1035,35 @@ def test_sparse_mathematical_core():
                                                     force_overlap=force_overlap)
 
 
-def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
-    lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
-    rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-    lhs_nd = rand_ndarray(shape, lhs_stype)
-    rhs_nd = rand_ndarray(shape, rhs_stype)
-    lhs_np = lhs_nd.asnumpy()
-    rhs_np = rhs_nd.asnumpy()
-
-    out_np = lhs_np + rhs_np
-    test = mx.symbol.sparse.elemwise_add(lhs, rhs)
-    location = {'lhs': lhs_nd, 'rhs': rhs_nd}
-    check_symbolic_forward(test, location, [out_np])
-    check_numeric_gradient(test, location)
-    grad_stypes = {}
-    if lhs_grad_stype is not None and lhs_grad_stype != 'default':
-        grad_stypes['lhs'] = lhs_grad_stype
-    if rhs_grad_stype is not None and rhs_grad_stype != 'default':
-        grad_stypes['rhs'] = rhs_grad_stype
-    check_symbolic_backward(test, location, [out_np], [out_np, out_np],
-                            grad_stypes=grad_stypes)
-
 
 def test_elemwise_add_ex():
-    if default_context().device_type == 'cpu':
-        shapes = [rand_shape_2d(), rand_shape_3d()]
-        for shape in shapes:
-            check_elemwise_add_ex('default', 'default', shape)
-            check_elemwise_add_ex('default', 'row_sparse', shape)
-            check_elemwise_add_ex('row_sparse', 'default', shape)
-            check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
-                                  lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
+    def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
+        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
+        rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
+        lhs_nd = rand_ndarray(shape, lhs_stype)
+        rhs_nd = rand_ndarray(shape, rhs_stype)
+        lhs_np = lhs_nd.asnumpy()
+        rhs_np = rhs_nd.asnumpy()
 
+        out_np = lhs_np + rhs_np
+        test = mx.symbol.sparse.elemwise_add(lhs, rhs)
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+        check_symbolic_forward(test, location, [out_np])
+        check_numeric_gradient(test, location)
+        grad_stypes = {}
+        if lhs_grad_stype is not None and lhs_grad_stype != 'default':
+            grad_stypes['lhs'] = lhs_grad_stype
+        if rhs_grad_stype is not None and rhs_grad_stype != 'default':
+            grad_stypes['rhs'] = rhs_grad_stype
+        check_symbolic_backward(test, location, [out_np], [out_np, out_np],
+                                grad_stypes=grad_stypes)
 
-# TODO(haibin) randomize this test
-def test_elemwise_add_ex_multiple_stages():
-    if default_context().device_type == 'cpu':
-        # prep data
-        shape = (4, 2)
-        ds_np = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
-        sp_np1 = np.array([[5, 10], [0, 0], [0, 0], [0, 0]])
-        sp_np2 = np.array([[0, 0], [5, 10], [0, 0], [0, 0]])
+    shapes = [rand_shape_2d(), rand_shape_3d()]
+    for shape in shapes:
+        check_elemwise_add_ex('default', 'default', shape)
+        check_elemwise_add_ex('row_sparse', 'row_sparse', shape,
+                              lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
-        val1 = mx.nd.array([[5, 10]]);
-        val2 = mx.nd.array([[5, 10]]);
-        idx1 = mx.nd.array([0], dtype=np.int64);
-        idx2 = mx.nd.array([1], dtype=np.int64);
-        sp_nd1 = mx.nd.sparse.row_sparse_array(val1, idx1, shape)
-        sp_nd2 = mx.nd.sparse.row_sparse_array(val2, idx2, shape)
-        ds_nd = mx.nd.array(ds_np)
-
-        # sparse + sparse = sparse
-        sp_data1 = mx.symbol.Variable('sp_data1', stype='row_sparse')
-        sp_data2 = mx.symbol.Variable('sp_data2', stype='row_sparse')
-        ds_data = mx.symbol.Variable('ds_data')
-        plus = mx.symbol.sparse.elemwise_add(sp_data1, sp_data2, name='plus')
-        # sparse + dense = dense
-        test = mx.symbol.sparse.elemwise_add(plus, ds_data)
-        check_symbolic_forward(test, {'sp_data1': sp_nd1, 'sp_data2': sp_nd2,
-                                      'ds_data': ds_nd}, [sp_np1 + sp_np2 + ds_np])
-
-        arr_grads = [mx.nd.zeros(shape) for i in range(3)]
-        exec_test = test.bind(default_context(), args={'sp_data1': sp_nd1, 'sp_data2': sp_nd2,
-                                                       'ds_data': ds_nd}, args_grad=arr_grads)
-        exec_test.forward(is_train=True)
-        assert_almost_equal(exec_test.outputs[0].asnumpy(), sp_np1 + sp_np2 + ds_np)
-        exec_test.backward(out_grads=exec_test.outputs)
-        assert_almost_equal(arr_grads[0].asnumpy(), arr_grads[1].asnumpy())
 
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
@@ -1160,7 +1080,7 @@ def test_cast_storage_ex():
         grad_stypes = {'x': to_stype}
         check_symbolic_backward(test, location, [out_np], [out_np], grad_stypes=grad_stypes)
 
-    density = [1.00, 0.50, 0.05, 0.01]
+    density = [1.00, 0.50, 0.01]
     for d in density:
         shape_2d = rand_shape_2d()
         shape_3d = rand_shape_3d()
@@ -1219,7 +1139,7 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
-    density = [1.00, 0.50, 0.10, 0.05, 0.01]
+    density = [1.00, 0.50, 0.01]
     for lhs_d in density:
         lhs_shape = rand_shape_2d(50, 200)
         rhs_d = 1
@@ -1271,23 +1191,12 @@ def test_sparse_retain():
 
     shape = rand_shape_2d()
     shape_3d = rand_shape_3d()
-    densities = [0.01, 0.1, 0.2, 0.5, 0.8, 1.0]
+    densities = [0.01, 0.5, 1.0]
     index_types = [np.float32, np.int32, np.int64]
     for density in densities:
         for itype in index_types:
             check_sparse_retain(shape, density, itype)
             check_sparse_retain(shape_3d, density, itype)
-
-def do_cast(arr, stype):
-    if arr.stype != stype:
-        return mx.nd.cast_storage(arr, stype=stype)
-    return arr
-
-def check_is_type(arr, stype):
-    if stype is not None:
-        assert arr.stype == stype
-    else:
-        assert arr.stype == 'default'
 
 
 def test_sparse_unary_with_numerics():
@@ -1299,15 +1208,13 @@ def test_sparse_unary_with_numerics():
 
         expected_result_type, expected_grad_result_type = \
             get_fw_bw_result_types_2(forward_numpy_call, stype, backward_numpy_call, output_grad_stype)
-
         if backward_is_use_output is True:
             expected_grad_result_type = expected_result_type
 
         shape = (3, 4)
         data = mx.symbol.Variable("data")
 
-        grad_stypes = list()
-        grad_stypes.append(expected_grad_result_type)
+        grad_stypes = {'data' : expected_grad_result_type}
 
         y = mxnet_func(data)
         if stype == 'default':
@@ -1355,7 +1262,7 @@ def test_sparse_unary_with_numerics():
     check_sparse_function('relu',
                           lambda x: mx.sym.relu(x),
                           lambda x: np.maximum(x, 0.0),
-                          lambda input, outg: outg * assign_each(input, lambda x: x > 0.0))
+                          lambda output, outg: outg * assign_each(output, lambda x: x > 0.0), backward_is_use_output=True)
 
     check_sparse_function('sigmoid',
                           lambda x: mx.sym.sigmoid(x),
@@ -1431,66 +1338,71 @@ def test_sparse_square_sum():
 
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
-    if default_context().device_type == 'cpu':
-        def check_broadcast_add(shape, lhs_stype, rhs_stype):
-            lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
-            rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
-            lhs_nd = rand_ndarray(shape, lhs_stype)
-            rhs_nd = rand_ndarray(shape, rhs_stype)
-            lhs_dns = mx.nd.cast_storage(lhs_nd, stype='default')
-            rhs_dns = mx.nd.cast_storage(rhs_nd, stype='default')
+    def check_broadcast_add(shape, lhs_stype, rhs_stype):
+        lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
+        rhs = mx.symbol.Variable('rhs', stype=rhs_stype)
+        lhs_nd = rand_ndarray(shape, lhs_stype)
+        rhs_nd = rand_ndarray(shape, rhs_stype)
+        lhs_dns = mx.nd.cast_storage(lhs_nd, stype='default')
+        rhs_dns = mx.nd.cast_storage(rhs_nd, stype='default')
 
-            out_dns = (lhs_dns + rhs_dns).asnumpy()
-            test = mx.symbol.broadcast_add(lhs, rhs)
-            location = {'lhs': lhs_nd, 'rhs': rhs_nd}
-            check_symbolic_forward(test, location, [out_dns])
-            check_numeric_gradient(test, location)
-            check_symbolic_backward(test, location, [out_dns], [out_dns, out_dns])
+        out_dns = (lhs_dns + rhs_dns).asnumpy()
+        test = mx.symbol.broadcast_add(lhs, rhs)
+        location = {'lhs': lhs_nd, 'rhs': rhs_nd}
+        check_symbolic_forward(test, location, [out_dns])
+        check_numeric_gradient(test, location)
+        check_symbolic_backward(test, location, [out_dns], [out_dns, out_dns])
 
-        def np_softmax(x, axis=-1):
-            # fix for old numpy on Travis not supporting keepdims
-            # x = x - np.max(x, axis=-1, keepdims=True)
-            x = x - np.max(x, axis=axis, keepdims=True)
-            x = np.exp(x)
-            # x /= np.sum(x, axis=-1, keepdims=True)
-            x /= np.sum(x, axis=axis, keepdims=True)
-            return x
+    def np_softmax(x, axis=-1):
+        # fix for old numpy on Travis not supporting keepdims
+        x = x - np.max(x, axis=axis, keepdims=True)
+        x = np.exp(x)
+        x /= np.sum(x, axis=axis, keepdims=True)
+        return x
 
-        def check_softmax_with_shape(lhs_stype, rhs_stype, shape, preserve_shape=False):
-            # bind with label
-            ctx = default_context()
-            X = mx.symbol.Variable('X', stype=lhs_stype)
-            L = mx.symbol.Variable('L', stype=rhs_stype)
-            Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
-            x = rand_ndarray(shape, lhs_stype)
-            l = rand_ndarray(shape, rhs_stype)
-            l[:] = np_softmax(l.asnumpy())
-            grad = mx.nd.empty(shape, ctx=ctx)
-            exec1 = Y.bind(ctx, args = [x, l], args_grad = {'X': grad})
-            exec1.forward(is_train=True)
-            out = exec1.outputs[0].asnumpy()
-            assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
-            exec1.backward()
-            assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(),
-                                rtol=1e-3, atol=1e-4)
+    def check_softmax_with_shape(lhs_stype, rhs_stype, shape, preserve_shape=False):
+        # bind with label
+        ctx = default_context()
+        X = mx.symbol.Variable('X', stype=lhs_stype)
+        L = mx.symbol.Variable('L', stype=rhs_stype)
+        Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
+        x = rand_ndarray(shape, lhs_stype)
+        l = rand_ndarray(shape, rhs_stype)
+        l[:] = np_softmax(l.asnumpy())
+        grad = mx.nd.empty(shape, ctx=ctx)
+        exec1 = Y.bind(ctx, args = [x, l], args_grad = {'X': grad})
+        exec1.forward(is_train=True)
+        out = exec1.outputs[0].asnumpy()
+        assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
+        exec1.backward()
+        assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(),
+                            rtol=1e-3, atol=1e-4)
 
-        def check_concat(shape, lhs_stype, rhs_stype):
-            x = mx.symbol.Variable('x', stype=lhs_stype)
-            w = mx.symbol.Variable('w', stype=rhs_stype)
-            test = mx.sym.Concat(x, w)
-            x_nd = rand_ndarray(shape, lhs_stype)
-            w_nd = rand_ndarray(shape, rhs_stype)
-            location = {'x': x_nd, 'w': w_nd}
-            check_numeric_gradient(test, location)
+    def check_concat(shape, lhs_stype, rhs_stype):
+        x = mx.symbol.Variable('x', stype=lhs_stype)
+        w = mx.symbol.Variable('w', stype=rhs_stype)
+        test = mx.sym.Concat(x, w)
+        x_nd = rand_ndarray(shape, lhs_stype)
+        w_nd = rand_ndarray(shape, rhs_stype)
+        location = {'x': x_nd, 'w': w_nd}
+        check_numeric_gradient(test, location)
 
-        shape = rand_shape_2d()
-        stypes = ['default', 'csr', 'row_sparse']
-        for lhs in stypes:
-            for rhs in stypes:
-                check_broadcast_add(shape, lhs, rhs)
-                check_concat(shape, lhs, rhs)
-                check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
-                check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
+    def check_operator_with_temp_resource(shape, stype):
+        x = mx.symbol.Variable('x', stype=stype)
+        test = mx.sym.sum(x)
+        x_nd = rand_ndarray(shape, stype)
+        location = {'x': x_nd}
+        check_numeric_gradient(test, location)
+
+    shape = rand_shape_2d()
+    stypes = ['default', 'csr', 'row_sparse']
+    for lhs in stypes:
+        check_operator_with_temp_resource(shape, lhs)
+        for rhs in stypes:
+            check_broadcast_add(shape, lhs, rhs)
+            check_concat(shape, lhs, rhs)
+            check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
+            check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
@@ -1518,11 +1430,9 @@ def test_sparse_elementwise_sum():
         for a in arr_grad:
             assert_almost_equal(a.asnumpy(), out_grad.asnumpy())
 
-    maxdim = 5
-    for dim in range(2, maxdim):
-        for i in range(3):
-            shape = tuple(np.random.randint(5, 10, size=dim))
-            check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
+    for dim in range(2, 4):
+        shape = tuple(np.random.randint(5, 10, size=dim))
+        check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
 if __name__ == '__main__':
     import nose

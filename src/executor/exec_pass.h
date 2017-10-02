@@ -96,6 +96,12 @@ using OpExecVector = std::vector<std::shared_ptr<OpExecutor> >;
 using ContextVector = std::vector<Context>;
 
 /*!
+ * \brief per node device mask vector
+ * \node stored under "dev_mask"
+ */
+using DevMaskVector = std::vector<int>;
+
+/*!
  * \brief Attach OpExecutor to the graph attributes.
  *
  * \param g input graph
@@ -170,6 +176,17 @@ Graph InferType(Graph&& graph,
 Graph InferStorageType(Graph&& graph,
                        StorageTypeVector&& storage_type_inputs = StorageTypeVector(),
                        const std::string& storage_type_attr_key = "");
+
+/*! \brief The default storage type inference function, which assigns all undefined
+ *         storage types to kDefaultStorage. If all of input and output storage types
+ *         are kDefaultStorage, DispatchMode::kFCompute is assigned to dispatch_mode. Otherwise,
+ *         DispatchMode::kFComputeFallback is assigned to dispatch_mode.
+ */
+bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                        const int dev_mask,
+                        DispatchMode* dispatch_mode,
+                        std::vector<int> *iattr,
+                        std::vector<int> *oattr);
 
 }  // namespace exec
 }  // namespace mxnet

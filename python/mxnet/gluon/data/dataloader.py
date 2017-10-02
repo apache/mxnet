@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset generator."""
+__all__ = ['DataLoader']
 
 import numpy as np
 

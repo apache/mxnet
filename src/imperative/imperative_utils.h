@@ -27,6 +27,7 @@
 #include "../executor/exec_pass.h"
 #include "../c_api/c_api_common.h"
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 
 #ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 #define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
@@ -77,11 +78,12 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
   return ctx;
 }
 
-// Set the shape, dtype and storage type
+// Set the shape, dtype, storage type and dispatch mode via the attribute inference functions
 inline void SetShapeType(const Context& ctx,
                   const nnvm::NodeAttrs& attrs,
                   const std::vector<NDArray*>& inputs,
-                  const std::vector<NDArray*>& outputs) {
+                  const std::vector<NDArray*>& outputs,
+                  DispatchMode* dispatch_mode) {
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
@@ -136,15 +138,21 @@ inline void SetShapeType(const Context& ctx,
     out_storage_types.push_back(i->storage_type());
   }
   if (inferstorage.count(attrs.op)) {
-    CHECK(inferstorage[attrs.op](attrs, ctx, &in_storage_types, &out_storage_types));
-    CHECK_EQ(out_storage_types.size(), outputs.size());
+    CHECK(inferstorage[attrs.op](attrs, ctx.dev_mask(), dispatch_mode,
+                                 &in_storage_types, &out_storage_types));
+  } else {
+    // if infer storage attr is not present, apply the default infer storage function
+    bool success = exec::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
+                                            &in_storage_types, &out_storage_types);
+    CHECK(success);
   }
+  CHECK_EQ(out_storage_types.size(), outputs.size());
+  CHECK(*dispatch_mode != DispatchMode::kUndefined);
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (outputs[i]->is_none()) {
-      // if failed to infer the storage type, assume the output storage is dense
-      if (storage_type == kDefaultStorage || out_storage_types[i] == kUndefinedStorage) {
+      if (storage_type == kDefaultStorage) {
         *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
       } else {
         *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
@@ -169,7 +177,8 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
                    std::vector<engine::VarHandle> *p_read_vars,
                    std::vector<engine::VarHandle> *p_write_vars,
                    std::vector<Resource> *p_requested,
-                   std::vector<uint32_t> *p_mutate_idx) {
+                   std::vector<uint32_t> *p_mutate_idx,
+                   const DispatchMode dispatch_mode) {
   static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& ftmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
 
@@ -177,6 +186,10 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   std::vector<engine::VarHandle>& write_vars = *p_write_vars;
   std::vector<Resource>& requested = *p_requested;
   std::vector<uint32_t>& mutate_idx = *p_mutate_idx;
+
+  if (fmutate.count(attrs.op)) {
+    mutate_idx = fmutate[attrs.op](attrs);
+  }
 
   if (ftmp_resource.count(attrs.op)) {
     int ntmp = 0;
@@ -196,19 +209,22 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
     CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
   }
 
+  // append extra resource requests for storage fallback
+  if (dispatch_mode == DispatchMode::kFComputeFallback) {
+    requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+    write_vars.push_back(requested.back().var);
+  }
+
   read_vars.reserve(inputs.size());
   for (auto& i : inputs) {
     read_vars.push_back(i->var());
   }
-  write_vars.reserve(outputs.size());
+  write_vars.reserve(outputs.size() + mutate_idx.size());
   for (auto& i : outputs) {
     write_vars.push_back(i->var());
   }
-  if (fmutate.count(attrs.op)) {
-    mutate_idx = fmutate[attrs.op](attrs);
-    for (auto & i : mutate_idx) {
-      write_vars.push_back(inputs[i]->var());
-    }
+  for (auto & i : mutate_idx) {
+    write_vars.push_back(inputs[i]->var());
   }
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
 }
@@ -265,35 +281,20 @@ inline void PushFCompute(const FCompute& fn,
       std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
-      // populate input blobs and output blobs
-      SetupDefaultBlobs(inputs, &input_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
-      SetupDefaultBlobs(outputs, &output_blobs, &post_temp_dst, &post_temp_src);
-      // add mutable inputs to post temp list
-      for (const auto idx : mutate_idx) {
-        auto map_iter = in_temp_idx_map.find(idx);
-        if (map_iter != in_temp_idx_map.end()) {
-          post_temp_src.push_back(pre_temp_dst[map_iter->second]);
-          post_temp_dst.push_back(inputs[idx]);
-        }
-      }
-      OpContext opctx{is_train, rctx,
-                      engine::CallbackOnComplete(),
-                      requested};
-      if (ctx.dev_mask() == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-        CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
-        fn(attrs, opctx, input_blobs, req, output_blobs);
-        // cast to original storage type, if necessary
-        CastNonDefaultStorage<gpu>(post_temp_src, post_temp_dst, opctx);
+      // setup blobs
+      SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
+                             &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
+                             &in_temp_idx_map, mutate_idx);
+      // setup context
+      OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
+      bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
+      // pre-fcompute fallback, cast to default storage type
+      CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
+      fn(attrs, opctx, input_blobs, req, output_blobs);
+      // post-fcompute fallback, cast to original storage type
+      CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
+      if (is_gpu) {
         rctx.get_stream<gpu>()->Wait();
-#else
-        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-      } else {
-        CastNonDefaultStorage<cpu>(pre_temp_src, pre_temp_dst, opctx);
-        fn(attrs, opctx, input_blobs, req, output_blobs);
-        // cast to original storage type, if necessary
-        CastNonDefaultStorage<cpu>(post_temp_src, post_temp_dst, opctx);
       }
       on_complete();
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -339,7 +340,8 @@ inline void PushOperator(const OpStatePtr& state,
                   const std::vector<NDArray*>& p_inputs,
                   const std::vector<NDArray*>& p_outputs,
                   const std::vector<uint32_t>& mutate_idx,
-                  const std::vector<OpReqType>& req) {
+                  const std::vector<OpReqType>& req,
+                  const DispatchMode dispatch_mode) {
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
@@ -352,56 +354,8 @@ inline void PushOperator(const OpStatePtr& state,
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
 
   auto fcompute = common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
-  if (fcompute != nullptr) {
-    CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
-    Engine::Get()->PushAsync(
-      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx, req](
-          RunContext rctx,
-          engine::CallbackOnComplete on_complete) {
-        OpContext opctx{is_train, rctx, on_complete, requested};
-
-        std::vector<TBlob> input_blobs, output_blobs;
-        // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
-        std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
-        // mapping from index in input_blobs to index in pre_temp_dst
-        std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
-        // populate input blobs and output blobs
-        SetupDefaultBlobs(inputs, &input_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
-        SetupDefaultBlobs(outputs, &output_blobs, &post_temp_dst, &post_temp_src);
-        // add mutable inputs to post temp list
-        for (const auto idx : mutate_idx) {
-          if (in_temp_idx_map.find(idx) != in_temp_idx_map.end()) {
-            post_temp_src.push_back(pre_temp_dst[in_temp_idx_map[idx]]);
-            post_temp_dst.push_back(inputs[idx]);
-          }
-        }
-        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-#if MXNET_USE_CUDA
-          CastNonDefaultStorage<gpu>(pre_temp_src, pre_temp_dst, opctx);
-          fcompute(state, opctx, input_blobs, req, output_blobs);
-          CastNonDefaultStorage<gpu>(post_temp_src, post_temp_dst, opctx);
-#else
-          LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-        } else {
-          CastNonDefaultStorage<cpu>(pre_temp_src, pre_temp_dst, opctx);
-          fcompute(state, opctx, input_blobs, req, output_blobs);
-          CastNonDefaultStorage<cpu>(post_temp_src, post_temp_dst, opctx);
-        }
-        if (exec_type == ExecType::kSync) {
-          if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
-            rctx.get_stream<gpu>()->Wait();
-          }
-          on_complete();
-        }
-      }, ctx, read_vars, write_vars, FnProperty::kNormal,
-      0, PROFILER_MESSAGE(op->name.c_str()));
-  } else {
-    auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
-        op, "FStatefulComputeEx", ctx);
-    CHECK(fcompute_ex != nullptr)
-        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
-        << "for stateful operator " << op->name;
+  auto fcompute_ex = common::GetFCompute<FStatefulComputeEx>(op, "FStatefulComputeEx", ctx);
+  if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
     const auto& run = [state, fcompute_ex, inputs, outputs, requested, is_train,
                        exec_type, req](
           RunContext rctx,
@@ -421,13 +375,48 @@ inline void PushOperator(const OpStatePtr& state,
       Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
                                0, PROFILER_MESSAGE(op->name.c_str()));
     }
+  } else {
+    CHECK(fcompute != nullptr)
+        << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+        << "for stateful operator " << op->name;
+    CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
+    Engine::Get()->PushAsync(
+      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx, req](
+          RunContext rctx,
+          engine::CallbackOnComplete on_complete) {
+        OpContext opctx{is_train, rctx, on_complete, requested};
+
+        std::vector<TBlob> input_blobs, output_blobs;
+        // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
+        std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
+        // mapping from index in input_blobs to index in pre_temp_dst
+        std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+        // populate input blobs and output blobs
+        SetupDefaultBlobsInOut(inputs, outputs, &input_blobs, &output_blobs,
+                               &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
+                               &in_temp_idx_map, mutate_idx);
+        // setup contexts
+        bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
+        // pre-fcompute fallback
+        CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
+        fcompute(state, opctx, input_blobs, req, output_blobs);
+        // post-fcompute fallback, cast to original storage type, if necessary
+        CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
+        if (exec_type == ExecType::kSync) {
+          if (is_gpu) {
+            rctx.get_stream<gpu>()->Wait();
+          }
+          on_complete();
+        }
+      }, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
   }
 }
 
 inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
-                        bool use_inputs,
-                        std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                        std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                               bool use_inputs,
+                               std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                               std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
@@ -469,9 +458,9 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
 
 
 inline bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
-                       bool use_inputs,
-                       std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                       std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                              bool use_inputs,
+                              std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                              std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
@@ -511,27 +500,26 @@ inline bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
   return false;
 }
 
-
-inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const Context& ctx,
-                              StorageTypeVector&& storage_types, bool use_inputs,
-                              std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                              std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const int dev_mask,
+                                     StorageTypeVector&& storage_types, bool use_inputs,
+                                     std::pair<uint32_t, uint32_t> node_range = {0, 0},
+                                     std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
-  bool ctx_match = false;
-  if (g.attrs.count("context")) {
-    const auto& prev_vctx = g.GetAttr<exec::ContextVector>("context");
-    if (prev_vctx.size() && prev_vctx[0].dev_mask() == ctx.dev_mask()) ctx_match = true;
+  bool dev_match = false;
+  if (g.attrs.count("dev_mask")) {
+    const auto& prev_vdev = g.GetAttr<exec::DevMaskVector>("dev_mask");
+    if (prev_vdev.size() && prev_vdev[0] == dev_mask) dev_match = true;
   }
-  if (!ctx_match) {
-    exec::ContextVector vctx(g.indexed_graph().num_nodes(), ctx);
-    g.attrs["context"] = std::make_shared<dmlc::any>(std::move(vctx));
+  if (!dev_match) {
+    exec::DevMaskVector vdev(g.indexed_graph().num_nodes(), dev_mask);
+    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(vdev));
   }
 
-  if (ctx_match && use_inputs) {
+  if (dev_match && use_inputs) {
     if (g.attrs.count("storage_type_inputs") &&
         g.GetAttr<StorageTypeVector>("storage_type_inputs") == storage_types) return true;
-  } else if (ctx_match && g.attrs.count("storage_type")) {
+  } else if (dev_match && g.attrs.count("storage_type")) {
     const auto& prev_storage_types = g.GetAttr<StorageTypeVector>("storage_type");
     CHECK_EQ(prev_storage_types.size(), storage_types.size());
     bool match = true;
@@ -551,17 +539,44 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const Context& ctx,
   if (node_range.second > node_range.first) {
     g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
   }
-  if (node_range.second > node_range.first) {
-    g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
-  }
   if (use_inputs) {
     g = exec::InferStorageType(std::move(g), std::move(storage_types));
   } else {
     g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(storage_types));
     g = exec::InferStorageType(std::move(g));
   }
-  CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
 
+  const auto &idx = g.indexed_graph();
+  const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  uint32_t node_start = 0, node_end = idx.num_nodes();
+  if (node_range.second > node_range.first) {
+    node_end = node_range.second;
+    node_start = node_range.first;
+  }
+  bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
+  if (log_verbose) {
+    for (uint32_t nid = node_start; nid < node_end; ++nid) {
+      const auto& inode = idx[nid];
+      if (inode.source->is_variable()) {
+        LOG(INFO) << "node " << nid << " var";
+      } else {
+        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
+                  << ": " << common::dispatch_mode_string(dispatch_modes[nid]);
+        for (const auto& e : inode.inputs) {
+          auto eid = idx.entry_id(e);
+          LOG(INFO) << "\t\tinput " << eid << ": "
+                    << common::stype_string(vstorage_type[eid]);
+        }
+        for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+          uint32_t eid = idx.entry_id(nid, index);
+          LOG(INFO) << "\t\toutput " << eid << ": "
+                    << common::stype_string(vstorage_type[eid]);
+        }
+      }
+    }
+  }
+  CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
   return false;
 }
 
