@@ -222,22 +222,22 @@ void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
 
 // Fill a rsp NDArray with zeros by updating the aux shape.
 template<typename xpu>
-void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
+void FillZerosRspImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
+  if (!dst.storage_initialized()) return;
   // reset the shapes if it's not zeros
-  auto storage_shape = dst->storage_shape();
+  auto storage_shape = dst.storage_shape();
   storage_shape[0] = 0;
-  dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+  dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
 }
 
 // Fill a CSR NDArray with zeros by updating the aux shape.
 template<typename xpu>
-void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
+void FillZerosCsrImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
+  if (!dst.storage_initialized()) return;
   // reset the shapes if it's not zeros
   TShape new_shape(mshadow::Shape1(0));
-  dst->set_aux_shape(csr::kIndPtr, new_shape);
-  dst->set_aux_shape(csr::kIdx, new_shape);
+  dst.set_aux_shape(csr::kIndPtr, new_shape);
+  dst.set_aux_shape(csr::kIdx, new_shape);
 }
 
 template<typename xpu>
@@ -255,10 +255,10 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
   if (stype == kRowSparseStorage) {
     NDArray nd(outputs[0]);
-    FillZerosRspImpl<xpu>(s, &nd);
+    FillZerosRspImpl<xpu>(s, nd);
   } else if (stype == kCSRStorage) {
     NDArray nd(outputs[0]);
-    FillZerosCsrImpl<xpu>(s, &nd);
+    FillZerosCsrImpl<xpu>(s, nd);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }

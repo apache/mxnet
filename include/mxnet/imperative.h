@@ -36,6 +36,45 @@ namespace mxnet {
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
+  /*! \brief */
+  class AGInfo {
+   public:
+    Context ctx;
+    OpReqType grad_req;
+    OpStatePtr state;
+    std::vector<NDArray> outputs;
+    std::vector<NDArray> out_grads;
+    bool fresh_out_grad;
+
+    AGInfo() :
+      grad_req(kNullOp), fresh_out_grad(false) {}
+
+    static void Clear(const nnvm::NodePtr& node) {
+      if (node == nullptr || node->info.empty()) return;
+      AGInfo& info = Get(node);
+      if (info.grad_req != kNullOp) return;
+      node->info.clear();
+    }
+
+    static AGInfo& Get(const nnvm::NodePtr& node) {
+      return dmlc::get<AGInfo>(node->info);
+    }
+
+    static AGInfo& Create(const nnvm::NodePtr& node) {
+      node->info.construct<AGInfo>();
+      return Get(node);
+    }
+
+    static bool IsNone(const NDArray& arr) {
+      return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
+    }
+
+    static bool IsVariable(const nnvm::NodePtr& node) {
+      AGInfo& info = Get(node);
+      return info.grad_req != kNullOp && info.outputs.size() == 1
+             && info.out_grads.size() == 1;
+    }
+  };
   class CachedOp {
    public:
     explicit CachedOp(const nnvm::Symbol& sym);
@@ -141,44 +180,6 @@ class Imperative {
 
  private:
   friend class NDArray;
-  /*! \brief */
-  class AGInfo {
-   public:
-    OpReqType grad_req;
-    OpStatePtr state;
-    std::vector<NDArray> outputs;
-    std::vector<NDArray> out_grads;
-    bool fresh_out_grad;
-
-    AGInfo() :
-      grad_req(kNullOp), fresh_out_grad(false) {}
-
-    static void Clear(const nnvm::NodePtr& node) {
-      if (node == nullptr || node->info.empty()) return;
-      AGInfo& info = Get(node);
-      if (info.grad_req != kNullOp) return;
-      node->info.clear();
-    }
-
-    static AGInfo& Get(const nnvm::NodePtr& node) {
-      return dmlc::get<AGInfo>(node->info);
-    }
-
-    static AGInfo& Create(const nnvm::NodePtr& node) {
-      node->info.construct<AGInfo>();
-      return Get(node);
-    }
-
-    static bool IsNone(const NDArray& arr) {
-      return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
-    }
-
-    static bool IsVariable(const nnvm::NodePtr& node) {
-      AGInfo& info = Get(node);
-      return info.grad_req != kNullOp && info.outputs.size() == 1
-             && info.out_grads.size() == 1;
-    }
-  };
   /*! \brief make constructor protected. */
   Imperative() {}
   /*! \brief find the input/output ndarrays that are needed for backward */
@@ -189,7 +190,6 @@ class Imperative {
       std::vector<bool> *p_save_outputs);
   void RunGraph(
       const bool retain_graph,
-      const Context& default_ctx,
       const nnvm::IndexedGraph& idx,
       const std::vector<NDArray*> arrays,
       size_t node_start, size_t node_end,

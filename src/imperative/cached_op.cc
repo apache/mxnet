@@ -195,7 +195,8 @@ nnvm::Graph Imperative::CachedOp::GetForwardGraph(
   bool match = true;
   match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx().dev_mask(),
+  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
+  match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
   if (!match) {
@@ -282,7 +283,8 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
                               node_range, entry_range);
   match &= CheckAndInferType(&g, std::move(dtypes), false,
                              node_range, entry_range);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx().dev_mask(), std::move(stypes),
+  exec::DevMaskVector dev_mask(idx.num_nodes(), inputs[0]->ctx().dev_mask());
+  match &= CheckAndInferStorageType(&g, std::move(dev_mask), std::move(stypes),
                                     false, node_range, entry_range);
 
   if (!match) {
@@ -352,7 +354,7 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   Imperative::Get()->RunGraph(
-      false, default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
+      false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states, dispatch_modes);
 
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
@@ -422,7 +424,7 @@ void Imperative::CachedOp::Backward(
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   Imperative::Get()->RunGraph(
-      retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
+      retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
       std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   if (retain_graph) {

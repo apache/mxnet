@@ -311,23 +311,33 @@ inline void PushFComputeEx(const FComputeEx& fn,
                     const std::vector<NDArray*>& p_inputs,
                     const std::vector<NDArray*>& p_outputs,
                     const std::vector<OpReqType>& req) {
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
+
   bool is_train = Imperative::Get()->is_training();
+  ExecType exec_type = ExecType::kSync;
+  if (fexec_type.count(op)) {
+    exec_type = fexec_type[op](attrs);
+  }
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushAsync([ctx, is_train, attrs, fn, inputs, outputs, requested, req](
+  const auto& run = [ctx, exec_type, is_train, attrs, fn, inputs, outputs, requested, req](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
-      std::vector<TBlob> input_blobs, output_blobs;
-      OpContext opctx{is_train, rctx,
-                      engine::CallbackOnComplete(),
-                      requested};
+      OpContext opctx{is_train, rctx, on_complete, requested};
       fn(attrs, opctx, inputs, req, outputs);
-      if (ctx.dev_mask() == gpu::kDevMask) {
-        rctx.get_stream<gpu>()->Wait();
+      if (exec_type == ExecType::kSync) {
+        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+          rctx.get_stream<gpu>()->Wait();
+        }
+        on_complete();
       }
-      on_complete();
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+    };
+  if (exec_type == ExecType::kLocal) {
+    run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+  } else {
+    Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
+  }
 }
 
 inline void PushOperator(const OpStatePtr& state,
@@ -500,20 +510,16 @@ inline bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
   return false;
 }
 
-inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const int dev_mask,
+inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev_mask,
                                      StorageTypeVector&& storage_types, bool use_inputs,
                                      std::pair<uint32_t, uint32_t> node_range = {0, 0},
                                      std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
-  bool dev_match = false;
-  if (g.attrs.count("dev_mask")) {
-    const auto& prev_vdev = g.GetAttr<exec::DevMaskVector>("dev_mask");
-    if (prev_vdev.size() && prev_vdev[0] == dev_mask) dev_match = true;
-  }
+  bool dev_match = g.attrs.count("dev_mask") &&
+                   g.GetAttr<exec::DevMaskVector>("dev_mask") == dev_mask;
   if (!dev_match) {
-    exec::DevMaskVector vdev(g.indexed_graph().num_nodes(), dev_mask);
-    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(vdev));
+    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(dev_mask));
   }
 
   if (dev_match && use_inputs) {
@@ -579,6 +585,54 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const int dev_mask,
   CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
   return false;
 }
+
+
+inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
+  static const auto& _copyto = Op::Get("_copyto");
+
+  std::vector<Context> vctx(
+      idx.num_nodes(), Context::Create(static_cast<Context::DeviceType>(-1), 0));
+  size_t num_unknown = idx.num_nodes();
+  // forward pass
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    if (!idx[i].source->info.empty()) {
+      vctx[i] = dmlc::get<Imperative::AGInfo>(idx[i].source->info).ctx;
+      --num_unknown;
+    } else if (idx[i].source->op() == _copyto) {
+      CHECK_GT(idx[i].source->control_deps.size(), 0);
+      auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
+      CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
+      vctx[i] = vctx[idx[fwd_nid].inputs[0].node_id];
+      --num_unknown;
+    } else if (idx[i].inputs.size()) {
+      vctx[i] = vctx[idx[i].inputs[0].node_id];
+      --num_unknown;
+    }
+  }
+  // backward pass
+  for (int i = idx.num_nodes() - 1; i >= 0; --i) {
+    if (vctx[i].dev_type == -1) continue;
+    if (idx[i].source->op() == _copyto) {
+      auto in_nid = idx[i].inputs[0].node_id;
+      if (vctx[in_nid].dev_type != -1) continue;
+      CHECK_GT(idx[i].source->control_deps.size(), 0);
+      auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
+      CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
+      vctx[in_nid] = vctx[fwd_nid];
+      --num_unknown;
+      continue;
+    }
+    for (const auto& j : idx[i].inputs) {
+      if (vctx[j.node_id].dev_type != -1) continue;
+      vctx[j.node_id] = vctx[i];
+      --num_unknown;
+    }
+  }
+  CHECK_EQ(num_unknown, 0) << "Unabled to decied context for nodes";
+
+  return vctx;
+}
+
 
 inline MemoryPlanVector PlanMemory(
     nnvm::Graph* p_g, nnvm::StorageVector&& storage,

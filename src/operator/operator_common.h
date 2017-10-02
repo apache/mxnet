@@ -112,6 +112,11 @@ inline bool type_is_none(const int& x) {
   return x == -1;
 }
 
+/*! \brief check if type is none (-1) */
+inline bool storage_type_is_none(const int& x) {
+  return x == -1;
+}
+
 /*! \brief check if shape is scalar({1}). */
 inline bool shape_is_scalar(const TShape& x) {
   return x.ndim() == 1 && x.Size() == 1;
