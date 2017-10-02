@@ -98,6 +98,9 @@ class KVStoreDist : public KVStoreLocal {
     if (get_rank() == 0) {
       SendCommandToServers(kSetCompress, compress_);
     }
+    //this fails. everyone just waits. why?
+//    Barrier();
+//    ps::Postoffice::Get()->Barrier(ps::kWorkerGroup + ps::kServerGroup);
   }
 
   void Barrier() override {
@@ -196,7 +199,8 @@ class KVStoreDist : public KVStoreLocal {
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
-        PSKV& pskv = EncodeKey(key, size, false);
+        bool is_compressed = (compress_!="none");
+        PSKV& pskv = EncodeKey(key, size, false, is_compressed);
 #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
@@ -295,7 +299,6 @@ class KVStoreDist : public KVStoreLocal {
         }
         CopyFromTo(merged, &comm_buf);
       }
-
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
       if (compress_ != "none") {
@@ -335,13 +338,12 @@ class KVStoreDist : public KVStoreLocal {
           LOG(FATAL) << "Unsupported quantization";
         }
       }
-
       // push to servers
       if (storage_type == kDefaultStorage) {
         if (compress_ == "none") {
           PushDefault(key, comm_buf, priority);
         } else {
-          PushDefault(key, small_buf, priority);
+          PushCompressed(key, comm_buf, small_buf, priority);
         }
       } else if (storage_type == kRowSparseStorage) {
         PushRowSparse(key, comm_buf, priority);
@@ -351,14 +353,75 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void PushDefault(int key, NDArray &send_buf, int priority){
+
+  void PushCompressed(int key, NDArray& comm_buf, NDArray &send_buf, int priority){
+    auto& comm_small_send_buf = comm_small_send_buf_[key];
+    PSKV& pskv = EncodeCompressedKey(key, send_buf.shape().Size(), true);
     std::vector<Engine::VarHandle> const_vars;
-    auto& comm_buf = comm_buf_[key];
-    const_vars.push_back(send_buf.var());
-    if (compress_ != "none") {
+    const_vars.push_back(comm_buf.var());
+    if (comm_buf.shape().Size() > bigarray_bound_) {
+      if (comm_small_send_buf.is_none()) {
+        comm_small_send_buf = NDArray(TShape{pskv.size}, comm_buf.ctx(), false, comm_buf.dtype());
+      }
+      size_t prev_from = 3;
+      size_t prev_to = 0;
+      int cursize = 0;
+      int original_size = comm_buf.shape().Size();
+      CHECK_GT(original_size,0);
+      NDArray meta = send_buf.Slice(0,3);
+      for(size_t i = 0; i<pskv.keys.size(); i++) {
+        NDArray part_meta = comm_small_send_buf.Slice(prev_to, prev_to+3);
+        NDArray part_data = comm_small_send_buf.Slice(prev_to+3, prev_to+pskv.lens[i]);
+        CopyFromTo(meta, &part_meta);
+        int part_num_orig = (pskv.lens[i]-3)*16;
+        part_meta.At(2) = part_num_orig;
+        cursize += part_num_orig;
+        CopyFromTo(send_buf.Slice(prev_from, prev_from+pskv.lens[i]-3), &part_data);
+        prev_to += pskv.lens[i];
+        prev_from += pskv.lens[i]-3;
+      }
+      CHECK_EQ(original_size, cursize);
+      const_vars.push_back(comm_small_send_buf.var());
+    } else {
       //if compress is set, then send_buf is different from comm_buf
-      const_vars.push_back(comm_buf.var());
+      const_vars.push_back(send_buf.var());
     }
+
+    std::cout<<"comm buf shape is "<<comm_buf.shape().Size()<<std::endl;
+    auto push_to_servers =
+      [this, key, pskv, &const_vars, comm_buf, &comm_small_send_buf, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+        // convert to ps keys
+        size_t size = 0;
+        real_t* data = nullptr;
+        if ( comm_buf.shape().Size() > bigarray_bound_ ){
+          data = comm_small_send_buf.data().dptr<real_t>();
+          #if MKL_EXPERIMENTAL == 1
+          mkl_set_tblob_eager_mode(comm_small_send_buf.data());
+          #endif
+          size = comm_small_send_buf.shape().Size();
+        } else {
+          data = send_buf.data().dptr<real_t>();
+          #if MKL_EXPERIMENTAL == 1
+          mkl_set_tblob_eager_mode(send_buf.data());
+          #endif
+          size = send_buf.shape().Size();
+        }
+        // do push. false means no delete
+        ps::SArray<real_t> vals(data, size, false);
+        CHECK_NOTNULL(ps_worker_)->ZPush(
+          pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
+      };
+    Engine::Get()->PushAsync(
+      push_to_servers,
+      pinned_ctx_,
+      const_vars,
+      {},
+      FnProperty::kNormal,
+      priority,
+      PROFILER_MESSAGE("KVStoreDistCompressedPush"));
+  }
+
+  void PushDefault(int key, NDArray &send_buf, int priority){
     auto push_to_servers =
         [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
@@ -378,7 +441,7 @@ class KVStoreDist : public KVStoreLocal {
     Engine::Get()->PushAsync(
         push_to_servers,
         pinned_ctx_,
-        const_vars,
+        {send_buf.var()},
         {},
         FnProperty::kNormal,
         priority,
@@ -492,6 +555,88 @@ class KVStoreDist : public KVStoreLocal {
    */
   std::mutex mu_;
 
+  size_t roundUp(size_t numToRound, size_t  multiple)
+  {
+    assert(multiple && ((multiple & (multiple - 1)) == 0));
+    return (numToRound + multiple - 1) & -multiple;
+  }
+
+
+  PSKV& EncodeKey(int key, size_t size, bool is_push, bool is_compressed) {
+    if (is_compressed) {
+      EncodeCompressedKey(key, size, is_push);
+    } else {
+      EncodeKey(key, size, is_push);
+    }
+  }
+
+  /**
+   * \brief convert to keys in ps for compressed values
+   * \brief buf_size will be size of recv_buf (original size) if pull
+   * buf_size will be size of quantized array if push. Actual size of
+   * send_buf in this case will add few counts of meta information
+   * to each part if divided
+   */
+  inline PSKV& EncodeCompressedKey(int key, size_t buf_size, bool is_push) {
+    size_t original_size = comm_buf_[key].shape().Size();
+    size_t size = (is_push) ? buf_size : original_size;
+    mu_.lock();
+    PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
+    mu_.unlock();
+    if (!pskv.keys.empty()) {
+      //will fail
+//      CHECK_EQ(static_cast<size_t>(pskv.size), size)<< "The value size cannot be changed";
+    } else {
+      auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
+      int num_servers = krs.size();
+      CHECK_GT(num_servers, 0);
+      // a simple heuristic for load balance
+      if (original_size < bigarray_bound_) {
+        // send it to a single random picked server
+        int server = (key * 9973) % num_servers;
+        ps::Key ps_key = krs[server].begin() + key;
+        CHECK_LT(ps_key, krs[server].end());
+        pskv.keys.push_back(ps_key);
+        pskv.lens.push_back(size);
+        pskv.size = size;
+      } else {
+        // partition it to all servers
+        pskv.size = 0;
+        size_t final_size;
+        if (is_push) {
+          final_size = buf_size+3*(num_servers-1);
+          for (int i = 0; i < num_servers; ++i) {
+            //if pushing, divide size of compressed array into blocks of 16, so we don't split between a compressed value
+            //if pulling, need to divide exact way as above did
+            size_t part_size = is_push? (roundUp((size-3)/num_servers*(i+1), 16) - roundUp((size-3)/num_servers*(i), 16) + 3)
+                                      : (roundUp((size)/num_servers*(i+1), 1) - roundUp((size)/num_servers*(i), 1));
+            ps::Key ps_key = krs[i].begin() + key;
+            CHECK_LT(ps_key, krs[i].end());
+            pskv.keys.push_back(ps_key);
+
+            //if last block was rounded up to beyond size of our data, set it to end of data
+            if (i == num_servers-1 && ((pskv.size+part_size) > final_size)) {
+              part_size = buf_size + 3*(num_servers-1) - pskv.size;
+            }
+            pskv.lens.push_back(part_size);
+            pskv.size += part_size;
+          }
+          CHECK_EQ(static_cast<size_t>(pskv.size), final_size);
+        } else {
+          PSKV& push_pskv = push_ps_kv_[key];
+          for (int i=0; i<push_pskv.lens.size(); i++) {
+            pskv.keys.push_back(push_pskv.keys[i]);
+            pskv.lens.push_back((push_pskv.lens[i]-3)*16);
+            pskv.size += pskv.lens[i];
+          }
+          CHECK_EQ(pskv.size, original_size);
+        }
+
+      }
+    }
+    return pskv;
+  }
+
   /**
    * \brief convert to keys in ps
    */
@@ -500,7 +645,6 @@ class KVStoreDist : public KVStoreLocal {
     PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
     mu_.unlock();
     if (!pskv.keys.empty()) {
-      // For compress, we cannt check here
       CHECK_EQ(static_cast<size_t>(pskv.size), size) << "The value size cannot be changed";
     } else {
       auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
@@ -532,7 +676,6 @@ class KVStoreDist : public KVStoreLocal {
         CHECK_EQ(static_cast<size_t>(pskv.size), size);
       }
     }
-
     return pskv;
   }
 
@@ -606,10 +749,10 @@ class KVStoreDist : public KVStoreLocal {
    * \brief threshold for partition
    */
   size_t bigarray_bound_;
-
   std::unordered_map<int, NDArray> comm_buf_;
   /// \brief small buffer for quantize
   std::unordered_map<int, NDArray> comm_small_buf_;
+  std::unordered_map<int, NDArray> comm_small_send_buf_;
   /// \brief residual buffer for quantize
   std::unordered_map<int, NDArray> residual_;
   /// \brief threshold for quantize

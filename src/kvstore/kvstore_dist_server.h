@@ -156,7 +156,6 @@ class KVStoreDistServer {
       sync_mode_ = true;
     } else if (recved.head == kSetCompress) {
       compress_ = recved.body;
-      std::cout<<"Setting compress to "<<compress_<<std::endl;
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -389,11 +388,16 @@ class KVStoreDistServer {
       NDArray recved = NDArray(recv_blob, 0);
       NDArray decomp_buf = decomp_buf_[key];
       if (compress_ != "none") {
+//        std::cout<<"threshold value is "<<(*(recv_blob.dptr<float>()+0))
+//                 <<" and "<<(*(recv_blob.dptr<float>()+1))<<" "<<(*(recv_blob.dptr<float>()+2))<< " "<<(*(recv_blob.dptr<float>()+3))<<std::endl;
+//        std::cout<<"threshold value is "<<*((float *) recv_blob.dptr_)<<" "<<std::endl;
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
         if (decomp_buf.is_none()) {
           decomp_buf = NDArray(dshape, Context());
         }
+        std::cout<<"in data handle of server, original size is "<<original_size<<" and small size is "<<req_data.vals.size()<<std::endl;
+
       }
  
       if (stored.is_none()) {
