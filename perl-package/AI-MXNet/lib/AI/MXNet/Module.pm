@@ -147,7 +147,7 @@ func _update_params(
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
             # use a better solution later
-            &{$updater}($index*$num_device+$k, $g, $w);
+            $updater->($index*$num_device+$k, $g, $w);
         }, $arg_list, $grad_list);
     }, $param_arrays, $grad_arrays);
 }
@@ -457,13 +457,13 @@ method init_params(
                     }
                     if(defined $initializer)
                     {
-                        &{$initializer}($name, $arr);
+                        $initializer->($name, $arr);
                     }
                 }
             }
             else
             {
-                &{$initializer}($name, $arr) if defined $initializer;
+                $initializer->($name, $arr) if defined $initializer;
             }
     };
     my $attrs = $self->_symbol->attr_dict;

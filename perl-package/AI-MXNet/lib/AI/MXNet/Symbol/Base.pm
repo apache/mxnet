@@ -90,6 +90,14 @@ func _make_atomic_symbol_function($handle, $name)
         $ret_type) = @{ check_call(AI::MXNetCAPI::SymbolGetAtomicSymbolInfo($handle)) };
     $ret_type //= '';
     my $func_name = $name;
+    my @arguments;
+    my %arguments = map { $_ => 1 } qw/name attr lr_mult wd_mult
+                                       init __layout__ dtype shape/;
+    for my $i (0..@{ $arg_names }-1)
+    {
+        push @arguments, $arg_names->[$i];
+        $arguments{ $arg_names->[$i] } = 1;
+    }
     my $doc_str = build_doc($func_name,
                             $desc,
                             $arg_names,
@@ -99,7 +107,7 @@ func _make_atomic_symbol_function($handle, $name)
                             $ret_type
     );
     my $creator = sub {
-        my $class = shift;
+        my $class = ref($_[0]) || shift;
         my (@args, %kwargs);
         if(
             @_
@@ -114,6 +122,7 @@ func _make_atomic_symbol_function($handle, $name)
         }
         elsif(blessed $_[0] and $_[0]->isa(__PACKAGE__))
         {
+
             while(blessed $_[0] and $_[0]->isa(__PACKAGE__))
             {
                 push @args, shift(@_);
@@ -122,7 +131,18 @@ func _make_atomic_symbol_function($handle, $name)
         }
         else
         {
-            %kwargs = @_;
+            while(@_ >= 2 and not ref $_[-2]
+                    and (exists $arguments{ $_[-2] } or (blessed $_[-1] and $_[-1]->isa(__PACKAGE__))))
+            {
+                my $v = pop(@_);
+                my $k = pop(@_);
+                $kwargs{ $k } = $v;
+            }
+            @kwargs{ @arguments[0..@args-1] } = @args;
+        }
+        if(blessed $class and $class->isa(__PACKAGE__))
+        {
+            $kwargs{data} = $class;
         }
         my $params = {};
         my $symbol_kwargs = {};
