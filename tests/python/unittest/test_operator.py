@@ -401,6 +401,19 @@ def test_relu():
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
+def test_elu():
+    def felu(x):
+        x2 = x.copy()
+        negind = x < 0
+        x2[negind] = np.exp(x2[negind]) - 1
+        return x2
+    shape = (15,)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.LeakyReLU(x, act_type="elu", slope=1.0)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = felu(xa)
+    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_symbolic_forward(y, [xa], [ya])
 
 def test_sigmoid():
     def fsigmoid(a):
