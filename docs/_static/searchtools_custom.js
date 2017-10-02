@@ -10,7 +10,7 @@
  */
 
 
-/* Non-minified version JS is _stemmer.js if file is provided */ 
+/* Non-minified version JS is _stemmer.js if file is provided */
 /**
  * Porter Stemmer
  */
@@ -406,7 +406,7 @@ var Search = {
         return (left > right) ? -1 : ((left < right) ? 1 : 0);
       }
     });
-    
+
     //Render result for preview
     if(isPreview) {
         var prevNum = 0;
@@ -436,7 +436,7 @@ var Search = {
                 highlightstring + item[2]).html(item[1]));
             } else {
                 // normal html builders
-                var baseURL = 'http://mxnet.io/';
+                var baseURL = 'https://' + window.location.hostname + '/';
                 listItem.append($('<a/>').attr('href',
                 baseURL + item[0] + DOCUMENTATION_OPTIONS.FILE_SUFFIX +
                 highlightstring + item[2]).html(item[1]));
@@ -719,7 +719,7 @@ var Search = {
         scoreDict[filenames[file]][titles[file]] += score;
       }
     }
-    
+
     for(var file in scoreDict) {
       for(var title in scoreDict[file]) {
         results.push([file, title, '', null, scoreDict[file][title]]);
@@ -757,14 +757,14 @@ var Search = {
 
 $(document).ready(function() {
   var searchBoxWidth = $('#search-input-wrap').width();
-  var searchBoxWidthModifier = 150; 
+  var searchBoxWidthModifier = 150;
   var focusInputColor = "white";
   var focusIconColor = "dimgray";
   var focusPlaceColor = "searchBoxExp";
   var normalInputColor = "transparent";
   var normalIconColor = "white";
   var normalPlaceColor = "searchBoxNorm";
-    
+
   function focusOut() {
     $("#search-input-wrap").css('width', '');
     $(".searchBox").width(searchBoxWidth);
@@ -793,14 +793,14 @@ $(document).ready(function() {
       isPreview = false;
     }
   });
-    
+
   //Click to focus out
   $('body').click(function (e) {
     if(e.target.id == 'search-preview' || e.target.name == 'q' || $(e.target).parents("#search-preview").size()) return;
 
     focusOut();
   });
-    
+
   //Press esc to focus out
   $(document).keyup(function(e) {
      if (e.keyCode == 27) { // escape key maps to keycode `27`
@@ -808,7 +808,7 @@ $(document).ready(function() {
        focusOut();
      }
   });
-    
+
   //Add search result preview
   $('#search-input-wrap input').on('input', function () {
       if($(this).val().length == 0) {

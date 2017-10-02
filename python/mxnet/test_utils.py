@@ -135,21 +135,31 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     """Returns CSRNDArray with uniform distribution
     This generates a csr matrix with totalnnz unique randomly chosen numbers
     from num_rows*num_cols and arranges them in the 2d array in the
-    following way: row_index = (random_number_generated / num_rows)
+    following way:
+    row_index = (random_number_generated / num_rows)
     col_index = random_number_generated - row_index * num_cols
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as spsp
-    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
-    if data_init is not None:
-        csr.data.fill(data_init)
-    if shuffle_csr_indices is True:
-        shuffle_csr_column_indices(csr)
-    result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
-                                     (num_rows, num_cols), dtype=dtype)
+    try:
+        from scipy import sparse as spsp
+        csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+        if data_init is not None:
+            csr.data.fill(data_init)
+        if shuffle_csr_indices is True:
+            shuffle_csr_column_indices(csr)
+        result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
+                                         (num_rows, num_cols), dtype=dtype)
+    except ImportError:
+        assert(data_init is None), \
+               "data_init option is not supported when scipy is absent"
+        assert(not shuffle_csr_indices), \
+               "shuffle_csr_indices option is not supported when scipy is absent"
+        # scipy not available. try to generate one from a dense array
+        dns = mx.nd.random.uniform(shape=(num_rows, num_cols), dtype=dtype)
+        masked_dns = dns * (dns < density)
+        result = masked_dns.tostype('csr')
     return result
-
 
 def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """Returns CSRNDArray with powerlaw distribution
@@ -246,6 +256,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
+
     Parameters
     ----------
     shape: list or tuple
@@ -253,9 +264,11 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     density, optional: float, should be between 0 and 1
     distribution, optional: str, valid values: "uniform" or "powerlaw"
     dtype, optional: numpy.dtype, default value is None
+
     Returns
     -------
     Result of type CSRNDArray or RowSparseNDArray
+
     Examples
     --------
     Below is an example of the powerlaw distribution with csr as the stype.
@@ -265,7 +278,18 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     else, remaining unused_nnzs will be used in n+1th row
     If number of cols is too small and we have already reached column size it will fill up
     all following columns in all followings rows until we reach the required density.
-    density = rnd.rand() if density is None else density
+
+    >>> csr_arr, _ = rand_sparse_ndarray(shape=(5, 16), stype="csr",
+                                         density=0.50, distribution="powerlaw")
+    >>> indptr = csr_arr.indptr.asnumpy()
+    >>> indices = csr_arr.indices.asnumpy()
+    >>> data = csr_arr.data.asnumpy()
+    >>> row2nnz = len(data[indptr[1]:indptr[2]])
+    >>> row3nnz = len(data[indptr[2]:indptr[3]])
+    >>> assert(row3nnz == 2*row2nnz)
+    >>> row4nnz = len(data[indptr[3]:indptr[4]])
+    >>> assert(row4nnz == 2*row3nnz)
+
     """
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
@@ -516,6 +540,13 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
 
     assert_almost_equal(a, b, rtol, atol, names)
 
+def assert_exception(f, exception_type, *args, **kwargs):
+    """Test that function f will throw an exception of type given by `exception_type`"""
+    try:
+        f(*args, **kwargs)
+        assert(False)
+    except exception_type:
+        return
 
 def retry(n):
     """Retry n times before failing for stochastic test cases."""

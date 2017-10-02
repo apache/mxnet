@@ -27,24 +27,25 @@ This module contains definitions for the following model architectures:
 -  `ResNet V2`_
 -  `SqueezeNet`_
 -  `VGG`_
+-  `MobileNet`_
 
 You can construct a model with random weights by calling its constructor:
 .. code::
 
-    import mxnet.gluon.models as models
-    resnet18 = models.resnet18_v1()
-    alexnet = models.alexnet()
-    squeezenet = models.squeezenet1_0()
-    densenet = models.densenet_161()
+    from mxnet.gluon.model_zoo import vision
+    resnet18 = vision.resnet18_v1()
+    alexnet = vision.alexnet()
+    squeezenet = vision.squeezenet1_0()
+    densenet = vision.densenet_161()
 
 We provide pre-trained models for all the models except ResNet V2.
 These can constructed by passing
 ``pretrained=True``:
 .. code::
 
-    import mxnet.gluon.models as models
-    resnet18 = models.resnet18_v1(pretrained=True)
-    alexnet = models.alexnet(pretrained=True)
+    from mxnet.gluon.model_zoo import vision
+    resnet18 = vision.resnet18_v1(pretrained=True)
+    alexnet = vision.alexnet(pretrained=True)
 
 Pretrained models are converted from torchvision.
 All pre-trained models expect input images normalized in the same way,
@@ -67,6 +68,7 @@ The transformation should preferrably happen at preprocessing. You can use
 .. _ResNet V2: https://arxiv.org/abs/1512.03385
 .. _SqueezeNet: https://arxiv.org/abs/1602.07360
 .. _VGG: https://arxiv.org/abs/1409.1556
+.. _MobileNet: https://arxiv.org/abs/1704.04861
 """
 
 from .alexnet import *

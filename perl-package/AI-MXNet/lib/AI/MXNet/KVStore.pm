@@ -309,14 +309,17 @@ method num_workers()
     ----------
     fname : str
         Path to output states file.
+    dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
 =cut
 
-method save_optimizer_states(Str $fname)
+method save_optimizer_states(Str $fname, Bool :$dump_optimizer=0)
 {
     confess("Cannot save states for distributed training")
         unless defined $self->_updater;
     open(F, ">:raw", "$fname") or confess("can't open $fname for writing: $!");
-    print F $self->_updater->get_states();
+    print F $self->_updater->get_states($dump_optimizer);
     close(F);
 }
 

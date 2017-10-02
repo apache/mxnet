@@ -17,16 +17,17 @@
 
 # pylint: skip-file
 import os, gzip
-import pickle as pickle
 import sys
 
-def get_libsvm_data(data_dir, data_name, url, data_origin_name):
+def get_libsvm_data(data_dir, data_name, url):
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
     os.chdir(data_dir)
     if (not os.path.exists(data_name)):
+        print("Dataset " + data_name + " not present. Downloading now ...")
         import urllib
-        zippath = os.path.join(data_dir, data_origin_name)
-        urllib.urlretrieve(url, zippath)
-        os.system("bzip2 -d %r" % data_origin_name)
+        zippath = os.path.join(data_dir, data_name + ".bz2")
+        urllib.urlretrieve(url + data_name + ".bz2", zippath)
+        os.system("bzip2 -d %r" % data_name + ".bz2")
+        print("Dataset " + data_name + " is now present.")
     os.chdir("..")

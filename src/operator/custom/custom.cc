@@ -342,7 +342,22 @@ void Backward(const OpStatePtr& state,
   Imperative::Get()->set_is_recording(prev_recording);
 }
 
-
+// infer storage function for custom op, which assigns kDefaultStorage for
+// all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
+inline bool InferStorageType(const nnvm::NodeAttrs& attrs,
+                             const int dev_mask,
+                             DispatchMode* dispatch_mode,
+                             std::vector<int> *iattr,
+                             std::vector<int> *oattr) {
+  for (int& v : *oattr) {
+    if (v == -1) v = kDefaultStorage;
+  }
+  for (int& v : *iattr) {
+    if (v == -1) v = kDefaultStorage;
+  }
+  dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+  return true;
+}
 
 NNVM_REGISTER_OP(Custom)
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
@@ -383,6 +398,7 @@ Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
@@ -404,7 +420,8 @@ NNVM_REGISTER_OP(_backward_Custom)
     return ExecType::kLocal;
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
 
 }  // namespace custom
 }  // namespace op

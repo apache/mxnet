@@ -140,7 +140,8 @@ DMLC_REGISTER_PARAMETER(MultiSampleParam);
                                          input_name_1, input_name_2, \
                                          input_desc_1, input_desc_2, \
                                          description) \
-  NNVM_REGISTER_OP(sample_##distr) \
+  NNVM_REGISTER_OP(_sample_##distr) \
+  .add_alias("sample_" #distr) \
   .describe(description()+std::string(ADD_FILELINE)) \
   .set_num_inputs(num_inputs) \
   .set_num_outputs(1) \
