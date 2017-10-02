@@ -101,7 +101,7 @@ class L2Loss(Loss):
     """Calculates the mean squared error between output and label.
 
     .. math::
-        L = \\frac{1}{2}\\sum_i \\Vert {output}_i - {label}_i \\Vert^2.
+        L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert^2.
 
     Output and label can have arbitrary shape as long as they have the same
     number of elements.
@@ -176,7 +176,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
     BCE loss is useful when training logistic regression.
 
     .. math::
-        loss(o, t) = - 1/n \sum_i (t[i] * log(o[i]) + (1 - t[i]) * log(1 - o[i]))
+        loss(o, t) = - 1/n \\sum_i (t[i] * \\log(o[i]) + (1 - t[i]) * \\log(1 - o[i]))
 
 
     Parameters
@@ -336,7 +336,6 @@ class KLDivLoss(Loss):
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
-
 class CTCLoss(Loss):
     r"""Connectionist Temporal Classification Loss.
 
@@ -416,3 +415,154 @@ class CTCLoss(Loss):
                                  data_lengths=data_lengths, label_lengths=label_lengths,
                                  blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)
+
+
+class HuberLoss(Loss):
+    """Calculates smoothed L1 loss that is equal to L1 loss if absolute error
+    exceeds rho but is equal to L2 loss otherwise. Also called SmoothedL1 loss.
+
+    .. math::
+        L = \\begin{cases} \\frac{1}{2 \\rho} ({output}_i - {label}_i)^2 &
+                           \\text{ if } |{output}_i - {label}_i| < \\rho \\\
+                           |{output}_i - {label}_i| - \\frac{\\rho}{2} &
+                           \\text{ otherwise }
+            \\end{cases}
+
+    Output and label must have the same number of elements.
+
+    Parameters
+    ----------
+    rho : float
+        Threshold for trimmed mean estimator. By default set to 1
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, rho=1, weight=None, batch_axis=0, **kwargs):
+        super(HuberLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._rho = rho
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.abs(output - label)
+        loss = F.where(loss > self._rho, loss - 0.5 * self._rho,
+                       (0.5/self._rho) * F.square(loss))
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+
+class HingeLoss(Loss):
+    """Calculates the hinge loss function often used in SVMs:
+
+    .. math::
+        L = max(0, \\margin - {output}_i {label}_i)
+
+    where output is the classifier prediction and label is the target tensor
+    containing values -1 or 1. Output and label must have the same number of
+    elements.
+
+    Parameters
+    ----------
+    margin : float
+        The margin in hinge loss. Defaults to 1.0
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, margin=1, weight=None, batch_axis=0, **kwargs):
+        super(HingeLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._margin = margin
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.relu(margin - output * label)
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+
+class SquaredHingeLoss(Loss):
+    """Calculates the soft-margin loss function used in SVMs:
+
+    .. math::
+        L = max(0, 1 - {output}_i {label}_i)^2
+
+    Output and label can have arbitrary shape as long as they have the same
+    number of elements.
+
+    Parameters
+    ----------
+    margin : float
+        The margin in hinge loss. Defaults to 1.0
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, margin=1, weight=None, batch_axis=0, **kwargs):
+        super(SquaredHingeLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._margin = margin
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.square(F.relu(self._margin - output * label))
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+
+class LogisticLoss(Loss):
+    """Calculates the logistic loss (for binary losses only):
+
+    .. math::
+        L = \\log(1 + \\exp(- {output}_i {label}_i))
+
+    Output and label can have arbitrary shape as long as they have the same
+    number of elements.
+
+    Parameters
+    ----------
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, weight=None, batch_axis=0, **kwargs):
+        super(Logistic, self).__init__(weight, batch_axis, **kwargs)
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        label = _reshape_label_as_output(F, output, label)
+        loss = F.log(1.0 + F.exp(-output * label))
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
+
+class TripletLoss(Loss):
+    """Calculates the mean squared error between output and label:
+
+    .. math::
+        L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert^2.
+
+    Output and label can have arbitrary shape as long as they have the same
+    number of elements.
+
+    Parameters
+    ----------
+    margin : float
+        Margin of separation between correct and incorrect pair.
+    weight : float or None
+        Global scalar weight for loss.
+    axis : int, default 1
+        The axis over which to sum distances.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    """
+    def __init__(self, margin=1, weight=None, batch_axis=0, **kwargs):
+        super(TripletLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._margin = margin
+
+    def hybrid_forward(self, F, output, positive, negative):
+        loss = F.sum(F.square(output-positive) - F.square(output-negative),
+                     axis=self._batch_axis, exclude=True)
+        loss = F.relu(loss + self._margin)
+        return _apply_weighting(F, loss, self._weight, None)
