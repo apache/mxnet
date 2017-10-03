@@ -1463,10 +1463,10 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
                      "kdda.t.bz2")
     """
 
-    download(url, dirname=data_dir, overwrite=False)
-    cwd = os.path.abspath(os.getcwd())
-    os.chdir(data_dir)
+    data_name = os.path.join(data_dir, data_name)
+    data_origin_name = os.path.join(data_dir, data_origin_name)
     if not os.path.exists(data_name):
+        download(url, dirname=data_dir, overwrite=False)
         bz_file = bz2.BZ2File(data_origin_name, 'rb')
         with open(data_name, 'wb') as fout:
             try:
@@ -1475,7 +1475,6 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
             finally:
                 bz_file.close()
         os.remove(data_origin_name)
-    os.chdir(cwd)
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
