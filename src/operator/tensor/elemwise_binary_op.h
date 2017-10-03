@@ -183,30 +183,6 @@ class ElemwiseBinaryOp : public OpBase {
     return a1.var() == a2.var();
   }
 
-  /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
-  template<typename DType, typename IType, typename OP>
-  static void RspRspOp(mshadow::Stream<cpu> *s,
-                       const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
-                       const NDArray &lhs,
-                       const NDArray &rhs,
-                       const OpReqType req,
-                       const NDArray &output,
-                       const bool lhs_may_be_dense,
-                       const bool rhs_may_be_dense,
-                       const bool allow_inplace,
-                       const bool scatter);
-
-  /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
-  template<typename DType, typename IType, typename CType, typename OP>
-  static inline void CsrCsrOp(mshadow::Stream<cpu> *s,
-                              const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const NDArray &lhs,
-                              const NDArray &rhs,
-                              const OpReqType req,
-                              const NDArray &output);
-
   /*! \brief Minimum of three */
   static MSHADOW_XINLINE size_t minthree(const size_t a, const size_t b, const size_t c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
@@ -291,13 +267,13 @@ class ElemwiseBinaryOp : public OpBase {
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
         RspRspOp<DType, IType, LOP>(
           s, attrs, ctx, inputs[1], inputs[2], req[0], outputs[0],
-          false, false, false);
+          false, false, false, false);
       });
       // lhs in-place
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
         RspRspOp<DType, IType, mshadow::op::mul>(
           s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
-          false, false, true);
+          false, false, true, false);
       });
     }
     // rhs grad
@@ -305,16 +281,41 @@ class ElemwiseBinaryOp : public OpBase {
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
         RspRspOp<DType, IType, ROP>(
           s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
-          false, false, false);
+          false, false, false, false);
       });
       // rhs in-place
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
         RspRspOp<DType, IType, mshadow::op::mul>(
           s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
-          false, false, true);
+          false, false, true, false);
       });
     }
   }
+
+ protected:
+  /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
+  template<typename DType, typename IType, typename OP>
+  static void RspRspOp(mshadow::Stream<cpu> *s,
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       const OpReqType req,
+                       const NDArray &output,
+                       const bool lhs_may_be_dense,
+                       const bool rhs_may_be_dense,
+                       const bool allow_inplace,
+                       const bool scatter);
+
+  /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
+  template<typename DType, typename IType, typename CType, typename OP>
+  static inline void CsrCsrOp(mshadow::Stream<cpu> *s,
+                              const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const NDArray &lhs,
+                              const NDArray &rhs,
+                              const OpReqType req,
+                              const NDArray &output);
 
  public:
   template<typename xpu, typename OP>
@@ -430,7 +431,7 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_IDX_TYPE_SWITCH(outputs[0].aux_type(rowsparse::kIdx), IType, {
           RspRspOp<DType, IType, OP>(
             s, attrs, ctx, inputs[0], inputs[1],
-            req[0], outputs[0], lhs_may_be_dense, rhs_may_be_dense, false);
+            req[0], outputs[0], lhs_may_be_dense, rhs_may_be_dense, false, false);
         });
       });
     } else {

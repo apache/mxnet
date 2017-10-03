@@ -409,7 +409,8 @@ parameter values:
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ClipEx<cpu>)
 .set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
-                                                     const Context& ctx,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
                                                      std::vector<int> *in_attrs,
                                                      std::vector<int> *out_attrs) {
     // For clipping ranges that cross zero, sparse output is possible

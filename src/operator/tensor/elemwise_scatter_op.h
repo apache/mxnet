@@ -122,15 +122,16 @@ class ElemwiseScatterBinaryOp : public ElemwiseBinaryOp {
                          const std::vector<NDArray> &inputs,
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
-    ScatterWrap<gpu>(attrs, ctx, inputs, req,
-                     outputs, false, [](const nnvm::NodeAttrs &attrs,
-                                        const OpContext &ctx,
-                                        const std::vector<NDArray> &inputs,
-                                        const std::vector<OpReqType> &req,
-                                        const std::vector<NDArray> &outputs) {
-        FCompExFallback<gpu>(attrs, ctx, inputs, req, outputs, ElemwiseBinaryOp::Compute<gpu, OP>,
-                             "ComputeEx_");
-      });
+//    ScatterWrap<gpu>(attrs, ctx, inputs, req,
+//                     outputs, false, [](const nnvm::NodeAttrs &attrs,
+//                                        const OpContext &ctx,
+//                                        const std::vector<NDArray> &inputs,
+//                                        const std::vector<OpReqType> &req,
+//                                        const std::vector<NDArray> &outputs) {
+//        FCompExFallback<gpu>(attrs, ctx, inputs, req, outputs, ElemwiseBinaryOp::Compute<gpu, OP>,
+//                             "ComputeEx_");
+//      });
+    LOG(FATAL) << "NOT IMPLEMENTED";
   }
 #endif  // #ifdef __CUDACC__
 
@@ -180,15 +181,16 @@ class ElemwiseScatterBinaryScalarOp : public BinaryScalarOp {
     if (outputs[0].storage_type() == inputs[0].storage_type()) {
       BinaryScalarOp::ComputeEx<gpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
-      ScatterWrap<cpu>(attrs, ctx, inputs, req,
-                       outputs, false, [](const nnvm::NodeAttrs &attrs,
-                                          const OpContext &ctx,
-                                          const std::vector<NDArray> &inputs,
-                                          const std::vector<OpReqType> &req,
-                                          const std::vector<NDArray> &outputs) {
-          FCompExFallback<gpu>(attrs, ctx, inputs, req, outputs, BinaryScalarOp::Compute<gpu, OP>,
-                               "ComputeEx_");
-        });
+      CHECK(false) << "Unsupported operation";
+//      ScatterWrap<cpu>(attrs, ctx, inputs, req,
+//                       outputs, false, [](const nnvm::NodeAttrs &attrs,
+//                                          const OpContext &ctx,
+//                                          const std::vector<NDArray> &inputs,
+//                                          const std::vector<OpReqType> &req,
+//                                          const std::vector<NDArray> &outputs) {
+//          FCompExFallback<gpu>(attrs, ctx, inputs, req, outputs, BinaryScalarOp::Compute<gpu, OP>,
+//                               "ComputeEx_");
+//        });
     }
   }
 #endif  // __CUDACC__
