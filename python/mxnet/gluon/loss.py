@@ -113,16 +113,15 @@ class L2Loss(Loss):
     batch_axis : int, default 0
         The axis that represents mini-batch.
 
-
-    Input shape:
-        `output` is the prediction tensor.
-        `label` is the truth tensor and should have the same shape as `output`.
-        `sample_weight` is a matrix for per-sample weighting. Must be broadcastable to
-        the same shape as loss. For example, if loss has shape (64, 10) and you want
+    Inputs:
+        - output: prediction tensor with arbitrary shape
+        - label: truth tensor with the same size as output.
+        - sample_weight: element-wise weighting tensor. Must be broadcastable to
+        the same shape as output. For example, if output has shape (64, 10) and you want
         to weigh each sample in the batch separately, `sample_weight` should have shape (64, 1).
 
-    Output shape:
-        The loss output has the shape (batch_size,).
+    Outputs:
+        - loss: loss tensor with shape (batch_size,).
     """
     def __init__(self, weight=1., batch_axis=0, **kwargs):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
