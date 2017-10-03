@@ -376,7 +376,6 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
-    
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
@@ -390,14 +389,11 @@ class KVStoreDistServer {
       if (compress_ != "none") {
 //        std::cout<<"threshold value is "<<(*(recv_blob.dptr<float>()+0))
 //                 <<" and "<<(*(recv_blob.dptr<float>()+1))<<" "<<(*(recv_blob.dptr<float>()+2))<< " "<<(*(recv_blob.dptr<float>()+3))<<std::endl;
-//        std::cout<<"threshold value is "<<*((float *) recv_blob.dptr_)<<" "<<std::endl;
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
         if (decomp_buf.is_none()) {
           decomp_buf = NDArray(dshape, Context());
         }
-        std::cout<<"in data handle of server, original size is "<<original_size<<" and small size is "<<req_data.vals.size()<<std::endl;
-
       }
  
       if (stored.is_none()) {
@@ -420,14 +416,29 @@ class KVStoreDistServer {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
+//            std::cout<<"recvd threshold"<<* (float*) recved.data().dptr_<<std::endl;
+//            std::cout<<"recvd data"<<* ((float*) recved.data().dptr_+3)<<std::endl;
+//            for(int i=3; i<recved.shape().Size(); i++) {
+//              float f = *((float *) recved.data().dptr_+i);
+//              CHECK_EQ (f,0);
+//            }
             Dequantize(recved, &decomp_buf, compress_, 0);
+            decomp_buf.WaitToRead();
+//            std::cout<<"decompbuf "<<* (float*) decomp_buf.data().dptr_<<std::endl;
             CopyFromTo(decomp_buf, &merged.array, 0);
           }
         } else {
           if (compress_ == "none") {
             merged.array += recved;
           } else {
+//            std::cout<<"recvd data"<<* ((float*) recved.data().dptr_+3)<<std::endl;
+//            for(int i=3; i<recved.shape().Size(); i++) {
+//              float f = *((float *) recved.data().dptr_+i);
+//              CHECK_EQ (f,0);
+//            }
             Dequantize(recved, &decomp_buf, compress_, 0);
+            decomp_buf.WaitToRead();
+//            std::cout<<"decompbuf "<<* (float*) decomp_buf.data().dptr_<<std::endl;
             merged.array += decomp_buf;
           }
         }
@@ -450,6 +461,8 @@ class KVStoreDistServer {
         server->Response(req_meta);
         stored.WaitToRead();
       }
+//      std::cout<<"Server: Finished push"<<std::endl;
+//      std::cout<<"stored.shape() "<<stored.shape()<<std::endl;
     } else {
       // pull
       ps::KVPairs<real_t> response;

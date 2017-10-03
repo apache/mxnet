@@ -181,7 +181,6 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
-
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       // use the same array for merging to guarantee that pull always happens
@@ -195,19 +194,21 @@ class KVStoreDist : public KVStoreLocal {
         recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
                            true, grouped_vals[i][0]->dtype());
       }
-      auto pull_from_servers = [this, key, recv_buf](
+      bool is_compressed = (compress_!="none");
+      auto pull_from_servers = [this, key, recv_buf, is_compressed](
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
-        bool is_compressed = (compress_!="none");
         PSKV& pskv = EncodeKey(key, size, false, is_compressed);
 #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
         real_t* data = recv_buf.data().dptr<real_t>();
         // false means not to delete data when SArray is deleted
+
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
+
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
       };
@@ -220,7 +221,6 @@ class KVStoreDist : public KVStoreLocal {
           FnProperty::kNormal,
           priority,
           PROFILER_MESSAGE("KVStoreDistDefaultPull"));
-
       comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
     }
   }
@@ -355,6 +355,7 @@ class KVStoreDist : public KVStoreLocal {
 
 
   void PushCompressed(int key, NDArray& comm_buf, NDArray &send_buf, int priority){
+    std::cout<<"send buf data"<<* (float*) (send_buf.data().dptr_)<<" "<<* ((float*)send_buf.data().dptr_+3)<<std::endl;
     auto& comm_small_send_buf = comm_small_send_buf_[key];
     PSKV& pskv = EncodeCompressedKey(key, send_buf.shape().Size(), true);
     std::vector<Engine::VarHandle> const_vars;
@@ -380,6 +381,9 @@ class KVStoreDist : public KVStoreLocal {
         prev_to += pskv.lens[i];
         prev_from += pskv.lens[i]-3;
       }
+      comm_small_send_buf.WaitToRead();
+      std::cout<<"commsmallsendbuf data"<<* (float*) (comm_small_send_buf.data().dptr_)<<" "<<* ((float*)comm_small_send_buf.data().dptr_+1)<<" "<<* ((float*)comm_small_send_buf.data().dptr_+2)<<" "<<* ((float*)comm_small_send_buf.data().dptr_+3)<<std::endl;
+
       CHECK_EQ(original_size, cursize);
       const_vars.push_back(comm_small_send_buf.var());
     } else {
@@ -387,9 +391,8 @@ class KVStoreDist : public KVStoreLocal {
       const_vars.push_back(send_buf.var());
     }
 
-    std::cout<<"comm buf shape is "<<comm_buf.shape().Size()<<std::endl;
     auto push_to_servers =
-      [this, key, pskv, &const_vars, comm_buf, &comm_small_send_buf, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+      [this, key, pskv, comm_buf, &comm_small_send_buf, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = 0;
         real_t* data = nullptr;
@@ -564,9 +567,9 @@ class KVStoreDist : public KVStoreLocal {
 
   PSKV& EncodeKey(int key, size_t size, bool is_push, bool is_compressed) {
     if (is_compressed) {
-      EncodeCompressedKey(key, size, is_push);
+      return EncodeCompressedKey(key, size, is_push);
     } else {
-      EncodeKey(key, size, is_push);
+      return EncodeKey(key, size, is_push);
     }
   }
 
@@ -623,10 +626,12 @@ class KVStoreDist : public KVStoreLocal {
           }
           CHECK_EQ(static_cast<size_t>(pskv.size), final_size);
         } else {
+          mu_.lock();
           PSKV& push_pskv = push_ps_kv_[key];
+          mu_.unlock();
           for (int i=0; i<push_pskv.lens.size(); i++) {
             pskv.keys.push_back(push_pskv.keys[i]);
-            pskv.lens.push_back((push_pskv.lens[i]-3)*16);
+            pskv.lens.push_back(((push_pskv.lens[i])-3)*16);
             pskv.size += pskv.lens[i];
           }
           CHECK_EQ(pskv.size, original_size);
