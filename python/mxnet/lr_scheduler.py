@@ -93,13 +93,20 @@ class FactorScheduler(LRScheduler):
 
 class MultiFactorScheduler(LRScheduler):
     """Reduce the learning rate by given a list of steps.
+
     Assume there exists *k* such that::
+    
         step[k] <= num_update and num_update < step[k+1]
+
     Then calculate the new learning rate by::
+
         base_lr * pow(factor, k+1)
+
     When warmup_step>1, warmup the learning rate by a const value for first warmup_step steps.
     It returns a new learning rate by::
+
         begin_lr + (num_update - 1) * const_update
+
     Parameters
     ----------
     step: list of int
