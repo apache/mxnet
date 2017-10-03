@@ -704,12 +704,9 @@ class AdaGrad(Optimizer):
             retained_weight = sparse.retain(weight, grad.indices)
             to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, wd))
             assert len(to_add.indices) == grad_indices_count
-            retained_weight = sparse.elemwise_add(retained_weight,
-                                                  _internal._mul_scalar(to_add, -lr))
-            weight[:] = retained_weight
+            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, -lr))
             state[:] = history
             assert state.stype == save_history_stype
-            assert len(weight.indices) == grad_indices_count
             assert len(history.indices) == grad_indices_count
         else:
             history[:] += square(grad)
