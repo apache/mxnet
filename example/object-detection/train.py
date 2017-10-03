@@ -30,7 +30,7 @@ num_class = 20
 transform = transform.SSDAugmentation((512, 512))
 train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'trainval')], transform=transform)
 val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=transform)
-train_data = DataLoader(train_dataset, 4, True, last_batch='rollover')
+train_data = DataLoader(train_dataset, 1, True, last_batch='rollover')
 val_data = DataLoader(val_dataset, 2, False, last_batch='keep')
 target_generator = SSDTargetGenerator()
 # for data in train_data:
@@ -54,7 +54,8 @@ dtype = 'float32'
 # monitor
 # print(net.collect_params())
 # raise
-checker = net.collect_params()['conv0_weight']
+# checker = net.collect_params()['conv0_weight']
+checker = net.collect_params()['stage3_conv1_weight']
 
 # training process
 def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
@@ -84,12 +85,12 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                     y = nd.cast(y, dtype)
                     z = net(x)
                     cls_targets, box_targets, box_masks = target_generator(z, y)
-                    super_print(y, cls_targets, box_targets)
-                    raise
+                    # super_print(y, cls_targets, box_targets)
+                    # raise
                     loss1 = cls_loss(z[0], cls_targets)
                     loss2 = box_loss((z[1] - box_targets) * box_masks, nd.zeros_like(box_targets))
                     # L = loss1 + loss2
-                    L = loss2
+                    L = loss1
                     Ls.append(L)
                     outputs.append(z[0])
                     labels.append(cls_targets)
