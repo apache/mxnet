@@ -1,0 +1,107 @@
+# This is the default configuration file for object detection API
+# The structure of the configuration is listed as follows:
+# --- dataset
+#  |- augmentation
+#  |- model
+
+# dataset name, directory, # class, class names, etc...
+dataset:
+  name: pascal_0712_trainval
+  directory: './data/'
+  num_class: 20
+
+network:
+  name: resnet50_v1
+  pretrained: yes
+  feature_extractor:
+    layers:
+      - '_plus15'
+      - ''
+      - ''
+      - ''
+      - ''
+      - ''
+    channels:
+      - 0
+      - 256
+      - 256
+      - 256
+      - 256
+      - 256
+    min_channel: 128
+    use_1x1_conv: yes
+    channel_multiplier: 0.5
+  arch: ssd
+  ssd:
+    anchors:
+      num_layers: 6
+      min_scale: 0.2
+      max_scale: 0.95
+      aspect_ratios:
+        - 1.0
+        - 2.0
+        - 0.5
+        - 3.0
+        - 0.33333
+      reduce_ratio_lowerst_layer: 3  # use 3 ratios in the lowerst layer instead of 5
+      clip: no
+      verbose: no
+    matcher:
+      positive_threshold: 0.5
+      negative_threshold: 0.5
+      negative_mining_ratio: 3.0
+      minimum_negative_samples: 0
+      variances:
+        - 0.1
+        - 0.1
+        - 0.2
+        - 0.2
+
+# augmentation is applied to all images in iterators
+augmentation:
+  # training augmentaion list
+  train:
+    horizontal_flip: yes
+    resize: 0
+    rand_crop: 0.8
+    rand_pad: 0.8
+    rand_gray: 0.05
+    rand_mirror: yes
+    mean: yes
+    std: yes
+    brightness: 0.05
+    contrast: 0.05
+    saturation: 0.05
+    pca_noise: 0.05
+    hue: 0.05
+    inter_method: 10
+    min_object_covered: 0.75
+    aspect_ratio_range:
+      - 0.5
+      - 2.0
+    area_range:
+      - 0.3
+      - 3.0
+    min_eject_coverage: 0.4
+    max_attempts: 100
+    pad_val:
+      - 127.0
+      - 127.0
+      - 127.0
+
+  # validation augmentation is turned off
+  val:
+    horizontal_flip: no
+    resize: 0
+    rand_crop: 0
+    rand_pad: 0
+    rand_gray: 0
+    rand_mirror: no
+    mean: yes
+    std: yes
+    brightness: 0
+    contrast: 0
+    saturation: 0
+    pca_noise: 0
+    hue: 0
+    inter_method: 2
