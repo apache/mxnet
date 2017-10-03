@@ -1060,6 +1060,11 @@ struct product {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
     dst *= src;
   }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
+    Reduce(dst, src);
+  }
   /*!
   *\brief calculate gradient of redres with respect to redsrc,
   * redres: reduced result, redsrc: one of reduction element
@@ -1074,6 +1079,13 @@ struct product {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
     initv = 1;
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
+    SetInitValue(initv);
   }
 };
 
@@ -1106,19 +1118,17 @@ struct nansum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(dst)) {
-      if (isnan_typed::IsNan(src)) {
-        dst = DType(0);
-      } else {
-        dst = src;
-      }
-    } else {
-      if (isnan_typed::IsNan(src)) {
-        dst = dst;
-      } else {
-        dst += src;
-      }
-    }
+    if (isnan_typed::IsNan(src)) return;
+    dst += src;
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& residual) { // NOLINT(*)
+    if (isnan_typed::IsNan(src)) return;
+    DType y = src - residual;
+    DType t = dst + y;
+    residual = (t - dst) - y;
+    dst = t;
   }
   /*!
   *\brief set the initial value during reduction
@@ -1126,6 +1136,14 @@ struct nansum {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
       initv = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    SetInitValue(initv);
+    residual = 0;
   }
 };
 
@@ -1141,19 +1159,13 @@ struct nanprod {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(dst)) {
-      if (isnan_typed::IsNan(src)) {
-        dst = DType(1);
-      } else {
-        dst = src;
-      }
-    } else {
-      if (isnan_typed::IsNan(src)) {
-        dst = dst;
-      } else {
-        dst *= src;
-      }
-    }
+    if (isnan_typed::IsNan(src)) return;
+    dst *= src;
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
+    Reduce(dst, src);
   }
   /*!
   *\brief set the initial value during reduction
@@ -1161,6 +1173,13 @@ struct nanprod {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
     initv = 1;
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
+    SetInitValue(initv);
   }
 };
 
