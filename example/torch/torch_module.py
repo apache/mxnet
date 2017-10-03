@@ -16,7 +16,11 @@
 # under the License.
 
 # pylint: skip-file
-from data import mnist_iterator
+import sys
+import os
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
+from get_data import MNISTIterator
 import mxnet as mx
 import numpy as np
 import logging
@@ -42,7 +46,7 @@ else:
 
 # data
 
-train, val = mnist_iterator(batch_size=100, input_shape = (784,))
+train, val = MNISTIterator(batch_size=100, input_shape = (784,))
 
 # train
 

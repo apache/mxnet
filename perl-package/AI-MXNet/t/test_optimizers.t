@@ -62,13 +62,13 @@ method update($index, $weight, $grad, $state)
     $grad = $grad * $self->rescale_grad + $wd * $weight;
     if($self->clip_gradient)
     {
-        mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, { out => $grad });
+        mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, out => $grad);
     }
     $mean *= $self->beta1;
     $mean += $grad * (1 - $self->beta1);
 
     $variance *= $self->beta2;
-    $variance += (1 - $self->beta2) * mx->nd->square($grad, { out => $grad });
+    $variance += (1 - $self->beta2) * mx->nd->square($grad, out => $grad);
 
     my $coef1 = 1 - $self->beta1**$t;
     my $coef2 = 1 - $self->beta2**$t;
@@ -182,7 +182,7 @@ method update($index, $weight, $grad, $state)
     }
     if($self->clip_weights)
     {
-        mx->nd->clip($weight, -$self->clip_weights, $self->clip_weights, { out => $weight });
+        mx->nd->clip($weight, -$self->clip_weights, $self->clip_weights, out => $weight);
     }
 }
 

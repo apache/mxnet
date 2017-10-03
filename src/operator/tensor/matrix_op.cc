@@ -279,7 +279,7 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, true, false, true>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)

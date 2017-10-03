@@ -4,7 +4,6 @@ use Test::More tests => 257;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
 use AI::MXNet::TestUtils qw(almost_equal enumerate same_array dies_like);
-use Data::Dumper;
 
 sub test_module_layout
 {

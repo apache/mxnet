@@ -164,6 +164,8 @@ to set `round_batch` to False.
 
 If ``data_csv = 'data/'`` is set, then all the files in this directory will be read.
 
+``reset()`` is expected to be called only after a complete pass of data.
+
 Examples::
 
   // Contents of CSV file ``data/data.csv``.

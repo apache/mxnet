@@ -33,22 +33,23 @@ has end    => (is => 'ro', isa => 'Shape', required => 1);
 use overload
     '.=' => \&set,
     '='  => sub { $_[0] },
-    '""' => \&notsupported,
-    '+'  => \&notsupported,
-    '+=' => \&notsupported,
-    '-'  => \&notsupported,
-    '-=' => \&notsupported,
-    '*'  => \&notsupported,
-    '*=' => \&notsupported,
-    '/'  => \&notsupported,
-    '/=' => \&notsupported,
-    '**' => \&notsupported,
-    '==' => \&notsupported,
-    '!=' => \&notsupported,
-    '>'  => \&notsupported,
-    '>=' => \&notsupported,
-    '<'  => \&notsupported,
-    '<=' => \&notsupported;
+    '""' => sub { my $self = $_[0]->sever; "$self" },
+    '**' => sub { my $self = $_[0]->sever; $self ** $_[1] },
+    '==' => sub { my $self = $_[0]->sever; $self == $_[1] },
+    '!=' => sub { my $self = $_[0]->sever; $self != $_[1] },
+    '+'  => sub { my $self = $_[0]->sever; $self +  $_[1] },
+    '*'  => sub { my $self = $_[0]->sever; $self *  $_[1] },
+    '-'  => sub { my $self = $_[0]->sever; $_[2] ? $_[1] - $self : $self - $_[1] },
+    '/'  => sub { my $self = $_[0]->sever; $_[2] ? $_[1] / $self : $self / $_[1] },
+    '+=' => sub { my ($self, $other) = @_; my $in = $self->sever; $self .= ($in+$_[1]) },
+    '-=' => sub { my ($self, $other) = @_; my $in = $self->sever; $self .= ($in-$_[1]) },
+    '*=' => sub { my ($self, $other) = @_; my $in = $self->sever; $self .= ($in*$_[1]) },
+    '/=' => sub { my ($self, $other) = @_; my $in = $self->sever; $self .= ($in/$_[1]) },
+    '**='=> sub { my ($self, $other) = @_; my $in = $self->sever; $self .= ($in**$_[1]) },
+    '>'  => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] >  $self : $self >  $_[1] },
+    '>=' => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] >= $self : $self >= $_[1] },
+    '<'  => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] <  $self : $self <  $_[1] },
+    '<=' => sub { my $self = $_[0]->sever; return $_[2] ? $_[1] <= $self : $self <= $_[1] };
 
 method set(AcceptableInput $value, $reverse=)
 {
@@ -113,7 +114,13 @@ method sever()
     no warnings 'misc';
     use attributes 'AI::MXNet::NDArray::Slice', \&AI::MXNet::NDArray::Slice::sever, 'lvalue';
 }
+
 sub notsupported  { confess("NDArray only support continuous slicing on axis 0"); }
-sub AUTOLOAD { notsupported() }
+sub AUTOLOAD {
+    my $sub = $AI::MXNet::NDArray::Slice::AUTOLOAD;
+    $sub =~ s/.*:://;
+    my $self = shift;
+    return $self->sever->$sub(@_);
+}
 
 1;

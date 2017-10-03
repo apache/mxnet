@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """Parameter optimizer."""
+__all__ = ['Trainer']
 
 from .. import optimizer as opt
 from ..model import _create_kvstore
