@@ -95,8 +95,8 @@ class MultiFactorScheduler(LRScheduler):
     """Reduce the learning rate by given a list of steps.
 
     Assume there exists *k* such that::
-    
-        step[k] <= num_update and num_update < step[k+1]
+
+       step[k] <= num_update and num_update < step[k+1]
 
     Then calculate the new learning rate by::
 
