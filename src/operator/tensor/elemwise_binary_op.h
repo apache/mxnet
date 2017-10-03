@@ -194,7 +194,8 @@ class ElemwiseBinaryOp : public OpBase {
                        const NDArray &output,
                        const bool lhs_may_be_dense,
                        const bool rhs_may_be_dense,
-                       const bool allow_inplace);
+                       const bool allow_inplace,
+                       const bool scatter);
 
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
   template<typename DType, typename IType, typename CType, typename OP>
@@ -315,31 +316,6 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
- protected:
-  /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
-  template<typename DType, typename IType, typename OP>
-  static void RspRspOp(mshadow::Stream<cpu> *s,
-                       const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
-                       const NDArray &lhs,
-                       const NDArray &rhs,
-                       const OpReqType req,
-                       const NDArray &output,
-                       const bool lhs_may_be_dense,
-                       const bool rhs_may_be_dense,
-                       const bool allow_inplace,
-                       const bool scatter);
-
-  /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
-  template<typename DType, typename IType, typename CType, typename OP>
-  static inline void CsrCsrOp(mshadow::Stream<cpu> *s,
-                              const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const NDArray &lhs,
-                              const NDArray &rhs,
-                              const OpReqType req,
-                              const NDArray &output);
-
  public:
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs &attrs,
@@ -407,7 +383,7 @@ class ElemwiseBinaryOp : public OpBase {
         MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
           RspRspOp<DType, IType, OP>(
             s, attrs, ctx, inputs[0], inputs[1],
-            req[0], outputs[0], false, false, false);
+            req[0], outputs[0], false, false, false, false);
         });
       });
     } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage &&

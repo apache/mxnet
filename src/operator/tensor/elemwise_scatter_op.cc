@@ -23,15 +23,17 @@
 namespace mxnet {
 namespace op {
 
-static bool StorageTypeRspOrDenseOutput(const nnvm::NodeAttrs &attrs,
-                                        const Context &ctx,
-                                        std::vector<int> *in_attrs,
-                                        std::vector<int> *out_attrs) {
+static bool StorageTypeRspOrDenseOutput(const NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
+                                        std::vector<int>* out_attrs) {
   if ((*in_attrs)[0] == kRowSparseStorage) {
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
     return true;
   }
-  return ElemwiseStorageTypeDenseOutput<1>(attrs, ctx, in_attrs, out_attrs);
+  return storage_type_assign(&out_attrs[0], kDefaultStorage,
+                             dispatch_mode, DispatchMode::kFCompute);;
 }
 
 /*! \brief _scatter_elemwise_div */
