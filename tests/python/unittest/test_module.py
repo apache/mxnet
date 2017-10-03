@@ -512,14 +512,14 @@ def test_factorization_machine_module():
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
     # allocate memory by given the input data and lable shapes
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-    # initialize parameters by uniform random numbers
+    # initialize parameters by random numbers
     mod.init_params(initializer=init)
-    # use Sparse SGD with learning rate 0.1 to train
+    # use sparse Adam with learning rate 0.1 to train
     adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001, rescale_grad=1.0/batch_size)
     mod.init_optimizer(optimizer=adam)
-    # use accuracy as the metric
+    # use MSE as the metric
     metric = mx.metric.create('MSE')
-    # train 10 epoch
+    # train 10 epochs
     for epoch in range(10):
         train_iter.reset()
         metric.reset()
@@ -674,40 +674,6 @@ def test_forward_reshape():
     data2 = [mx.nd.ones((3, 5))]
     mod.forward(Batch(data2))
     assert mod.get_outputs()[0].shape == (3, 5)
-
-
-def test_forward_update_metric_pad():
-    d = mx.sym.Variable('data')
-    fc = mx.sym.FullyConnected(data=d, num_hidden=2)
-    sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
-
-    dshape = (10, 2)
-    data = [mx.nd.zeros(dshape)]
-    lshape = (10,)
-    label = [mx.nd.array(([0] * 8) + ([1] * 2))]
-
-    eval_metric = mx.metric.Accuracy()
-    mod = mx.mod.Module(symbol=sym, data_names=['data'],
-                        label_names=['softmax_label'])
-    mod.bind(data_shapes=[('data', dshape)],
-             label_shapes=[('softmax_label', lshape)])
-    mod.init_params(initializer=mx.initializer.Zero())
-    mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
-
-    # Test that accuracy is 0.8 without padding
-    pad = None
-    data_batch = mx.io.DataBatch(data=data, label=label, pad=pad)
-    mod.forward(data_batch)
-    mod.update_metric(eval_metric, data_batch.label)
-    assert eval_metric.get()[1] == 0.8
-
-    # Test that accuracy is 1.0 with padding
-    pad = 2
-    eval_metric.reset()
-    data_batch = mx.io.DataBatch(data=data, label=label, pad=pad)
-    mod.forward(data_batch)
-    mod.update_metric(eval_metric, data_batch.label)
-    assert eval_metric.get()[1] == 1.0
 
 
 if __name__ == '__main__':

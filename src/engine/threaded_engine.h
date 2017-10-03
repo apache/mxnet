@@ -345,7 +345,7 @@ class ThreadedEngine : public Engine {
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
           LOG(FATAL) << e.what() << "\n" <<
-            "An fatal error occurred in asynchronous engine operation. "
+            "A fatal error occurred in asynchronous engine operation. "
             "If you do not know what caused this error, "
             "you can try set environment variable MXNET_ENGINE_TYPE "
             "to NaiveEngine and run with debugger (i.e. gdb). "

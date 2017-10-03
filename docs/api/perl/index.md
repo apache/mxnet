@@ -12,6 +12,12 @@ that's all that is needed there.
 In addition please refer to [excellent metacpan doc interface](https://metacpan.org/release/AI-MXNet) and to very detailed
 [MXNet Python API Documentation](http://mxnet.io/api/python/index.html).
 
+AI::MXNet supports new imperative PyTorch like Gluon MXNet interface. Please get acquainted with this new interface
+at [Deep Learning - The Straight Dope](http://gluon.mxnet.io/).
+
+For specific Perl Gluon usage please refer to Perl examples and tests directories on github, but be assured that the Python and Perl usage
+are extremely close in order to make the use of the Python Gluon docs and examples as easy as possible.
+
 AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initialized from PDL and the results can be
 transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
 

@@ -26,7 +26,7 @@ use Exporter;
 use base qw(Exporter);
 @AI::MXNet::TestUtils::EXPORT_OK = qw(same reldiff almost_equal GetMNIST_ubyte
                                       GetCifar10 pdl_maximum pdl_minimum mlp2 conv
-                                      check_consistency zip assert enumerate same_array dies_like);
+                                      check_consistency zip assert enumerate same_array dies_like allclose);
 use constant default_numerical_threshold => 1e-6;
 =head1 NAME
 
@@ -45,6 +45,21 @@ use constant default_numerical_threshold => 1e-6;
 func same(PDL $a, PDL $b)
 {
     return ($a != $b)->sum == 0;
+}
+
+=head2 allclose
+
+    Test if all elements of two pdl arrays are almost equal
+
+    Parameters
+    ----------
+    a : pdl
+    b : pdl
+=cut
+
+func allclose(PDL $a, PDL $b)
+{
+    return (($a - $b)->abs <= default_numerical_threshold)->all;
 }
 
 =head2 reldiff
