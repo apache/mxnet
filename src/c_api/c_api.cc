@@ -1103,6 +1103,14 @@ int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos) {
   API_END();
 }
 
+int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos) {
+  API_BEGIN();
+  MXRecordIOContext *context =
+    reinterpret_cast<MXRecordIOContext*>(handle);
+  *pos = context->reader->Tell();
+  API_END();
+}
+
 int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
                 char** input_names, char** output_names,
                 NDArrayHandle* inputs, NDArrayHandle* outputs,

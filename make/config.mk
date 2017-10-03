@@ -62,6 +62,11 @@ USE_CUDNN = 0
 # imbin iterator
 USE_OPENCV = 1
 
+#whether use libjpeg-turbo for image decode without OpenCV wrapper
+USE_TURBO_JPEG = 0
+#add the path to libjpeg-turbo library
+USE_TURBO_JPEG_PATH = NONE
+
 # use openmp for parallelization
 USE_OPENMP = 1
 
