@@ -107,6 +107,7 @@ if __name__ == '__main__':
             nbatch += 1
             # for distributed training, we need to manually pull sparse weights from kvstore
             if kv:
+                row_ids = batch.data[0].indices
                 kv.row_sparse_pull('weight', weight, row_ids=[row_ids])
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
