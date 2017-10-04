@@ -110,10 +110,12 @@ class FullyConnectedOp : public Operator {
 
     // Legacy approach shown here for comparison:
     //   out = dot(data, wmat.T());
-    linalg_gemm(data, wmat, out, false, true, s);
-    if (!param_.no_bias) {
+    if (param_.no_bias) {
+      linalg_gemm(data, wmat, out, false, true, s);
+    } else {
       Tensor<xpu, 1, DType> bias = in_data[fullc::kBias].get<xpu, 1, DType>(s);
-      out += repmat(bias, data.size(0));
+      out = repmat(bias, data.size(0));
+      linalg_gemm(data, wmat, out, false, true, s, mxnet::kAddTo);
     }
   }
 
