@@ -551,7 +551,6 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev
     g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(storage_types));
     g = exec::InferStorageType(std::move(g));
   }
-  common::LogStorageType(g, node_range);
 
   CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
   return false;
