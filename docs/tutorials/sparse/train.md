@@ -17,7 +17,7 @@ To complete this tutorial, we need:
 pip install jupyter requests
 ```
 
-- Basic knowledge of Symbol in MXNet. See the detailed tutorial for Symbol in [Symbol - Neural network graphs and auto-differentiation](https://mxnet.incubator.apache.org/tutorials/basic/symbol.html).
+- Basic knowledge of Symbol in MXNet. See the detailed tutorial for Symbol in [Symbol - Neural Network Graphs and Auto-differentiation](https://mxnet.incubator.apache.org/tutorials/basic/symbol.html).
 
 - Basic knowledge of CSRNDArray in MXNet. See the detailed tutorial for CSRNDArray in [CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
 
@@ -132,8 +132,8 @@ fallback_log = fallback_exec.outputs[1]
 
 ### Inspecting Storage Types of the Symbol Graph (Work in Progress)
 
-When the environment variable `MXNET_EXEC_LOG_LEVEL` is set to `INFO`, MXNet will log the information of the graph executor,
-including storage types of operators' inputs and outputs in the graph. For example, we can inspect the storage types of
+When the environment variable `MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING` is set to `1`, MXNet will log the storage type information of
+operators' inputs and outputs in the computation graph. For example, we can inspect the storage types of
 a linear classification network with sparse operators as follows:
 
 
@@ -141,7 +141,7 @@ a linear classification network with sparse operators as follows:
 # Set logging level for executor
 import mxnet as mx
 import os
-os.environ['MXNET_EXEC_LOG_LEVEL'] = "INFO"
+os.environ['MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING'] = "1"
 # Data in csr format
 data = mx.sym.var('data', stype='csr', shape=(32, 10000))
 # Weight in row_sparse format

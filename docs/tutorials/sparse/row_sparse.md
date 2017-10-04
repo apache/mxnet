@@ -315,7 +315,7 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 {'a.stype':a.stype, 'd.stype':d.stype, 'e.stype':e.stype} # stypes of a and e will be not changed
 ```
 
-Note that warning messages will be printed when such a storage fallback event happens (work in progress).
+Note that warning messages will be printed when such a storage fallback event happens. If you are using jupyter notebook, the warning message will be printed in your terminal console.
 
 ## Sparse Optimizers
 
@@ -373,7 +373,7 @@ with only a few sparse operators such as cast_storage and dot.
 
 To create a RowSparseNDArray on gpu, we need to explicitly specify the context:
 
-**Note** If a GPU is not available, an error will be reported in the following section. In order to execute it a cpu, set gpu_device to mx.cpu().
+**Note** If a GPU is not available, an error will be reported in the following section. In order to execute it on a cpu, set gpu_device to mx.cpu().
 
 
 ```python

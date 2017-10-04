@@ -57,7 +57,7 @@ The `indices` array stores the column index for each non-zero element in `data`.
 
     indices = [0, 2, 1]
 
-The `indptr` array is what will help identify the rows where the data appears. It stores the index into `data` of the first non-zero element number of each row of the matrix. This array always starts with 0 (reasons can be explored later), so indptr[0] is 0. Each subsequent value in the array is the aggregate number of non-zero elements up to that row. Looking at the first row of the matrix you can see two non-zero values, so indptr[1] is 2. The next row contains all zeros, so the aggregate is still 2, so indptr[2] is 2. Finally, you see the last row contains one non-zero element bring the aggregate to 3, so indptr[3] is 3. Your result:
+The `indptr` array is what will help identify the rows where the data appears. It stores the offset into `data` of the first non-zero element number of each row of the matrix. This array always starts with 0 (reasons can be explored later), so indptr[0] is 0. Each subsequent value in the array is the aggregate number of non-zero elements up to that row. Looking at the first row of the matrix you can see two non-zero values, so indptr[1] is 2. The next row contains all zeros, so the aggregate is still 2, so indptr[2] is 2. Finally, you see the last row contains one non-zero element bring the aggregate to 3, so indptr[3] is 3. To reconstruct the dense matrix, you will use `data[0:2]` and `indices[0:2]` for the first row, `data[2:2]` and `indices[2:2]` for the second row (which contains all zeros), and `data[2:3]` and `indices[2:3]` for the third row. Your result:
 
     indptr = [0, 2, 2, 3]
 
@@ -66,7 +66,7 @@ and duplicated column indices for the same row are not allowed.
 
 ## Array Creation
 
-There are a few different ways to create a `CSRNDArray`, but first let's recreate the matrix we just discussed using the `data`, `indices`, and `indptr` we calculated.
+There are a few different ways to create a `CSRNDArray`, but first let's recreate the matrix we just discussed using the `data`, `indices`, and `indptr` we calculated in the previous example.
 
 You can create a CSRNDArray with data, indices and indptr by using the `csr_matrix` function:
 
@@ -115,12 +115,19 @@ except ImportError:
     print("scipy package is required")
 ```
 
-You can create a CSRNDArray from a dense NDArray by using the `tostype` function, which is explained further in the [Storage Type Conversion](#storage-type-conversion) section:
+What if you have a big set of data and you haven't calculated indices or indptr yet? Let's try a simple CSRNDArray from an existing array of data and derive those values with some built-in functions. We can mockup a "big" dataset with a random amount of the data being non-zero, then compress it by using the `tostype` function, which is explained further in the [Storage Type Conversion](#storage-type-conversion) section:
 
 ```python
-dense = mx.nd.array([[7., 0., 8., 0.], [0., 0., 0., 0.], [0., 9., 0., 0.]])
-csr = dense.tostype('csr')
-csr.asnumpy()
+big_array = mx.nd.round(mx.nd.random.uniform(low=0, high=1, shape=(1000, 100)))
+print(big_array)
+big_array_csr = big_array.tostype('csr')
+# Access indices array
+indices = big_array_csr.indices
+# Access indptr array
+indptr = big_array_csr.indptr
+# Access data array
+data = big_array_csr.data
+# The total size of `data`, `indices` and `indptr` arrays is much lesser than the dense big_array!
 ```
 
 You can also create a CSRNDArray from another using the `array` function specifying the element data type with the option `dtype`,
@@ -227,18 +234,17 @@ g.copyto(f)
 ```
 
 ## Indexing and Slicing
-
 You can slice a CSRNDArray on axis 0 with operator `[]`, which copies the slices and returns a new CSRNDArray.
 
 
 ```python
 a = mx.nd.array(np.arange(6).reshape(3,2)).tostype('csr')
-b = a[1:2]
+b = a[1:2].asnumpy()
 c = a[:].asnumpy()
-{'b':b, 'c':c}
+{'a':a, 'b':b, 'c':c}
 ```
 
-Note that accessing individual elements in a CSRNDArray is currently not supported.
+Note that multi-dimensional indexing or slicing along a particular axis is currently not supported for a CSRNDArray.
 
 ## Sparse Operators and Storage Type Inference
 
@@ -279,7 +285,7 @@ e = mx.nd.log(a, out=e) # dense operator with a sparse output
 {'a.stype':a.stype, 'd.stype':d.stype, 'e.stype':e.stype} # stypes of a and e will be not changed
 ```
 
-Note that warning messages will be printed when such a storage fallback event happens (work in progress).
+Note that warning messages will be printed when such a storage fallback event happens. If you are using jupyter notebook, the warning message will be printed in your terminal console.
 
 ## Data Loading
 
@@ -288,15 +294,15 @@ You can load data in batches from a CSRNDArray using `mx.io.NDArrayIter`:
 
 ```python
 # Create the source CSRNDArray
-data = mx.nd.array(np.arange(40).reshape((10,4))).tostype('csr')
-labels = np.ones([10, 1])
+data = mx.nd.array(np.arange(36).reshape((9,4))).tostype('csr')
+labels = np.ones([9, 1])
 batch_size = 3
 dataiter = mx.io.NDArrayIter(data, labels, batch_size, last_batch_handle='discard')
 # Inspect the data batches
 [batch.data[0] for batch in dataiter]
 ```
 
-You can also load data stored in the libsvm file format using `mx.io.LibSVMIter`:
+You can also load data stored in the [libsvm file format](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/) using `mx.io.LibSVMIter`, where the format is: ``<label> <col_idx1>:<value1> <col_idx2>:<value2> ... <col_idxN>:<valueN>``. Each line in the file records the label and the column indices and data for non-zero entries. For example, for a matrix with 6 columns, ``1 2:1.5 4:-3.5`` means the label is ``1``, the data is ``[[0, 0, 1,5, 0, -3.5, 0]]``. More detailed examples of `mx.io.LibSVMIter` are available in the [API documentation](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter).
 
 
 ```python
