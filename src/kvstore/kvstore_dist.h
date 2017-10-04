@@ -33,6 +33,8 @@
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
 #include "../ndarray/ndarray_function.h"
+#include <inttypes.h> // for uint32_t
+
 #if MKL_EXPERIMENTAL == 1
 #include <mkl_memory.h>
 #include "../operator/mkl/mkl_memory-inl.h"
@@ -51,7 +53,27 @@ namespace kvstore {
  * it's the server node's job to control the data consistency among all
  * workers. see details on \ref ServerHandle::Start
  */
-class KVStoreDist : public KVStoreLocal {
+
+  void floatToBinary(float f, std::string& str)
+  {
+    union { float f; uint32_t i; } u;
+    u.f = f;
+    str.clear();
+
+    for (int i = 0; i < 32; i++)
+    {
+      if (u.i % 2)  str.push_back('1');
+      else str.push_back('0');
+      u.i >>= 1;
+    }
+
+    // Reverse the string since now it's backwards
+    std::string temp(str.rbegin(), str.rend());
+    str = temp;
+  }
+
+
+  class KVStoreDist : public KVStoreLocal {
  public:
   explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
@@ -324,10 +346,15 @@ class KVStoreDist : public KVStoreLocal {
         }
 
         if (compress_ == "2bit") {
+//          comm_buf.WaitToRead();
+//          for (int i=0; i<comm_buf.shape().Size(); i++) {
+//            CHECK_EQ(*((float *) comm_buf.data().dptr_ + 1), 0.);
+//            std::cout << "Original data is " << *((float *) comm_buf.data().dptr_) << " "
+//                      << *((float *) comm_buf.data().dptr_ + 1) << std::endl;
+//          }
           Quantize(comm_buf, &small_buf, &res_buf, pos_thre_, neg_thre_, compress_, priority);
-        //  small_buf.WaitToRead();
+          small_buf.WaitToRead();
           //res_buf.WaitToRead();
-          //std::cout<<"Original data is "<<*((float *) comm_buf.data().dptr_)<<std::endl;
           //std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
           //std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
             //       << *(((float *) small_buf.data().dptr_)+1) << " "
@@ -355,7 +382,15 @@ class KVStoreDist : public KVStoreLocal {
 
 
   void PushCompressed(int key, NDArray& comm_buf, NDArray &send_buf, int priority){
-    std::cout<<"send buf data"<<* (float*) (send_buf.data().dptr_)<<" "<<* ((float*)send_buf.data().dptr_+3)<<std::endl;
+//      for (int i=3; i<send_buf.shape().Size(); i++) {
+//            CHECK_EQ(*((float *) send_buf.data().dptr_ + 1), 0.);
+//          }
+    std::string f;
+    floatToBinary(* ((float*)send_buf.data().dptr_+3),f);
+    std::cout<<"push:buf:compr"<<* (float*) (send_buf.data().dptr_)<<" "
+            <<* (((float*) send_buf.data().dptr_)+1)<<" "
+            <<* (((float*) send_buf.data().dptr_)+2)<<" "
+             <<f<<std::endl;
     auto& comm_small_send_buf = comm_small_send_buf_[key];
     PSKV& pskv = EncodeCompressedKey(key, send_buf.shape().Size(), true);
     std::vector<Engine::VarHandle> const_vars;
@@ -382,8 +417,14 @@ class KVStoreDist : public KVStoreLocal {
         prev_from += pskv.lens[i]-3;
       }
       comm_small_send_buf.WaitToRead();
-      std::cout<<"commsmallsendbuf data"<<* (float*) (comm_small_send_buf.data().dptr_)<<" "<<* ((float*)comm_small_send_buf.data().dptr_+1)<<" "<<* ((float*)comm_small_send_buf.data().dptr_+2)<<" "<<* ((float*)comm_small_send_buf.data().dptr_+3)<<std::endl;
-
+      std::cout<<"push:created buf:"<<* (float*) (comm_small_send_buf.data().dptr_)<<" "
+               <<* ((float*)comm_small_send_buf.data().dptr_+1)<<" "
+               <<* ((float*)comm_small_send_buf.data().dptr_+2)<<" "
+               <<* ((float*)comm_small_send_buf.data().dptr_+3)<<std::endl;
+      std::cout<<* ((float*)comm_small_send_buf.data().dptr_+pskv.lens[0])<<" "
+               <<* ((float*)comm_small_send_buf.data().dptr_+pskv.lens[0]+1)<<" "
+               <<* ((float*)comm_small_send_buf.data().dptr_+pskv.lens[0]+2)<<" "
+               <<* ((float*)comm_small_send_buf.data().dptr_+pskv.lens[0]+3)<<std::endl;
       CHECK_EQ(original_size, cursize);
       const_vars.push_back(comm_small_send_buf.var());
     } else {
@@ -586,13 +627,16 @@ class KVStoreDist : public KVStoreLocal {
     mu_.lock();
     PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
     mu_.unlock();
+    auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
+    int num_servers = krs.size();
+    CHECK_GT(num_servers, 0);
     if (!pskv.keys.empty()) {
-      //will fail
-//      CHECK_EQ(static_cast<size_t>(pskv.size), size)<< "The value size cannot be changed";
+      if (is_push) {
+        CHECK_EQ(static_cast<size_t >(pskv.size), buf_size+3*(num_servers-1))<< "The value size can't be changed";
+      } else {
+        CHECK_EQ(static_cast<size_t >(pskv.size), original_size)<< "The value size can't be changed";
+      }
     } else {
-      auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
-      int num_servers = krs.size();
-      CHECK_GT(num_servers, 0);
       // a simple heuristic for load balance
       if (original_size < bigarray_bound_) {
         // send it to a single random picked server
@@ -605,38 +649,30 @@ class KVStoreDist : public KVStoreLocal {
       } else {
         // partition it to all servers
         pskv.size = 0;
-        size_t final_size;
-        if (is_push) {
-          final_size = buf_size+3*(num_servers-1);
-          for (int i = 0; i < num_servers; ++i) {
-            //if pushing, divide size of compressed array into blocks of 16, so we don't split between a compressed value
-            //if pulling, need to divide exact way as above did
-            size_t part_size = is_push? (roundUp((size-3)/num_servers*(i+1), 16) - roundUp((size-3)/num_servers*(i), 16) + 3)
-                                      : (roundUp((size)/num_servers*(i+1), 1) - roundUp((size)/num_servers*(i), 1));
-            ps::Key ps_key = krs[i].begin() + key;
-            CHECK_LT(ps_key, krs[i].end());
-            pskv.keys.push_back(ps_key);
+        size_t final_size = buf_size+3*(num_servers-1);
+        for (int i = 0; i < num_servers; ++i) {
+          //if pushing, divide size of compressed array into blocks of 16, so we don't split between a compressed value
+          size_t part_size = is_push? (roundUp((size-3)/num_servers*(i+1), 16) - roundUp((size-3)/num_servers*(i), 16) + 3)
+                                    : (roundUp((size)/num_servers*(i+1), 1) - roundUp((size)/num_servers*(i), 1));
+          ps::Key ps_key = krs[i].begin() + key;
+          CHECK_LT(ps_key, krs[i].end());
+          pskv.keys.push_back(ps_key);
 
-            //if last block was rounded up to beyond size of our data, set it to end of data
-            if (i == num_servers-1 && ((pskv.size+part_size) > final_size)) {
-              part_size = buf_size + 3*(num_servers-1) - pskv.size;
-            }
-            pskv.lens.push_back(part_size);
-            pskv.size += part_size;
+          //if last block was rounded up to beyond size of our data, set it to end of data
+          if (i == num_servers-1 && ((pskv.size+part_size) > final_size)) {
+            part_size = buf_size + 3*(num_servers-1) - pskv.size;
           }
+          pskv.lens.push_back(part_size);
+          pskv.size += part_size;
+        }
+        if (is_push) {
           CHECK_EQ(static_cast<size_t>(pskv.size), final_size);
         } else {
-          mu_.lock();
-          PSKV& push_pskv = push_ps_kv_[key];
-          mu_.unlock();
-          for (int i=0; i<push_pskv.lens.size(); i++) {
-            pskv.keys.push_back(push_pskv.keys[i]);
-            pskv.lens.push_back(((push_pskv.lens[i])-3)*16);
-            pskv.size += pskv.lens[i];
+          for (int i=0; i < num_servers; ++i) {
+            pskv.lens[i] = (pskv.lens[i]-3)*16;
           }
-          CHECK_EQ(pskv.size, original_size);
+          CHECK_EQ(static_cast<size_t >(pskv.size), original_size);
         }
-
       }
     }
     return pskv;
