@@ -168,7 +168,9 @@ The storage type of ``make_loss`` output depends upon the input storage type:
 
 // identity output as first input, but attributes (shape and type) are constrained to be like rhs
 // storage type attribute is not constrained to be like rhs if it is already defined
-NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
+NNVM_REGISTER_OP(reshape_like)
+.describe("Reshape lhs to the same shape as rhs.")
+.add_alias("_identity_with_attr_like_rhs")
 .set_num_inputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
@@ -186,7 +188,20 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeFirstItemEx<cpu>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape",
+    [](const nnvm::NodeAttrs& attrs,
+       std::vector<TShape> *in_attrs,
+       std::vector<TShape> *out_attrs) {
+      if ((*in_attrs)[0].ndim()) {
+        CHECK_EQ((*in_attrs)[0].Size(), (*in_attrs)[1].Size())
+            << "Cannot reshape lhs with shape " << (*in_attrs)[0] << "to rhs "
+            << "with shape " << (*in_attrs)[1] << " because they have different "
+            << "size.";
+      }
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
+      return true;
+    })
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,

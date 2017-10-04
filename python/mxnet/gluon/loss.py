@@ -61,7 +61,7 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
 
 def _reshape_like(F, x, y):
     """Reshapes x to the same shape as y."""
-    return x.reshape(y.shape) if F is ndarray else x.reshape(())
+    return x.reshape(y.shape) if F is ndarray else F.reshape_like(x, y)
 
 class Loss(HybridBlock):
     """Base class for loss.
@@ -229,7 +229,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
-            max_val = F.maximum(-pred, 0)
+            max_val = F.relu(-pred)
             loss = pred - pred*label + max_val + F.log(F.exp(-max_val)+F.exp(-pred-max_val))
         else:
             loss = -(F.log(pred+1e-12)*label + F.log(1.-pred+1e-12)*(1.-label))
@@ -563,7 +563,7 @@ class HingeLoss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.relu(margin - pred * label)
+        loss = F.relu(self._margin - pred * label)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -644,7 +644,7 @@ class LogisticLoss(Loss):
           batch_axis are averaged out.
     """
     def __init__(self, weight=None, batch_axis=0, **kwargs):
-        super(Logistic, self).__init__(weight, batch_axis, **kwargs)
+        super(LogisticLoss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
