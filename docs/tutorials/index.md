@@ -31,6 +31,18 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    python/predict_image
    vision/large_scale_classification
 ```
+
+### Sparse NDArray
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   sparse/csr
+   sparse/row_sparse
+   sparse/train
+```
+
 <br>
 More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
 
