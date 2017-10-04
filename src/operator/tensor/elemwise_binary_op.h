@@ -53,19 +53,21 @@ inline bool ElemwiseBinaryBackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
                                          DispatchMode::kFComputeEx;
-  if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
-  if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
-    // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
-                                     dispatch_mode, dispatch_ex);
-    // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
-    if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
-        (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
-      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, dispatch_ex);
-      dispatched = true;
+  if (!dispatched) {
+    if (common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+      // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
+      dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                       dispatch_mode, dispatch_ex);
+      // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
+      if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
+          (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
+        DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, dispatch_ex);
+        dispatched = true;
+      }
     }
   }
   if (!dispatched) {
@@ -105,6 +107,12 @@ inline bool ElemwiseMulStorageType(const nnvm::NodeAttrs& attrs,
       // dns, rsp -> rsp
       dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                        dispatch_mode, dispatch_ex);
+    } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
+      dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                       dispatch_mode, dispatch_ex);
+    } else if (lhs_stype == kCSRStorage || rhs_stype == kCSRStorage) {
+      dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                       dispatch_mode, DispatchMode::kFComputeFallback);
     }
   }
   if (!dispatched) {
@@ -434,6 +442,8 @@ class ElemwiseBinaryOp : public OpBase {
             req[0], outputs[0], lhs_may_be_dense, rhs_may_be_dense, false, false);
         });
       });
+    } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
+      ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
     } else {
       LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
@@ -571,7 +581,7 @@ class ElemwiseBinaryOp : public OpBase {
  */
 #define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(__name$, __kernel$)                       \
   MXNET_OPERATOR_REGISTER_BINARY(__name$)                                                        \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true, false>) \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, true, true, true>) \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 

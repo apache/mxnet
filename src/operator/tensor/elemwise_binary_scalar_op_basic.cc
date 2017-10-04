@@ -21,6 +21,7 @@
  * \file elemwise_binary_scalar_op.cc
  * \brief CPU Implementation of unary function.
  */
+#include "../../common/utils.h"
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_scalar_op.h"
 
@@ -33,15 +34,8 @@
     })                                                              \
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType", \
-    [](const NodeAttrs& attrs, \
-       const int dev_mask, \
-       DispatchMode* dispatch_mode, \
-       std::vector<int>* in_attrs, \
-       std::vector<int>* out_attrs)  { \
-        return storage_type_assign(&out_attrs[0], kDefaultStorage, \
-                                   dispatch_mode, DispatchMode::kFComputeEx); \
-    }) \
+  .set_attr<FInferStorageType>("FInferStorageType",                 \
+    BinaryScalarStorageTypeWithDenseResultStorageType)              \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
@@ -51,6 +45,29 @@
 
 namespace mxnet {
 namespace op {
+
+static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& attrs,
+                                                              const int dev_mask,
+                                                              DispatchMode* dispatch_mode,
+                                                              std::vector<int>* in_attrs,
+                                                              std::vector<int>* out_attrs)  {
+  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    return storage_type_assign(&out_attrs[0],
+                               kDefaultStorage,
+                               dispatch_mode,
+                               DispatchMode::kFCompute);
+  } else if (dev_mask == kCPU) {
+    return storage_type_assign(&out_attrs[0],
+                               kDefaultStorage,
+                               dispatch_mode,
+                               DispatchMode::kFComputeEx);
+  } else {
+    return storage_type_assign(&out_attrs[0],
+                               kDefaultStorage,
+                               dispatch_mode,
+                               DispatchMode::kFComputeFallback);
+  }
+}
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SCALAR_SUPPORT_WITH_DENSE_RESULT(_plus_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::plus>)

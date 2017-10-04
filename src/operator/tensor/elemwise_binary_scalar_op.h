@@ -299,12 +299,14 @@ class BinaryScalarOp : public UnaryOp {
     DCHECK_EQ(outputs.size(), 1);
     const auto in_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if (req[0] == kNullOp) return;
+    if (req[0] == kNullOp) {
+      return;
+    }
     if ((in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) ||
         (in_stype == kCSRStorage && out_stype == kCSRStorage)) {
       // csr -> csr, or rsp -> rsp
       UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
-    } else if (out_stype == kDefaultStorage && typeid(xpu) == typeid(cpu) &&
+    } else if (out_stype == kDefaultStorage &&
               (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
       MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
         MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {

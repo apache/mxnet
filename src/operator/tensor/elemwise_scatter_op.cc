@@ -28,12 +28,29 @@ static bool StorageTypeRspOrDenseOutput(const NodeAttrs& attrs,
                                         DispatchMode* dispatch_mode,
                                         std::vector<int>* in_attrs,
                                         std::vector<int>* out_attrs) {
-  if ((*in_attrs)[0] == kRowSparseStorage) {
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kRowSparseStorage);
-    return true;
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NDArrayStorageType lhs_stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
+  if (lhs_stype == kRowSparseStorage) {
+    return storage_type_assign(&out_attrs[0], kRowSparseStorage,
+                               dispatch_mode, DispatchMode::kFComputeEx);
   }
   return storage_type_assign(&out_attrs[0], kDefaultStorage,
-                             dispatch_mode, DispatchMode::kFCompute);;
+                             dispatch_mode, DispatchMode::kFCompute);
+}
+
+static bool StorageTypeScatteredScalarOp(const NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
+                                        std::vector<int>* out_attrs) {
+  // Supports kDefaultStorage, kRowSparseStorage and kCSRStorage
+  const NDArrayStorageType stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
+  return storage_type_assign(out_attrs,
+                             stype,
+                             dispatch_mode,
+                             stype == kDefaultStorage ? DispatchMode::kFCompute
+                                                      : DispatchMode::kFComputeEx);
 }
 
 /*! \brief _scatter_elemwise_div */
@@ -54,6 +71,10 @@ with default storage
 
 )code")
 .set_attr<FInferStorageType>("FInferStorageType", StorageTypeRspOrDenseOutput)
+.set_attr<FResourceRequest>("FResourceRequest",
+                            [](const NodeAttrs& attrs) {
+                              return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                            })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 
 /*! \brief _scatter_plus_scalar */
@@ -70,6 +91,7 @@ The storage type of ``_scatter_plus_scalar`` output depends on storage types of 
 with default storage
 
 )code")
+.set_attr<FInferStorageType>("FInferStorageType", StorageTypeScatteredScalarOp)
 .set_attr<FCompute>("FCompute<cpu>",
                     ElemwiseScatterBinaryScalarOp::Compute<cpu, mshadow::op::plus>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
@@ -90,6 +112,7 @@ The storage type of ``_scatter_minus_scalar`` output depends on storage types of
 with default storage
 
 )code")
+.set_attr<FInferStorageType>("FInferStorageType", StorageTypeScatteredScalarOp)
 .set_attr<FCompute>("FCompute<cpu>",
                     ElemwiseScatterBinaryScalarOp::Compute<cpu, mshadow::op::minus>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
