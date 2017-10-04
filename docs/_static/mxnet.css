@@ -1156,6 +1156,8 @@ dl.last.docutils dt{
 
 dl.docutils dt {
     color: #555;
+    background-color: #f0f0f0;
+    border-bottom: solid #ccc;
 }
 
 /*----------------Model zoo page style------------------*/
