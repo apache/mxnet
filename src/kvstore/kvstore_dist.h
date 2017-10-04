@@ -180,8 +180,9 @@ namespace kvstore {
     if (get_rank() == 0) {
       Push_(keys, values, 0, false);
       // wait until the push is finished
-      for (const auto& v : values) {
-        v.WaitToWrite();
+      for (const int key : keys) {
+        comm_buf_[key].WaitToWrite();
+        comm_small_send_buf_[key].WaitToWrite();
       }
     } else {
       // do nothing
@@ -321,6 +322,7 @@ namespace kvstore {
         }
         CopyFromTo(merged, &comm_buf);
       }
+
       auto& small_buf = comm_small_buf_[key];
       auto& res_buf = residual_[key];
       if (compress_ != "none") {
@@ -347,13 +349,14 @@ namespace kvstore {
 
         if (compress_ == "2bit") {
 //          comm_buf.WaitToRead();
+//          std::cout<<"waiting done"<<std::endl;
 //          for (int i=0; i<comm_buf.shape().Size(); i++) {
 //            CHECK_EQ(*((float *) comm_buf.data().dptr_ + 1), 0.);
 //            std::cout << "Original data is " << *((float *) comm_buf.data().dptr_) << " "
 //                      << *((float *) comm_buf.data().dptr_ + 1) << std::endl;
 //          }
           Quantize(comm_buf, &small_buf, &res_buf, pos_thre_, neg_thre_, compress_, priority);
-          small_buf.WaitToRead();
+//          small_buf.WaitToRead();
           //res_buf.WaitToRead();
           //std::bitset<sizeof(float)*CHAR_BIT> foo(*reinterpret_cast<unsigned long*>((((float *) small_buf.data().dptr_)+3)));
           //std::cout<<"Compressed buf is "<<*((float *) small_buf.data().dptr_)<<" "
