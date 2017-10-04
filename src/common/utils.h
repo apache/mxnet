@@ -26,6 +26,7 @@
 
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
+#include <nnvm/graph.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
