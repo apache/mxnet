@@ -107,7 +107,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1"
+          LOG(WARNING) << "Variance is not close enough to 1 "
                        << saveSum << " (" << sum << "), "
                        << saveVar << " (" << var << ")";
         }
@@ -211,7 +211,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1"
+          LOG(WARNING) << "Variance is not close enough to 1 "
                        << saveSum << " (" << sum << "), "
                        << saveVar << " (" << var << ")";
         }
@@ -442,7 +442,7 @@ static StreamType& PRT(
   *os << test::op::BasicOperatorData<DType, AccReal>::bvt2String(bvt) << ": " << idx
       << ": ";
   const TBlob& blob = obj.getBlobVect(bvt)[idx];
-  test::print(os, blob);
+  test::print(RunContext(), os, blob);
   return *os;
 }
 

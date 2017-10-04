@@ -1607,10 +1607,8 @@ def test_scatter_ops():
 
     shape = (10, 5)
 
-    #for lhs_stype in ['row_sparse', 'default', 'csr']:
-    for lhs_stype in ['row_sparse']:
-        #for rhs_stype in ['row_sparse', 'default', 'csr']:
-        for rhs_stype in ['csr']:
+    for lhs_stype in ['row_sparse', 'default', 'csr']:
+        for rhs_stype in ['row_sparse', 'default', 'csr']:
             print("op: {}, lhs_stype: {}, rhs_stype: {}".format('_scatter_elemwise_div',
                                                                 lhs_stype, rhs_stype))
             check_scatter_ops('_scatter_elemwise_div', shape, lhs_stype, rhs_stype,
@@ -1618,23 +1616,19 @@ def test_scatter_ops():
                               lambda l, r: l / r,
                               verbose=False)
 
-    # for lhs_stype in ['row_sparse', 'default', 'csr']:
-    #     print("op: {}, lhs_stype: {}".format('_scatter_plus', lhs_stype))
-    #     check_scatter_ops('_scatter_plus', shape, lhs_stype, 'scalar',
-    #                       lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
-    #                       lambda l, r: l + r,
-    #                       rhs_is_scalar=True, verbose=False)
-    #
-    #     print("op: {}, lhs_stype: {}".format('_scatter_minus', lhs_stype))
-    #     check_scatter_ops('_scatter_minus', shape, lhs_stype, 'scalar',
-    #                       lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
-    #                       lambda l, r: l + r,
-    #                       rhs_is_scalar=True, verbose=False, density=0.5)
+    for lhs_stype in ['row_sparse', 'default', 'csr']:
+        print("op: {}, lhs_stype: {}".format('_scatter_plus', lhs_stype))
+        check_scatter_ops('_scatter_plus', shape, lhs_stype, 'scalar',
+                          lambda l, r: mx.sym._internal._scatter_plus_scalar(l, r),
+                          lambda l, r: l + r,
+                          rhs_is_scalar=True, verbose=False)
+
+        print("op: {}, lhs_stype: {}".format('_scatter_minus', lhs_stype))
+        check_scatter_ops('_scatter_minus', shape, lhs_stype, 'scalar',
+                          lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
+                          lambda l, r: l + r,
+                          rhs_is_scalar=True, verbose=False, density=0.5)
 
 if __name__ == '__main__':
-    set_default_context(mx.gpu(0))
-    # import nose
-    # nose.runmodule()
-    #test_elemwise_binary_ops()
-    #test_sparse_mathematical_core()
-    test_scatter_ops()
+    import nose
+    nose.runmodule()

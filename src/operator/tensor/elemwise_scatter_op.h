@@ -39,8 +39,19 @@ namespace op {
 class ScatterOpBase {
  /*! \brief Protected in order to prevent widespread use. Scatter ops is a special case */
  protected:
-  /*! \brief For some situations, we need to do the computation as dense and then use
-   * sparse-retain to strip out the portions we aren't interested in */
+  /*!
+   * \brief For some situations, we need to do the computation as dense and then use
+   * sparse-retain to strip out the portions we aren't interested in.
+   * \note If your operastor uses this function, it must request kTempStorage
+   * \tparam xpu gpu or cpu
+   * \tparam Function Function to call with dense inputs and outputs
+   * \param attrs Operator attributes
+   * \param ctx Operator context
+   * \param inputs Input NDArrays
+   * \param req Operation request
+   * \param outputs Output NDArrays
+   * \param function
+   */
   template<typename xpu, typename Function>
   static void ComputeAsDense(const nnvm::NodeAttrs &attrs,
                              const OpContext &ctx,
@@ -50,16 +61,18 @@ class ScatterOpBase {
                              Function function) {
     std::vector<bool> output_converted;
     std::vector<TBlob>   input_data, output_data;
-    std::vector<NDArray> other_outputs;
+    std::vector<NDArray> other_inputs, other_outputs;
+    other_inputs.reserve(inputs.size());
     input_data.reserve(inputs.size());
     output_data.reserve(outputs.size());
     other_outputs.reserve(outputs.size());
     output_converted.reserve(outputs.size());
     // Inputs...
-    for(const NDArray& nd : inputs) {
-      if(nd.storage_type() != kDefaultStorage) {
+    for (const NDArray& nd : inputs) {
+      if (nd.storage_type() != kDefaultStorage) {
         NDArray in(nd.shape(), ctx.run_ctx.get_ctx());
-        CastStorageComputeEx<xpu>(nnvm::NodeAttrs(), ctx, { nd }, req, { in });
+        CastStorageComputeEx<xpu>(attrs, ctx, { nd }, req, { in });
+        other_inputs.push_back(in);
         input_data.push_back(in.data());
       } else {
         input_data.push_back(nd.data());
@@ -67,10 +80,10 @@ class ScatterOpBase {
     }
 
     // Outputs...
-    for(const NDArray& nd : outputs) {
-      if(nd.storage_type() != kDefaultStorage) {
+    for (const NDArray& nd : outputs) {
+      if (nd.storage_type() != kDefaultStorage) {
         NDArray out(nd.shape(), ctx.run_ctx.get_ctx());
-        CastStorageComputeEx<xpu>(nnvm::NodeAttrs(), ctx, { nd }, req, { out });
+        CastStorageComputeEx<xpu>(attrs, ctx, { nd }, req, { out });
         other_outputs.push_back(out);
         output_data.push_back(out.data());
         output_converted.push_back(true);
@@ -85,9 +98,9 @@ class ScatterOpBase {
     function(attrs, ctx, input_data, req, output_data);
 
     // Convert output(s) back if necessary
-    for(size_t i = 0, n = outputs.size(); i < n; ++i) {
-      if(output_converted[i]) {
-        CastStorageComputeEx<xpu>(nnvm::NodeAttrs(),
+    for (size_t i = 0, n = outputs.size(); i < n; ++i) {
+      if (output_converted[i]) {
+        CastStorageComputeEx<xpu>(attrs,
                                   ctx,
                                   { other_outputs[i] },
                                   req,
@@ -188,9 +201,11 @@ class ElemwiseScatterBinaryOp : public ElemwiseBinaryOp,
                                          const std::vector<NDArray> &outputs) {
           if ((input0_stype == kCSRStorage || input1_stype == kCSRStorage)
               && input0_stype != input1_stype) {
+            // Fallback to dense + retain
             ComputeAsDense<cpu>(attrs, ctx, inputs, req,
                                 outputs, ElemwiseBinaryOp::Compute<cpu, OP>);
           } else {
+            // Normal operation + retain
             ElemwiseBinaryOp::ComputeEx<cpu, OP>(attrs, ctx, inputs, req, outputs);
           }
         });
@@ -218,6 +233,7 @@ class ElemwiseScatterBinaryOp : public ElemwiseBinaryOp,
 #endif  // #ifdef __CUDACC__
 
  public:
+  /*! \brief General compute for operations which include sparse tensors */
   template<typename xpu, typename OP>
   static void ComputeEx(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
@@ -247,6 +263,7 @@ class ElemwiseScatterBinaryScalarOp : public BinaryScalarOp,
                                         const std::vector<NDArray> &inputs,
                                         const std::vector<OpReqType> &req,
                                         const std::vector<NDArray> &outputs) {
+        // Normal operation + retain
         BinaryScalarOp::ComputeEx<cpu, OP>(attrs, ctx, inputs, req, outputs);
     });
   }
@@ -270,6 +287,7 @@ class ElemwiseScatterBinaryScalarOp : public BinaryScalarOp,
                                           const std::vector<NDArray> &inputs,
                                           const std::vector<OpReqType> &req,
                                           const std::vector<NDArray> &outputs) {
+          // Fallback to dense + retain
           ComputeAsDense<gpu>(attrs, ctx, inputs, req, outputs, BinaryScalarOp::Compute<gpu, OP>);
       });
     }
@@ -278,6 +296,8 @@ class ElemwiseScatterBinaryScalarOp : public BinaryScalarOp,
 
  public:
   using BinaryScalarOp::Compute;
+
+  /*! \brief General compute for operations which include sparse tensors */
   template<typename xpu, typename OP>
   static void ComputeEx(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
