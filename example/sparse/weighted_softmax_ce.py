@@ -17,7 +17,13 @@
 
 import mxnet as mx
 
+
 class WeightedSoftmaxCrossEntropyLoss(mx.operator.CustomOp):
+    """ softmax cross entropy weighted loss, where the loss is adjusted by \
+((1 + label * pos_cls_weight) / pos_cls_weight)
+
+    """
+
     def __init__(self, positive_cls_weight):
         self.positive_cls_weight = float(positive_cls_weight)
 
@@ -58,11 +64,9 @@ class WeightedSoftmaxCrossEntropyLossProp(mx.operator.CustomOpProp):
         assert(positive_cls_weight > 0)
 
     def list_arguments(self):
-        #  this can be omitted if you only have 1 input.
         return ['data', 'label']
 
     def list_outputs(self):
-        #  this can be omitted if you only have 1 output.
         return ['output']
 
     def infer_shape(self, in_shapes):
