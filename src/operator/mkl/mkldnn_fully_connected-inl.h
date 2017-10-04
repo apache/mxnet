@@ -187,35 +187,41 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
     }
     if (ipFwd_pd == NULL) {
       InitInnerProductFwd(in_data);
-    }
-    std::shared_ptr<memory> fwd_top_data_memory;
-    std::shared_ptr<primitive> fwd_bottom_data_primitive,
-      fwd_weights_data_primitive, fwd_bias_data_primitive;
-    fwd_bottom_data_primitive = fwd_bottom_data->get_converted_prv(data.dptr_,
-      false, in_data[fullc::kData]);
-    fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat.dptr_,
-      false, in_data[fullc::kWeight]);
-
-    fwd_top_data_memory = fwd_top_data->create_output_memory(
-      out.dptr_, out_data[fullc::kOut], fwd_top_data);
-    if (!param_.no_bias) {
-      Tensor<xpu, 1, Dtype> bias =
-        mkl_experimental_direct_get<xpu, 1, Dtype>(in_data[fullc::kBias], s);
-      fwd_bias_data_primitive = fwd_bias_data->get_converted_prv(bias.dptr_,
-        false, in_data[fullc::kBias]);
-      ipFwd.reset(new inner_product_forward(*ipFwd_pd
-        , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
-        , *fwd_bias_data_primitive, *fwd_top_data_memory));
+      fwd_bottom_data_primitive = fwd_bottom_data->get_converted_prv(data.dptr_,
+        false, in_data[fullc::kData]);
+      fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat.dptr_,
+        false, in_data[fullc::kWeight]);
+      fwd_top_data_memory = fwd_top_data->create_output_memory(
+        out.dptr_, out_data[fullc::kOut], fwd_top_data);
+      if (!param_.no_bias) {
+        Tensor<xpu, 1, Dtype> bias =
+          mkl_experimental_direct_get<xpu, 1, Dtype>(in_data[fullc::kBias], s);
+        fwd_bias_data_primitive = fwd_bias_data->get_converted_prv(bias.dptr_,
+          false, in_data[fullc::kBias]);
+        ipFwd.reset(new inner_product_forward(*ipFwd_pd
+          , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
+          , *fwd_bias_data_primitive, *fwd_top_data_memory));
+      } else {
+        ipFwd.reset(new inner_product_forward(*ipFwd_pd
+          , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
+          , *fwd_top_data_memory));
+      }
     } else {
-      ipFwd.reset(new inner_product_forward(*ipFwd_pd
-        , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
-        , *fwd_top_data_memory));
+      fwd_bottom_data->sync_converted_prv(data.dptr_,
+        false, in_data[fullc::kData]);
+      fwd_weights_data->sync_converted_prv(wmat.dptr_,
+        false, in_data[fullc::kWeight]);
+      fwd_top_data->sync_output_memory(
+        out_data[fullc::kOut], fwd_top_data);
+      if (!param_.no_bias) {
+        Tensor<xpu, 1, Dtype> bias =
+          mkl_experimental_direct_get<xpu, 1, Dtype>(in_data[fullc::kBias], s);
+        fwd_bias_data->sync_converted_prv(bias.dptr_,
+          false, in_data[fullc::kBias]);
+      }
     }
     ipFwd.submit();
 
-    if (fwd_top_data->conversion_needed()) {
-      fwd_top_data->convert_from_prv(out.dptr_);
-    }
   }
   void InitInnerProductBwd() {
     int32_t n = this->M_;
@@ -410,6 +416,9 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
   std::shared_ptr<inner_product_backward_weights::primitive_desc> ipBwdWeights_pd;
   MKLDNNPrimitive<Dtype> ipFwd, ipBwdData, ipBwdWeights;
 
+  std::shared_ptr<memory> fwd_top_data_memory;
+  std::shared_ptr<primitive> fwd_bottom_data_primitive,
+    fwd_weights_data_primitive, fwd_bias_data_primitive;
   int32_t w_, h_;
   int M_;
   int channels_;
