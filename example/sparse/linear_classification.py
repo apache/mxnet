@@ -18,6 +18,7 @@
 import mxnet as mx
 from mxnet.test_utils import *
 from get_data import get_libsvm_data
+from linear_model import *
 import argparse
 import os
 
@@ -29,7 +30,11 @@ parser.add_argument('--num-epoch', type=int, default=5,
 parser.add_argument('--batch-size', type=int, default=8192,
                     help='number of examples per batch')
 parser.add_argument('--kvstore', type=str, default=None,
-                    help='what kvstore to use [local, dist_async, etc]')
+                    help='what kvstore to use',
+                    choices=["dist_async", "local"])
+parser.add_argument('--optimizer', type=str, default='ftrl',
+                    help='what optimizer to use',
+                    choices=["ftrl", "sgd", "adam"])
 
 AVAZU = {
     'train': 'avazu-app',
@@ -39,19 +44,6 @@ AVAZU = {
     'num_features': 1000001,
 }
 
-def linear_model(num_features):
-    # data with csr storage type to enable feeding data with CSRNDArray
-    x = mx.symbol.Variable("data", stype='csr')
-    norm_init = mx.initializer.Normal(sigma=0.01)
-    # weight with row_sparse storage type to enable sparse gradient updates
-    weight = mx.symbol.Variable("weight", shape=(num_features, 2), init=norm_init, stype='row_sparse')
-    bias = mx.symbol.Variable("bias", shape=(2, ))
-    dot = mx.symbol.sparse.dot(x, weight)
-    pred = mx.symbol.broadcast_add(dot, bias)
-    y = mx.symbol.Variable("softmax_label")
-    model = mx.symbol.SoftmaxOutput(data=pred, label=y, multi_output=True, name="out")
-    return model
-
 if __name__ == '__main__':
     import logging
     head = '%(asctime)-15s %(message)s'
@@ -59,9 +51,11 @@ if __name__ == '__main__':
 
     # arg parser
     args = parser.parse_args()
+    logging.info(args)
     num_epoch = args.num_epoch
     kvstore = args.kvstore
     batch_size = args.batch_size
+    optimizer = args.optimizer
 
     # create kvstore
     kv = mx.kvstore.create(kvstore) if kvstore else None
@@ -84,17 +78,25 @@ if __name__ == '__main__':
                                  batch_size=batch_size)
 
     # model
-    model = linear_model(num_features)
+    # The positive class weight, says how much more we should upweight the importance of
+    # positive instances in the objective function.
+    # This is used to combat the extreme class imbalance.
+    positive_class_weight = 2
+    model = linear_model(num_features, positive_class_weight)
 
     # module
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
-    sgd = mx.optimizer.SGD(momentum=0.0, clip_gradient=5.0,
-                           learning_rate=0.001, rescale_grad=1.0/batch_size/num_worker)
-    mod.init_optimizer(optimizer=sgd, kvstore=kv)
+    optim = mx.optimizer.create(optimizer, learning_rate=0.01, rescale_grad=1.0/batch_size/num_worker)
+    mod.init_optimizer(optimizer=optim, kvstore=kv)
     # use accuracy as the metric
-    metric = mx.metric.create('log_loss')
+    metric = mx.metric.create(['nll_loss'])
+
+    # get the sparse weight parameter
+    arg_params, _ = mod.get_params()
+    weight = arg_params['weight']
+    speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
     data_iter = iter(train_data)
@@ -103,23 +105,21 @@ if __name__ == '__main__':
         metric.reset()
         for batch in data_iter:
             nbatch += 1
-            # for distributed training, we need to explicitly pull sparse weights from kvstore
+            # for distributed training, we need to manually pull sparse weights from kvstore
             if kv:
                 row_ids = batch.data[0].indices
-                # pull sparse weight based on the indices
-                index = mod._exec_group.param_names.index('weight')
-                kv.row_sparse_pull('weight', mod._exec_group.param_arrays[index],
-                                   priority=-index, row_ids=[row_ids])
+                kv.row_sparse_pull('weight', weight, row_ids=[row_ids])
             mod.forward_backward(batch)
-            # update parameters
+            # update all parameters (including the weight parameter)
             mod.update()
             # update training metric
             mod.update_metric(metric, batch.label)
-            if nbatch % 100 == 0:
-                logging.info('epoch %d batch %d, train log loss = %s' % (epoch, nbatch, metric.get()[1]))
+            speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
+                                                       eval_metric=metric, locals=locals())
+            speedometer(speedometer_param)
         # evaluate metric on validation dataset
-        score = mod.score(eval_data, ['log_loss'])
-        logging.info('epoch %d, eval log loss = %s' % (epoch, score[0][1]))
+        score = mod.score(eval_data, ['nll_loss'])
+        logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
         # reset the iterator for next pass of data
         data_iter.reset()
     logging.info('Training completed.')
