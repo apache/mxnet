@@ -53,7 +53,7 @@ class VOCDetection(DetectionDataset):
         ids = []
         for year, name in sets:
             root = os.path.join(self._root, 'VOC' + str(year))
-            lf = os.path.join(root, 'Imagesets', 'Main', name + '.txt')
+            lf = os.path.join(root, 'ImageSets', 'Main', name + '.txt')
             with open(lf, 'r') as f:
                 ids += [(root, line.strip()) for line in f.readlines()]
         return ids

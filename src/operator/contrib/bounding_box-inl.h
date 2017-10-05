@@ -622,7 +622,7 @@ struct bipartite_matching {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *row_marker, DType *col_marker,
                                   const DType *scores, const DType *sorted_index,
-                                  int num_row, int num_col,
+                                  int num_batch, int num_row, int num_col,
                                   float threshold, bool is_ascend, int topk) {
     int stride = num_row * num_col;
     const DType *index = sorted_index + i * stride;
@@ -632,7 +632,7 @@ struct bipartite_matching {
     int count = 0;
     for (int j = 0; j < stride; ++j) {
       int idx = static_cast<int>(index[j]);
-      int r = idx / num_col;
+      int r = idx / num_batch / num_col;
       int c = idx % num_col;
       if (rmarker[r] == -1 && cmarker[c] == -1) {
         if ((!is_ascend && score[j] > threshold) ||
@@ -700,8 +700,8 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
     row_marker = -1;
     col_marker = -1;
     Kernel<bipartite_matching, xpu>::Launch(s, batch_size, row_marker.dptr_,
-     col_marker.dptr_, scores.dptr_, sorted_index.dptr_, row, col, param.threshold,
-     param.is_ascend, param.topk);
+     col_marker.dptr_, scores.dptr_, sorted_index.dptr_, batch_size, row, col,
+     param.threshold, param.is_ascend, param.topk);
   });
 }
 

@@ -67,6 +67,8 @@ class SSDNet(Block):
         cls_preds = nd.concat(*cls_preds, dim=1).reshape((0, -1, self.num_classes))
         box_preds = nd.concat(*box_preds, dim=1).reshape((0, -1, 4))
         anchors = nd.concat(*anchors, dim=0).reshape((1, -1, 4))
+        # sync device since anchors are always generated on cpu currently
+        anchors = anchors.as_in_context(cls_preds.context)
         return [cls_preds, box_preds, anchors]
 
 
