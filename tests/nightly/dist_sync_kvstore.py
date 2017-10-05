@@ -60,7 +60,7 @@ def init_kv_compressed(kv):
     #kv.set_optimizer(mx.optimizer.create('test'))
     # init kv compression keys
     kv.init('221', mx.nd.zeros(big_shape))
-    # kv.init('21', mx.nd.zeros(shape))
+    kv.init('21', mx.nd.zeros(shape))
     #kv.set_optimizer(mx.optimizer.create('test'))
     return kv, pos_threshold, neg_threshold
 
@@ -209,6 +209,11 @@ def test_sync_push_pull():
         newval = curval + 2*nworker*pos
         check_diff_to_scalar(val2, newval)
 
+    def check_pull_before_push(kv):
+        val = mx.nd.ones(big_shape)
+        kv.pull('221', val)
+        check_diff_to_scalar(val, 0)
+
     def check_zero(kv):
         kv.push('221', mx.nd.zeros(big_shape))
         # to check that all are set to 0s
@@ -216,17 +221,18 @@ def test_sync_push_pull():
         kv.pull('221', val)
         check_diff_to_scalar(val, 0)
 
-    # check_default_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    # check_big_row_sparse_keys(kv, my_rank, nworker)
-    # print('worker ' + str(my_rank) + ' is done with non compression tests')
+    print ('worker '+str(my_rank)+' started')
+    check_default_keys(kv, my_rank, nworker)
+    check_row_sparse_keys(kv, my_rank, nworker)
+    check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+    check_big_row_sparse_keys(kv, my_rank, nworker)
+    print('worker ' + str(my_rank) + ' is done with non compression tests')
 
     kv, pos, neg = init_kv_compressed(kv)
-    # print ('pushing now')
+    check_pull_before_push(kv)
     check_zero(kv)
-    # verify_residual(kv, pos, nworker)
-    # check_ones(kv, pos, nworker)
+    verify_residual(kv, pos, nworker)
+    check_ones(kv, pos, nworker)
     print('worker ' + str(my_rank) + ' is done with compression tests')
 
 if __name__ == "__main__":
