@@ -109,8 +109,6 @@ else
     PRE_COMMAND=""
 fi
 
-COMMAND=("sudo bash -c \"ln /dev/null /dev/raw1394\" ; " "${COMMAND[@]}")
-
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
 echo "CI_DOCKER_EXTRA_PARAMS: ${CI_DOCKER_EXTRA_PARAMS[@]}"
