@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
   qemu-user-static \
   unzip
 
-ENV CROSS_TRIPLE=arm-linux-androideabi
+ENV CROSS_TRIPLE=aarch64-linux-android
 ENV CROSS_ROOT=/usr/${CROSS_TRIPLE}
 ENV AS=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-as \
     AR=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-ar \
@@ -25,8 +25,8 @@ RUN mkdir -p /build && \
     cd android-ndk-r${ANDROID_NDK_REVISION} && \
     ./build/tools/make_standalone_toolchain.py \
       --stl=libc++ \
-      --arch arm \
-      --api 16 \
+      --arch arm64 \
+      --api 21 \
       --install-dir=${CROSS_ROOT} && \
     cd / && \
     rm -rf /build && \
@@ -50,22 +50,21 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vcs-url=$VCS_URL \
       org.label-schema.schema-version="1.0"
 
-ENV CC /usr/arm-linux-androideabi/bin/arm-linux-androideabi-gcc
-ENV CXX /usr/arm-linux-androideabi/bin/arm-linux-androideabi-g++
+ENV ARCH aarch64
 
 # Build OpenBLAS
 # https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android
 RUN git clone https://github.com/xianyi/OpenBLAS.git && \
     cd OpenBLAS && \
-    make -j$(nproc) TARGET=ARMV7 ARM_SOFTFP_ABI=1 HOSTCC=gcc NOFORTRAN=1 libs
+    make -j$(nproc) TARGET=ARMV8 ARM_SOFTFP_ABI=1 HOSTCC=gcc NOFORTRAN=1 libs
 
 ENV OPENBLAS_ROOT /work/OpenBLAS
 ENV LIBRARY_PATH /work/OpenBLAS/lib/:/work/OpenBLAS/:$LIBRARY_PATH
 ENV CPLUS_INCLUDE_PATH /work/OpenBLAS/include/:/work/OpenBLAS/:$CPLUS_INCLUDE_PATH
 WORKDIR /work
 
-ENV CC /usr/arm-linux-androideabi/bin/arm-linux-androideabi-clang
-ENV CXX /usr/arm-linux-androideabi/bin/arm-linux-androideabi-clang++
+ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
+ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 ENV BUILD_OPTS "USE_BLAS=openblas USE_SSE=0 DMLC_LOG_STACK_TRACE=0 USE_OPENCV=0 USE_LAPACK=0"
 
 # Build MXNet

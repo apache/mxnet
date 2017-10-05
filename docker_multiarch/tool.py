@@ -78,6 +78,7 @@ def mkdir_p(d):
 def get_arches():
     """Get a list of architectures given our dockerfiles"""
     dockerfiles = glob.glob("Dockerfile.build.*")
+    dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
     arches = list(map(lambda x: re.sub(r"Dockerfile.build.(.*)", r"\1", x), dockerfiles))
     arches.sort()
     return arches
