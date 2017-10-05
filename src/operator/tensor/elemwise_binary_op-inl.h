@@ -30,7 +30,13 @@
 namespace mxnet {
 namespace op {
 
-/*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
+/*! \brief binary op handling for the following row sparse inputs/outputs
+  rsp, rsp -> rsp,
+  dns, rsp -> rsp,
+  rsp, dns -> rsp,
+  dns, rsp -> dns,
+  rsp, dns -> dns,
+*/
 template<typename DType, typename IType, typename OP>
 void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
                                 const nnvm::NodeAttrs &attrs,

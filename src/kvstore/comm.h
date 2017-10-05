@@ -264,7 +264,7 @@ class CommCPU : public Comm {
     CHECK_EQ(indices.dtype(), dst->aux_type(rowsparse::kIdx))
       << "CopyRetainedRowsToGPU only supports same data type for idx array and dst aux_data(0)";
     if (!src.storage_initialized() || indices.data().Size() == 0U) {
-      op::FillZerosRspImpl(gpu_stream, dst);
+      op::FillZerosRspImpl(gpu_stream, *dst);
       return;
     }
     using namespace mshadow;

@@ -46,6 +46,8 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I contribute a patch to MXNet?](http://mxnet.io/community/contribute.html)
 
+* [How do I implement operators in MXNet backend?](http://mxnet.io/how_to/add_op_in_backend.html)
+
 * [How do I create new operators in MXNet?](http://mxnet.io/how_to/new_op.html)
 
 * [How do I set MXNet's environmental variables?](http://mxnet.io/how_to/env_var.html)

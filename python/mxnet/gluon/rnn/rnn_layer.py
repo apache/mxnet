@@ -21,9 +21,10 @@
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
 from __future__ import print_function
+__all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray
-from ..nn import Block
+from .. import Block
 from . import rnn_cell
 
 

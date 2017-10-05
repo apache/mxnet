@@ -19,9 +19,11 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
-import unittest 
+import unittest
+from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
+import unittest
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -779,6 +781,14 @@ def test_ndarray_fluent():
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
 
+@raises(ValueError)
+def test_bool_ambiguous():
+    bool(mx.nd.ones((2,3,4)))
+
+def test_bool():
+    assert not bool(mx.nd.array([]))
+    assert not bool(mx.nd.zeros((1,)))
+    assert bool(mx.nd.ones((1,)))
 
 if __name__ == '__main__':
     import nose

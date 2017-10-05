@@ -38,7 +38,6 @@ NNVM_REGISTER_OP(_backward_power)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 2>)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::power_grad, mshadow_op::power_rgrad>);
 
@@ -54,7 +53,6 @@ NNVM_REGISTER_OP(_backward_maximum)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 2>)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<cpu, mshadow_op::ge,
   mshadow_op::lt>);
 
@@ -70,7 +68,6 @@ NNVM_REGISTER_OP(_backward_minimum)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 2>)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<cpu, mshadow_op::le,
   mshadow_op::gt>);
 
@@ -89,7 +86,6 @@ NNVM_REGISTER_OP(_backward_hypot)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> > {{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 2>)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<cpu,
   mshadow_op::hypot_grad_left, mshadow_op::hypot_grad_right>);
 

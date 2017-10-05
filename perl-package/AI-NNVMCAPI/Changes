@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::NNVMCAPI.
 
+1.1     Sun Sep 24 10:26:54 PDT 2017
+        - support for perl 5.14
+
 1.01    Sat Jun 10 23:57:27 PDT 2017
         - sync with python.
 

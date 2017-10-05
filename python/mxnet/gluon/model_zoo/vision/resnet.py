@@ -264,7 +264,6 @@ class ResNetV1(HybridBlock):
 
             self.classifier = nn.HybridSequential(prefix='')
             self.classifier.add(nn.GlobalAvgPool2D())
-            self.classifier.add(nn.Flatten())
             self.classifier.add(nn.Dense(classes, in_units=channels[-1]))
 
     def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
