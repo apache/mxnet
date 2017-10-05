@@ -153,10 +153,10 @@ class _Conv(HybridBlock):
         if self.bias is None:
             s += ', bias=False'
         s += ')'
+        shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
-                        mapping=self._channels if not self._in_channels
-                        else '{0} -> {1}'.format(self._in_channels,
-                                                 self._channels),
+                        mapping=shape[0] if not shape[1]
+                        else '{0} -> {1}'.format(shape[1], shape[0]),
                         **self._kwargs)
 
 
