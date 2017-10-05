@@ -22,6 +22,6 @@ function randn{N}(mean::Real, stdvar::Real, shape::NTuple{N,Int}, ctx::Context)
   randn!(mean, stdvar, out)
 end
 
-function srand!(seed_state::Int)
+function srand(seed_state::Int)
   @mxcall(:MXRandomSeed, (Cint,), seed_state)
 end
