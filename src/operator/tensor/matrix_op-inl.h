@@ -425,14 +425,14 @@ inline bool SliceShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                           const int dev_mask,
-                                           DispatchMode* dispatch_mode,
-                                           std::vector<int>* in_attrs,
-                                           std::vector<int>* out_attrs) {
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  auto& in_stype = in_attrs->at(0);
+  const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
