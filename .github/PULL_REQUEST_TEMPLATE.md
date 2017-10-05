@@ -1,5 +1,5 @@
 ## Description ##
-(DELETEME Brief description on what this PR is about)
+(Brief description on what this PR is about)
 
 ## Checklist ##
 ### Essentials ###
@@ -10,7 +10,6 @@
 - [ ] For user-facing API changes, API doc string has been updated.
 
 ### Changes ###
-(DELETEME list items of changes here)
 - [ ] Feature1, tests, (and when applicable, API doc)
 - [ ] Feature2, tests, (and when applicable, API doc)
 
