@@ -109,7 +109,7 @@ else
     PRE_COMMAND=""
 fi
 
-COMMAND=("sudo ln /dev/null /dev/raw1394 &&" "${COMMAND[@]}")
+COMMAND=("sudo link /dev/null /dev/raw1394 &&" "${COMMAND[@]}")
 
 # Print arguments.
 echo "WORKSPACE: ${WORKSPACE}"
