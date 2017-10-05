@@ -30,7 +30,7 @@ num_class = 20
 transform = transform.SSDAugmentation((512, 512))
 train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'trainval')], transform=transform)
 val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=transform)
-train_data = DataLoader(train_dataset, 1, True, last_batch='rollover')
+train_data = DataLoader(train_dataset, 32, True, last_batch='rollover')
 val_data = DataLoader(val_dataset, 2, False, last_batch='keep')
 target_generator = SSDTargetGenerator()
 # for data in train_data:
@@ -45,7 +45,7 @@ target_generator = SSDTargetGenerator()
 # network
 net = ssd_512_resnet18_v1(classes=num_class, pretrained=(0, 0))
 
-lr = 0.0001
+lr = 0.01
 wd = 0.00005
 momentum = 0.9
 log_interval = 1
@@ -89,8 +89,8 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                     # raise
                     loss1 = cls_loss(z[0], cls_targets)
                     loss2 = box_loss((z[1] - box_targets) * box_masks, nd.zeros_like(box_targets))
-                    # L = loss1 + loss2
-                    L = loss1
+                    L = loss1 + loss2
+                    # L = loss1
                     Ls.append(L)
                     outputs.append(z[0])
                     labels.append(cls_targets)
@@ -103,9 +103,10 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
             cls_metric.update(labels, outputs)
             box_metric.update(box_labels, box_preds)
             if log_interval and not (i + 1) % log_interval:
-                print(checker.grad())
+                # print(checker.grad())
                 name, acc = cls_metric.get()
                 name1, mae = box_metric.get()
                 logging.info("Epoch [%d] Batch [%d], %s=%f, %s=%f"%(epoch, i, name, acc, name1, mae))
 
-train(net, train_data, val_data, 10)
+ctx = [mx.gpu(i) for i in range(8)]
+train(net, train_data, val_data, 10, ctx=ctx)

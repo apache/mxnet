@@ -32,8 +32,8 @@ class FocalLoss(loss.Loss):
         self._eps = eps
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
-        find_inf(output, 'output')
-        backup = output.asnumpy()
+        # find_inf(output, 'output')
+        # backup = output.asnumpy()
         if not self._from_logits:
             output = F.sigmoid(output)
         if self._sparse_label:
@@ -41,20 +41,20 @@ class FocalLoss(loss.Loss):
         else:
             one_hot = label > 0
         pt = F.where(one_hot, output, 1 - output)
-        print('pt', pt)
-        find_inf(pt, 'pt')
+        # print('pt', pt)
+        # find_inf(pt, 'pt')
         t = F.ones_like(one_hot)
         alpha = F.where(one_hot, self._alpha * t, (1 - self._alpha) * t)
-        find_inf(alpha, 'alpha')
-        tmp1 = (1-pt) ** self._gamma
-        print('tmp1',tmp1)
-        find_inf(tmp1, 'tmp1')
-        tmp2 = F.log(pt)
-        find_inf(tmp2, 'tmp2')
-        tmp3 = -alpha * tmp1
-        find_inf(tmp3, 'tmp3')
-        tmp4 = tmp1 * tmp2
-        find_inf(tmp4, 'tmp4')
+        # find_inf(alpha, 'alpha')
+        # tmp1 = (1-pt) ** self._gamma
+        # print('tmp1',tmp1)
+        # find_inf(tmp1, 'tmp1')
+        # tmp2 = F.log(pt)
+        # find_inf(tmp2, 'tmp2')
+        # tmp3 = -alpha * tmp1
+        # find_inf(tmp3, 'tmp3')
+        # tmp4 = tmp1 * tmp2
+        # find_inf(tmp4, 'tmp4')
         loss = -alpha * ((1 - pt) ** self._gamma) * F.log(F.minimum(pt + self._eps, 1))
         # print('pt again', pt)
         # find_inf(loss, 'loss')
