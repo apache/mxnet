@@ -62,3 +62,24 @@ if __name__ == '__main__':
     ae_model.load('mnist_pt.arg')
     print("Training error:", ae_model.eval(train_X))
     print("Validation error:", ae_model.eval(val_X))
+    if visualize:
+        try:
+            import matplotlib
+            from matplotlib import pyplot as plt
+            import model
+            matplotlib.interactive(True)
+            # sample a random image
+            original_image = X[np.random.choice(X.shape[0]), :].reshape(1, 784)
+            data_iter = mx.io.NDArrayIter({'data': original_image}, batch_size=1, shuffle=False,
+                                          last_batch_handle='pad')
+            # remove list?
+            reconstructed_image = list(model.extract_feature(ae_model.decoder, ae_model.args,
+                                       ae_model.auxs, data_iter,
+                                       original_image.shape[0], ae_model.xpu).values())[0]
+            print(type(reconstructed_image))
+            plt.imshow(original_image)
+            plt.show()
+            plt.imshow(reconstructed_image)
+            plt.show()
+        except ImportError:
+            logging.info("matplotlib is required for visualization")
