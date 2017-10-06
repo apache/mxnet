@@ -1312,7 +1312,7 @@ def test_sparse_square_sum():
                         assert ret.stype == 'default'
                     ret_expected = mx.nd.sum(dns*dns, axis=axis, keepdims=keepdim)
                     # check forward result
-                    assert same(ret.asnumpy(), ret_expected.asnumpy())
+                    assert_almost_equal(ret.asnumpy(), ret_expected.asnumpy())
 
                     rsp_data = mx.sym.Variable('data', stype='row_sparse')
                     test = mx.symbol._internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
