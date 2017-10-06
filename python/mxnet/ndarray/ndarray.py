@@ -1902,6 +1902,12 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = Context.default_ctx
+
+    # in case of mx.nd.arange(x) stop is set to x and start is set to 0
+    if stop is None:
+        stop = start
+        start = 0
+
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
