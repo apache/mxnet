@@ -1,0 +1,30 @@
+group 'io.mxnet'
+version '0.1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'antlr'
+apply plugin: 'application'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    antlr "org.antlr:antlr4:$antlrVersion"
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    compileOnly 'org.projectlombok:lombok:1.16.18'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+generateGrammarSource {
+    arguments += ['-visitor']
+}
+
+jar {
+    baseName = 'caffe-mxnet-translator'
+    version =  '0.1.0'
+}
+
+mainClassName = "io.mxnet.caffetranslator.Launcher"
