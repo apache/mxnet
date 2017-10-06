@@ -68,7 +68,6 @@ if __name__ == '__main__':
     print("Validation error:", ae_model.eval(val_X))
     if visualize:
         try:
-            import matplotlib
             from matplotlib import pyplot as plt
             from model import extract_feature
             # sample a random image
