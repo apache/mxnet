@@ -113,9 +113,20 @@ def test_sparse_nd_slice():
         assert same(A[start:end].asnumpy(), A2[start:end])
         assert same(A[start:].asnumpy(), A2[start:])
         assert same(A[:end].asnumpy(), A2[:end])
+    
+    def check_slice_nd_csr_fallback(shape):
+        stype = 'csr'
+        A, _ = rand_sparse_ndarray(shape, stype)
+        A2 = A.asnumpy()
+        start = rnd.randint(0, shape[0] - 1)
+        end = rnd.randint(start + 1, shape[0])
+        result = mx.nd.sparse.slice(A, begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
+        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
+        assert same(result_dense.asnumpy(), result.asnumpy())
 
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
     check_sparse_nd_csr_slice(shape)
+    check_slice_nd_csr_fallback(shape)
 
 
 def test_sparse_nd_equal():
