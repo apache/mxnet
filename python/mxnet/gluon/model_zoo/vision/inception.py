@@ -189,7 +189,6 @@ class Inception3(HybridBlock):
             self.classifier.add(_make_E('E2_'))
             self.classifier.add(nn.AvgPool2D(pool_size=8))
             self.classifier.add(nn.Dropout(0.5))
-            self.classifier.add(nn.Flatten())
             self.classifier.add(nn.Dense(classes))
 
     def hybrid_forward(self, F, x):

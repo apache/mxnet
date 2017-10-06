@@ -171,22 +171,19 @@ The storage type of ``make_loss`` output depends upon the input storage type:
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_num_inputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"lhs", "rhs"};
-  })
+  [](const NodeAttrs& attrs) { return std::vector<std::string>{"lhs", "rhs"}; })
 .set_attr<nnvm::FInplaceOption>(
     "FInplaceOption", [](const NodeAttrs& attrs) {
       return std::vector<std::pair<int, int> >{{0, 0}};
     })
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
-    [](const NodeAttrs& attrs){
-      return std::vector<bool>{true};
-    })
+    [](const NodeAttrs& attrs){ return std::vector<bool>{true}; })
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeFirstItemEx<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
@@ -194,13 +191,57 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
       auto lhs = MakeNonlossGradNode(
           "_backward_copy", n, ograds, {},
           std::unordered_map<std::string, std::string>());
-      auto ng = MakeNode("zeros_like", n->attrs.name + "rhs_backward",
+      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
+
+
+NNVM_REGISTER_OP(reshape_like)
+.describe("Reshape lhs to have the same shape as rhs.")
+.set_num_inputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) { return std::vector<std::string>{"lhs", "rhs"}; })
+.set_attr<nnvm::FInplaceOption>(
+    "FInplaceOption", [](const NodeAttrs& attrs) {
+      return std::vector<std::pair<int, int> >{{0, 0}};
+    })
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+    [](const NodeAttrs& attrs){ return std::vector<bool>{true}; })
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+    [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FInferShape>("FInferShape",
+    [](const nnvm::NodeAttrs& attrs,
+       std::vector<TShape> *in_attrs,
+       std::vector<TShape> *out_attrs) {
+      if ((*in_attrs)[0].ndim()) {
+        CHECK_EQ((*in_attrs)[0].Size(), (*in_attrs)[1].Size())
+            << "Cannot reshape lhs with shape " << (*in_attrs)[0] << "to rhs "
+            << "with shape " << (*in_attrs)[1] << " because they have different "
+            << "size.";
+      }
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[1]);
+      return true;
+    })
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FGradient>(
+    "FGradient",  [](const nnvm::NodePtr& n,
+                     const std::vector<nnvm::NodeEntry>& ograds) {
+      auto lhs = MakeNonlossGradNode(
+          "_backward_copy", n, ograds, {},
+          std::unordered_map<std::string, std::string>());
+      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n);
+      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      return lhs;
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.");
+
 
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
