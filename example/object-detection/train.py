@@ -15,7 +15,7 @@ from block.loss import *
 from block.target import *
 from block.loss import *
 from trainer.metric import Accuracy, SmoothL1
-from trainer.debuger import super_print, find_abnormal
+from trainer.debugger import super_print, find_abnormal
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -33,8 +33,9 @@ val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=trans
 train_data = DataLoader(train_dataset, 32, True, last_batch='rollover')
 val_data = DataLoader(val_dataset, 2, False, last_batch='keep')
 target_generator = SSDTargetGenerator()
-# for data in train_data:
-#     pass
+for data in train_data:
+    pass
+raise
 #     print(data[0].shape, data[1].shape, type(data[0]), type(data[1]))
     # import cv2
     # import numpy as np

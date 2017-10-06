@@ -8,5 +8,7 @@ def super_print(*args):
     np.set_printoptions(threshold=threshold)
 
 def find_abnormal(arr):
-    pos = np.where(not np.isfinite(arr))
+    pos = np.where(np.logical_not(np.isfinite(arr)))
+    if pos[0].size < 1:
+        return None
     return pos

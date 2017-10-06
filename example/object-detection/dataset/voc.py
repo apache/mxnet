@@ -78,8 +78,19 @@ class VOCDetection(DetectionDataset):
             ymin = (float(xml_box.find('ymin').text) - 1) / height
             xmax = (float(xml_box.find('xmax').text) - 1) / width
             ymax = (float(xml_box.find('ymax').text) - 1) / height
+            try:
+                self._validator(xmin, ymin, xmax, ymax)
+            except AssertionError as e:
+                raise RuntimeError("Invalid label at {}, {}".format(anno_path, e))
             label.append([cls_id, xmin, ymin, xmax, ymax, difficult])
         return np.array(label)
+
+    def _validator(self, xmin, ymin, xmax, ymax):
+        """Validate labels."""
+        assert xmin >= 0 and xmin < 1.0, "xmin must in [0, 1), given {}".format(xmin)
+        assert ymin >= 0 and ymin < 1.0, "ymin must in [0, 1), given {}".format(ymin)
+        assert xmax > xmin and ymin <= 1.0, "xmax must in (xmin, 1], given {}".format(xmax)
+        assert ymax > ymin and ymax <= 1.0, "ymax must in (ymin, 1], given {}".format(ymax)
 
     def _preload_labels(self):
         """Preload all labels into memory."""
