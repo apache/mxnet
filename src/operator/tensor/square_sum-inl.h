@@ -123,10 +123,11 @@ struct SquareSumRspKernel<req, 0, false> {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int j, DType* out_data, const DType* in_data,
                                   const int64_t nnr, const int64_t num_cols) {
-    DType sum = 0;
+    DType sum, residual;
+    mshadow::red::sum::SetInitValue(sum, residual);
     for (int64_t i = 0; i < nnr; ++i) {
-      const DType val = in_data[i*num_cols+j];
-      sum += val * val;
+      const DType val = in_data[i*num_cols+j] * in_data[i*num_cols+j];
+      mshadow::red::sum::Reduce(sum, val, residual);
     }
     KERNEL_ASSIGN(out_data[j], req, sum);
   }
@@ -143,11 +144,12 @@ struct SquareSumRspKernel<req, 1, false> {
   template<typename IType, typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const IType* in_row_idx,
                                   const DType* in_data, const int64_t num_cols) {
-    DType sum = 0;
+    DType sum, residual;
+    mshadow::red::sum::SetInitValue(sum, residual);
     const int64_t offset = i * num_cols;
     for (int64_t j = 0; j < num_cols; ++j) {
-      const DType val = in_data[offset+j];
-      sum += val * val;
+      const DType val = in_data[offset+j] * in_data[offset+j];
+      mshadow::red::sum::Reduce(sum, val, residual);
     }
     KERNEL_ASSIGN(out_data[in_row_idx[i]], req, sum);
   }
@@ -165,12 +167,13 @@ struct SquareSumRspKernel<req, 1, true> {
   MSHADOW_XINLINE static void Map(int i, IType* out_row_idx, DType* out_data,
                                   const IType* in_row_idx, const DType* in_data,
                                   const int64_t num_cols) {
-    DType sum = 0;
+    DType sum, residual;
+    mshadow::red::sum::SetInitValue(sum, residual);
     out_row_idx[i] = in_row_idx[i];
     const int64_t offset = i * num_cols;
     for (int64_t j = 0; j < num_cols; ++j) {
-      const DType val = in_data[offset+j];
-      sum += val * val;
+      const DType val = in_data[offset+j] * in_data[offset+j];
+      mshadow::red::sum::Reduce(sum, val, residual);
     }
     KERNEL_ASSIGN(out_data[i], req, sum);
   }
