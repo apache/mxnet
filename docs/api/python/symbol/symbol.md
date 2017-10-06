@@ -91,6 +91,61 @@ Composite multiple symbols into a new one by an operator.
     Symbol.__pow__
 ```
 
+#### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.sin
+    Symbol.cos
+    Symbol.tan
+    Symbol.arcsin
+    Symbol.arccos
+    Symbol.arctan
+    Symbol.degrees
+    Symbol.radians
+```
+
+#### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.sinh
+    Symbol.cosh
+    Symbol.tanh
+    Symbol.arcsinh
+    Symbol.arccosh
+    Symbol.arctanh
+```
+
+#### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.exp
+    Symbol.expm1
+    Symbol.log
+    Symbol.log10
+    Symbol.log2
+    Symbol.log1p
+```
+
+#### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.sqrt
+    Symbol.rsqrt
+    Symbol.square
+```
+
 #### Comparison operators
 
 ```eval_rst
@@ -351,6 +406,8 @@ Composite multiple symbols into a new one by an operator.
     one_hot
     pick
     where
+    gather_nd
+    scatter_nd
 ```
 
 ## Mathematical functions

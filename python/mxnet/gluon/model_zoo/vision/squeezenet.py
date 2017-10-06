@@ -107,7 +107,7 @@ class SqueezeNet(HybridBlock):
         return x
 
 # Constructor
-def get_squeezenet(version, pretrained=False, ctx=cpu(), **kwargs):
+def get_squeezenet(version, pretrained=False, ctx=cpu(), root='~/.mxnet/models', **kwargs):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
     SqueezeNet 1.1 model from the `official SqueezeNet repo
@@ -123,11 +123,13 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(), **kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     net = SqueezeNet(version, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('squeezenet%s'%version), ctx=ctx)
+        net.load_params(get_model_file('squeezenet%s'%version, root=root), ctx=ctx)
     return net
 
 def squeezenet1_0(**kwargs):
@@ -140,6 +142,8 @@ def squeezenet1_0(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_squeezenet('1.0', **kwargs)
 
@@ -155,5 +159,7 @@ def squeezenet1_1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
     """
     return get_squeezenet('1.1', **kwargs)

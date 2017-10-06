@@ -18,13 +18,16 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
+__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten']
+import warnings
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
 
 
 class Sequential(Block):
-    """Stacks `Block`s sequentially.
+    """Stacks Blocks sequentially.
 
     Example::
 
@@ -37,9 +40,10 @@ class Sequential(Block):
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, block):
+    def add(self, *blocks):
         """Adds block on top of the stack."""
-        self.register_child(block)
+        for block in blocks:
+            self.register_child(block)
 
     def forward(self, x):
         for block in self._children:
@@ -55,15 +59,29 @@ class Sequential(Block):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __getitem__(self, i):
-        return self._children[i]
+    def __getitem__(self, key):
+        return self._children[key]
 
     def __len__(self):
         return len(self._children)
 
+    def hybridize(self, active=True):
+        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        non-hybrid children.
+
+        Parameters
+        ----------
+        active : bool, default True
+            Whether to turn hybrid on or off.
+        """
+        if self._children and all(isinstance(c, HybridBlock) for c in self._children):
+            warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
+                          'using HybridSequential for the best performance.')
+        super(Sequential, self).hybridize(active)
+
 
 class HybridSequential(HybridBlock):
-    """Stacks `HybridBlock`s sequentially.
+    """Stacks HybridBlocks sequentially.
 
     Example::
 
@@ -76,9 +94,10 @@ class HybridSequential(HybridBlock):
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
 
-    def add(self, block):
+    def add(self, *blocks):
         """Adds block on top of the stack."""
-        self.register_child(block)
+        for block in blocks:
+            self.register_child(block)
 
     def hybrid_forward(self, F, x):
         for block in self._children:
@@ -94,8 +113,8 @@ class HybridSequential(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __getitem__(self, i):
-        return self._children[i]
+    def __getitem__(self, key):
+        return self._children[key]
 
     def __len__(self):
         return len(self._children)
@@ -144,6 +163,7 @@ class Dense(HybridBlock):
 
 
     If ``flatten`` is set to be True, then the shapes are:
+
     Input shape:
         An N-D input with shape
         `(batch_size, x1, x2, ..., xn) with x1 * x2 * ... * xn equal to in_units`.
@@ -151,7 +171,9 @@ class Dense(HybridBlock):
     Output shape:
         The output would have shape `(batch_size, units)`.
 
+
     If ``flatten`` is set to be false, then the shapes are:
+
     Input shape:
         An N-D input with shape
         `(x1, x2, ..., xn, in_units)`.
@@ -352,12 +374,18 @@ class BatchNorm(HybridBlock):
 
 
 class LeakyReLU(HybridBlock):
-    """Leaky version of a Rectified Linear Unit.
+    r"""Leaky version of a Rectified Linear Unit.
 
-    It allows a small gradient when the unit is not active::
+    It allows a small gradient when the unit is not active
 
-        `f(x) = alpha * x for x < 0`,
-        `f(x) = x for x >= 0`.
+    .. math::
+
+        f\left(x\right) = \left\{
+            \begin{array}{lr}
+               \alpha x & : x \lt 0 \\
+                      x & : x \geq 0 \\
+            \end{array}
+        \right.\\
 
     Parameters
     ----------
@@ -372,6 +400,7 @@ class LeakyReLU(HybridBlock):
         Same shape as input.
     """
     def __init__(self, alpha, **kwargs):
+        assert alpha >= 0, "Slope coefficient for LeakyReLU must be no less than 0."
         super(LeakyReLU, self).__init__(**kwargs)
         self._alpha = alpha
 

@@ -33,6 +33,8 @@ try:
 except ImportError:
     spsp = None
 
+__all__ = ['zeros', 'empty', 'array', 'load', 'save']
+
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.

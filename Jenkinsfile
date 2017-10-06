@@ -84,8 +84,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 def python2_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/train"
   }
 }
 
@@ -103,7 +103,7 @@ def python3_ut(docker_type) {
 def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/gpu"
   }
 }
 

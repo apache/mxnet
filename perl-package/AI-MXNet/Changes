@@ -1,5 +1,10 @@
 Revision history for Perl extension AI::MXNet
 
+1.1     Sun Oct  1 10:19:08 PDT 2017
+        - Major update, added support for new imperative MXNet interface Gluon and realtime GPU kernels callable from Perl space.
+        - Bugfixes for distributed training.
+        - Miscellaneous fixes and performance improvements.
+
 1.0102 Sun Aug  6 16:55:08 PDT 2017
         - bugfixes in Image.pm, updated tests, added PearsonCorrelation metric, added Convolutional RNN modules.
 

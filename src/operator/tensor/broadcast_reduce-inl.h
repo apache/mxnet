@@ -158,11 +158,11 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
                                        const Shape<ndim>& rshape, const Shape<ndim>& rstride) {
   Shape<ndim> coord = unravel(idx, sshape);
   int j = ravel(coord, bshape);
-  DType val;
-  Reducer::SetInitValue(val);
+  DType val, residual;
+  Reducer::SetInitValue(val, residual);
   for (int k = 0; k < M; ++k) {
     coord = unravel(k, rshape);
-    Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]));
+    Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]), residual);
   }
   assign(&small[idx], addto, val);
 }
@@ -240,8 +240,8 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
   const int idx_big0 = ravel(coord, big_shape);
   const int idx_lhs0 = ravel(coord, lhs_shape0);
   const int idx_rhs0 = ravel(coord, rhs_shape0);
-  DType val;
-  Reducer::SetInitValue(val);
+  DType val, residual;
+  Reducer::SetInitValue(val, residual);
   for (int k = 0; k < M; ++k) {
     Shape<ndim> coord_big = unravel(k, rshape);
     int idx_big = idx_big0 + dot(coord_big, rstride);
@@ -252,7 +252,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
     Shape<ndim> coord_rhs = unravel(k, rhs_shape);
     int idx_rhs = idx_rhs0 + dot(coord_rhs, rhs_stride);
 
-    Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs]) ) );
+    Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
   }
   assign(&small[idx], addto, val);
 }
