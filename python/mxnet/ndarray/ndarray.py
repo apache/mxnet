@@ -511,11 +511,19 @@ fixed-size items.
                         key, self.shape[0]))
             return self._at(key)
         elif isinstance(key, py_slice):
-            if key.step is not None:
-                raise ValueError("NDArray only supports slicing with step size 1.")
-            if key.start is not None or key.stop is not None:
+            if key.step is not None and key.step != 1:
+                if key.step == 0:
+                    raise ValueError("slice step cannot be zero")
+                start, stop = self._prepare_start_and_stop(key.start, key.stop)
+                indices = [i for i in range(start, stop, key.step)]
+                if len(indices) == 0:
+                    raise ValueError('slicing ndarray with %s is not valid'
+                                     ' since it would generate an empty ndarray' % key)
+                return self.take(array(indices, ctx=self.context, dtype=np.int32))
+            elif key.start is not None or key.stop is not None:
                 return self._slice(key.start, key.stop)
-            return self
+            else:
+                return self
         elif isinstance(key, tuple):
             shape = self.shape
             assert len(key) > 0, "Cannot slice with empty indices"
@@ -614,6 +622,29 @@ fixed-size items.
             source_array.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(source_array.size)))
 
+    def _prepare_start_and_stop(self, start, stop):
+        length = self.shape[0]
+
+        if start is None:
+            start = 0
+        elif start < 0:
+            start += length
+            if start < 0:
+                raise IndexError('Slicing start %d exceeds limit of %d' % (start-length, length))
+        elif start >= length:
+            raise IndexError('Slicing start %d exceeds limit of %d' % (start, length))
+
+        if stop is None:
+            stop = length
+        elif stop < 0:
+            stop += length
+            if stop < 0:
+                raise IndexError('Slicing stop %d exceeds limit of %d' % (stop-length, length))
+        elif stop > length:
+            raise IndexError('Slicing stop %d exceeds limit of %d' % (stop, length))
+
+        return start, stop
+
     def _slice(self, start, stop):
         """Returns a sliced NDArray that shares memory with the current one.
         This is called through ``x[start:stop]``.
@@ -638,26 +669,10 @@ fixed-size items.
         array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
-        if start is None:
-            start = mx_uint(0)
-        elif start < 0:
-            length = self.shape[0]
-            start += length
-            assert start >= 0, "Slicing start %d exceeds limit of %d"%(start-length, length)
-            start = mx_uint(start)
-        else:
-            start = mx_uint(start)
-        if stop is None:
-            stop = mx_uint(self.shape[0])
-        elif stop < 0:
-            length = self.shape[0]
-            stop += length
-            assert stop >= 0, "Slicing end %d exceeds limit of %d"%(stop-length, length)
-            stop = mx_uint(stop)
-        else:
-            stop = mx_uint(stop)
+        start, stop = self._prepare_start_and_stop(start, stop)
+
         check_call(_LIB.MXNDArraySlice(
-            self.handle, start, stop, ctypes.byref(handle)))
+            self.handle, mx_uint(start), mx_uint(stop), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
@@ -684,9 +699,14 @@ fixed-size items.
         array([ 1.], dtype=float32)
         """
         handle = NDArrayHandle()
-        idx = mx_uint(idx)
+        if idx < 0:
+            length = self.shape[0]
+            idx += length
+            if idx < 0:
+                raise IndexError('index %d is out of bounds for axis 0 with size %d'
+                                 % (idx-length, length))
         check_call(_LIB.MXNDArrayAt(
-            self.handle, idx, ctypes.byref(handle)))
+            self.handle, mx_uint(idx), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, shape):
