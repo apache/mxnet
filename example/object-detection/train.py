@@ -15,7 +15,7 @@ from block.loss import *
 from block.target import *
 from block.loss import *
 from trainer.metric import Accuracy, SmoothL1
-from trainer.debuger import super_print
+from trainer.debuger import super_print, find_abnormal
 
 logging.basicConfig(level=logging.DEBUG)
 

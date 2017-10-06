@@ -6,3 +6,7 @@ def super_print(*args):
     for arg in args:
         print(arg)
     np.set_printoptions(threshold=threshold)
+
+def find_abnormal(arr):
+    pos = np.where(not np.isfinite(arr))
+    return pos
