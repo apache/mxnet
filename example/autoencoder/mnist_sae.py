@@ -34,6 +34,9 @@ parser.add_argument('--finetune-iter', type=int, default=100000,
                     help='the number of iterations for fine-tuning.')
 parser.add_argument('--visualize', action='store_true',
                     help='whether to visualize the original image and the reconstructed one.')
+parser.add_argument('--num-units', type=str, default="784,500,500,2000,10",
+                    help='the number of hidden units for the layers of the encoder.' \
+                         'The decoder layers are created in the reverse order.')
 
 # set to INFO to see less information during training
 logging.basicConfig(level=logging.DEBUG)
@@ -44,9 +47,10 @@ batch_size = opt.batch_size
 pretrain_iter = opt.pretrain_iter
 finetune_iter = opt.finetune_iter
 visualize = opt.visualize
+layers = [int(i) for i in opt.num_units.split(',')]
 
 if __name__ == '__main__':
-    ae_model = AutoEncoderModel(mx.cpu(0), [784,500,500,2000,10], pt_dropout=0.2,
+    ae_model = AutoEncoderModel(mx.cpu(0), layers, pt_dropout=0.2,
         internal_act='relu', output_act='relu')
 
     X, _ = data.get_mnist()
