@@ -66,20 +66,20 @@ if __name__ == '__main__':
         try:
             import matplotlib
             from matplotlib import pyplot as plt
-            import model
-            matplotlib.interactive(True)
+            from model import extract_feature
             # sample a random image
             original_image = X[np.random.choice(X.shape[0]), :].reshape(1, 784)
             data_iter = mx.io.NDArrayIter({'data': original_image}, batch_size=1, shuffle=False,
                                           last_batch_handle='pad')
-            # remove list?
-            reconstructed_image = list(model.extract_feature(ae_model.decoder, ae_model.args,
-                                       ae_model.auxs, data_iter,
-                                       original_image.shape[0], ae_model.xpu).values())[0]
-            print(type(reconstructed_image))
-            plt.imshow(original_image)
+            # reconstruct the image
+            reconstructed_image = extract_feature(ae_model.decoder, ae_model.args,
+                                                  ae_model.auxs, data_iter, 1,
+                                                  ae_model.xpu).values()[0]
+            print("original image")
+            plt.imshow(original_image.reshape((28,28)))
             plt.show()
-            plt.imshow(reconstructed_image)
+            print("reconstructed image")
+            plt.imshow(reconstructed_image.reshape((28, 28)))
             plt.show()
         except ImportError:
             logging.info("matplotlib is required for visualization")
