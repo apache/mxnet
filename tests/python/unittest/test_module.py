@@ -145,8 +145,8 @@ def test_export_serving():
     signature = { 'input_type': 'application/json', 'output_type': 'application/json' }
     with open('synset.txt', 'w') as synset:
         synset.write('test label')
-    mod.export_serving('test', 0, signature, save_optimizer_states=True, use_synset=True)
-    assert os.path.isfile('test.zip'), "No zip file found for export_serving."
+    mod.export_serving('test', signature, util_files = ['synset.txt'])
+    assert os.path.isfile('test.model'), "No zip file found for export_serving."
     assert os.path.isfile('signature.json'), "No signature file found for export_serving."
     with open('signature.json') as f:
         sig = json.load(f)
