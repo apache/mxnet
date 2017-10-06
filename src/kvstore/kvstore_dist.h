@@ -557,12 +557,6 @@ namespace kvstore {
    */
   std::mutex mu_;
 
-  size_t roundUp(size_t numToRound, size_t  multiple)
-  {
-    assert(multiple && ((multiple & (multiple - 1)) == 0));
-    return (numToRound + multiple - 1) & -multiple;
-  }
-
 
     void Compress(NDArray& comm_buf, NDArray* small_buf, NDArray* res_buf, PSKV& pskv, int priority){
       size_t orig_size = comm_buf.shape().Size();
@@ -612,21 +606,17 @@ namespace kvstore {
     auto krs = ps::Postoffice::Get()->GetServerKeyRanges();
     int num_servers = krs.size();
     CHECK_GT(num_servers, 0);
-
     int bits = compress_ == "2bit" ? 16 : 32;
+    //size of data to be sent
     size_t size = 0;
-    size_t size_data = original_size % bits == 0 ?
-                       original_size / bits :
-                       original_size / bits + 1;
     if (is_push) {
       if (original_size >= bigarray_bound_) {
-        size = original_size % bits == 0 ?
-               original_size / bits + (3*num_servers):
-               original_size / bits + 1 + (3*num_servers);
+        size = (size_t) num_servers * ((original_size / num_servers) % bits == 0 ?
+                         (original_size/num_servers) / bits + 3 :
+                         (original_size/num_servers) / bits + 4);
       } else {
         size = original_size % bits == 0 ?
-               original_size / bits + 3:
-               original_size / bits + 4;
+               original_size / bits + 3: original_size / bits + 4;
       }
     } else {
       size = original_size;
@@ -639,45 +629,58 @@ namespace kvstore {
     if (!pskv.keys.empty()) {
       CHECK_EQ(static_cast<size_t >(pskv.size), size)<< "The value size can't be changed";
     } else {
-      // a simple heuristic for load balance
+      // populate both pull and push pskvs
+      mu_.lock();
+      PSKV& pull_pskv = pull_ps_kv_[key];
+      PSKV& push_pskv = push_ps_kv_[key];
+      mu_.unlock();
+
       if (original_size < bigarray_bound_) {
+        // a simple heuristic for load balancing
         // send it to a single random picked server
         int server = (key * 9973) % num_servers;
         ps::Key ps_key = krs[server].begin() + key;
         CHECK_LT(ps_key, krs[server].end());
-        pskv.keys.push_back(ps_key);
-        pskv.lens.push_back(size);
-        pskv.size = size;
+        push_pskv.keys.push_back(ps_key);
+        pull_pskv.keys.push_back(ps_key);
+        push_pskv.lens.push_back(size);
+        pull_pskv.lens.push_back(original_size);
+        push_pskv.size = size;
+        pull_pskv.size = original_size;
       } else {
         // partition it to all servers
-        pskv.size = 0;
+        push_pskv.size = 0;
+        pull_pskv.size = 0;
         for (int i = 0; i < num_servers; ++i) {
-          //if pushing, divide size of compressed array into blocks of 16, so we don't split between a compressed value
-          size_t part_size = roundUp(size_data/num_servers*(i+1), 16) - roundUp(size_data/num_servers*(i), 16) + 3;
-//                                    : (roundUp((size)/num_servers*(i+1), 1) - roundUp((size)/num_servers*(i), 1));
+          size_t part_orig = static_cast<size_t> (
+                        lround(static_cast<double>(original_size) / num_servers * (i + 1)) -
+                        lround(static_cast<double>(original_size) / num_servers * i));
+//          if(get_rank()==0) std::cout<<"part_orig "<<part_orig<<std::endl;
+          // if block was rounded up to beyond size of our data, set it to end of data
+          if (part_orig + pskv.size > original_size) {
+            part_orig = original_size - pskv.size;
+          }
+          size_t compr_split = (part_orig % bits == 0)? part_orig/bits + 3 : part_orig/bits + 4;
+
           ps::Key ps_key = krs[i].begin() + key;
           CHECK_LT(ps_key, krs[i].end());
-          pskv.keys.push_back(ps_key);
-
-          //if last block was rounded up to beyond size of our data, set it to end of data
-          if (i == num_servers-1 && ((pskv.size+part_size) > size)) {
-            part_size = size - pskv.size;
-          }
-          if(is_push) {
-            pskv.lens.push_back(part_size);
-            pskv.size += part_size;
-          } else {
-            pskv.lens.push_back((part_size-3)*16);
-            pskv.size += (part_size-3)*16;
-          }
-          std::cout<<"pskv len "<<pskv.lens[i]<<" " <<is_push<<std::endl;
-
+          push_pskv.keys.push_back(ps_key);
+          pull_pskv.keys.push_back(ps_key);
+          // push_pskv stores lengths of compressed blocks
+          push_pskv.lens.push_back(compr_split);
+          // pull_pskv stores lengths of original data
+          pull_pskv.lens.push_back(part_orig);
+          push_pskv.size += compr_split;
+          pull_pskv.size += part_orig;
+//          if (get_rank()==0) std::cout << "push key: " << key << " pskv len " << pskv.lens[i] << " " << std::endl;
+//          if (get_rank()==0) std::cout << "pull key: " << key << " pskv len " << pull_pskv.lens[i] << " " << std::endl;
         }
         CHECK_EQ(static_cast<size_t>(pskv.size), size);
+        CHECK_EQ(static_cast<size_t>(pull_pskv.size), original_size);
         CHECK_EQ(pskv.lens.size(), num_servers);
+//        std::cout<<"set pull pskv for key:"<<key<<". size as "<<pull_pskv.size<<std::endl;
+        }
       }
-
-    }
     return pskv;
   }
 
