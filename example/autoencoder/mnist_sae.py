@@ -28,9 +28,9 @@ parser.add_argument('--print-every', type=int, default=1000,
                     help='the interval of printing during training.')
 parser.add_argument('--batch-size', type=int, default=256,
                     help='the batch size used for training.')
-parser.add_argument('--pretrain-iter', type=int, default=50000,
+parser.add_argument('--pretrain-num-iter', type=int, default=50000,
                     help='the number of iterations for pretraining.')
-parser.add_argument('--finetune-iter', type=int, default=100000,
+parser.add_argument('--finetune-num-iter', type=int, default=100000,
                     help='the number of iterations for fine-tuning.')
 parser.add_argument('--visualize', action='store_true',
                     help='whether to visualize the original image and the reconstructed one.')
@@ -44,8 +44,8 @@ opt = parser.parse_args()
 logging.info(opt)
 print_every = opt.print_every
 batch_size = opt.batch_size
-pretrain_iter = opt.pretrain_iter
-finetune_iter = opt.finetune_iter
+pretrain_num_iter = opt.pretrain_num_iter
+finetune_num_iter = opt.finetune_num_iter
 visualize = opt.visualize
 layers = [int(i) for i in opt.num_units.split(',')]
 
@@ -57,10 +57,10 @@ if __name__ == '__main__':
     train_X = X[:60000]
     val_X = X[60000:]
 
-    ae_model.layerwise_pretrain(train_X, batch_size, pretrain_iter, 'sgd', l_rate=0.1, decay=0.0,
-                                lr_scheduler=mx.misc.FactorScheduler(20000,0.1),
+    ae_model.layerwise_pretrain(train_X, batch_size, pretrain_num_iter, 'sgd', l_rate=0.1,
+                                decay=0.0, lr_scheduler=mx.misc.FactorScheduler(20000,0.1),
                                 print_every=print_every)
-    ae_model.finetune(train_X, batch_size, finetune_iter, 'sgd', l_rate=0.1, decay=0.0,
+    ae_model.finetune(train_X, batch_size, finetune_num_iter, 'sgd', l_rate=0.1, decay=0.0,
                       lr_scheduler=mx.misc.FactorScheduler(20000,0.1), print_every=print_every)
     ae_model.save('mnist_pt.arg')
     ae_model.load('mnist_pt.arg')
