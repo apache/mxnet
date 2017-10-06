@@ -109,5 +109,5 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                 name1, mae = box_metric.get()
                 logging.info("Epoch [%d] Batch [%d], %s=%f, %s=%f"%(epoch, i, name, acc, name1, mae))
 
-ctx = [mx.gpu(i) for i in range(8)]
+ctx = [mx.gpu(i) for i in range(1)]
 train(net, train_data, val_data, 10, ctx=ctx)

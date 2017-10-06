@@ -631,8 +631,8 @@ struct bipartite_matching {
     DType *cmarker = col_marker + i * num_col;
     int count = 0;
     for (int j = 0; j < stride; ++j) {
-      int idx = static_cast<int>(index[j]);
-      int r = idx / num_batch / num_col;
+      int idx = static_cast<int>(index[j]) % stride;
+      int r = idx / num_col;
       int c = idx % num_col;
       if (rmarker[r] == -1 && cmarker[c] == -1) {
         if ((!is_ascend && score[j] > threshold) ||
@@ -700,7 +700,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
     row_marker = -1;
     col_marker = -1;
     Kernel<bipartite_matching, xpu>::Launch(s, batch_size, row_marker.dptr_,
-     col_marker.dptr_, scores.dptr_, sorted_index.dptr_, batch_size, row, col,
+     col_marker.dptr_, scores_copy.dptr_, sorted_index.dptr_, batch_size, row, col,
      param.threshold, param.is_ascend, param.topk);
   });
 }
