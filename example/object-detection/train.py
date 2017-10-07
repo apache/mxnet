@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+import random
 import mxnet as mx
 from mxnet import nd
 from mxnet import gluon
@@ -13,11 +14,13 @@ from trainer.trainer import train_ssd
 from model_zoo.ssd import *
 from block.loss import *
 from block.target import *
-from block.loss import *
+from block.coder import MultiClassDecoder, NormalizedBoxCenterDecoder
 from trainer.metric import Accuracy, SmoothL1
 from trainer.debugger import super_print, find_abnormal
 
+# experimental stuff
 logging.basicConfig(level=logging.DEBUG)
+random.seed(123)
 
 
 def ctx_as_list(ctx):
@@ -28,14 +31,16 @@ def ctx_as_list(ctx):
 # dataset
 num_class = 20
 transform = transform.SSDAugmentation((512, 512))
-train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'trainval')], transform=transform)
+train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'trainval'), (2012, 'trainval')], transform=transform)
+# train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'train')], transform=transform)
 val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=transform)
 train_data = DataLoader(train_dataset, 32, True, last_batch='rollover')
-val_data = DataLoader(val_dataset, 2, False, last_batch='keep')
+val_data = DataLoader(val_dataset, 4, False, last_batch='keep')
 target_generator = SSDTargetGenerator()
-for data in train_data:
-    pass
-raise
+logging.debug(str(val_dataset))
+# for data in train_data:
+#     pass
+# raise
 #     print(data[0].shape, data[1].shape, type(data[0]), type(data[1]))
     # import cv2
     # import numpy as np
@@ -49,7 +54,7 @@ net = ssd_512_resnet18_v1(classes=num_class, pretrained=(0, 0))
 lr = 0.01
 wd = 0.00005
 momentum = 0.9
-log_interval = 1
+log_interval = 10
 dtype = 'float32'
 
 # monitor
@@ -57,6 +62,35 @@ dtype = 'float32'
 # raise
 # checker = net.collect_params()['conv0_weight']
 checker = net.collect_params()['stage3_conv1_weight']
+
+box_decoder = NormalizedBoxCenterDecoder()
+cls_decoder = MultiClassDecoder()
+
+def evaluate_voc(net, val_data, ctx):
+    ctx = ctx_as_list(ctx)
+    results = []
+    for i, batch in enumerate(val_data):
+        data = gluon.utils.split_and_load(batch[0], ctx_list=ctx, batch_axis=0)
+        for x in data:
+            z = net(x)
+            cls_preds, box_preds, anchors = z
+            # print('box_preds',box_preds)
+            # print('anchors', anchors)
+            boxes = box_decoder(box_preds, anchors)
+            boxes = nd.clip(boxes, 0.0, 1.0)
+            cls_ids, scores = cls_decoder(nd.sigmoid(cls_preds))
+            result = nd.concat(cls_ids.reshape((0, 0, 1)), scores.reshape((0, 0, 1)), boxes, dim=2)
+            # print(boxes)
+            # print(cls_ids)
+            # print(scores)
+            # print(result)
+            out = nd.contrib.box_nms(result, topk=400)
+            # print(out)
+            results.append(out.asnumpy())
+    results = np.vstack(results)
+    # write to disk for eval
+    val_dataset.eval_results(results)
+
 
 # training process
 def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
@@ -68,6 +102,8 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     box_loss = gluon.loss.L1Loss()
     cls_metric = Accuracy(axis=-1)
     box_metric = SmoothL1()
+
+    evaluate_voc(net, val_data, ctx)
 
     for epoch in range(epochs):
         tic = time.time()
@@ -100,14 +136,25 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                 for L in Ls:
                     pass
                     L.backward()
-            trainer.step(batch[0].shape[0], ignore_stale_grad=True)
+            batch_size = batch[0].shape[0]
+            trainer.step(batch_size, ignore_stale_grad=True)
             cls_metric.update(labels, outputs)
             box_metric.update(box_labels, box_preds)
             if log_interval and not (i + 1) % log_interval:
                 # print(checker.grad())
                 name, acc = cls_metric.get()
                 name1, mae = box_metric.get()
-                logging.info("Epoch [%d] Batch [%d], %s=%f, %s=%f"%(epoch, i, name, acc, name1, mae))
+                logging.info("Epoch [%d] Batch [%d], Speed: %f samples/sec, %s=%f, %s=%f"%(epoch, i, batch_size/(time.time()-btic), name, acc, name1, mae))
+            btic = time.time()
+
+        name, acc = cls_metric.get()
+        name1, mae = box_metric.get()
+        logging.info('[Epoch %d] training: %s=%f, %s=%f'%(epoch, name, acc, name1, mae))
+        logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
+        mean_ap = evaluate_voc(net, val_data, ctx)
+        # name, val_acc = test(ctx)
+        logging.info('[Epoch %d] validation: %s=%f'%(epoch, 'mAP', mean_ap))
 
 ctx = [mx.gpu(i) for i in range(1)]
-train(net, train_data, val_data, 10, ctx=ctx)
+ctx = mx.cpu()
+train(net, train_data, val_data, 100, ctx=ctx)

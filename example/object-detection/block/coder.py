@@ -138,4 +138,6 @@ class MultiClassDecoder(HybridClassDecoder):
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         cls_id = F.argmax(x, self._axis) - 1
-        return cls_id
+        scores = F.pick(x, cls_id, axis=-1)
+        scores = F.where(cls_id > -0.5, scores, F.zeros_like(scores))
+        return cls_id, scores
