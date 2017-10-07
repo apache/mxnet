@@ -186,7 +186,7 @@ class VOCDetection(DetectionDataset):
             aps += [ap]
             logging.info("AP for {} = {:.4f}".format(cls_name, ap))
         mean_ap = np.mean(aps)
-        logging.info("Mean AP = {:.4f}".format(mean_ap)
+        logging.info("Mean AP = {:.4f}".format(mean_ap))
         return mean_ap
 
     def _parse_voc_rec(self, filename):
