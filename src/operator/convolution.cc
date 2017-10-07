@@ -47,6 +47,11 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
                         std::vector<TShape> *in_shape,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
+#if 1
+  {
+    LOG(INFO) << __FUNCTION__;
+  }
+#endif
   Operator *op = NULL;
   // If 1D convolution, use MXNet implementation
   if (param.kernel.ndim() == 1) {
@@ -55,7 +60,7 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
     })
     return op;
   }
-#if MXNET_USE_MKLDNN == 1
+#if 0 //MXNET_USE_MKLDNN == 1
     if ((param.dilate[0] == 1 && param.dilate[1] == 1)
         && param.kernel.ndim() == 2) {
         switch (dtype) {

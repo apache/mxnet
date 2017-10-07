@@ -32,6 +32,9 @@
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../mkl/mkldnn_elemwise_sum-inl.h.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -106,10 +109,22 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
+#if 1
+  {
+    LOG(INFO) << __FUNCTION__;
+  }
+#endif
   CHECK_EQ(outputs.size(), 1U);
+
+#if MXNET_USE_MKLDNN == 1
+  CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32);
+  MKLDNNElementWiseSumCompute_<xpu, float>(attrs, ctx, inputs, req, outputs);
+#else
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
   });
+#endif
+
 }
 
 template<typename xpu>

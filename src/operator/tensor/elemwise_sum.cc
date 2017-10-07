@@ -40,6 +40,11 @@ DMLC_REGISTER_PARAMETER(ElementWiseSumParam);
 std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
     const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
+#if 1
+  {
+    LOG(INFO) << __FUNCTION__;
+  }
+#endif
   // identity constraints in the beginning for easier shape inference.
   const nnvm::Op* copy_op =
       nnvm::Op::Get("identity");
@@ -86,6 +91,11 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
+#if 1
+  {
+    LOG(INFO) << __FUNCTION__;
+  }
+#endif
   CHECK(!inputs.empty());
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);

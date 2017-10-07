@@ -34,6 +34,10 @@
 #include <utility>
 #include "mkldnn_base-inl.h"
 #include "mkl_util-inl.h"
+#include "../operator_common.h"
+#include "../mshadow_op.h"
+#include "../batch_norm-inl.h"
+
 
 namespace mxnet {
 namespace op {
@@ -139,6 +143,26 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
                        const std::vector<TBlob> &aux_states) {
       using namespace mshadow;
       using namespace mshadow::expr;
+#if 1
+    {
+      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
+        std::cout << "BEFORE FWD " << name << " (" << t.size(0) << "): ";
+        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
+          std::cout << t[i] << " ";
+        }
+        std::cout << std::endl;
+      };
+      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
+      mshadow::Tensor<xpu, 1, Dtype> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indata.kData", indatakData);
+      mshadow::Tensor<xpu, 1, Dtype> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indata.kGamma", indatakGamma);
+      mshadow::Tensor<xpu, 1, Dtype> indatakBeta = in_data[batchnorm::kBeta].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indata.kBeta", indatakBeta);
+      mshadow::Tensor<xpu, 1, Dtype> outdatakkOut= out_data[batchnorm::kOut].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm outdata.kOut", outdatakkOut);
+    }
+#endif
       CHECK_EQ(in_data.size(), 3);
       CHECK_EQ(aux_states.size(), 2);
       if (ctx.is_train) {
@@ -216,14 +240,34 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
         BatchNormFwd.reset(new batch_normalization_forward(*fwd_inference_pd,
           *fwd_input_primitive, (const primitive::at)*mean_memory, (const primitive::at)*var_memory,
           *weight_memory, *fwd_output_memory));
-        }
-      } else {
-        fwd_bottom_data->sync_converted_prv(data.dptr_, false,
-          in_data[batchnorm::kData]);
-        fwd_top_data->sync_output_memory(
-          out_data[batchnorm::kOut], fwd_top_data);
       }
-      BatchNormFwd.submit();
+    } else {
+      fwd_bottom_data->sync_converted_prv(data.dptr_, false,
+        in_data[batchnorm::kData]);
+      fwd_top_data->sync_output_memory(
+        out_data[batchnorm::kOut], fwd_top_data);
+    }
+    BatchNormFwd.submit();
+#if 1
+    {
+      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
+        std::cout << "AFTER FWD " << name << " (" << t.size(0) << "): ";
+        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
+          std::cout << t[i] << " ";
+        }
+        std::cout << std::endl;
+      };
+      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
+      mshadow::Tensor<xpu, 1, Dtype> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indata.kData", indatakData);
+      mshadow::Tensor<xpu, 1, Dtype> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indata.kGamma", indatakGamma);
+      mshadow::Tensor<xpu, 1, Dtype> indatakBeta = in_data[batchnorm::kBeta].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indata.kBeta", indatakBeta);
+      mshadow::Tensor<xpu, 1, Dtype> outdatakkOut= out_data[batchnorm::kOut].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm outdata.kOut", outdatakkOut);
+    }
+#endif
   }
   void InitBatchNormBwd(const std::vector<TBlob> &out_grad) {
     int32_t n = this->num_;
@@ -290,6 +334,41 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, Dtype> data, grad, grad_in;
 
+#if 1
+    {
+      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
+          std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
+          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
+            std::cout << t[i] << " ";
+          }
+          std::cout << std::endl;
+      };
+      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
+      mshadow::Tensor<xpu, 1, Dtype> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indatakData", indatakData);
+      mshadow::Tensor<xpu, 1, Dtype> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm indatakGamma", indatakGamma);
+      mshadow::Tensor<xpu, 1, Dtype> ingradkGamma = in_grad[batchnorm::kGamma].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm ingradkGamma", ingradkGamma);
+      mshadow::Tensor<xpu, 1, Dtype> ingradkBeta = in_grad[batchnorm::kBeta].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm ingradkBeta", ingradkBeta);
+      mshadow::Tensor<xpu, 1, Dtype> ingradkData = in_grad[batchnorm::kData].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm ingradkData", ingradkData);
+      mshadow::Tensor<xpu, 1, Dtype> auxstateskMovingMean = aux_states[batchnorm::kMovingMean].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm auxstateskMovingMean", auxstateskMovingMean);
+      mshadow::Tensor<xpu, 1, Dtype> auxstateskMovingVar = aux_states[batchnorm::kMovingVar].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm auxstateskMovingVar", auxstateskMovingVar);
+      mshadow::Tensor<xpu, 1, Dtype> outdatakMean = out_data[batchnorm::kMean].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm outdatakMean", outdatakMean);
+      mshadow::Tensor<xpu, 1, Dtype> outdatakVar = out_data[batchnorm::kVar].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm outdatakVar", outdatakVar);
+      mshadow::Tensor<xpu, 1, Dtype> outgradkOut = out_grad[batchnorm::kOut].FlatTo1D<xpu, Dtype>(s);
+      printTensor("batchnorm outgradkOut", outgradkOut);
+    }
+
+//      exit(0);
+#endif
+
     if (in_data[batchnorm::kData].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[batchnorm::kOut].shape_[0],
         out_grad[batchnorm::kOut].shape_[1], 1, 1);
@@ -317,22 +396,22 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
       slope = 1.f;
 
 
-    Dtype * mean_dptr = NULL;
-    Dtype * var_dptr = NULL;
+    Dtype *mean_dptr = NULL;
+    Dtype *var_dptr = NULL;
     if (ctx.is_train && !param_.use_global_stats) {
       int size = mean.size(0);  // Tensor<xpu, 1, Dtype>
-      float * moving_mean_ptr = reinterpret_cast<float*>(moving_mean.dptr_);
-      float * mean_ptr = reinterpret_cast<float*>(mean.dptr_);
-      float * moving_var_ptr = reinterpret_cast<float*>(moving_var.dptr_);
-      float * var_ptr = reinterpret_cast<float*>(var.dptr_);
+      float *moving_mean_ptr = reinterpret_cast<float *>(moving_mean.dptr_);
+      float *mean_ptr = reinterpret_cast<float *>(mean.dptr_);
+      float *moving_var_ptr = reinterpret_cast<float *>(moving_var.dptr_);
+      float *var_ptr = reinterpret_cast<float *>(var.dptr_);
       float minus_mom = (1 - param_.momentum);
       for (int i = 0; i < size; i++) {
         moving_mean_ptr[i] = moving_mean_ptr[i] * param_.momentum
-          + mean_ptr[i] * minus_mom;
+                             + mean_ptr[i] * minus_mom;
       }
       for (int i = 0; i < size; i++) {
         moving_var_ptr[i] = moving_var_ptr[i] * param_.momentum
-          + var_ptr[i] * minus_mom;
+                            + var_ptr[i] * minus_mom;
       }
       mean_dptr = mean.dptr_;
       var_dptr = var.dptr_;
@@ -346,40 +425,75 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
       bmean_memory.reset(new memory(bwd_scaleshift_pd->mean_primitive_desc(), mean_dptr));
       bvar_memory.reset(new memory(bwd_scaleshift_pd->variance_primitive_desc(), var_dptr));
       bwd_diff_src_memory = bwd_bottom_diff->create_output_memory(grad_in.dptr_,
-        in_grad[batchnorm::kData], bwd_bottom_diff);
+                                                                  in_grad[batchnorm::kData], bwd_bottom_diff);
 
       bwd_diff_dst_memory = bwd_top_diff->get_converted_prv(grad.dptr_,
-        false, out_grad[batchnorm::kOut]);
+                                                            false, out_grad[batchnorm::kOut]);
 
       BatchNormBwd.reset(new batch_normalization_backward(*bwd_scaleshift_pd,
-        *fwd_input_primitive, *bmean_memory, *bvar_memory,
-        *bwd_diff_dst_memory,
-        *weight_memory, *bwd_diff_src_memory, *diff_weight_memory));
+                                                          *fwd_input_primitive, *bmean_memory, *bvar_memory,
+                                                          *bwd_diff_dst_memory,
+                                                          *weight_memory, *bwd_diff_src_memory, *diff_weight_memory));
     } else {
       bwd_top_diff->sync_converted_prv(grad.dptr_,
-        false, out_grad[batchnorm::kOut]);
+                                       false, out_grad[batchnorm::kOut]);
       bwd_bottom_diff->sync_output_memory(
-        in_grad[batchnorm::kData], bwd_bottom_diff);
+              in_grad[batchnorm::kData], bwd_bottom_diff);
     }
     BatchNormBwd.submit();
-    Dtype * scaleShiftDiff_buf = reinterpret_cast<Dtype*>(diff_weight_memory->get_data_handle());
+    Dtype *scaleShiftDiff_buf = reinterpret_cast<Dtype *>(diff_weight_memory->get_data_handle());
     if (!param_.fix_gamma) {
       // Store ScaleShift blobs
-      Dtype* diff_scale = gslope.dptr_;
+      Dtype *diff_scale = gslope.dptr_;
       for (int i = 0; i < channels_; i++) {
         diff_scale[i] = scaleShiftDiff_buf[i];
       }
     } else {
       int gslope_size = gslope.size(0);
-      float * gslope_ptr = reinterpret_cast<float*>(gslope.dptr_);
+      float *gslope_ptr = reinterpret_cast<float *>(gslope.dptr_);
       for (int i = 0; i < gslope_size; i++) {
         *gslope_ptr++ = 0.0f;
       }
     }
-    Dtype* diff_shift = gbias.dptr_;
+    Dtype *diff_shift = gbias.dptr_;
     for (int i = 0; i < channels_; i++) {
       diff_shift[i] = scaleShiftDiff_buf[channels_ + i];
     }
+
+#if 1
+      {
+        auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
+            std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
+            for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
+              std::cout << t[i] << " ";
+            }
+            std::cout << std::endl;
+        };
+        mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
+        mshadow::Tensor<xpu, 1, Dtype> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm indatakData", indatakData);
+        mshadow::Tensor<xpu, 1, Dtype> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm indatakGamma", indatakGamma);
+        mshadow::Tensor<xpu, 1, Dtype> ingradkGamma = in_grad[batchnorm::kGamma].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm ingradkGamma", ingradkGamma);
+        mshadow::Tensor<xpu, 1, Dtype> ingradkBeta = in_grad[batchnorm::kBeta].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm ingradkBeta", ingradkBeta);
+        mshadow::Tensor<xpu, 1, Dtype> ingradkData = in_grad[batchnorm::kData].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm ingradkData", ingradkData);
+        mshadow::Tensor<xpu, 1, Dtype> auxstateskMovingMean = aux_states[batchnorm::kMovingMean].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm auxstateskMovingMean", auxstateskMovingMean);
+        mshadow::Tensor<xpu, 1, Dtype> auxstateskMovingVar = aux_states[batchnorm::kMovingVar].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm auxstateskMovingVar", auxstateskMovingVar);
+        mshadow::Tensor<xpu, 1, Dtype> outdatakMean = out_data[batchnorm::kMean].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm outdatakMean", outdatakMean);
+        mshadow::Tensor<xpu, 1, Dtype> outdatakVar = out_data[batchnorm::kVar].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm outdatakVar", outdatakVar);
+        mshadow::Tensor<xpu, 1, Dtype> outgradkOut = out_grad[batchnorm::kOut].FlatTo1D<xpu, Dtype>(s);
+        printTensor("batchnorm outgradkOut", outgradkOut);
+      }
+
+//      exit(0);
+#endif
   }
 
  private:

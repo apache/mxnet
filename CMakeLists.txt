@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(mxnet C CXX)
 
+add_definitions(-DMXNET_USE_MKLDNN=1)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
