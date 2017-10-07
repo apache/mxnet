@@ -69,6 +69,7 @@ def test_elementwise_sum():
         for dim in range(1, maxdim):
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
             check_elementwise_sum_with_shape(shape, np.random.randint(1, 8))
+    np.random.seed()
 
 
 def check_concat_with_shape(shapes, dimension, skip_second):
@@ -1041,6 +1042,7 @@ def test_convolution_grouping():
 
     for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+    np.random.seed()
 
 
 def test_depthwise_convolution():
@@ -1079,7 +1081,7 @@ def test_depthwise_convolution():
                         exe2.backward(exe2.outputs[0])
 
                         for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-                            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+                            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 def gen_broadcast_data(idx):
@@ -1812,6 +1814,7 @@ def test_dot(ctx=default_context()):
             check_numeric_gradient(dot_sym_xT(data_type), [m1_npy.T, m2_npy], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
             check_numeric_gradient(dot_sym_yT(data_type), [m1_npy, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
             check_numeric_gradient(dot_sym_xT_yT(data_type), [m1_npy.T, m2_npy.T], numeric_eps=1e-1, rtol=2e-2, atol=1e-3)
+    np.random.seed()
 
 
 def test_batch_dot():
@@ -2097,6 +2100,7 @@ def test_roipooling():
     check_numeric_gradient(sym=test, location=[x1, x2],
                            grad_nodes={'data':'add', 'rois':'null'},
                            numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
+    np.random.seed()
 
 
 def check_pad_with_shape(shape, xpu, pad_width, mode):
@@ -2208,6 +2212,7 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-5)
     # check gradient
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
+    np.random.seed()
 
 
 def test_l2_normalization():
@@ -2943,6 +2948,7 @@ def test_bilinear_sampler():
             exe_addto.backward(mx.nd.array(out_grad))
             assert_almost_equal(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid, rtol=1e-3,atol=1e-5)
             assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
+    np.random.seed()
 
 
 def test_index2d():
@@ -3981,6 +3987,7 @@ def test_laop():
     check_fw(test_sumlogdiag, [a], [r])
     if grad_check == 1:
         check_grad(test_sumlogdiag, [a])
+    np.random.seed()
 
 
 # Tests for operators linalg.syrk, linalg.gelqf
@@ -4091,6 +4098,7 @@ def test_laop_2():
             check_grad(test_gelqf_q, [a_batch])
             # A => L
             check_grad(test_gelqf_l, [a_batch])
+    np.random.seed()
 
 
 # Tests for operator linalg.syevd
@@ -4201,6 +4209,7 @@ def test_laop_3():
             check_grad(test_syevd_u_4, [a_batch])
             # A => L
             check_grad(test_syevd_l_4, [a_batch])
+    np.random.seed()
 
 
 def test_laop_4():
@@ -4229,6 +4238,7 @@ def test_laop_4():
     # float32
     #print('float32')
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
+    np.random.seed()
 
 
 def test_stack():
