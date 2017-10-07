@@ -83,5 +83,5 @@ display = <display>
 <if(average_loss)>
 average_loss = <average_loss>
 <endif>
-train_metrics = TrainMetrics(<if(display)>display=<display><endif><if(average_loss)>, average_loss=<average_loss><endif>)
+train_metrics = TrainMetrics(<if(display)>display=display<endif><if(average_loss)>, average_loss=average_loss<endif>)
 test_metrics = TestMetrics()
