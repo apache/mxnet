@@ -46,6 +46,8 @@ function __init__()
   _get_libmx_op_names()
   _populate_iter_creator_cache!()
 
+  global const LIB_VERSION = _get_lib_version()
+
   atexit() do
     # notify libmxnet we are shutting down
     ccall( ("MXNotifyShutdown", MXNET_LIB), Cint, () )
@@ -72,6 +74,15 @@ macro mxcall(fv, argtypes, args...)
       throw(MXError(err_msg))
     end
   end
+end
+
+"""
+Get libmxnet version
+"""
+function _get_lib_version()
+  ver = Ref{Cint}(0)
+  @mxcall :MXGetVersion (Ref{Cint},) ver
+  ver[]
 end
 
 ################################################################################
