@@ -20,6 +20,7 @@ from __future__ import division
 import argparse, time
 import logging
 logging.basicConfig(level=logging.INFO)
+import hotshot, hotshot.stats
 
 import mxnet as mx
 from mxnet import gluon
@@ -64,6 +65,7 @@ parser.add_argument('--use-pretrained', action='store_true',
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
 parser.add_argument('--log-interval', type=int, default=50, help='Number of batches to wait before logging.')
+parser.add_argument('--profile', action='store_true')
 opt = parser.parse_args()
 
 logging.info(opt)
@@ -166,7 +168,7 @@ def train(epochs, ctx):
 
     net.save_params('image-classifier-%s-%d.params'%(opt.model, epochs))
 
-if __name__ == '__main__':
+def main():
     if opt.mode == 'symbolic':
         data = mx.sym.var('data')
         out = net(data)
@@ -186,3 +188,15 @@ if __name__ == '__main__':
         if opt.mode == 'hybrid':
             net.hybridize()
         train(opt.epochs, context)
+
+if __name__ == '__main__':
+    if opt.profile:
+        prof = hotshot.Profile('image-classifier-%s-%s.prof'%(opt.model, opt.mode))
+        prof.runcall(main)
+        prof.close()
+        stats = hotshot.stats.load('image-classifier-%s-%s.prof'%(opt.model, opt.mode))
+        stats.strip_dirs()
+        stats.sort_stats('cumtime', 'calls')
+        stats.print_stats()
+    else:
+        main()
