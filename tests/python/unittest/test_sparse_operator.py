@@ -1291,6 +1291,20 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('row_sparse', shape)
     check_sparse_nd_zeros_like('csr', shape)
 
+def test_sparse_sum_axis():
+    dim0 = 30
+    dim1 = 1000
+    axes = [0, 1]
+    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    for density in densities:
+        shape = rand_shape_2d(dim0, dim1)
+        csr_array = rand_ndarray(shape=shape, stype='csr', density=density)
+        dns = csr_array.tostype('default')
+        for axis in axes:
+            ret = mx.nd.sum(csr_array, axis=axis)
+            assert ret.stype == 'default'
+            ret_expected = mx.nd.sum(dns, axis=axis)
+            assert_almost_equal(ret.asnumpy(), ret_expected.asnumpy())
 
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':

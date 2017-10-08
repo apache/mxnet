@@ -45,12 +45,16 @@ Defined in )code";
 }
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
+.add_alias("_sparse_sum")
 .add_alias("sum_axis")
 .describe(R"code(Computes the sum of array elements over given axes.
 
 .. Note::
 
   `sum` and `sum_axis` are equivalent.
+  For CSRNDArray summation along axis 0 and axis 1 is supported.
+  Setting keepdims or exclude to True with CSRNDArray will cause
+  fallback to dense operator.
 
 Example::
 
@@ -66,8 +70,19 @@ Example::
   sum(data, axis=[1,2])
   [ 12.  19.  27.]
 
+  data = [[1,2,0],
+          [3,0,1],
+          [4,1,0]]
+  sum(data, axis=0)
+  [ 8.  2.  2.]
+
+  sum(data, axis=1)
+  [ 3.  4.  5.]
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum>)
+.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

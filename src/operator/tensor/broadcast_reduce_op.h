@@ -339,6 +339,42 @@ inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
   }
 }
 
+inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  const auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex =
+      invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
+  if (!dispatched && in_stype == kDefaultStorage) {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                     DispatchMode::kFCompute);
+  }
+
+  if (!dispatched && in_stype == kCSRStorage &&
+      (param.axis[0] == 0 || param.axis[0] == 1) && !param.keepdims &&
+      !param.exclude) {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                     dispatch_ex);
+  }
+
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+
+  return true;
+}
+
 template<typename xpu, typename reducer>
 void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
@@ -409,6 +445,149 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   }
 
   ReduceAxesComputeImpl<xpu, reducer, normalize>(attrs, ctx, inputs, req, outputs, small);
+}
+
+template <int req, int axis>
+struct SumCsrKernel;
+
+template <int req>
+struct SumCsrKernel<req, 0> {
+  template <typename RType, typename IType, typename DType>
+  MSHADOW_XINLINE static void Map(int j, DType* out_data,
+                                  const RType* in_indptr, const IType* in_idx,
+                                  const DType* in_data,
+                                  const int64_t num_rows) {
+    DType sum, residual;
+    mshadow::red::sum::SetInitValue(sum, residual);
+    const IType jval = static_cast<IType>(j);
+    for (RType i = 0; i < num_rows; ++i) {
+      if (in_indptr[i] >= in_indptr[i + 1]) continue;
+      if ((in_idx[in_indptr[i]] <= jval) &&
+          (in_idx[in_indptr[i + 1] - 1] >= jval)) {
+        // Do binary search for j between in_idx[in_indptr[i]] and
+        // in_idx[in_indptr[i+1]]
+        // The assumption here is in_idx for each row is sorted
+        IType start = in_indptr[i];
+        IType end = in_indptr[i + 1] - 1;
+        IType mid;
+        while (start <= end) {
+          mid = (start + end) / 2;
+          if (in_idx[mid] == jval) {
+            mshadow::red::sum::Reduce(sum, in_data[mid], residual);
+            break;
+          } else if (in_idx[mid] < jval) {
+            start = mid + 1;
+          } else {
+            end = mid - 1;
+          }
+        }
+      }
+    }
+    KERNEL_ASSIGN(out_data[j], req, sum);
+  }
+};
+
+template <int req>
+struct SumCsrKernel<req, 1> {
+  template <typename RType, typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+                                  const RType* in_indptr,
+                                  const DType* in_data) {
+    DType sum, residual;
+    mshadow::red::sum::SetInitValue(sum, residual);
+    for (RType k = in_indptr[i]; k < in_indptr[i + 1]; k++) {
+      mshadow::red::sum::Reduce(sum, in_data[k], residual);
+    }
+    KERNEL_ASSIGN(out_data[i], req, sum);
+  }
+};
+
+template <typename xpu>
+void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s,
+                const NDArray& input, const OpReqType req, NDArray* output) {
+  if (req == kNullOp) return;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr) only supports axis 0 or 1";
+  CHECK(param.axis[0] == 0 || param.axis[0] == 1)
+      << "sum(csr) only support axis 0 or 1";
+  CHECK(!param.keepdims) << "keepdims not supported for sparse";
+  CHECK(!param.exclude) << "exclude not supported for sparse";
+  int64_t out_data_size = 0;
+  if (param.axis[0] == 0) {
+    out_data_size = input.shape()[1];
+  } else {
+    out_data_size = input.shape()[0];
+  }
+  // only dense output storage type is supported
+  CHECK_EQ(output->storage_type(), kDefaultStorage);
+
+  CHECK_NE(req, kWriteInplace);
+
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  if (req == kWriteTo) {
+    MSHADOW_TYPE_SWITCH(output->data().type_flag_, DType, {
+      Kernel<set_zero, xpu>::Launch(s, out_data_size,
+                                    output->data().dptr<DType>());
+    })
+  }
+
+  if (!input.storage_initialized()) {
+    return;
+  }
+
+  const int64_t num_rows = input.shape()[0];
+
+  if (0 == param.axis[0]) {
+    MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIdx), IType, {
+        MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            auto in_indptr = input.aux_data(kIndPtr).dptr<RType>();
+            auto in_idx = input.aux_data(kIdx).dptr<IType>();
+            auto in_data = input.data().dptr<DType>();
+            Kernel<SumCsrKernel<req_type, 0>, xpu>::Launch(
+                s, out_data_size, output->data().dptr<DType>(), in_indptr,
+                in_idx, in_data, num_rows);
+          });
+        });
+      });
+    });
+  } else if (1 == param.axis[0]) {
+    MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
+      MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+          auto in_indptr = input.aux_data(kIndPtr).dptr<RType>();
+          auto in_data = input.data().dptr<DType>();
+          Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
+              s, out_data_size, output->data().dptr<DType>(), in_indptr,
+              in_data);
+        });
+      });
+    });
+  }
+}
+
+template <typename xpu, typename reducer, bool normalize = false>
+void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  const NDArrayStorageType istype = inputs[0].storage_type();
+  if (istype == kCSRStorage) {
+    CHECK_EQ(inputs[0].shape().ndim(), 2U) << "sum(csr) op only supports"
+                                           << " 2D ndarray as input";
+    NDArray output = outputs[0];
+    SumCsrImpl(attrs, s, inputs[0], req[0], &output);
+  } else {
+    LOG(FATAL) << "Not implemented: "
+               << operator_string(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 // works when shape inference of output is given
