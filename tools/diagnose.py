@@ -94,8 +94,8 @@ if __name__ == '__main__':
         print('------------Pip Info-----------')
         try:
             import pip
-            print('Version   :', pip.__version__)
-            print('Directory :', os.path.dirname(pip.__file__))
+            print('Version      :', pip.__version__)
+            print('Directory    :', os.path.dirname(pip.__file__))
         except ImportError:
             print('No corresponding pip install for current python.')
 
@@ -103,13 +103,13 @@ if __name__ == '__main__':
         print('----------MXNet Info-----------')
         try:
             import mxnet
-            print('Version  :', mxnet.__version__)
+            print('Version      :', mxnet.__version__)
             mx_dir = os.path.dirname(mxnet.__file__)
-            print('Directory:', mx_dir)
+            print('Directory    :', mx_dir)
             commit_hash = os.path.join(mx_dir, 'COMMIT_HASH')
             with open(commit_hash, 'r') as f:
                 ch = f.read().strip()
-                print('Commit Hash:', ch)
+                print('Commit Hash   :', ch)
         except ImportError:
             print('No MXNet installed.')
         except IOError:
