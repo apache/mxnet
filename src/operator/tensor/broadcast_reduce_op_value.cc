@@ -73,10 +73,13 @@ Example::
   data = [[1,2,0],
           [3,0,1],
           [4,1,0]]
-  sum(data, axis=0)
+ 
+  csr = cast_storage(data, 'csr')
+
+  sum(csr, axis=0)
   [ 8.  2.  2.]
 
-  sum(data, axis=1)
+  sum(csr, axis=1)
   [ 3.  4.  5.]
 
 )code" ADD_FILELINE)
