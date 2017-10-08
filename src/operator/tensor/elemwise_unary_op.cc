@@ -139,8 +139,6 @@ MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 MXNET_ADD_SPARSE_OP_ALIAS(make_loss)
 .describe(R"code(Make your own loss function in network construction.
 
-.. note:: ``MakeLoss`` is deprecated, use ``make_loss``.
-
 This operator accepts a customized loss function symbol as a terminal loss and
 the symbol should be an operator with no backward dependency.
 The output of this function is the gradient of loss with respect to the input data.
