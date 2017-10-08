@@ -21,6 +21,7 @@ import os
 import gzip
 import sys
 
+
 def get_libsvm_data(data_dir, data_name, url):
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
@@ -115,7 +116,6 @@ def preprocess(data_name, out_name):
                 feats.append([1, float(row[col].strip())])
 
             all_rows.append(feats)
-
 
     with open(out_name, "w") as f:
         for row in all_rows:
