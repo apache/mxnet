@@ -113,7 +113,7 @@ Example::
   a = Variable('a')
   b = Variable('b')
   b_stop_grad = stop_gradient(3 * b)
-  loss = MakeLoss(b_stop_grad + a)
+  loss = make_loss(b_stop_grad + a)
 
   executor = loss.simple_bind(ctx=cpu(), a=(1,2), b=(1,2))
   executor.forward(is_train=True, a=v1, b=v2)
@@ -138,7 +138,6 @@ Example::
 MXNET_OPERATOR_REGISTER_UNARY(make_loss)
 MXNET_ADD_SPARSE_OP_ALIAS(make_loss)
 .describe(R"code(Stops gradient computation.
-.. note:: ``make_loss`` is deprecated, use ``MakeLoss``.
 
 The storage type of ``make_loss`` output depends upon the input storage type:
 
