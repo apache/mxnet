@@ -48,6 +48,8 @@ DMLC_REGISTER_PARAMETER(MakeLossParam);
 MXNET_REGISTER_OP_PROPERTY(MakeLoss, MakeLossProp)
 .describe(R"code(Make your own loss function in network construction.
 
+.. note:: ``MakeLoss`` is deprecated, use ``make_loss``.
+
 This operator accepts a customized loss function symbol as a terminal loss and
 the symbol should be an operator with no backward dependency.
 The output of this function is the gradient of loss with respect to the input data.
@@ -56,9 +58,9 @@ For example, if you are a making a cross entropy loss function. Assume ``out`` i
 predicted output and ``label`` is the true label, then the cross entropy can be defined as::
 
   cross_entropy = label * log(out) + (1 - label) * log(1 - out)
-  loss = MakeLoss(cross_entropy)
+  loss = make_loss(cross_entropy)
 
-We will need to use ``MakeLoss`` when we are creating our own loss function or we want to
+We will need to use ``make_loss`` when we are creating our own loss function or we want to
 combine multiple loss functions. Also we may want to stop some variables' gradients
 from backpropagation. See more detail in ``BlockGrad`` or ``stop_gradient``.
 
