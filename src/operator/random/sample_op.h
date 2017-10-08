@@ -241,6 +241,44 @@ using FSampleCompute = std::function<void (const nnvm::NodeAttrs& attrs,
 
 using mxnet::TBlob;
 
+// Convenience class that transfers a host based scalar into an
+// array on either the host or the device. Needed as
+// the core samplers expect parameters to be tensors located on the
+// appropriate device.
+template<typename xpu>
+Context AllocContext();
+template<>
+MSHADOW_FORCE_INLINE Context AllocContext<cpu>() { return Context::CPU(); }
+template<>
+MSHADOW_FORCE_INLINE Context AllocContext<gpu>() { return Context::GPU(); }
+
+template<typename xpu, typename DType>
+struct Scalar2Array {
+  Storage::Handle array;
+  Scalar2Array(DType scalar, const OpContext& ctx) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    array = Storage::Get()->Alloc(sizeof(DType), AllocContext<xpu>());
+    Tensor<xpu, 1, DType> src(Ref(), Shape1(1), s);
+    Copy(src, Tensor<cpu, 1, DType>(&scalar, Shape1(1)), s);
+  }
+  ~Scalar2Array() {
+    Storage::Get()->Free(array);
+  }
+  DType *Ref() { return static_cast<DType*>(array.dptr); }
+  Tensor<xpu, 1, DType> GetTensor() { return Tensor<xpu, 1, DType>(Ref(), Shape1(1)); }
+};
+
+// Convienience function to generate the required number of seeds for sampling
+template<typename xpu>
+MSHADOW_FORCE_INLINE Tensor<xpu, 1, unsigned int> GetSeeds(index_t N, const OpContext& ctx) {
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const index_t nSeeds(OptSampleSeedNum<xpu>(N));
+  Tensor<xpu, 1, unsigned int> seeds
+    = ctx.requested[1].get_space_typed<xpu, 1, unsigned int>(Shape1(nSeeds), ctx.get_stream<xpu>());
+  ctx.requested[0].get_random<xpu, float>(s)->GetRandInt(seeds);
+  return seeds;
+}
+
 template<typename xpu, typename Sampler>
 struct SampleMaster;
 
@@ -250,19 +288,15 @@ struct SampleMaster<xpu, UniformSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
-    
+    CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
+    Scalar2Array<xpu, float> low(param.low, ctx), high(param.high, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     UniformSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed,
-                     &(param.low), &(param.high),
-                     outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(low.GetTensor(), high.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -273,18 +307,15 @@ struct SampleMaster<xpu, NormalSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleNormalParam& param = nnvm::get<SampleNormalParam>(attrs.parsed);
     CHECK_GT(param.scale, 0) << "scale parameter in gaussian has to be positive";
+    Scalar2Array<xpu, float> loc(param.loc, ctx), scale(param.scale, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     NormalSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed,
-                     &(param.loc), &(param.scale),
-                     outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(loc.GetTensor(), scale.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -295,21 +326,16 @@ struct SampleMaster<xpu, GammaSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleGammaParam& param = nnvm::get<SampleGammaParam>(attrs.parsed);
     CHECK_GT(param.alpha, 0) << "alpha parameter in gamma distribution has to be positive";
     CHECK_GT(param.beta, 0) << "beta parameter in gamma distribution has to be positive";
-
+    Scalar2Array<xpu, float> alpha(param.alpha, ctx), beta(param.beta, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     GammaSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed,
-                     &(param.alpha), &(param.beta),
-                     outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(alpha.GetTensor(), beta.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -320,18 +346,15 @@ struct SampleMaster<xpu, ExponentialSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleExponentialParam& param = nnvm::get<SampleExponentialParam>(attrs.parsed);
     CHECK_GT(param.lam, 0) << "lambda parameter in exponential distribution has to be positive";
-
+    Scalar2Array<xpu, float> lam(param.lam, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     ExponentialSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed, &(param.lam), outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(lam.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -342,18 +365,15 @@ struct SampleMaster<xpu, PoissonSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SamplePoissonParam& param = nnvm::get<SamplePoissonParam>(attrs.parsed);
     CHECK_GE(param.lam, 0) << "lambda parameter in poisson distribution has to be non-negative";
-
+    Scalar2Array<xpu, float> lam(param.lam, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     PoissonSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed, &(param.lam), outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(lam.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -364,22 +384,16 @@ struct SampleMaster<xpu, NegativeBinomialSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleNegBinomialParam& param = nnvm::get<SampleNegBinomialParam>(attrs.parsed);
     CHECK_GE(param.k, 0) << "k parameter in negative binomial distribution has to be non-negative";
     CHECK_GE(param.p, 0) << "p parameter in negative binomial distribution has to be non-negative";
-    float k_float = float(param.k);
-
+    Scalar2Array<xpu, float> k(param.k, ctx), p(param.p, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     NegativeBinomialSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed,
-                     &(k_float), &(param.p),
-                     outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(k.GetTensor(), p.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -390,23 +404,18 @@ struct SampleMaster<xpu, GeneralizedNegativeBinomialSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    using namespace mxnet::op;
-    using namespace expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleGenNegBinomialParam& param = nnvm::get<SampleGenNegBinomialParam>(attrs.parsed);
     CHECK_GE(param.mu, 0)
       << "mu parameter in generalized negative binomial distribution has to be non-negative";
     CHECK_GE(param.alpha, 0)
       << "alpha parameter in generalized negative binomial distribution has to be non-negative";
-
+    Scalar2Array<xpu, float> mu(param.mu, ctx), alpha(param.alpha, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     GeneralizedNegativeBinomialSampler<xpu> sampler;
-    const int nSeed = sampler.OptSeedNum();
-    const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-    MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      sampler.Sample(1, outputs->Size(), nSeed,
-                     &(param.mu), &(param.alpha),
-                     outputs->dptr<OType>(), seed, s);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(mu.GetTensor(), alpha.GetTensor(), out, seeds, s);
     });
   }
 };
@@ -420,7 +429,6 @@ void SampleComputeEx_(const nnvm::NodeAttrs& attrs,
                       SampleMaster<xpu, Sampler> sample_master) {
   NDArray output = outputs[0];
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  printf ("SampleComputeEx_");
   if (output.storage_type() == kRowSparseStorage) {
     // indices
     nnvm::dim_t nnr = output.shape()[0];

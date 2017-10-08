@@ -139,34 +139,28 @@ struct SamplerCaller;
 
 template<typename xpu, typename IType, typename OType, typename Sampler>
 struct SamplerCaller<xpu, IType, OType, Sampler, 1> {
-  static void op(const int nParm,
-                 const int nSample,
-                 const std::vector<TBlob>& inputs,
+  static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int seed,
+                 const Tensor<xpu, 1, unsigned int>& seeds,
                        mshadow::Stream<xpu> *s) {
     Sampler sampler;
-    sampler.Sample(nParm, nSample, sampler.OptSeedNum(),
-                   inputs[0].dptr<IType>(),
-                   outputs[0].dptr<OType>(),
-                   seed, s);
+    sampler.Sample(inputs[0].FlatTo1D<xpu, IType>(s),
+                   outputs[0].FlatTo1D<xpu, OType>(s),
+                   seeds, s);
   }
 };
 
 template<typename xpu, typename IType, typename OType, typename Sampler>
 struct SamplerCaller<xpu, IType, OType, Sampler, 2> {
-  static void op(const int nParm,
-                 const int nSample,
-                 const std::vector<TBlob>& inputs,
+  static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
-                 const int seed,
+                 const Tensor<xpu, 1, unsigned int>& seeds,
                        mshadow::Stream<xpu> *s) {
     Sampler sampler;
-    sampler.Sample(nParm, nSample, sampler.OptSeedNum(),
-                   inputs[0].dptr<IType>(),
-                   inputs[1].dptr<IType>(),
-                   outputs[0].dptr<OType>(),
-                   seed, s);
+    sampler.Sample(inputs[0].FlatTo1D<xpu, IType>(s),
+                   inputs[1].FlatTo1D<xpu, IType>(s),
+                   outputs[0].FlatTo1D<xpu, OType>(s),
+                   seeds, s);
   }
 };
 
@@ -177,24 +171,20 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  CHECK_GT(inputs.size(), 0);
-  CHECK_LT(inputs.size(), 3);
-  CHECK_EQ(outputs.size(), 1);
-  CHECK_EQ(req.size(), 1);
   using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), inum);
+  CHECK_EQ(outputs.size(), 1);
+  CHECK_GT(inputs[0].Size(), 0);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in0 = inputs[0];
-  const TBlob& out = outputs[0];
-  if (out.Size() == 0) return;
-  CHECK_GT(in0.Size(), 0);
-  CHECK_EQ(out.Size() % in0.Size(), 0);
-  const int nParm(in0.Size()), nSample(out.Size()/in0.Size());
-  const int seed(ctx.requested[0].get_random<xpu, float>(s)->GetRandInt());
-
-  MSHADOW_TYPE_SWITCH(in0.type_flag_, IType, {
-    MSHADOW_SGL_DBL_TYPE_SWITCH(out.type_flag_, OType, {
+  // Generate multiple seeds for the different threads.
+  const int nSeeds(OptSampleSeedNum<xpu>(outputs[0].Size()));
+  Tensor<xpu, 1, unsigned> seeds
+    = ctx.requested[1].get_space_typed<xpu, 1, unsigned> (Shape1(nSeeds), ctx.get_stream<xpu>());
+  ctx.requested[0].get_random<xpu, float>(s)->GetRandInt(seeds);
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         SamplerCaller<xpu, IType, OType, Sampler, inum>
-            ::op(nParm, nSample, inputs, outputs, seed, s);
+            ::op(inputs, outputs, seeds, s);
     });
   });
 }

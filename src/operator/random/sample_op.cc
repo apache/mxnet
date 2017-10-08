@@ -49,7 +49,6 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialParam);
 // Add "uniform" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_uniform, SampleUniformParam)
 .add_alias("uniform")
-.add_alias("_sample_uniform")
 .add_alias("random_uniform")
 .describe(R"code(Draw random samples from a uniform distribution.
 
@@ -71,7 +70,6 @@ Example::
 // Add "normal" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_normal, SampleNormalParam)
 .add_alias("normal")
-.add_alias("_sample_normal")
 .add_alias("random_normal")
 .describe(R"code(Draw random samples from a normal (Gaussian) distribution.
 
@@ -89,7 +87,6 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, NormalSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_gamma, SampleGammaParam)
-.add_alias("_sample_gamma")
 .add_alias("random_gamma")
 .describe(R"code(Draw random samples from a gamma distribution.
 
@@ -105,7 +102,6 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, GammaSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_exponential, SampleExponentialParam)
-.add_alias("_sample_exponential")
 .add_alias("random_exponential")
 .describe(R"code(Draw random samples from an exponential distribution.
 
@@ -116,12 +112,12 @@ Example::
    exponential(lam=4, shape=(2,2)) = [[ 0.0097189 ,  0.08999364],
                                       [ 0.04146638,  0.31715935]]
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SampleExponentialParam, true, false>)
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleExponentialParam, true, false>)
 .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, ExponentialSampler<cpu>>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, ExponentialSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_poisson, SamplePoissonParam)
-.add_alias("_sample_poisson")
 .add_alias("random_poisson")
 .describe(R"code(Draw random samples from a Poisson distribution.
 
@@ -138,7 +134,6 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, PoissonSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_negative_binomial, SampleNegBinomialParam)
-.add_alias("_sample_negbinomial")
 .add_alias("random_negative_binomial")
 .describe(R"code(Draw random samples from a negative binomial distribution.
 
@@ -151,12 +146,12 @@ Example::
    negative_binomial(k=3, p=0.4, shape=(2,2)) = [[ 4.,  7.],
                                                  [ 2.,  5.]]
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SampleNegativeBinomialParam, true, false>)
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleNegBinomialParam, true, false>)
 .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, NegativeBinomialSampler<cpu>>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, NegativeBinomialSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_generalized_negative_binomial, SampleGenNegBinomialParam)
-.add_alias("_sample_gennegbinomial")
 .add_alias("random_generalized_negative_binomial")
 .describe(R"code(Draw random samples from a generalized negative binomial distribution.
 
@@ -170,7 +165,8 @@ Example::
    generalized_negative_binomial(mu=2.0, alpha=0.3, shape=(2,2)) = [[ 2.,  1.],
                                                                     [ 6.,  4.]]
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SampleGeneralizedNegativeBinomialParam, true, false>)
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleGenNegBinomialParam, true, false>)
 .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, GeneralizedNegativeBinomialSampler<cpu>>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, GeneralizedNegativeBinomialSampler<cpu>>);
 
