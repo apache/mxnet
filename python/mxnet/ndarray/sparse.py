@@ -22,8 +22,10 @@ from __future__ import absolute_import
 from __future__ import division
 try:
     from __builtin__ import slice as py_slice
+    from __builtin__ import sum as py_sum
 except ImportError:
     from builtins import slice as py_slice
+    from builtins import sum as py_sum
 
 import ctypes
 import warnings
@@ -94,7 +96,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     aux_type_ids = [int(_DTYPE_NP_TO_MX[np.dtype(aux_t).type]) for aux_t in aux_types]
     aux_shapes = [(0,) for aux_t in aux_types] if aux_shapes is None else aux_shapes
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
-    aux_shapes = sum(aux_shapes, ())
+    aux_shapes = py_sum(aux_shapes, ())
     num_aux = mx_uint(len(aux_types))
     check_call(_LIB.MXNDArrayCreateSparseEx(
         ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
