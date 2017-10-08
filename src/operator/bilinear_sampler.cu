@@ -63,14 +63,43 @@ __global__ void BilinearSamplerForwardKernel(const int i_c, const int i_h,
     DType top_right_v = 0;
     DType bottom_left_v = 0;
     DType bottom_right_v = 0;
-    if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1))
-      top_left_v = *(data + data_index);
-    if (between(top_left_x + 1, 0, i_w-1) && between(top_left_y, 0, i_h-1))
-      top_right_v = *(data + data_index + 1);
-    if (between(top_left_x, 0, i_w-1) && between(top_left_y + 1, 0, i_h-1))
-      bottom_left_v = *(data + data_index + i_w);
-    if (between(top_left_x+1, 0, i_w-1) && between(top_left_y + 1, 0, i_h-1))
-      bottom_right_v = *(data + data_index + i_w + 1);
+    if (between(top_left_x, 0, i_w-1)) {
+      if (between(top_left_y, 0, i_h-1)) {
+        top_left_v = *(data + data_index);
+        if (between(top_left_x + 1, 0, i_w-1)) {
+          top_right_v = *(data + data_index + 1);
+          if (between(top_left_y + 1, 0, i_h-1)) {
+            bottom_left_v = *(data + data_index + i_w);
+            bottom_right_v = *(data + data_index + i_w + 1);
+          } else {
+            bottom_left_v = top_left_v;
+            bottom_right_v = top_right_v;
+          }
+        } else {
+          top_right_v = top_left_v;
+          if (between(top_left_y + 1, 0, i_h-1))
+            bottom_right_v = bottom_left_v = *(data + data_index + i_w);
+          else
+            bottom_right_v = bottom_left_v = top_left_v;
+        }
+      } else if (between(top_left_y + 1, 0, i_h-1)) {
+        top_left_v = bottom_left_v = *(data + data_index + i_w);
+        if (between(top_left_x + 1, 0, i_w-1))
+          top_right_v = bottom_right_v = *(data + data_index + i_w + 1);
+        else
+          top_right_v = bottom_right_v = bottom_left_v;
+      }
+    } else if (between(top_left_x + 1, 0, i_w-1)) {
+      if (between(top_left_y, 0, i_h-1)) {
+        top_left_v = top_right_v = *(data + data_index + 1);
+        if (between(top_left_y + 1, 0, i_h-1))
+          bottom_left_v = bottom_right_v = *(data + data_index + i_w + 1);
+        else
+          bottom_left_v = bottom_right_v = top_right_v;
+      } else {
+        top_left_v = top_right_v = bottom_left_v = bottom_right_v = *(data + data_index + i_w + 1);
+      }
+    }
     *(out+out_index) = top_left_v * top_left_y_w * top_left_x_w +
                         top_right_v * top_left_y_w * (1.0 - top_left_x_w) +
                         bottom_left_v * (1.0 - top_left_y_w) * top_left_x_w +
@@ -112,25 +141,70 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
       DType bottom_left_v = 0;
       DType bottom_right_v = 0;
       // calc input grad
-      if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index], *(grad + grad_index) * top_left_y_w * top_left_x_w);
-        top_left_v = *(data + data_index);
+      DType grad_top_left_v = 0;
+      DType grad_top_right_v = 0;
+      DType grad_bottom_left_v = 0;
+      DType grad_bottom_right_v = 0;
+      if (between(top_left_x, 0, i_w-1)) {
+        if (between(top_left_y, 0, i_h-1)) {
+          grad_top_left_v = *(grad + grad_index) * top_left_y_w * top_left_x_w;
+          top_left_v = *(data + data_index);
+          if (between(top_left_x + 1, 0, i_w-1)) {
+            grad_top_right_v = *(grad + grad_index) * top_left_y_w * (1.0 - top_left_x_w);
+            top_right_v = *(data + data_index + 1);
+            if (between(top_left_y + 1, 0, i_h-1)) {
+              grad_bottom_left_v = *(grad + grad_index) * (1.0 - top_left_y_w) * top_left_x_w;
+              grad_bottom_right_v = *(grad + grad_index) * (1.0 - top_left_y_w) * (1.0 - top_left_x_w);
+              bottom_left_v = *(data + data_index + i_w);
+              bottom_right_v = *(data + data_index + i_w + 1);
+            } else {
+              grad_top_left_v = *(grad + grad_index) * top_left_x_w;
+              grad_top_right_v = *(grad + grad_index) * (1.0 - top_left_x_w);
+              bottom_left_v = top_left_v;
+              bottom_right_v = top_right_v;
+            }
+          } else {
+            grad_top_left_v = *(grad + grad_index) * top_left_y_w;
+            top_right_v = top_left_v;
+            if (between(top_left_y + 1, 0, i_h-1)) {
+              grad_bottom_left_v = *(grad + grad_index) * (1.0 - top_left_y_w);
+              bottom_right_v = bottom_left_v = *(data + data_index + i_w);
+            } else {
+              grad_top_left_v = *(grad + grad_index);
+              bottom_right_v = bottom_left_v = top_left_v;
+            }
+          }
+        } else if (between(top_left_y + 1, 0, i_h-1)) {
+          grad_bottom_left_v = *(grad + grad_index) * top_left_x_w;
+          top_left_v = bottom_left_v = *(data + data_index + i_w);
+          if (between(top_left_x + 1, 0, i_w-1)) {
+            grad_bottom_right_v = *(grad + grad_index) * (1.0 - top_left_x_w);
+            top_right_v = bottom_right_v = *(data + data_index + i_w + 1);
+          } else {
+            grad_bottom_left_v = *(grad + grad_index);
+            top_right_v = bottom_right_v = bottom_left_v;
+          }
+        }
+      } else if (between(top_left_x + 1, 0, i_w-1)) {
+        if (between(top_left_y, 0, i_h-1)) {
+          grad_top_right_v = *(grad + grad_index) * top_left_y_w;
+          top_left_v = top_right_v = *(data + data_index + 1);
+          if (between(top_left_y + 1, 0, i_h-1)) {
+            grad_bottom_right_v = *(grad + grad_index) * (1.0 - top_left_y_w);
+            bottom_left_v = bottom_right_v = *(data + data_index + i_w + 1);
+          } else {
+            grad_top_right_v = *(grad + grad_index);
+            bottom_left_v = bottom_right_v = top_right_v;
+          }
+        } else {
+          grad_bottom_right_v = *(grad + grad_index);
+          top_left_v = top_right_v = bottom_left_v = bottom_right_v = *(data + data_index + i_w + 1);
+        }
       }
-      if (between(top_left_x+1, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index + 1], *(grad + grad_index) * top_left_y_w
-                                        * (1.0 - top_left_x_w));
-        top_right_v = *(data + data_index + 1);
-      }
-      if (between(top_left_x, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index+ i_w], *(grad + grad_index) * (1.0 - top_left_y_w)
-                                        * top_left_x_w);
-        bottom_left_v = *(data + data_index + i_w);
-      }
-      if (between(top_left_x+1, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index+ i_w + 1], *(grad + grad_index) * (1.0 - top_left_y_w)
-                                            * (1.0 - top_left_x_w));
-        bottom_right_v = *(data + data_index + i_w + 1);
-      }
+      *(g_input + data_index) += grad_top_left_v;
+      *(g_input + data_index + 1) += grad_top_right_v;
+      *(g_input + data_index+ i_w) += grad_bottom_left_v;
+      *(g_input + data_index+ i_w + 1) += grad_bottom_right_v;
       // calc weight grad of top_left_w, then multiple -1 is the grad of grid_src
       top_left_y_gw -= *(grad + grad_index) * (top_right_v - bottom_right_v +
                         (top_left_v - top_right_v - bottom_left_v + bottom_right_v)
