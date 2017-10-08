@@ -89,21 +89,20 @@ def evaluate_voc(net, val_data, ctx):
             results.append(out.asnumpy())
     results = np.vstack(results)
     # write to disk for eval
-    val_dataset.eval_results(results)
+    return val_dataset.eval_results(results)
 
 
 # training process
 def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     ctx = ctx_as_list(ctx)
     net.initialize(mx.init.Uniform(), ctx=ctx)
+    net.hybridize()
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
         {'learning_rate': lr, 'wd': wd, 'momentum':momentum})
     cls_loss = FocalLoss(num_class=num_class+1)
     box_loss = gluon.loss.L1Loss()
     cls_metric = Accuracy(axis=-1)
     box_metric = SmoothL1()
-
-    evaluate_voc(net, val_data, ctx)
 
     for epoch in range(epochs):
         tic = time.time()
@@ -151,9 +150,9 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
         name1, mae = box_metric.get()
         logging.info('[Epoch %d] training: %s=%f, %s=%f'%(epoch, name, acc, name1, mae))
         logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
-        mean_ap = evaluate_voc(net, val_data, ctx)
+        map_name, mean_ap = evaluate_voc(net, val_data, ctx)
         # name, val_acc = test(ctx)
-        logging.info('[Epoch %d] validation: %s=%f'%(epoch, 'mAP', mean_ap))
+        logging.info('[Epoch %d] validation: %s=%f'%(epoch, map_name, mean_ap))
 
 ctx = [mx.gpu(i) for i in range(1)]
 ctx = mx.cpu()
