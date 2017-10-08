@@ -64,6 +64,9 @@ We will need to use ``make_loss`` when we are creating our own loss function or 
 combine multiple loss functions. Also we may want to stop some variables' gradients
 from backpropagation. See more detail in ``BlockGrad`` or ``stop_gradient``.
 
+In addition, we can give a scale to the loss by setting ``grad_scale``,
+so that the gradient of the loss will be rescaled in the backpropagation.
+
 .. note:: This operator should be used as a Symbol instead of NDArray.
 
 )code" ADD_FILELINE)
