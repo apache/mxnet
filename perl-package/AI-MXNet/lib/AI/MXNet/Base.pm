@@ -275,16 +275,14 @@ sub build_param_doc
     $remove_dup //= 1;
     my %param_keys;
     my @param_str;
-    zip(sub {
-            my ($key, $type_info, $desc) = @_;
-            return if exists $param_keys{$key} and $remove_dup;
+    for(zip($arg_names, $arg_types, $arg_descs)) {
+            my ($key, $type_info, $desc) = @$_;
+            next if exists $param_keys{$key} and $remove_dup;
             $param_keys{$key} = 1;
             my $ret = sprintf("%s : %s", $key, $type_info);
             $ret .= "\n    ".$desc if length($desc);
             push @param_str,  $ret;
-        },
-        $arg_names, $arg_types, $arg_descs
-    );
+    }
     return sprintf("Parameters\n----------\n%s\n", join("\n", @param_str));
 }
 

@@ -148,10 +148,10 @@ sub test_module_states
     $mod->forward($batch);
     my $out2 = $mod->get_outputs(1);
 
-    zip(sub {
-        my ($x1, $x2) = @_;
+    for(zip($out1, $out2)) {
+        my ($x1, $x2) = @$_;
         ok(not almost_equal($x1->aspdl, $x2->aspdl, 1e-3));
-    }, $out1, $out2);
+    }
 }
 
 sub test_module_switch_bucket

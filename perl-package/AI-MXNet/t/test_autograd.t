@@ -37,10 +37,10 @@ sub autograd_assert
     ok(same($output->aspdl, $res->aspdl));
     my $grad_res = $grad_f->(@args);
     ok(@$grad_vals == @$grad_res);
-    zip(sub {
-        my ($a, $b) = @_;
+    for(zip($grad_vals, $grad_res)) {
+        my ($a, $b) = @$_;
         ok(same($a->aspdl, $b->aspdl));
-    }, $grad_vals, $grad_res);
+    }
 }
 
 sub test_unary_func
