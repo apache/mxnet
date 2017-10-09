@@ -6,8 +6,8 @@
 - [ ] Passed code style checking (`make lint`)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
 - [ ] All changes have test coverage
-- [ ] Examples are either not affected by this change, or have been fixed to be compatible with this change
 - [ ] For user-facing API changes, API doc string has been updated.
+- [ ] To my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
 
 ### Changes ###
 - [ ] Feature1, tests, (and when applicable, API doc)
