@@ -65,7 +65,9 @@ parser.add_argument('--use-pretrained', action='store_true',
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
 parser.add_argument('--log-interval', type=int, default=50, help='Number of batches to wait before logging.')
-parser.add_argument('--profile', action='store_true')
+parser.add_argument('--profile', action='store_true',
+                    help='Option to turn on memory profiling for front-end, '\
+                         'and prints out the memory usage by python function at the end.')
 opt = parser.parse_args()
 
 logging.info(opt)
