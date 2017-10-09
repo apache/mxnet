@@ -23,6 +23,8 @@ more `Executor` for data parallelization.
 
 import logging
 import warnings
+import json
+import zipfile
 
 from .. import context as ctx
 from .. import optimizer as opt
@@ -170,6 +172,122 @@ class Module(BaseModule):
             state_name = '%s-%04d.states' % (prefix, epoch)
             self.save_optimizer_states(state_name)
             logging.info('Saved optimizer state to \"%s\"', state_name)
+
+    def export_serving(self, model_name, signature, util_files=None):
+        """Export current progress to a zip file used by MXNet model serving.
+
+        Parameters
+        ----------
+        model_name : str
+            Name of the model to be exported.
+        signature : dict
+            A dictionary containing model input and output information.
+            Data names or data shapes of inputs and outputs can be automatically
+            collected from module. They are optional. User needs to specify inputs
+            and outputs MIME type for http request. Currently only 'image/jpeg'
+            and 'application/json' are supported. All inputs should have the same type.
+            This also applies for outputs.
+            An example signature would be:
+                signature = { "input_type": "image/jpeg", "output_type": "application/json" }
+            A full signature containing inputs and outputs:
+                {
+                    "input_type": "image/jpeg",
+                    "inputs" : [
+                        'data_name': 'data',
+                        'data_shape': [1, 3, 224, 224]
+                    ],
+                    "outputs" : [
+                        'data_name': 'softmax',
+                        'data_shape': [1, 1000]
+                    ]
+                    "output_type": "application/json"
+                }
+        util_files : List
+            A list of string containing other utility files for inference. One example is class
+            label file for classification task.
+
+        Examples
+        --------
+        >>> signature1 = { "input_type": "image/jpeg", "output_type": "application/json" }
+        >>> model1.export_serving(model_name='resnet-18', signature=signature1,
+        >>>                       util_files=['synset.txt'])
+        >>> signature2 = {
+        >>>                    "input_type": "image/jpeg",
+        >>>                    "inputs" : [
+        >>>                        'data_name': 'data',
+        >>>                        'data_shape': [1, 3, 224, 224]
+        >>>                    ],
+        >>>                    "outputs" : [
+        >>>                        'data_name': 'softmax',
+        >>>                        'data_shape': [1, 1000]
+        >>>                    ]
+        >>>                    "output_type": "application/json"
+        >>>              }
+        >>> model2.export_serving(model_name='resnet-152', signature=signature2,
+        >>>                       util_files=['synset.txt'])
+        Exported model to "resnet-18.model"
+        Exported model to "resnet-152.model"
+        """
+        epoch_placeholder = 0
+        valid_mime_type = ['image/jpeg', 'application/json']
+        sig_file_name = 'signature.json'
+
+        if 'inputs' not in signature:
+            signature['inputs'] = list()
+            for name, shape in self.data_shapes:
+                signature['inputs'].append({
+                    'data_name': name,
+                    'data_shape': list(shape)
+                })
+        if 'outputs' not in signature:
+            signature['outputs'] = list()
+            for name, shape in self.output_shapes:
+                signature['outputs'].append({
+                    'data_name': name,
+                    'data_shape': list(shape)
+                })
+
+        # Verify signature correctness
+        assert 'input_type' in signature and 'output_type' in signature, \
+            'input_type and output_type are required in signature.'
+        assert isinstance(signature['input_type'], basestring) and \
+               isinstance(signature['output_type'], basestring), \
+            'Value of input_type and output_type should be string'
+        assert signature['input_type'] in valid_mime_type and \
+               signature['output_type'] in valid_mime_type, \
+            'Valid type should be picked from %s' % (valid_mime_type)
+
+        assert 'inputs' in signature and 'outputs' in signature, \
+            'inputs and outputs are required in signature.'
+        assert isinstance(signature['inputs'], list) and \
+               isinstance(signature['outputs'], list), \
+            'inputs and outputs values must be list.'
+        for data in signature['inputs']:
+            assert isinstance(data, dict), 'Each input must be a dictionary.'
+            assert 'data_name' in data, 'data_name is required for input.'
+            assert isinstance(data['data_name'], basestring), 'data_name value must be string.'
+            assert 'data_shape' in data, 'data_shape is required for input.'
+            assert isinstance(data['data_shape'], list), 'data_shape value must be list.'
+        for data in signature['outputs']:
+            assert isinstance(data, dict), 'Each output must be a dictionary.'
+            assert 'data_name' in data, 'data_name is required for output.'
+            assert isinstance(data['data_name'], basestring), 'data_name value must be string.'
+            assert 'data_shape' in data, 'data_shape is required for output.'
+            assert isinstance(data['data_shape'], list), 'data_shape value must be list.'
+
+        with open(sig_file_name, 'w') as sig:
+            json.dump(signature, sig)
+        self.save_checkpoint(model_name, epoch_placeholder)
+
+        file_list = ['%s-symbol.json' % (model_name), '%s-%04d.params' %
+                     (model_name, epoch_placeholder), sig_file_name]
+        if util_files:
+            file_list += util_files
+
+        with zipfile.ZipFile('%s.model' % (model_name), 'w') as zip_file:
+            for item in file_list:
+                zip_file.write(item)
+        logging.info('Exported model to \"%s.model\"', model_name)
 
     def _reset_bind(self):
         """Internal function to reset binded state."""

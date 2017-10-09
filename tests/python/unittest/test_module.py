@@ -19,6 +19,8 @@ import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet.test_utils import *
 import numpy as np
+import os
+import json
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
@@ -126,6 +128,38 @@ def test_save_load():
     assert mod._symbol.tojson() == mod2._symbol.tojson()
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
+
+
+def test_export_serving():
+    sym = mx.sym.Variable('data')
+    sym = mx.sym.FullyConnected(sym, num_hidden=100)
+    sym = mx.symbol.Activation(name="act_1", data=sym, act_type='sigmoid')
+    sym = mx.symbol.LinearRegressionOutput(data=sym, name='softmax', grad_scale=2)
+
+    mod = mx.mod.Module(sym, ('data',))
+    mod.bind(data_shapes=[('data', (10, 10))])
+    mod.init_params()
+    mod.init_optimizer(optimizer_params={'learning_rate': 0.1, 'momentum': 0.9})
+    mod.update()
+
+    signature = { 'input_type': 'application/json', 'output_type': 'application/json' }
+    with open('synset.txt', 'w') as synset:
+        synset.write('test label')
+    mod.export_serving('test', signature, util_files = ['synset.txt'])
+    assert os.path.isfile('test.model'), "No zip file found for export_serving."
+    assert os.path.isfile('signature.json'), "No signature file found for export_serving."
+    with open('signature.json') as f:
+        sig = json.load(f)
+    assert sig['input_type'] == signature['input_type'], \
+        "Input type incorrect. Expect %s but got %s" % (signature['input_type'], sig['input_type'])
+    assert sig['output_type'] == signature['output_type'], \
+        "Output type incorrect. Expect %s but got %s" % (signature['output_type'], sig['output_type'])
+    for input, data in zip(sig['inputs'], mod.data_shapes):
+        assert input['data_name'] == data[0], "Input name mistach. %s vs %s" % (input['data_name'], data[0])
+        assert input['data_shape'] == list(data[1]), "Input shape mistach. %s vs %s" % (input['data_shape'], data[1])
+    for output, data in zip(sig['outputs'], mod.output_shapes):
+        assert output['data_name'] == data[0], "Output name mistach. %s vs %s" % (output['data_name'], data[0])
+        assert output['data_shape'] == list(data[1]), "Output shape mistach. %s vs %s" % (output['data_shape'], data[1])
 
 
 def test_module_reshape():
