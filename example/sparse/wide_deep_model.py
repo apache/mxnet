@@ -19,12 +19,12 @@ import mxnet as mx
 from weighted_softmax_ce import *
 
 
-def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, input_dims, hidden_units, positive_cls_weight):
+def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, 
+                    input_dims, hidden_units, positive_cls_weight):
     data = mx.symbol.Variable("data", stype='csr')
     label = mx.symbol.Variable("softmax_label")
 
     x = mx.symbol.slice_axis(data=data, axis=1, begin=0, end=num_linear_features)
-    x = mx.symbol.cast_storage(x, 'csr')
     norm_init = mx.initializer.Normal(sigma=0.01)
     # weight with row_sparse storage type to enable sparse gradient updates
     weight = mx.symbol.Variable("weight", shape=(num_linear_features, 2),
@@ -53,5 +53,4 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, 
 
     out = mx.symbol.Custom(linear_out+deep_out, label, op_type='weighted_softmax_ce_loss',
                            positive_cls_weight=positive_cls_weight, name='model')
-
     return mx.symbol.MakeLoss(out)

@@ -18,35 +18,41 @@
 import mxnet as mx
 from mxnet.test_utils import *
 from get_data import *
-from linear_model import *
+from wide_deep_model import *
 import argparse
 import os
 
 
-parser = argparse.ArgumentParser(description="Run sparse linear classification " \
+parser = argparse.ArgumentParser(description="Run sparse wide and deep classification " \
                                              "with distributed kvstore",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-epoch', type=int, default=5,
                     help='number of epochs to train')
-parser.add_argument('--batch-size', type=int, default=8192,
+parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='learning rate')
 parser.add_argument('--kvstore', type=str, default=None,
                     help='what kvstore to use',
                     choices=["dist_async", "local"])
-parser.add_argument('--optimizer', type=str, default='ftrl',
+parser.add_argument('--optimizer', type=str, default='adam',
                     help='what optimizer to use',
                     choices=["ftrl", "sgd", "adam"])
 parser.add_argument('--log-interval', type=int, default=100,
                     help='number of batches to wait before logging training status')
 
-AVAZU = {
-    'train': 'avazu-app',
-    'test': 'avazu-app.t',
-    'url': "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/",
-    # 1000000 + 1 since LibSVMIter uses zero-based indexing
-    'num_features': 1000001,
+
+# Related to feature engineering, please see preprocess in get_data.py
+ADULT = {
+    'num_features': 2400,
+    'train': 'adult.data',
+    'test': 'adult.test',
+    'url': 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/',
+    'num_linear_features': 2000,
+    'num_embed_features': 2,
+    'num_cont_features': 38,
+    'embed_input_dims': [1000, 1000],
+    'hidden_units': [8, 50, 100],
     'positive_class_weight': 2.0,
 }
 
@@ -71,17 +77,16 @@ if __name__ == '__main__':
     rank = kv.rank if kv else 0
     num_worker = kv.num_workers if kv else 1
 
-    # dataset
-    num_features = AVAZU['num_features']
+    # dataset    
+    num_features = ADULT['num_features']
     data_dir = os.path.join(os.getcwd(), 'data')
-    train_data = os.path.join(data_dir, AVAZU['train'])
-    val_data = os.path.join(data_dir, AVAZU['test'])
-    get_libsvm_data(data_dir, AVAZU['train'], AVAZU['url'])
-    get_libsvm_data(data_dir, AVAZU['test'], AVAZU['url'])
-    # The positive class weight, says how much more we should upweight the importance of
-    # positive instances in the objective function.
-    # This is used to combat the extreme class imbalance.
-    model = linear_model(AVAZU['num_features'], AVAZU['positive_class_weight'])
+    train_data = os.path.join(data_dir, ADULT['train']+'.libsvm')
+    val_data = os.path.join(data_dir, ADULT['test']+'.libsvm')
+    get_uci_data(data_dir, ADULT['train'], ADULT['url'])
+    get_uci_data(data_dir, ADULT['test'], ADULT['url'])
+
+    model = wide_deep_model(ADULT['num_linear_features'], ADULT['num_embed_features'], ADULT['num_cont_features'],
+                            ADULT['embed_input_dims'], ADULT['hidden_units'], ADULT['positive_class_weight'])
 
     # data iterator
     train_data = mx.io.LibSVMIter(data_libsvm=train_data, data_shape=(num_features,),
@@ -113,7 +118,9 @@ if __name__ == '__main__':
             nbatch += 1
             # for distributed training, we need to manually pull sparse weights from kvstore
             if kv:
-                row_ids = batch.data[0].indices
+                row_ids = batch.data[0].indices.asnumpy().tolist()
+                # remove row ids which corresponding to embedding or continuous features
+                row_ids = mx.nd.array([row_id for row_id in row_ids if row_id < ADULT['num_linear_features']])
                 kv.row_sparse_pull('weight', weight, row_ids=[row_ids])
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
