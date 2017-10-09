@@ -432,15 +432,12 @@ def test_elemwise_binary_ops():
 
         for ii in range(1):
             # Run defaults
-            #check_elemwise_binary_ops('default', 'default', rand_shape_2d())
+            check_elemwise_binary_ops('default', 'default', rand_shape_2d())
 
             # Try different densities
             for lhs_density in [0.0, random.uniform(0, 1), 1.0]:
-            #for lhs_density in [0]:
                 for rhs_density in [0.0, random.uniform(0, 1), 1.0]:
-                #for rhs_density in [random.uniform(0, 1)]:
                     for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
-                    #for ograd_density in [random.uniform(0, 1)]:
                         shape = rand_shape_2d()
 
                         print("lhs_density={}, rhs_density={}, ograd_density={}, shape: {}".format(
@@ -448,9 +445,7 @@ def test_elemwise_binary_ops():
 
                         # Try row_sparse overlaps
                         for force_lr_overlap in [False, True]:
-                        #for force_lr_overlap in [False]:
                             for force_grad_overlap in [False, True]:
-                            #for force_grad_overlap in [True]:
 
                                 shape = rand_shape_2d()
 
@@ -1636,9 +1631,5 @@ def test_scatter_ops():
                           rhs_is_scalar=True, verbose=False, density=0.5)
 
 if __name__ == '__main__':
-    set_default_context(mx.gpu(0))
-    # import nose
-    # nose.runmodule()
-    test_elemwise_binary_ops()
-    #test_sparse_mathematical_core()
-    #test_scatter_ops()
+    import nose
+    nose.runmodule()
