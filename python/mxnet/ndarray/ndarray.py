@@ -514,8 +514,8 @@ fixed-size items.
             if key.step is not None and key.step != 1:
                 if key.step == 0:
                     raise ValueError("slice step cannot be zero")
-                start, stop = self._prepare_start_and_stop(key.start, key.stop)
-                indices = [i for i in range(start, stop, key.step)]
+                start, stop, step = _get_index_range(key.start, key.stop, self.shape[0], key.step)
+                indices = [i for i in range(start, stop, step)]
                 if len(indices) == 0:
                     raise ValueError('slicing ndarray with %s is not valid'
                                      ' since it would generate an empty ndarray' % key)
@@ -534,6 +534,7 @@ fixed-size items.
                 indices = []
                 dtype = 'int32'
                 shape = None
+                need_broadcast = False
                 for idx_i in key:
                     if not isinstance(idx_i, NDArray):
                         assert isinstance(idx_i, (NDArray, np.ndarray, list, tuple)), \
@@ -545,11 +546,18 @@ fixed-size items.
                         dtype = idx_i.dtype
                     if shape is None:
                         shape = idx_i.shape
-                    else:
-                        assert shape == idx_i.shape, \
-                            "All index arrays must have the same shape: %s vs %s. " \
-                            "Broadcasting is not supported yet."%(shape, idx_i.shape)
+                    elif shape != idx_i.shape:
+                        need_broadcast = True
+                        shape = _get_broadcast_shape(shape, idx_i.shape)
                     indices.append(idx_i)
+                if need_broadcast:
+                    tmp = []
+                    for idx in indices:
+                        if idx.shape != shape:
+                            tmp.append(idx.broadcast_to(shape))
+                        else:
+                            tmp.append(idx)
+                    indices = tmp
                 indices = op.stack(*indices)
                 return op.gather_nd(self, indices)
             else:
@@ -622,29 +630,6 @@ fixed-size items.
             source_array.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(source_array.size)))
 
-    def _prepare_start_and_stop(self, start, stop):
-        length = self.shape[0]
-
-        if start is None:
-            start = 0
-        elif start < 0:
-            start += length
-            if start < 0:
-                raise IndexError('Slicing start %d exceeds limit of %d' % (start-length, length))
-        elif start >= length:
-            raise IndexError('Slicing start %d exceeds limit of %d' % (start, length))
-
-        if stop is None:
-            stop = length
-        elif stop < 0:
-            stop += length
-            if stop < 0:
-                raise IndexError('Slicing stop %d exceeds limit of %d' % (stop-length, length))
-        elif stop > length:
-            raise IndexError('Slicing stop %d exceeds limit of %d' % (stop, length))
-
-        return start, stop
-
     def _slice(self, start, stop):
         """Returns a sliced NDArray that shares memory with the current one.
         This is called through ``x[start:stop]``.
@@ -669,7 +654,7 @@ fixed-size items.
         array([], shape=(0, 2), dtype=float32)
         """
         handle = NDArrayHandle()
-        start, stop = self._prepare_start_and_stop(start, stop)
+        start, stop, _ = _get_index_range(start, stop, self.shape[0])
 
         check_call(_LIB.MXNDArraySlice(
             self.handle, mx_uint(start), mx_uint(stop), ctypes.byref(handle)))
@@ -1797,6 +1782,63 @@ fixed-size items.
             A copy of the array with the chosen storage stype
         """
         return op.cast_storage(self, stype=stype)
+
+
+def _get_index_range(start, stop, length, step=1):
+    """Given start, stop, step and array length, return
+    valid values of start, stop, and step for generating index range.
+    Note that the returned value of stop is not necessarily >= 0, since
+    stop is -1 in the case of ::-1."""
+    if step == 0:
+        raise ValueError('step size cannot be zero')
+    if length < 0:
+        raise ValueError('array length cannot be less than zero')
+    if step is None:
+        step = 1
+    if start is None:
+        if step > 0:
+            start = 0
+        else:
+            start = length - 1
+    elif start < 0:
+        start += length
+        if start < 0:
+            raise IndexError('Slicing start %d exceeds limit of %d' % (start-length, length))
+    elif start >= length:
+        raise IndexError('Slicing start %d exceeds limit of %d' % (start, length))
+
+    if stop is None:
+        if step > 0:
+            stop = length
+        else:
+            # this supports case such as ::-1
+            # stop = -1 here refers to the element before index 0,
+            # instead of the last element in the array
+            stop = -1
+    elif stop < 0:
+        stop += length
+        if stop < 0:
+            raise IndexError('Slicing stop %d exceeds limit of %d' % (stop-length, length))
+    elif stop > length:
+        raise IndexError('Slicing stop %d exceeds limit of %d' % (stop, length))
+
+    return start, stop, step
+
+
+def _get_broadcast_shape(shape1, shape2):
+    length1 = len(shape1)
+    length2 = len(shape2)
+    if length1 > length2:
+        shape = list(shape1)
+    else:
+        shape = list(shape2)
+    i = max(length1, length2) - 1
+    for a, b in zip(shape1[::-1], shape2[::-1]):
+        if a != 1 and b != 1 and a != b:
+            raise ValueError('shape1=%s is not broadcastable to shape2=%s' % (shape1, shape2))
+        shape[i] = max(a, b)
+        i -= 1
+    return tuple(shape)
 
 
 def onehot_encode(indices, out):
