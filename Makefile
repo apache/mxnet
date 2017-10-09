@@ -42,9 +42,9 @@ include $(config)
 
 # Check and prepare either MKLDNN or MKL2017
 ifeq ($(USE_MKLDNN), 1)
-	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
-	MKLDNNROOT := $(firstword $(RETURN_STRING))
-	MKLROOT := $(lastword $(RETURN_STRING))
+	#RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
+	#MKLDNNROOT := $(firstword $(RETURN_STRING))
+	#MKLROOT := $(lastword $(RETURN_STRING))
 	export USE_MKLML = 1
 	USE_MKL2017=0
 else ifeq ($(USE_MKL2017), 1)

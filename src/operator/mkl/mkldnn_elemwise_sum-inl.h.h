@@ -29,10 +29,12 @@
 #include <dmlc/logging.h>
 #include <cstring>
 #include <vector>
+#include <mkldnn_types.h>
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
+#include "./mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -52,20 +54,27 @@ namespace op {
     }
   };
   template<typename xpu, typename DType>
-  void MKLDNNElementWiseSumCompute_(const nnvm::NodeAttrs &attrs,
-                                    const OpContext &ctx,
-                                    const std::vector<TBlob> &in_data,
-                                    const std::vector<OpReqType> &req,
-                                    const std::vector<TBlob> &out_data) {
+  void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
+                                   const OpContext &ctx,
+                                   const std::vector<TBlob> &in_data,
+                                   const std::vector<OpReqType> &req,
+                                   const std::vector<TBlob> &out_data) {
+    using namespace mxnet_op;
 #if 1
     {
       LOG(INFO) << __FUNCTION__;
+      LOG(INFO) << "in_data.size: " << in_data.size() << " shape: " << in_data[0].shape_;
+      int out_size = static_cast<int>((out_data[0].Size() + DataType<DType>::kLanes - 1)
+                                      / DataType<DType>::kLanes);
+      LOG(INFO) << "out_size: " << out_size << "shape: " << out_data[0].shape_;
+      LOG(INFO) << "req[0]: " << req[0];
     }
 #endif
-    using namespace mxnet_op;
     if (req[0] == kNullOp) return;
     size_t size = in_data.size();
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
+#if 0
     DType * out_dptr = out_data[0].dptr<DType>();
     int out_size = static_cast<int>((out_data[0].Size() + DataType<DType>::kLanes - 1)
                                     / DataType<DType>::kLanes);
@@ -102,6 +111,82 @@ namespace op {
         break;
       }
     }
+#endif
+
+#if 1
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
+
+    // get data shape info
+    int32_t n = in_data[0].shape_[0];
+    int32_t c = in_data[0].shape_[1];
+    int32_t h = in_data[0].shape_[2];
+    int32_t w = in_data[0].shape_[3];
+
+    // Inputs
+    std::vector<primitive::at> inputs;
+    // get input memory descriptors
+    std::vector<memory::primitive_desc> input_usr_mpd;
+    std::vector<memory::primitive_desc> input_prv_mpd;
+    for (size_t i = 0; i < in_data.size(); ++i) {
+      LOG(INFO) << "input " << i;
+      std::shared_ptr<MKLDNNData<DType>> input_dnn_data =
+            get_mkldnn_prv_descriptor<DType>(in_data[i]);
+      std::shared_ptr<memory> input_memory =
+            input_dnn_data->get_converted_prv((float*)in_data[i].dptr_, false,
+                                              in_data[i]);
+
+      input_usr_mpd.push_back(*input_dnn_data->usr_memory_pd());
+      input_prv_mpd.push_back(*input_dnn_data->prv_memory_pd());
+      LOG(INFO) << "input usr format " << input_usr_mpd[i].desc().data.format;
+      LOG(INFO) << "input prv format " << input_prv_mpd[i].desc().data.format;
+      inputs.push_back(*input_memory);
+    }
+
+    LOG(INFO) << "input done";
+    // setup output memory
+//    memory::desc output_usr_desc = {{n, c, h, w}, memory::data_type::f32,
+//                                    memory::format::nchw};
+//    memory::desc output_prv_desc = {{n, c, h, w}, memory::data_type::f32,
+//                                    memory::format::nchw};
+
+    memory::desc output_usr_desc = input_usr_mpd[0].desc();
+    memory::desc output_prv_desc = input_prv_mpd[0].desc();
+    std::shared_ptr<memory::primitive_desc> output_usr_mpd;
+    output_usr_mpd.reset(new memory::primitive_desc(output_usr_desc,
+                                                   cpu_engine));
+    LOG(INFO) << "output usr done";
+    std::shared_ptr<memory::primitive_desc> output_prv_mpd;
+    output_prv_mpd.reset(new memory::primitive_desc(output_prv_desc,
+                                                   cpu_engine));
+    LOG(INFO) << "output prv done";
+    std::shared_ptr<MKLDNNData<DType>> output_dnn_data;
+    output_dnn_data.reset(new MKLDNNData<DType>(output_usr_mpd,
+                                                output_prv_mpd));
+    LOG(INFO) << "output dnn data done";
+    // create output memory primitive
+    std::shared_ptr<memory> output =
+          output_dnn_data->create_output_memory((float*)out_data[0].dptr_,
+                                                out_data[0],
+                                                output_dnn_data);
+    LOG(INFO) << "output done";
+
+    std::vector<double> scale(in_data.size(), 1.0);
+
+    // sum primitive descriptor
+    // need output memory::desc, scale per input, and memory primitive_desc for
+    // inputs
+    sum::primitive_desc sum_pd(output_prv_desc, scale, input_prv_mpd);
+
+    MKLDNNPrimitive<DType> elemwise_sum;
+    elemwise_sum.reset(new mkldnn::sum(sum_pd, inputs, *output));
+    LOG(INFO) << "before submit";
+    elemwise_sum.submit();
+    LOG(INFO) << "after submit";
+#endif
+
+
   }
 
 }

@@ -118,7 +118,7 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
   CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32);
-  MKLDNNElementWiseSumCompute_<xpu, float>(attrs, ctx, inputs, req, outputs);
+  MKLDNNElementWiseSumCompute<xpu, float>(attrs, ctx, inputs, req, outputs);
 #else
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);

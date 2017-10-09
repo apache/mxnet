@@ -235,14 +235,18 @@ std::shared_ptr<memory> MKLDNNMemoryDescriptor<Dtype>::create_output_memory(
     std::shared_ptr<MKLDNNMemoryDescriptor<Dtype> > thisData, bool in_place) {
     std::shared_ptr<memory> omem;
     if (this->conversion_needed()) {
+      LOG(INFO) << __FUNCTION__ << " " << __LINE__;
       if (in_place) {
+        LOG(INFO) << __FUNCTION__ << " " << __LINE__;
         std::shared_ptr<MKLDNNData<Dtype> > blob_omem = get_mkldnn_prv_descriptor<Dtype>(blob);
         omem = blob_omem->get_prv_memory();
       } else {
+        LOG(INFO) << __FUNCTION__ << " " << __LINE__;
         omem = this->get_prv_memory();
         blob.Mkl_mem_->set_prv_descriptor(thisData);
       }
     } else {
+      LOG(INFO) << __FUNCTION__ << " " << __LINE__;
       blob.Mkl_mem_->check_and_prv_to_cpu(cpu_data, false);
       omem.reset(new memory(*this->usr_memory_pd(), cpu_data));
     }
