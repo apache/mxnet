@@ -128,10 +128,11 @@ class StandaloneBlob : public TBlob {
   std::shared_ptr<BlobMemory>  memory_;
 };
 
+#if MXNET_USE_CUDA
 /*! \brief Return blob in CPU memory  */
 inline StandaloneBlob BlobOnCPU(const RunContext &rctx, const TBlob& src) {
   StandaloneBlob res(src.shape_, false, src.type_flag_);
-  if(src.dev_mask() == cpu::kDevMask) {
+  if (src.dev_mask() == cpu::kDevMask) {
     LOG(WARNING) << "BlobOnCPU(<cpu blob>) is safe, but try not to call this with a CPU blob"
                  << " because it is inefficient";
     memcpy(res.dptr_, src.dptr_, res.MemorySize());
@@ -143,6 +144,7 @@ inline StandaloneBlob BlobOnCPU(const RunContext &rctx, const TBlob& src) {
   }
   return res;
 }
+#endif  // MXNET_USE_CUDA
 
 constexpr const size_t MPRINT_PRECISION = 5;
 
@@ -274,10 +276,11 @@ inline StreamType& print_blob_(const RunContext& ctx,
                                const bool doChannels = true,
                                const bool doBatches = true,
                                const bool add_endl = true) {
-
-  if(blob.dev_mask() == gpu::kDevMask) {
+#if MXNET_USE_CUDA
+  if (blob.dev_mask() == gpu::kDevMask) {
     return print_blob_<DType>(ctx, _os, BlobOnCPU(ctx, blob), doChannels, doBatches, add_endl);
   }
+#endif  // MXNET_USE_CUDA
 
   StreamType &os = *_os;
   const size_t dim = static_cast<size_t>(blob.ndim());

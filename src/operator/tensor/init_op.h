@@ -225,8 +225,6 @@ template<typename xpu>
 void FillZerosRspImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
   if (!dst.storage_initialized()) return;
   // reset the shapes if it's not zeros
-  auto storage_shape = dst.storage_shape();
-  storage_shape[0] = 0;
   dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
 }
 

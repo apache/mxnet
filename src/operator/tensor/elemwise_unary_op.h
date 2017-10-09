@@ -34,41 +34,6 @@
 namespace mxnet {
 namespace op {
 
-// infer storage function for _identity_with_attr_like_rhs op
-inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
-                                           const int dev_mask,
-                                           DispatchMode* dispatch_mode,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  auto& lhs_stype = in_attrs->at(0);
-  const auto& rhs_stype = in_attrs->at(1);
-  auto& out_stype = out_attrs->at(0);
-  bool dispatched = false;
-
-  CHECK_NE(rhs_stype, kUndefinedStorage);
-  type_assign(&out_stype, rhs_stype);
-  type_assign(&lhs_stype, rhs_stype);
-  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
-      out_stype == kDefaultStorage) {
-    // dns, dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  }
-  if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-      (lhs_stype == out_stype)) {
-    // rsp, _ -> rsp, or csr, _ -> csr
-    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
-  if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
-}
-
 class OpBase {
  protected:
   template<int req>
@@ -106,14 +71,10 @@ class OpBase {
     if (req != kNullOp) {
       if (clone_from) {
         const TShape& ishape = clone_from->storage_shape();
-        TShape sshape = dest->storage_shape();
-        CHECK(shape_assign(&sshape, ishape));
-        dest->CheckAndAllocData(sshape);
+        dest->CheckAndAllocData(ishape);
         CHECK_EQ(dest->storage_type(), clone_from->storage_type());
         for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
-          TShape ashape = dest->aux_shape(i);
-          CHECK(shape_assign(&ashape, clone_from->aux_shape(i)));
-          dest->CheckAndAllocAuxData(i, ashape);
+          dest->CheckAndAllocAuxData(i, clone_from->aux_shape(i));
         }
         DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
       } else {
@@ -405,7 +366,6 @@ class UnaryOp : public OpBase {
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
     const auto lhs_stype = inputs[0].storage_type();
-    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
         (lhs_stype == out_stype)) {

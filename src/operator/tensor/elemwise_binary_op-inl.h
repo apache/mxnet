@@ -59,18 +59,21 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   CHECK(!lhs_is_dense || lhs_may_be_dense) << "rvalue cannot be dense";
   CHECK(!rhs_is_dense || rhs_may_be_dense) << "rvalue cannot be dense";
   CHECK(!lhs_is_dense || !rhs_is_dense);
+  // Only one item at most may be dense (lhs, rhs or result)
   if (rhs_is_dense) {
-    // For right-side dense, lhs input zero should always output zero
+    // For right-side dense, in order to have sparse output, lhs input zero should
+    // always output zero
     CHECK(fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < 1e-4f);
     CHECK(!is_dense_result);  // Currently not handled
   }
   if (lhs_is_dense) {
-    // For right-side dense, lhs input zero should always output zero
+    // For left-side dense, in order to have sparse output, lhs input zero should
+    // always output zero
     CHECK(fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < 1e-4f);
     CHECK(!is_dense_result);  // Currently not handled
   }
 
-  // Memory Estimation: This is (roughly) the number of result rows. We still
+  // Memory Estimation: This is (roughly) the number of result rows. We may still
   // need to subtract the number of common rows
   bool lhs_in_place = false, rhs_in_place = false;
   const size_t num_rows_l = lhs_is_dense ? lhs.shape()[0] : lhs.aux_shape(rowsparse::kIdx).Size();
@@ -272,9 +275,9 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
   const size_t alloc_size = nr_cols * sizeof(IType) + 2 * nr_cols * sizeof(DType);
 
-  SparseTempStorage<uint8_t> sparseTempStorage(ctx);
-  mshadow::Tensor<cpu, 1, uint8_t> workspace =
-    sparseTempStorage.get_space_typed<cpu, 1>(mshadow::Shape1(alloc_size));
+  Tensor<cpu, 1, uint8_t> workspace =
+    ctx.requested[ResourceRequest::kTempSpace].get_space_typed<cpu, 1, uint8_t>(
+      mshadow::Shape1(alloc_size), s);
 
   // Allocate temp space and partition into three tensors
   mshadow::Tensor<cpu, 1, IType> next(reinterpret_cast<IType *>(workspace.dptr_),

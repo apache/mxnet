@@ -37,7 +37,7 @@ namespace op {
  * \brief Shared helper functions for scatter ops
  */
 class ScatterOpBase {
- /*! \brief Protected in order to prevent widespread use. Scatter ops is a special case */
+  /*! \brief Protected in order to prevent widespread use. Scatter ops is a special case */
  protected:
   /*!
    * \brief For some situations, we need to do the computation as dense and then use
