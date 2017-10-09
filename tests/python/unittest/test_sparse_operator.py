@@ -166,9 +166,6 @@ def test_elemwise_binary_ops():
                                 skip_gradient_check=False,
                                 shuffle_csr_indices=True,
                                 verbose=False):
-        if verbose is True:
-            print("testing:", name)
-
         if lhs_grad_stype is None:
             lhs_grad_stype = lhs_stype
         if rhs_grad_stype is None:
@@ -176,6 +173,10 @@ def test_elemwise_binary_ops():
 
         lhs_grad_stype = get_result_type_3(backward_numpy_call, lhs_grad_stype)
         rhs_grad_stype = get_result_type_3(backward_numpy_call, rhs_grad_stype)
+
+        if verbose is True:
+            print("testing: {}  lhs={}, rhs={}, lhs_grad_stype={}, rhs_grad_stype={}"
+                  .format(name, lhs_stype, rhs_stype, lhs_grad_stype, rhs_grad_stype))
 
         # Output type should be same as lvalue type, unless otherwise specified
         if expected_result_storage_type is None:
@@ -431,12 +432,15 @@ def test_elemwise_binary_ops():
 
         for ii in range(1):
             # Run defaults
-            check_elemwise_binary_ops('default', 'default', rand_shape_2d())
+            #check_elemwise_binary_ops('default', 'default', rand_shape_2d())
 
             # Try different densities
             for lhs_density in [0.0, random.uniform(0, 1), 1.0]:
+            #for lhs_density in [0]:
                 for rhs_density in [0.0, random.uniform(0, 1), 1.0]:
+                #for rhs_density in [random.uniform(0, 1)]:
                     for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
+                    #for ograd_density in [random.uniform(0, 1)]:
                         shape = rand_shape_2d()
 
                         print("lhs_density={}, rhs_density={}, ograd_density={}, shape: {}".format(
@@ -444,7 +448,9 @@ def test_elemwise_binary_ops():
 
                         # Try row_sparse overlaps
                         for force_lr_overlap in [False, True]:
+                        #for force_lr_overlap in [False]:
                             for force_grad_overlap in [False, True]:
+                            #for force_grad_overlap in [True]:
 
                                 shape = rand_shape_2d()
 
@@ -1630,5 +1636,9 @@ def test_scatter_ops():
                           rhs_is_scalar=True, verbose=False, density=0.5)
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    set_default_context(mx.gpu(0))
+    # import nose
+    # nose.runmodule()
+    test_elemwise_binary_ops()
+    #test_sparse_mathematical_core()
+    #test_scatter_ops()
