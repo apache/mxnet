@@ -414,20 +414,22 @@ parameter values:
                                                      std::vector<int> *in_attrs,
                                                      std::vector<int> *out_attrs) {
     // For clipping ranges that cross zero, sparse output is possible
+    CHECK_EQ(in_attrs->size(), 1U) << " in operator " << attrs.name;
     CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
-    int stype = kDefaultStorage;
-    const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
+    if ((*in_attrs)[0] == kDefaultStorage) {
+      return storage_type_assign(&out_attrs[0], kDefaultStorage,
+                                 dispatch_mode, DispatchMode::kFCompute);
+    }
+    const auto& param = nnvm::get<ClipParam>(attrs.parsed);
     if (param.a_min <= 0.0 && param.a_max >= 0.0) {
-      for (size_t i = 0, n = in_attrs->size(); i < n; ++i) {
-        const int this_stype = (*in_attrs)[i];
-        if (this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
-          stype = this_stype;
-          break;
-        }
+      const int this_stype = (*in_attrs)[0];
+      if (this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
+        return storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+                                   dispatch_mode, DispatchMode::kFComputeEx);
       }
     }
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, stype);
-    return true;
+    return storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
+                               dispatch_mode, DispatchMode::kFComputeFallback);
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")

@@ -760,6 +760,10 @@ class AdaGrad(Optimizer):
             grad_indices_count = len(grad.indices)
 
         grad = grad * self.rescale_grad
+
+        if is_sparse is True:
+            assert grad_indices_count == len(grad.indices)
+
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
