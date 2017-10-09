@@ -320,9 +320,7 @@ namespace kvstore {
       }
       auto &comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        // make sure the previous push/pull is completed
-        comm_buf.WaitToWrite();
-        comm_buf = merged;  // avoid memory copy
+        send_buf = merged;  // avoid memory copy
       } else {
         if (comm_buf.is_none()) {
           if (storage_type == kDefaultStorage) {

@@ -88,6 +88,9 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         A new empty ndarray handle
     """
     hdl = NDArrayHandle()
+    for aux_t in aux_types:
+        if np.dtype(aux_t) != np.dtype("int64"):
+            raise NotImplementedError("only int64 is supported for aux types")
     aux_type_ids = [int(_DTYPE_NP_TO_MX[np.dtype(aux_t).type]) for aux_t in aux_types]
     aux_shapes = [(0,) for aux_t in aux_types] if aux_shapes is None else aux_shapes
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
@@ -148,6 +151,11 @@ class BaseSparseNDArray(NDArray):
 
     def reshape(self, shape):
         raise NotSupportedForSparseNDArray(self.reshape, None, shape)
+
+    @property
+    def size(self):
+        # the `size` for a sparse ndarray is ambiguous, hence disabled.
+        raise NotImplementedError()
 
     def _aux_type(self, i):
         """Data-type of the array's ith aux data.
@@ -250,12 +258,12 @@ class BaseSparseNDArray(NDArray):
 
 # pylint: disable=abstract-method
 class CSRNDArray(BaseSparseNDArray):
-    """A sparse representation of 2D NDArray in the standard CSR format.
+    """A sparse representation of 2D NDArray in the Compressed Sparse Row format.
 
     A CSRNDArray represents an NDArray as three separate arrays: `data`,
     `indptr` and `indices`. It uses the standard CSR representation where the column indices for
-    row i are stored in indices[indptr[i]:indptr[i+1]] and their corresponding values are stored
-    in values[indptr[i]:indptr[i+1]].
+    row i are stored in ``indices[indptr[i]:indptr[i+1]]`` and their corresponding values are stored
+    in ``data[indptr[i]:indptr[i+1]]``.
 
     The column indices for a given row are expected to be sorted in ascending order.
     Duplicate column entries for the same row are not allowed.
@@ -492,7 +500,7 @@ class RowSparseNDArray(BaseSparseNDArray):
     `indices`.
 
     - data: an NDArray of any dtype with shape [D0, D1, ..., Dn].
-    - indices: a 1-D int64 NDArray with shape [D0].
+    - indices: a 1-D int64 NDArray with shape [D0] with values sorted in ascending order.
 
     The `indices` stores the indices of the row slices with non-zeros,
     while the values are stored in `data`. The corresponding NDArray ``dense``
@@ -513,10 +521,8 @@ class RowSparseNDArray(BaseSparseNDArray):
         array([[ 1.,  2., 3.],
                [ 4.,  0., 5.]], dtype=float32)
 
-    A RowSparseNDArray is typically used to represent non-zero row-slices of a large NDArray
+    A RowSparseNDArray is typically used to represent non-zero row slices of a large NDArray
     of shape [LARGE0, D1, .. , Dn] where LARGE0 >> D0 and most row slices are zeros.
-
-    The indices are expected to be sorted in ascending order.
 
     RowSparseNDArray is used principally in the definition of gradients for operations
     that have sparse gradients (e.g. sparse dot and sparse embedding).
@@ -871,7 +877,7 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
     elif stype == _STORAGE_TYPE_ROW_SPARSE:
         return RowSparseNDArray(handle, writable=writable)
     else:
-        raise Exception("unknown storage type")
+        raise Exception("unknown storage type: %s"%stype)
 
 
 _set_ndarray_class(_ndarray_cls)

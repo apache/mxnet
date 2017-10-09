@@ -403,7 +403,7 @@ class Module(BaseModule):
             assert isinstance(shared_module, Module) and \
                     shared_module.binded and shared_module.params_initialized
             shared_group = shared_module._exec_group
-            assert len(shared_group.execs) == len(self._context)
+            assert len(shared_group.execs) >= len(self._context)
         else:
             shared_group = None
 

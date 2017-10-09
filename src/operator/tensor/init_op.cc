@@ -38,6 +38,7 @@ NNVM_REGISTER_OP(_zeros)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", InitShape<InitOpParam>)
 .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<FInferStorageType>("FInferStorageType", InitStorageType<InitOpParam, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FillComputeZerosEx<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
@@ -86,7 +87,7 @@ Examples::
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)

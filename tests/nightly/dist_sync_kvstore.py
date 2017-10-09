@@ -41,6 +41,9 @@ irregular_shape = (1211,1211)
 def init_kv():
     kv = mx.kv.create('dist_sync')
     # init kv dns keys
+    # kv.init('1221', mx.nd.zeros(big_shape))
+    # kv.init('12221', mx.nd.zeros(irregular_shape))
+    # kv.init('121', mx.nd.zeros(shape))
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
     kv.init('99', mx.nd.ones(big_shape))
     # init kv row_sparse keys
@@ -204,6 +207,7 @@ def test_sync_push_pull():
         val = mx.nd.zeros(big_shape)
         kv.pull('221', val)
         curval = val[0][0].asnumpy()[0]
+        print(curval)
         kv.push('221',mx.nd.ones(big_shape)*pos*4)
         val2 = mx.nd.zeros(big_shape)
         kv.pull('221', val2)
@@ -224,18 +228,22 @@ def test_sync_push_pull():
 
 
     # print ('worker '+str(my_rank)+' started')
-    # check_default_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    # check_big_row_sparse_keys(kv, my_rank, nworker)
+    check_default_keys(kv, my_rank, nworker)
+    check_row_sparse_keys(kv, my_rank, nworker)
+    check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+    check_big_row_sparse_keys(kv, my_rank, nworker)
     # print('worker ' + str(my_rank) + ' is done with non compression tests')
 
-    kv, pos, neg = init_kv_compressed(kv)
-    check_pull_before_push(kv)
-    check_zero(kv)
-    verify_residual(kv, pos, nworker)
-    check_ones(kv, pos, nworker)
-    print('worker ' + str(my_rank) + ' is done with compression tests')
+    # kv, pos, neg = init_kv_compressed(kv)
+    # check_pull_before_push(kv)
+    # check_zero(kv)
+    # verify_residual(kv, pos, nworker)
+    # check_ones(kv, pos, nworker)
+    # print('worker ' + str(my_rank) + ' is done with compression tests')
+def test():
+    val = mx.nd.zeros(big_shape)
+    check_diff_to_scalar(val,0)
 
 if __name__ == "__main__":
+    # test()
     test_sync_push_pull()

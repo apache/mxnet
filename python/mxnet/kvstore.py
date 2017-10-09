@@ -141,7 +141,7 @@ class KVStore(object):
 
         This function returns immediately after adding an operator to the engine.
         The actual operation is executed asynchronously after all previous `push`
-        and `pull` calls for the same input key(s) are finished.
+        for the same input key(s) are finished.
         There is no synchronization between workers. One can use ``_barrier()``
         to sync all workers.
 

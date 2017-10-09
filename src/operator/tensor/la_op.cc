@@ -209,7 +209,7 @@ with positive diagonal. We compute:
   *out* = *A*\ :sup:`-T` \* *A*\ :sup:`-1`
 
 In other words, if *A* is the Cholesky factor of a symmetric positive definite matrix
-*B*, then
+*B* (obtained by *potrf*), then
 
   *out* = *B*\ :sup:`-1`
 
@@ -219,8 +219,8 @@ If *n>2*, *potri* is performed separately on the trailing two dimensions for all
 .. note:: The operator supports float32 and float64 data types only.
 
 .. note:: Use this operator only if you are certain you need the inverse of *B*, and
-          cannot use the Cholesky factor alone. The latter is more numerically
-          stable and cheaper.
+          cannot use the Cholesky factor *A* (*potrf*), together with backsubstitution
+          (*trsm*). The latter is numerically much safer, and also cheaper.
 
 Examples::
 
@@ -415,6 +415,8 @@ Examples::
 NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_num_inputs(2)
 .set_num_outputs(1)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
+  { return std::vector<std::pair<int, int>>{{1, 0}}; })
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -547,6 +549,79 @@ NNVM_REGISTER_OP(_backward_linalg_gelqf)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 4, 1, gelqf_backward>);
+
+NNVM_REGISTER_OP(_linalg_syevd)
+.describe(R"code(Eigendecomposition for symmetric matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* must be symmetric, of shape *(x, x)*. We compute the eigendecomposition,
+resulting in the orthonormal matrix *U* of eigenvectors, shape *(x, x)*, and the
+vector *L* of eigenvalues, shape *(x,)*, so that:
+
+   *U* \* *A* = *diag(L)* \* *U*
+
+Here:
+
+   *U* \* *U*\ :sup:`T` = *U*\ :sup:`T` \* *U* = *I*
+
+where *I* is the identity matrix. Also, *L(0) <= L(1) <= L(2) <= ...* (ascending order).
+
+If *n>2*, *syevd* is performed separately on the trailing two dimensions of *A* (batch
+mode). In this case, *U* has *n* dimensions like *A*, and *L* has *n-1* dimensions.
+
+.. note:: The operator supports float32 and float64 data types only.
+
+.. note:: For the time being, this operator supports the float64 data type only. If the
+          rest of your expression uses float32, please apply the Cast operator to inputs
+          and outputs.
+
+.. note:: Derivatives for this operator are defined only if *A* is such that all its
+          eigenvalues are distinct, and the eigengaps are not too small. If you need
+          gradients, do not apply this operator to matrices with multiple eigenvalues.
+
+Examples::
+
+   // Single symmetric eigendecomposition
+   A = [[1., 2.], [2., 4.]]
+   U, L = syevd(A)
+   U = [[0.89442719, -0.4472136],
+        [0.4472136, 0.89442719]]
+   L = [0., 5.]
+
+   // Batch symmetric eigendecomposition
+   A = [[[1., 2.], [2., 4.]],
+        [[1., 2.], [2., 5.]]]
+   U, L = syevd(A)
+   U = [[[0.89442719, -0.4472136],
+         [0.4472136, 0.89442719]],
+        [[0.92387953, -0.38268343],
+         [0.38268343, 0.92387953]]]
+   L = [[0., 5.],
+        [0.17157288, 5.82842712]]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<nnvm::FInferShape>("FInferShape", LaEigFactShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
+  { return std::vector<std::pair<int, int>>{{0, 0}}; })
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", LaOpForwSyevd<cpu, syevd>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_syevd"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of input matrices to be factorized");
+
+NNVM_REGISTER_OP(_backward_linalg_syevd)
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
+  { return std::vector<std::pair<int, int> >{{0, 0}}; })
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackwSyevd<cpu, syevd_backward>);
 
 }  // namespace op
 }  // namespace mxnet

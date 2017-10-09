@@ -42,10 +42,8 @@ def test_symbol_compose():
     net2 = mx.symbol.FullyConnected(name='fc3', num_hidden=10)
     net2 = mx.symbol.Activation(data=net2, act_type='relu')
     net2 = mx.symbol.FullyConnected(data=net2, name='fc4', num_hidden=20)
-    #print(net2.debug_str())
 
     composed = net2(fc3_data=net1, name='composed')
-    #print(composed.debug_str())
     multi_out = mx.symbol.Group([composed, net1])
     assert len(multi_out.list_outputs()) == 2
 
@@ -167,19 +165,28 @@ def test_symbol_fluent():
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
                     'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'take',
                     'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
-                    'clip', 'abs' 'sign'])
-    def check_fluent_regular(func, kwargs, shape=(5, 17, 1)):
+                    'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
+                    'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
+                    'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
+                    'square'])
+    def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.symbol.Variable('data')
             regular = getattr(mx.symbol, func)(data, name=func+'0', **kwargs)
             fluent = getattr(data, func)(**kwargs)
             check_symbol_consistency(regular, fluent, {'ctx': mx.context.current_context(),
                                                        'data': shape},
-                                     skip_grad=func not in has_grad)
+                                     skip_grad=func not in has_grad,
+                                     equal_nan=equal_nan)
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
-                 'ones_like', 'abs', 'sign']:
+                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
+                 'exp', 'expm1',  'square']:
         check_fluent_regular(func, {})
+
+    for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
+                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt']:
+        check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
         check_fluent_regular(func, {'axis': 1})
@@ -201,13 +208,14 @@ def test_symbol_fluent():
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
 
-def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False):
+def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
     assert sym1.list_arguments() == sym2.list_arguments()
     assert sym1.list_auxiliary_states() == sym2.list_auxiliary_states()
     assert sym1.list_outputs() == sym2.list_outputs()
 
     mx.test_utils.check_consistency([sym1, sym2], ctx_list=[ctx, ctx],
-                                    grad_req='null' if skip_grad else 'write')
+                                    grad_req='null' if skip_grad else 'write',
+                                    equal_nan=equal_nan)
 
 def test_load_000800():
     with mx.AttrScope(ctx_group='stage1'):
@@ -286,14 +294,14 @@ def test_zero_prop2():
     assert False
 
 
-def test_simple_bind_special_case():
+def test_simple_bind_incomplete_shape_inference_in_one_forward_pass():
     """This is a special case that results in shape inference
     failure after moving simple_bind logic from frontend to backend.
     Added here for testing against the network similar to the following one.
 
     Network diagram:
     weight --> abs_op --> sum_op --
-                                   |--> add_op
+          \                        |--> add_op
     data   --> fc_op  --> sum_op --
 
     Given data's shape, if the shape inference starts from weight node,
@@ -309,6 +317,20 @@ def test_simple_bind_special_case():
     modified_weight = mx.sym.abs(fc.get_internals()['fc_weight'])
     net = mx.sym.sum(modified_weight) + mx.sym.sum(fc)
     net.simple_bind(ctx=mx.cpu(), data=data_shape)
+
+
+def test_simple_bind_gradient_graph_possible_with_cycle():
+    """This is a special case that results in a cycle in the gradient graph
+    before this bug was fixed. With the following symbol, the node entries
+    passed into function AggregateGradient(std::vector<nnvm::NodeEntry>&& v)
+    are the outputs of the same node. Therefore, adding a node to the
+    control_deps of itself must be skipped.
+    See GitHub issue:
+    https://github.com/apache/incubator-mxnet/issues/8029
+    for more details."""
+    data = mx.symbol.Variable('data')
+    res = data + data + data + data + data + data + data + data
+    res.simple_bind(ctx=mx.cpu(), data=(1,))
 
 
 if __name__ == '__main__':

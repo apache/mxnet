@@ -27,24 +27,25 @@ This module contains definitions for the following model architectures:
 -  `ResNet V2`_
 -  `SqueezeNet`_
 -  `VGG`_
+-  `MobileNet`_
 
 You can construct a model with random weights by calling its constructor:
 .. code::
 
-    import mxnet.gluon.models as models
-    resnet18 = models.resnet18_v1()
-    alexnet = models.alexnet()
-    squeezenet = models.squeezenet1_0()
-    densenet = models.densenet_161()
+    from mxnet.gluon.model_zoo import vision
+    resnet18 = vision.resnet18_v1()
+    alexnet = vision.alexnet()
+    squeezenet = vision.squeezenet1_0()
+    densenet = vision.densenet_161()
 
 We provide pre-trained models for all the models except ResNet V2.
 These can constructed by passing
 ``pretrained=True``:
 .. code::
 
-    import mxnet.gluon.models as models
-    resnet18 = models.resnet18_v1(pretrained=True)
-    alexnet = models.alexnet(pretrained=True)
+    from mxnet.gluon.model_zoo import vision
+    resnet18 = vision.resnet18_v1(pretrained=True)
+    alexnet = vision.alexnet(pretrained=True)
 
 Pretrained models are converted from torchvision.
 All pre-trained models expect input images normalized in the same way,
@@ -67,6 +68,7 @@ The transformation should preferrably happen at preprocessing. You can use
 .. _ResNet V2: https://arxiv.org/abs/1512.03385
 .. _SqueezeNet: https://arxiv.org/abs/1602.07360
 .. _VGG: https://arxiv.org/abs/1409.1556
+.. _MobileNet: https://arxiv.org/abs/1704.04861
 """
 
 from .alexnet import *
@@ -81,6 +83,8 @@ from .squeezenet import *
 
 from .vgg import *
 
+from .mobilenet import *
+
 def get_model(name, **kwargs):
     """Returns a pre-defined model by name
 
@@ -92,6 +96,10 @@ def get_model(name, **kwargs):
         Whether to load the pretrained weights for model.
     classes : int
         Number of classes for the output layer.
+    ctx : Context, default CPU
+        The context in which to load the pretrained weights.
+    root : str, default '~/.mxnet/models'
+        Location for keeping the model parameters.
 
     Returns
     -------
@@ -124,6 +132,10 @@ def get_model(name, **kwargs):
               'squeezenet1.0': squeezenet1_0,
               'squeezenet1.1': squeezenet1_1,
               'inceptionv3': inception_v3,
+              'mobilenet1.0': mobilenet1_0,
+              'mobilenet0.75': mobilenet0_75,
+              'mobilenet0.5': mobilenet0_5,
+              'mobilenet0.25': mobilenet0_25
              }
     name = name.lower()
     if name not in models:

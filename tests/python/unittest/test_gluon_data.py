@@ -70,9 +70,15 @@ def test_sampler():
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
 def test_datasets():
-    assert len(gluon.data.vision.MNIST(root='data')) == 60000
-    assert len(gluon.data.vision.FashionMNIST(root='data')) == 60000
-    assert len(gluon.data.vision.CIFAR10(root='data', train=False)) == 10000
+    assert len(gluon.data.vision.MNIST(root='data/mnist')) == 60000
+    assert len(gluon.data.vision.MNIST(root='data/mnist', train=False)) == 10000
+    assert len(gluon.data.vision.FashionMNIST(root='data/fashion-mnist')) == 60000
+    assert len(gluon.data.vision.FashionMNIST(root='data/fashion-mnist', train=False)) == 10000
+    assert len(gluon.data.vision.CIFAR10(root='data/cifar10')) == 50000
+    assert len(gluon.data.vision.CIFAR10(root='data/cifar10', train=False)) == 10000
+    assert len(gluon.data.vision.CIFAR100(root='data/cifar100')) == 50000
+    assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True)) == 50000
+    assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
 
 def test_image_folder_dataset():
     prepare_record()

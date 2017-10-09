@@ -91,7 +91,6 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     CSRNDArray.shape
-    CSRNDArray.size
     CSRNDArray.context
     CSRNDArray.dtype
     CSRNDArray.stype
@@ -153,7 +152,6 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.shape
-    RowSparseNDArray.size
     RowSparseNDArray.context
     RowSparseNDArray.dtype
     RowSparseNDArray.stype
@@ -183,6 +181,20 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.zeros_like
+```
+
+### Array rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.round
+    RowSparseNDArray.rint
+    RowSparseNDArray.fix
+    RowSparseNDArray.floor
+    RowSparseNDArray.ceil
+    RowSparseNDArray.trunc
 ```
 
 ### Indexing
@@ -216,6 +228,8 @@ We summarize the interface for each class in the following sections.
     zeros_like
     csr_matrix
     row_sparse_array
+    mxnet.ndarray.load
+    mxnet.ndarray.save
 ```
 
 ## Array manipulation routines
@@ -248,8 +262,91 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     elemwise_add
+    elemwise_sub
+    elemwise_mul
+    negative
     dot
     add_n
+```
+
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sin
+    tan
+    arcsin
+    arctan
+    degrees
+    radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sinh
+    tanh
+    arcsinh
+    arctanh
+```
+
+### Rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    round
+    rint
+    fix
+    floor
+    ceil
+    trunc
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    expm1
+    log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sqrt
+    square
+```
+
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    abs
+    sign
+```
+
+### More
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    make_loss
+    stop_gradient
 ```
 
 ## API Reference
@@ -259,10 +356,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members: shape, size, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __getitem__, __setitem__
+    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __getitem__, __setitem__
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members: shape, size, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, __getitem__, __setitem__
+    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, __getitem__, __setitem__
 
 .. automodule:: mxnet.ndarray.sparse
     :members:
@@ -271,6 +368,9 @@ We summarize the interface for each class in the following sections.
 
 .. automodule:: mxnet.ndarray.sparse
     :members: array, zeros, empty
+
+.. automodule:: mxnet.ndarray
+    :members: load, save
 
 ```
 

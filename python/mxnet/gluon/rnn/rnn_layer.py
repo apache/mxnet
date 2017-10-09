@@ -21,9 +21,10 @@
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
 from __future__ import print_function
+__all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray
-from ..nn import Block
+from .. import Block
 from . import rnn_cell
 
 
@@ -278,34 +279,31 @@ class RNN(_RNNLayer):
         Shared Parameters for this `Block`.
 
 
-    Input shapes:
-        The input shape depends on `layout`. For `layout='TNC'`, the
-        input has shape `(sequence_length, batch_size, input_size)`
+    Inputs:
+        - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
+          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+        - **states**: initial recurrent state tensor with shape
+          `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
+          shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
+          `states` is None, zeros will be used as default begin states.
 
-
-    Output shape:
-        The output shape depends on `layout`. For `layout='TNC'`, the
-        output has shape `(sequence_length, batch_size, num_hidden)`.
-        If `bidirectional` is True, output shape will instead be
-        `(sequence_length, batch_size, 2*num_hidden)`
-
-    Recurrent state:
-        The recurrent state is an NDArray with shape `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, the recurrent state shape will instead be
-        `(2*num_layers, batch_size, num_hidden)`
-        If input recurrent state is None, zeros are used as default begin states,
-        and the output recurrent state is omitted.
+    Outputs:
+        - **out**: output tensor with shape `(sequence_length, batch_size, num_hidden)`
+          when `layout` is "TNC". If `bidirectional` is True, output shape will instead
+          be `(sequence_length, batch_size, 2*num_hidden)`
+        - **out_states**: output recurrent state tensor with the same shape as `states`.
+          If `states` is None `out_states` will not be returned.
 
 
     Examples
     --------
     >>> layer = mx.gluon.rnn.RNN(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, activation='relu',
@@ -381,35 +379,32 @@ class LSTM(_RNNLayer):
         Shared Parameters for this `Block`.
 
 
-    Input shapes:
-        The input shape depends on `layout`. For `layout='TNC'`, the
-        input has shape `(sequence_length, batch_size, input_size)`
+    Inputs:
+        - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
+          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+        - **states**: a list of two initial recurrent state tensors. Each has shape
+          `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
+          shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
+          `states` is None, zeros will be used as default begin states.
 
-    Output shape:
-        The output shape depends on `layout`. For `layout='TNC'`, the
-        output has shape `(sequence_length, batch_size, num_hidden)`.
-        If `bidirectional` is True, output shape will instead be
-        `(sequence_length, batch_size, 2*num_hidden)`
-
-    Recurrent state:
-        The recurrent state is a list of two NDArrays. Both has shape
-        `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, each recurrent state will instead have shape
-        `(2*num_layers, batch_size, num_hidden)`.
-        If input recurrent state is None, zeros are used as default begin states,
-        and the output recurrent state is omitted.
+    Outputs:
+        - **out**: output tensor with shape `(sequence_length, batch_size, num_hidden)`
+          when `layout` is "TNC". If `bidirectional` is True, output shape will instead
+          be `(sequence_length, batch_size, 2*num_hidden)`
+        - **out_states**: a list of two output recurrent state tensors with the same
+          shape as in `states`. If `states` is None `out_states` will not be returned.
 
 
     Examples
     --------
     >>> layer = mx.gluon.rnn.LSTM(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
-    >>> c0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
+    >>> c0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, [h0, c0])
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
@@ -481,33 +476,31 @@ class GRU(_RNNLayer):
         Shared Parameters for this `Block`.
 
 
-    Input shapes:
-        The input shape depends on `layout`. For `layout='TNC'`, the
-        input has shape `(sequence_length, batch_size, input_size)`
+    Inputs:
+        - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
+          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+        - **states**: initial recurrent state tensor with shape
+          `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
+          shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
+          `states` is None, zeros will be used as default begin states.
 
-    Output shape:
-        The output shape depends on `layout`. For `layout='TNC'`, the
-        output has shape `(sequence_length, batch_size, num_hidden)`.
-        If `bidirectional` is True, output shape will instead be
-        `(sequence_length, batch_size, 2*num_hidden)`
-
-    Recurrent state:
-        The recurrent state is an NDArray with shape `(num_layers, batch_size, num_hidden)`.
-        If `bidirectional` is True, the recurrent state shape will instead be
-        `(2*num_layers, batch_size, num_hidden)`
-        If input recurrent state is None, zeros are used as default begin states,
-        and the output recurrent state is omitted.
+    Outputs:
+        - **out**: output tensor with shape `(sequence_length, batch_size, num_hidden)`
+          when `layout` is "TNC". If `bidirectional` is True, output shape will instead
+          be `(sequence_length, batch_size, 2*num_hidden)`
+        - **out_states**: output recurrent state tensor with the same shape as `states`.
+          If `states` is None `out_states` will not be returned.
 
 
     Examples
     --------
     >>> layer = mx.gluon.rnn.GRU(100, 3)
     >>> layer.initialize()
-    >>> input = mx.nd.random.uniform(shape=(5, 3, 10))
+    >>> input = mx.nd.random_uniform(shape=(5, 3, 10))
     >>> # by default zeros are used as begin state
     >>> output = layer(input)
     >>> # manually specify begin state.
-    >>> h0 = mx.nd.random.uniform(shape=(3, 3, 100))
+    >>> h0 = mx.nd.random_uniform(shape=(3, 3, 100))
     >>> output, hn = layer(input, h0)
     """
     def __init__(self, hidden_size, num_layers=1, layout='TNC',
