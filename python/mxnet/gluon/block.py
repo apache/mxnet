@@ -170,7 +170,7 @@ class Block(object):
         self._children = []
 
         # Cooperative design for multiple inheritance
-        super().__init__(**kwargs)
+        super(Block, self).__init__(**kwargs)
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
