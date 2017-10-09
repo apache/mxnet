@@ -20,6 +20,7 @@ use strict;
 use warnings;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw/blessed/;
+use JSON::PP;
 
 =head1 NAME
 
@@ -77,10 +78,37 @@ has 'name'       => (is => 'rw', isa => 'Str');
 has 'num'        => (is => 'rw', isa => 'Int');
 has 'num_inst'   => (is => 'rw', isa => 'Maybe[Int|ArrayRef[Int]]');
 has 'sum_metric' => (is => 'rw', isa => 'Maybe[Num|ArrayRef[Num]]');
+has '_kwargs'    => (is => 'rw', init_arg => undef);
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
 
 sub BUILD
 {
-    shift->reset;
+    my ($self, $kwargs) = @_;
+    $self->reset;
+    $self->_kwargs($kwargs);
+}
+
+method _class_name()
+{
+    my $class = ref $self || $self;
+    $class =~ s/^.+:://;
+    $class;
+}
+
+=head2 get_config
+
+    Save configurations of metric. Can be recreated
+        from configs with mx->metric->create(%{ $config })
+=cut
+
+method get_config()
+{
+    my %config = %{ $self->_kwargs };
+    %config = (%config,
+        metric => $self->_class_name,
+        name   => $self->name
+    );
+    return \%config;
 }
 
 method update($label, $pred)
@@ -151,6 +179,7 @@ use Mouse;
 extends 'AI::MXNet::EvalMetric';
 has 'metrics' => (is => 'rw', isa => 'ArrayRef[AI::MXNet::EvalMetric]', default => sub { [] });
 has '+name'   => (default => 'composite');
+method python_constructor_arguments() { ['metrics'] }
 
 # Add a child metric.
 method add(AI::MXNet::EvalMetric $metric)
@@ -232,6 +261,7 @@ use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'top_k_accuracy');
 has 'top_k' => (is => 'rw', isa => 'int', default => 1);
+method python_constructor_arguments() { ['top_k'] }
 
 sub BUILD
 {
@@ -344,6 +374,8 @@ extends 'AI::MXNet::EvalMetric';
 has '+name'        => (default => 'Perplexity');
 has 'ignore_label' => (is => 'ro', isa => 'Maybe[Int]');
 has 'axis'         => (is => 'ro', isa => 'Int', default => -1);
+method python_constructor_arguments() { ['ignore_label', 'axis'] }
+
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;
@@ -483,13 +515,8 @@ use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'cross-entropy');
-has 'eps'     => (is => 'ro', isa => 'Num', default => 1e-8);
-around BUILDARGS => sub {
-    my $orig  = shift;
-    my $class = shift;
-    return $class->$orig(eps => $_[0]) if @_ == 1;
-    return $class->$orig(@_);
-};
+has 'eps'     => (is => 'ro', isa => 'Num', default => 1e-12);
+method python_constructor_arguments() { ['eps'] }
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
@@ -559,6 +586,140 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }, $labels, $preds);
 }
 
+package AI::MXNet::Loss;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::EvalMetric';
+has '+name'   => (default => 'loss');
+
+=head1 NAME
+
+    AI::MXNet::Loss
+=cut
+
+=head1 DESCRIPTION
+
+    Dummy metric for directly printing loss.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+=cut
+
+method update($labels, ArrayRef[AI::MXNet::NDArray] $preds)
+{
+    for my $pred (@{ $preds })
+    {
+        $self->sum_metric($self->sum_metric + $pred->sum->asscalar);
+        $self->num_inst($self->num_inst + $pred->size);
+    }
+}
+
+package AI::MXNet::Confidence;
+use Mouse;
+
+=head1 NAME
+
+    AI::MXNet::Confidence
+=cut
+
+=head1 DESCRIPTION
+
+    Accuracy by confidence buckets.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    num_classes: Int
+        number of classes
+    confidence_thresholds: ArrayRef[Num]
+        confidence buckets
+    For example
+    my $composite_metric  = AI::MXNet::CompositeEvalMetric->new;
+    $composite_metric->add(mx->metric->create('acc'));
+    $composite_metric->add(
+        AI::MXNet::Confidence->new(
+            num_classes => 2,
+            confidence_thresholds => [ 0.5, 0.7, 0.8, 0.9 ],
+        )
+    );
+=cut
+
+extends 'AI::MXNet::EvalMetric';
+has 'num_classes', is => 'ro', isa => 'Int', required => 1;
+has 'confidence_thresholds', is => 'ro', isa => 'ArrayRef[Num]', required => 1;
+has '+name'   => (default => 'confidence');
+has '+sum_metric', isa => 'PDL';
+has '+num_inst', isa => 'PDL';
+method python_constructor_arguments() { ['num_classes', 'confidence_thresholds'] }
+
+sub _hot
+{
+    my($m, $n) = @_;
+    my $md = $m->dim(-1);
+    my $hot = PDL->zeros($n, $md);
+    $hot->index2d($m->flat(), PDL->sequence($md)) .= 1;
+    return $hot;
+}
+
+sub reset
+{
+    my($self) = @_;
+    my $nt = @{$self->confidence_thresholds};
+    my $n = $self->num_classes;
+    $self->sum_metric(PDL->zeroes($nt, $n));
+    $self->num_inst(PDL->zeroes($nt, $n));
+    return;
+}
+
+sub update
+{
+    my($self, $labels, $preds) = @_;
+    my $n = $self->num_classes;
+    my $ct = PDL->new($self->confidence_thresholds);
+    my $nt = $ct->nelem;
+    for(0 .. @$labels - 1)
+    {
+        my $label = _hot($labels->[$_]->aspdl, $n);
+        my $pred = $preds->[$_]->aspdl;
+        for my $c (0 .. $n - 1)
+        {
+            my $ls = $label->slice($c);
+            my $pm = $pred->slice($c) > $ct;
+            $self->sum_metric->slice(":,$c") += ($pm & $ls);
+            $self->num_inst->slice(":,$c") += $pm;
+        }
+    }
+    return;
+}
+
+sub get
+{
+    my($self) = @_;
+    my(@names, @values);
+    my $val = $self->sum_metric / $self->num_inst;
+    my $ct = $self->confidence_thresholds;
+    my $n = $self->num_classes;
+    for my $c (0 .. $n - 1)
+    {
+        for my $t (0 .. @$ct - 1)
+        {
+            my $sm = $self->sum_metric->at($t, $c);
+            my $ni = $self->num_inst->at($t, $c);
+            push @names, "P(v=$c|Conf>$ct->[$t])=($sm/$ni)";
+            push @values, $val->at($t, $c);
+        }
+    }
+    return(\@names, \@values);
+}
+
+=head1 NAME
+
+    AI::MXNet::CustomMetric
+=cut
+
 =head1 DESCRIPTION
 
     Custom evaluation metric that takes a sub ref.
@@ -582,6 +743,7 @@ use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has 'eval_function'       => (is => 'ro', isa => 'CodeRef');
 has 'allow_extra_outputs' => (is => 'ro', isa => 'Int', default => 0);
+method python_constructor_arguments() { ['eval_function', 'allow_extra_outputs'] }
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
@@ -613,22 +775,28 @@ package AI::MXNet::Metric;
 =cut
 
 my %metrics = qw/
-    acc            AI::MXNet::Accuracy
-    accuracy       AI::MXNet::Accuracy
-    ce             AI::MXNet::CrossEntropy
-    f1             AI::MXNet::F1
-    mae            AI::MXNet::MAE
-    mse            AI::MXNet::MSE
-    rmse           AI::MXNet::RMSE
-    top_k_accuracy AI::MXNet::TopKAccuracy
-    Perplexity     AI::MXNet::Perplexity
-    perplexity     AI::MXNet::Perplexity
-    pearsonr       AI::MXNet::PearsonCorrelation
+    acc                 AI::MXNet::Accuracy
+    accuracy            AI::MXNet::Accuracy
+    ce                  AI::MXNet::CrossEntropy
+    crossentropy        AI::MXNet::CrossEntropy
+    f1                  AI::MXNet::F1
+    mae                 AI::MXNet::MAE
+    mse                 AI::MXNet::MSE
+    rmse                AI::MXNet::RMSE
+    top_k_accuracy      AI::MXNet::TopKAccuracy
+    topkaccuracy        AI::MXNet::TopKAccuracy
+    perplexity          AI::MXNet::Perplexity
+    pearsonr            AI::MXNet::PearsonCorrelation
+    pearsoncorrelation  AI::MXNet::PearsonCorrelation
+    loss                AI::MXNet::Loss
+    compositeevalmetric AI::MXNet::CompositeEvalMetric
+    confidence          AI::MXNet::Confidence
 /;
 
-method create(Metric|ArrayRef[Metric] $metric, %kwargs)
+method create(Metric|ArrayRef[Metric] $metric, @kwargs)
 {
     Carp::confess("metric must be defined") unless defined $metric;
+    return $metric if blessed $metric and $metric->isa('AI::MXNet::EvalMetric');
     if(my $ref = ref $metric)
     {
         if($ref eq 'ARRAY')
@@ -636,23 +804,29 @@ method create(Metric|ArrayRef[Metric] $metric, %kwargs)
             my $composite_metric = AI::MXNet::CompositeEvalMetric->new();
             for my $child_metric (@{ $metric })
             {
-                $composite_metric->add(__PACKAGE__->create($child_metric, %kwargs))
+                $composite_metric->add(__PACKAGE__->create($child_metric, @kwargs))
             }
             return $composite_metric;
         }
         else
         {
-            return AI::MXNet::CustomMetric->new(eval_function => $metric, %kwargs);
+            return AI::MXNet::CustomMetric->new(eval_function => $metric, @kwargs);
         }
     }
     else
     {
-        if(not exists $metrics{ lc($metric) })
+        if(not exists $metrics{ lc($metric) } and not $metric =~ /^{/)
         {
             my @metrics = keys %metrics;
             Carp::confess("Metric must be either subref or one of [@metrics]");
         }
-        return $metrics{ lc($metric) }->new(%kwargs);
+        if($metric =~ /^{/ and not @kwargs)
+        {
+            my $config = decode_json($metric);
+            $metric = delete $config->{metric};
+            @kwargs = %{ $config };
+        }
+        return $metrics{ lc($metric) }->new(@kwargs);
     }
 }
 

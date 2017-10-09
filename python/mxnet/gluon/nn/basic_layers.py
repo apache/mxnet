@@ -18,7 +18,8 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-
+__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten']
 import warnings
 
 from ..block import Block, HybridBlock
@@ -26,7 +27,7 @@ from ..utils import _indent
 
 
 class Sequential(Block):
-    """Stacks `Block`s sequentially.
+    """Stacks Blocks sequentially.
 
     Example::
 
@@ -80,7 +81,7 @@ class Sequential(Block):
 
 
 class HybridSequential(HybridBlock):
-    """Stacks `HybridBlock`s sequentially.
+    """Stacks HybridBlocks sequentially.
 
     Example::
 
@@ -89,6 +90,7 @@ class HybridSequential(HybridBlock):
         with net.name_scope():
             net.add(nn.Dense(10, activation='relu'))
             net.add(nn.Dense(20))
+        net.hybridize()
     """
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
@@ -161,21 +163,16 @@ class Dense(HybridBlock):
         See document of `Block`.
 
 
-    If ``flatten`` is set to be True, then the shapes are:
-    Input shape:
-        An N-D input with shape
-        `(batch_size, x1, x2, ..., xn) with x1 * x2 * ... * xn equal to in_units`.
+    Inputs:
+        - **data**: if `flatten` is True, `data` should be a tensor with shape
+          `(batch_size, x1, x2, ..., xn)`, where x1 * x2 * ... * xn is equal to
+          `in_units`. If `flatten` is False, `data` should have shape
+          `(x1, x2, ..., xn, in_units)`.
 
-    Output shape:
-        The output would have shape `(batch_size, units)`.
-
-    If ``flatten`` is set to be false, then the shapes are:
-    Input shape:
-        An N-D input with shape
-        `(x1, x2, ..., xn, in_units)`.
-
-    Output shape:
-        The output would have shape `(x1, x2, ..., xn, units)`.
+    Outputs:
+        - **out**: if `flatten` is True, `out` will be a tensor with shape
+          `(batch_size, units)`. If `flatten` is False, `out` will have shape
+          `(x1, x2, ..., xn, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True, flatten=True,
                  weight_initializer=None, bias_initializer='zeros',
@@ -215,7 +212,7 @@ class Dense(HybridBlock):
 
 
 class Activation(HybridBlock):
-    """Applies an activation function to input.
+    r"""Applies an activation function to input.
 
     Parameters
     ----------
@@ -224,11 +221,11 @@ class Activation(HybridBlock):
         See :func:`~mxnet.ndarray.Activation` for available choices.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, activation, **kwargs):
         self._act_type = activation
@@ -258,11 +255,11 @@ class Dropout(HybridBlock):
         Fraction of the input units to drop. Must be a number between 0 and 1.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
 
     References
     ----------
@@ -320,11 +317,11 @@ class BatchNorm(HybridBlock):
         and `in_channels` will be inferred from the shape of input data.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -370,12 +367,18 @@ class BatchNorm(HybridBlock):
 
 
 class LeakyReLU(HybridBlock):
-    """Leaky version of a Rectified Linear Unit.
+    r"""Leaky version of a Rectified Linear Unit.
 
-    It allows a small gradient when the unit is not active::
+    It allows a small gradient when the unit is not active
 
-        `f(x) = alpha * x for x < 0`,
-        `f(x) = x for x >= 0`.
+    .. math::
+
+        f\left(x\right) = \left\{
+            \begin{array}{lr}
+               \alpha x & : x \lt 0 \\
+                      x & : x \geq 0 \\
+            \end{array}
+        \right.\\
 
     Parameters
     ----------
@@ -383,13 +386,14 @@ class LeakyReLU(HybridBlock):
         slope coefficient for the negative half axis. Must be >= 0.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, alpha, **kwargs):
+        assert alpha >= 0, "Slope coefficient for LeakyReLU must be no less than 0."
         super(LeakyReLU, self).__init__(**kwargs)
         self._alpha = alpha
 
@@ -403,7 +407,7 @@ class LeakyReLU(HybridBlock):
 
 
 class Embedding(HybridBlock):
-    """Turns non-negative integers (indexes/tokens) into dense vectors
+    r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
 
 
@@ -419,11 +423,11 @@ class Embedding(HybridBlock):
         Initializer for the `embeddings` matrix.
 
 
-    Input shape:
-        2D tensor with shape: `(N, M)`.
+    Inputs:
+        - **data**: 2D tensor with shape: `(x1, x2)`.
 
-    Output shape:
-        3D tensor with shape: `(N, M, output_dim)`.
+    Output:
+        - **out**: 3D tensor with shape: `(x1, x2, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
                  weight_initializer=None, **kwargs):
@@ -444,13 +448,13 @@ class Embedding(HybridBlock):
 
 
 class Flatten(HybridBlock):
-    """Flattens the input to two dimensional.
+    r"""Flattens the input to two dimensional.
 
-    Input shape:
-        Arbitrary shape `(N, a, b, c, ...)`
+    Inputs:
+        - **data**: input tensor with arbitrary shape `(N, x1, x2, ..., xn)`
 
-    Output shape:
-        2D tensor with shape: `(N, a*b*c...)`
+    Output:
+        - **out**: 2D tensor with shape: `(N, x1 \cdot x2 \cdot ... \cdot xn)`
     """
     def __init__(self, **kwargs):
         super(Flatten, self).__init__(**kwargs)

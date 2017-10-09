@@ -131,6 +131,39 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<typename ParamType, bool rsp, bool csr>
+inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
+                            const int dev_mask,
+                            DispatchMode* dispatch_mode,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto &out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  type_assign(&out_stype, kDefaultStorage);
+  if (!dispatched && out_stype == kDefaultStorage) {
+    // default
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && rsp && out_stype == kRowSparseStorage) {
+    // rsp
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched && csr && out_stype == kCSRStorage) {
+    // csr
+    dispatched = storage_type_assign(out_attrs, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
@@ -189,22 +222,22 @@ void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
 
 // Fill a rsp NDArray with zeros by updating the aux shape.
 template<typename xpu>
-void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
+void FillZerosRspImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
+  if (!dst.storage_initialized()) return;
   // reset the shapes if it's not zeros
-  auto storage_shape = dst->storage_shape();
+  auto storage_shape = dst.storage_shape();
   storage_shape[0] = 0;
-  dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+  dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
 }
 
 // Fill a CSR NDArray with zeros by updating the aux shape.
 template<typename xpu>
-void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
+void FillZerosCsrImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
+  if (!dst.storage_initialized()) return;
   // reset the shapes if it's not zeros
   TShape new_shape(mshadow::Shape1(0));
-  dst->set_aux_shape(csr::kIndPtr, new_shape);
-  dst->set_aux_shape(csr::kIdx, new_shape);
+  dst.set_aux_shape(csr::kIndPtr, new_shape);
+  dst.set_aux_shape(csr::kIdx, new_shape);
 }
 
 template<typename xpu>
@@ -222,13 +255,12 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
   if (stype == kRowSparseStorage) {
     NDArray nd(outputs[0]);
-    FillZerosRspImpl<xpu>(s, &nd);
+    FillZerosRspImpl<xpu>(s, nd);
   } else if (stype == kCSRStorage) {
     NDArray nd(outputs[0]);
-    FillZerosCsrImpl<xpu>(s, &nd);
+    FillZerosCsrImpl<xpu>(s, nd);
   } else {
-    // no fallback is required since the output doesn't depend on input
-    LOG(FATAL) << "storage type " << stype << " not implemented.";
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 

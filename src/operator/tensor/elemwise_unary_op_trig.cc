@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 // sin
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(sin, cpu, mshadow_op::sin)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sin, cpu, mshadow_op::sin)
 MXNET_ADD_SPARSE_OP_ALIAS(sin)
 .describe(R"code(Computes the element-wise sine of the input array.
 
@@ -66,7 +66,7 @@ The storage type of ``cos`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>);
 
 // tan
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(tan, cpu, mshadow_op::tan)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(tan, cpu, mshadow_op::tan)
 MXNET_ADD_SPARSE_OP_ALIAS(tan)
 .describe(R"code(Computes the element-wise tangent of the input array.
 
@@ -86,7 +86,7 @@ The storage type of ``tan`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshadow_op::tan_grad>);
 
 // arcsin
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(arcsin, cpu, mshadow_op::arcsin)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arcsin, cpu, mshadow_op::arcsin)
 MXNET_ADD_SPARSE_OP_ALIAS(arcsin)
 .describe(R"code(Returns element-wise inverse sine of the input array.
 
@@ -127,7 +127,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
                                                   unary_bwd<mshadow_op::arccos_grad>);
 
 // arctan
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(arctan, cpu, mshadow_op::arctan)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arctan, cpu, mshadow_op::arctan)
 MXNET_ADD_SPARSE_OP_ALIAS(arctan)
 .describe(R"code(Returns element-wise inverse tangent of the input array.
 
@@ -148,7 +148,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
                                                   unary_bwd<mshadow_op::arctan_grad>);
 
 // degrees
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(degrees, cpu, mshadow_op::degrees)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(degrees, cpu, mshadow_op::degrees)
 MXNET_ADD_SPARSE_OP_ALIAS(degrees)
 .describe(R"code(Converts each element of the input array from radians to degrees.
 
@@ -167,7 +167,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_degrees,
                                                   unary_bwd<mshadow_op::degrees_grad>);
 
 // radians
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(radians, cpu, mshadow_op::radians)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(radians, cpu, mshadow_op::radians)
 MXNET_ADD_SPARSE_OP_ALIAS(radians)
 .describe(R"code(Converts each element of the input array from degrees to radians.
 
@@ -186,7 +186,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_radians,
                                                   unary_bwd<mshadow_op::radians_grad>);
 
 // sinh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(sinh, cpu, mshadow_op::sinh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sinh, cpu, mshadow_op::sinh)
 MXNET_ADD_SPARSE_OP_ALIAS(sinh)
 .describe(R"code(Returns the hyperbolic sine of the input array, computed element-wise.
 
@@ -219,7 +219,7 @@ The storage type of ``cosh`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow_op::cosh_grad>);
 
 // tanh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(tanh, cpu, mshadow_op::tanh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(tanh, cpu, mshadow_op::tanh)
 MXNET_ADD_SPARSE_OP_ALIAS(tanh)
 .describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
 
@@ -237,7 +237,7 @@ The storage type of ``tanh`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<mshadow_op::tanh_grad>);
 
 // arcsinh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(arcsinh, cpu, mshadow_op::arcsinh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arcsinh, cpu, mshadow_op::arcsinh)
 MXNET_ADD_SPARSE_OP_ALIAS(arcsinh)
 .describe(R"code(Returns the element-wise inverse hyperbolic sine of the input array, \
 computed element-wise.
@@ -268,7 +268,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccosh,
                                                   unary_bwd<mshadow_op::arccosh_grad>);
 
 // arctanh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(arctanh, cpu, mshadow_op::arctanh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arctanh, cpu, mshadow_op::arctanh)
 MXNET_ADD_SPARSE_OP_ALIAS(arctanh)
 .describe(R"code(Returns the element-wise inverse hyperbolic tangent of the input array, \
 computed element-wise.

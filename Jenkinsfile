@@ -11,30 +11,6 @@ max_time = 120
 // assign any caught errors here
 err = null
 
-//Method to Kill old PR Builds that are running currently when a new build is triggered.
-//env.JOB_NAME looks something like "incubator-mxnet/PR-7893". Thus, projectName is incubator-mxnet
-//env.JOB_BASE_NAME is either the name of the branch or for a PR something like "PR-7893"
-//Once the project and the current PR (or branch) is known, search for all builds within it.
-//Abort the build if it is older than the current build.
-def abortPreviousRunningBuilds() {
-  def hudsonInstance = Hudson.instance
-  def projectName = env.JOB_NAME.split('/')[0]
-
-  hudsonInstance.getItem(projectName).getItem(env.JOB_BASE_NAME).getBuilds().each{ build ->
-    def exec = build.getExecutor()
-
-    if (build.number < currentBuild.number && exec != null) {
-      exec.interrupt(
-        Result.ABORTED,
-        new CauseOfInterruption.UserInterruption(
-          "Aborted by #${currentBuild.number}"
-        )
-      )
-      println("Aborted previous running build #${build.number}")
-    }
-  }
-}
-
 // initialize source codes
 def init_git() {
   retry(5) {
@@ -42,7 +18,7 @@ def init_git() {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
-        sh 'git clean -d -f'
+        sh 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
@@ -58,7 +34,7 @@ def init_git_win() {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         bat 'git submodule update --init'
-        bat 'git clean -d -f'
+        bat 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
@@ -108,8 +84,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 def python2_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/train"
   }
 }
 
@@ -127,7 +103,7 @@ def python3_ut(docker_type) {
 def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/gpu"
   }
 }
 
@@ -143,9 +119,6 @@ try {
     stage("Sanity Check") {
       timeout(time: max_time, unit: 'MINUTES') {
         node('mxnetlinux') {
-          if (env.BRANCH_NAME != "master") {
-            abortPreviousRunningBuilds()
-          }
           ws('workspace/sanity') {
             init_git()
             sh "python tools/license_header.py check"
@@ -397,11 +370,7 @@ try {
                     init_git()
                     unpack_lib('gpu')
                     timeout(time: max_time, unit: 'MINUTES') {
-                      try {
                         sh "${docker_run} gpu ./perl-package/test.sh"
-                      } catch (exc) {
-                        error "Perl GPU test failed."
-                      }
                     }
                 }
             }

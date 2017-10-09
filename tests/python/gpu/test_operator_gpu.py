@@ -33,7 +33,7 @@ from test_gluon import *
 from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_ndarray import test_create_csr, test_create_row_sparse
+from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -1418,6 +1418,32 @@ def test_cuda_rtc():
     saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
     assert (y.asnumpy() == 12).all()
 
+
+def test_cross_device_autograd():
+    x = mx.nd.random.uniform(shape=(10,))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        y = mx.nd.tanh(x)
+        y = y.copyto(mx.gpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.cpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.gpu(0))
+        y = y.copyto(mx.gpu(0))
+
+        y.backward()
+
+    dx = x.grad.asnumpy()
+    x.grad[:] = 0
+
+    with mx.autograd.record():
+        y = x
+        for i in range(3):
+            y = mx.nd.tanh(y)
+        y.backward()
+
+    assert_almost_equal(dx, x.grad.asnumpy())
 
 if __name__ == '__main__':
     import nose

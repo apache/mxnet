@@ -56,7 +56,10 @@ NNVM_REGISTER_OP(make_loss)
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeFirstItemsEx<gpu>);
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeFirstItemEx<gpu>);
+
+NNVM_REGISTER_OP(reshape_like)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
@@ -79,14 +82,16 @@ NNVM_REGISTER_OP(_backward_reciprocal)
 
 // abs
 NNVM_REGISTER_OP(abs)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::abs>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::abs>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::abs>);
 
 NNVM_REGISTER_OP(_backward_abs)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::sign> >);
 
 // sign
 NNVM_REGISTER_OP(sign)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sign>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sign>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::sign>);
 
 NNVM_REGISTER_OP(_backward_sign)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
@@ -94,27 +99,35 @@ NNVM_REGISTER_OP(_backward_sign)
 
 // round
 NNVM_REGISTER_OP(round)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::round>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::round>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::round>);
 
 // ceil
 NNVM_REGISTER_OP(ceil)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::ceil>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::ceil>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::ceil>);
 
 // floor
 NNVM_REGISTER_OP(floor)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::floor>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::floor>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::floor>);
 
 // trunc
 NNVM_REGISTER_OP(trunc)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::trunc>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::trunc>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::trunc>);
 
 // rint
 NNVM_REGISTER_OP(rint)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::rint>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::rint>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::rint>);
+
 
 // fix
 NNVM_REGISTER_OP(fix)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::fix>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::fix>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::fix>);
+
 
 // square
 NNVM_REGISTER_OP(square)
@@ -127,7 +140,9 @@ NNVM_REGISTER_OP(_backward_square)
 
 // sqrt
 NNVM_REGISTER_OP(sqrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::square_root>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::square_root>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::square_root>);
+
 
 NNVM_REGISTER_OP(_backward_sqrt)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
@@ -143,7 +158,9 @@ NNVM_REGISTER_OP(_backward_rsqrt)
 
 // cbrt
 NNVM_REGISTER_OP(cbrt)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::cube_root>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::cube_root>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::cube_root>);
+
 
 NNVM_REGISTER_OP(_backward_cbrt)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
@@ -179,7 +196,8 @@ NNVM_REGISTER_OP(_backward_log)
 
 // log1p
 NNVM_REGISTER_OP(log1p)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log1p>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log1p>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::log1p>);
 
 NNVM_REGISTER_OP(_backward_log1p)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
@@ -187,7 +205,8 @@ NNVM_REGISTER_OP(_backward_log1p)
 
 // expm1
 NNVM_REGISTER_OP(expm1)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::expm1>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::expm1>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::expm1>);
 
 NNVM_REGISTER_OP(_backward_expm1)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
