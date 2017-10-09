@@ -611,7 +611,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
 
 void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int priority) {
   CHECK(from.shape().ndim() != 0)
-      << "source operands have zero dimension shape";
+    << "source operands have zero dimension shape";
   // important: callback must always capture by value
   NDArray ret = *to;
   int a = from.ctx().dev_mask();
@@ -622,11 +622,11 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([inputs](RunContext ctx) {
-          mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
-        }, from.ctx(), {from.var()}, {ret.var()},
-        FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
+                                mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
+                              }, from.ctx(), {from.var()}, {ret.var()},
+                              FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
-      LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
+      LOG(FATAL) << "Unsupported dequantization " << compress << std::endl;
     }
   } else {
 #if MXNET_USE_CUDA
@@ -646,6 +646,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
     LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
   }
+}
 
 
 void CopyFromTo(const NDArray& from, NDArray *to, int priority) {

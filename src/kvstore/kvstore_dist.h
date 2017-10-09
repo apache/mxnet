@@ -318,7 +318,7 @@ namespace kvstore {
       }
       auto &comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        send_buf = merged;  // avoid memory copy
+        comm_buf= merged;  // avoid memory copy
       } else {
         if (comm_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
@@ -362,7 +362,6 @@ namespace kvstore {
           LOG(FATAL) << "compression for non default storage type unsupported";
         }
       } else {
-        std::cout<<"About to push" <<std::endl;
         // push to servers
         if (storage_type == kDefaultStorage) {
           PushDefault(key, comm_buf, priority);
