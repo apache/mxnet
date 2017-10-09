@@ -3,23 +3,21 @@ Note: Providing complete information in the most concise form is the best way to
 If the issue is non-technical, feel free to present the information in what you believe is the best form.
 
 ## Description
-(Brief description of the problem in no more than 2 sentences)
+(Brief description of the problem in no more than 2 sentences.)
 
 ## Environment info (Required)
 
 ```
 What to do:
 1. Download the diagnosis script from https://raw.githubusercontent.com/apache/incubator-mxnet/master/tools/diagnose.py
-2. Run the script and paste its output here.
+2. Run the script using `python diagnose.py` and paste its output here.
 
 ```
 
 Package used (Python/R/Scala/Julia):
 (I'm using ...)
 
-If you are using R package, please provide
-
-R `sessionInfo()`:
+For R user, please provide R `sessionInfo()`:
 
 ## Build info (Required if built from source)
 
@@ -35,8 +33,7 @@ Build config:
 (Paste the complete error message, including stack trace.)
 
 ## Minimum reproducible example
-If you are using your own code, please provide a short script that reproduces the error.
-Otherwise, please provide link to the existing example.
+(If you are using your own code, please provide a short script that reproduces the error. Otherwise, please provide link to the existing example.)
 
 ## Steps to reproduce
 (Paste the commands you ran that produced the error.)
