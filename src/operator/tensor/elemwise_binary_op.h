@@ -78,7 +78,6 @@ class ElemwiseBinaryOp : public OpBase {
   };
 
  private:
-
   /*!
    * \brief CSR operation requires temp space
    */
@@ -251,7 +250,6 @@ class ElemwiseBinaryOp : public OpBase {
                               const NDArray &output);
 
  public:
-
   /*!
    * \brief Rsp-op-Rsp operation which produces a dense result
    * \param attrs Attributes
@@ -353,7 +351,6 @@ class ElemwiseBinaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1);
     if (req[0] == kNullOp) return;
     const auto lhs_stype = inputs[0].storage_type();
-    //const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     bool has_both = false;

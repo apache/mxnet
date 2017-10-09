@@ -123,7 +123,7 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
     uint8_t has = 0;
     for (const auto& nd : ndarrays) {
       const NDArrayStorageType stype = nd.storage_type();
-      if(stype == stype1) {
+      if (stype == stype1) {
         has |= 1;
       } else if (stype == stype2) {
         has |= 2;
@@ -131,8 +131,9 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
         return false;
       }
     }
-    if(has_both) {}
-    *has_both = has == 3;
+    if (has_both) {
+      *has_both = has == 3;
+    }
     return true;
   }
   return false;

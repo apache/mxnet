@@ -56,7 +56,7 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
-  if(!dispatched && (rhs_stype == kRowSparseStorage || rhs_stype == kCSRStorage)) {
+  if (!dispatched && (rhs_stype == kRowSparseStorage || rhs_stype == kCSRStorage)) {
     // rsp, _ -> rsp, or csr, _ -> csr
     dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(rhs_stype),
                                      dispatch_mode, DispatchMode::kFComputeEx);
