@@ -46,7 +46,23 @@ static const int kDefaultPushPull = 0;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
 static const int kSetCompress = 2;
+  void floatToBinary2(float f, std::string& str)
+  {
+    union { float f; uint32_t i; } u;
+    u.f = f;
+    str.clear();
 
+    for (int i = 0; i < 32; i++)
+    {
+      if (u.i % 2)  str.push_back('1');
+      else str.push_back('0');
+      u.i >>= 1;
+    }
+
+    // Reverse the string since now it's backwards
+    std::string temp(str.rbegin(), str.rend());
+    str = temp;
+  }
 /**
  * \brief executor runs a function using the thread called \ref Start
  */
@@ -393,10 +409,22 @@ class KVStoreDistServer {
           decomp_buf = NDArray(dshape, Context());
         }
       }
- 
+      if(compress_!="none") {
+        CHECK_EQ(*((float *) recved.data().dptr_),-0.5);
+        CHECK_EQ(*((float *) recved.data().dptr_+1),0.5);
+        CHECK_EQ(*((float *) recved.data().dptr_+2),dshape.Size());
+        for(int i=3; i<recved.shape().Size(); i++){
+          CHECK_EQ(*((float *) recved.data().dptr_+i),0);
+        }
+      }
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
+//        if(compress_!="none") {
+//          for(int i=0; i<stored.shape().Size(); i++){
+//            CHECK_EQ(*(float *) stored.data().dptr_+i,0);
+//          }
+//        }
         if (compress_ == "none") {
           CopyFromTo(recved, &stored, 0);
         } else {
@@ -404,17 +432,27 @@ class KVStoreDistServer {
         }
         server->Response(req_meta);
         stored.WaitToRead();
+        if(compress_!="none") {
+          CHECK_EQ(*((float *) recved.data().dptr_+2),dshape.Size());
+          for(int i=0; i<stored.shape().Size(); i++){
+            CHECK_EQ(*((float *) stored.data().dptr_+i),0);
+          }
+        }
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
         if (merged.array.is_none()) {
           merged.array = NDArray(dshape, Context());
         }
+        std::string s;
+        floatToBinary2(*((float *) recved.data().dptr_+3), s);
+
         if (merged.request.size() == 0) {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
             Dequantize(recved, &merged.array, compress_, 0);
+//            decomp_buf.WaitToRead();
 //            CopyFromTo(decomp_buf, &merged.array, 0);
           }
         } else {

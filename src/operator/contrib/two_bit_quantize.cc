@@ -95,8 +95,12 @@ Invoke dequantize_2bit(out, array), the 'array' argument will become
 .set_attr<nnvm::FInferType>("FInferType", Dequantize2BitType)
 .set_attr<FCompute>("FCompute<cpu>", Dequantize2BitCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_dequantize_2bit"})
-.add_argument("input_1", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
-.add_argument("input_2", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`");
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+[](const nnvm::NodeAttrs& attrs) {
+  return std::vector<uint32_t>{1};
+})
+.add_argument("quantized_data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
+.add_argument("dequantized_data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`");
 
 }  // namespace op
 }  // namespace mxnet

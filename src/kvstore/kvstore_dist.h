@@ -303,9 +303,21 @@ namespace kvstore {
       // merge over devices
       int key = uniq_keys[i];
       const auto &vals = grouped_vals[i];
+      if (compress_!="none") {
+        vals[0].WaitToRead();
+        for (int i = 0; i < vals[0].shape().Size(); i++) {
+          CHECK_EQ(*((float *) vals[0].data().dptr_ + i), 0);
+        }
+      }
+
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
       const auto storage_type = merged.storage_type();
-
+      if (compress_!="none") {
+        merged.WaitToRead();
+        for (int i = 0; i < merged.shape().Size(); i++) {
+          CHECK_EQ(*((float *) merged.data().dptr_ + i), 0);
+        }
+      }
       auto &comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
         // make sure the previous push/pull is completed
@@ -320,6 +332,12 @@ namespace kvstore {
           }
         }
         CopyFromTo(merged, &comm_buf);
+      }
+      if (compress_!="none") {
+        comm_buf.WaitToRead();
+        for (int i = 0; i < comm_buf.shape().Size(); i++) {
+          CHECK_EQ(*((float *) comm_buf.data().dptr_ + i), 0);
+        }
       }
 
       if (compress_ != "none") {
@@ -348,6 +366,7 @@ namespace kvstore {
           LOG(FATAL) << "compression for non default storage type unsupported";
         }
       } else {
+        std::cout<<"About to push" <<std::endl;
         // push to servers
         if (storage_type == kDefaultStorage) {
           PushDefault(key, comm_buf, priority);
@@ -545,8 +564,26 @@ namespace kvstore {
         end_part_data = orig_size;
       }
       NDArray part_data = flattened_comm_buf.Slice(cur_from, end_part_data);
+//      for(int i=0; i<part_data.shape().Size(); i++){
+//        CHECK_EQ(*((float *) part_data.data().dptr_+i),0);
+//      }
       NDArray part_res = res_buf->Slice(cur_from, end_part_data);
       Quantize(part_data, &part_compr, &part_res, neg_threshold_, pos_threshold_, compress_, priority);
+      part_compr.WaitToRead();
+
+        CHECK_EQ(*(float *) part_compr.data().dptr_,-0.5);
+        CHECK_EQ(*((float *) part_compr.data().dptr_+1),0.5);
+        for(int i=3; i<part_compr.shape().Size(); i++){
+          CHECK_EQ(*((float *) part_compr.data().dptr_+i),0);
+        }
+
+
+//      std::string s;
+//      float d = *((float *) part_compr.data().dptr_+3);
+//      float n = *((float *) part_compr.data().dptr_);
+//      float p = *((float *) part_compr.data().dptr_+1);
+//      floatToBinary(d , s);
+//      std::cout<<"sent "<<n<<" "<<p<<" "<<s<<std::endl;
       cur_from = end_part_data;
       cur_to = cur_to + pskv.lens[i];
     }

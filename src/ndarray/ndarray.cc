@@ -604,9 +604,6 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   NDArray ret = *to;
   int a = from.ctx().dev_mask();
   int b = to->ctx().dev_mask();
-  std::vector<Engine::VarHandle> const_vars;
-  const_vars.push_back(from.var());
-
   std::vector<TBlob> inputs(2);
   inputs[0] = from.data();
   inputs[1] = to->data();
@@ -614,7 +611,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
     if (compress == "2bit") {
       Engine::Get()->PushSync([inputs](RunContext ctx) {
           mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
-        }, from.ctx(), const_vars, {ret.var()},
+        }, from.ctx(), {from.var()}, {ret.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
       LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
