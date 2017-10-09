@@ -16,3 +16,6 @@
 [submodule "cub"]
 	path = cub
 	url = https://github.com/dmlc/cub
+[submodule "julia-package"]
+	path = julia-package
+	url = https://github.com/dmlc/MXNet.jl.git

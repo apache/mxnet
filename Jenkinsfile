@@ -407,6 +407,21 @@ try {
           }
         }
       },
+      'Julia 0.6: CPU': {
+        node('mxnetlinux') {
+          ws('workspace/ut-julia-cpu') {
+            init_git()
+            unpack_lib('cpu')
+            withEnv(['MXNET_HOME=/workspace/ut-julia-cpu']) {
+              timeout(time: max_timem unit: 'MINUTES') {
+                sh "${docker_run} cpu julia -e 'Pkg.clone(\"julia-package\", \"MXNet\")'"
+                sh "${docker_run} cpu julia -e 'Pkg.build(\"MXNet\")'"
+                sh "${docker_run} cpu julia -e 'Pkg.test(\"MXNet\")'"
+              }
+            }
+          }
+        }
+      },
       'Python 2: CPU Win': {
         node('mxnetwindows') {
           ws('workspace/ut-python-cpu') {
