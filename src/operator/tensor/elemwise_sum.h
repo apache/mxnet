@@ -33,7 +33,7 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #if MXNET_USE_MKLDNN == 1
-#include "../mkl/mkldnn_elemwise_sum-inl.h.h"
+#include "mkldnn_elemwise_sum-inl.h"
 #endif
 
 namespace mxnet {

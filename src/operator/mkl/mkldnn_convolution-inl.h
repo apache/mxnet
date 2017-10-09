@@ -175,7 +175,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
     // size_t expected = this->param_.no_bias ? 2 : 3;
     // CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
         std::cout << "BEFORE FW " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
@@ -242,7 +242,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
                                        fwd_top_data);
     }
     convFwd.submit();
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
         std::cout << "AFTER FW " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
@@ -395,7 +395,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Volume convolution is not implmented in mshadow";
     }
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
           std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
@@ -534,7 +534,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
       }
     }
 
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
           std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";

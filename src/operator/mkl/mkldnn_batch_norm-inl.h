@@ -143,7 +143,7 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
                        const std::vector<TBlob> &aux_states) {
       using namespace mshadow;
       using namespace mshadow::expr;
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
         std::cout << "BEFORE FWD " << name << " (" << t.size(0) << "): ";
@@ -248,7 +248,7 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
         out_data[batchnorm::kOut], fwd_top_data);
     }
     BatchNormFwd.submit();
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
         std::cout << "AFTER FWD " << name << " (" << t.size(0) << "): ";
@@ -334,7 +334,7 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, Dtype> data, grad, grad_in;
 
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
           std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
@@ -460,7 +460,7 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
       diff_shift[i] = scaleShiftDiff_buf[channels_ + i];
     }
 
-#if 1
+#if 0
       {
         auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
             std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
