@@ -58,7 +58,7 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
 
 NNVM_REGISTER_OP(clip)
-.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", ClipEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_clip)
