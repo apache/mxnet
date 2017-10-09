@@ -34,7 +34,6 @@
 #include "./kvstore_dist_server.h"
 #include "../ndarray/ndarray_function.h"
 #include <inttypes.h> // for uint32_t
-
 #if MKL_EXPERIMENTAL == 1
 #include <mkl_memory.h>
 #include "../operator/mkl/mkl_memory-inl.h"
@@ -204,6 +203,7 @@ namespace kvstore {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       // use the same array for merging to guarantee that pull always happens
@@ -227,10 +227,8 @@ namespace kvstore {
 #endif
         real_t* data = recv_buf.data().dptr<real_t>();
         // false means not to delete data when SArray is deleted
-
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
-
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
       };
@@ -381,10 +379,8 @@ namespace kvstore {
     auto push_to_servers =
         [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
-          size_t size = 0;
-          real_t* data = nullptr;
-          size = send_buf.shape().Size();
-          data = send_buf.data().dptr<real_t>();
+          size_t size = send_buf.shape().Size();
+          real_t* data = send_buf.data().dptr<real_t>();
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
 #endif
@@ -515,10 +511,8 @@ namespace kvstore {
     auto push_to_servers =
       [this, key, comm_buf, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
-        size_t size = 0;
-        real_t* data = nullptr;
-        size = small_buf.shape().Size();
-        data = small_buf.data().dptr<real_t>();
+        size_t size = small_buf.shape().Size();
+        real_t* data = small_buf.data().dptr<real_t>();
         #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(small_buf.data());
         #endif

@@ -34,7 +34,7 @@
 #include <bitset>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
-#include "../operator/tensor/elemwise_binary_op.h"
+#include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "../ndarray/ndarray_function.h"
 
@@ -198,9 +198,9 @@ class KVStoreDistServer {
     if (merged->request.size() == (size_t) ps::NumWorkers()) {
       // let the main thread to execute updater_, which is necessary for python
       if (updater_) {
-  exec_.Exec([this, key, merged, stored](){
+        exec_.Exec([this, key, merged, stored](){
             CHECK(updater_);
-           updater_(key, merged->array, stored);
+            updater_(key, merged->array, stored);
           });
       } else {
         // if no updater, just copy
@@ -392,6 +392,7 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
+
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
