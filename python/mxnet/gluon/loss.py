@@ -381,3 +381,35 @@ class CTCLoss(Loss):
                                  data_lengths=data_lengths, label_lengths=label_lengths,
                                  blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)
+
+
+class CenterLoss(Loss):
+    r""" Center Loss
+    """
+    def __init__(self, num_classes, feature_size, ctx, alpha=0.5, lmbd=0.01, weight=1., batch_axis=0, **kwargs):
+        super(CenterLoss, self).__init__(weight*lmbd, batch_axis, **kwargs)
+        self._alpha = alpha
+        self._lmbd = lmbd
+        self._num_classes = num_classes
+        self._feature_size = feature_size
+        self._ctx = ctx
+        self._centers = nd.zeros((num_classes, feature_size), ctx=ctx)
+
+    def hybrid_forward(self, F, output, label, sample_weight=None):
+        selected_centers = F.take(self._centers, label)
+        diff = output - selected_centers
+        loss = F.sum(F.square(diff), axis=1)
+
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        # Update the centers
+        counts = nd.zeros((self._num_classes, ), ctx=self._ctx)
+        for lb in label:
+            lb = int(lb.asscalar())
+            counts[lb] += 1
+
+        for i, lb in enumerate(label):
+            lb = int(lb.asscalar())
+            self._centers[lb] += diff[i] / (counts[lb] + 1)
+
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
+
