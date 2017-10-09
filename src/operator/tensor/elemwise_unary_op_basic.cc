@@ -28,6 +28,8 @@
 namespace mxnet {
 namespace op {
 
+#error foo
+
 // relu
 MXNET_OPERATOR_REGISTER_UNARY(relu)
 MXNET_ADD_SPARSE_OP_ALIAS(relu)
