@@ -53,7 +53,7 @@ def init_kv():
     my_rank = kv.rank
     nworker = kv.num_workers
     # init updater on servers
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     return kv, my_rank, nworker
 
 def init_kv_compressed(kv):
@@ -191,7 +191,7 @@ def test_sync_push_pull():
             kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold - 0.4))
             val2 = mx.nd.zeros(d[1])
             kv.pull(d[0],val2)
-            curval = pos_threshold * 2 * nworker
+            curval = pos_threshold * rate * nworker
             check_diff_to_scalar(val2, curval)
             kv.push(d[0], mx.nd.ones(d[1])*0.2)
             val3= mx.nd.zeros(d[1])
@@ -200,7 +200,7 @@ def test_sync_push_pull():
             kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold-0.2))
             val4 = mx.nd.zeros(d[1])
             kv.pull(d[0],val4)
-            curval += pos_threshold*2*nworker
+            curval += pos_threshold*rate*nworker
             check_diff_to_scalar(val4, curval)
 
     def check_ones(kv, pos, nworker):
@@ -211,7 +211,7 @@ def test_sync_push_pull():
         kv.push('221',mx.nd.ones(big_shape)*pos*4)
         val2 = mx.nd.zeros(big_shape)
         kv.pull('221', val2)
-        newval = curval + 2*nworker*pos
+        newval = curval + rate*nworker*pos
         check_diff_to_scalar(val2, newval)
 
     def check_pull_before_push(kv):
