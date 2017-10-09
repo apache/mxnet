@@ -41,6 +41,20 @@ struct init_mem_2bit {
   }
 };
 
+struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
+  float pos_threshold, neg_threshold;
+  DMLC_DECLARE_PARAMETER(TwoBitParam) {
+    DMLC_DECLARE_FIELD(pos_threshold)
+      .set_default(0.1)
+      .describe("Threshold to quantize positive values. "
+                  "Has to be greater than 0");
+    DMLC_DECLARE_FIELD(neg_threshold)
+      .set_default(-0.1)
+      .describe("Threshold to quantize negative values. "
+                  "Has to be less than 0");
+  }
+};
+
 template<typename xpu>
 void Create2BitArrayCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
@@ -48,11 +62,9 @@ void Create2BitArrayCompute(const nnvm::NodeAttrs& attrs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
   // For now, this method can only compress the float data
-  using namespace mshadow;
-  using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   // Init the memory of output to 0x00000000
-  Kernel<init_mem_2bit, xpu>::Launch(s, outputs[0].Size(),
+  mxnet_op::Kernel<init_mem_2bit, xpu>::Launch(s, outputs[0].Size(),
                               outputs[0].dptr<float>());  // compressed array
 }
 
@@ -73,9 +85,9 @@ inline bool Create2BitArrayShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool Create2BitArray2BitType(const nnvm::NodeAttrs& attrs,
-                                    std::vector<int> *in_attrs,
-                                    std::vector<int> *out_attrs) {
+inline bool Create2BitArrayType(const nnvm::NodeAttrs &attrs,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
   // 0. input array
   CHECK_EQ(in_attrs->size(), 1U);
   // 0. output array
@@ -90,13 +102,13 @@ inline bool Create2BitArray2BitType(const nnvm::NodeAttrs& attrs,
 struct init_threshold_2bit {
   MSHADOW_XINLINE static void Map(int i,
                                   float *out,
-                                  const float *neg_threshold,
-                                  const float *pos_threshold,
+                                  const float neg_threshold,
+                                  const float pos_threshold,
                                   int size) {
-    // The first two elments in output is threshold
+    // The first two elements in output are thresholds
     // The third element is the original size of the array
-    out[0] = *neg_threshold;
-    out[1] = *pos_threshold;
+    out[0] = neg_threshold;
+    out[1] = pos_threshold;
     out[2] = (float)size;
   }
 };
@@ -106,8 +118,8 @@ struct quantize_2bit {
                                   float *out,
                                   float *grad,
                                   float *residual,
-                                  const float *neg_threshold,
-                                  const float *pos_threshold) {
+                                  const float neg_threshold,
+                                  const float pos_threshold) {
     // Add residual to gradient
     grad[i] += residual[i];
     // get block id
@@ -119,9 +131,9 @@ struct quantize_2bit {
     // get column id
     int col_id = (i%16)%4;
     // Compress
-    if (grad[i] <= *neg_threshold) {  // set data to 01
+    if (grad[i] <= neg_threshold) {  // set data to 01
       // new residual
-      residual[i] = grad[i] - *neg_threshold;
+      residual[i] = grad[i] - neg_threshold;
       switch (col_id) {
         case 0:
           (*ch_ptr) |= 0x40;  // binary: (01)00 0000
@@ -138,8 +150,8 @@ struct quantize_2bit {
         default:
           break;
       }
-    } else if (grad[i] >= *pos_threshold) {  // set data to 10
-      residual[i] = grad[i] - *pos_threshold;
+    } else if (grad[i] >= pos_threshold) {  // set data to 10
+      residual[i] = grad[i] - pos_threshold;
       switch (col_id) {
         case 0:
           (*ch_ptr) |= 0x80;  // binary: (10)00 0000
@@ -163,36 +175,35 @@ struct quantize_2bit {
 };
 
 template<typename xpu>
-void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
+void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+                      const float neg_threshold, const float pos_threshold) {
   // First, init the memory of output to 0x00000000
-  Kernel<init_mem_2bit, xpu>::Launch(s, inputs[4].Size(),
-                              inputs[4].dptr<float>());  // compressed array
+  mxnet_op::Kernel<init_mem_2bit, xpu>::Launch(s, inputs[2].Size(),
+                              inputs[2].dptr<float>());  // compressed array
   // Then, init threshold and original size
-  Kernel<init_threshold_2bit, xpu>::Launch(s, 1,
-                              inputs[4].dptr<float>(),   // compressed array
-                              inputs[2].dptr<float>(),   // negative threshold
-                              inputs[3].dptr<float>(),   // positive threshold
-                              inputs[0].Size());         // original size
+  mxnet_op::Kernel<init_threshold_2bit, xpu>::Launch(s, 1,
+                              inputs[2].dptr<float>(),   // compressed array
+                              neg_threshold, pos_threshold,
+                              inputs[0].Size());
   // Finally, compress the data and calculate new residual
-  Kernel<quantize_2bit, xpu>::Launch(s, inputs[0].Size(),
-                          inputs[4].dptr<float>()+3,   // compressed array
+  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[0].Size(),
+                          inputs[2].dptr<float>()+3,   // compressed array
                           inputs[0].dptr<float>(),     // input array
                           inputs[1].dptr<float>(),     // residual array
-                          inputs[2].dptr<float>(),     // negative threshold
-                          inputs[3].dptr<float>());    // positive threshold
+                          neg_threshold,     // negative threshold
+                          pos_threshold);    // positive threshold
 }
 
+// function defined as operator
 template<typename xpu>
 void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs) {
-  // For now, this method can only compress the float data
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  Quantize2BitImpl<xpu>(s, inputs);
+  const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
+  Quantize2BitImpl<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -200,20 +211,16 @@ inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
                               std::vector<TShape> *out_attrs) {
   // 0. input array
   // 1. residual array
-  // 2. negative threshold
-  // 3. positive threshold
-  // 4. compressed array
-  CHECK_EQ(in_attrs->size(), 5U);
+  // 2. compressed array
+  CHECK_EQ(in_attrs->size(), 3U);
   CHECK(!shape_is_none(in_attrs->at(0)));
   CHECK(!shape_is_none(in_attrs->at(1)));
   CHECK_EQ(in_attrs->at(0).Size(),
            in_attrs->at(1).Size());
-  CHECK(shape_is_scalar(in_attrs->at(2)));
-  CHECK(shape_is_scalar(in_attrs->at(3)));
   int shape = in_attrs->at(0).Size() % 16 == 0 ?
                     in_attrs->at(0).Size() / 16 + 3:
                     in_attrs->at(0).Size() / 16 + 4;
-  CHECK_EQ(in_attrs->at(4).Size(), shape)
+  CHECK_EQ(in_attrs->at(2).Size(), shape)
     << "The size of output array is not equal to "
     << "the size of compressed array";
   return true;
@@ -224,22 +231,14 @@ inline bool Quantize2BitType(const nnvm::NodeAttrs& attrs,
                              std::vector<int> *out_attrs) {
   // 0. input array
   // 1. residual array
-  // 2. negative threshold
-  // 3. positive threshold
-  // 4. compressed array
-  CHECK_EQ(in_attrs->size(), 5U);
+  // 2. compressed array
+  CHECK_EQ(in_attrs->size(), 3U);
   // check input
   CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)
     << "`quantize_2bit_` only supports float32 input for now";
   CHECK_EQ((*in_attrs)[1], mshadow::kFloat32)
     << "`quantize_2bit_` only supports float32 input for now";
   CHECK_EQ((*in_attrs)[2], mshadow::kFloat32)
-    << "the third input of `quantize_2bit` should be "
-    << "a tensor with type of float";
-  CHECK_EQ((*in_attrs)[3], mshadow::kFloat32)
-    << "the fourth input of `quantize_2bit` should be "
-    << "a tensor with type of float";
-  CHECK_EQ((*in_attrs)[4], mshadow::kFloat32)
     << "`quantize_2bit_` only supports float32 input for now";
   return true;
 }

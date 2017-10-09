@@ -168,7 +168,8 @@ template<typename xpu>
 void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
 
 template<typename xpu>
-void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
+void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+                          const float neg_threshold, const float pos_threshold);
 
 template<typename Device>
 void ElementwiseSum(const std::vector<TBlob> source,

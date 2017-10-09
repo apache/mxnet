@@ -547,7 +547,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority) {
 }
 
 void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
-              const NDArray &pos_threshold, const NDArray &neg_threshold,
+              const float neg_threshold, const float pos_threshold,
               std::string& compress, int priority) {
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
@@ -558,23 +558,20 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   int b = to->ctx().dev_mask();
   std::vector<Engine::VarHandle> const_vars;
   const_vars.push_back(from.var());
-  const_vars.push_back(pos_threshold.var());
-  const_vars.push_back(neg_threshold.var());
   std::vector<Engine::VarHandle> mutable_vars;
   mutable_vars.push_back(ret.var());
   mutable_vars.push_back(res.var());
 
-  std::vector<TBlob> inputs(5);
+  std::vector<TBlob> inputs(3);
   inputs[0] = from.data();
   inputs[1] = residual->data();
-  inputs[2] = neg_threshold.data();
-  inputs[3] = pos_threshold.data();
-  inputs[4] = to->data();
+  inputs[2] = to->data();
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([inputs](RunContext ctx) {
-          mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
+      Engine::Get()->PushSync([inputs, neg_threshold, pos_threshold](RunContext ctx) {
+          mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
+                                                    neg_threshold, pos_threshold);
         }, from.ctx(), const_vars, mutable_vars,
         FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {

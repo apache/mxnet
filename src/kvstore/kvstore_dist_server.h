@@ -387,8 +387,6 @@ class KVStoreDistServer {
       NDArray recved = NDArray(recv_blob, 0);
       NDArray decomp_buf = decomp_buf_[key];
       if (compress_ != "none") {
-//        std::cout<<"threshold value is "<<(*(recv_blob.dptr<float>()+0))
-//                 <<" and "<<(*(recv_blob.dptr<float>()+1))<<" "<<(*(recv_blob.dptr<float>()+2))<< " "<<(*(recv_blob.dptr<float>()+3))<<std::endl;
         long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
         dshape = TShape{original_size};
         if (decomp_buf.is_none()) {
@@ -416,29 +414,15 @@ class KVStoreDistServer {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
-//            std::cout<<"recvd threshold"<<* (float*) recved.data().dptr_<<std::endl;
-//            std::cout<<"recvd data"<<* ((float*) recved.data().dptr_+3)<<std::endl;
-//            for(int i=3; i<recved.shape().Size(); i++) {
-//              float f = *((float *) recved.data().dptr_+i);
-//              CHECK_EQ (f,0);
-//            }
-            Dequantize(recved, &decomp_buf, compress_, 0);
-            decomp_buf.WaitToRead();
-//            std::cout<<"decompbuf "<<* (float*) decomp_buf.data().dptr_<<std::endl;
-            CopyFromTo(decomp_buf, &merged.array, 0);
+            Dequantize(recved, &merged.array, compress_, 0);
+//            CopyFromTo(decomp_buf, &merged.array, 0);
           }
         } else {
           if (compress_ == "none") {
             merged.array += recved;
           } else {
-//            std::cout<<"recvd data"<<* ((float*) recved.data().dptr_+3)<<std::endl;
-//            for(int i=3; i<recved.shape().Size(); i++) {
-//              float f = *((float *) recved.data().dptr_+i);
-//              CHECK_EQ (f,0);
-//            }
             Dequantize(recved, &decomp_buf, compress_, 0);
-            decomp_buf.WaitToRead();
-//            std::cout<<"decompbuf "<<* (float*) decomp_buf.data().dptr_<<std::endl;
+//            decomp_buf.WaitToRead();
             merged.array += decomp_buf;
           }
         }
@@ -461,8 +445,6 @@ class KVStoreDistServer {
         server->Response(req_meta);
         stored.WaitToRead();
       }
-//      std::cout<<"Server: Finished push"<<std::endl;
-//      std::cout<<"stored.shape() "<<stored.shape()<<std::endl;
     } else {
       // pull
       ps::KVPairs<real_t> response;
@@ -502,7 +484,7 @@ class KVStoreDistServer {
 
   /**
    * \brief decomp_buf_ is a buffer into which compressed values are
-   * decompressed before merging to the store
+   * decompressed before merging to the store. used when compress_!='none'
    */
   std::unordered_map<int, NDArray> decomp_buf_;
 

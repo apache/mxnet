@@ -25,7 +25,7 @@
 
 namespace mxnet {
 namespace op {
-
+DMLC_REGISTER_PARAMETER(TwoBitParam);
 NNVM_REGISTER_OP(_contrib_quantize_2bit)
 .describe(R"code(Quantize a input tensor using 2-bit compression with residual
 array and user-specified threshold.
@@ -49,30 +49,30 @@ original array will be compressed into a single element in the last element.
 In two bit compress, every 16 float data in original array
 will be packed into one float data in output array.
 )code" ADD_FILELINE)
-.set_num_inputs(5)
+.set_num_inputs(3)
 .set_num_outputs(0)
+.set_attr_parser(ParamParser<TwoBitParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", Quantize2BitShape)
 .set_attr<nnvm::FInferType>("FInferType", Quantize2BitType)
 .set_attr<FCompute>("FCompute<cpu>", Quantize2BitCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_quantize_2bit"})
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
 [](const nnvm::NodeAttrs& attrs) {
-    return std::vector<uint32_t>{2,4};
+    return std::vector<uint32_t>{1,2};
 })
 .add_argument("gradient_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_argument("residual_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
-.add_argument("neg_threshold", "NDArray-or-Symbol", "The negative shreshold")
-.add_argument("pos_shreshold", "NDArray-or-Symbol", "The positive shreshold")
-.add_argument("compressed_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`");
+.add_argument("compressed_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
+.add_arguments(TwoBitParam::__FIELDS__());
 
 
 NNVM_REGISTER_OP(_contrib_create_2bit)
-.describe(R"code(Tp generate a compressed array with right shape.
+  .describe(R"code(Tp generate a compressed array with right shape.
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", Create2BitArrayShape)
-.set_attr<nnvm::FInferType>("FInferType", Create2BitArray2BitType)
+  .set_num_inputs(1)
+  .set_num_outputs(1)
+  .set_attr<nnvm::FInferShape>("FInferShape", Create2BitArrayShape)
+  .set_attr<nnvm::FInferType>("FInferType", Create2BitArrayType)
 .set_attr<FCompute>("FCompute<cpu>", Create2BitArrayCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_create_2bit"})
 .add_argument("input", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`");

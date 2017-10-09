@@ -906,7 +906,7 @@ size_t num_aux_data(NDArrayStorageType stype);
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
-              const NDArray &pos_threshold, const NDArray &neg_threshold,
+              const float neg_threshold, const float pos_threshold,
               std::string& compress, int priority);
 
 void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int priority);
