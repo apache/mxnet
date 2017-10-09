@@ -708,6 +708,5 @@ def test_forward_reshape():
 
 
 if __name__ == '__main__':
-    # import nose
-    # nose.runmodule()
-    test_factorization_machine_module()
+    import nose
+    nose.runmodule()
