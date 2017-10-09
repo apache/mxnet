@@ -1,46 +1,50 @@
-For bugs or installation issues, please provide the following information.
+Note: Providing complete information in the most concise form is the best way to get help. This issue template serves as the checklist for essential information to most of the technical issues.
 
-** What's the best way of getting help through issues? **
-Providing complete information in the most concise form in issues is the best way to get help from the community. This issue template serves as the checklist for providing information that are essential to solving most of the technical issues.
+If the issue is non-technical, feel free to present the information in what you believe is the best form.
 
-Also here's a book to those who are interested in perfecting the skill of asking questions: http://www.catb.org/~esr/faqs/smart-questions.html
+## Description
+(Brief description of the problem in no more than 2 sentences)
 
-## Environment info
-Operating System:
+## Environment info (Required)
 
-Compiler: (gcc/clang/mingw/visual studio)
+```
+What to do:
+1. Download the diagnosis script from https://raw.githubusercontent.com/apache/incubator-mxnet/master/tools/diagnose.py
+2. Run the script and paste its output here.
+
+```
 
 Package used (Python/R/Scala/Julia):
-
-MXNet version:
-
-Or if installed from source:
-
-MXNet commit hash (`git rev-parse HEAD`):
-
-If you are using python package, please provide
-
-Python version and distribution:
+(I'm using ...)
 
 If you are using R package, please provide
 
 R `sessionInfo()`:
 
+## Build info (Required if built from source)
+
+Compiler (gcc/clang/mingw/visual studio):
+
+MXNet commit hash:
+(Paste the output of `git rev-parse HEAD` here.)
+
+Build config:
+(Paste the content of config.mk, or the build command.)
+
 ## Error Message:
-Please paste the full error message, including stack trace.
+(Paste the complete error message, including stack trace.)
 
 ## Minimum reproducible example
-if you are using your own code, please provide a short script that reproduces the error.
+If you are using your own code, please provide a short script that reproduces the error.
+Otherwise, please provide link to the existing example.
 
 ## Steps to reproduce
-or if you are running standard examples, please provide the commands you have run that lead to the error.
+(Paste the commands you ran that produced the error.)
 
 1.
 2.
-3.
 
 ## What have you tried to solve it?
 
 1.
 2.
-3.
