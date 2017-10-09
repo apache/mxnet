@@ -50,8 +50,10 @@ def init_git_win() {
 def make(docker_type, make_flag) {
   timeout(time: max_time, unit: 'MINUTES') {
     try {
-      sh "${docker_run} ${docker_type} sudo make clean"
-      sh "${docker_run} ${docker_type} sudo make -C amalgamation/ clean"
+      sh "${docker_run} ${docker_type} sudo rm -rf *"
+      sh "${docker_run} ${docker_type} sudo git reset --hard"
+      // sh "${docker_run} ${docker_type} sudo make clean"
+      // sh "${docker_run} ${docker_type} sudo make -C amalgamation/ clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
