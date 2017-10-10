@@ -230,7 +230,6 @@ class KVStore(object):
 
         For `RowSparseNDArray` values, this call is ignored,
         please use ``row_sparse_pull`` instead.
-        
 
         Parameters
         ----------
