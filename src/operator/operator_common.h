@@ -520,7 +520,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
   auto warning_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
-  bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
   if (log_verbose) {
     std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
     if (warning_printed->find(warning) == warning_printed->end()) {
