@@ -1,6 +1,6 @@
 # Gluon
 
-The new Gluon interface is available as a library in Apache MXNet and allows developers of all skill levels to prototype, build, and train deep learning models. This interface greatly simplifies the process of creating deep learning models without sacrificing training speed. You can easily get started with the Gluon interface using [this extensive set of tutorials, documentation, and example] (https://virtualenv.pypa.io/en/stable/userguide/).
+The new Gluon interface is available as a library in Apache MXNet and allows developers of all skill levels to prototype, build, and train deep learning models. This interface greatly simplifies the process of creating deep learning models without sacrificing training speed. You can easily get started with the Gluon interface using [this extensive set of tutorials, documentation, and example](https://virtualenv.pypa.io/en/stable/userguide/).
 
 **Here are Gluon’s four major advantages:**
 
