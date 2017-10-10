@@ -142,8 +142,8 @@ class KVStore(object):
         This function returns immediately after adding an operator to the engine.
         The actual operation is executed asynchronously. If there are consecutive
         pushes to the same key, there is no guarantee on the serialization of pushes.
-        Simultaneous pushes to the same key may conflict and
-        overwrite the previous pending push as of now.
+        The execution of a push does not guarantee that all previous pushes are
+        finished.
         There is no synchronization between workers.
         One can use ``_barrier()`` to sync all workers.
 
@@ -223,12 +223,13 @@ class KVStore(object):
         Subsequent attempts to read from the `out` variable will be blocked until the
         pull operation completes.
 
-        `pull` is executed asynchronously after all previous `push` and `pull` calls
-        for the same input key(s) are finished.
+        `pull` is executed asynchronously after all previous `pull` calls and only
+        the last `push` call for the same input key(s) are finished.
 
-        The returned values are gauranteed to be the latest values in the store.
+        The returned values are guaranteed to be the latest values in the store.
 
-        For `RowSparseNDArray` values, please use ``row_sparse_pull`` instead.
+        For `RowSparseNDArray` values, this call is ignored,
+        please use ``row_sparse_pull`` instead.
 
         Parameters
         ----------
@@ -289,7 +290,8 @@ class KVStore(object):
         from the store with specified row_ids.
 
         `row_sparse_pull` is executed asynchronously after all previous
-        `push`/`pull`/`row_sparse_pull` calls for the same input key(s) are finished.
+        `pull`/`row_sparse_pull` calls and the last `push` call for the
+        same input key(s) are finished.
 
         The returned values are guaranteed to be the latest values in the store.
 

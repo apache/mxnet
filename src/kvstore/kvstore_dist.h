@@ -272,7 +272,7 @@ class KVStoreDist : public KVStoreLocal {
       auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        // A push right after a previous push may conflict and overwrite the previous push.
+        // Start of a push doesn't guarantee that the previous pushes are completed.
         // This shouldn't affect training of networks though because training involves
         // a sequence of push, pull, then push. This imposes ordering that the
         // second push happens after the first pull, and the pull happens after first push.
