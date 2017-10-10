@@ -13,6 +13,7 @@ err = null
 
 // initialize source codes
 def init_git() {
+  deleteDir()
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
@@ -30,6 +31,7 @@ def init_git() {
 
 def init_git_win() {
   retry(5) {
+    deleteDir()
     try {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
