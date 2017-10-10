@@ -525,10 +525,17 @@ fixed-size items.
             else:
                 return self
 
-        # if key is any type of NDArray, list, or np.ndarray
-        # make a tuple from it
-        if isinstance(key, (NDArray, list, np.ndarray)):
+        # if key is any type of NDArray, list, or np.ndarray make a tuple from it
+        # Note: Only support array-like object for key if key is a list.
+        if isinstance(key, (NDArray, np.ndarray)):
             key = (key,)
+        elif isinstance(key, list):
+            try:
+                tmp = np.array(key, dtype='int32')
+                key = (tmp,)
+            except:
+                raise TypeError('Indexing NDArray only supports array-like object'
+                                ' when the index=%s is of type list' % str(key))
 
         if isinstance(key, tuple):
             if _need_gather_nd_op(key):
@@ -543,7 +550,7 @@ fixed-size items.
         """Get item when key is a tuple of any objects of the following types:
         NDArray, np.ndarray, list, tuple, slice, and integer. Note that if
         all the objects in the tuple are of type slice with step=1, it should
-        go with basic indexing for better efficiency."""
+        invoke slice operator for better efficiency."""
         if not isinstance(key, tuple):
             raise ValueError('index=%s must be a tuple type to use advanced indexing, received type=%s'
                              % (str(key), str(type(key))))
@@ -587,6 +594,8 @@ fixed-size items.
         return op.gather_nd(self, indices)
 
     def _invoke_slice_op(self, key):
+        """This function is called when key is a tuple of slices with
+        all steps being None or equal to 1."""
         if not isinstance(key, tuple):
             raise ValueError('index=%s must be a tuple type, received type=%s'
                              % (str(key), str(type(key))))
@@ -1829,9 +1838,11 @@ def _need_gather_nd_op(key):
 
 def _get_index_range(start, stop, length, step=1):
     """Given start, stop, step and array length, return
-    valid values of start, stop, and step for generating index range.
+    absolute values of start, stop, and step for generating index range.
+    The returned values have been compensated by adding length if they
+    are less than zero for all the cases but slice(None, None, -1).
     Note that the returned value of stop is not necessarily >= 0, since
-    stop is -1 in the case of ::-1."""
+    absolute stop is -1 in the case of slice(None, None, -1)."""
     if step == 0:
         raise ValueError('step size cannot be zero')
     if length < 0:
