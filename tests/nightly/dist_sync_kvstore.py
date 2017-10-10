@@ -44,7 +44,6 @@ big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
 kv = mx.kv.create('dist_sync')
 
 def init_kv():
-    # kv = mx.kv.create('dist_sync')
     # init kv dns keys
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
     kv.init('99', mx.nd.ones(big_shape))
@@ -179,16 +178,11 @@ def test_sync_push_pull():
 
 def test_sync_init():
     def check_init(kv, cur_keys, cur_shape, device=False):
-        if device:
-            val = [mx.nd.zeros(cur_shape, mx.gpu()) for i in cur_keys]
-        else:
-            val = [mx.nd.zeros(cur_shape) for i in cur_keys]    
+        ctx = mx.gpu(0) if device else mx.cpu()
+        val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
             expected = i
-            if device:
-                kv.init(cur_keys[i], [mx.nd.ones(cur_shape, mx.gpu()) * i])
-            else:
-                kv.init(cur_keys[i], [mx.nd.ones(cur_shape) * i])
+            kv.init(cur_keys[i], [mx.nd.ones(cur_shape, ctx) * i])
             kv.pull(cur_keys[i], out=val[i])
             check_diff_to_scalar(val[i], expected)
     check_init(kv, init_test_keys, shape)
