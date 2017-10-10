@@ -17,6 +17,11 @@ What to do:
 Package used (Python/R/Scala/Julia):
 (I'm using ...)
 
+For Scala user, please provide:
+1. Java version: (`java -version`)
+2. Maven version: (`mvn -version`)
+3. Scala runtime if applicable: (`scala -version`)
+
 For R user, please provide R `sessionInfo()`:
 
 ## Build info (Required if built from source)
