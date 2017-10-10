@@ -1,5 +1,5 @@
 var searchBox = $("#search-input-wrap");
-var TITLE = ['/get_started/', '/tutorials/', '/community/contribute.html', '/api/'];
+var TITLE = ['/get_started/', '/tutorials/', '/gluon/' , '/community/contribute.html', '/api/'];
 var DOC_TITLE = ['/faq/', '/architecture/', '/model_zoo/'];
 var APISubmenu, versionSubmenu, docSubmenu;
 $("#burgerMenu").children().each(function () {
