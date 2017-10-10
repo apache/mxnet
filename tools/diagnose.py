@@ -114,7 +114,7 @@ def check_mxnet():
         import traceback
         if not isinstance(e, IOError):
             print("An error occured trying to import mxnet.")
-            print("This is very likely due to missing dll files.")
+            print("This is very likely due to missing missing or incompatible library files.")
         print(traceback.format_exc())
 
 def check_os():
