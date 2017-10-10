@@ -110,12 +110,12 @@ def check_mxnet():
             print('Commit Hash   :', ch)
     except ImportError:
         print('No MXNet installed.')
-    except IOError:
-        pass
-    except:
-        print("An error occured trying to import mxnet.")
-        print("This is very likely due to a missing dll.")
-        raise
+    except Exception as e:
+        import traceback
+        if not isinstance(e, IOError):
+            print("An error occured trying to import mxnet.")
+            print("This is very likely due to missing dll files.")
+        print(traceback.format_exc())
 
 def check_os():
     print('----------System Info----------')
