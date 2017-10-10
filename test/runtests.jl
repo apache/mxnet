@@ -11,6 +11,8 @@ function test_dir(dir)
   end
 end
 
+info("libmxnet version => $(mx.LIB_VERSION)")
+
 include(joinpath(dirname(@__FILE__), "common.jl"))
 @testset "MXNet Test" begin
   test_dir(joinpath(dirname(@__FILE__), "unittest"))
