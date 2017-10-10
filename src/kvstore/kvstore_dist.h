@@ -276,7 +276,7 @@ class KVStoreDist : public KVStoreLocal {
         // This shouldn't affect training of networks though because training involves
         // a sequence of push, pull, then push. This imposes ordering that the
         // second push happens after the first pull, and the pull happens after first push.
-          send_buf = merged;  // avoid memory copy
+        send_buf = merged;  // avoid memory copy
       } else {
         if (send_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
@@ -322,7 +322,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
-  void PullRowSparse_(const int key, NDArray *recv_buf, const NDArray indices, int priority) {
+  void PullRowSparse_(const int key, NDArray *recv_buf, const NDArray& indices, int priority) {
     using namespace rowsparse;
     auto pull_from_servers = [this, key, recv_buf, indices]
                              (RunContext rctx, Engine::CallbackOnComplete cb) {

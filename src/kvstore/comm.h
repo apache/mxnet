@@ -68,7 +68,7 @@ class Comm {
             provided row_ids
    */
   virtual void BroadcastRowSparse(int key, const NDArray& src,
-                                  const std::vector<std::pair<NDArray*, NDArray>> dst,
+                                  const std::vector<std::pair<NDArray*, NDArray>>& dst,
                                   const bool use_copy,
                                   const int priority) = 0;
 
@@ -191,7 +191,7 @@ class CommCPU : public Comm {
   }
 
   void BroadcastRowSparse(int key, const NDArray& src,
-                          const std::vector<std::pair<NDArray*, NDArray>> dst,
+                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
                           const bool use_copy,
                           const int priority) override {
     using namespace mshadow;
@@ -542,7 +542,7 @@ class CommDevice : public Comm {
   }
 
   void BroadcastRowSparse(int key, const NDArray& src,
-                          const std::vector<std::pair<NDArray*, NDArray>> dst,
+                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
                           const bool use_copy,
                           const int priority) override {
     LOG(FATAL) << "Not implemented yet";
