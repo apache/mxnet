@@ -227,10 +227,11 @@ void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
  * \param dst - NDArray which is to be set to "all zeroes"
  */
 template<typename xpu>
-void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
-  // reset the shapes if it's not zeros (set_aux_shape() will set storage_shape to zero as well)
-  dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
+  if (dst.storage_initialized()) {
+    // reset the shapes if it's not zeros (set_aux_shape() will set storage_shape to zero as well)
+    dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+  }
 }
 
 /*!
@@ -238,16 +239,16 @@ void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
  * \param s - The device stream
  * \param dst - NDArray which is to be set to "all zeroes"
  */
-inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, NDArray *dst) {
-  dst->set_aux_shape(csr::kIdx, mshadow::Shape1(0));
-  dst->CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst->shape()[0] + 1));
-  TBlob indptr_data = dst->aux_data(csr::kIndPtr);
-  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(csr::kIndPtr), IType, {
+inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, const NDArray& dst) {
+  dst.set_aux_shape(csr::kIdx, mshadow::Shape1(0));
+  dst.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst.shape()[0] + 1));
+  TBlob indptr_data = dst.aux_data(csr::kIndPtr);
+  MSHADOW_IDX_TYPE_SWITCH(dst.aux_type(csr::kIndPtr), IType, {
     mxnet_op::Kernel<mxnet_op::set_zero, mshadow::cpu>::Launch(
       s, indptr_data.Size(), indptr_data.dptr<IType>());
   });
 }
-void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, NDArray *dst);
+void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst);
 
 /*!
  * \brief Fill an NDArray with zeros
@@ -272,11 +273,9 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) return;
   CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
   if (stype == kRowSparseStorage) {
-    NDArray nd(outputs[0]);
-    FillZerosRspImpl(s, &nd);
+    FillZerosRspImpl(s, outputs[0]);
   } else if (stype == kCSRStorage) {
-    NDArray nd(outputs[0]);
-    FillZerosCsrImpl(s, &nd);
+    FillZerosCsrImpl(s, outputs[0]);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
