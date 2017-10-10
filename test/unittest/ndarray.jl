@@ -425,6 +425,16 @@ function test_kwargs()
   @test all(copy(tx) .== tA)
 end
 
+function test_show()
+  let str = sprint(show, mx.NDArray([1 2 3 4]))
+    @test contains(str, "1x4")
+    @test contains(str, "mx.NDArray")
+    @test contains(str, "Int64")
+    @test contains(str, "CPU")
+    @test match(r"1\s+2\s+3\s+4", str) != nothing
+  end
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -445,6 +455,7 @@ end
   test_dot()
   test_reshape()
   test_kwargs()
+  test_show()
 end
 
 end

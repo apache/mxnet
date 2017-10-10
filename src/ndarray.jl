@@ -99,7 +99,8 @@ type NDArray
 end
 
 function Base.show(io :: IO, arr :: NDArray)
-  print(io, "mx.NDArray{$(eltype(arr))}$(size(arr))")
+  println(io, "$(join(size(arr), "x")) mx.NDArray{$(eltype(arr))} @ $(context(arr)):")
+  Base.showarray(io, try_get_shared(arr, sync=:read), false, header=false)
 end
 
 function NDArray{T<:Real}(data :: Array{T})
@@ -299,7 +300,7 @@ function eltype{T <: Union{NDArray, MX_NDArrayHandle}}(arr :: T)
 
   if dtype_ref[] == -1 # arr->is_none()
     warn("Eltype of $arr is not defined")
-    Base.show_backtrace(STDOUT,backtrace())
+    Base.show_backtrace(STDOUT, backtrace())
     println()
     return Float32
   else
@@ -832,24 +833,35 @@ function _wait_to_write(arr :: NDArray)
 end
 
 """
-    try_get_shared(arr)
+    try_get_shared(arr; sync=:nop)
 
 Try to create a Julia array by sharing the data with the underlying `NDArray`.
 
 # Arguments:
+
 * `arr::NDArray`: the array to be shared.
 
 !!! note
     The returned array does not guarantee to share data with the underlying `NDArray`.
     In particular, data sharing is possible only when the `NDArray` lives on CPU.
+
+* `sync::Symbol`: `:nop`,`:write`, `:read`
+  On CPU, invoke `_wait_to_read` if `:read`;
+  invoke `_wait_to_write` if `:write`.
 """
-function try_get_shared(arr :: NDArray)
+function try_get_shared(arr :: NDArray; sync::Symbol=:nop)
   if context(arr).device_type == CPU
     # try to do data sharing
-    return unsafe_wrap(Array, pointer(arr), size(arr))
+    if sync == :read
+      _wait_to_read(arr)
+    elseif sync == :write
+      _wait_to_write(arr)
+    end
+
+    unsafe_wrap(Array, pointer(arr), size(arr))
   else
     # impossible to share, just copying
-    return copy(arr)
+    copy(arr)
   end
 end
 
@@ -859,12 +871,12 @@ end
 Test whether `j_arr` is sharing data with `arr`.
 
 # Arguments:
-* Array j_arr: the Julia Array.
-* NDArray arr: the `NDArray`.
+
+* `j_arr::Array`: the Julia Array.
+* `arr::NDArray`: the `NDArray`.
 """
-function is_shared(j_arr :: Array, arr :: NDArray)
-  false
-end
+is_shared(j_arr :: Array, arr :: NDArray) = false
+
 function is_shared{T<:DType}(j_arr :: Array{T}, arr :: NDArray)
   if length(j_arr) != length(arr)
     return false
