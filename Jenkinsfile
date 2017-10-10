@@ -30,8 +30,8 @@ def init_git() {
 }
 
 def init_git_win() {
+  deleteDir()
   retry(5) {
-    deleteDir()
     try {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
