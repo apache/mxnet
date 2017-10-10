@@ -263,10 +263,10 @@ struct dequantize_2bit {
       case 0:
         // positve
         if (((*ch_ptr) & (0xc0)) == 0x80) {  // binary: (10)00 0000
-          out[i] = *pos_threshold;
+          out[i] = pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0xc0)) == 0x40) {  // binary: (01)00 0000
-          out[i] = *neg_threshold;
+          out[i] = neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -274,10 +274,10 @@ struct dequantize_2bit {
       case 1:
         // positve
         if (((*ch_ptr) & (0x30)) == 0x20) {  // binary: 00(10) 0000
-          out[i] = *pos_threshold;
+          out[i] = pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x30)) == 0x10) {  // binary: 00(01) 0000
-          out[i] = *neg_threshold;
+          out[i] = neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -285,10 +285,10 @@ struct dequantize_2bit {
       case 2:
         // positve
         if (((*ch_ptr) & (0x0c)) == 0x08) {  // binary: 00(10) 0000
-          out[i] = *pos_threshold;
+          out[i] = pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x0c)) == 0x04) {  // binary: 00(01) 0000
-          out[i] = *neg_threshold;
+          out[i] = neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -296,10 +296,10 @@ struct dequantize_2bit {
       case 3:
         // positve
         if (((*ch_ptr) & (0x03)) == 0x02) {  // binary: 00(10) 0000
-          out[i] = *pos_threshold;
+          out[i] = pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x03)) == 0x01) {  // binary: 00(01) 0000
-          out[i] = *neg_threshold;
+          out[i] = neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
