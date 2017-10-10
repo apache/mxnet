@@ -207,7 +207,6 @@ def test_sync_push_pull():
         val = mx.nd.zeros(big_shape)
         kv.pull('221', val)
         curval = val[0][0].asnumpy()[0]
-        print(curval)
         kv.push('221',mx.nd.ones(big_shape)*pos*4)
         val2 = mx.nd.zeros(big_shape)
         kv.pull('221', val2)

@@ -22,6 +22,10 @@ sys.path.insert(0, "../../python/")
 import mxnet as mx
 import numpy as np
 
+def check_diff_to_scalar(A, x, rank=None):
+    """ assert A == x"""
+    assert(np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x)
+
 keys = [3, 5, 7]
 # let the last shape exceed MXNET_KVSTORE_BIGARRAY_BOUND
 shapes = [(4, 4), (100, 100), (2000, 2000)];
@@ -55,9 +59,29 @@ def test_kvstore(kv_type):
             err = sum(err) / np.sum(np.abs(res[j]))
             assert(err < 1e-6), (err, shapes[j])
 
-test_kvstore('local_update_cpu')
-test_kvstore('local_allreduce_cpu')
-test_kvstore('local_allreduce_device')
+def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
+    print(kv_type)
+    kv = mx.kv.create(kv_type)
+    kv.set_compress({'compress':compress, 'neg_threshold':neg, 'pos_threshold':pos})
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
+    for k, s in zip(keys, shapes):
+        kv.init(k, mx.nd.zeros(s))
+    # data = [[np.(s)*2-1 for i in range(nworker)] for s in shapes]
+    def pull_before_push(kv):
+        for j in range(len(keys)):
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g))+1 for g in range(nworker)]
+            check_diff_to_scalar(out, 1)
+            kv.pull(keys[j], out=out)
+            check_diff_to_scalar(out, 0)
+            # err = [np.sum(np.abs(o.asnumpy() - res[j])) for o in out]
+            # err = sum(err) / np.sum(np.abs(res[j]))
+            # assert(err < 1e-6), (err, shapes[j])
+
+    pull_before_push(kv)
+test_compress_kvstore('local_update_cpu')
+# test_kvstore('local_update_cpu')
+# test_kvstore('local_allreduce_cpu')
+# test_kvstore('local_allreduce_device')
 
 ## group keys interface
 def test_group_kvstore(kv_type):
@@ -79,6 +103,6 @@ def test_group_kvstore(kv_type):
             err = sum(err) / np.sum(np.abs(a))
             assert(err < 1e-6), (err, a.shape)
 
-test_group_kvstore('local_update_cpu')
-test_group_kvstore('local_allreduce_cpu')
-test_group_kvstore('local_allreduce_device')
+# test_group_kvstore('local_update_cpu')
+# test_group_kvstore('local_allreduce_cpu')
+# test_group_kvstore('local_allreduce_device')
