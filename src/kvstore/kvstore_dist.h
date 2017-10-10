@@ -544,7 +544,7 @@ namespace kvstore {
     size_t cur_from = 0;
     //should be start of meta in new small_buf
     size_t cur_to = 0;
-    for(int i=0; i<pskv.keys.size(); i++) {
+    for(size_t i=0; i<pskv.keys.size(); i++) {
       // first 3 elements of this are meta info (thresholds
       // and size of original arr compressed
       NDArray part_compr = small_buf->Slice(cur_to, cur_to+pskv.lens[i]);
@@ -562,11 +562,11 @@ namespace kvstore {
       Quantize(part_data, &part_compr, &part_res, neg_threshold_, pos_threshold_, compress_, priority);
       part_compr.WaitToRead();
 
-        CHECK_EQ(*(float *) part_compr.data().dptr_,-0.5);
-        CHECK_EQ(*((float *) part_compr.data().dptr_+1),0.5);
-        for(int i=3; i<part_compr.shape().Size(); i++){
-          CHECK_EQ(*((float *) part_compr.data().dptr_+i),0);
-        }
+//        CHECK_EQ(*(float *) part_compr.data().dptr_,-0.5);
+//        CHECK_EQ(*((float *) part_compr.data().dptr_+1),0.5);
+//        for(int i=3; i<part_compr.shape().Size(); i++){
+//          CHECK_EQ(*((float *) part_compr.data().dptr_+i),0);
+//        }
 
 
 //      std::string s;
