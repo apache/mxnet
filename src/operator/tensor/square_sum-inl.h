@@ -351,7 +351,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(igrad->storage_type(), kRowSparseStorage);
   CHECK_EQ(req, kWriteTo);
   if (!input.storage_initialized()) {
-    FillZerosRspImpl<xpu>(s, *igrad);
+    FillZerosRspImpl(s, *igrad);
     return;
   }
 

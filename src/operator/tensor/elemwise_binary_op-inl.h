@@ -260,9 +260,12 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   if (!nr_rows) {
     return;
   }
+  CHECK_EQ(lhs.aux_shape(csr::kIndPtr).Size(), nr_rows + 1);
   const size_t nr_cols = lhs.shape().Size() / nr_rows;
 
   CHECK_EQ(lhs.shape().Size(), rhs.shape().Size());
+
+  const bool same_lhs_rhs = IsSameArray<DType>(lhs, output);
 
   const size_t lhs_nnz = lhs.storage_shape().Size();
   const size_t rhs_nnz = rhs.storage_shape().Size();
@@ -289,7 +292,9 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
   OpBase::FillDense<cpu, IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
   OpBase::FillDense<cpu, DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
-  OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0),  req, rhs_row.dptr_);
+  if (!same_lhs_rhs) {
+    OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  }
 
   // Column indices
   const Tensor<cpu, 1, IType> col_indices_l = lhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);
