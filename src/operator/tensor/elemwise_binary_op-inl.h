@@ -265,12 +265,12 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
   CHECK_EQ(lhs.shape().Size(), rhs.shape().Size());
 
-  const bool same_lhs_rhs = IsSameArray<DType>(lhs, output);
+  const bool same_lhs_rhs = IsSameArray(lhs, rhs);
 
   const size_t lhs_nnz = lhs.storage_shape().Size();
   const size_t rhs_nnz = rhs.storage_shape().Size();
 
-  const size_t output_nnz_guess = IsSameArray(lhs, rhs) ? lhs_nnz : lhs_nnz + rhs_nnz;
+  const size_t output_nnz_guess = same_lhs_rhs ? lhs_nnz : lhs_nnz + rhs_nnz;
 
   output.CheckAndAlloc({mshadow::Shape1(lhs.shape()[0] + 1),
                         mshadow::Shape1(std::min(output_nnz_guess, lhs.shape().Size()))});
