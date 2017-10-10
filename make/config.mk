@@ -57,6 +57,11 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+#whether to use NCCL library
+USE_NCCL = 0
+#add the path to NCCL library
+USE_NCCL_PATH = NONE
+
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator

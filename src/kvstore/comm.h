@@ -22,6 +22,9 @@
 #ifndef MXNET_KVSTORE_COMM_H_
 #define MXNET_KVSTORE_COMM_H_
 #include <dmlc/omp.h>
+#if MXNET_USE_NCCL
+#include <nccl.h>
+#endif  // MXNET_USE_NCCL
 #include <string>
 #include <algorithm>
 #include <utility>
@@ -32,6 +35,21 @@
 #include "mxnet/ndarray.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
+
+#if MXNET_USE_NCCL
+#include "../common/cuda_utils.h"
+
+#ifndef NCCL_MAJOR
+#define NCCL_MAJOR 1
+#endif
+
+#if NCCL_MAJOR == 1
+#define ncclGroupStart()
+#define ncclGroupEnd()
+#define ncclNumTypes nccl_NUM_TYPES
+#endif  // NCCL_MAJOR == 1
+#endif  // MXNET_USE_NCCL
+
 namespace mxnet {
 namespace kvstore {
 /**
@@ -46,8 +64,8 @@ class Comm {
   /**
    * \brief init key with the data shape and storage shape
    */
-  virtual void Init(int key, const NDArrayStorageType stype,
-                    const TShape& shape, int dtype = mshadow::kFloat32) = 0;
+  virtual void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+      int dtype = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -58,7 +76,10 @@ class Comm {
    */
   virtual void Broadcast(
       int key, const NDArray& src,
-      const std::vector<NDArray*> dst, int priority) = 0;
+      const std::vector<NDArray> dst, int priority) = 0;
+
+  virtual void CommSync(const std::vector<const NDArray*>& dst, int priority) { }
+  virtual void CommSync(const std::vector<NDArray>& dst, int priority) { }
 
   /**
    * \brief broadcast src to dst[i] with target row_ids for every i
@@ -98,7 +119,7 @@ class CommCPU : public Comm {
   virtual ~CommCPU() { }
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
-            int type = mshadow::kFloat32) override {
+            int type = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) override {
     if (stype == kDefaultStorage) {
       merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
     } else {
@@ -178,7 +199,7 @@ class CommCPU : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray*> dst, int priority) override {
+                 const std::vector<NDArray> dst, int priority) override {
     int mask = src.ctx().dev_mask();
     if (mask == Context::kCPU) {
       for (auto d : dst) CopyFromTo(src, d, priority);
@@ -468,7 +489,7 @@ class CommDevice : public Comm {
   virtual ~CommDevice() { }
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
-            int dtype = mshadow::kFloat32) override {
+            int dtype = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) override {
     if (stype == kDefaultStorage) {
       sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
     } else {
@@ -522,14 +543,14 @@ class CommDevice : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray*> dst, int priority) override {
+                 const std::vector<NDArray> dst, int priority) override {
     if (!inited_) {
       // copy to a random device first
       int dev_id = key % dst.size();
       CopyFromTo(src, dst[dev_id], priority);
       for (size_t i = 0; i < dst.size(); ++i) {
         if (i != static_cast<size_t>(dev_id)) {
-          CopyFromTo(*dst[dev_id], dst[i], priority);
+          CopyFromTo(dst[dev_id], dst[i], priority);
         }
       }
     } else {
@@ -635,6 +656,302 @@ class CommDevice : public Comm {
   bool inited_;
 };
 
+#if MXNET_USE_NCCL
+class CommNCCL : public Comm {
+ public:
+  CommNCCL() {
+    inited_ = false;
+    pinned_ctx_ = Context::CPUPinned(0);
+  }
+
+  virtual ~CommNCCL() {
+    for (auto e : nccl_data_) {
+      cudaStreamDestroy(e.second.stream);
+      ncclCommDestroy(e.second.comm);
+    }
+  }
+
+  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+            int dtype = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) override {
+    if (stype == kDefaultStorage) {
+      sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
+    } else {
+      LOG(FATAL) << "NCCL KVStore does not support sparse storage type";
+    }
+  }
+
+  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
+                        int priority) override {
+    // avoid extra copy for single device, but it may bring problems for
+    // abnormal usage of kvstore
+    if (src.size() == 1) {
+      return src[0];
+    }
+
+    if (!inited_) {
+      std::vector<Context> devs;
+      for (const auto& a : src) {
+        devs.push_back(a.ctx());
+      }
+      InitNCCL(devs);
+      InitMergeBuffer(devs);
+    }
+
+    std::vector<int> dev_ids;
+    for (auto e : src) {
+      dev_ids.push_back(e.ctx().dev_id);
+    }
+    std::sort(dev_ids.begin(), dev_ids.end());
+    CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
+
+    auto& buf = merge_buf_[key];
+    int root = buf.merged.ctx().dev_id;
+    size_t root_id = -1;
+    for (size_t i = 0; i < src.size(); ++i) {
+      if (src[i].ctx().dev_id == root) {
+        root_id = i;
+        break;
+      }
+    }
+
+    auto& reduce = buf.merged;
+
+    std::vector<Engine::VarHandle> const_vars;
+    for (size_t i = 0; i < src.size(); ++i) {
+      const_vars.push_back(src[i].var());
+    }
+    Engine::Get()->PushSync([src, reduce, root_id, this](RunContext rctx) {
+          {
+            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+            int root = nccl_data_[src[root_id].ctx().dev_id].rank;
+            ncclGroupStart();
+            for (size_t i = 0; i < src.size(); ++i) {
+              NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
+              if (i == root_id) {
+              MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+              ncclReduce(src[i].data().dptr<DType>(),
+                                reduce.data().dptr<DType>(),
+                                src[i].shape().Size(),
+                                GetNCCLType(src[i].dtype()),
+                                ncclSum,
+                                root,
+                                cur.comm,
+                                cur.stream););
+              } else {
+              MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+              ncclReduce(src[i].data().dptr<DType>(),
+                                NULL,
+                                src[i].shape().Size(),
+                                GetNCCLType(src[i].dtype()),
+                                ncclSum,
+                                root,
+                                cur.comm,
+                                cur.stream););
+              }
+            }
+            ncclGroupEnd();
+          }
+        },
+        Context::CPU(),
+        const_vars,
+        {reduce.var()},
+        FnProperty::kCPUPrioritized,
+        priority,
+        PROFILER_MESSAGE("KVStoreReduce"));
+
+    return buf.merged;
+  }
+
+  void CommSync(const std::vector<const NDArray*>& dst,
+                int priority) override {
+    std::vector<Engine::VarHandle> const_vars;
+    std::vector<Engine::VarHandle> mutate_vars;
+    for (size_t i = 0; i < dst.size(); ++i) {
+        mutate_vars.push_back(dst[i]->var());
+    }
+    Engine::Get()->PushSync([this](RunContext rctx) {
+          for (auto cur : nccl_data_) {
+            CUDA_CALL(cudaSetDevice(cur.second.dev_id));
+            CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
+          }
+        },
+        Context::CPU(),
+        const_vars,
+        mutate_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        PROFILER_MESSAGE("KVStoreStreamSync"));
+  }
+
+  void CommSync(const std::vector<NDArray>& dst,
+                int priority) override {
+    std::vector<Engine::VarHandle> const_vars;
+    std::vector<Engine::VarHandle> mutate_vars;
+    for (size_t i = 0; i < dst.size(); ++i) {
+        mutate_vars.push_back(dst[i].var());
+    }
+    Engine::Get()->PushSync([this](RunContext rctx) {
+          for (auto cur : nccl_data_) {
+            CUDA_CALL(cudaSetDevice(cur.second.dev_id));
+            CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
+          }
+        },
+        Context::CPU(),
+        const_vars,
+        mutate_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        PROFILER_MESSAGE("KVStoreStreamSync"));
+  }
+
+  void BroadcastRowSparse(int key, const NDArray& src,
+                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                          const bool use_copy,
+                          const int priority) override {
+    LOG(FATAL) << "NCCL kvstore does not support sparse storage type";
+  }
+
+  void Broadcast(int key, const NDArray& src,
+                 const std::vector<NDArray> dst, int priority) override {
+    if (!inited_) {
+      // copy to a random device first
+      int dev_id = key % dst.size();
+      CopyFromTo(src, dst[dev_id], priority);
+      for (size_t i = 0; i < dst.size(); ++i) {
+        if (i != static_cast<size_t>(dev_id)) {
+          CopyFromTo(dst[dev_id], dst[i], priority);
+        }
+      }
+    } else {
+      auto& buf = merge_buf_[key];
+      int root = src.ctx().dev_id;
+      assert(root == buf.ctx().dev_id);
+      size_t root_id = -1;
+      for (size_t i = 0; i < dst.size(); ++i) {
+        if (dst[i].ctx().dev_id == root) {
+          root_id = i;
+          break;
+        }
+      }
+      std::vector<int> dev_ids;
+      for (size_t i = 0; i < dst.size(); ++i) {
+        auto& bcast = (i == root_id) ? src : dst[i];
+        dev_ids.push_back(bcast.ctx().dev_id);
+      }
+      std::sort(dev_ids.begin(), dev_ids.end());
+      CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
+      CopyFromTo(src, dst[root_id], priority);
+      if (dst.size() == 1) return;
+      std::vector<Engine::VarHandle> mutable_vars;
+      for (size_t i = 0; i < dst.size(); ++i) {
+        if ( i != root_id)
+          mutable_vars.push_back(dst[i].var());
+      }
+      Engine::Get()->PushSync([src, dst, root_id, this](RunContext rctx) {
+          {
+            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+            int root = nccl_data_[src.ctx().dev_id].rank;
+            ncclGroupStart();
+            for (size_t i = 0; i < dst.size(); ++i) {
+              auto& bcast = (i == root_id) ? src : dst[i];
+              NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
+              MSHADOW_TYPE_SWITCH(bcast.dtype(), DType,
+                  ncclBcast(bcast.data().dptr<DType>(),
+                    bcast.shape().Size(),
+                    GetNCCLType(bcast.dtype()),
+                    root,
+                    cur.comm,
+                    cur.stream););
+            }
+            ncclGroupEnd();
+          }
+      },
+      Context::CPU(),
+      {src.var()},
+      mutable_vars,
+      FnProperty::kCPUPrioritized,
+      priority,
+      PROFILER_MESSAGE("KVStoreBCast"));
+    }
+  }
+
+ private:
+  ncclDataType_t GetNCCLType(int dtype) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        return ncclFloat;
+      case mshadow::kFloat16:
+        return ncclHalf;
+      case mshadow::kFloat64:
+        return ncclDouble;
+      case mshadow::kUint8:
+        return ncclChar;
+      case mshadow::kInt32:
+        return ncclInt;
+      default:
+        LOG(FATAL) << "Unknown type passed to NCCL KVStore";
+    }
+    return ncclNumTypes;
+  }
+
+  void InitNCCL(const std::vector<Context>& devs) {
+    for (size_t i = 0; i < devs.size(); ++i) {
+      device_ids_.push_back(devs[i].dev_id);
+    }
+    std::sort(device_ids_.begin(), device_ids_.end());
+    std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+    std::vector<ncclComm_t> comms(devs.size());
+    ncclCommInitAll(&(comms[0]), devs.size(), &(device_ids_[0]));
+    for (size_t i = 0; i < devs.size(); ++i) {
+      NCCLEntry e;
+      e.dev_id = device_ids_[i];
+      e.comm = comms[i];
+      e.rank = i;
+      cudaSetDevice(e.dev_id);
+      cudaStreamCreate(&(e.stream));
+      nccl_data_[device_ids_[i]] = e;
+    }
+  }
+
+  using KeyAttrs = std::tuple<int, TShape, int>;
+  // try to allocate buff on device evenly
+  void InitMergeBuffer(const std::vector<Context>& devs) {
+    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
+      int key  = std::get<0>(sorted_key_attrs_[i]);
+      TShape s = std::get<1>(sorted_key_attrs_[i]);
+      int type = std::get<2>(sorted_key_attrs_[i]);
+      auto& buf = merge_buf_[key];
+      Context ctx;
+      // use devs[0] as root
+      ctx = devs[0];
+      buf.merged = NDArray(s, ctx, false, type);
+    }
+    inited_ = true;
+  }
+
+  std::vector<KeyAttrs> sorted_key_attrs_;
+  /// \brief temporal space for pushing and pulling
+  struct BufferEntry {
+    /// \brief the merged value
+    NDArray merged;
+  };
+  struct NCCLEntry {
+    /// \brief device ID
+    int dev_id;
+    /// \brief NCCL commmunicator
+    ncclComm_t comm;
+    /// \brief NCCL rank
+    int rank;
+    /// \brief GPU stream to use with NCCL
+    cudaStream_t stream;
+  };
+  std::unordered_map<int, BufferEntry> merge_buf_;
+  std::unordered_map<int, NCCLEntry> nccl_data_;
+  bool inited_;
+  // \brief devices used with this KVStore
+  std::vector<int> device_ids_;
+};
+#endif  // MXNET_USE_NCCL
 }  // namespace kvstore
 }  // namespace mxnet
 #endif  // MXNET_KVSTORE_COMM_H_

@@ -28,6 +28,9 @@
 #if MXNET_USE_DIST_KVSTORE
 #include "./kvstore_dist.h"
 #endif  // MXNET_USE_DIST_KVSTORE
+#if MXNET_USE_NCCL
+#include "./kvstore_nccl.h"
+#endif  // MXNET_USE_NCCL
 
 namespace mxnet {
 
@@ -55,7 +58,16 @@ KVStore* KVStore::Create(const char *type_name) {
     return nullptr;
 #endif  // MXNET_USE_DIST_KVSTORE
   } else {
-    kv =  new kvstore::KVStoreLocal(use_device_comm);
+    if (has("nccl")) {
+#if MXNET_USE_NCCL
+      kv = new kvstore::KVStoreNCCL();
+#else
+      LOG(FATAL) << "compile with USE_NCCL=1 to use " << tname;
+      return nullptr;
+#endif
+    } else {
+      kv =  new kvstore::KVStoreLocal(use_device_comm);
+    }
   }
   kv->type_ = tname;
   return kv;

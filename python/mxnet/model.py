@@ -20,6 +20,7 @@
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
+import os
 import time
 import logging
 import warnings
@@ -104,15 +105,18 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
-    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
-        arg_list, grad_list = pair
-        if grad_list[0] is None:
-            continue
-        name = param_names[index]
+    size = len(grad_arrays)
+    start = 0
+    # Use aggregation by default only with NCCL
+    default_batch = 16 if 'nccl' in kvstore.type else 1
+    batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
+    while(start < size):
+        end = start + batch if start + batch < size else size
         # push gradient, priority is negative index
-        kvstore.push(name, grad_list, priority=-index)
+        kvstore.push(param_names[start:end], grad_arrays[start:end], priority=-start)
         # pull back the weights
-        kvstore.pull(name, arg_list, priority=-index)
+        kvstore.pull(param_names[start:end], param_arrays[start:end], priority=-start)
+        start = end
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):

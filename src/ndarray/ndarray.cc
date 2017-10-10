@@ -559,7 +559,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
 }
 
 
-void CopyFromTo(const NDArray& from, NDArray *to, int priority) {
+void CopyFromTo(const NDArray& from, const NDArray *to, int priority) {
   CopyFromTo(from, *to, priority);
 }
 
