@@ -149,22 +149,6 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
       b[j * ldb + i] = a[i * lda + j];
 }
 
-template <>
-inline void flip<cpu, float>(int m, int n,
-  float *b, int ldb, float *a, int lda) {
-  for (int i = 0; i < m; ++i)
-    for (int j = 0; j < n; ++j)
-      b[j * ldb + i] = a[i * lda + j];
-}
-
-template <>
-inline void flip<cpu, double>(int m, int n,
-  double *b, int ldb, double *a, int lda) {
-  for (int i = 0; i < m; ++i)
-    for (int j = 0; j < n; ++j)
-      b[j * ldb + i] = a[i * lda + j];
-}
-
 
 #if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
 
