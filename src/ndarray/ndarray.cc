@@ -594,7 +594,8 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
         Engine::Get()->PushSync([inputs](RunContext ctx) {
-            mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
+            mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
+                                                      neg_threshold, pos_threshold);
           }, from.ctx(), const_vars, mutable_vars,
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
         } else {
