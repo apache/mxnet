@@ -68,7 +68,7 @@ class Comm {
             provided row_ids
    */
   virtual void BroadcastRowSparse(int key, const NDArray& src,
-                                  const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                                  const std::vector<std::pair<NDArray*, NDArray>> dst,
                                   const bool use_copy,
                                   const int priority) = 0;
 
@@ -129,7 +129,7 @@ class CommCPU : public Comm {
       if (buf.copy_buf.empty()) {
         buf.copy_buf.resize(src.size()-1);
         for (size_t j = 0; j < src.size() - 1; ++j) {
-          // allocate NDArray basd on storage type
+          // allocate NDArray based on storage type
           buf.copy_buf[j] = NDArray(
             src[0].shape(), pinned_ctx_, false, src[0].dtype());
         }
@@ -191,7 +191,7 @@ class CommCPU : public Comm {
   }
 
   void BroadcastRowSparse(int key, const NDArray& src,
-                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                          const std::vector<std::pair<NDArray*, NDArray>> dst,
                           const bool use_copy,
                           const int priority) override {
     using namespace mshadow;
@@ -542,7 +542,7 @@ class CommDevice : public Comm {
   }
 
   void BroadcastRowSparse(int key, const NDArray& src,
-                          const std::vector<std::pair<NDArray*, NDArray>>& dst,
+                          const std::vector<std::pair<NDArray*, NDArray>> dst,
                           const bool use_copy,
                           const int priority) override {
     LOG(FATAL) << "Not implemented yet";

@@ -140,10 +140,12 @@ class KVStore(object):
         """ Pushes a single or a sequence of key-value pairs into the store.
 
         This function returns immediately after adding an operator to the engine.
-        The actual operation is executed asynchronously after all previous `push`
-        for the same input key(s) are finished.
-        There is no synchronization between workers. One can use ``_barrier()``
-        to sync all workers.
+        The actual operation is executed asynchronously. If there are consecutive
+        pushes to the same key, there is no guarantee on the serialization of pushes.
+        Simultaneous pushes to the same key may conflict and
+        overwrite the previous pending push as of now.
+        There is no synchronization between workers.
+        One can use ``_barrier()`` to sync all workers.
 
         Parameters
         ----------
