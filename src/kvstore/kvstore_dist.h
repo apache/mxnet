@@ -301,21 +301,21 @@ namespace kvstore {
       // merge over devices
       int key = uniq_keys[i];
       const auto &vals = grouped_vals[i];
-      if (compress_!="none") {
-        vals[0].WaitToRead();
-        for (int i = 0; i < vals[0].shape().Size(); i++) {
-          CHECK_EQ(*((float *) vals[0].data().dptr_ + i), 0);
-        }
-      }
+//      if (compress_!="none") {
+//        vals[0].WaitToRead();
+//        for (int i = 0; i < vals[0].shape().Size(); i++) {
+//          CHECK_EQ(*((float *) vals[0].data().dptr_ + i), 0);
+//        }
+//      }
 
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
       const auto storage_type = merged.storage_type();
-      if (compress_!="none") {
-        merged.WaitToRead();
-        for (int i = 0; i < merged.shape().Size(); i++) {
-          CHECK_EQ(*((float *) merged.data().dptr_ + i), 0);
-        }
-      }
+//      if (compress_!="none") {
+//        merged.WaitToRead();
+//        for (int i = 0; i < merged.shape().Size(); i++) {
+//          CHECK_EQ(*((float *) merged.data().dptr_ + i), 0);
+//        }
+//      }
       auto &comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
         comm_buf= merged;  // avoid memory copy
@@ -329,12 +329,12 @@ namespace kvstore {
         }
         CopyFromTo(merged, &comm_buf);
       }
-      if (compress_!="none") {
-        comm_buf.WaitToRead();
-        for (int i = 0; i < comm_buf.shape().Size(); i++) {
-          CHECK_EQ(*((float *) comm_buf.data().dptr_ + i), 0);
-        }
-      }
+//      if (compress_!="none") {
+//        comm_buf.WaitToRead();
+//        for (int i = 0; i < comm_buf.shape().Size(); i++) {
+//          CHECK_EQ(*((float *) comm_buf.data().dptr_ + i), 0);
+//        }
+//      }
 
       if (compress_ != "none") {
         auto &small_buf = compr_buf_[key];
