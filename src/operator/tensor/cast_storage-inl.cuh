@@ -28,7 +28,7 @@
 #include <cub/cub.cuh>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
-#include <operator/mxnet_op.h>
+#include "../mxnet_op.h"
 #include "./util/tensor_util-inl.cuh"
 
 namespace mxnet {
