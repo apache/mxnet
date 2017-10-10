@@ -220,26 +220,45 @@ void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   });
 }
 
-// Fill a rsp NDArray with zeros by updating the aux shape.
+/*!
+ * \brief Fill a rsp NDArray with zeros by updating the aux shape.
+ * \tparam xpu - cpu or gpu
+ * \param s - The device stream
+ * \param dst - NDArray which is to be set to "all zeroes"
+ */
 template<typename xpu>
-void FillZerosRspImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
-  if (!dst.storage_initialized()) return;
-  // reset the shapes if it's not zeros
-  auto storage_shape = dst.storage_shape();
-  storage_shape[0] = 0;
-  dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
+  if (dst.storage_initialized()) {
+    // reset the shapes if it's not zeros (set_aux_shape() will set storage_shape to zero as well)
+    dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+  }
 }
 
-// Fill a CSR NDArray with zeros by updating the aux shape.
-template<typename xpu>
-void FillZerosCsrImpl(mshadow::Stream<xpu> *s, const NDArray& dst) {
-  if (!dst.storage_initialized()) return;
-  // reset the shapes if it's not zeros
-  TShape new_shape(mshadow::Shape1(0));
-  dst.set_aux_shape(csr::kIndPtr, new_shape);
-  dst.set_aux_shape(csr::kIdx, new_shape);
+/*!
+ * \brief Fill a CSR NDArray with zeros by updating the aux shape
+ * \param s - The device stream
+ * \param dst - NDArray which is to be set to "all zeroes"
+ */
+inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, const NDArray& dst) {
+  dst.set_aux_shape(csr::kIdx, mshadow::Shape1(0));
+  dst.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst.shape()[0] + 1));
+  TBlob indptr_data = dst.aux_data(csr::kIndPtr);
+  MSHADOW_IDX_TYPE_SWITCH(dst.aux_type(csr::kIndPtr), IType, {
+    mxnet_op::Kernel<mxnet_op::set_zero, mshadow::cpu>::Launch(
+      s, indptr_data.Size(), indptr_data.dptr<IType>());
+  });
 }
+void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst);
 
+/*!
+ * \brief Fill an NDArray with zeros
+ * \tparam xpu - cpu or gpu
+ * \param attrs  - node attributes (unused)
+ * \param ctx - Device context
+ * \param inputs - NDArray inputs (unused)
+ * \param req - Request type (i.e. kWrite, kNullOp, etc.)
+ * \param outputs - Array which contains at position zero (0) the array to be set to zeros
+ */
 template<typename xpu>
 void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -254,11 +273,9 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) return;
   CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
   if (stype == kRowSparseStorage) {
-    NDArray nd(outputs[0]);
-    FillZerosRspImpl<xpu>(s, nd);
+    FillZerosRspImpl(s, outputs[0]);
   } else if (stype == kCSRStorage) {
-    NDArray nd(outputs[0]);
-    FillZerosCsrImpl<xpu>(s, nd);
+    FillZerosCsrImpl(s, outputs[0]);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }

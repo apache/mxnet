@@ -21,6 +21,7 @@
  * \file sample_op.cc
  * \brief CPU Implementation of sample op
  */
+
 #include "./sample_op.h"
 #include "../tensor/init_op.h"
 
@@ -63,8 +64,8 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SampleUniformParam, true, false>)
-.set_attr<FCompute>("FCompute<cpu>", SampleUniform_<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SampleUniformEx_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, UniformSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, UniformSampler<cpu>>);
 
 // Add "normal" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_normal, SampleNormalParam)
@@ -82,8 +83,8 @@ Example::
                                           [-1.23474145,  1.55807114]]
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SampleNormalParam, true, false>)
-.set_attr<FCompute>("FCompute<cpu>", SampleNormal_<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SampleNormalEx_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, NormalSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, NormalSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_gamma, SampleGammaParam)
 .add_alias("random_gamma")
@@ -97,8 +98,8 @@ Example::
                                             [ 3.91697288,  3.65933681]]
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SampleGammaParam, true, false>)
-.set_attr<FCompute>("FCompute<cpu>", SampleGamma_<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SampleGammaEx_<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, GammaSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, GammaSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_exponential, SampleExponentialParam)
 .add_alias("random_exponential")
@@ -111,7 +112,10 @@ Example::
    exponential(lam=4, shape=(2,2)) = [[ 0.0097189 ,  0.08999364],
                                       [ 0.04146638,  0.31715935]]
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", SampleExponential_<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleExponentialParam, true, false>)
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, ExponentialSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, ExponentialSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_poisson, SamplePoissonParam)
 .add_alias("random_poisson")
@@ -125,7 +129,9 @@ Example::
    poisson(lam=4, shape=(2,2)) = [[ 5.,  2.],
                                   [ 4.,  6.]]
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", SamplePoisson_<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType", InitStorageType<SamplePoissonParam, true, false>)
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, PoissonSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, PoissonSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_negative_binomial, SampleNegBinomialParam)
 .add_alias("random_negative_binomial")
@@ -140,7 +146,10 @@ Example::
    negative_binomial(k=3, p=0.4, shape=(2,2)) = [[ 4.,  7.],
                                                  [ 2.,  5.]]
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", SampleNegBinomial_<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleNegBinomialParam, true, false>)
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, NegativeBinomialSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, NegativeBinomialSampler<cpu>>);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_generalized_negative_binomial, SampleGenNegBinomialParam)
 .add_alias("random_generalized_negative_binomial")
@@ -156,7 +165,10 @@ Example::
    generalized_negative_binomial(mu=2.0, alpha=0.3, shape=(2,2)) = [[ 2.,  1.],
                                                                     [ 6.,  4.]]
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", SampleGenNegBinomial_<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleGenNegBinomialParam, true, false>)
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, GeneralizedNegativeBinomialSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, GeneralizedNegativeBinomialSampler<cpu>>);
 
 }  // namespace op
 }  // namespace mxnet
