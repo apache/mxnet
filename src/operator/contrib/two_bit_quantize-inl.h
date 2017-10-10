@@ -122,6 +122,12 @@ struct quantize_2bit {
                                   const float pos_threshold) {
     // Add residual to gradient
     grad[i] += residual[i];
+
+    // Considers each float in the output array as forming a block
+    // Each block comprises a 4x4 grid. Each value in this grid
+    // refers to one float in the original grad array
+    // Only supports float32
+
     // get block id
     int block_id = i / 16;
     char* ch_ptr = reinterpret_cast<char*>(out+block_id);
@@ -312,13 +318,12 @@ struct dequantize_2bit {
 
 template<typename xpu>
 void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs) {
-  //using namespace mshadow;
-  // For now, this method can only decompress the float data
+  // Can only decompress the float32 data
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
-                              inputs[1].dptr<float>(),       // out array
-                              inputs[0].dptr<float>()+3,     // compressed array
+                              inputs[1].dptr<float>(),        // out array
+                              inputs[0].dptr<float>()+3,      // compressed array
                               *(inputs[0].dptr<float>()),     // negative threshold
-                              *(inputs[0].dptr<float>()+1));  // positve threshold
+                              *(inputs[0].dptr<float>()+1));  // positive threshold
 }
 
 template<typename xpu>
