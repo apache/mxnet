@@ -248,8 +248,8 @@ struct dequantize_2bit {
   MSHADOW_XINLINE static void Map(int i,
                                   float *out,
                                   float *in,
-                                  const float *neg_threshold,
-                                  const float *pos_threshold) {
+                                  const float neg_threshold,
+                                  const float pos_threshold) {
     // get block ptr
     int block_id = i / 16;
     char* ch_ptr = reinterpret_cast<char*>(in+block_id);
@@ -317,8 +317,8 @@ void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& input
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
                               inputs[1].dptr<float>(),       // out array
                               inputs[0].dptr<float>()+3,     // compressed array
-                              inputs[0].dptr<float>(),     // negative threshold
-                              inputs[0].dptr<float>()+1);  // positve threshold
+                              *(inputs[0].dptr<float>()),     // negative threshold
+                              *(inputs[0].dptr<float>()+1));  // positve threshold
 }
 
 template<typename xpu>

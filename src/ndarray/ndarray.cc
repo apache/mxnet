@@ -634,7 +634,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
       if (compress == "2bit") {
         Engine::Get()->PushSync([inputs](RunContext ctx) {
             mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
-          }, from.ctx(), const_vars, {ret.var()},
+          }, from.ctx(), {from.var()}, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
         } else {
           LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
