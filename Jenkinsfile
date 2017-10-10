@@ -19,7 +19,7 @@ def init_git() {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
-        sh 'git clean -d -f'
+        sh 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
@@ -36,7 +36,7 @@ def init_git_win() {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         bat 'git submodule update --init'
-        bat 'git clean -d -f'
+        bat 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
@@ -52,10 +52,6 @@ def init_git_win() {
 def make(docker_type, make_flag) {
   timeout(time: max_time, unit: 'MINUTES') {
     try {
-      sh "${docker_run} ${docker_type} sudo rm -rf *"
-      sh "${docker_run} ${docker_type} sudo git reset --hard"
-      // sh "${docker_run} ${docker_type} sudo make clean"
-      // sh "${docker_run} ${docker_type} sudo make -C amalgamation/ clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
     } catch (exc) {
       echo 'Incremental compilation failed. Fall back to build from scratch'
