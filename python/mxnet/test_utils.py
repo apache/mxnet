@@ -1442,10 +1442,31 @@ def get_mnist():
             'test_data':test_img, 'test_label':test_lbl}
 
 def get_bz2_data(data_dir, data_name, url, data_origin_name):
-    """Download and extract bz2 data."""
-    download(url, dirname=data_dir, overwrite=False)
-    os.chdir(data_dir)
+    """Download and extract bz2 data.
+
+    Parameters
+    ----------
+
+    data_dir : str
+        Absolute or relative path of the directory name to store bz2 files
+    data_name : str
+        Name of the output file in which bz2 contents will be extracted
+    url : str
+        URL to download data from
+    data_origin_name : str
+        Name of the downloaded b2 file
+
+    Examples
+    --------
+    >>> get_bz2_data("data_dir", "kdda.t",
+                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
+                     "kdda.t.bz2")
+    """
+
+    data_name = os.path.join(data_dir, data_name)
+    data_origin_name = os.path.join(data_dir, data_origin_name)
     if not os.path.exists(data_name):
+        download(url, dirname=data_dir, overwrite=False)
         bz_file = bz2.BZ2File(data_origin_name, 'rb')
         with open(data_name, 'wb') as fout:
             try:
@@ -1454,7 +1475,6 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
             finally:
                 bz_file.close()
         os.remove(data_origin_name)
-    os.chdir("..")
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable
