@@ -480,6 +480,28 @@ def test_embedding():
     assert (layer.weight.grad()[5:] == 0).asnumpy().all()
 
 
+def test_export():
+    model = gluon.model_zoo.vision.resnet18_v1(prefix='resnet', pretrained=True)
+    model.hybridize()
+    data = mx.nd.random.normal(shape=(1, 3, 224, 224))
+    out = model(data)
+
+    model.export('gluon')
+
+    module = mx.mod.Module.load('gluon', 0, label_names=None)
+    module.bind(data_shapes=[('data', data.shape)])
+    module.forward(mx.io.DataBatch([data], None), is_train=False)
+    mod_out, = module.get_outputs()
+
+    assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
+
+    model2 = gluon.model_zoo.vision.resnet18_v1(prefix='resnet')
+    model2.collect_params().load('gluon-0000.params', mx.cpu())
+    out2 = model2(data)
+
+    assert_almost_equal(out.asnumpy(), out2.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
