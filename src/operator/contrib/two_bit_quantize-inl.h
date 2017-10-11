@@ -254,8 +254,8 @@ struct dequantize_2bit {
   MSHADOW_XINLINE static void Map(int i,
                                   float *out,
                                   float *in,
-                                  const float neg_threshold,
-                                  const float pos_threshold) {
+                                  float *neg_threshold,
+                                  float *pos_threshold) {
     // get block ptr
     int block_id = i / 16;
     char* ch_ptr = reinterpret_cast<char*>(in+block_id);
@@ -269,10 +269,10 @@ struct dequantize_2bit {
       case 0:
         // positve
         if (((*ch_ptr) & (0xc0)) == 0x80) {  // binary: (10)00 0000
-          out[i] = pos_threshold;
+          out[i] = *pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0xc0)) == 0x40) {  // binary: (01)00 0000
-          out[i] = neg_threshold;
+          out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -280,10 +280,10 @@ struct dequantize_2bit {
       case 1:
         // positve
         if (((*ch_ptr) & (0x30)) == 0x20) {  // binary: 00(10) 0000
-          out[i] = pos_threshold;
+          out[i] = *pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x30)) == 0x10) {  // binary: 00(01) 0000
-          out[i] = neg_threshold;
+          out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -291,10 +291,10 @@ struct dequantize_2bit {
       case 2:
         // positve
         if (((*ch_ptr) & (0x0c)) == 0x08) {  // binary: 00(10) 0000
-          out[i] = pos_threshold;
+          out[i] = *pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x0c)) == 0x04) {  // binary: 00(01) 0000
-          out[i] = neg_threshold;
+          out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -302,10 +302,10 @@ struct dequantize_2bit {
       case 3:
         // positve
         if (((*ch_ptr) & (0x03)) == 0x02) {  // binary: 00(10) 0000
-          out[i] = pos_threshold;
+          out[i] = *pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x03)) == 0x01) {  // binary: 00(01) 0000
-          out[i] = neg_threshold;
+          out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
         }
@@ -322,8 +322,8 @@ void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& input
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
                               inputs[1].dptr<float>(),        // out array
                               inputs[0].dptr<float>()+3,      // compressed array
-                              *(inputs[0].dptr<float>()),     // negative threshold
-                              *(inputs[0].dptr<float>()+1));  // positive threshold
+                              inputs[0].dptr<float>(),     // negative threshold
+                              inputs[0].dptr<float>()+1);  // positive threshold
 }
 
 template<typename xpu>

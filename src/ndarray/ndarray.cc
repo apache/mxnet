@@ -624,12 +624,12 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   NDArray ret = *to;
   int a = from.ctx().dev_mask();
   int b = to->ctx().dev_mask();
-  std::vector<TBlob> inputs(2);
-  inputs[0] = from.data();
-  inputs[1] = to->data();
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([inputs](RunContext ctx) {
+      Engine::Get()->PushSync([from, to](RunContext ctx) {
+        std::vector<TBlob> inputs(2);
+        inputs[0] = from.data();
+        inputs[1] = to->data();
         mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
           }, from.ctx(), {from.var()}, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
@@ -640,7 +640,10 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([inputs](RunContext ctx) {
+        Engine::Get()->PushSync([from, to](RunContext ctx) {
+          std::vector<TBlob> inputs(2);
+          inputs[0] = from.data();
+          inputs[1] = to->data();
             mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
           }, from.ctx(), {from.var()}, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));

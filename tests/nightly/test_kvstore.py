@@ -32,7 +32,7 @@ shapes = [(4, 4), (100, 100), (2000, 2000)];
 
 lr = .1
 nworker = 4
-nrepeat = 10
+nrepeat = 1
 
 ## generate data
 data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for j in range(nrepeat)]
@@ -44,7 +44,7 @@ def test_kvstore(kv_type):
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
-
+       
     res = [np.zeros(s) for s in shapes]
     for i in range(nrepeat):
         for j in range(len(keys)):
@@ -60,28 +60,81 @@ def test_kvstore(kv_type):
             assert(err < 1e-6), (err, shapes[j])
 
 def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
-    print(kv_type)
+    print(kv_type, compress)
+    rate = 2
     kv = mx.kv.create(kv_type)
     kv.set_compress({'compress':compress, 'neg_threshold':neg, 'pos_threshold':pos})
-    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=2))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
-    # data = [[np.(s)*2-1 for i in range(nworker)] for s in shapes]
-    def pull_before_push(kv):
-        for j in range(len(keys)):
-            out = [mx.nd.zeros(shapes[j], mx.gpu(g))+1 for g in range(nworker)]
-            check_diff_to_scalar(out, 1)
-            kv.pull(keys[j], out=out)
-            check_diff_to_scalar(out, 0)
-            # err = [np.sum(np.abs(o.asnumpy() - res[j])) for o in out]
-            # err = sum(err) / np.sum(np.abs(res[j]))
-            # assert(err < 1e-6), (err, shapes[j])
 
-    pull_before_push(kv)
+    def pull_before_push(kv):
+        for i in range(nrepeat):
+            for j in range(len(keys)):
+                out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
+                kv.pull(keys[j], out=out)
+                for o in out:
+                    check_diff_to_scalar(o, 0)
+
+    def push_zeros(kv):
+        for i in range(nrepeat):
+            for j in range(len(keys)):
+                kv.push(keys[j], [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)])
+                out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
+                kv.pull(keys[j], out=out)
+                for o in out:
+                    check_diff_to_scalar(o, 0)
+
+    def verify_residual(kv, neg_threshold, pos_threshold, rate):
+        for j in range(len(keys)):
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*0.4 for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j],out=out)
+            for o in out:
+                check_diff_to_scalar(o, 0)
+
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*(pos_threshold-0.4) for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j],out=out)
+            curval = pos_threshold * rate * nworker
+            for o in out:
+                check_diff_to_scalar(o, curval)
+
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*(0.2) for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j],out=out)
+            for o in out:
+                check_diff_to_scalar(o, curval)
+
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*(pos_threshold-0.2) for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j],out=out)
+            curval += pos_threshold*rate*nworker
+            for o in out:
+                check_diff_to_scalar(o, curval)
+            return curval
+
+    def check_ones(kv, pos, rate, curval):
+        newval = curval + rate*nworker*pos
+        for j in range(len(keys)):
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*pos*4 for g in range(nworker)])
+            out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j], out=out)
+            for o in out:
+                check_diff_to_scalar(o, newval)
+
+   pull_before_push(kv)
+   push_zeros(kv)
+   curval = verify_residual(kv, neg, pos, rate)
+   check_ones(kv, pos, rate, curval)
+
+test_kvstore('local_update_cpu')
+test_kvstore('local_allreduce_cpu')
+test_kvstore('local_allreduce_device')
+
 test_compress_kvstore('local_update_cpu')
-# test_kvstore('local_update_cpu')
-# test_kvstore('local_allreduce_cpu')
-# test_kvstore('local_allreduce_device')
+test_compress_kvstore('local_allreduce_cpu')
+test_compress_kvstore('local_allreduce_device')
 
 ## group keys interface
 def test_group_kvstore(kv_type):
@@ -103,6 +156,6 @@ def test_group_kvstore(kv_type):
             err = sum(err) / np.sum(np.abs(a))
             assert(err < 1e-6), (err, a.shape)
 
-# test_group_kvstore('local_update_cpu')
-# test_group_kvstore('local_allreduce_cpu')
-# test_group_kvstore('local_allreduce_device')
+test_group_kvstore('local_update_cpu')
+test_group_kvstore('local_allreduce_cpu')
+test_group_kvstore('local_allreduce_device')
