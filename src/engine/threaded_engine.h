@@ -28,6 +28,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/omp.h>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -284,6 +285,10 @@ class ThreadedEngine : public Engine {
     objpool_blk_ref_    = common::ObjectPool<OprBlock>::_GetSharedRef();
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
+
+    /*! \brief Set default OMP threads per kernel worker to default */
+    set_num_omp_threads_per_worker(DefaultOMPThreadsPerWorker());
+    CHECK_GT(num_omp_threads_per_worker(), 0);
   }
   ~ThreadedEngine() {
     {
@@ -291,6 +296,25 @@ class ThreadedEngine : public Engine {
       kill_.store(true);
     }
     finished_cv_.notify_all();
+  }
+
+  /*! \brief Return default OMP thread count. Currently, this is whatever OMP shows as number
+   * of procs
+   * \warning Do not call this in any performance-sensitive use-case since checking the environment
+   * is slow
+   */
+  static int DefaultOMPThreadsPerWorker() {
+#ifdef _OPENMP
+    // If OMP_NUM_THREADS is set, use omp_get_max_threads(), which will be the value
+    // interpreted by the implemetation from the OMP_NUM_THREADS environment variable.
+    // Otherwise, return the number of processors, not counting hyperthreading.
+    // Test for set OMP_NUM_THREADS by checking against some nonsensical value
+    const int max_threads = dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN ?
+                            omp_get_num_procs() : omp_get_num_threads();
+    return max_threads;
+#else
+    return 0;
+#endif
   }
 
  protected:
@@ -360,6 +384,21 @@ class ThreadedEngine : public Engine {
     }
   }
 
+  /*! \brief Return the number of OMP threads that should be used per worker
+   * \return Number of OMP threads that should be used per worker
+   */
+  int num_omp_threads_per_worker() const override {
+    return num_omp_threads_per_worker_;
+  }
+
+  /*! \brief Set the number of OMP threads that should be used per worker
+   * \param num_threads_per_worker Number of OMP threads to be used per worker
+   * TODO(cjolivier01) Dynamically adjust based upon number of concurrent CPU jobs
+   */
+  void set_num_omp_threads_per_worker(int num_omp_threads_per_worker) override {
+    num_omp_threads_per_worker_ = num_omp_threads_per_worker;
+  }
+
  private:
   /*!
    * \brief check if thee is duplication in const_vars and mutable_vars.
@@ -405,6 +444,10 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+
+  /*! \brief Number of OMP threads to be used per worker */
+  int num_omp_threads_per_worker_{0};
+
   /*!
    * \brief Disallow copy construction and assignment.
    */
@@ -413,4 +456,5 @@ class ThreadedEngine : public Engine {
 
 }  // namespace engine
 }  // namespace mxnet
+
 #endif  // MXNET_ENGINE_THREADED_ENGINE_H_

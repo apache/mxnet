@@ -27,8 +27,10 @@
 
 #include <dmlc/omp.h>
 #include <mxnet/base.h>
+#include <mxnet/engine.h>
 #include <mxnet/op_attr_types.h>
 #include <algorithm>
+
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
 #endif  // __CUDACC__
@@ -213,6 +215,20 @@ struct set_zero {
   }
 };
 
+/*! \brief Binary op backward gradient OP wrapper */
+template<typename GRAD_OP>
+struct backward_grad {
+  /* \brief Backward calc with grad
+   * \param a - output grad
+   * \param args... - data to grad calculation op (what this is -- input, output, etc. -- varies)
+   * \return input grad
+   */
+  template<typename DType, typename ...Args>
+  MSHADOW_XINLINE static DType Map(DType a, Args... args) {
+    return DType(a * GRAD_OP::Map(args...));
+  }
+};
+
 /*! \brief Select assignment operation based upon the req value
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
  */
@@ -241,13 +257,25 @@ struct Kernel;
 template<typename OP>
 struct Kernel<OP, cpu> {
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *s, int N, Args... args) {
-#if (MXNET_USE_CUDA == 0)
-    #pragma omp parallel for
-#endif
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, args...);
+  inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+#ifdef _OPENMP
+    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
+    if (omp_cores <= 1) {
+      // Zero means not to use OMP, but don't interfere with external OMP behavior
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_cores)
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
     }
+#else
+    for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+    }
+#endif
   }
 };
 
