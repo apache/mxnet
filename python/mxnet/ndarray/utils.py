@@ -25,6 +25,8 @@ from .ndarray import array as _array
 from .ndarray import empty as _empty_ndarray
 from .ndarray import zeros as _zeros_ndarray
 from .sparse import zeros as _zeros_sparse_ndarray
+from .ndarray import eye as _eye_ndarray
+from .sparse import eye as _eye_sparse_ndarray
 from .sparse import empty as _empty_sparse_ndarray
 from .sparse import array as _sparse_array
 from .sparse import _ndarray_cls
@@ -33,7 +35,14 @@ try:
 except ImportError:
     spsp = None
 
-__all__ = ['zeros', 'empty', 'array', 'load', 'save']
+__all__ = ['zeros', 'empty', 'array', 'load', 'save', 'eye']
+
+
+def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
+    if stype is None or stype == 'default':
+        return _eye_ndarray(N, M, k, ctx, dtype, **kwargs)
+    else:
+        return _eye_sparse_ndarray(stype, N, M, k, ctx, dtype, aux_types, **kwargs)
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):

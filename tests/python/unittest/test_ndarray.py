@@ -730,6 +730,13 @@ def test_output():
     assert_almost_equal(out.asnumpy(), zeros.asnumpy())
     mx.nd.full(shape, 2, out=out)
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
+    import random
+    for i in range(20):
+        N = random.randint(1, 10)
+        M = random.randint(1, 10)
+        k = random.randint(-15, 15)
+        assert_almost_equal(np.eye(N, M, k), mx.nd.eye(N, M, k).asnumpy())
+
 
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',

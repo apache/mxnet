@@ -22,7 +22,7 @@ from . import _internal, contrib, linalg, sparse, random, utils
 from .op import *
 from .ndarray import *
 # pylint: enable=wildcard-import
-from .utils import load, save, zeros, empty, array
+from .utils import load, save, zeros, empty, array, eye
 from .sparse import _ndarray_cls
 from .ndarray import _GRAD_REQ_MAP
 

@@ -48,6 +48,7 @@ from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import NDArray, _storage_type
 from .ndarray import zeros as _zeros_ndarray
+from .ndarray import eye as _eye_ndarray
 from .ndarray import array as _array
 from . import op
 
@@ -881,6 +882,22 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
 
 
 _set_ndarray_class(_ndarray_cls)
+
+
+def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
+    if stype == 'default':
+        return _eye_ndarray(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    if aux_types is None:
+        if stype == 'row_sparse' or stype == 'csr':
+            aux_types = _STORAGE_AUX_TYPES[stype]
+        else:
+            raise Exception("unknown storage type")
+    assert(len(aux_types) == len(_STORAGE_AUX_TYPES[stype]))
+    out = _ndarray_cls(_new_alloc_handle(stype, (N, M if M > 0 else N), ctx, True, dtype, aux_types))
+    return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
 
 def zeros(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):

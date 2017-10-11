@@ -2925,6 +2925,16 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
                                    out=out)
 
 
+def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
+    # pylint: disable= unused-argument
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    # pylint: disable= no-member, protected-access
+    return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
+    # pylint: enable= no-member, protected-access
+
+
 def zeros(shape, ctx=None, dtype=None, **kwargs):
     """Returns a new array filled with all zeros, with the given shape and type.
 
