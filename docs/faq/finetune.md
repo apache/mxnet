@@ -34,17 +34,10 @@ identification.
 We will show that, even with simple hyper-parameters setting, we can match and
 even outperform state-of-the-art results on caltech-256.
 
-```eval_rst
-.. list-table::
-   :header-rows: 1
-
-   * - Network 
-     - Accuracy 
-   * - Resnet-50 
-     - 77.4% 
-   * - Resnet-152 
-     - 86.4% 
-```
+| Network | Accuracy |
+| --- | --- |
+| Resnet-50 | 77.4% |
+| Resnet-152 | 86.4% |
 
 ## Prepare data
 
@@ -84,7 +77,7 @@ if sys.version_info[0] >= 3:
     from urllib.request import urlretrieve
 else:
     from urllib import urlretrieve
-    
+
 def download(url):
     filename = url.split("/")[-1]
     if not os.path.exists(filename):
@@ -94,7 +87,6 @@ download('http://data.mxnet.io/data/caltech-256/caltech-256-60-val.rec')
 ```
 
 Next, we define the function which returns the data iterators:
-
 
 ```python
 import mxnet as mx
@@ -124,7 +116,6 @@ We then download a pretrained 50-layer ResNet model and load it into memory. Not
 that if `load_checkpoint` reports an error, we can remove the downloaded files
 and try `get_model` again.
 
-
 ```python
 def get_model(prefix, epoch):
     download(prefix+'-symbol.json')
@@ -137,7 +128,6 @@ sym, arg_params, aux_params = mx.model.load_checkpoint('resnet-50', 0)
 ## Train
 
 We first define a function which replaces the last fully-connected layer for a given network.
-
 
 ```python
 def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
@@ -215,10 +205,7 @@ assert mod_score > 0.86, "Low training accuracy."
 ```
 
 
-
 As can be seen, even for a single data epoch, it reaches 83% validation
 accuracy. After 8 epoches, the validation accuracy increases to 86.4%.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-
-
