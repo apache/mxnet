@@ -33,7 +33,7 @@
 #include <dmlc/common.h>
 #include <dmlc/timer.h>
 #include <type_traits>
-#if MXNET_USE_TURBO_JPEG
+#if MXNET_USE_LIBJPEG_TURBO
 #include <turbojpeg.h>
 #endif
 #include "./image_recordio.h"
@@ -70,7 +70,7 @@ class ImageRecordIOParser2 {
   void ProcessImage(const cv::Mat& res,
     mshadow::Tensor<cpu, 3, DType>* data_ptr, const bool is_mirrored, const float contrast_scaled,
     const float illumination_scaled);
-#if MXNET_USE_TURBO_JPEG
+#if MXNET_USE_LIBJPEG_TURBO
   cv::Mat TJimdecode(cv::Mat buf, int color);
 #endif
 #endif
@@ -424,7 +424,7 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
   }
 }
 
-#if MXNET_USE_TURBO_JPEG
+#if MXNET_USE_LIBJPEG_TURBO
 
 bool is_jpeg(unsigned char * file) {
   if ((file[0] == 255) && (file[1] == 216)) {
@@ -513,14 +513,14 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
       switch (param_.data_shape[0]) {
        case 1:
-#if MXNET_USE_TURBO_JPEG
+#if MXNET_USE_LIBJPEG_TURBO
         res = TJimdecode(buf, 0);
 #else
         res = cv::imdecode(buf, 0);
 #endif
         break;
        case 3:
-#if MXNET_USE_TURBO_JPEG
+#if MXNET_USE_LIBJPEG_TURBO
         res = TJimdecode(buf, 1);
 #else
         res = cv::imdecode(buf, 1);

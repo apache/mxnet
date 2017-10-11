@@ -278,15 +278,15 @@ else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
-ifeq ($(USE_TURBO_JPEG), 1)
-	ifneq ($(USE_TURBO_JPEG_PATH), NONE)
-		CFLAGS += -I$(USE_TURBO_JPEG_PATH)/include
-		LDFLAGS += -L$(USE_TURBO_JPEG_PATH)/lib
+ifeq ($(USE_LIBJPEG_TURBO), 1)
+	ifneq ($(USE_LIBJPEG_TURBO_PATH), NONE)
+		CFLAGS += -I$(USE_LIBJPEG_TURBO_PATH)/include
+		LDFLAGS += -L$(USE_LIBJPEG_TURBO_PATH)/lib
 	endif
 	LDFLAGS += -lturbojpeg
-	CFLAGS += -DMXNET_USE_TURBO_JPEG=1
+	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=1
 else
-	CFLAGS += -DMXNET_USE_TURBO_JPEG=0
+	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
 endif
 
 # For quick compile test, used smaller subset
