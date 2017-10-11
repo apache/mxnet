@@ -407,7 +407,6 @@ class UnaryOp : public OpBase {
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
     const auto lhs_stype = inputs[0].storage_type();
-    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
         (lhs_stype == out_stype)) {

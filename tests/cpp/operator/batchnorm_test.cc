@@ -1364,7 +1364,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
 
 /*! \brief Insert the channel field `channelCount` into the shape at `channelAxis` position */
 static TShape MakeShape(const std::vector<index_t>& shape,
-                        unsigned int channelAxis,
+                        signed int channelAxis,
                         const size_t channelCount) {
   if (channelAxis < 0) {
     channelAxis += shape.size() + 1;

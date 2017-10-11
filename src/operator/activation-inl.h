@@ -34,6 +34,7 @@
 #include <vector>
 #include <utility>
 #include "./operator_common.h"
+#include "./mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -77,7 +78,13 @@ class ActivationOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[activation::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
-    Assign(out, req[activation::kOut], F<ForwardOp>(data));
+    CHECK_EQ(data.shape_.Size(), out.shape_.Size());
+    CHECK_NE(req[activation::kOut], kNullOp);
+    CHECK_NE(req[activation::kOut], kAddTo);
+    MXNET_ASSIGN_REQ_SWITCH(req[activation::kOut], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
+        s, data.shape_.Size(), out.dptr_, data.dptr_);
+    });
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -96,7 +103,15 @@ class ActivationOp : public Operator {
     Tensor<xpu, 2, DType> m_out_grad = out_grad[activation::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, DType>(s);
-    Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
+    CHECK_EQ(m_out_data.shape_.Size(), m_in_grad.shape_.Size());
+    CHECK_EQ(m_out_data.shape_.Size(), m_out_grad.shape_.Size());
+    CHECK_NE(req[activation::kOut], kNullOp);
+    CHECK_NE(req[activation::kOut], kAddTo);
+    MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<
+        mxnet::op::mxnet_op::backward_grad<BackwardOp>, Req>, xpu>::Launch(
+          s, m_out_data.shape_.Size(), m_in_grad.dptr_, m_out_grad.dptr_, m_out_data.dptr_);
+    });
   }
 };  // class ActivationOp
 
