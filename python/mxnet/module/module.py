@@ -62,7 +62,7 @@ class Module(BaseModule):
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,
-                 fixed_param_names=None, state_names=None):
+                 fixed_param_names=None, state_names=None, compress_params=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -99,6 +99,7 @@ class Module(BaseModule):
         self._aux_params = None
         self._params_dirty = False
 
+        self._compress_params = compress_params if compress_params else {'compress':'none'}
         self._optimizer = None
         self._kvstore = None
         self._update_on_kvstore = None

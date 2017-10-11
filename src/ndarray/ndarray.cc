@@ -573,15 +573,14 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   std::vector<Engine::VarHandle> mutable_vars;
   mutable_vars.push_back(ret.var());
   mutable_vars.push_back(res.var());
-
-  std::vector<TBlob> inputs(3);
-  inputs[0] = from.data();
-  inputs[1] = residual->data();
-  inputs[2] = to->data();
-
+  std::cout<<"going into loop"<<std::endl;
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([inputs, neg_threshold, pos_threshold](RunContext ctx) {
+      Engine::Get()->PushSync([from, residual, to, neg_threshold, pos_threshold](RunContext ctx) {
+          std::vector<TBlob> inputs(3);
+          inputs[0] = from.data();
+          inputs[1] = residual->data();
+          inputs[2] = to->data();
           mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
                                                     neg_threshold, pos_threshold);
         }, from.ctx(), const_vars, mutable_vars,
@@ -593,7 +592,16 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([inputs, neg_threshold, pos_threshold](RunContext ctx) {
+        std::cout<<"pushing to engine"<<std::endl;
+        Engine::Get()->PushSync([from, residual, to, neg_threshold, pos_threshold](RunContext ctx) {
+            std::vector<TBlob> inputs(3);
+            inputs[0] = from.data();
+            inputs[1] = residual->data();
+            inputs[2] = to->data();
+            for(int i=0; i<4; i++) {
+              CHECK_EQ(*(from.data().dptr<float>()+i), 1.);
+            }
+            std::cout<<"passed checks"<<std::endl;
             mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
                                                       neg_threshold, pos_threshold);
           }, from.ctx(), const_vars, mutable_vars,
@@ -623,9 +631,9 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([inputs](RunContext ctx) {
-                                mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
-                              }, from.ctx(), {from.var()}, {ret.var()},
-                              FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
+        mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
+          }, from.ctx(), {from.var()}, {ret.var()},
+          FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
       LOG(FATAL) << "Unsupported dequantization " << compress << std::endl;
     }

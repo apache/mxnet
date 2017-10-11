@@ -530,12 +530,12 @@ class CommDevice : public Comm {
       for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
-        if (compress_.compare("none") != 0) {
+        if (compress_ != "none") {
           buf.residual[i] = NDArray(
             buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
           buf.residual[i] = 0;
           int bits;
-          if (compress_.compare("2bit") == 0) {
+          if (compress_ =="2bit") {
             bits = 16;
             long int small_size = buf.merged.shape().Size() % bits == 0 ?
                                   buf.merged.shape().Size() / bits + 3 :

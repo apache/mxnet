@@ -347,6 +347,7 @@ inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,
   // check input
   CHECK(!shape_is_none(in_attrs->at(0)));
   CHECK(!shape_is_none(in_attrs->at(1)));
+  //TODO(huilgolr) check
   CHECK_LE(in_attrs->at(1).Size(),
            in_attrs->at(0).Size()*16)
     << "The shape of the second input array are "
