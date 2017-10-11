@@ -113,7 +113,8 @@ def fit(args, network, data_loader, **kwargs):
     data_loader : function that returns the train and val data iterators
     """
     # kvstore
-    kv = mx.kvstore.create(args.kv_store, '2bit')
+    kv = mx.kvstore.create(args.kv_store)
+    kv.set_compress({'compress':'2bit','pos_threshold':0.5,'neg_threshold':-0.5})
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
