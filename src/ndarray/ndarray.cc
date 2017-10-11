@@ -591,16 +591,11 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        std::cout<<"pushing to engine"<<std::endl;
         Engine::Get()->PushSync([from, residual, to, neg_threshold, pos_threshold](RunContext ctx) {
             std::vector<TBlob> inputs(3);
             inputs[0] = from.data();
             inputs[1] = residual->data();
             inputs[2] = to->data();
-            for(int i=0; i<4; i++) {
-              CHECK_EQ(*(from.data().dptr<float>()+i), 1.);
-            }
-            std::cout<<"passed checks"<<std::endl;
             mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
                                                       neg_threshold, pos_threshold);
           }, from.ctx(), const_vars, mutable_vars,

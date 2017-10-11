@@ -123,17 +123,15 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
             for o in out:
                 check_diff_to_scalar(o, newval)
 
-   pull_before_push(kv)
-   push_zeros(kv)
-   curval = verify_residual(kv, neg, pos, rate)
-   check_ones(kv, pos, rate, curval)
+    pull_before_push(kv)
+    push_zeros(kv)
+    curval = verify_residual(kv, neg, pos, rate)
+    check_ones(kv, pos, rate, curval)
 
 test_kvstore('local_update_cpu')
 test_kvstore('local_allreduce_cpu')
 test_kvstore('local_allreduce_device')
 
-test_compress_kvstore('local_update_cpu')
-test_compress_kvstore('local_allreduce_cpu')
 test_compress_kvstore('local_allreduce_device')
 
 ## group keys interface
