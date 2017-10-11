@@ -237,7 +237,8 @@ class KVStoreDist : public KVStoreLocal {
       // TODO(haibin) refactor this for loop
       for (size_t i = 0; i < num_vals; i++) {
         auto &row_id = target_val_rowids[i].second;
-        NDArray indices = row_id.Copy(pinned_ctx_);
+        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
+        CopyFromTo(row_id, &indices, 0);
         Unique(&indices, priority);
         target_val_rowids[i].second = indices;
         num_rows += indices.shape().Size();
@@ -271,6 +272,10 @@ class KVStoreDist : public KVStoreLocal {
       auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
+        // Start of a push doesn't guarantee that the previous pushes are completed.
+        // This shouldn't affect training of networks though because training involves
+        // a sequence of push, pull, then push. This imposes ordering that the
+        // second push happens after the first pull, and the pull happens after first push.
         send_buf = merged;  // avoid memory copy
       } else {
         if (send_buf.is_none()) {
@@ -340,11 +345,13 @@ class KVStoreDist : public KVStoreLocal {
                   << pskv.keys << " size: " << size;
       }
       auto vals = new ps::SArray<real_t>(data, size, false);
-      CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull,
-        [vals, cb]() { delete vals; cb(); });
-      // copy indices to recv_buf
+      // copy indices to recv_buf. this needs to be done before ZPull
+      // because after pull is done, the callback function returns and locks are released.
+      // at this point, later functions may access the indices variable while copy happens
       mshadow::Copy(recv_buf->aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
                     indices_data.FlatTo1D<cpu, int64_t>());
+      CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull,
+        [vals, cb]() { delete vals; cb(); });
     };
     CHECK_NOTNULL(Engine::Get())->PushAsync(
         pull_from_servers,
@@ -485,24 +492,27 @@ class KVStoreDist : public KVStoreLocal {
       int64_t start_row = 0;
       // parition it to all servers
       for (int i = 0; i < num_servers; ++i) {
-        // calculate partition ranges
-        int64_t part_num_rows =
-            llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
-            llround(static_cast<double>(total_num_rows) / num_servers * i);
-        auto end_row = start_row + part_num_rows;
-        auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
-        auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
         ps::Key master_key = krs[i].begin() + key;
         pskv.keys.push_back(master_key);
         pskv.lens.push_back(0);
-        for (auto offset = lb; offset < ub; offset++) {
-          ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
-          CHECK_LT(ps_key, krs[i].end());
-          pskv.keys.push_back(ps_key);
-          pskv.lens.push_back(unit_len);
-          pskv.size += unit_len;
+        if (offsets) {
+          // calculate partition ranges
+          int64_t part_num_rows =
+            llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
+            llround(static_cast<double>(total_num_rows) / num_servers * i);
+          auto end_row = start_row + part_num_rows;
+          auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
+          auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
+
+          for (auto offset = lb; offset < ub; offset++) {
+            ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
+            CHECK_LT(ps_key, krs[i].end());
+            pskv.keys.push_back(ps_key);
+            pskv.lens.push_back(unit_len);
+            pskv.size += unit_len;
+          }
+          start_row = end_row;
         }
-        start_row = end_row;
       }
       CHECK_EQ(static_cast<size_t>(pskv.size), size);
     } else {
