@@ -453,8 +453,8 @@ class ElemwiseBinaryOp : public OpBase {
     const auto rhs_stype = outputs[1].storage_type();
     // lhs grad
     if (req[0] != kNullOp) {
-      if (in_stype == kRowSparseStorage && lhs_stype == kRowSparseStorage) {
-        CHECK_EQ(outputs[0].storage_type(), kRowSparseStorage);
+      if (in_stype == lhs_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
+        CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> rsp, _. op requires 0-input returns 0-output
         DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
@@ -467,8 +467,8 @@ class ElemwiseBinaryOp : public OpBase {
     }
     // rhs grad
     if (req[1] != kNullOp) {
-      if (in_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) {
-        CHECK_EQ(outputs[0].storage_type(), kRowSparseStorage);
+      if (in_stype == rhs_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
+        CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> _, rsp. op requires 0-input returns 0-output
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {

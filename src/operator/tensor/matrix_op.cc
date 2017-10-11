@@ -413,23 +413,27 @@ parameter values:
                                                      DispatchMode* dispatch_mode,
                                                      std::vector<int> *in_attrs,
                                                      std::vector<int> *out_attrs) {
+    bool dispatched = false;
     // For clipping ranges that cross zero, sparse output is possible
     CHECK_EQ(in_attrs->size(), 1U) << " in operator " << attrs.name;
     CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
     if ((*in_attrs)[0] == kDefaultStorage) {
-      return storage_type_assign(&out_attrs[0], kDefaultStorage,
-                                 dispatch_mode, DispatchMode::kFCompute);
+      dispatched = storage_type_assign(&out_attrs[0], kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
     }
     const auto& param = nnvm::get<ClipParam>(attrs.parsed);
-    if (param.a_min <= 0.0 && param.a_max >= 0.0) {
+    if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
       const int this_stype = (*in_attrs)[0];
       if (this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
-        return storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
-                                   dispatch_mode, DispatchMode::kFComputeEx);
+        dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+                                         dispatch_mode, DispatchMode::kFComputeEx);
       }
     }
-    return storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
-                               dispatch_mode, DispatchMode::kFComputeFallback);
+    if (!dispatched) {
+      dispatch_fallback(out_attrs, dispatch_mode);
+      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    }
+    return true;
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")

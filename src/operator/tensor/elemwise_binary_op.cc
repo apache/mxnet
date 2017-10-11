@@ -61,8 +61,6 @@ bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   using namespace common;
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 2U);
-  const auto lhs_grad_stype = out_attrs->at(0);
-  auto& rhs_grad_stype = out_attrs->at(1);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
@@ -72,16 +70,10 @@ bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched) {
-    if (common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
-      // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
+    if (common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage)
+      && common::ContainsOnlyStorage(*out_attrs, kRowSparseStorage)) {
       dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
                                        dispatch_mode, dispatch_ex);
-      // when some grad_stype is already kDefaultStorage, FComputeEx can handle that, too
-      if ((lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
-          (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
-        DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, dispatch_ex);
-        dispatched = true;
-      }
     }
   }
   if (!dispatched) {
