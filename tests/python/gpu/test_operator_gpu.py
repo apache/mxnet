@@ -1455,26 +1455,35 @@ def test_two_bit_quantization_op():
     mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
     decompr = mx.nd.zeros(grad.shape)
     mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    assert same(np.zeros(grad.shape), decompr.asnumpy())
-    assert same(residual.asnumpy(), np.array([1.0, 1.0, 1.0]))
+    exp_residual = np.ones(grad.shape)
+    exp_grad = np.zeros(grad.shape)
+    assert same(np.zeros(grad.shape), decompr.asnumpy()), (decompr.asnumpy(), exp_grad)
+    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
 
     grad = mx.nd.array([3.0, 3.0, 3.0], ctx=mx.gpu(0))
     mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
     mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    assert same(np.ones(grad.shape)*(pos_threshold.asnumpy()), decompr.asnumpy())
-    assert same(residual.asnumpy(), np.array([0.0, 0.0, 0.0]))
+    exp_grad = np.ones(grad.shape)*pos_threshold
+    exp_residual = np.zeros(grad.shape)
+    assert same(exp_grad, decompr.asnumpy()), (decompr.asnumpy(),exp_grad)
+    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
 
     grad = mx.nd.array([1.0, 1.0, 1.0], ctx=mx.gpu(0))
     mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
     mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    assert same(np.zeros(grad.shape), decompr.asnumpy())
-    assert same(residual.asnumpy(), np.array([1.0, 1.0, 1.0]))
+    exp_grad = np.zeros(grad.shape)
+    exp_residual = np.ones(grad.shape)
+    assert same(exp_grad, decompr.asnumpy()), (decompr.asnumpy(), exp_grad)
+    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
 
     grad = mx.nd.array([6.0, 6.0, 6.0], ctx=mx.gpu(0))
     mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
     mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    assert same(np.ones(grad.shape)*(pos_threshold.asnumpy()), decompr.asnumpy())
-    assert same(residual.asnumpy(), np.array([3.0, 3.0, 3.0]))
+    exp_grad = np.ones(grad.shape)*pos_threshold
+    exp_residual = np.ones(grad.shape)*3
+    assert same(exp_grad, decompr.asnumpy()), (decompr.asnumpy(), exp_grad)
+    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
+
 
 if __name__ == '__main__':
     import nose

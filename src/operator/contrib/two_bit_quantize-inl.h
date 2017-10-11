@@ -44,14 +44,14 @@ struct init_mem_2bit {
 struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
   float pos_threshold, neg_threshold;
   DMLC_DECLARE_PARAMETER(TwoBitParam) {
-    DMLC_DECLARE_FIELD(pos_threshold)
-      .set_default(0.1)
-      .describe("Threshold to quantize positive values. "
-                  "Has to be greater than 0");
     DMLC_DECLARE_FIELD(neg_threshold)
       .set_default(-0.1)
       .describe("Threshold to quantize negative values. "
                   "Has to be less than 0");
+    DMLC_DECLARE_FIELD(pos_threshold)
+      .set_default(0.1)
+      .describe("Threshold to quantize positive values. "
+                  "Has to be greater than 0");
   }
 };
 
