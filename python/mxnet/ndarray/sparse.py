@@ -885,6 +885,40 @@ _set_ndarray_class(_ndarray_cls)
 
 
 def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
+    """Return Return a 2-D array with ones on the diagonal and zeros elsewhere
+       of given shape and type.
+
+    Parameters
+    ----------
+    stype: string
+        The storage type of the return array, such as 'row_sparse', 'csr', etc
+    N: int
+        Number of rows in the output.
+    M : int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k : int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx : Context, optional
+        An optional device context (default is the current default context)
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+    aux_types: list of numpy.dtype, optional
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
+        (default values depends on the storage type)
+
+    Returns
+    -------
+    RowSparseNDArray or CSRNDArray
+        A created array
+    Examples
+    --------
+    >>> mx.nd.sparse.eye('csr', 1, 2)
+    <CSRNDArray 1x2 @cpu(0)>
+    >>> mx.nd.sparse.eye('row_sparse', 1, 2, dtype='float16').asnumpy()
+    array([[ 1.,  0.]], dtype=float16)
+    """
     if stype == 'default':
         return _eye_ndarray(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
@@ -896,7 +930,8 @@ def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
         else:
             raise Exception("unknown storage type")
     assert(len(aux_types) == len(_STORAGE_AUX_TYPES[stype]))
-    out = _ndarray_cls(_new_alloc_handle(stype, (N, M if M > 0 else N), ctx, True, dtype, aux_types))
+    ncols = M if M > 0 else N
+    out = _ndarray_cls(_new_alloc_handle(stype, (N, ncols), ctx, True, dtype, aux_types))
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
 

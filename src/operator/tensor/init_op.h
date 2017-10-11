@@ -32,6 +32,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <algorithm>
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 
@@ -54,9 +55,9 @@ struct EyeParam : public dmlc::Parameter<EyeParam> {
     .describe("Number of columns in the output. If 0, defaults to N");
     DMLC_DECLARE_FIELD(k)
     .set_default(0)
-    .describe("Index of the diagonal. 0 (the default) refers to the main diagonal.\
-              A positive value refers to an upper diagonal.\
-              A negative value to a lower diagonal.");
+    .describe("Index of the diagonal. 0 (the default) refers to the main diagonal."
+              "A positive value refers to an upper diagonal."
+              "A negative value to a lower diagonal.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -87,7 +88,7 @@ struct eye_fill_impl {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t num_cols,
                                   const nnvm::dim_t k) {
-    if ((i % num_cols) == ((i / num_cols) + k)){
+    if ((i % num_cols) == ((i / num_cols) + k)) {
       KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(1));
     } else {
       KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(0));
@@ -159,7 +160,7 @@ void EyeFillCsr(mshadow::Stream<xpu> *s, const NDArray& out,
           s, N + 1, out.aux_data(csr::kIndPtr).dptr<RType>(),
           nnz, std::abs(std::min((nnvm::dim_t)0, k)));
         Kernel<eye_csr_idx_fill, xpu>::Launch(
-          s, nnz, out.aux_data(csr::kIdx).dptr<IType>(), 
+          s, nnz, out.aux_data(csr::kIdx).dptr<IType>(),
           std::max(std::min(k, num_cols-1), (nnvm::dim_t)0));
         Kernel<eye_csr_data_fill, xpu>::Launch(
           s, nnz, out.data().dptr<DType>());

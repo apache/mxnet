@@ -39,6 +39,39 @@ __all__ = ['zeros', 'empty', 'array', 'load', 'save', 'eye']
 
 
 def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
+    """Return Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx: Context, optional
+        An optional device context (default is the current default context)
+    dtype: str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+    aux_types: list of numpy.dtype, optional
+        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
+        (default values depends on the storage type)
+
+    Returns
+    -------
+        A created array
+
+    Examples
+    --------
+    >>> mx.nd.eye(1, 2)
+
+    [[ 1.  0.]]
+    <NDArray 1x2 @cpu(0)>
+    >>> mx.nd.eye(1, 2, 1).asnumpy()
+    array([[ 0.,  1.]], dtype=float32)
+    """
     if stype is None or stype == 'default':
         return _eye_ndarray(N, M, k, ctx, dtype, **kwargs)
     else:
