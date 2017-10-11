@@ -4,6 +4,22 @@ from mxnet.metric import check_label_shapes
 import numpy as np
 
 
+class LossRecorder(mx.metric.EvalMetric):
+    """
+
+    """
+    def __init__(self, name):
+        super(LossRecorder, self).__init__(name)
+
+    def update(self, labels, preds=0):
+        """
+        """
+        for loss in labels:
+            if isinstance(loss, mx.nd.NDArray):
+                loss = loss.asnumpy()
+            self.sum_metric += loss.sum()
+            self.num_inst += loss.size
+
 class Accuracy(mx.metric.EvalMetric):
     """
 
@@ -31,8 +47,11 @@ class Accuracy(mx.metric.EvalMetric):
             label = label.asnumpy().astype('int32')
 
             check_label_shapes(label, pred_label)
+            correct = np.logical_and(
+                pred_label.flat == label.flat,
+                pred_label.flat != self.ignore_label)
 
-            self.sum_metric += (pred_label.flat == label.flat).sum()
+            self.sum_metric += correct.sum()
             self.num_inst += np.sum(label != self.ignore_label)
 
 

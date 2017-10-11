@@ -3,11 +3,28 @@ Losses are used to penalize incorrect classification and inaccurate box regressi
 Losses are subclasses of gluon.loss.Loss which is a HybridBlock actually.
 """
 from mxnet.gluon import loss
+from mxnet.gluon.loss import _reshape_like, _apply_weighting
 import numpy as np
 
 def find_inf(x, mark='null'):
     pos = np.where(x.asnumpy().flat == np.inf)[0]
     print(mark, pos)
+
+
+class SmoothL1Loss(loss.Loss):
+    """SmoothL1 loss for finer grade regression.
+    SmoothL1 is introduced in
+
+    """
+    def __init__(self, sigma=1., weight=None, batch_axis=0, **kwargs):
+        super(SmoothL1Loss, self).__init__(weight, batch_axis, **kwargs)
+        self._sigma = sigma
+
+    def hybrid_forward(self, F, pred, label, sample_weight=None):
+        label = _reshape_like(F, label, pred)
+        loss = F.smooth_l1(pred - label, scalar=self._sigma)
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 class FocalLoss(loss.Loss):
     """Focal Loss for inbalanced classification.
@@ -74,4 +91,5 @@ class FocalLoss(loss.Loss):
         # print(np.sum(temp))
         # print(F.sum(loss,axis=self._batch_axis, exclude=True))
         # raise
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
