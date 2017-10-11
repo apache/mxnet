@@ -20,7 +20,6 @@ from __future__ import division
 import argparse, time
 import logging
 logging.basicConfig(level=logging.INFO)
-import hotshot, hotshot.stats
 
 import mxnet as mx
 from mxnet import gluon
@@ -193,6 +192,7 @@ def main():
 
 if __name__ == '__main__':
     if opt.profile:
+        import hotshot, hotshot.stats
         prof = hotshot.Profile('image-classifier-%s-%s.prof'%(opt.model, opt.mode))
         prof.runcall(main)
         prof.close()
