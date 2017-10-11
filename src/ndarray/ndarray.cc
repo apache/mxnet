@@ -573,7 +573,6 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   std::vector<Engine::VarHandle> mutable_vars;
   mutable_vars.push_back(ret.var());
   mutable_vars.push_back(res.var());
-  std::cout<<"going into loop"<<std::endl;
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([from, residual, to, neg_threshold, pos_threshold](RunContext ctx) {
