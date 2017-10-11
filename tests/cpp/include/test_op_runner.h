@@ -25,6 +25,9 @@
 #ifndef TEST_OP_RUNNER_H_
 #define TEST_OP_RUNNER_H_
 
+#include <string>
+#include <vector>
+#include <utility>
 #include "./test_op.h"
 
 namespace mxnet {
@@ -63,7 +66,6 @@ class GenericOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
   void resetBackward() override {
     test::op::BasicOperatorData<DType, AccReal>::FillRandom();
   }
-
 };
 
 /*!
@@ -75,7 +77,6 @@ class GenericOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
 template<typename OperatorProp, typename OperatorDataContainer>
 class OperatorRunner {
  public:
-
   typedef typename OperatorDataContainer::DataType    DType;
   typedef typename OperatorDataContainer::AccRealType AccReal;
 
@@ -140,7 +141,7 @@ class OperatorRunner {
     test::op::OpInfo<OperatorProp, DType, AccReal> info =
       RunGenericOperatorForward(isGPU, inputShape, kwargs, count);
     return RunGenericOperatorBackward(&info, count);
-  };
+  }
 
   /*!
    * \brief Timing test a generic operator
@@ -189,7 +190,7 @@ class OperatorRunner {
       index_t height = 1;
       index_t width = 1;
 
-      if(!timing_shape.ndim()) {
+      if (!timing_shape.ndim()) {
         do {
           batchSize = stochastic ? test::rangedRand(1U, TES_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
           channels = stochastic ? test::rangedRand(1U, TEST_CHANNELS * 2U) : TIMING_CHANNELS;
@@ -260,7 +261,6 @@ class OperatorRunner {
   static constexpr int TIMING_DEPTH = 2;
   static constexpr int TIMING_DH = 64;
   static constexpr int TIMING_DW = 64;
-
 };
 
 }  // namespace test

@@ -101,7 +101,7 @@ class BasicOperatorData {
       , initializeForward_(0)   // unit testing may call inits in any order based
       , initializeBackward_(0)  // upon its use-case (ie may not want to run forward pass first)
       , initializeCallback_(0)
-      , generator_(new std::mt19937()){
+      , generator_(new std::mt19937()) {
     opContext_.is_train = true;
     opContext_.run_ctx.stream = nullptr;
 
@@ -395,9 +395,9 @@ class BasicOperatorData {
 
   void FillRandom() {
     std::uniform_real_distribution<DType> distribution(-1.0, 1.0);
-    for(size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
+    for (size_t j = 0, jn = this->c_.all_blob_vects_.size(); j < jn; ++j) {
       std::vector<TBlob> *data_vect = this->c_.all_blob_vects_[j];
-      if(data_vect) {
+      if (data_vect) {
         for (size_t i = 0, n = data_vect->size(); i < n; ++i) {
           TBlob &blob = (*data_vect)[i];
           test::patternFill<DType>(&blob, [this, &distribution]() -> DType {

@@ -53,7 +53,7 @@ TEST(ACTIVATION_PERF, TimingCPU) {
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"act_type", "tanh"});
   test::OperatorRunner<mxnet::op::ActivationProp, test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1); // prime code and cache
+  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
   const std::vector <TShape> shapes = {
     {1,  1, 28, 28},
     {1,  3, 28, 28},
@@ -75,12 +75,12 @@ TEST(ACTIVATION_PERF, TimingGPU) {
   test::op::OpInfo<mxnet::op::ActivationProp, float, float> info;
   test::OperatorRunner<mxnet::op::ActivationProp,
     test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1); // prime code and cache
+  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
   const std::vector<TShape> shapes = {
     {1, 1, 28, 28}, {1, 3, 28, 28},
     {50, 1, 18, 32}, {50, 3, 18, 32}
   };
-  for(const TShape& shape : shapes) {
+  for (const TShape& shape : shapes) {
     runner.TimingTest("Fully connected", true, false, kwargs, 2, 10, shape);
   }
 }
