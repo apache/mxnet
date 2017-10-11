@@ -267,6 +267,7 @@ class KVStoreLocal : public KVStore {
       // invalid, print warning messages once
       if (this->warnings_printed_.find(key) == this->warnings_printed_.end()) {
         LOG(INFO) << "Warning: non-default weights detected during kvstore pull. "
+                  << "This call has been ignored. "
                   << "Please make sure to use row_sparse_pull with row_ids.";
         this->warnings_printed_.insert(key);
       }
