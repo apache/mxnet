@@ -275,7 +275,10 @@ FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
-FILE(GLOB_RECURSE NNVMSOURCE "nnvm/src/*.cc" "nnvm/src/*.h" "nnvm/include/*.h")
+FILE(GLOB_RECURSE NNVMSOURCE
+  nnvm/src/c_api/*.cc
+  nnvm/src/core/*.cc
+  nnvm/src/pass/*.cc)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
@@ -527,4 +530,3 @@ if(MSVC)
 endif()
 set(LINT_DIRS include src scripts python tests cpp-package)
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
-
