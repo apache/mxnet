@@ -278,7 +278,11 @@ FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 FILE(GLOB_RECURSE NNVMSOURCE
   nnvm/src/c_api/*.cc
   nnvm/src/core/*.cc
-  nnvm/src/pass/*.cc)
+  nnvm/src/pass/*.cc
+  nnvm/src/c_api/*.h
+  nnvm/src/core/*.h
+  nnvm/src/pass/*.h
+  nnvm/include/*.h)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
