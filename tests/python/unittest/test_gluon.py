@@ -502,6 +502,19 @@ def test_export():
     assert_almost_equal(out.asnumpy(), out2.asnumpy())
 
 
+def test_hybrid_stale_cache():
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(mx.gluon.nn.Dense(10, weight_initializer='zeros', bias_initializer='ones', flatten=False))
+
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5)))
+
+    net.add(mx.gluon.nn.Flatten())
+    assert net(mx.nd.ones((2,3,5))).shape == (2, 30)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
