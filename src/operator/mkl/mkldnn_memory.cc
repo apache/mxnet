@@ -171,6 +171,7 @@ std::shared_ptr<memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype *
                                                                          const TBlob &tblob) {
   std::shared_ptr<MKLMemHolder> blob = tblob.Mkl_mem_;
   if (this->conversion_needed()) {
+    LOG(INFO) << __FUNCTION__<< __LINE__;
     // have private format
     const Dtype *prv_ptr = reinterpret_cast<Dtype *>(blob->prv_data());
     if (prv_ptr == NULL) {
@@ -198,6 +199,7 @@ std::shared_ptr<memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype *
       return blob_prv_mkldnn_mem_descr->get_prv_memory(true);
     }
   } else {
+    LOG(INFO) << __FUNCTION__<< __LINE__;
     const Dtype *prv_ptr = reinterpret_cast<Dtype *>(blob->prv_data());
     if (prv_ptr != NULL) {
       std::shared_ptr<MKLDNNData<Dtype> >

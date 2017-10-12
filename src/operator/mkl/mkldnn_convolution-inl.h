@@ -73,116 +73,99 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
   }
  private:
   void InitForward(const OpContext &ctx) {
-    // if (std::is_same<DType, double>::value)   NOT_IMPLEMENTED;
-    auto propagation = (!ctx.is_train) ? prop_kind::forward_scoring
-                                       : prop_kind::forward_training;
+      // if (std::is_same<DType, double>::value)   NOT_IMPLEMENTED;
+      auto propagation =
+        (!ctx.is_train) ? prop_kind::forward_scoring : prop_kind::forward_training;
 
-    int32_t g = std::max(this->group_, 1);
-    int32_t n = this->num_;
-    int32_t iw = this->width_;
-    int32_t ih = this->height_;
-    int32_t ic = this->channels_;
+      int32_t g = std::max(this->group_, 1);
+      int32_t n = this->num_;
+      int32_t iw = this->width_;
+      int32_t ih = this->height_;
+      int32_t ic = this->channels_;
 
-    int32_t ow = this->width_out_;
-    int32_t oh = this->height_out_;
-    int32_t oc = this->channel_output_;
+      int32_t ow = this->width_out_;
+      int32_t oh = this->height_out_;
+      int32_t oc = this->channel_output_;
 
-    int32_t kw = this->kernel_w_;
-    int32_t kh = this->kernel_h_;
-    memory::dims convolutionStrides
-        {static_cast<int>(this->stride_h_), static_cast<int>(this->stride_w_)};
-    memory::dims padding{this->pad_h_, this->pad_w_};
+      int32_t kw = this->kernel_w_;
+      int32_t kh = this->kernel_h_;
+      memory::dims convolutionStrides{ static_cast<int>(this->stride_h_),
+        static_cast<int>(this->stride_w_) };
+      memory::dims padding{ this->pad_h_, this->pad_w_ };
 
-    memory::data_type mpcsn = memory::data_type::f32;
-    memory::format mfmt_any = memory::format::any;
-    mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
+      memory::data_type mpcsn = memory::data_type::f32;
+      memory::format mfmt_any = memory::format::any;
+      mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
 
-    memory::dims bottom_tz = {n, ic, ih, iw};
-    memory::dims bias_tz = {oc};
-    memory::dims top_tz = {n, oc, oh, ow};
-    memory::dims weights_tz =
-        (g != 1) ? memory::dims{g, oc / g, ic / g, kh, kw} : memory::dims{oc,
-                                                                          ic,
-                                                                          kh,
-                                                                          kw};
+      memory::dims bottom_tz = { n, ic, ih, iw };
+      memory::dims bias_tz = { oc };
+      memory::dims top_tz = { n, oc, oh, ow };
+      memory::dims weights_tz =
+        (g != 1) ? memory::dims{ g, oc / g, ic / g, kh, kw } : memory::dims{ oc, ic, kh, kw };
 
-    memory::desc init_bottom_md({bottom_tz}, mpcsn, mfmt_any);
-    memory::desc init_bias_md({bias_tz}, mpcsn, mfmt_any);
-    memory::desc init_top_md({top_tz}, mpcsn, mfmt_any);
-    memory::desc init_weights_md({weights_tz}, mpcsn, mfmt_any);
+      memory::desc init_bottom_md({ bottom_tz }, mpcsn, mfmt_any);
+      memory::desc init_bias_md({ bias_tz }, mpcsn, mfmt_any);
+      memory::desc init_top_md({ top_tz }, mpcsn, mfmt_any);
+      memory::desc init_weights_md({ weights_tz }, mpcsn, mfmt_any);
 
-    // ---- Initialize convolution primitive descriptor
-    std::shared_ptr<convolution_forward::desc> convFwd_desc;
-    if (!this->param_.no_bias) {
-      convFwd_desc.reset(new convolution_forward::desc(propagation,
-                                                       algorithm::convolution_direct,
-                                                       init_bottom_md,
-                                                       init_weights_md,
-                                                       init_bias_md,
-                                                       init_top_md,
-                                                       convolutionStrides,
-                                                       padding,
-                                                       padding,
-                                                       padding_kind::zero));
-    } else {
-      convFwd_desc.reset(new convolution_forward::desc(propagation,
-                                                       algorithm::convolution_direct,
-                                                       init_bottom_md,
-                                                       init_weights_md,
-                                                       init_top_md,
-                                                       convolutionStrides,
-                                                       padding,
-                                                       padding,
-                                                       padding_kind::zero));
-    }
-    convFwd_pd.reset(new convolution_forward::primitive_desc(*convFwd_desc,
-                                                             cpu_engine));
-
+      // ---- Initialize convolution primitive descriptor
+      std::shared_ptr<convolution_forward::desc> convFwd_desc;
+      if (!this->param_.no_bias) {
+        convFwd_desc.reset(
+          new convolution_forward::desc(propagation, algorithm::convolution_direct
+          , init_bottom_md, init_weights_md, init_bias_md, init_top_md
+          , convolutionStrides, padding, padding, padding_kind::zero));
+      } else {
+        convFwd_desc.reset(
+          new convolution_forward::desc(propagation, algorithm::convolution_direct
+          , init_bottom_md, init_weights_md, init_top_md
+          , convolutionStrides, padding, padding, padding_kind::zero));
+      }
+      convFwd_pd.reset(new convolution_forward::primitive_desc(*convFwd_desc, cpu_engine));
     std::cout << "convFwd_pd: " << convFwd_pd->dst_primitive_desc().desc().data.format << std::endl;
-    CHECK(convFwd_pd);
-    // ---- Create priv memory primitive descriptors stored as class members -------------
-    typedef typename memory::primitive_desc MemPD;
-    std::shared_ptr<MemPD> prv_fwd_bottom_data_memory_pd
-        (new MemPD(convFwd_pd->src_primitive_desc()));
-    std::shared_ptr<MemPD>
-        prv_fwd_top_data_memory_pd(new MemPD(convFwd_pd->dst_primitive_desc()));
-    std::shared_ptr<MemPD> prv_fwd_weights_data_memory_pd
-        (new MemPD(convFwd_pd->weights_primitive_desc()));
+      CHECK(convFwd_pd);
+      // ---- Create priv memory primitive descriptors stored as class members -------------
+      typedef typename memory::primitive_desc MemPD;
+      std::shared_ptr<MemPD> prv_fwd_bottom_data_memory_pd(
+        new MemPD(convFwd_pd->src_primitive_desc()));
+      std::shared_ptr<MemPD> prv_fwd_top_data_memory_pd(
+        new MemPD(convFwd_pd->dst_primitive_desc()));
+      std::shared_ptr<MemPD> prv_fwd_weights_data_memory_pd(
+        new MemPD(convFwd_pd->weights_primitive_desc()));
     std::cout << "prv_fwd_top_data_memory_pd: " <<
                                                 prv_fwd_top_data_memory_pd->desc().data.format << std::endl;
 
-    // ---- Create usr memory primitive descriptors -------------
-    memory::format mfmt_nchw = memory::format::nchw;
-    memory::format
-        weights_mfmt = (g != 1) ? memory::format::goihw : memory::format::oihw;
+      // ---- Create usr memory primitive descriptors -------------
+      memory::format mfmt_nchw = memory::format::nchw;
+      memory::format weights_mfmt = (g != 1) ? memory::format::goihw : memory::format::oihw;
 
-    std::shared_ptr<MemPD> usr_bottom_data_memory_pd
-        (new MemPD({{bottom_tz}, mpcsn, mfmt_nchw}, cpu_engine));
-    std::shared_ptr<MemPD> usr_bias_data_memory_pd
-        (new MemPD({{bias_tz}, mpcsn, memory::format::x}, cpu_engine));
-    std::shared_ptr<MemPD> usr_top_data_memory_pd
-        (new MemPD({{top_tz}, mpcsn, mfmt_nchw}, cpu_engine));
-    std::shared_ptr<MemPD> usr_weights_data_memory_pd
-        (new MemPD({{weights_tz}, mpcsn, weights_mfmt}, cpu_engine));
+      std::shared_ptr<MemPD> usr_bottom_data_memory_pd(
+        new MemPD({ { bottom_tz }, mpcsn, mfmt_nchw }, cpu_engine));
+      std::shared_ptr<MemPD> usr_bias_data_memory_pd(
+        new MemPD({ { bias_tz }, mpcsn, memory::format::x }, cpu_engine));
+      std::shared_ptr<MemPD> usr_top_data_memory_pd(
+        new MemPD({ { top_tz }, mpcsn, mfmt_nchw }, cpu_engine));
+      std::shared_ptr<MemPD> usr_weights_data_memory_pd(
+        new MemPD({ { weights_tz }, mpcsn, weights_mfmt }, cpu_engine));
 
 
-    // ---  init primitive and prv_memory descriptors ----------------------
-    fwd_bottom_data.reset(new MKLDNNData<DType>(usr_bottom_data_memory_pd,
-                                                prv_fwd_bottom_data_memory_pd));
-    fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
-    fwd_top_data.reset(new MKLDNNData<DType>(usr_top_data_memory_pd,
-                                             prv_fwd_top_data_memory_pd));
-    fwd_top_data->name = "fwd_top_data      @ " + this->getName();
-    fwd_weights_data.reset(new MKLDNNData<DType>(usr_weights_data_memory_pd,
-                                                 prv_fwd_weights_data_memory_pd));
-    fwd_weights_data->name = "fwd_weights_data  @ " + this->getName();
-    if (!this->param_.no_bias) {
-      std::shared_ptr<MemPD> prv_fwd_bias_data_memory_pd
-          (new MemPD(convFwd_pd->bias_primitive_desc()));
-      fwd_bias_data.reset(new MKLDNNData<DType>(usr_bias_data_memory_pd,
-                                                prv_fwd_bias_data_memory_pd));
-      fwd_bias_data->name = "fwd_bias_data     @ " + this->getName();
-    }
+      // ---  init primitive and prv_memory descriptors ----------------------
+      fwd_bottom_data.reset(
+        new MKLDNNData<DType>(usr_bottom_data_memory_pd, prv_fwd_bottom_data_memory_pd));
+      fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
+      fwd_top_data.reset(
+        new MKLDNNData<DType>(usr_top_data_memory_pd, prv_fwd_top_data_memory_pd));
+      fwd_top_data->name = "fwd_top_data      @ " + this->getName();
+      fwd_weights_data.reset(
+        new MKLDNNData<DType>(usr_weights_data_memory_pd, prv_fwd_weights_data_memory_pd));
+      fwd_weights_data->name = "fwd_weights_data  @ " + this->getName();
+      if (!this->param_.no_bias) {
+        std::shared_ptr<MemPD> prv_fwd_bias_data_memory_pd(
+          new MemPD(convFwd_pd->bias_primitive_desc()));
+        fwd_bias_data.reset(
+          new MKLDNNData<DType>(usr_bias_data_memory_pd, prv_fwd_bias_data_memory_pd));
+        fwd_bias_data->name = "fwd_bias_data     @ " + this->getName();
+      }
 #if 1
     {
       std::string prefix = "FWD-INI CON ";
@@ -198,13 +181,13 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(req[conv::kOut], kWriteTo);
-    // size_t expected = this->param_.no_bias ? 2 : 3;
-    // CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1);
-    Stream <xpu> *s = ctx.get_stream<xpu>();
+        using namespace mshadow;
+        using namespace mshadow::expr;
+        CHECK_EQ(req[conv::kOut], kWriteTo);
+        // size_t expected = this->param_.no_bias ? 2 : 3;
+        // CHECK_EQ(in_data.size(), expected);
+        CHECK_EQ(out_data.size(), 1);
+        Stream<xpu> *s = ctx.get_stream<xpu>();
 #if 1
     {
       std::string prefix = "FWD-BEF CON ";
@@ -219,53 +202,56 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
                          in_data[conv::kOut].shape_.Size());
     }
 #endif
-    Tensor<xpu, 4, DType> data =
+        Tensor<xpu, 4, DType> data =
             mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kData], s);
-    Tensor<xpu, 4, DType> out =
+        Tensor<xpu, 4, DType> out =
             mkl_experimental_direct_get<xpu, 4, DType>(out_data[conv::kOut], s);
-    Tensor<xpu, 4, DType> wmat =
+        Tensor<xpu, 4, DType> wmat =
             mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kWeight], s);
-    Tensor<xpu, 1, DType> bias;
-    CHECK_EQ(data.CheckContiguous(), true);
-    CHECK_EQ(wmat.CheckContiguous(), true);
-    CHECK_EQ(out.CheckContiguous(), true);
-    DType *data_ptr = data.dptr_;
-    DType *wmat_ptr = wmat.dptr_;
-    DType *out_ptr = out.dptr_;
-    if (convFwd_pd == NULL) {
-      if (!b_init_conv) {
-        this->init_properties(data, out);
-        this->b_init_conv = true;
-      }
+        CHECK_EQ(data.CheckContiguous(), true);
+        CHECK_EQ(wmat.CheckContiguous(), true);
+        CHECK_EQ(out.CheckContiguous(), true);
+        DType *data_ptr = data.dptr_;
+        DType *wmat_ptr = wmat.dptr_;
+        DType *out_ptr = out.dptr_;
+      if (convFwd_pd == NULL) {
+        if (!b_init_conv) {
+          this->init_properties(data, out);
+          this->b_init_conv = true;
+        }
 
-      InitForward(ctx);
-      // ---  init primitive and prv_memory descriptors ---------
-      fwd_bottom_data_primitive =
-              fwd_bottom_data->get_converted_prv(data_ptr, false, in_data[conv::kData]);
-      fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true,
-                                                                       in_data[conv::kWeight]);
-      if (!this->param_.no_bias) {
-        bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
-        fwd_bias_data_primitive =
-                fwd_bias_data->get_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
-      }
-      fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out_data[conv::kOut],
-                                                               fwd_top_data);
-      if (!this->param_.no_bias) {
-        convFwd.reset(new convolution_forward(*convFwd_pd, *fwd_bottom_data_primitive, *fwd_weights_data_primitive,
-                                              *fwd_bias_data_primitive, *fwd_top_data_memory));
+        InitForward(ctx);
+          // ---  init primitive and prv_memory descriptors ---------
+        fwd_bottom_data_primitive =
+          fwd_bottom_data->get_converted_prv(data_ptr, false, in_data[conv::kData]);
+        fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, false,
+          in_data[conv::kWeight]);
+        if (!this->param_.no_bias) {
+          Tensor<xpu, 1, DType> bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
+          fwd_bias_data_primitive =
+            fwd_bias_data->get_converted_prv(bias.dptr_, false, in_data[conv::kBias]);
+        }
+        fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out_data[conv::kOut],
+          fwd_top_data);
+        if (!this->param_.no_bias) {
+          convFwd.reset(new convolution_forward(*convFwd_pd
+            , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
+            , *fwd_bias_data_primitive, *fwd_top_data_memory));
+        } else {
+          convFwd.reset(new convolution_forward(*convFwd_pd
+            , *fwd_bottom_data_primitive, *fwd_weights_data_primitive
+            , *fwd_top_data_memory));
+        }
       } else {
-        convFwd.reset(new convolution_forward(*convFwd_pd, *fwd_bottom_data_primitive, *fwd_weights_data_primitive,
-                                              *fwd_top_data_memory));
+          fwd_bottom_data->sync_converted_prv(data_ptr, false, in_data[conv::kData]);
+          fwd_weights_data->sync_converted_prv(wmat_ptr, false, in_data[conv::kWeight]);
+          if (!this->param_.no_bias) {
+              Tensor<xpu, 1, DType> bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
+              fwd_bias_data->sync_converted_prv(bias.dptr_, false, in_data[conv::kBias]);
+          }
+          fwd_top_data->sync_output_memory(out_data[conv::kOut],
+            fwd_top_data);
       }
-    } else {
-      fwd_bottom_data->sync_converted_prv(data_ptr, false, in_data[conv::kData]);
-      fwd_weights_data->sync_converted_prv(wmat_ptr, true, in_data[conv::kWeight]);
-      if (!this->param_.no_bias)
-        fwd_bias_data->sync_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
-      fwd_top_data->sync_output_memory(out_data[conv::kOut],
-                                       fwd_top_data);
-    }
 #if 1
     {
       std::string prefix = "FWD-BEF CON ";
@@ -278,7 +264,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
       //printTensorFormat<DType>(prefix+"out_data.kOut", get_mkldnn_prv_descriptor<DType>(out_data[conv::kOut]));
     }
 #endif
-    convFwd.submit();
+      convFwd.submit();
 #if 1
     {
       std::string prefix = "FWD-AFT CON ";
@@ -479,9 +465,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
     Tensor<xpu, 3, DType> gwmat =
       mkl_experimental_direct_get_with_shape<xpu, 3, DType>(
         in_grad[conv::kWeight], wmat_shape, s);
-    Tensor<xpu, 1, DType> gbias;
-    if (!this->param_.no_bias) 
-        gbias = mkl_experimental_direct_get<xpu, 1, DType>(in_grad[conv::kBias], s);
     
     if (!b_init_conv) {
       this->init_properties(data, grad);
@@ -541,6 +524,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
           bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(gwmat.dptr_,
             in_grad[conv::kWeight], bwdw_weights_diff);
           if (!this->param_.no_bias) {
+            Tensor<xpu, 1, DType> gbias = mkl_experimental_direct_get<xpu, 1, DType>(in_grad[conv::kBias], s);
             bwdw_bias_diff_memory = bwdw_bias_diff->create_output_memory(gbias.dptr_,
               in_grad[conv::kBias], bwdw_bias_diff);
 
