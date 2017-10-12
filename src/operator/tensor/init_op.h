@@ -185,7 +185,7 @@ void EyeFillEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for EyeFillEx";
   if (stype == kCSRStorage) {
     NDArray nd(outputs[0]);
-    EyeFillCsr(s, nd, param.N, param.M, param.k);
+    EyeFillCsr<xpu>(s, nd, param.N, param.M, param.k);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
