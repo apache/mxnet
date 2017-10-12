@@ -67,7 +67,7 @@ static bool StorageTypeScatteredScalarOp(const NodeAttrs& attrs,
                                          std::vector<int>* out_attrs) {
   // Supports kDefaultStorage, kRowSparseStorage and kCSRStorage
   const auto stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
-  if(storage_type_assign(out_attrs,
+  if (storage_type_assign(out_attrs,
                          stype,
                          dispatch_mode,
                          stype == kDefaultStorage ? DispatchMode::kFCompute
