@@ -23,6 +23,18 @@
 namespace mxnet {
 namespace op {
 
+static bool fail_storage_type_inference(const NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
+                                        std::vector<int>* out_attrs) {
+  dispatch_fallback(out_attrs, dispatch_mode);
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 static bool StorageTypeRspOrDenseOutput(const NodeAttrs& attrs,
                                         const int dev_mask,
                                         DispatchMode* dispatch_mode,
@@ -30,27 +42,39 @@ static bool StorageTypeRspOrDenseOutput(const NodeAttrs& attrs,
                                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const NDArrayStorageType lhs_stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
-  if (lhs_stype == kRowSparseStorage) {
-    return storage_type_assign(&out_attrs[0], kRowSparseStorage,
-                               dispatch_mode, DispatchMode::kFComputeEx);
+  const auto lhs_stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
+  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
+      && common::ContainsOnlyStorage(*out_attrs, kDefaultStorage)) {
+    if (storage_type_assign(&out_attrs[0], kDefaultStorage,
+                            dispatch_mode, DispatchMode::kFCompute)) {
+      return true;
+    }
   }
-  return storage_type_assign(&out_attrs[0], kDefaultStorage,
-                             dispatch_mode, DispatchMode::kFCompute);
+  if (lhs_stype == kRowSparseStorage) {
+    if (storage_type_assign(&out_attrs[0], kRowSparseStorage,
+                            dispatch_mode,
+                            DispatchMode::kFComputeEx)) {
+      return true;
+    }
+  }
+  return fail_storage_type_inference(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 }
 
 static bool StorageTypeScatteredScalarOp(const NodeAttrs& attrs,
-                                        const int dev_mask,
-                                        DispatchMode* dispatch_mode,
-                                        std::vector<int>* in_attrs,
-                                        std::vector<int>* out_attrs) {
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
   // Supports kDefaultStorage, kRowSparseStorage and kCSRStorage
-  const NDArrayStorageType stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
-  return storage_type_assign(out_attrs,
-                             stype,
-                             dispatch_mode,
-                             stype == kDefaultStorage ? DispatchMode::kFCompute
-                                                      : DispatchMode::kFComputeEx);
+  const auto stype = static_cast<NDArrayStorageType>((*in_attrs)[0]);
+  if(storage_type_assign(out_attrs,
+                         stype,
+                         dispatch_mode,
+                         stype == kDefaultStorage ? DispatchMode::kFCompute
+                                                  : DispatchMode::kFComputeEx)) {
+    return true;
+  }
+  return fail_storage_type_inference(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 }
 
 /*! \brief _scatter_elemwise_div */

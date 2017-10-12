@@ -762,7 +762,9 @@ class AdaGrad(Optimizer):
         grad = grad * self.rescale_grad
 
         if is_sparse is True:
-            assert grad_indices_count == len(grad.indices)
+            grad_indices = grad.indices
+            # Make sure that the scalar multiply still has a sparse result
+            assert grad_indices_count == len(grad_indices)
 
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
@@ -771,8 +773,9 @@ class AdaGrad(Optimizer):
 
         if is_sparse:
             history[:] = sparse.elemwise_add(sparse.square(grad),
-                                             sparse.retain(history, grad.indices))
-            assert len(history.indices) == grad_indices_count
+                                             sparse.retain(history, grad_indices))
+            history_indices = history.indices
+            assert len(history_indices) == grad_indices_count
             adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
             srt = op.sqrt(adjusted_add)
             div = _internal._scatter_elemwise_div(grad, srt)
@@ -782,7 +785,7 @@ class AdaGrad(Optimizer):
             weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, -lr))
             state[:] = history
             assert state.stype == save_history_stype
-            assert len(history.indices) == grad_indices_count
+            assert len(history_indices) == grad_indices_count
         else:
             history[:] += square(grad)
             div = grad / sqrt(history + self.float_stable_eps)

@@ -353,11 +353,10 @@ class ElemwiseBinaryOp : public OpBase {
     const auto lhs_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    bool has_both = false;
-    // rsp, rsp -> rsp
-    if ((common::ContainsOnlyStorage(inputs, kRowSparseStorage)
-      || (common::ContainsOnlyStorage(inputs, kRowSparseStorage, kDefaultStorage, &has_both)
-          && has_both)) && (out_stype == kRowSparseStorage || out_stype == kDefaultStorage)) {
+    if ((common::ContainsOnlyStorage(inputs, kRowSparseStorage))
+        && (out_stype == kRowSparseStorage || out_stype == kDefaultStorage)) {
+      // rsp, rsp -> rsp
+      // rsp, rsp -> dns
       const int rsp_input_idx = lhs_stype == kRowSparseStorage ? 0 : 1;
       MSHADOW_IDX_TYPE_SWITCH(inputs[rsp_input_idx].aux_type(rowsparse::kIdx), IType, {
         MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
@@ -395,14 +394,18 @@ class ElemwiseBinaryOp : public OpBase {
     const auto lhs_stype = inputs[0].storage_type();
     const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if (out_stype == kRowSparseStorage &&
+    if ((out_stype == kRowSparseStorage || out_stype == kDefaultStorage) &&
         ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
          (lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
          (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) &&
          lhs_may_be_dense && rhs_may_be_dense) {
       // rsp, rsp -> rsp
+      // rsp, rsp -> dns
       // rsp, dns -> rsp
       // dns, rsp -> rsp
+      // More than once dense not allowed (this will be checked in RspRspOp):
+      //   rsp, dns -> dns  <-- NOT ALLOWED
+      //   dns, rsp -> dns  <-- NOT ALLOWED
       mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
       MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
         MSHADOW_IDX_TYPE_SWITCH(outputs[0].aux_type(rowsparse::kIdx), IType, {

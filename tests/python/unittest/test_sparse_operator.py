@@ -1646,3 +1646,4 @@ def test_scatter_ops():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
+
