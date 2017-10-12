@@ -505,6 +505,23 @@ class Augmenter(object):
         raise NotImplementedError("Must override implementation.")
 
 
+class SequentialAug(Augmenter):
+    """Composing a sequential augmenter list."""
+    def __init__(self, ts):
+        super(SequentialAug, self).__init__()
+        self.ts = ts
+
+    def dumps(self):
+        """Override the default to avoid duplicate dump."""
+        return [self.__class__.__name__.lower(), [x.dumps() for x in self.ts]]
+
+    def __call__(self, src):
+        """Augmenter body"""
+        for aug in self.ts:
+            src = aug(src)
+        return src
+
+
 class ResizeAug(Augmenter):
     """Make resize shorter edge to size augmenter.
 
