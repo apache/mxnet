@@ -488,8 +488,9 @@ fixed-size items.
         """x.__getitem__(i) <=> x[i]
         Returns a sliced view of this array if the elements fetched are contiguous in memory;
         otherwise, returns a newly created NDArray.
-        This functions supports advanced indexing defined in the following reference with some limitations.
-        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        This functions supports advanced indexing defined in the following reference with
+        some limitations.
+        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing  # pylint: disable=line-too-long
         The following features/functionality are not supported for now:
         1. If key is a list type, only a list of integers is supported,
            i.e. key=[1, 2] is okay, while not for key=[[1]].
@@ -594,8 +595,8 @@ fixed-size items.
             return not isinstance(index, py_slice)
 
         if not isinstance(key, tuple):
-            raise ValueError('index=%s must be a tuple type to use advanced indexing, received type=%s'
-                             % (str(key), str(type(key))))
+            raise ValueError('index=%s must be a tuple type to use advanced indexing,'
+                             ' received type=%s' % (str(key), str(type(key))))
         assert len(key) > 0, "Cannot slice with empty indices"
         shape = self.shape
         assert len(shape) >= len(key),\
@@ -605,7 +606,7 @@ fixed-size items.
         need_broadcast = (len(key) != 1)
         advanced_indices = []  # include list, NDArray, np.ndarray, integer
         basic_indices = []  # include only slices
-        advanced_index_bshape = None  # final advanced index shape, broadcastable to all advanced indices
+        advanced_index_bshape = None  # final advanced index shape
         for i, idx_i in enumerate(key):
             is_advanced_index = True
             if isinstance(idx_i, (np.ndarray, list, tuple)):
@@ -634,8 +635,9 @@ fixed-size items.
                     advanced_index_bshape = _get_broadcast_shape(advanced_index_bshape, idx_i.shape)
             indices.append(idx_i)
 
-        # Get final index shape for gather_nd. See the following reference for determining the output array shape.
-        # https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        # Get final index shape for gather_nd. See the following reference
+        # for determining the output array shape.
+        # https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing  # pylint: disable=line-too-long
         if len(advanced_indices) == 0:
             raise ValueError('Advanced index tuple must contain at least one of the following types:'
                              ' list, tuple, NDArray, np.ndarray, integer, received index=%s' % key)
@@ -647,24 +649,24 @@ fixed-size items.
                 advanced_indices_adjacent = False
                 break
 
-        index_bshape = []  # index broadcasted shape
+        index_bshape_list = []  # index broadcasted shape
         if advanced_indices_adjacent:
             for i in range(0, advanced_indices[0]):
-                index_bshape.extend(indices[i].shape)
+                index_bshape_list.extend(indices[i].shape)
                 if not need_broadcast and indices[i].shape != advanced_index_bshape:
                     need_broadcast = True
-            index_bshape.extend(advanced_index_bshape)
+            index_bshape_list.extend(advanced_index_bshape)
             for i in range(advanced_indices[-1]+1, len(indices)):
                 if not need_broadcast and indices[i].shape != advanced_index_bshape:
                     need_broadcast = True
-                index_bshape.extend(indices[i].shape)
+                index_bshape_list.extend(indices[i].shape)
         else:
-            index_bshape.extend(advanced_index_bshape)
+            index_bshape_list.extend(advanced_index_bshape)
             for i in basic_indices:
-                index_bshape.extend(indices[i].shape)
+                index_bshape_list.extend(indices[i].shape)
                 if not need_broadcast and indices[i].shape != advanced_index_bshape:
                     need_broadcast = True
-        index_bshape = tuple(index_bshape)
+        index_bshape = tuple(index_bshape_list)
 
         # Need to broadcast all ndarrays in indices to the final shape.
         # For example, suppose an array has shape=(5, 6, 7, 8) and
@@ -689,9 +691,9 @@ fixed-size items.
                     if _is_advanced_index(idx):
                         k = advanced_index_bshape_stop
                         # find the reshaped shape for indices[i]
-                        for d in indices[i].shape[::-1]:
+                        for dim_size in indices[i].shape[::-1]:
                             k -= 1
-                            idx_rshape[k] = d
+                            idx_rshape[k] = dim_size
                     else:
                         if i < advanced_indices[0]:  # slice is on the left side of advanced indices
                             idx_rshape[i] = indices[i].shape[0]
@@ -703,23 +705,23 @@ fixed-size items.
                     # broadcast current index to the final shape
                     broadcasted_indices.append(indices[i].reshape(tuple(idx_rshape)).broadcast_to(index_bshape))
                     # reset idx_rshape to ones
-                    for j in range(len(idx_rshape)):
+                    for j, _ in enumerate(idx_rshape):
                         idx_rshape[j] = 1
             else:
                 basic_index_offset = len(advanced_index_bshape)
                 for i, idx in enumerate(key):
                     if _is_advanced_index(idx):
                         k = len(advanced_index_bshape)
-                        for d in indices[i].shape[::-1]:
+                        for dim_size in indices[i].shape[::-1]:
                             k -= 1
-                            idx_rshape[k] = d
+                            idx_rshape[k] = dim_size
                     else:
                         idx_rshape[basic_index_offset] = indices[i].shape[0]
                         basic_index_offset += 1
                     # broadcast current index to the final shape
                     broadcasted_indices.append(indices[i].reshape(tuple(idx_rshape)).broadcast_to(index_bshape))
                     # reset idx_rshape to ones
-                    for j in range(len(idx_rshape)):
+                    for j, _ in enumerate(idx_rshape):
                         idx_rshape[j] = 1
 
             indices = broadcasted_indices
@@ -746,13 +748,14 @@ fixed-size items.
                 # slice_i.step != 1 should not happen here
                 # it should have been routed to advanced indexing
                 if slice_i.step is not None and slice_i.step != 1:
-                    raise ValueError('_basic_indexing_step_equal_one does not support slice step=%d' % slice_i.step)
+                    raise ValueError('_basic_indexing_step_equal_one does not support slice step=%d'
+                                     % slice_i.step)
                 begin.append(0 if slice_i.start is None else slice_i.start)
                 end.append(shape[i] if slice_i.stop is None else slice_i.stop)
                 oshape.append(end[i] - begin[i])
             else:
-                raise ValueError('_basic_indexing_step_equal_one does not support slicing with index=%s of type=%s.'
-                                 % (str(slice_i), str(type(slice_i))))
+                raise ValueError('_basic_indexing_step_equal_one does not support slicing with '
+                                 'index=%s of type=%s.' % (str(slice_i), str(type(slice_i))))
         oshape.extend(shape[i+1:])
         if len(oshape) == 0:
             oshape.append(1)
@@ -762,7 +765,8 @@ fixed-size items.
         """Accept mix of slices and integers as index. No requirements on the value of slice's step.
         For indices of integers or slices with step=1, use _basic_indexing_step_equal_one."""
         if not isinstance(key, tuple):
-            raise TypeError('_basic_indexing_step_not_equal_one only supports tuple as its index type')
+            raise TypeError('_basic_indexing_step_not_equal_one only supports'
+                            ' tuple as its index type')
         shape = self.shape
         oshape = []  # final output shape
         indices = []  # all indices generated by slices and integers, fed to gather_nd
@@ -775,26 +779,27 @@ fixed-size items.
                 indices.append(idx)
                 bshape.append(1)
             elif isinstance(slice_i, py_slice):
-                start, stop, step = _get_index_range(slice_i.start, slice_i.stop, shape[i], slice_i.step)
+                start, stop, step = _get_index_range(slice_i.start, slice_i.stop, shape[i],
+                                                     slice_i.step)
                 idx = arange(start, stop, step, ctx=self.context, dtype='int32')
                 indices.append(idx)
                 oshape.append(idx.shape[0])
                 bshape.append(oshape[-1])
             else:
-                raise ValueError('_basic_indexing_step_not_equal_one does not support slicing with index=%s of type=%s.'
+                raise ValueError('_basic_indexing_step_not_equal_one does not support'
+                                 ' slicing with index=%s of type=%s.'
                                  % (str(slice_i), str(type(slice_i))))
 
         oshape.extend(shape[i+1:])
         if len(oshape) == 0:
             oshape.append(1)
-        bshape = tuple(bshape)
         ones_list = [1] * len(indices)
         tmp_indices = []
         for i, index in enumerate(indices):
             ones_list[i] = len(index)
             index = index.reshape(tuple(ones_list))
             ones_list[i] = 1
-            index = index.broadcast_to(bshape)
+            index = index.broadcast_to(tuple(bshape))
             tmp_indices.append(index)
 
         indices = op.stack(*tmp_indices)
