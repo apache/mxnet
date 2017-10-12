@@ -280,7 +280,7 @@ data = [7, 8, 9]
 indptr = [0, 2, 2, 3]
 indices = [0, 2, 1]
 # A csr matrix as lhs
-lhs = mx.nd.sparse.csr_matrix(data, indptr, indices, shape)
+lhs = mx.nd.sparse.csr_matrix((data, indices, indptr), shape)
 # A dense matrix as rhs
 rhs = mx.nd.ones((3, 2))
 # row_sparse result is inferred from sparse operator dot(csr.T, dense) based on input stypes

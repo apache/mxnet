@@ -148,7 +148,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
             csr.data.fill(data_init)
         if shuffle_csr_indices is True:
             shuffle_csr_column_indices(csr)
-        result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
+        result = mx.nd.sparse.csr_matrix((csr.data, csr.indices, csr.indptr),
                                          (num_rows, num_cols), dtype=dtype)
     except ImportError:
         assert(data_init is None), \

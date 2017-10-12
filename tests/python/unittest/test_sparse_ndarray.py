@@ -465,8 +465,7 @@ def test_create_csr():
         data = matrix.data
         indptr = matrix.indptr
         indices = matrix.indices
-        csr_created = mx.nd.sparse.csr_matrix(data=data, indptr=indptr,
-                                              indices=indices, shape=shape)
+        csr_created = mx.nd.sparse.csr_matrix((data, indices, indptr), shape=shape)
         assert csr_created.stype == 'csr'
         assert same(csr_created.data.asnumpy(), data.asnumpy())
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())

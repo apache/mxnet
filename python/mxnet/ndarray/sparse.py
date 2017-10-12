@@ -318,7 +318,7 @@ class CSRNDArray(BaseSparseNDArray):
         >>> indptr = np.array([0, 2, 3, 6])
         >>> indices = np.array([0, 2, 2, 0, 1, 2])
         >>> data = np.array([1, 2, 3, 4, 5, 6])
-        >>> a = mx.nd.sparse.csr_matrix(data, indptr, indices, (3, 3))
+        >>> a = mx.nd.sparse.csr_matrix((data, indices, indptr), (3, 3))
         >>> a.asnumpy()
         array([[1, 0, 2],
                [0, 0, 3],
@@ -761,7 +761,7 @@ def csr_matrix(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=N
     Example
     -------
     >>> import mxnet as mx
-    >>> a = mx.nd.sparse.csr_matrix([1, 2, 3], [0, 1, 2, 2, 3], [1, 0, 2], (4, 3))
+    >>> a = mx.nd.sparse.csr_matrix(([1, 2, 3], [1, 0, 2], [0, 1, 2, 2, 3]), (4, 3))
     >>> a.asnumpy()
     array([[ 0.,  1.,  0.],
            [ 2.,  0.,  0.],
@@ -1010,7 +1010,7 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
         # preprocess scipy csr to canonical form
         csr = source_array.sorted_indices()
         csr.sum_duplicates()
-        arr = csr_matrix(csr.data, csr.indptr, csr.indices, csr.shape, dtype=dtype,
+        arr = csr_matrix((csr.data, csr.indices, csr.indptr), csr.shape, dtype=dtype,
                          indptr_type=indptr_type, indices_type=indices_type)
         return arr
     elif isinstance(source_array, (np.ndarray, np.generic)):
