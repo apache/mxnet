@@ -866,12 +866,13 @@ class HorizontalFlipAug(Augmenter):
 
 class CastAug(Augmenter):
     """Cast to float32"""
-    def __init__(self):
-        super(CastAug, self).__init__(type='float32')
+    def __init__(self, typ='float32'):
+        super(CastAug, self).__init__(type=typ)
+        self.typ = typ
 
     def __call__(self, src):
         """Augmenter body"""
-        src = src.astype(np.float32)
+        src = src.astype(self.typ)
         return src
 
 
