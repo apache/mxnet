@@ -804,6 +804,63 @@ def test_bool():
     assert not bool(mx.nd.zeros((1,)))
     assert bool(mx.nd.ones((1,)))
 
+
+def test_ndarray_indexing():
+    def check_indexing(np_array, index, is_scalar=False):
+        """`is_scalar` indicates whether we should expect a scalar for the result.
+        If so, the indexed array of NDArray should call asscalar to compare
+        with numpy's indexed array."""
+        np_index = index
+        if isinstance(index, mx.nd.NDArray):
+            np_index = index.asnumpy()
+        np_indexed_array = np_array[np_index]
+        mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
+        mx_indexed_array = mx_array[index]
+        if is_scalar:
+            mx_indexed_array = mx_indexed_array.asscalar()
+        else:
+            mx_indexed_array = mx_indexed_array.asnumpy()
+        assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
+
+    shape = (8, 16, 9, 9)
+    np_array = np.arange(np.prod(shape)).reshape(shape)
+    # index_list is a list of tuples. The tuple's first element is the index, the second one is a boolean value
+    # indicating whether we should expect the result as a scalar compared to numpy.
+    index_list = [(0, False), (5, False), (slice(5), False), (slice(1, 5), False), (slice(1, 5, 2), False),
+                  (slice(7, 0, -1), False), (slice(None, 6), False), (slice(None, 6, 3), False),
+                  (slice(1, None), False), (slice(1, None, 3), False), (slice(None, None, 2), False),
+                  (slice(None, None, -1), False), (slice(None, None, -2), False),
+                  ((slice(None), slice(None), 1, 8), False),
+                  ((slice(None), 2, slice(1, 5), 1), False),
+                  ((1, 2, 3), False), ((1, 2, 3, 4), True),
+                  ((slice(None, None, -1), 2, slice(1, 5), 1), False),
+                  ((slice(None, None, -1), 2, slice(1, 7, 2), 1), False),
+                  ([1], False), ([1, 2], False), ([2, 1, 3], False),
+                  ([3, 2, 2, 3], False),
+                  (np.ones(shape=(2,), dtype=np.int32), False), (np.ones(shape=(2, 2), dtype=np.int32), False),
+                  (np.array([[2, 3, 4, 5], [0, 1, 5, 4], [2, 3, 0, 4]], dtype=np.int32), False),
+                  (mx.nd.ones(shape=(2,), dtype=np.int32), False), (mx.nd.ones(shape=(2, 2), dtype=np.int32), False),
+                  (mx.nd.array([[2, 3, 4, 5], [0, 1, 5, 4], [2, 3, 0, 4]], dtype=np.int32), False),
+                  ((1, [2, 3]), False), ((1, [2, 3], np.ones(shape=(2, 1), dtype=np.int32)), False),
+                  ((1, [2], np.ones(shape=(2, 1), dtype=np.int32), slice(None)), False),
+                  ((1, [2, 3], np.ones(shape=(2, 1), dtype=np.int32), slice(2, 5)), False),
+                  ((1, [2, 3], np.ones(shape=(2, 1), dtype=np.int32), slice(2, 5, 2)), False),
+                  ((1, [2], np.ones(shape=(1, 1), dtype=np.int32), slice(None, None, -1)), False),
+                  ([0], False), ([0, 1], False), ([1, 2, 3], False), ([2, 0, 5, 6], False),
+                  (([1, 1], [2, 3]), False), (([1], [4], [5]), False), (([1], [4], [5], [6]), False),
+                  (([[1]], [[2]]), False), (([[1]], [[2]], [[3]], [[4]]), False),
+                  ((slice(0, 2), [[1], [1]], slice(0, 2), slice(0, 5, 2)), False),
+                  (([[[[1]]]], [[1]], slice(0, 3), [1, 1]), False),
+                  (([[[[1]]]], 3, slice(0, 3), [1, 1]), False),
+                  (([[[[1]]]], 3, slice(0, 3), 0), False),
+                  (([[[[1]]]], [[2], [2]], slice(0, 3), slice(None)), False),
+                  (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
+                  (([1, 2], slice(3, 5), (2, 3), [3, 4]), False)]
+
+    for index in index_list:
+        check_indexing(np_array, index[0], index[1])
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
