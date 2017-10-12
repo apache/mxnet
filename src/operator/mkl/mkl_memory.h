@@ -49,8 +49,8 @@ struct PrvMemDescr {
 #if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
 // Currently HEAD_AT_PRV do not free CPU data
 enum SyncedHead {
-  HEAD_AT_CPU,
-  HEAD_AT_PRV,
+  HEAD_AT_CPU, // if true means data has been converted to cpu?
+  HEAD_AT_PRV, // if true means data need to be converted to cpu?
 };
 struct MKLMemHolder {
   SyncedHead head_;
@@ -72,26 +72,32 @@ struct MKLMemHolder {
     return  prv_descriptor_;
   }
   bool head_at_cpu() {
-    return (head_ == HEAD_AT_CPU) ? true : false;
+    return (head_ == HEAD_AT_CPU);
   }
   bool head_at_prv() {
-    return (head_ == HEAD_AT_PRV) ? true : false;
+    return (head_ == HEAD_AT_PRV);
   }
   void* prv_data(bool allocate_when_uninit = true) {
+    // XXX lfeng: why do we want to check this? if head_ is not at
+    // HEAD_AT_PRV can we still have valid prv pointer?
     if (head_ != HEAD_AT_PRV) {
       return NULL;
     }
+    // XXX lfeng: this and the following CHECK() are checking the same thing?
     if (prv_descriptor_ == NULL) {
       LOG(FATAL) << " prv_descriptor_  is NULL";
     }
     CHECK(prv_descriptor_.get());
-    return reinterpret_cast<void*>(prv_descriptor_->prv_ptr(allocate_when_uninit));
+    return prv_descriptor_->prv_ptr(allocate_when_uninit);
   }
 
   int prv_count() {
+    // XXX lfeng: why is this check needed?
     if (head_ != HEAD_AT_PRV) {
       return 0;
     }
+
+    // XXX lfeng: same as the CHECK afterward, don't need both?
     if (prv_descriptor_ == NULL) {
       LOG(FATAL) << " prv_descriptor_  is NULL";
     }
@@ -101,7 +107,15 @@ struct MKLMemHolder {
   static std::shared_ptr<MKLMemHolder> create() {
     return std::make_shared<MKLMemHolder>();
   }
+
+  /**
+   * Verify we have a valid prv descriptor and if prv has the latest data
+   * convert to cpu.
+   * @param dptr_
+   * @param convert
+   */
   void  check_and_prv_to_cpu(void *dptr_, bool convert = true) {
+//    std::cout << __func__ << __LINE__ << std::endl;
     if (!b_disable_prv_2_cpu && head_ == HEAD_AT_PRV) {
       CHECK(prv_descriptor_ != nullptr);
       if (convert)

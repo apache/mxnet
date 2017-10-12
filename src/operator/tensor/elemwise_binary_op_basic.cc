@@ -23,10 +23,21 @@
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../mkl/mkldnn_elemwise_sum-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
+
+#if MXNET_USE_MKLDNN == 1
+MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>)       \
+.set_attr<FCompute>("FCompute<cpu>", MKLDNNElementWiseAddCompute<cpu>)    \
+.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>)
+#else
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_add, mshadow::op::plus)
+#endif
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus").add_alias("_sparse_elemwise_add")
 .describe(R"code(Adds arguments element-wise.

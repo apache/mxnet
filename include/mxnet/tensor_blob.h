@@ -198,6 +198,29 @@ class TBlob {
   inline int ndim(void) const {
     return shape_.ndim();
   }
+
+  template<typename DType>
+  DType* getCurrentDataPtr() const {
+    if (Mkl_mem_->get_prv_descriptor() != nullptr && Mkl_mem_->head_at_prv()) {
+      return Mkl_mem_->prv_data();
+    }
+    return dptr_;
+  }
+
+  /**
+   * Check and convert data from MKLDNN to cpu buffer. This does not change
+   * the flag pointing to which buffer (mkl vs. cpu) has the latest data.
+   * @return
+   */
+  template<typename DType>
+  DType * getSyncedCPUDataPtr() const {
+    if (Mkl_mem_->get_prv_descriptor() != nullptr && Mkl_mem_->head_at_prv()) {
+      Mkl_mem_->check_and_prv_to_cpu(dptr_);
+      // make sure we don't change the head flag
+      Mkl_mem_->head_ = HEAD_AT_PRV;
+    }
+    return reinterpret_cast<DType*>(dptr_);
+  }
   /*!
    * \brief return size of i-th dimension, start counting from highest dimension
    * \param idx the dimension count from the highest dimensin

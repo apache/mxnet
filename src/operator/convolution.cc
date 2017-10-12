@@ -60,7 +60,7 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
     })
     return op;
   }
-#if 0 //MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1
     if ((param.dilate[0] == 1 && param.dilate[1] == 1)
         && param.kernel.ndim() == 2) {
         switch (dtype) {

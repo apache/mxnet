@@ -27,6 +27,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <mkldnn_types.h>
 #include "mkl_conv-common-inl.h"
 #include "mkldnn_base-inl.h"
 
@@ -72,96 +73,124 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
   }
  private:
   void InitForward(const OpContext &ctx) {
-      // if (std::is_same<DType, double>::value)   NOT_IMPLEMENTED;
-      auto propagation =
-        (!ctx.is_train) ? prop_kind::forward_scoring : prop_kind::forward_training;
+    // if (std::is_same<DType, double>::value)   NOT_IMPLEMENTED;
+    auto propagation = (!ctx.is_train) ? prop_kind::forward_scoring
+                                       : prop_kind::forward_training;
 
-      int32_t g = std::max(this->group_, 1);
-      int32_t n = this->num_;
-      int32_t iw = this->width_;
-      int32_t ih = this->height_;
-      int32_t ic = this->channels_;
+    int32_t g = std::max(this->group_, 1);
+    int32_t n = this->num_;
+    int32_t iw = this->width_;
+    int32_t ih = this->height_;
+    int32_t ic = this->channels_;
 
-      int32_t ow = this->width_out_;
-      int32_t oh = this->height_out_;
-      int32_t oc = this->channel_output_;
+    int32_t ow = this->width_out_;
+    int32_t oh = this->height_out_;
+    int32_t oc = this->channel_output_;
 
-      int32_t kw = this->kernel_w_;
-      int32_t kh = this->kernel_h_;
-      memory::dims convolutionStrides{ static_cast<int>(this->stride_h_),
-        static_cast<int>(this->stride_w_) };
-      memory::dims padding{ this->pad_h_, this->pad_w_ };
+    int32_t kw = this->kernel_w_;
+    int32_t kh = this->kernel_h_;
+    memory::dims convolutionStrides
+        {static_cast<int>(this->stride_h_), static_cast<int>(this->stride_w_)};
+    memory::dims padding{this->pad_h_, this->pad_w_};
 
-      memory::data_type mpcsn = memory::data_type::f32;
-      memory::format mfmt_any = memory::format::any;
-      mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
+    memory::data_type mpcsn = memory::data_type::f32;
+    memory::format mfmt_any = memory::format::any;
+    mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
 
-      memory::dims bottom_tz = { n, ic, ih, iw };
-      memory::dims bias_tz = { oc };
-      memory::dims top_tz = { n, oc, oh, ow };
-      memory::dims weights_tz =
-        (g != 1) ? memory::dims{ g, oc / g, ic / g, kh, kw } : memory::dims{ oc, ic, kh, kw };
+    memory::dims bottom_tz = {n, ic, ih, iw};
+    memory::dims bias_tz = {oc};
+    memory::dims top_tz = {n, oc, oh, ow};
+    memory::dims weights_tz =
+        (g != 1) ? memory::dims{g, oc / g, ic / g, kh, kw} : memory::dims{oc,
+                                                                          ic,
+                                                                          kh,
+                                                                          kw};
 
-      memory::desc init_bottom_md({ bottom_tz }, mpcsn, mfmt_any);
-      memory::desc init_bias_md({ bias_tz }, mpcsn, mfmt_any);
-      memory::desc init_top_md({ top_tz }, mpcsn, mfmt_any);
-      memory::desc init_weights_md({ weights_tz }, mpcsn, mfmt_any);
+    memory::desc init_bottom_md({bottom_tz}, mpcsn, mfmt_any);
+    memory::desc init_bias_md({bias_tz}, mpcsn, mfmt_any);
+    memory::desc init_top_md({top_tz}, mpcsn, mfmt_any);
+    memory::desc init_weights_md({weights_tz}, mpcsn, mfmt_any);
 
-      // ---- Initialize convolution primitive descriptor
-      std::shared_ptr<convolution_forward::desc> convFwd_desc;
-      if (!this->param_.no_bias) {
-        convFwd_desc.reset(
-          new convolution_forward::desc(propagation, algorithm::convolution_direct
-          , init_bottom_md, init_weights_md, init_bias_md, init_top_md
-          , convolutionStrides, padding, padding, padding_kind::zero));
-      } else {
-        convFwd_desc.reset(
-          new convolution_forward::desc(propagation, algorithm::convolution_direct
-          , init_bottom_md, init_weights_md, init_top_md
-          , convolutionStrides, padding, padding, padding_kind::zero));
-      }
-      convFwd_pd.reset(new convolution_forward::primitive_desc(*convFwd_desc, cpu_engine));
-      CHECK(convFwd_pd);
-      // ---- Create priv memory primitive descriptors stored as class members -------------
-      typedef typename memory::primitive_desc MemPD;
-      std::shared_ptr<MemPD> prv_fwd_bottom_data_memory_pd(
-        new MemPD(convFwd_pd->src_primitive_desc()));
-      std::shared_ptr<MemPD> prv_fwd_top_data_memory_pd(
-        new MemPD(convFwd_pd->dst_primitive_desc()));
-      std::shared_ptr<MemPD> prv_fwd_weights_data_memory_pd(
-        new MemPD(convFwd_pd->weights_primitive_desc()));
+    // ---- Initialize convolution primitive descriptor
+    std::shared_ptr<convolution_forward::desc> convFwd_desc;
+    if (!this->param_.no_bias) {
+      convFwd_desc.reset(new convolution_forward::desc(propagation,
+                                                       algorithm::convolution_direct,
+                                                       init_bottom_md,
+                                                       init_weights_md,
+                                                       init_bias_md,
+                                                       init_top_md,
+                                                       convolutionStrides,
+                                                       padding,
+                                                       padding,
+                                                       padding_kind::zero));
+    } else {
+      convFwd_desc.reset(new convolution_forward::desc(propagation,
+                                                       algorithm::convolution_direct,
+                                                       init_bottom_md,
+                                                       init_weights_md,
+                                                       init_top_md,
+                                                       convolutionStrides,
+                                                       padding,
+                                                       padding,
+                                                       padding_kind::zero));
+    }
+    convFwd_pd.reset(new convolution_forward::primitive_desc(*convFwd_desc,
+                                                             cpu_engine));
 
-      // ---- Create usr memory primitive descriptors -------------
-      memory::format mfmt_nchw = memory::format::nchw;
-      memory::format weights_mfmt = (g != 1) ? memory::format::goihw : memory::format::oihw;
+    std::cout << "convFwd_pd: " << convFwd_pd->dst_primitive_desc().desc().data.format << std::endl;
+    CHECK(convFwd_pd);
+    // ---- Create priv memory primitive descriptors stored as class members -------------
+    typedef typename memory::primitive_desc MemPD;
+    std::shared_ptr<MemPD> prv_fwd_bottom_data_memory_pd
+        (new MemPD(convFwd_pd->src_primitive_desc()));
+    std::shared_ptr<MemPD>
+        prv_fwd_top_data_memory_pd(new MemPD(convFwd_pd->dst_primitive_desc()));
+    std::shared_ptr<MemPD> prv_fwd_weights_data_memory_pd
+        (new MemPD(convFwd_pd->weights_primitive_desc()));
+    std::cout << "prv_fwd_top_data_memory_pd: " <<
+                                                prv_fwd_top_data_memory_pd->desc().data.format << std::endl;
 
-      std::shared_ptr<MemPD> usr_bottom_data_memory_pd(
-        new MemPD({ { bottom_tz }, mpcsn, mfmt_nchw }, cpu_engine));
-      std::shared_ptr<MemPD> usr_bias_data_memory_pd(
-        new MemPD({ { bias_tz }, mpcsn, memory::format::x }, cpu_engine));
-      std::shared_ptr<MemPD> usr_top_data_memory_pd(
-        new MemPD({ { top_tz }, mpcsn, mfmt_nchw }, cpu_engine));
-      std::shared_ptr<MemPD> usr_weights_data_memory_pd(
-        new MemPD({ { weights_tz }, mpcsn, weights_mfmt }, cpu_engine));
+    // ---- Create usr memory primitive descriptors -------------
+    memory::format mfmt_nchw = memory::format::nchw;
+    memory::format
+        weights_mfmt = (g != 1) ? memory::format::goihw : memory::format::oihw;
+
+    std::shared_ptr<MemPD> usr_bottom_data_memory_pd
+        (new MemPD({{bottom_tz}, mpcsn, mfmt_nchw}, cpu_engine));
+    std::shared_ptr<MemPD> usr_bias_data_memory_pd
+        (new MemPD({{bias_tz}, mpcsn, memory::format::x}, cpu_engine));
+    std::shared_ptr<MemPD> usr_top_data_memory_pd
+        (new MemPD({{top_tz}, mpcsn, mfmt_nchw}, cpu_engine));
+    std::shared_ptr<MemPD> usr_weights_data_memory_pd
+        (new MemPD({{weights_tz}, mpcsn, weights_mfmt}, cpu_engine));
 
 
-      // ---  init primitive and prv_memory descriptors ----------------------
-      fwd_bottom_data.reset(
-        new MKLDNNData<DType>(usr_bottom_data_memory_pd, prv_fwd_bottom_data_memory_pd));
-      fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
-      fwd_top_data.reset(
-        new MKLDNNData<DType>(usr_top_data_memory_pd, prv_fwd_top_data_memory_pd));
-      fwd_top_data->name = "fwd_top_data      @ " + this->getName();
-      fwd_weights_data.reset(
-        new MKLDNNData<DType>(usr_weights_data_memory_pd, prv_fwd_weights_data_memory_pd));
-      fwd_weights_data->name = "fwd_weights_data  @ " + this->getName();
-      if (!this->param_.no_bias) {
-        std::shared_ptr<MemPD> prv_fwd_bias_data_memory_pd(
-          new MemPD(convFwd_pd->bias_primitive_desc()));
-        fwd_bias_data.reset(
-          new MKLDNNData<DType>(usr_bias_data_memory_pd, prv_fwd_bias_data_memory_pd));
-        fwd_bias_data->name = "fwd_bias_data     @ " + this->getName();
-      }
+    // ---  init primitive and prv_memory descriptors ----------------------
+    fwd_bottom_data.reset(new MKLDNNData<DType>(usr_bottom_data_memory_pd,
+                                                prv_fwd_bottom_data_memory_pd));
+    fwd_bottom_data->name = "fwd_bottom_data   @ " + this->getName();
+    fwd_top_data.reset(new MKLDNNData<DType>(usr_top_data_memory_pd,
+                                             prv_fwd_top_data_memory_pd));
+    fwd_top_data->name = "fwd_top_data      @ " + this->getName();
+    fwd_weights_data.reset(new MKLDNNData<DType>(usr_weights_data_memory_pd,
+                                                 prv_fwd_weights_data_memory_pd));
+    fwd_weights_data->name = "fwd_weights_data  @ " + this->getName();
+    if (!this->param_.no_bias) {
+      std::shared_ptr<MemPD> prv_fwd_bias_data_memory_pd
+          (new MemPD(convFwd_pd->bias_primitive_desc()));
+      fwd_bias_data.reset(new MKLDNNData<DType>(usr_bias_data_memory_pd,
+                                                prv_fwd_bias_data_memory_pd));
+      fwd_bias_data->name = "fwd_bias_data     @ " + this->getName();
+    }
+#if 1
+    {
+      std::string prefix = "FWD-INI CON ";
+      printTensorFormat<DType>(prefix+"fwd_bottom_data", fwd_bottom_data);
+      printTensorFormat<DType>(prefix+"fwd_weights_data", fwd_weights_data);
+      printTensorFormat<DType>(prefix+"fwd_top_data", fwd_top_data);
+    }
+#endif
   }
  public:
   virtual void Forward(const OpContext &ctx,
@@ -175,25 +204,21 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
     // size_t expected = this->param_.no_bias ? 2 : 3;
     // CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
-#if 0
+    Stream <xpu> *s = ctx.get_stream<xpu>();
+#if 1
     {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-        std::cout << "BEFORE FW " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          std::cout << t[i] << " ";
-        }
-        std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> outdatakOut= out_data[conv::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("conv outdatakOut", outdatakOut);
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakWeight", indatakWeight);
+      std::string prefix = "FWD-BEF CON ";
+      DType* indatakData = in_data[conv::kData].getSyncedCPUDataPtr<DType>();
+      printTensor<DType>(prefix+"indata.kData", indatakData,
+                         in_data[conv::kData].shape_.Size());
+      DType* indatakWeight = in_data[conv::kWeight].getSyncedCPUDataPtr<DType>();
+      printTensor<DType>(prefix+"indata.kWeight", indatakWeight,
+                         in_data[conv::kWeight].shape_.Size());
+      DType* outdatakkOut = out_data[conv::kOut].getSyncedCPUDataPtr<DType>();
+      printTensor<DType>(prefix+"outdata.kOut", outdatakkOut,
+                         in_data[conv::kOut].shape_.Size());
     }
 #endif
-    Stream <xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data =
             mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kData], s);
     Tensor<xpu, 4, DType> out =
@@ -241,23 +266,34 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
       fwd_top_data->sync_output_memory(out_data[conv::kOut],
                                        fwd_top_data);
     }
-    convFwd.submit();
-#if 0
+#if 1
     {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-        std::cout << "AFTER FW " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          std::cout << t[i] << " ";
-        }
-        std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> outdatakOut= out_data[conv::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("conv outdatakOut", outdatakOut);
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakWeight", indatakWeight);
+      std::string prefix = "FWD-BEF CON ";
+      printTensorFormat<DType>(prefix+"fwd_bottom_data", fwd_bottom_data);
+      printBufferHead(prefix+"in_data.kData", in_data[conv::kData]);
+      printTensorFormat<DType>(prefix+"fwd_weights_data", fwd_weights_data);
+      printBufferHead(prefix+"in_data.kWeight", in_data[conv::kWeight]);
+      printTensorFormat<DType>(prefix+"fwd_top_data", fwd_top_data);
+      printBufferHead(prefix+"out_data.kOut", out_data[conv::kOut]);
+      //printTensorFormat<DType>(prefix+"out_data.kOut", get_mkldnn_prv_descriptor<DType>(out_data[conv::kOut]));
+    }
+#endif
+    convFwd.submit();
+#if 1
+    {
+      std::string prefix = "FWD-AFT CON ";
+      DType* indatakData = in_data[conv::kData].getSyncedCPUDataPtr<DType>();
+      printTensor<DType>(prefix+"indata.kData", indatakData,
+                  in_data[conv::kData].shape_.Size());
+      DType* indatakWeight = in_data[conv::kWeight].getSyncedCPUDataPtr<DType>();
+      printTensor<DType>(prefix+"indata.kWeight", indatakWeight,
+                  in_data[conv::kWeight].shape_.Size());
+      DType* outdatakkOut = out_data[conv::kOut].getSyncedCPUDataPtr<DType>();
+      printTensor<DType>(prefix+"outdata.kOut", outdatakkOut,
+                  in_data[conv::kOut].shape_.Size());
+      printTensorFormat<DType>(prefix+"fwd_top_data", fwd_top_data);
+      printBufferHead(prefix+"out_data.kOut", out_data[conv::kOut]);
+      //printTensorFormat<DType>(prefix+"out_data.kOut", get_mkldnn_prv_descriptor<DType>(out_data[conv::kOut]));
     }
 #endif
   }

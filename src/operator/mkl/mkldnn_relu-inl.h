@@ -227,7 +227,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     Tensor<xpu, 4, Dtype> m_out_grad;
     Tensor<xpu, 4, Dtype> m_in_grad;
     Tensor<xpu, 4, Dtype> m_out_data;
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
           std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
@@ -291,7 +291,7 @@ if (bwd_pd == nullptr) {
       in_grad[activation::kData], bwd_bottom_diff, in_place_b_);
     }
     reluBwd.submit();
-#if 1
+#if 0
     {
       auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
           std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
