@@ -506,7 +506,13 @@ class Augmenter(object):
 
 
 class SequentialAug(Augmenter):
-    """Composing a sequential augmenter list."""
+    """Composing a sequential augmenter list.
+
+    Parameters
+    ----------
+    ts : list of augmenters
+        A series of augmenters to be applied in sequential order.
+    """
     def __init__(self, ts):
         super(SequentialAug, self).__init__()
         self.ts = ts
