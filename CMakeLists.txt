@@ -169,7 +169,7 @@ endif()
 set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
 
 if(USE_GPERFTOOLS)
-  find_package(GPERFOOLS OPTIONAL)
+  find_package(Gperftools)
   if(GPERFOOLS_FOUND)
     include_directories(${GPERFTOOLS_INCLUDE_DIR})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
