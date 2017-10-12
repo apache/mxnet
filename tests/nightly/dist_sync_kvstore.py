@@ -32,14 +32,18 @@ def check_diff_to_scalar(A, x, rank=None):
 # setup
 keys = ['3', '5', '7']
 rsp_keys = ['9', '11', '13']
+init_test_keys = [str(i) for i in range(200,300)]
+init_test_keys_big = [str(i) for i in range(300,400)]
+init_test_keys_device = [str(i) for i in range(400,500)]
+init_test_keys_device_big = [str(i) for i in range(500,600)]
 
 rate = 2
 shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
 
+kv = mx.kv.create('dist_sync')
 
 def init_kv():
-    kv = mx.kv.create('dist_sync')
     # init kv dns keys
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
     kv.init('99', mx.nd.ones(big_shape))
@@ -172,5 +176,22 @@ def test_sync_push_pull():
     check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done')
 
+def test_sync_init():
+    def check_init(kv, cur_keys, cur_shape, device=False):
+        ctx = mx.gpu(0) if device else mx.cpu()
+        val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
+        for i in range(len(cur_keys)):
+            expected = i
+            kv.init(cur_keys[i], [mx.nd.ones(cur_shape, ctx) * i])
+            kv.pull(cur_keys[i], out=val[i])
+            check_diff_to_scalar(val[i], expected)
+    check_init(kv, init_test_keys, shape)
+    check_init(kv, init_test_keys_big, big_shape)
+    check_init(kv, init_test_keys_device, shape, device=True)
+    check_init(kv, init_test_keys_device_big, big_shape, device=True)
+    my_rank = kv.rank
+    print('worker ' + str(my_rank) + ' is initialized')
+
 if __name__ == "__main__":
+    test_sync_init()
     test_sync_push_pull()
