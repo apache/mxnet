@@ -586,7 +586,7 @@ fixed-size items.
         """Get item when key is a tuple of any objects of the following types:
         NDArray, np.ndarray, list, tuple, slice, and integer. Note that if
         all the objects in the tuple are of type slice with step=1, it should
-        invoke slice operator for better efficiency."""
+        invoke _basic_indexing_step_equal_one for better efficiency."""
         def _is_advanced_index(index):
             """The definition of advanced index here includes integers as well, while
             integers are considered as basic index type when the key contains only
