@@ -551,7 +551,7 @@ void SliceCsrIndPtrImpl(const int begin, const int end, RunContext ctx,
  */
 template<typename xpu>
 void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
-                  const NDArray &in, OpReqType req, const NDArray &out, 
+                  const NDArray &in, OpReqType req, const NDArray &out,
                   const TShape &ishape) {
   using namespace mshadow;
   using namespace mxnet_op;
