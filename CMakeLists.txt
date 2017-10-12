@@ -165,6 +165,20 @@ if(UNIX)
   endif()
 endif()
 
+set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+if(USE_GPERFTOOLS)
+  find_package(GPERFOOLS OPTIONAL)
+  if(GPERFOOLS_FOUND)
+    include_directories(${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${GPERFTOOLS_LIBRARIES})
+  else()
+    set(USE_JEMALLOC 0)
+  endif()
+endif()
+
 # ---[ jemalloc
 if(USE_JEMALLOC)
   find_package(JeMalloc)
@@ -249,7 +263,7 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
   add_subdirectory("mshadow")
 endif()
-FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
+FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
