@@ -551,7 +551,8 @@ void SliceCsrIndPtrImpl(const int begin, const int end, RunContext ctx,
  */
 template<typename xpu>
 void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
-                  const NDArray &in, OpReqType req, const NDArray &out) {
+                  const NDArray &in, OpReqType req, const NDArray &out, 
+                  const TShape &ishape) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -560,7 +561,9 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
   int begin = *param.begin[0];
+  if (begin < 0) begin += ishape[0];
   int end = *param.end[0];
+  if (end < 0) end += ishape[0];
   int indptr_len = end - begin + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
   if (!in.storage_initialized()) {
@@ -606,7 +609,7 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
   CHECK_NE(in_stype, kDefaultStorage)
            << "SliceEx is not expected to execute for input with default storage type";
   if (in_stype == kCSRStorage) {
-    SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+    SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0], inputs[0].shape());
   } else {
     LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
   }
