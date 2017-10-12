@@ -826,7 +826,8 @@ def test_ndarray_indexing():
     np_array = np.arange(np.prod(shape)).reshape(shape)
     # index_list is a list of tuples. The tuple's first element is the index, the second one is a boolean value
     # indicating whether we should expect the result as a scalar compared to numpy.
-    index_list = [(0, False), (5, False), (slice(5), False), (slice(1, 5), False), (slice(1, 5, 2), False),
+    index_list = [(0, False), (5, False), (-1, False),
+                  (slice(5), False), (slice(1, 5), False), (slice(1, 5, 2), False),
                   (slice(7, 0, -1), False), (slice(None, 6), False), (slice(None, 6, 3), False),
                   (slice(1, None), False), (slice(1, None, 3), False), (slice(None, None, 2), False),
                   (slice(None, None, -1), False), (slice(None, None, -2), False),
