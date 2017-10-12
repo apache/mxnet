@@ -98,7 +98,7 @@ _GRAD_REQ_MAP = {
 
 # Return code for dispatching indexing function call
 _BASIC_INDEXING_STEP_EQUAL_ONE = 0
-_BASIC_INDEXING_STEP_NOT_EQUAL_ONE = 1
+_BASIC_INDEXING_STEP_NOT_ONE = 1
 _ADVANCED_INDEXING = 2
 
 
@@ -572,8 +572,8 @@ fixed-size items.
             indexing_dispatch_code = _get_indexing_dispatch_code(key)
             if indexing_dispatch_code == _BASIC_INDEXING_STEP_EQUAL_ONE:
                 return self._basic_indexing_step_equal_one(key)
-            elif indexing_dispatch_code == _BASIC_INDEXING_STEP_NOT_EQUAL_ONE:
-                return self._basic_indexing_step_not_equal_one(key)
+            elif indexing_dispatch_code == _BASIC_INDEXING_STEP_NOT_ONE:
+                return self._basic_indexing_step_not_one(key)
             elif indexing_dispatch_code == _ADVANCED_INDEXING:
                 return self._advanced_indexing(key)
             else:
@@ -758,7 +758,7 @@ fixed-size items.
             oshape.append(1)
         return op.slice(self, begin, end).reshape(oshape)
 
-    def _basic_indexing_step_not_equal_one(self, key):
+    def _basic_indexing_step_not_one(self, key):
         """Accept mix of slices and integers as index. No requirements on the value of slice's step.
         For indices of integers or slices with step=1, use _basic_indexing_step_equal_one."""
         if not isinstance(key, tuple):
@@ -1998,7 +1998,7 @@ def _get_indexing_dispatch_code(key):
     1. If the key contains only slices and integers, and the slices' steps
        are all either None or equal to 1, return `_BASIC_INDEXING_STEP_EQUAL_ONE`.
     2. If the key contains only slices and integers, and at least of slices'
-       step is not equal to 1, return `_BASIC_INDEXING_STEP_NOT_EQUAL_ONE`.
+       step is not equal to 1, return `_BASIC_INDEXING_STEP_NOT_ONE`.
     3. If the key contains any advanced index type, that is, list, tuple,
        np.ndarray, NDArray, return `_ADVANCED_INDEXING`.
     """
@@ -2016,7 +2016,7 @@ def _get_indexing_dispatch_code(key):
             raise ValueError("NDArray does not support slicing with key %s of type %s."
                              % (str(idx), str(type(idx))))
     if step_not_equal_one:
-        return _BASIC_INDEXING_STEP_NOT_EQUAL_ONE
+        return _BASIC_INDEXING_STEP_NOT_ONE
 
     return _BASIC_INDEXING_STEP_EQUAL_ONE
 
