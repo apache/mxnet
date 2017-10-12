@@ -327,7 +327,11 @@ class CSRNDArray(BaseSparseNDArray):
         array([[0, 0, 3]], dtype=float32)
         """
         if isinstance(key, int):
-            raise ValueError("__getitem__ with int key is not implemented for CSRNDArray")
+            if key == -1:
+                begin = self.shape[0] - 1
+            else:
+                begin = key
+            return op.slice(self, begin=begin, end=begin+1)
         if isinstance(key, py_slice):
             if key.step is not None:
                 raise ValueError('CSRNDArray only supports continuous slicing on axis 0')
