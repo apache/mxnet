@@ -168,6 +168,7 @@ endif()
 
 set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
 
+# ---[ gperftools
 if(USE_GPERFTOOLS)
   find_package(Gperftools)
   if(GPERFOOLS_FOUND)
@@ -189,6 +190,7 @@ if(USE_JEMALLOC)
   endif()
 endif()
 
+# ---[ OpenCV
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
@@ -211,6 +213,7 @@ else(USE_OPENCV)
   add_definitions(-DMXNET_USE_OPENCV=0)
 endif()
 
+# ---[ OpenMP
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   if(OPENMP_FOUND)
@@ -223,6 +226,7 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
+# ---[ LAPack
 if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
