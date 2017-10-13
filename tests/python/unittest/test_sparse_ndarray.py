@@ -517,7 +517,7 @@ def test_create_row_sparse():
         matrix = rand_ndarray(shape, 'row_sparse', density)
         data = matrix.data
         indices = matrix.indices
-        rsp_created = mx.nd.sparse.row_sparse_array(data=data, indices=indices, shape=shape)
+        rsp_created = mx.nd.sparse.row_sparse_array((data, indices), shape=shape)
         assert rsp_created.stype == 'row_sparse'
         assert same(rsp_created.data.asnumpy(), data.asnumpy())
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())

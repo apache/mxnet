@@ -804,7 +804,7 @@ def csr_matrix(data, indptr, indices, shape, ctx=None, dtype=None, indptr_type=N
     return result
 
 
-def row_sparse_array(data, indices, shape, ctx=None, dtype=None, indices_type=None):
+def row_sparse_array((data, indices), shape, ctx=None, dtype=None, indices_type=None):
     """Creates a multidimensional row sparse array with a set of tensor slices at given indices.
 
     Parameters
@@ -830,7 +830,7 @@ def row_sparse_array(data, indices, shape, ctx=None, dtype=None, indices_type=No
 
     Example
     -------
-    >>> a = mx.nd.sparse.row_sparse_array([[1, 2], [3, 4]], [1, 4], (6, 2))
+    >>> a = mx.nd.sparse.row_sparse_array(([[1, 2], [3, 4]]), [1, 4], (6, 2))
     >>> a.asnumpy()
     array([[ 0.,  0.],
            [ 1.,  2.],

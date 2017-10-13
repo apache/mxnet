@@ -142,11 +142,11 @@ import numpy as np
 shape = (6, 2)
 data_list = [[1, 2], [3, 4]]
 indices_list = [1, 4]
-a = mx.nd.sparse.row_sparse_array(data_list, indices_list, shape)
+a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape)
 # Create a RowSparseNDArray with numpy arrays
 data_np = np.array([[1, 2], [3, 4]])
 indices_np = np.array([1, 4])
-b = mx.nd.sparse.row_sparse_array(data_np, indices_np, shape)
+b = mx.nd.sparse.row_sparse_array((data_np, indices_np), shape)
 {'a':a, 'b':b}
 ```
 
@@ -263,7 +263,7 @@ You can retain a subset of row slices from a RowSparseNDArray specified by their
 ```python
 data = [[1, 2], [3, 4], [5, 6]]
 indices = [0, 2, 3]
-rsp = mx.nd.sparse.row_sparse_array(data, indices, (5, 2))
+rsp = mx.nd.sparse.row_sparse_array((data, indices), (5, 2))
 # Retain row 0 and row 1
 rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 {'rsp.asnumpy()': rsp.asnumpy(), 'rsp_retained': rsp_retained, 'rsp_retained.asnumpy()': rsp_retained.asnumpy()}
@@ -346,7 +346,7 @@ weight = mx.nd.ones(shape).tostype('row_sparse')
 # Create gradient
 data = [[1, 2], [4, 5]]
 indices = [1, 2]
-grad = mx.nd.sparse.row_sparse_array(data, indices, shape)
+grad = mx.nd.sparse.row_sparse_array((data, indices), shape)
 sgd = mx.optimizer.SGD(learning_rate=0.01, momentum=0.01)
 # Create momentum
 momentum = sgd.create_state(0, weight)
