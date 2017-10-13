@@ -288,7 +288,6 @@ class ThreadedEngine : public Engine {
 
     /*! \brief Set default OMP threads per kernel worker to default */
     set_num_omp_threads_per_worker(DefaultOMPThreadsPerWorker());
-    CHECK_GT(num_omp_threads_per_worker(), 0);
   }
   ~ThreadedEngine() {
     {
