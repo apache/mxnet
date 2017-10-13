@@ -566,31 +566,32 @@ def test_create_sparse_nd_infer_shape():
         check_create_rsp_infer_shape(shape_3d, density, dtype)
 
 def test_create_sparse_nd_from_dense():
-    def check_create_from_dns(shape, f, g, dtype):
-        nd = f(g(shape), dtype=dtype)
-        assert(same(nd.asnumpy(), np.ones(shape)))
-        assert(nd.dtype == dtype)
+    def check_create_from_dns(shape, f, dense_arr, dtype):
+        arr = f(dense_arr, dtype=dtype)
+        assert(same(arr.asnumpy(), np.ones(shape)))
+        assert(arr.dtype == dtype)
     shape = rand_shape_2d()
     dtype = np.int32
+    dense_arrs = [mx.nd.ones(shape), np.ones(shape), np.ones(shape).tolist()]
     for f in [mx.nd.sparse.csr_matrix, mx.nd.sparse.row_sparse_array]:
-        for g in [mx.nd.ones, np.ones]:
-            check_create_from_dns(shape, f, g, dtype)
+        for dense_arr in dense_arrs:
+            check_create_from_dns(shape, f, dense_arr, dtype)
 
 def test_create_sparse_nd_empty():
     def check_empty(shape, stype):
-        nd = mx.nd.empty(shape, stype=stype)
-        assert(nd.stype == stype)
-        assert same(nd.asnumpy(), np.zeros(shape))
+        arr = mx.nd.empty(shape, stype=stype)
+        assert(arr.stype == stype)
+        assert same(arr.asnumpy(), np.zeros(shape))
 
     def check_csr_empty(shape):
-        nd = mx.nd.sparse.csr_matrix(shape)
-        assert(nd.stype == 'csr')
-        assert same(nd.asnumpy(), np.zeros(shape))
+        arr = mx.nd.sparse.csr_matrix(shape)
+        assert(arr.stype == 'csr')
+        assert same(arr.asnumpy(), np.zeros(shape))
 
     def check_rsp_empty(shape):
-        nd = mx.nd.sparse.row_sparse_array(shape)
-        assert(nd.stype == 'row_sparse')
-        assert same(nd.asnumpy(), np.zeros(shape))
+        arr = mx.nd.sparse.row_sparse_array(shape)
+        assert(arr.stype == 'row_sparse')
+        assert same(arr.asnumpy(), np.zeros(shape))
 
     stypes = ['csr', 'row_sparse']
     shape = rand_shape_2d()
@@ -644,6 +645,8 @@ def test_sparse_nd_exception():
                      (2,2), shape=(3,2))
     assert_exception(mx.nd.sparse.row_sparse_array, ValueError,
                      (2,2), shape=(3,2))
+    assert_exception(mx.nd.sparse.zeros, ValueError,
+                     "invalid_stype", (2,2))
 
 
 if __name__ == '__main__':

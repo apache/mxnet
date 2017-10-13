@@ -75,7 +75,7 @@ A detailed tutorial is available at
 
 .. note:: ``mxnet.ndarray.sparse.CSRNDArray`` is similar to ``scipy.sparse.csr_matrix`` in some aspects. But they differ in a few aspects:
 
-   - The column indices (``CSRNDArray.indices``) for a given row are expected to be **sorted in ascending order**.
+   - In MXNet the column indices (``CSRNDArray.indices``) for a given row are expected to be **sorted in ascending order**.
      Duplicate column entries for the same row are not allowed.
    - ``CSRNDArray.data``, ``CSRNDArray.indices`` and ``CSRNDArray.indptr`` always create deep copies, while it's not the case in ``scipy.sparse.csr_matrix``.
 

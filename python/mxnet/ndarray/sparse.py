@@ -835,15 +835,17 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             raise ValueError("Unexpected length of input tuple: " + str(arg_len))
     else:
         # construct a csr matrix from a sparse / dense one
-        _check_shape(arg1.shape, shape)
         if isinstance(arg1, CSRNDArray) or (spsp and isinstance(arg1, spsp.csr.csr_matrix)):
             # construct a csr matrix from scipy or CSRNDArray
+            _check_shape(arg1.shape, shape)
             return array(arg1, ctx=ctx, dtype=dtype)
         elif isinstance(arg1, RowSparseNDArray):
             raise ValueError("Unexpected input type: RowSparseNDArray")
         else:
             # construct a csr matrix from a dense one
-            return _array(arg1, ctx=ctx, dtype=dtype).tostype('csr')
+            dns = _array(arg1, ctx=ctx, dtype=dtype)
+            _check_shape(dns.shape, shape)
+            return dns.tostype('csr')
 
 def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
                                 dtype=None, indices_type=None, indptr_type=None):
@@ -989,15 +991,17 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
                                                            ctx=ctx, dtype=dtype)
     else:
         # construct a row sparse ndarray from a dense / sparse array
-        _check_shape(arg1.shape, shape)
         if isinstance(arg1, RowSparseNDArray):
             # construct a row sparse ndarray from RowSparseNDArray
+            _check_shape(arg1.shape, shape)
             return array(arg1, ctx=ctx, dtype=dtype)
         elif isinstance(arg1, CSRNDArray):
             raise ValueError("Unexpected input type: CSRNDArray")
         else:
             # construct a csr matrix from a dense one
-            return _array(arg1, ctx=ctx, dtype=dtype).tostype('row_sparse')
+            dns = _array(arg1, ctx=ctx, dtype=dtype)
+            _check_shape(dns.shape, shape)
+            return dns.tostype('row_sparse')
 
 def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
                                         dtype=None, indices_type=None):
