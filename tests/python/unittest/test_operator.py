@@ -4531,7 +4531,6 @@ def test_binary_math_operators():
             name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
             num_eps)
 
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
