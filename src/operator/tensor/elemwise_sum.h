@@ -110,7 +110,20 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   CHECK_EQ(outputs.size(), 1U);
-
+#if 1
+  typedef float DType;
+  {
+    std::string prefix = "FWD-BEF SUM ";
+    DType * indata0 = inputs[0].getSyncedCPUDataPtr<DType>();
+    printTensor(prefix + "indata.0", indata0, inputs[0].shape_.Size());
+    DType * indata1 = inputs[1].getSyncedCPUDataPtr<DType>();
+    printTensor(prefix + "indata.1", indata1, inputs[1].shape_.Size());
+    DType * outdata0 = outputs[0].getSyncedCPUDataPtr<DType>();
+    printTensor(prefix + "outdata.0", outdata0, outputs[0].shape_.Size());
+    printBufferHead(prefix + "in_data.kData-0", inputs[0]);
+    printBufferHead(prefix + "in_data.kData-1", inputs[1]);
+  }
+#endif
 #if MXNET_USE_MKLDNN == 1
   CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32);
   MKLDNNElementWiseSumCompute<xpu, float>(attrs, ctx, inputs, req, outputs);
@@ -119,7 +132,17 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
       ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
   });
 #endif
-
+#if 1
+  {
+    std::string prefix = "FWD-AFT SUM ";
+    DType * indata0 = inputs[0].getSyncedCPUDataPtr<DType>();
+    printTensor(prefix + "indata.0", indata0, inputs[0].shape_.Size());
+    DType * indata1 = inputs[1].getSyncedCPUDataPtr<DType>();
+    printTensor(prefix + "indata.1", indata1, inputs[1].shape_.Size());
+    DType * outdata0 = outputs[0].getSyncedCPUDataPtr<DType>();
+    printTensor(prefix + "outdata.0", outdata0, outputs[0].shape_.Size());
+  }
+#endif
 }
 
 template<typename xpu>
