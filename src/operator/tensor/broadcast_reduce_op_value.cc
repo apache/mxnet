@@ -96,8 +96,11 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseNone<cpu>);
 
 MXNET_OPERATOR_REGISTER_REDUCE(mean)
+MXNET_ADD_SPARSE_OP_ALIAS(mean)
 .describe(get_reduce_axes_description("mean", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum, true>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SumOpForwardEx<cpu, mshadow::red::sum, true>)
+.set_attr<FInferStorageType>("FInferStorageType", SumOpForwardInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

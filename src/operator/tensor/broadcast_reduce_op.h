@@ -566,7 +566,7 @@ struct SumCsrKernel<req, 1> {
   }
 };
 
-template <typename xpu>
+template <typename xpu, bool normalize = false>
 void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
                 const NDArray& input, const OpReqType req, NDArray* output) {
   if (req == kNullOp) return;
@@ -586,6 +586,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
   CHECK_EQ(output->storage_type(), kDefaultStorage);
 
   using namespace mshadow;
+  using namespace mshadow::expr;
   using namespace mxnet_op;
   using namespace csr;
   using nnvm::dim_t;
@@ -630,23 +631,37 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 s, num_threads, output->data().dptr<DType>(), in_indptr, in_idx,
                 in_data, sum.dptr_, residual.dptr_, num_rows, num_cols,
                 seg_len);
+            if (normalize) {
+              mshadow::Tensor<xpu, 1, DType> out_data =
+                  output->data().FlatTo1D<xpu, DType>(s);
+              out_data /= scalar<DType>(num_rows);
+            }
           });
         });
       });
     });
   } else if (1 == param.axis[0]) {
     MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
-      MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
-          const DType* in_data = input.data().dptr<DType>();
-          Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
-              s, out_data_size, output->data().dptr<DType>(), in_indptr,
-              in_data);
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIdx), IType, {
+        MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
+            const DType* in_data = input.data().dptr<DType>();
+            const IType num_cols = input.shape()[1];
+            Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
+                s, out_data_size, output->data().dptr<DType>(), in_indptr,
+                in_data);
+            if (normalize) {
+              mshadow::Tensor<xpu, 1, DType> out_data =
+                  output->data().FlatTo1D<xpu, DType>(s);
+              out_data /= scalar<DType>(num_cols);
+            }
+          });
         });
       });
     });
   }
+
 }
 
 template <typename xpu, typename reducer, bool normalize = false>
@@ -663,7 +678,7 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
         << "sum(csr) op only supports 2D ndarray as input";
     NDArray output = outputs[0];
-    SumCsrImpl(attrs, s, ctx, inputs[0], req[0], &output);
+    SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
   } else {
     LOG(FATAL) << "Not implemented: "
                << operator_string(attrs, ctx, inputs, req, outputs);
