@@ -501,7 +501,7 @@ class RowSparseNDArray(BaseSparseNDArray):
     """A sparse representation of a set of NDArray row slices at given indices.
 
     A RowSparseNDArray represents a multidimensional NDArray using two separate arrays: `data` and
-    `indices`. The number of dimensions has to be greater than 1.
+    `indices`. The number of dimensions has to be at least 2.
 
     - data: an NDArray of any dtype with shape [D0, D1, ..., Dn].
     - indices: a 1-D int64 NDArray with shape [D0] with values sorted in ascending order.
@@ -725,12 +725,16 @@ def _prepare_src_array(source_array, dtype):
     nor an `np.ndarray`.
     """
     if not isinstance(source_array, NDArray) and not isinstance(source_array, np.ndarray):
-       try:
-           source_array = np.array(source_array, dtype=dtype)
-       except:
-           raise TypeError('values must be array like object')
+        try:
+            source_array = np.array(source_array, dtype=dtype)
+        except:
+            raise TypeError('values must be array like object')
     return source_array
 
+def _check_shape(s1, s2):
+    """check s1 == s2 if both are not None"""
+    if s1 and s2 and s1 != s2:
+        raise ValueError("Shape mismatch detected. " + str(s1) + " v.s. " + str(s2))
 
 def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
     """Creates a `CSRNDArray`, an 2D array with compressed sparse row (CSR) format.
@@ -784,8 +788,7 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             - **ctx** (*Context, optional*) - Device context \
             (default is the current default context).
             - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is ``data.dtype`` if ``data`` is an NDArray or numpy.ndarray, \
-            float32 otherwise.
+            The default dtype is float32.
 
     Parameters
     ----------
@@ -817,26 +820,30 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
     --------
     CSRNDArray : MXNet NDArray in compressed sparse row format.
     """
+    # construct a csr matrix from (M, N) or (data, indices, indptr)
     if isinstance(arg1, tuple):
         arg_len = len(arg1)
         if arg_len == 2:
             # empty matrix with shape
-            if shape and shape != arg1:
-                raise ValueError("Shape mismatch detected. " + str(shape) + " v.s. " + str(arg1))
+            _check_shape(arg1, shape)
             return empty('csr', arg1, ctx=ctx, dtype=dtype)
         elif arg_len == 3:
             # data, indices, indptr
-            return _csr_matrix_from_definition(arg1[0], arg1[1], arg1[2], shape=shape, ctx=ctx, dtype=dtype)
+            return _csr_matrix_from_definition(arg1[0], arg1[1], arg1[2], shape=shape,
+                                               ctx=ctx, dtype=dtype)
         else:
             raise ValueError("Unexpected length of input tuple: " + str(arg_len))
-    elif isinstance(arg1, CSRNDArray) or (spsp and isinstance(arg1, spsp.csr.csr_matrix)):
-        # construct a csr matrix from scipy or CSRNDArray
-        return array(arg1, ctx=ctx, dtype=dtype)
-    elif isinstance(arg1, RowSparseNDArray):
-        raise ValueError("Unexpected input type: RowSparseNDArray")
     else:
-        # construct a csr matrix from a dense one
-        return _array(arg1, ctx=ctx, dtype=dtype).tostype('csr')
+        # construct a csr matrix from a sparse / dense one
+        _check_shape(arg1.shape, shape)
+        if isinstance(arg1, CSRNDArray) or (spsp and isinstance(arg1, spsp.csr.csr_matrix)):
+            # construct a csr matrix from scipy or CSRNDArray
+            return array(arg1, ctx=ctx, dtype=dtype)
+        elif isinstance(arg1, RowSparseNDArray):
+            raise ValueError("Unexpected input type: RowSparseNDArray")
+        else:
+            # construct a csr matrix from a dense one
+            return _array(arg1, ctx=ctx, dtype=dtype).tostype('csr')
 
 def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
                                 dtype=None, indices_type=None, indptr_type=None):
@@ -864,14 +871,12 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     if not isinstance(indices, NDArray):
         indices = _array(indices, ctx, indices_type)
     if shape is None:
-        shape = (len(indtpr) - 1, 0)
-        shape[1] = op.max(indices).asscalar()
+        shape = (len(indptr) - 1, op.max(indices).asscalar() + 1)
     # verify shapes
     aux_shapes = [indptr.shape, indices.shape]
-    assert(data.ndim == 1)
-    assert(indptr.ndim == 1)
-    assert(indices.ndim == 1)
-    assert(len(shape) == 2)
+    if data.ndim != 1 or indptr.ndim != 1 or indices.ndim != 1 or \
+       indptr.shape[0] == 0 or indices.shape[0] == 0 or len(shape) != 2:
+       raise ValueError('invalid shape')
     result = CSRNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                           [indptr_type, indices_type], aux_shapes))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
@@ -926,6 +931,8 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
             stores the row index for each row slice with non-zero elements.
             - **shape** (*tuple of int, optional*) - The shape of the array. The default \
             shape is inferred from the indices and indptr arrays.
+            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+            The default dtype is float32.
 
     Parameters
     ----------
@@ -959,39 +966,39 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
     --------
     RowSparseNDArray : MXNet NDArray in row sparse format.
     """
+    # construct a row sparse array from (D0, D1 ..) or (data, indices)
     if isinstance(arg1, tuple):
         arg_len = len(arg1)
         if arg_len < 2:
             raise ValueError("Unexpected length of input tuple: " + str(arg_len))
         elif arg_len > 2:
             # empty ndarray with shape
-            if shape and shape != arg1:
-                raise ValueError("Shape mismatch detected. " + str(shape) + \
-                                 " v.s. " + str(arg1))
+            _check_shape(arg1, shape)
             return empty('row_sparse', arg1, ctx=ctx, dtype=dtype)
         else:
             # len(arg1) = 2, is either shape or (data, indices)
             if isinstance(arg1[0], integer_types) and isinstance(arg1[1], integer_types):
                 # empty ndarray with shape
-                if shape and shape != arg1:
-                    raise ValueError("Shape mismatch detected. " + str(shape) + \
-                                     " v.s. " + str(arg1))
+                _check_shape(arg1, shape)
                 return empty('row_sparse', arg1, ctx=ctx, dtype=dtype)
             else:
                 # data, indices, indptr
                 return _row_sparse_ndarray_from_definition(arg1[0], arg1[1], shape=shape,
                                                            ctx=ctx, dtype=dtype)
-    elif isinstance(arg1, RowSparseNDArray):
-        # construct a row sparse ndarray from RowSparseNDArray
-        return array(arg1, ctx=ctx, dtype=dtype)
-    elif isinstance(arg1, CSRNDArray):
-        raise ValueError("Unexpected input type: CSRNDArray")
     else:
-        # construct a csr matrix from a dense one
-        return _array(arg1, ctx=ctx, dtype=dtype).tostype('row_sparse')
+        # construct a row sparse ndarray from a dense / sparse array
+        _check_shape(arg1.shape, shape)
+        if isinstance(arg1, RowSparseNDArray):
+            # construct a row sparse ndarray from RowSparseNDArray
+            return array(arg1, ctx=ctx, dtype=dtype)
+        elif isinstance(arg1, CSRNDArray):
+            raise ValueError("Unexpected input type: CSRNDArray")
+        else:
+            # construct a csr matrix from a dense one
+            return _array(arg1, ctx=ctx, dtype=dtype).tostype('row_sparse')
 
 def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
-                                       dtype=None, indices_type=None):
+                                        dtype=None, indices_type=None):
     """Create a `RowSparseNDArray` based on data and indices"""
     storage_type = 'row_sparse'
     # context
@@ -1013,10 +1020,11 @@ def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
         indices = _array(indices, ctx, indices_type)
     if shape is None:
         num_indices = indices.shape[0]
-        shape = (indices[num_indices - 1].asscalar()) + data.shape
+        dim0 = 0 if num_indices == 0 else indices[num_indices - 1].asscalar() + 1
+        shape = (dim0, ) + data.shape[1:]
     # verify shapes
-    assert(data.ndim == len(shape))
-    assert(indices.ndim == 1)
+    if data.ndim != len(shape) or indices.ndim != 1 or np.prod(shape[1:]) == 0:
+        raise ValueError("invalid shape")
     result = RowSparseNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                                 [indices_type], [indices.shape]))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))

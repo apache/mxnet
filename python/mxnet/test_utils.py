@@ -143,7 +143,11 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
                                     distribution="uniform")
     try:
         from scipy import sparse as spsp
-        csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+        while True:
+            csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+            if csr.nnz == 0 and density != 0:
+                continue
+            break
         if data_init is not None:
             csr.data.fill(data_init)
         if shuffle_csr_indices is True:
@@ -251,7 +255,6 @@ def assign_each2(input1, input2, function):
     else:
         return np.array(input1)
 
-# TODO(haibin) also include types in arguments
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False):
@@ -302,11 +305,16 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             indices = rsp_indices
             assert(len(indices) <= shape[0])
         else:
-            idx_sample = rnd.rand(shape[0])
-            indices = np.argwhere(idx_sample < density).flatten()
+            while True:
+                idx_sample = rnd.rand(shape[0])
+                indices = np.argwhere(idx_sample < density).flatten()
+                # redo sampling if density != 0 but sample result is empty
+                if indices.shape[0] == 0 and density != 0:
+                    continue
+                break
         if indices.shape[0] == 0:
             result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
-            return result, (np.array([], dtype=dtype), np.array([], dtype='int64'))
+            return result, (np.array([], dtype=dtype), np.array([]))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
 

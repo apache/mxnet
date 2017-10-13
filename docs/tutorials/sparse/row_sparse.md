@@ -263,7 +263,7 @@ You can retain a subset of row slices from a RowSparseNDArray specified by their
 ```python
 data = [[1, 2], [3, 4], [5, 6]]
 indices = [0, 2, 3]
-rsp = mx.nd.sparse.row_sparse_array((data, indices), (5, 2))
+rsp = mx.nd.sparse.row_sparse_array((data, indices), shape=(5, 2))
 # Retain row 0 and row 1
 rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 {'rsp.asnumpy()': rsp.asnumpy(), 'rsp_retained': rsp_retained, 'rsp_retained.asnumpy()': rsp_retained.asnumpy()}

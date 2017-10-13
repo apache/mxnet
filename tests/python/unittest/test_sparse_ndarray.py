@@ -478,18 +478,17 @@ def test_create_csr():
             assert_almost_equal(nd.data.asnumpy(), sp.data)
             assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
             assert_almost_equal(nd.indices.asnumpy(), sp.indices)
-
         try:
-            import scipy.sparse as sp
+            import scipy.sparse as spsp
             # random canonical csr
-            csr_sp = sp.rand(shape[0], shape[1], density, format="csr")
+            csr_sp = spsp.rand(shape[0], shape[1], density, format="csr")
             csr_nd = f(csr_sp)
             assert_csr_almost_equal(csr_nd, csr_sp)
             # non-canonical csr which contains duplicates and unsorted indices
             indptr = np.array([0, 2, 3, 7])
             indices = np.array([0, 2, 2, 0, 1, 2, 1])
             data = np.array([1, 2, 3, 4, 5, 6, 1])
-            non_canonical_csr = sp.csr_matrix((data, indices, indptr), shape=(3, 3))
+            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3))
             canonical_csr_nd = f(non_canonical_csr)
             canonical_csr_sp = non_canonical_csr.copy()
             canonical_csr_sp.sum_duplicates()
@@ -523,6 +522,35 @@ def test_create_row_sparse():
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
+
+def test_create_sparse_nd_infer_shape():
+    def check_create_csr_infer_shape(shape, density):
+        matrix = rand_ndarray(shape, 'csr', density=density)
+        data = matrix.data
+        indptr = matrix.indptr
+        indices = matrix.indices
+        num_rows, num_cols = mx.nd.sparse.csr_matrix((data, indices, indptr)).shape
+        assert(num_rows == len(indptr) - 1)
+        assert(indices.shape[0] > 0), indices
+        assert(np.sum((num_cols <= indices).asnumpy()) == 0)
+
+    def check_create_rsp_infer_shape(shape, density):
+        array = rand_ndarray(shape, 'row_sparse', density=density)
+        data = array.data
+        indices = array.indices
+        inferred_shape = mx.nd.sparse.row_sparse_array((data, indices)).shape
+        assert(inferred_shape[1:] == data.shape[1:])
+        assert(indices.ndim > 0)
+        assert(indices.shape[0] > 0), indices
+        assert(np.sum((inferred_shape[0] <= indices).asnumpy()) == 0)
+
+    shape = rand_shape_2d()
+    shape_3d = rand_shape_3d()
+    densities = [0.5, 1]
+    for d in densities:
+        check_create_csr_infer_shape(shape, d)
+        check_create_rsp_infer_shape(shape, d)
+        check_create_rsp_infer_shape(shape_3d, d)
 
 def test_create_sparse_nd_from_dense():
     def check_create_from_dns(shape, f, g):
