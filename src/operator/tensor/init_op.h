@@ -62,9 +62,9 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
 };
 
 struct RangeParam : public dmlc::Parameter<RangeParam> {
-  real_t start;
-  dmlc::optional<real_t> stop;
-  real_t step;
+  double start;
+  dmlc::optional<double> stop;
+  double step;
   int repeat;
   std::string ctx;
   int dtype;
@@ -72,7 +72,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     DMLC_DECLARE_FIELD(start)
     .describe("Start of interval. The interval includes this value. The default start value is 0.");
     DMLC_DECLARE_FIELD(stop)
-    .set_default(dmlc::optional<real_t>())
+    .set_default(dmlc::optional<double>())
     .describe("End of interval. The interval does not include this value,"
               " except in some cases where step is not an integer and"
               " floating point round-off affects the length of out.");
@@ -104,6 +104,14 @@ inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   if (!static_cast<bool>(param.stop)) {
     param.stop = param.start;
     param.start = 0;
+  }
+  if (param.dtype == mshadow::kUint8 ||
+      param.dtype == mshadow::kInt8 ||
+      param.dtype == mshadow::kInt32 ||
+      param.dtype == mshadow::kInt64) {
+    param.start = round(param.start);
+    param.stop = round(param.stop.value());
+    param.step = round(param.step);
   }
   attrs->parsed = std::move(param);
 }
@@ -293,9 +301,12 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(out, req[0], range<DType>(param.start,
-                                              param.stop.value(),
-                                              param.step,
+    DType start = static_cast<DType>(param.start);
+    DType stop = static_cast<DType>(param.stop.value());
+    DType step = static_cast<DType>(param.step);
+    ASSIGN_DISPATCH(out, req[0], range<DType>(static_cast<DType>(param.start),
+                                              static_cast<DType>(param.stop.value()),
+                                              static_cast<DType>(param.step),
                                               param.repeat));
   });
 }
@@ -307,7 +318,7 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_NE(param.step, 0U)
+  CHECK_NE(param.step, 0)
     << "Range does not support step=0, received " << param.step;
   CHECK(param.repeat > 0)
     << "Range only supports repeat > 0, received " << param.repeat;
@@ -320,11 +331,13 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
       << "Range does not support (start, stop, step)= "
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     mshadow::Shape1(mshadow::expr::RangeOutSize(param.start,
-                                                                 param.stop.value(),
-                                                                 param.step,
-                                                                 param.repeat)));
+  MSHADOW_TYPE_SWITCH(param.dtype, DType, {
+    DType start = static_cast<DType>(param.start);
+    DType stop = static_cast<DType>(param.stop.value());
+    DType step = static_cast<DType>(param.step);
+    int out_size = mshadow::expr::RangeOutSize(start, stop, step, param.repeat);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(out_size));
+  });
   return true;
 }
 

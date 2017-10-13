@@ -2508,16 +2508,26 @@ def test_init():
         assert exe.outputs[0].asnumpy().dtype == dtype
 
     def test_arange():
+        # General Random Tests
+        dtype_choices = [np.float32, np.float64, np.int32]
         for i in range(5):
+            dtype = dtype_choices[np.random.randint(0, len(dtype_choices))]
             start = np.random.rand() * 10
             stop = start + np.random.rand() * 100
             step = np.random.rand() * 4
             repeat = int(np.random.rand() * 5) + 1
-            gt = np.arange(start=start, stop=stop, step=step)
+            gt = np.arange(start=start, stop=stop, step=step, dtype=dtype)
             gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
-            x = mx.sym.arange(start=start, stop=stop, step=step, repeat=repeat)
+            x = mx.sym.arange(start=start, stop=stop, step=step, repeat=repeat, dtype=dtype)
             exe = x.simple_bind(ctx=default_context())
             assert len(exe.grad_arrays) == 0
+            pred = exe.forward(is_train=False)[0].asnumpy()
+            assert_almost_equal(pred, gt)
+        # Some special cases
+        for dtype in dtype_choices:
+            gt = np.arange(start=0, stop=10000 * 10000, step=10001, dtype=dtype)
+            x = mx.sym.arange(start=0, stop=10000 * 10000, step=10001, dtype=dtype)
+            exe = x.simple_bind(ctx=default_context())
             pred = exe.forward(is_train=False)[0].asnumpy()
             assert_almost_equal(pred, gt)
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)

@@ -1869,11 +1869,11 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
 
     Parameters
     ----------
-    start : float, optional
+    start : number, optional
         Start of interval. The default start value is 0.
-    stop : float
+    stop : number
         End of interval.
-    step : float, optional
+    step : number, optional
         Spacing between values. The default step size is 1.
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.
