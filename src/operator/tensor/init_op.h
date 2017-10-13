@@ -301,9 +301,6 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    DType start = static_cast<DType>(param.start);
-    DType stop = static_cast<DType>(param.stop.value());
-    DType step = static_cast<DType>(param.step);
     ASSIGN_DISPATCH(out, req[0], range<DType>(static_cast<DType>(param.start),
                                               static_cast<DType>(param.stop.value()),
                                               static_cast<DType>(param.step),
