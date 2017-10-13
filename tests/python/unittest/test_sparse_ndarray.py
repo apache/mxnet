@@ -511,7 +511,7 @@ def test_create_csr():
 def test_create_row_sparse():
     dim0 = 50
     dim1 = 50
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5, 1]
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
         matrix = rand_ndarray(shape, 'row_sparse', density)
@@ -524,12 +524,39 @@ def test_create_row_sparse():
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
-def test_sparse_nd_empty():
-    stypes = ['csr', 'row_sparse', 'default']
-    for stype in stypes:
-        nd = mx.nd.empty((2,2), stype=stype)
-        assert(nd.stype == stype)
+def test_create_sparse_nd_from_dense():
+    def check_create_from_dns(shape, f, g):
+        nd = f(g(shape))
+        assert same(nd.asnumpy(), np.ones(shape))
+    shape = rand_shape_2d()
+    for f in [mx.nd.sparse.csr_matrix, mx.nd.sparse.row_sparse_array]:
+        for g in [mx.nd.ones, np.ones]:
+            check_create_from_dns(shape, f, g)
 
+def test_create_sparse_nd_empty():
+    def check_empty(shape, stype):
+        nd = mx.nd.empty(shape, stype=stype)
+        assert(nd.stype == stype)
+        assert same(nd.asnumpy(), np.zeros(shape))
+
+    def check_csr_empty(shape):
+        nd = mx.nd.sparse.csr_matrix(shape)
+        assert(nd.stype == 'csr')
+        assert same(nd.asnumpy(), np.zeros(shape))
+
+    def check_rsp_empty(shape):
+        nd = mx.nd.sparse.row_sparse_array(shape)
+        assert(nd.stype == 'row_sparse')
+        assert same(nd.asnumpy(), np.zeros(shape))
+
+    stypes = ['csr', 'row_sparse']
+    shape = rand_shape_2d()
+    shape_3d = rand_shape_3d()
+    for stype in stypes:
+        check_empty(shape, stype)
+    check_csr_empty(shape)
+    check_rsp_empty(shape)
+    check_rsp_empty(shape_3d)
 
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):

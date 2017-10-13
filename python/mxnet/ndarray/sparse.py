@@ -823,7 +823,7 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             # empty matrix with shape
             if shape and shape != arg1:
                 raise ValueError("Shape mismatch detected. " + str(shape) + " v.s. " + str(arg1))
-            return empty('csr', shape, ctx=ctx, dtype=dtype)
+            return empty('csr', arg1, ctx=ctx, dtype=dtype)
         elif arg_len == 3:
             # data, indices, indptr
             return _csr_matrix_from_definition(arg1[0], arg1[1], arg1[2], shape=shape, ctx=ctx, dtype=dtype)
@@ -836,7 +836,7 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
         raise ValueError("Unexpected input type: RowSparseNDArray")
     else:
         # construct a csr matrix from a dense one
-        return _array(source_array, ctx=ctx, dtype=dtype).tostype('csr')
+        return _array(arg1, ctx=ctx, dtype=dtype).tostype('csr')
 
 def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
                                 dtype=None, indices_type=None, indptr_type=None):
@@ -968,7 +968,7 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
             if shape and shape != arg1:
                 raise ValueError("Shape mismatch detected. " + str(shape) + \
                                  " v.s. " + str(arg1))
-            return empty('csr', shape, ctx=ctx, dtype=dtype)
+            return empty('row_sparse', arg1, ctx=ctx, dtype=dtype)
         else:
             # len(arg1) = 2, is either shape or (data, indices)
             if isinstance(arg1[0], integer_types) and isinstance(arg1[1], integer_types):
@@ -976,7 +976,7 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
                 if shape and shape != arg1:
                     raise ValueError("Shape mismatch detected. " + str(shape) + \
                                      " v.s. " + str(arg1))
-                return empty('csr', shape, ctx=ctx, dtype=dtype)
+                return empty('row_sparse', arg1, ctx=ctx, dtype=dtype)
             else:
                 # data, indices, indptr
                 return _row_sparse_ndarray_from_definition(arg1[0], arg1[1], shape=shape,
@@ -988,7 +988,7 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
         raise ValueError("Unexpected input type: CSRNDArray")
     else:
         # construct a csr matrix from a dense one
-        return _array(source_array, ctx=ctx, dtype=dtype).tostype('rowsparse')
+        return _array(arg1, ctx=ctx, dtype=dtype).tostype('row_sparse')
 
 def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
                                        dtype=None, indices_type=None):
@@ -1104,8 +1104,7 @@ def empty(stype, shape, ctx=None, dtype=None):
         dtype = mx_real_t
     assert(stype is not None)
     if stype == 'csr' or stype == 'row_sparse':
-        return _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype,
-                                              _STORAGE_AUX_TYPES[stype]))
+        return zeros(stype, shape, ctx=ctx, dtype=dtype)
     else:
         raise Exception("unknown stype : " + str(stype))
 
@@ -1143,7 +1142,7 @@ def array(source_array, ctx=None, dtype=None):
         assert(source_array.stype != 'default'), \
                "Please use `tostype` to create RowSparseNDArray or CSRNDArray from an NDArray"
         dtype = source_array.dtype if dtype is None else dtype
-        arr = empty(source_array.stype, source_array.shape, ctx, dtype)
+        arr = empty(source_array.stype, source_array.shape, ctx=ctx, dtype=dtype)
         arr[:] = source_array
         return arr
     elif spsp and isinstance(source_array, spsp.csr.csr_matrix):
