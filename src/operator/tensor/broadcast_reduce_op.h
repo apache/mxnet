@@ -583,8 +583,6 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
   // only dense output storage type is supported
   CHECK_EQ(output->storage_type(), kDefaultStorage);
 
-  CHECK_NE(req, kWriteInplace);
-
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
