@@ -1,5 +1,30 @@
 MXNet Change Log
 ================
+## 0.12.0
+### - New Features - Sparse Tensor Support
+  - Added comprehensive support for sparse matrices. See help on `mx.sym.sparse` and `mx.nd.sparse` for more info.
+  - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/MXNet+0.12.0+Release+Notes)
+### - New Features - Autograd and Gluon
+  - New loss functions added - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`
+  - `gluon.Trainer` now allows reading and setting learning rate with `trainer.learning_rate` property.
+  - Added `mx.autograd.grad` and experimental second order gradient support (though most operators don't support second order gradient yet)
+  - Added `ConvLSTM` etc to `gluon.contrib`
+  - Autograd now supports cross-device graphs. Use `x.copyto(mx.gpu(i))` and `x.copyto(mx.cpu())` to do computation on multiple devices.
+### - Other New Features
+  - Random number generators in `mx.nd.random.*` and `mx.sym.random.*` now supports both CPU and GPU
+  - `NDArray` and `Symbol` now supports "fluent" methods. You can now use `x.exp()` etc instead of `mx.nd.exp(x)` or `mx.sym.exp(x)`
+  - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python
+  - Added `multi_precision` option to optimizer for easier float16 training
+### - Performance
+  - Full support for NVidia Volta GPU Architecture and Cuda 9. Training is up to 3.5x faster than Pascal when using float16.
+### - API Changes
+  - Operators like `mx.sym.linalg_*` and `mx.sym.random_*` are now moved to `mx.sym.linalg.*` and `mx.sym.random.*`. The old names are still available but deprecated.
+  - `sample_*` and `random_*` are now merged as `random.*`, which supports both scalar and  `NDArray` distribution parameters.
+### - Bug-fixes
+  - Fixed a bug that causes `argsort` operator to fail on large tensors.
+  - Fixed numerical stability issues when summing large tensors.
+
+
 ## 0.11.0
 ### - Major Features
   - Apple Core ML model converter
