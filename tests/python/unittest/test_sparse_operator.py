@@ -465,6 +465,19 @@ def test_elemwise_binary_ops():
                                                           force_grad_overlap=force_grad_overlap,
                                                           ograd_density=ograd_density)
 
+def test_elemwise_csr_same_zeros():
+    # Zeroes
+    a = mx.nd.sparse.zeros('csr', (1,1))
+    b = mx.nd.elemwise_add(a,a)
+    res = a.asnumpy() + a.asnumpy()
+    assert_almost_equal(b.asnumpy(), res)
+
+def as_dense(arr):
+    if arr.stype != 'default':
+        return mx.nd.cast_storage(arr, stype='default')
+    else:
+        return arr;
+
 # Make sure that 0's look like 0's when we do a comparison
 def do_normalize(arr):
     ret = arr.copy()

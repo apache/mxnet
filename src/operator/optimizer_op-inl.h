@@ -1069,7 +1069,6 @@ inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
   const FtrlParam& param = nnvm::get<FtrlParam>(attrs.parsed);
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const auto weight_stype = inputs[0].storage_type();
   const auto grad_stype = inputs[1].storage_type();
   const auto z_stype = inputs[2].storage_type();

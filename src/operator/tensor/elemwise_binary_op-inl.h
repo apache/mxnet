@@ -251,16 +251,24 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   if (!nr_rows) {
     return;
   }
+  CHECK_EQ(lhs.aux_shape(csr::kIndPtr).Size(), nr_rows + 1);
   const size_t nr_cols = lhs.shape().Size() / nr_rows;
 
   CHECK_EQ(lhs.shape().Size(), rhs.shape().Size());
 
+  const bool same_lhs_rhs = IsSameArray<DType>(lhs, output);
+
   const size_t lhs_nnz = lhs.storage_shape().Size();
   const size_t rhs_nnz = rhs.storage_shape().Size();
 
+  const size_t max_nnz = same_lhs_rhs ? lhs_nnz : lhs_nnz + rhs_nnz;
+
   output.CheckAndAlloc({mshadow::Shape1(lhs.shape()[0] + 1),
-                        mshadow::Shape1(std::min(lhs_nnz + rhs_nnz, lhs.shape().Size()))});
-  DCHECK_EQ(output.aux_shape(csr::kIndPtr), lhs.aux_shape(csr::kIndPtr));
+                        mshadow::Shape1(std::min(max_nnz, lhs.shape().Size()))});
+
+  // Input and output should have the same number of row pointer items (m + 1)
+  CHECK_EQ(output.aux_shape(csr::kIndPtr), lhs.aux_shape(csr::kIndPtr));
+  CHECK_EQ(output.aux_shape(csr::kIndPtr), rhs.aux_shape(csr::kIndPtr));
 
   const size_t alloc_size = nr_cols * sizeof(IType) + 2 * nr_cols * sizeof(DType);
 
@@ -278,7 +286,9 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
 
   OpBase::FillDense<cpu, IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
   OpBase::FillDense<cpu, DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
-  OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0),  req, rhs_row.dptr_);
+  if (!same_lhs_rhs) {
+    OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+  }
 
   // Column indices
   const Tensor<cpu, 1, IType> col_indices_l = lhs.aux_data(csr::kIdx).FlatTo1D<cpu, IType>(s);
