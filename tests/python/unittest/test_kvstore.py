@@ -18,6 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
 from mxnet.base import py_str, MXNetError
 
@@ -60,6 +61,7 @@ def test_single_kv_pair():
     check_single_kv_pair(init_kv(), 3)
     check_single_kv_pair(init_kv_with_str(), 'a')
 
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8262")
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
