@@ -42,7 +42,7 @@ What's New
 * [Guide to Creating New Operators (Layers)](https://mxnet.incubator.apache.org/how_to/new_op.html)
 * [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
 * [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
-* [Large Scale Image Classification](https://github.com/dmlc/mxnet/tree/master/example/image-classification)
+* [Large Scale Image Classification](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification)
 
 Contents
 --------
