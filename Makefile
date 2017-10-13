@@ -189,13 +189,15 @@ endif
 # jemalloc malloc library (if not using gperftools)
 ifneq ($(USE_GPERFTOOLS), 1)
 	ifeq ($(USE_JEMALLOC), 1)
-		FIND_LIBFILE=$(wildcard /lib/libjemalloc.so)
+		FIND_LIBNAME=jemalloc
+		FIND_LIBFILEEXT=so
+		FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 		ifeq (,$(FIND_LIBFILE))
-			FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.so)
+			FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 			ifeq (,$(FIND_LIBFILE))
-				FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.so)
+				FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 				ifeq (,$(FIND_LIBFILE))
-					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.so)
+					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 					ifeq (,$(FIND_LIBFILE))
 						USE_JEMALLOC=0
 					endif
