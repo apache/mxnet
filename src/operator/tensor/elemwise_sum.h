@@ -109,11 +109,6 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
-#if 1
-  {
-    LOG(INFO) << __FUNCTION__;
-  }
-#endif
   CHECK_EQ(outputs.size(), 1U);
 
 #if MXNET_USE_MKLDNN == 1

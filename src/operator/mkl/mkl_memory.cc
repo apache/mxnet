@@ -178,7 +178,7 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
 #endif
 #if MKL_EXPERIMENTAL == 1
   if (dnn_chunk != NULL)
-    prv_ptr = static_cast<DType*>(dnn_chunk->prv_data());
+    prv_ptr = static_cast<Dtype*>(dnn_chunk->prv_data());
 #endif
 
   if (this->convert_to_int != NULL) {
@@ -198,17 +198,17 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
     }
 #if MKL_EXPERIMENTAL == 1
     if (prv_ptr != NULL)  {
-      std::shared_ptr<MKLData<DType> > current_descr =
-        op::mkl_get_mem_desc<DType>(dnn_chunk);
-      if (!dnnLayoutCompare<DType>(current_descr->layout_int,
+      std::shared_ptr<MKLData<Dtype> > current_descr =
+        op::mkl_get_mem_desc<Dtype>(dnn_chunk);
+      if (!dnnLayoutCompare<Dtype>(current_descr->layout_int,
         this->layout_int)) {
         if (this->convert_prv2prv) {
-          CHECK_EQ(dnnLayoutCompare<DType>(
+          CHECK_EQ(dnnLayoutCompare<Dtype>(
             this->descr_prv2prv_conversion->layout_int,
             this->layout_int), 0);
           status = 0;
         } else {
-          status = dnnConversionCreate<DType>(&this->convert_prv2prv,
+          status = dnnConversionCreate<Dtype>(&this->convert_prv2prv,
             current_descr->layout_int, this->layout_int);
           if (status == 0)
             this->descr_prv2prv_conversion = current_descr;
@@ -218,14 +218,14 @@ Dtype* MKLMemoryDescriptor<Dtype>::get_converted_prv(
           convert_resources[dnnResourceFrom] = cpu_ptr;
           convert_resources[dnnResourceTo] =
             reinterpret_cast<void*>(this->internal_ptr);
-          status = dnnExecute<DType>(this->convert_to_int, convert_resources);
+          status = dnnExecute<Dtype>(this->convert_to_int, convert_resources);
           CHECK_EQ(status, 0) << "Conversion failed with status " << status;
         } else {
           this->allocate();
           convert_resources[dnnResourceFrom] = reinterpret_cast<void*>(prv_ptr);
           convert_resources[dnnResourceTo] =
             reinterpret_cast<void*>(this->internal_ptr);
-          status = dnnExecute<DType>(this->convert_prv2prv, convert_resources);
+          status = dnnExecute<Dtype>(this->convert_prv2prv, convert_resources);
           CHECK_EQ(status, 0) << "Conversion failed with status " << status;
         }
         if (set_prv_ptr) {
@@ -265,7 +265,7 @@ void* MKLMemoryDescriptor<Dtype>::get_output_ptr(Dtype *data_ptr,
     if (!in_place) {
       dnn_chunk->set_prv_descriptor(self_ptr);
     } else {
-      DType * blob_prv = op::mkl_prv_data<DType>(blob);
+      Dtype * blob_prv = op::mkl_prv_data<Dtype>(blob);
       if (blob_prv != NULL)
         return blob_prv;
     }

@@ -68,11 +68,6 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
       }
       return _prv_memory;
     }
-    /**
-     * check usr and prv memory primitive descriptor are different
-     * @return true if usr and prv memory primitive descriptors are
-     * different, false otherwise.
-     */
     inline bool conversion_needed() const {
       if (!_prv_memory_pd_not_null)
         return false;
@@ -128,7 +123,6 @@ struct MKLDNNMemoryDescriptorBase : public PrvMemDescr,
  protected:
     std::shared_ptr<memory::primitive_desc> _usr_memory_pd;
     std::shared_ptr<memory::primitive_desc> _prv_memory_pd;
-    // XXX lfeng: why do these booleans exist at all?
     bool _usr_memory_pd_not_null;
     bool _prv_memory_pd_not_null;
     std::shared_ptr<memory> _prv_memory;
@@ -144,36 +138,13 @@ class MKLDNNMemoryDescriptor : public MKLDNNMemoryDescriptorBase<Dtype> {
     MKLDNNMemoryDescriptor(std::shared_ptr<memory::primitive_desc> usr_memory_pd
         , std::shared_ptr<memory::primitive_desc> prv_memory_pd);
 
-  /**
-   * Convert MKLDNN data buffer to cpu format
-   * @tparam Dtype
-   * @param cpu_ptr Pointer to cpu data where the converted result should write
-   * to.
-   */
     virtual void convert_from_prv(void* cpu_ptr);
-    /**
-     * Using input cpu data buffer pointer to convert data from usr format to prv
-     * format, stores in internal prv buffer.
-     * @tparam Dtype
-     * @param cpu_ptr
-     */
     virtual void convert_to_prv(void* cpu_ptr);
     virtual void convert_from_extprv(std::shared_ptr<memory> extprv_memory);
     virtual void convert_from_other(std::shared_ptr<PrvMemDescr> other);
     virtual bool on_to_cpu();
 
-    /**
-     * Set up usr and prv memory descriptors for conversion and create reorder
-     * operator.
-     * @tparam Dtype
-     * @param cpu_ptr Pointer to cpu buffer where reorder result will store in.
-     */
     virtual void create_reorder_from_prv(void* cpu_ptr);
-    /**
-     * Create the usr to prv reorder operation and using the input cpu data pointer.
-     * @tparam Dtype
-     * @param cpu_ptr Pointer to cpu buffer data.
-     */
     virtual void create_reorder_to_prv(void* cpu_ptr);
 
     // The last get_blob_data_ptr() argument is a hack for reusing

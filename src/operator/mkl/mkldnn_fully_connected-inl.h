@@ -251,9 +251,14 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
     std::shared_ptr<inner_product_backward_data::desc> ipBwdData_desc;
     std::shared_ptr<inner_product_backward_weights::desc> ipBwdWeights_desc;
 
-    ipBwdWeights_desc.reset(new inner_product_backward_weights::desc(
-      init_bottom_md, init_weights_md
-      , init_bias_md, init_top_md));
+    if (!param_.no_bias)
+      ipBwdWeights_desc.reset(new inner_product_backward_weights::desc(
+        init_bottom_md, init_weights_md
+        , init_bias_md, init_top_md));
+    else
+      ipBwdWeights_desc.reset(new inner_product_backward_weights::desc(
+        init_bottom_md, init_weights_md, init_top_md));
+    
     ipBwdData_desc.reset(new inner_product_backward_data::desc(
       init_bottom_md, init_weights_md, init_top_md));
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
@@ -356,6 +361,10 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
     Tensor<xpu, 2, Dtype> gdata = mkl_experimental_direct_get_with_shape<xpu, 2, Dtype>(
       in_grad[fullc::kData],
       Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
+    Tensor<xpu, 1, Dtype> gbias;
+    if (!param_.no_bias)
+        gbias = mkl_experimental_direct_get<xpu, 1, Dtype>(
+            in_grad[fullc::kBias], s);
     if (!init_mkldnn_) {
       LayerSetUp(data, grad);
       init_mkldnn_ = true;
@@ -363,36 +372,8 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
     if (ipBwdData_pd == NULL) {
       InitInnerProductBwd();
     }
-    std::shared_ptr<memory> bwdd_bottom_diff_memory
-      , bwdw_weights_diff_memory;
-    std::shared_ptr<primitive> bwdd_top_diff_primitive, bwdd_weights_data_primitive
-      , bwdw_top_diff_primitive, bwdw_bottom_data_primitive;
-    bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(data.dptr_,
-      false, in_data[fullc::kData]);
-    bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(grad.dptr_,
-      false, out_grad[fullc::kOut]);
-    bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(gwmat.dptr_,
-      in_grad[fullc::kWeight], bwdw_weights_diff);
-    if (req[fullc::kWeight]) {
-      if (!param_.no_bias) {
-        std::shared_ptr<memory> bwdw_bias_diff_memory;
-        Tensor<xpu, 1, Dtype> gbias = mkl_experimental_direct_get<xpu, 1, Dtype>(
-          in_grad[fullc::kBias], s);
-        bwdw_bias_diff_memory = bwdw_bias_diff->create_output_memory(gbias.dptr_,
-          in_grad[fullc::kBias], bwdw_bias_diff);
-        ipBwdWeights.reset(new inner_product_backward_weights(*ipBwdWeights_pd
-          , *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive
-          , *bwdw_weights_diff_memory, *bwdw_bias_diff_memory));
-        ipBwdWeights.submit();
-      } else {
-        ipBwdWeights.reset(new inner_product_backward_weights(*ipBwdWeights_pd
-          , *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive
-          , *bwdw_weights_diff_memory));
-        ipBwdWeights.submit();
-      }
-    }
-
     if (req[fullc::kData]) {
+      if (ipBwdData.aprimitive == NULL) {
       bwdd_top_diff_primitive = bwdd_top_diff->get_converted_prv(grad.dptr_,
         false, out_grad[fullc::kOut]);
       bwdd_weights_data_primitive = bwdd_weights_data->get_converted_prv(wmat.dptr_,
@@ -402,8 +383,49 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
       ipBwdData.reset(new inner_product_backward_data(*ipBwdData_pd
         , *bwdd_top_diff_primitive, *bwdd_weights_data_primitive
         , *bwdd_bottom_diff_memory));
+      } else {
+       bwdd_top_diff->sync_converted_prv(grad.dptr_,
+        false, out_grad[fullc::kOut]);
+       bwdd_weights_data->sync_converted_prv(wmat.dptr_,
+        false, in_data[fullc::kWeight]);
+       bwdd_bottom_diff->sync_output_memory(
+        in_grad[fullc::kData], bwdd_bottom_diff);
+      }
       ipBwdData.submit();
     }
+    if (req[fullc::kWeight]) {
+      if (ipBwdWeights.aprimitive == NULL) {
+        bwdw_bottom_data_primitive = bwdw_bottom_data->get_converted_prv(data.dptr_,
+          false, in_data[fullc::kData]);
+        bwdw_top_diff_primitive = bwdw_top_diff->get_converted_prv(grad.dptr_,
+          false, out_grad[fullc::kOut]);
+        bwdw_weights_diff_memory = bwdw_weights_diff->create_output_memory(gwmat.dptr_,
+        in_grad[fullc::kWeight], bwdw_weights_diff);
+        if (!param_.no_bias) {
+          bwdw_bias_diff_memory = bwdw_bias_diff->create_output_memory(gbias.dptr_,
+            in_grad[fullc::kBias], bwdw_bias_diff);
+          ipBwdWeights.reset(new inner_product_backward_weights(*ipBwdWeights_pd
+            , *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive
+            , *bwdw_weights_diff_memory, *bwdw_bias_diff_memory));
+        } else {
+          ipBwdWeights.reset(new inner_product_backward_weights(*ipBwdWeights_pd
+            , *bwdw_bottom_data_primitive, *bwdw_top_diff_primitive
+            , *bwdw_weights_diff_memory));
+        }
+      } else {
+         bwdw_bottom_data->sync_converted_prv(data.dptr_,
+          false, in_data[fullc::kData]);
+         bwdw_top_diff->sync_converted_prv(grad.dptr_,
+          false, out_grad[fullc::kOut]);
+         bwdw_weights_diff->sync_output_memory(
+        in_grad[fullc::kWeight], bwdw_weights_diff);
+        if (!param_.no_bias) 
+           bwdw_bias_diff->sync_output_memory(
+            in_grad[fullc::kBias], bwdw_bias_diff);
+      }
+      ipBwdWeights.submit();
+    }
+
   }
 
  private:
@@ -419,6 +441,10 @@ class MKLDNNFullyConnectedOp : public Operator, public MKLDNNLayer<Dtype> {
   std::shared_ptr<memory> fwd_top_data_memory;
   std::shared_ptr<primitive> fwd_bottom_data_primitive,
     fwd_weights_data_primitive, fwd_bias_data_primitive;
+    std::shared_ptr<memory> bwdd_bottom_diff_memory
+      , bwdw_weights_diff_memory, bwdw_bias_diff_memory;
+    std::shared_ptr<primitive> bwdd_top_diff_primitive, bwdd_weights_data_primitive
+      , bwdw_top_diff_primitive, bwdw_bottom_data_primitive;
   int32_t w_, h_;
   int M_;
   int channels_;

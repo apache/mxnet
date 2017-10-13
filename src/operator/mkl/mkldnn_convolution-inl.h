@@ -27,7 +27,6 @@
 #include <string>
 #include <algorithm>
 #include <vector>
-#include <mkldnn_types.h>
 #include "mkl_conv-common-inl.h"
 #include "mkldnn_base-inl.h"
 
@@ -122,7 +121,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
           , convolutionStrides, padding, padding, padding_kind::zero));
       }
       convFwd_pd.reset(new convolution_forward::primitive_desc(*convFwd_desc, cpu_engine));
-    std::cout << "convFwd_pd: " << convFwd_pd->dst_primitive_desc().desc().data.format << std::endl;
       CHECK(convFwd_pd);
       // ---- Create priv memory primitive descriptors stored as class members -------------
       typedef typename memory::primitive_desc MemPD;
@@ -132,8 +130,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
         new MemPD(convFwd_pd->dst_primitive_desc()));
       std::shared_ptr<MemPD> prv_fwd_weights_data_memory_pd(
         new MemPD(convFwd_pd->weights_primitive_desc()));
-    std::cout << "prv_fwd_top_data_memory_pd: " <<
-                                                prv_fwd_top_data_memory_pd->desc().data.format << std::endl;
 
       // ---- Create usr memory primitive descriptors -------------
       memory::format mfmt_nchw = memory::format::nchw;
@@ -166,14 +162,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
           new MKLDNNData<DType>(usr_bias_data_memory_pd, prv_fwd_bias_data_memory_pd));
         fwd_bias_data->name = "fwd_bias_data     @ " + this->getName();
       }
-#if 1
-    {
-      std::string prefix = "FWD-INI CON ";
-      printTensorFormat<DType>(prefix+"fwd_bottom_data", fwd_bottom_data);
-      printTensorFormat<DType>(prefix+"fwd_weights_data", fwd_weights_data);
-      printTensorFormat<DType>(prefix+"fwd_top_data", fwd_top_data);
-    }
-#endif
   }
  public:
   virtual void Forward(const OpContext &ctx,
@@ -188,20 +176,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
         // CHECK_EQ(in_data.size(), expected);
         CHECK_EQ(out_data.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();
-#if 1
-    {
-      std::string prefix = "FWD-BEF CON ";
-      DType* indatakData = in_data[conv::kData].getSyncedCPUDataPtr<DType>();
-      printTensor<DType>(prefix+"indata.kData", indatakData,
-                         in_data[conv::kData].shape_.Size());
-      DType* indatakWeight = in_data[conv::kWeight].getSyncedCPUDataPtr<DType>();
-      printTensor<DType>(prefix+"indata.kWeight", indatakWeight,
-                         in_data[conv::kWeight].shape_.Size());
-      DType* outdatakkOut = out_data[conv::kOut].getSyncedCPUDataPtr<DType>();
-      printTensor<DType>(prefix+"outdata.kOut", outdatakkOut,
-                         in_data[conv::kOut].shape_.Size());
-    }
-#endif
         Tensor<xpu, 4, DType> data =
             mkl_experimental_direct_get<xpu, 4, DType>(in_data[conv::kData], s);
         Tensor<xpu, 4, DType> out =
@@ -252,36 +226,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
           fwd_top_data->sync_output_memory(out_data[conv::kOut],
             fwd_top_data);
       }
-#if 1
-    {
-      std::string prefix = "FWD-BEF CON ";
-      printTensorFormat<DType>(prefix+"fwd_bottom_data", fwd_bottom_data);
-      printBufferHead(prefix+"in_data.kData", in_data[conv::kData]);
-      printTensorFormat<DType>(prefix+"fwd_weights_data", fwd_weights_data);
-      printBufferHead(prefix+"in_data.kWeight", in_data[conv::kWeight]);
-      printTensorFormat<DType>(prefix+"fwd_top_data", fwd_top_data);
-      printBufferHead(prefix+"out_data.kOut", out_data[conv::kOut]);
-      //printTensorFormat<DType>(prefix+"out_data.kOut", get_mkldnn_prv_descriptor<DType>(out_data[conv::kOut]));
-    }
-#endif
       convFwd.submit();
-#if 1
-    {
-      std::string prefix = "FWD-AFT CON ";
-      DType* indatakData = in_data[conv::kData].getSyncedCPUDataPtr<DType>();
-      printTensor<DType>(prefix+"indata.kData", indatakData,
-                  in_data[conv::kData].shape_.Size());
-      DType* indatakWeight = in_data[conv::kWeight].getSyncedCPUDataPtr<DType>();
-      printTensor<DType>(prefix+"indata.kWeight", indatakWeight,
-                  in_data[conv::kWeight].shape_.Size());
-      DType* outdatakkOut = out_data[conv::kOut].getSyncedCPUDataPtr<DType>();
-      printTensor<DType>(prefix+"outdata.kOut", outdatakkOut,
-                  in_data[conv::kOut].shape_.Size());
-      printTensorFormat<DType>(prefix+"fwd_top_data", fwd_top_data);
-      printBufferHead(prefix+"out_data.kOut", out_data[conv::kOut]);
-      //printTensorFormat<DType>(prefix+"out_data.kOut", get_mkldnn_prv_descriptor<DType>(out_data[conv::kOut]));
-    }
-#endif
   }
   void InitConvolutionBwd(const OpContext &ctx,
     const std::vector<TBlob> &out_grad,
@@ -417,32 +362,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
     if (param_.kernel.ndim() > 2) {
       LOG(FATAL) << "Volume convolution is not implmented in mshadow";
     }
-#if 0
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-          std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-            std::cout << t[i] << " ";
-          }
-          std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> outgradkOut = out_grad[conv::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("conv outgradkOut", outgradkOut);
-      mshadow::Tensor<xpu, 1, DType> ingradkWeight = in_grad[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkWeight", ingradkWeight);
-      if (!param_.no_bias) {
-        mshadow::Tensor<xpu, 1, DType> ingradkBias = in_grad[conv::kBias].FlatTo1D<xpu, DType>(s);
-        printTensor("conv ingradkBias", ingradkBias);
-      }
-      mshadow::Tensor<xpu, 1, DType> ingradkData = in_grad[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkData", ingradkData);
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakWeight", indatakWeight);
-    }
-#endif
     CHECK_EQ(out_grad.size(), 1);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK(in_data.size() == expected && in_grad.size() == expected);
@@ -553,34 +472,7 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
           in_grad[conv::kWeight].Size());
       }
     }
-
-#if 0
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-          std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-            std::cout << t[i] << " ";
-          }
-          std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> outgradkOut = out_grad[conv::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("conv outgradkOut", outgradkOut);
-      mshadow::Tensor<xpu, 1, DType> ingradkWeight = in_grad[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkWeight", ingradkWeight);
-      if (!param_.no_bias) {
-        mshadow::Tensor<xpu, 1, DType> ingradkBias = in_grad[conv::kBias].FlatTo1D<xpu, DType>(s);
-        printTensor("conv ingradkBias", ingradkBias);
-      }
-      mshadow::Tensor<xpu, 1, DType> ingradkData = in_grad[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkData", ingradkData);
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakWeight", indatakWeight);
-    }
-#endif
-  }
+}
 
  private:
   std::shared_ptr<MKLDNNData<DType> > fwd_bottom_data, fwd_top_data,

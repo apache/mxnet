@@ -99,26 +99,6 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
                                                  const std::vector<OpReqType> &req,
                                                  const std::vector<TBlob> &out_data,
                                                  const std::vector<TBlob> &aux_states) {
-#if 1
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-        std::cout << "BEFORE FWD " << name << " (" << t.size(0) << "): ";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          std::cout << t[i] << " ";
-        }
-        std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm indata.kData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm indata.kGamma", indatakGamma);
-      mshadow::Tensor<xpu, 1, DType> indatakBeta = in_data[batchnorm::kBeta].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm indata.kBeta", indatakBeta);
-      mshadow::Tensor<xpu, 1, DType> outdatakkOut= out_data[batchnorm::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm outdata.kOut", outdatakkOut);
-    }
-#endif
   // Input
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
@@ -210,26 +190,6 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
       }
     }
   }
-#if 1
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-        std::cout << "AFTER FWD " << name << " (" << t.size(0) << "): ";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          std::cout << t[i] << " ";
-        }
-        std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm indata.kData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm indata.kGamma", indatakGamma);
-      mshadow::Tensor<xpu, 1, DType> indatakBeta = in_data[batchnorm::kBeta].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm indata.kBeta", indatakBeta);
-      mshadow::Tensor<xpu, 1, DType> outdatakkOut= out_data[batchnorm::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("batchnorm outdata.kOut", outdatakkOut);
-    }
-#endif
 }
 
 template <typename xpu, typename DType, typename AccReal>
@@ -241,38 +201,6 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
                                                   const std::vector<OpReqType> &req,
                                                   const std::vector<TBlob> &in_grad,
                                                   const std::vector<TBlob> &aux_states) {
-#if 1
-  {
-    auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-        std::cout << "BEFORE CPU " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          std::cout << t[i] << " ";
-        }
-        std::cout << std::endl;
-    };
-    mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-    mshadow::Tensor<xpu, 1, DType> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm indatakData", indatakData);
-    mshadow::Tensor<xpu, 1, DType> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm indatakGamma", indatakGamma);
-    mshadow::Tensor<xpu, 1, DType> ingradkGamma = in_grad[batchnorm::kGamma].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm ingradkGamma", ingradkGamma);
-    mshadow::Tensor<xpu, 1, DType> ingradkBeta = in_grad[batchnorm::kBeta].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm ingradkBeta", ingradkBeta);
-    mshadow::Tensor<xpu, 1, DType> ingradkData = in_grad[batchnorm::kData].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm ingradkData", ingradkData);
-    mshadow::Tensor<xpu, 1, DType> auxstateskMovingMean = aux_states[batchnorm::kMovingMean].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm auxstateskMovingMean", auxstateskMovingMean);
-    mshadow::Tensor<xpu, 1, DType> auxstateskMovingVar = aux_states[batchnorm::kMovingVar].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm auxstateskMovingVar", auxstateskMovingVar);
-    mshadow::Tensor<xpu, 1, DType> outdatakMean = out_data[batchnorm::kMean].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm outdatakMean", outdatakMean);
-    mshadow::Tensor<xpu, 1, DType> outdatakVar = out_data[batchnorm::kVar].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm outdatakVar", outdatakVar);
-    mshadow::Tensor<xpu, 1, DType> outgradkOut = out_grad[batchnorm::kOut].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm outgradkOut", outgradkOut);
-  }
-#endif
   // Input Data
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights   = in_data[batchnorm::kGamma];
@@ -388,53 +316,10 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
       gradBiasData[channel] = scale * sumGradOut;
     }
   }
-#if 1
-  {
-    auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-        std::cout << "AFTER CPU " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          std::cout << t[i] << " ";
-        }
-        std::cout << std::endl;
-    };
-    auto setTensorValue = [] (const std::string& name, mshadow::Tensor<xpu, 1, DType>& t, const float val) {
-        std::cout << "overwriting values for " << name << " @" << t.dptr_ << " (" << t.size(0) << ")\n";
-        for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-          t[i] = val;
-        }
-    };
-    mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-    mshadow::Tensor<xpu, 1, DType> indatakData = in_data[batchnorm::kData].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm indatakData", indatakData);
-    mshadow::Tensor<xpu, 1, DType> indatakGamma = in_data[batchnorm::kGamma].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm indatakGamma", indatakGamma);
-    mshadow::Tensor<xpu, 1, DType> ingradkGamma = in_grad[batchnorm::kGamma].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm ingradkGamma", ingradkGamma);
-    mshadow::Tensor<xpu, 1, DType> ingradkBeta = in_grad[batchnorm::kBeta].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm ingradkBeta", ingradkBeta);
-    mshadow::Tensor<xpu, 1, DType> ingradkData = in_grad[batchnorm::kData].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm ingradkData", ingradkData);
-    mshadow::Tensor<xpu, 1, DType> auxstateskMovingMean = aux_states[batchnorm::kMovingMean].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm auxstateskMovingMean", auxstateskMovingMean);
-    mshadow::Tensor<xpu, 1, DType> auxstateskMovingVar = aux_states[batchnorm::kMovingVar].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm auxstateskMovingVar", auxstateskMovingVar);
-    mshadow::Tensor<xpu, 1, DType> outdatakMean = out_data[batchnorm::kMean].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm outdatakMean", outdatakMean);
-    mshadow::Tensor<xpu, 1, DType> outdatakVar = out_data[batchnorm::kVar].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm outdatakVar", outdatakVar);
-    mshadow::Tensor<xpu, 1, DType> outgradkOut = out_grad[batchnorm::kOut].FlatTo1D<xpu, DType>(s);
-    printTensor("batchnorm outgradkOut", outgradkOut);
-  }
-#endif
 }
 
 template<>
 Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& shape) {
-#if 1
-  {
-    LOG(INFO) << __FUNCTION__;
-  }
-#endif
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
   Operator *op = nullptr;
 #if MXNET_USE_MKL2017 == 1

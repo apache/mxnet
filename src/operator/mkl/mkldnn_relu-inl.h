@@ -227,24 +227,7 @@ class MKLDNNReluOp : public Operator, public MKLDNNLayer<Dtype> {
     Tensor<xpu, 4, Dtype> m_out_grad;
     Tensor<xpu, 4, Dtype> m_in_grad;
     Tensor<xpu, 4, Dtype> m_out_data;
-#if 0
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
-          std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-            std::cout << t[i] << " ";
-          }
-          std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, Dtype> outgradkOut = out_grad[activation::kOut].FlatTo1D<xpu, Dtype>(s);
-      printTensor("relu outgradkOut", outgradkOut);
-      mshadow::Tensor<xpu, 1, Dtype> outdatakOut = out_data[activation::kOut].FlatTo1D<xpu, Dtype>(s);
-      printTensor("relu outdatakOut", outdatakOut);
-      mshadow::Tensor<xpu, 1, Dtype> ingradkData = in_grad[activation::kData].FlatTo1D<xpu, Dtype>(s);
-      printTensor("relu ingradkData", ingradkData);
-    }
-#endif
+
     if (out_grad[activation::kOut].ndim() == 2) {
       Shape<4> dshape = Shape4(out_grad[activation::kOut].shape_[0],
         out_grad[activation::kOut].shape_[1], 1, 1);
@@ -291,25 +274,6 @@ if (bwd_pd == nullptr) {
       in_grad[activation::kData], bwd_bottom_diff, in_place_b_);
     }
     reluBwd.submit();
-#if 0
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, Dtype>& t) {
-          std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-            std::cout << t[i] << " ";
-          }
-          std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, Dtype> outgradkOut = out_grad[activation::kOut].FlatTo1D<xpu, Dtype>(s);
-      printTensor("relu outgradkOut", outgradkOut);
-      mshadow::Tensor<xpu, 1, Dtype> outdatakOut = out_data[activation::kOut].FlatTo1D<xpu, Dtype>(s);
-      printTensor("relu outdatakOut", outdatakOut);
-      mshadow::Tensor<xpu, 1, Dtype> ingradkData = in_grad[activation::kData].FlatTo1D<xpu, Dtype>(s);
-      printTensor("relu ingradkData", ingradkData);
-
-    }
-#endif
 
 }
 

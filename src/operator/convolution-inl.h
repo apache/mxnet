@@ -171,24 +171,6 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1U);
     CHECK_EQ(req[conv::kOut], kWriteTo);
-#if 1
-      {
-          auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-              std::cout << "BEFORE FW " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-              for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-                  std::cout << t[i] << " ";
-              }
-              std::cout << std::endl;
-          };
-          mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-          mshadow::Tensor<xpu, 1, DType> outdatakOut= out_data[conv::kOut].FlatTo1D<xpu, DType>(s);
-          printTensor("conv outdatakOut", outdatakOut);
-          mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-          printTensor("conv indatakData", indatakData);
-          mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-          printTensor("conv indatakWeight", indatakWeight);
-      }
-#endif
     LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
     Stream<xpu>* s = ctx.get_stream<xpu>();
 
@@ -248,24 +230,6 @@ class ConvolutionOp : public Operator {
       // has bias term, broadcast it to the same shape of output_3d in channel dim
       output_3d += mshadow::expr::broadcast<1>(bias, output_3d.shape_);
     }
-#if 1
-      {
-          auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-              std::cout << "AFTER FW " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-              for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-                  std::cout << t[i] << " ";
-              }
-              std::cout << std::endl;
-          };
-          mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-          mshadow::Tensor<xpu, 1, DType> outdatakOut= out_data[conv::kOut].FlatTo1D<xpu, DType>(s);
-          printTensor("conv outdatakOut", outdatakOut);
-          mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-          printTensor("conv indatakData", indatakData);
-          mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-          printTensor("conv indatakWeight", indatakWeight);
-      }
-#endif
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -284,33 +248,7 @@ class ConvolutionOp : public Operator {
     CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
     LayerSetUp(in_grad[conv::kData].shape_, out_grad[conv::kOut].shape_);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-#if 1
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-          std::cout << "BEFORE " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-            std::cout << t[i] << " ";
-          }
-          std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> outgradkOut = out_grad[conv::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("conv outgradkOut", outgradkOut);
-      mshadow::Tensor<xpu, 1, DType> ingradkWeight = in_grad[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkWeight", ingradkWeight);
-      if (!param_.no_bias) {
-        mshadow::Tensor<xpu, 1, DType> ingradkBias = in_grad[conv::kBias].FlatTo1D<xpu, DType>(s);
-        printTensor("conv ingradkBias", ingradkBias);
-      }
-      mshadow::Tensor<xpu, 1, DType> ingradkData = in_grad[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkData", ingradkData);
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakWeight", indatakWeight);
 
-    }
-#endif
     // initialize weight and col_buffer 3D tensors for using gemm
     // For computing dLoss/d(in_data[kData])
     index_t M = kernel_dim_;
@@ -387,33 +325,6 @@ class ConvolutionOp : public Operator {
           Shape3(num_, conv_out_channels_, conv_out_spatial_dim_), s);
       ASSIGN_DISPATCH(dbias, req[conv::kBias], sumall_except_dim<1>(dout));
     }
-#if 1
-    {
-      auto printTensor = [] (const std::string& name, const mshadow::Tensor<xpu, 1, DType>& t) {
-          std::cout << "AFTER " << name << " @" << t.dptr_ << " (" << t.size(0) << "): ";
-          for (int i = 0; i < std::min(20, (int)t.size(0)); ++i) {
-            std::cout << t[i] << " ";
-          }
-          std::cout << std::endl;
-      };
-      mshadow::Stream <xpu> *s = ctx.get_stream<xpu>();
-      mshadow::Tensor<xpu, 1, DType> outgradkOut = out_grad[conv::kOut].FlatTo1D<xpu, DType>(s);
-      printTensor("conv outgradkOut", outgradkOut);
-      mshadow::Tensor<xpu, 1, DType> ingradkWeight = in_grad[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkWeight", ingradkWeight);
-      if (!param_.no_bias) {
-        mshadow::Tensor<xpu, 1, DType> ingradkBias = in_grad[conv::kBias].FlatTo1D<xpu, DType>(s);
-        printTensor("conv ingradkBias", ingradkBias);
-      }
-      mshadow::Tensor<xpu, 1, DType> ingradkData = in_grad[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv ingradkData", ingradkData);
-      mshadow::Tensor<xpu, 1, DType> indatakData = in_data[conv::kData].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakData", indatakData);
-      mshadow::Tensor<xpu, 1, DType> indatakWeight = in_data[conv::kWeight].FlatTo1D<xpu, DType>(s);
-      printTensor("conv indatakWeight", indatakWeight);
-
-    }
-#endif
   }
 
  private:

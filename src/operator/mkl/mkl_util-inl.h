@@ -125,29 +125,6 @@ inline void mkl_set_tblob_eager_mode(const TBlob &data) {
     mem_holder->set_eager_mode(true);
   }
 }
-
-
-template<typename DType>
-inline void printTensor(const std::string& name, const DType* t, const size_t
-size) {
-  std::cout << name << " @" << t << " (" << size << "): ";
-  for (int i = 0; i < std::min(20, (int)size); ++i) {
-    std::cout << t[i] << " ";
-  }
-  std::cout << std::endl;
-};
-
-template<typename DType>
-inline void printTensorFormat(const std::string& name,
-                       std::shared_ptr<mxnet::MKLDNNData<DType>> mkldnn_data) {
-  std::cout << name << " FORM usr=" << mkldnn_data->usr_memory_pd()->desc().data.format
-            << " prv=" << mkldnn_data->prv_memory_pd()->desc().data.format << std::endl;
-};
-
-inline void printBufferHead(const std::string& name, const TBlob& blob) {
-  std::cout << name << " HEAD usr=" << blob.Mkl_mem_->head_at_cpu()
-            << " prv=" << blob.Mkl_mem_->head_at_prv() << std::endl;
-};
 #endif
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_

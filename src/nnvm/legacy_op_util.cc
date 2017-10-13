@@ -290,9 +290,6 @@ OpStatePtr OpPropCreateLayerOp(const NodeAttrs& attrs,
                                const std::vector<TShape>& ishape,
                                const std::vector<int>& itype) {
   auto& prop = nnvm::get<ParsedOpProp>(attrs.parsed);
-
-  LOG(INFO) << __FUNCTION__ << " " << __LINE__ << " " << prop.ptr->TypeString
-      () << std::endl;
   std::vector<TShape> is(ishape.begin(), ishape.begin() + prop.arguments.size());
   std::vector<int> it(itype.begin(), itype.begin() + prop.arguments.size());
   return OpStatePtr::Create<OperatorState>(prop.ptr->CreateOperatorEx(ctx, &is, &it),

@@ -311,8 +311,6 @@ class ElemwiseBinaryOp : public OpBase {
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
-    std::cout << __FUNCTION__ << " " << __LINE__ << " " << typeid(OP)
-        .name() << std::endl;
     if (req[0] != kNullOp) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
       CHECK_EQ(inputs.size(), 2U);
