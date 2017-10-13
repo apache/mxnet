@@ -115,7 +115,8 @@ class NDArray {
           aux_shapes = {TShape(mshadow::Shape1(0))};
         } else if (stype == kCSRStorage) {
           // aux shapes for indptr and indices
-          aux_shapes = {TShape(mshadow::Shape1(0)), TShape(mshadow::Shape1(0))};
+          CHECK_EQ(shape.ndim(), 2) << "Unexpected shape dimension: " << shape;
+          aux_shapes = {TShape(mshadow::Shape1(shape[0] + 1)), TShape(mshadow::Shape1(0))};
         } else {
           LOG(FATAL) << "Unknown storage type " << stype;
         }
