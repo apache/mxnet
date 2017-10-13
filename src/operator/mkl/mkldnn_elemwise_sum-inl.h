@@ -112,6 +112,7 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
     output = output_dnn_data->get_prv_memory();
 
   } else {
+    // TODO lfeng: this should be rare and expensive, maybe output a warning?
     // if output data does not have a mkl prv buffer, we assume usr
     // layout, default is nchw
     output_usr_mpd.reset(new memory::primitive_desc(default_usr_desc,
@@ -148,6 +149,7 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
       input_prv_mpd = input_dnn_data->prv_memory_pd();
       // check input prv descriptor match output prv descriptor
       if (input_prv_mpd != output_prv_mpd) {
+        // TODO lfeng: this should be rare and expensive, maybe output a warning?
         // input and output prv layout are different, we don't want modify
         // the input data object prv buffer, so we need to create annew
         // MKLDNNData object and do a conversion and copy data to new memory
