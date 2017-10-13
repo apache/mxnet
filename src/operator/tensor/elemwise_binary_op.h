@@ -35,7 +35,6 @@
 #include "../mshadow_op.h"
 #include "elemwise_unary_op.h"
 #include "../../common/utils.h"
-#include "../mkl/mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -311,20 +310,6 @@ class ElemwiseBinaryOp : public OpBase {
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
-#if 1
-    typedef float DType;
-    {
-      std::string prefix = "FWD-BEF ADD ";
-      DType * indata0 = inputs[0].getSyncedCPUDataPtr<DType>();
-      printTensor(prefix + "indata.0", indata0, inputs[0].shape_.Size());
-      DType * indata1 = inputs[1].getSyncedCPUDataPtr<DType>();
-      printTensor(prefix + "indata.1", indata1, inputs[1].shape_.Size());
-      DType * outdata0 = outputs[0].getSyncedCPUDataPtr<DType>();
-      printTensor(prefix + "outdata.0", outdata0, outputs[0].shape_.Size());
-      printBufferHead(prefix + "in_data.kData-0", inputs[0]);
-      printBufferHead(prefix + "in_data.kData-1", inputs[1]);
-    }
-#endif
     using namespace mxnet_op;
     if (req[0] != kNullOp) {
       Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -340,17 +325,6 @@ class ElemwiseBinaryOp : public OpBase {
         });
       });
     }
-#if 1
-    {
-      std::string prefix = "FWD-AFT ADD ";
-      DType * indata0 = inputs[0].getSyncedCPUDataPtr<DType>();
-      printTensor(prefix + "indata.0", indata0, inputs[0].shape_.Size());
-      DType * indata1 = inputs[1].getSyncedCPUDataPtr<DType>();
-      printTensor(prefix + "indata.1", indata1, inputs[1].shape_.Size());
-      DType * outdata0 = outputs[0].getSyncedCPUDataPtr<DType>();
-      printTensor(prefix + "outdata.0", outdata0, outputs[0].shape_.Size());
-    }
-#endif
   }
 
   template<typename xpu, typename OP>

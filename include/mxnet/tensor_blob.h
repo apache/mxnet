@@ -198,24 +198,6 @@ class TBlob {
   inline int ndim(void) const {
     return shape_.ndim();
   }
-
-#if MXNET_USE_MKLDNN == 1
-  /**
-   * Check and convert (if needed) data from MKLDNN to cpu buffer. This does
-   * not change the flag (head_) pointing to which buffer (mkl vs. cpu).
-   * @return Raw data pointer for debugging purpurse.
-   */
-  template<typename DType>
-  DType * getSyncedCPUDataPtr() const {
-    if (Mkl_mem_->get_prv_descriptor() != nullptr && Mkl_mem_->head_at_prv()) {
-      Mkl_mem_->check_and_prv_to_cpu(dptr_);
-      // make sure we don't change the head flag
-      Mkl_mem_->head_ = HEAD_AT_PRV;
-    }
-    return reinterpret_cast<DType*>(dptr_);
-  }
-#endif
-
   /*!
    * \brief return size of i-th dimension, start counting from highest dimension
    * \param idx the dimension count from the highest dimensin
