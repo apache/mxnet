@@ -13,7 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 *
-* \file mkldnn_fully_connected-inl.h
+* \file mkldnn_elemwise_sum-inl.h
 * \brief
 * \author young.jin.kim@intel.com
 *         ashok.emani@intel.com
@@ -34,7 +34,7 @@
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
-#include "./mkl_util-inl.h"
+#include "mkl_util-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -60,9 +60,8 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
   using namespace mshadow::expr;
 
   if (req[0] == kNullOp) return;
-  size_t size = in_data.size();
   // expecting to sum at least two input buffers
-  assert(size >= 2);
+  assert(in_data.size() >= 2);
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
