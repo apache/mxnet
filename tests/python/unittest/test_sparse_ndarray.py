@@ -525,33 +525,41 @@ def test_create_row_sparse():
 
 def test_create_sparse_nd_infer_shape():
     def check_create_csr_infer_shape(shape, density, dtype):
-        matrix = rand_ndarray(shape, 'csr', density=density)
-        data = matrix.data
-        indptr = matrix.indptr
-        indices = matrix.indices
-        nd = mx.nd.sparse.csr_matrix((data, indices, indptr), dtype=dtype)
-        num_rows, num_cols = nd.shape
-        assert(num_rows == len(indptr) - 1)
-        assert(indices.shape[0] > 0), indices
-        assert(np.sum((num_cols <= indices).asnumpy()) == 0)
-        assert(nd.dtype == dtype), (nd.dtype, dtype)
+        try:
+            matrix = rand_ndarray(shape, 'csr', density=density)
+            data = matrix.data
+            indptr = matrix.indptr
+            indices = matrix.indices
+            nd = mx.nd.sparse.csr_matrix((data, indices, indptr), dtype=dtype)
+            num_rows, num_cols = nd.shape
+            assert(num_rows == len(indptr) - 1)
+            assert(indices.shape[0] > 0), indices
+            assert(np.sum((num_cols <= indices).asnumpy()) == 0)
+            assert(nd.dtype == dtype), (nd.dtype, dtype)
+        # cannot infer on invalid shape
+        except ValueError:
+            pass
 
     def check_create_rsp_infer_shape(shape, density, dtype):
-        array = rand_ndarray(shape, 'row_sparse', density=density)
-        data = array.data
-        indices = array.indices
-        nd = mx.nd.sparse.row_sparse_array((data, indices), dtype=dtype)
-        inferred_shape = nd.shape
-        assert(inferred_shape[1:] == data.shape[1:])
-        assert(indices.ndim > 0)
-        assert(indices.shape[0] > 0), indices
-        assert(np.sum((inferred_shape[0] <= indices).asnumpy()) == 0)
-        assert(nd.dtype == dtype)
+        try:
+            array = rand_ndarray(shape, 'row_sparse', density=density)
+            data = array.data
+            indices = array.indices
+            nd = mx.nd.sparse.row_sparse_array((data, indices), dtype=dtype)
+            inferred_shape = nd.shape
+            assert(inferred_shape[1:] == data.shape[1:])
+            assert(indices.ndim > 0)
+            assert(nd.dtype == dtype)
+            if indices.shape[0] > 0:
+                assert(np.sum((inferred_shape[0] <= indices).asnumpy()) == 0)
+        # cannot infer on invalid shape
+        except ValueError:
+            pass
 
     dtype = np.int32
     shape = rand_shape_2d()
     shape_3d = rand_shape_3d()
-    densities = [0.5, 1]
+    densities = [0, 0.5, 1]
     for density in densities:
         check_create_csr_infer_shape(shape, density, dtype)
         check_create_rsp_infer_shape(shape, density, dtype)

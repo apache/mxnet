@@ -143,12 +143,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
                                     distribution="uniform")
     try:
         from scipy import sparse as spsp
-        while True:
-            csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
-            # regenerate matrix if density != 0 but result is empty
-            if csr.nnz == 0 and density != 0:
-                continue
-            break
+        csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
         if data_init is not None:
             csr.data.fill(data_init)
         if shuffle_csr_indices is True:
@@ -306,13 +301,8 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             indices = rsp_indices
             assert(len(indices) <= shape[0])
         else:
-            while True:
-                idx_sample = rnd.rand(shape[0])
-                indices = np.argwhere(idx_sample < density).flatten()
-                # redo sampling if density != 0 but sample result is empty
-                if indices.shape[0] == 0 and density != 0:
-                    continue
-                break
+            idx_sample = rnd.rand(shape[0])
+            indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
             result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
             return result, (np.array([], dtype=dtype), np.array([]))
