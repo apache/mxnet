@@ -3538,13 +3538,15 @@ def test_cbrt_op():
     check_symbolic_forward(test, [data_tmp], [np.cbrt(data_tmp)])
 
 def test_rcbrt_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors
-    data_tmp[data_tmp == 0] = 1.0
+    # Avoid possible division by 0 errors and finite difference method inaccuracies.
+    # Factor of 4 below set empirically, depends on eps.
+    data_tmp[abs(data_tmp) < 4*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.rcbrt(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
     check_symbolic_forward(test, [data_tmp], [1/np.cbrt(data_tmp)])
 
 def test_custom_op():
