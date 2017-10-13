@@ -1294,9 +1294,9 @@ def test_sparse_nd_zeros_like():
 def test_sparse_sum_axis():
     def test_variations():
         dim0 = 30
-        dim1 = 1000
+        dim1 = 100
         axes = [0, 1]
-        densities = [0, 0.01, 0.1, 0.2, 0.5]
+        densities = [0, 0.5, 1]
         for density in densities:
             shape = rand_shape_2d(dim0, dim1)
             csr_array = rand_ndarray(shape=shape, stype='csr', density=density)

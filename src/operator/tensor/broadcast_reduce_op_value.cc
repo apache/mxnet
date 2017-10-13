@@ -45,16 +45,15 @@ Defined in )code";
 }
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
-.add_alias("_sparse_sum")
+MXNET_ADD_SPARSE_OP_ALIAS(sum)
 .add_alias("sum_axis")
 .describe(R"code(Computes the sum of array elements over given axes.
 
 .. Note::
 
   `sum` and `sum_axis` are equivalent.
-  For CSRNDArray summation along axis 0 and axis 1 is supported.
-  Setting keepdims or exclude to True with CSRNDArray will cause
-  fallback to dense operator.
+  For ndarray of csr storage type summation along axis 0 and axis 1 is supported.
+  Setting keepdims or exclude to True will cause a fallback to dense operator.
 
 Example::
 
