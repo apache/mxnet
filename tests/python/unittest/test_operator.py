@@ -490,13 +490,13 @@ def test_embedding():
     arg_map["data"][:] = np_data
     arg_map["embed_weight"][:] = np_weight
     exe_test.forward(is_train=True)
-    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight))
+    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight), rtol=1e-5, atol=1e-5)
     # backward
     np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
     grad = mx.nd.zeros(np_grad.shape)
     grad[:] = np_grad
     exe_test.backward([grad])
-    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad))
+    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad), rtol=1e-5, atol=1e-5)
 
 
 # check ops handle duplicate input correctly.
