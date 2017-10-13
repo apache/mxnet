@@ -312,7 +312,11 @@ class ThreadedEngine : public Engine {
                             omp_get_num_procs() : omp_get_num_threads();
     return max_threads;
 #else
+<<<<<<< HEAD
     return 1;
+=======
+    return 0;
+>>>>>>> origin/master
 #endif
   }
 
@@ -445,7 +449,11 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
 
   /*! \brief Number of OMP threads to be used per worker */
+<<<<<<< HEAD
   int num_omp_threads_per_worker_{1};
+=======
+  int num_omp_threads_per_worker_{0};
+>>>>>>> origin/master
 
   /*!
    * \brief Disallow copy construction and assignment.
