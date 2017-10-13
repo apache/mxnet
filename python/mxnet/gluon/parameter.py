@@ -614,7 +614,9 @@ class ParameterDict(object):
                     "restore_prefix is %s but Parameters name %s does not start " \
                     "with %s"%(restore_prefix, name, restore_prefix)
         lprefix = len(restore_prefix)
-        arg_dict = {restore_prefix+k: v for k, v in ndarray.load(filename).items()}
+        loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
+                  for k, v in ndarray.load(filename).items()]
+        arg_dict = {restore_prefix+k: v for k, v in loaded}
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \
