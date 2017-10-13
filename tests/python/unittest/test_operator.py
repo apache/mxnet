@@ -1043,7 +1043,7 @@ def test_depthwise_convolution():
                             np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-def gen_broadcast_data(idx):
+def gen_broadcast_data(idx=None):
     # Manually set test cases
     binary_op_data_shape = np.array(
         [[[2, 5, 1, 30, 7], [1, 5, 448, 30, 1]],
@@ -1077,7 +1077,7 @@ def gen_broadcast_data(idx):
         [[1, 24, 103, 17, 18], [1, 24, 1, 1, 1]],
         [[1, 1, 1, 1, 2], [1, 24, 194, 50, 1]],
         [[1, 1, 107, 84, 9], [1, 1, 1, 1, 1]]])
-    if idx < binary_op_data_shape.shape[0]:
+    if idx != None and idx < binary_op_data_shape.shape[0]:
         l_shape = binary_op_data_shape[idx][0]
         r_shape = binary_op_data_shape[idx][1]
     else:
@@ -1273,17 +1273,34 @@ def test_broadcast_binary_op():
                                 mx_nd_func=mx.nd.equal)
         check_binary_op_backward(c, lambda g_out, a, b: (np.zeros_like(a), np.zeros_like(b)), gen_broadcast_data_int)
 
+    # What is the closest pair of elements in the two input arrays?  This is the minimum
+    # workable eps for the finite difference method of gradient calculation.
+    def required_eps(input_data):
+        return abs(input_data[0] - input_data[1]).min()
+
+    # The finite difference method may calculate an incorrect gradient for z = max(x,y) if
+    # the x and y values are closer than eps.  One approach to dealing with this would be to
+    # lower the eps based on the data, but eps values smaller than 2**(-18) were seen to be
+    # problematic because of other multipliers involved in the calculation.  Instead, we simply
+    # regenerate the dataset if it is incompatible with the desired eps.
+    def gen_min_max_input_data(desired_eps):
+        input_data = gen_broadcast_data()
+        while required_eps(input_data) < desired_eps:
+            print('Note: random input values unsuitable for the finite difference method detected, regenerating.')
+            input_data = gen_broadcast_data()
+        return input_data
+
     def test_bmax(a, b):
         c = mx.sym.broadcast_maximum(a, b)
         check_binary_op_forward(c, lambda x, y: np.maximum(x, y), gen_broadcast_data, mx_nd_func=mx.nd.maximum)
-        # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
-        check_numeric_gradient(c, gen_broadcast_data(idx=200), rtol=1e-2, atol=1e-3)
+        eps = 2**(-12)
+        check_numeric_gradient(c, gen_min_max_input_data(eps), numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
     def test_bmin(a, b):
         c = mx.sym.broadcast_minimum(a, b)
         check_binary_op_forward(c, lambda x, y: np.minimum(x, y), gen_broadcast_data, mx_nd_func=mx.nd.minimum)
-        # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
-        check_numeric_gradient(c, gen_broadcast_data(idx=200), rtol=1e-2, atol=1e-3)
+        eps = 2**(-12)
+        check_numeric_gradient(c, gen_min_max_input_data(eps), numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
     test_bplus(a, b)
     test_bminus(a, b)
