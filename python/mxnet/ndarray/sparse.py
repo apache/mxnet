@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=wildcard-import, unused-wildcard-import, too-many-lines
 """Sparse NDArray API of MXNet."""
 
 from __future__ import absolute_import
@@ -41,12 +42,17 @@ from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
 from . import op
+try:
+    from .gen_sparse import * # pylint: disable=redefined-builtin
+except ImportError:
+    pass
 from ._internal import _set_ndarray_class
 from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
+
 
 try:
     import scipy.sparse as spsp

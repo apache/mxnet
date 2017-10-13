@@ -16,8 +16,12 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=unused-import
+# pylint: disable=wildcard-import, unused-wildcard-import, redefined-builtin
 """Backend ops in mxnet.ndarray namespace"""
-__all__ = ['CachedOp']
+from ._internal import CachedOp
+try:
+    from .gen_op import * # pylint: disable=unused-wildcard-import
+except ImportError:
+    pass
 
-from ._internal import NDArrayBase, CachedOp
+__all__ = ['CachedOp']

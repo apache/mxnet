@@ -20,14 +20,13 @@ import os as _os
 import ctypes
 import numpy as np  # pylint: disable=unused-import
 
-from . import _internal
 from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-import
 from ..ndarray_doc import _build_doc
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null # pylint: disable=unused-import
 
 
-def _generate_ndarray_function_code(handle, name, func_name):
+def _generate_ndarray_function_code(handle, name, func_name, signature_only=False):
     """Generate function for ndarray op by handle and function name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
@@ -92,19 +91,20 @@ def _generate_ndarray_function_code(handle, name, func_name):
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
-        code.append("""
+        if not signature_only:
+            code.append("""
     ndargs = []
     for i in {}:
         assert isinstance(i, NDArrayBase), \\
             "Positional arguments must have NDArray type, " \\
             "but got %s"%str(i)
         ndargs.append(i)""".format(arr_name))
-        if dtype_name is not None:
-            code.append("""
+            if dtype_name is not None:
+                code.append("""
     if '%s' in kwargs:
         kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
-        code.append("""
+            code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
     keys = list(kwargs.keys())
@@ -112,33 +112,38 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
     else:
         code.append("""
 def %s(%s):"""%(func_name, ', '.join(signature)))
-        code.append("""
+        if not signature_only:
+            code.append("""
     ndargs = []
     keys = list(kwargs.keys())
     vals = list(kwargs.values())""")
-        # NDArray args
-        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
-            code.append("""
+            # NDArray args
+            for name in ndarg_names: # pylint: disable=redefined-argument-from-local
+                code.append("""
     if {name} is not None:
         assert isinstance({name}, NDArrayBase), \\
             "Argument {name} must have NDArray type, but got %s"%str({name})
         ndargs.append({name})""".format(name=name))
-        # kwargs
-        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
-            code.append("""
+            # kwargs
+            for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                code.append("""
     if %s is not _Null:
         keys.append('%s')
         vals.append(%s)"""%(name, name, name))
-        # dtype
-        if dtype_name is not None:
-            code.append("""
+            # dtype
+            if dtype_name is not None:
+                code.append("""
     if %s is not _Null:
         keys.append('%s')
         vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
-    code.append("""
+    if not signature_only:
+        code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(
         handle.value))
+    else:
+        code.append("""
+    return (0,)""")
 
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
                                          for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
@@ -160,5 +165,4 @@ def _make_ndarray_function(handle, name, func_name):
     ndarray_function.__module__ = 'mxnet.ndarray'
     return ndarray_function
 
-if not _internal.__dict__.get('skip_register'):
-    _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
+_init_op_module('mxnet', 'ndarray', _make_ndarray_function)

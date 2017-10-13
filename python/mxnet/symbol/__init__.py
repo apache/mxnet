@@ -19,6 +19,10 @@
 
 from . import _internal, contrib, linalg, op, random, sparse
 # pylint: disable=wildcard-import, redefined-builtin
+try:
+    from .gen_op import * # pylint: disable=unused-wildcard-import
+except ImportError:
+    pass
 from . import register
 from .op import *
 from .symbol import *

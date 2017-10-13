@@ -15,9 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=wildcard-import, unused-import
 """NDArray namespace used to register internal functions."""
-import sys as _sys
 import os as _os
+import sys as _sys
+
+import numpy as np
+
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.ndarray import NDArrayBase, CachedOp
@@ -33,5 +37,11 @@ except ImportError:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from .._ctypes.ndarray import NDArrayBase, CachedOp
     from .._ctypes.ndarray import _set_ndarray_class, _imperative_invoke
+
+from ..base import _Null
+try:
+    from .gen__internal import * # pylint: disable=unused-wildcard-import
+except ImportError:
+    pass
 
 __all__ = ['NDArrayBase', 'CachedOp', '_imperative_invoke', '_set_ndarray_class']

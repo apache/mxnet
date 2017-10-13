@@ -15,12 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=wildcard-import, unused-import
 """Symbol namespace used to register internal functions."""
 # Use different version of SymbolBase
 # When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import
 import sys as _sys
 import os as _os
+
+import numpy as np
+
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.symbol import SymbolBase, _set_symbol_class
@@ -36,5 +39,12 @@ except ImportError:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from .._ctypes.symbol import SymbolBase, _set_symbol_class
     from .._ctypes.symbol import _symbol_creator
+from ..attribute import AttrScope
+from ..base import _Null
+from ..name import NameManager
+try:
+    from .gen__internal import * # pylint: disable=unused-wildcard-import
+except ImportError:
+    pass
 
 __all__ = ['SymbolBase', '_set_symbol_class', '_symbol_creator']

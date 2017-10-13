@@ -16,6 +16,11 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=unused-import
+# pylint: disable=wildcard-import, unused-wildcard-import, redefined-builtin
 """Backend ops in mxnet.symbol namespace."""
+try:
+    from .gen_op import *
+except ImportError:
+    pass
+
 __all__ = []

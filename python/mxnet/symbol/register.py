@@ -23,15 +23,15 @@ import numpy as np
 
 from . import _internal
 from ._internal import SymbolBase, _symbol_creator
+from ..attribute import AttrScope
 from ..base import mx_uint, check_call, _LIB, py_str
 from ..symbol_doc import _build_doc
 from ..base import _Null, _init_op_module
 from ..name import NameManager
-from ..attribute import AttrScope
 # pylint: enable=unused-import
 
 
-def _generate_symbol_function_code(handle, name, func_name):
+def _generate_symbol_function_code(handle, name, func_name, signature_only=False):
     """Generate function for symbol op by handle and function name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
@@ -98,19 +98,20 @@ def _generate_symbol_function_code(handle, name, func_name):
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
-        code.append("""
+        if not signature_only:
+            code.append("""
     sym_args = []
     for i in {}:
         assert isinstance(i, SymbolBase), \\
             "Positional arguments must be Symbol instances, " \\
             "but got %s"%str(i)
         sym_args.append(i)""".format(arr_name))
-        if dtype_name is not None:
-            code.append("""
+            if dtype_name is not None:
+                code.append("""
     if '%s' in kwargs:
         kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
-        code.append("""
+            code.append("""
     attr = kwargs.pop('attr', None)
     kwargs.update(AttrScope.current.get(attr))
     name = kwargs.pop('name', None)
@@ -125,20 +126,21 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         else:
             keys.append(k)
             vals.append(v)"""%(func_name.lower()))
-        if key_var_num_args:
-            code.append("""
+            if key_var_num_args:
+                code.append("""
     if '%s' not in kwargs:
         keys.append('%s')
         vals.append(len(sym_args) + len(sym_kwargs))"""%(
             key_var_num_args, key_var_num_args))
 
-        code.append("""
+            code.append("""
     return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
         handle.value))
     else:
         code.append("""
 def %s(%s):"""%(func_name, ', '.join(signature)))
-        code.append("""
+        if not signature_only:
+            code.append("""
     kwargs.update(AttrScope.current.get(attr))
     sym_kwargs = dict()
     keys = []
@@ -149,30 +151,34 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         else:
             keys.append(k)
             vals.append(v)""")
-        # NDArray args
-        for name in ndarg_names: # pylint: disable=redefined-argument-from-local
-            code.append("""
+            # NDArray args
+            for name in ndarg_names: # pylint: disable=redefined-argument-from-local
+                code.append("""
     if {name} is not None:
         assert isinstance({name}, SymbolBase), \\
             "Argument {name} must be Symbol instances, but got %s"%str({name})
         sym_kwargs['{name}'] = {name}""".format(name=name))
-        # kwargs
-        for name in kwarg_names: # pylint: disable=redefined-argument-from-local
-            code.append("""
+            # kwargs
+            for name in kwarg_names: # pylint: disable=redefined-argument-from-local
+                code.append("""
     if %s is not _Null:
         keys.append('%s')
         vals.append(%s)"""%(name, name, name))
-        # dtype
-        if dtype_name is not None:
-            code.append("""
+            # dtype
+            if dtype_name is not None:
+                code.append("""
     if %s is not _Null:
         keys.append('%s')
         vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
-        code.append("""
+            code.append("""
     name = NameManager.current.get(name, '%s')
     return _symbol_creator(%d, None, sym_kwargs, keys, vals, name)"""%(
         func_name.lower(), handle.value))
+
+    if signature_only:
+        code.append("""
+    return (0,)""")
 
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
                                          for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
@@ -193,5 +199,4 @@ def _make_symbol_function(handle, name, func_name):
     symbol_function.__module__ = 'mxnet.symbol'
     return symbol_function
 
-if not _internal.__dict__.get('skip_register'):
-    _init_op_module('mxnet', 'symbol', _make_symbol_function)
+_init_op_module('mxnet', 'symbol', _make_symbol_function)

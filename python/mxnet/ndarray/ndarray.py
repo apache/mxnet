@@ -39,7 +39,7 @@ from ..base import ctypes2buffer
 from ..context import Context
 from . import _internal
 from . import op
-from .op import NDArrayBase
+from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
