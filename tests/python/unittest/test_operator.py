@@ -333,6 +333,35 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
 
 
+def test_softmax():
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
+
+
+def test_softmax_cross_entropy():
+    batch_size = 32
+    num_class = 20
+
+    data = mx.sym.Variable("data")
+    label = mx.sym.Variable("softmax_label")
+    conv = mx.sym.Convolution(data=data, kernel=(2, 2), num_filter=5)
+    flatten = mx.sym.Flatten(data=conv)
+    fc = mx.sym.FullyConnected(data=flatten, num_hidden=num_class)
+    out = mx.sym.softmax_cross_entropy(data=fc, label=label)
+
+    data_shape = (batch_size , 3, 64, 64)
+    label_shape = (batch_size,)
+    mod = mx.mod.Module(symbol=out)
+    mod.bind(data_shapes=[('data', data_shape)],
+             label_shapes=[('softmax_label', label_shape)])
+    mod.init_params()
+    mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
+    mod.forward(mx.io.DataBatch(data=[mx.ndarray.normal(0, 10, shape=data_shape)],
+                                label=[mx.ndarray.arange(0, batch_size)]))
+    assert mod.get_outputs()[0].shape == (1,)
+
+
 def test_python_op():
     X = mx.symbol.Variable('X')
     op = mx.operator.NumpyOp()
