@@ -16,6 +16,7 @@ MXNet Change Log
   - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python
   - Added `multi_precision` option to optimizer for easier float16 training
 ### Performance
+  - Autograd and Gluon now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
   - Full support for NVidia Volta GPU Architecture and Cuda 9. Training is up to 3.5x faster than Pascal when using float16.
 ### - API Changes
   - Operators like `mx.sym.linalg_*` and `mx.sym.random_*` are now moved to `mx.sym.linalg.*` and `mx.sym.random.*`. The old names are still available but deprecated.
