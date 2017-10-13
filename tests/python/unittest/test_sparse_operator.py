@@ -1304,6 +1304,32 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('row_sparse', shape)
     check_sparse_nd_zeros_like('csr', shape)
 
+def test_sparse_sum_axis():
+    def test_variations():
+        dim0 = 30
+        dim1 = 100
+        axes = [0, 1]
+        densities = [0, 0.5, 1]
+        for density in densities:
+            shape = rand_shape_2d(dim0, dim1)
+            csr_array = rand_ndarray(shape=shape, stype='csr', density=density)
+            dns = csr_array.tostype('default')
+            for axis in axes:
+                ret = mx.nd.sum(csr_array, axis=axis)
+                assert ret.stype == 'default'
+                ret_expected = mx.nd.sum(dns, axis=axis)
+                assert_almost_equal(ret.asnumpy(), ret_expected.asnumpy())
+
+    def test_fallback(axis=0, keepdims=True, exclude=True):
+        dim0 = 30
+        dim1 = 100
+        shape = rand_shape_2d(dim0, dim1)
+        csr_array = rand_ndarray(shape=shape, stype='csr', density=0.01)
+        ret = mx.nd.sum(csr_array, axis=axis, keepdims=keepdims,
+                        exclude=exclude)
+
+    test_variations()
+    test_fallback(axis=0, keepdims=True, exclude=True)
 
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':
