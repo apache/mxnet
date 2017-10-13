@@ -3,6 +3,7 @@ MXNet Change Log
 ## 0.12.0
 ### New Features - Sparse Tensor Support
   - Added comprehensive support for sparse matrices. See help on `mx.sym.sparse` and `mx.nd.sparse` for more info.
+  - Limited support for fancy indexing. x[idx_arr0, idx_arr1, ..., idx_arrn] is now supported. Full support coming soon in next release. Checkout master to get a preview.
   - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/MXNet+0.12.0+Release+Notes)
 ### New Features - Autograd and Gluon
   - New loss functions added - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`
@@ -16,7 +17,7 @@ MXNet Change Log
   - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python
   - Added `multi_precision` option to optimizer for easier float16 training
 ### Performance
-  - Autograd and Gluon now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
+  - Enabled JIT compilation. Autograd and Gluon hybridize now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
   - Full support for NVidia Volta GPU Architecture and Cuda 9. Training is up to 3.5x faster than Pascal when using float16.
 ### - API Changes
   - Operators like `mx.sym.linalg_*` and `mx.sym.random_*` are now moved to `mx.sym.linalg.*` and `mx.sym.random.*`. The old names are still available but deprecated.
