@@ -26,6 +26,7 @@
 #include <thread>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "threaded_engine.h"
 
 namespace mxnet {
 namespace engine {
@@ -46,6 +47,7 @@ class NaiveEngine final : public Engine {
   };
 
   NaiveEngine() {
+    set_num_omp_threads_per_worker(ThreadedEngine::DefaultOMPThreadsPerWorker());
   }
   // virtual destructor
   virtual ~NaiveEngine() {
@@ -187,6 +189,20 @@ class NaiveEngine final : public Engine {
     shutdown_phase_.store(true);
   }
 
+  /*! \brief Return the number of OMP threads that should be used per worker
+   * \return Number of OMP threads that should be used per worker
+   */
+  int num_omp_threads_per_worker() const override {
+    return num_omp_threads_per_worker_;
+  }
+
+  /*! \brief Set the number of OMP threads that should be used per worker
+   * \param num_threads_per_worker Number of OMP threads to be used per worker
+   */
+  void set_num_omp_threads_per_worker(int num_threads_per_worker) override {
+    num_omp_threads_per_worker_ = num_threads_per_worker;
+  }
+
  private:
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param) {
@@ -202,6 +218,8 @@ class NaiveEngine final : public Engine {
   mshadow::Stream<cpu> cpu_stream_;
   // GPU streams
   std::vector<mshadow::Stream<gpu>*> streams_;
+  /*! \brief Number of OMP threads to be used per worker */
+  int num_omp_threads_per_worker_{0};
 };  // class NaiveEngine
 
 

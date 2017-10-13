@@ -1359,15 +1359,15 @@ def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
 
-def test_autograd_save_memory():
-    x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
-    x.attach_grad()
-
-    with mx.autograd.record():
-        for i in range(200):
-            x = x + 1
-            x.wait_to_read()
-    x.backward()
+#def test_autograd_save_memory():
+#    x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
+#    x.attach_grad()
+#
+#    with mx.autograd.record():
+#        for i in range(200):
+#            x = x + 1
+#            x.wait_to_read()
+#    x.backward()
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()
