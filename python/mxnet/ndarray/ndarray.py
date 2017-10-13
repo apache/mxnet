@@ -1285,6 +1285,16 @@ fixed-size items.
             return op.broadcast_to(self, shape=tuple(shape))
     # pylint: enable= undefined-variable
 
+    def check_format(self, full_check=True):
+        """check whether the matrix format is valid.
+        Parameters
+        ----------
+        full_check : bool, optional
+            If `True`, rigorous check, O(N) operations. Otherwise
+            basic check, O(1) operations (default True).
+        """
+        check_call(_LIB.MXNDArrayCheckFormat(self.handle, ctypes.c_bool(full_check)))
+
     def wait_to_read(self):
         """Waits until all previous write operations on the current array are finished.
 

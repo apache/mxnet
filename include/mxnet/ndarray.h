@@ -309,6 +309,62 @@ class NDArray {
     return true;
   }
   /*!
+   * \brief check whether the matrix format is valid
+   * \param full_check if `True`, rigorous check, O(N) operations
+   *    Otherwise basic check, O(1) operations
+   */
+  inline void check_format(const bool full_check = true) const {
+    auto stype = storage_type();
+    if (stype == kCSRStorage) {
+      CHECK_EQ(shape().ndim(), 2)
+               << "CSR only for two dimension";
+      CHECK(aux_shape(csr::kIdx).ndim() == 1 &&
+            aux_shape(csr::kIndPtr).ndim() == 1 &&
+            storage_shape().ndim() == 1)
+            << "data, indices, and indptr should be 1-D";
+      CHECK_EQ(aux_shape(csr::kIndPtr)[0], shape()[0] + 1)
+               << "index pointer size" << aux_shape(csr::kIndPtr)[0]
+               << "should be " << (shape()[0] + 1);
+      CHECK_EQ(aux_shape(csr::kIdx)[0], storage_shape()[0])
+               << "indices and data should have the same size";
+      auto type = aux_type(csr::kIndPtr);
+      MSHADOW_TYPE_SWITCH(type, IType, {
+        auto dptr = aux_data(csr::kIndPtr).dptr<IType>();
+        CHECK_EQ(dptr[0], 0)
+                 << "index pointer should start with 0";
+        const nnvm::dim_t end = aux_shape(csr::kIndPtr)[0];
+        CHECK_GE(dptr[end-1], aux_shape(csr::kIdx)[0])
+                 << "Last value of index pointer should be less than "
+                 << "the size of index and data arrays";
+      });
+      if (full_check) {
+        auto indptr_type = aux_type(csr::kIndPtr);
+        MSHADOW_TYPE_SWITCH(indptr_type, IType, {
+          auto dptr = aux_data(csr::kIndPtr).dptr<IType>();
+          for (nnvm::dim_t i=0; i < aux_shape(csr::kIndPtr)[0]-1; i++) {
+            CHECK_GE(dptr[i+1], dptr[i])
+                     << "index pointer values must form a "
+                     << "non-decreasing sequence";
+          }
+        });
+        auto idx_type = aux_type(csr::kIdx);
+        MSHADOW_TYPE_SWITCH(idx_type, IType, {
+          auto dptr = aux_data(csr::kIdx).dptr<IType>();
+          for (nnvm::dim_t i=0; i < aux_shape(csr::kIdx)[0]; i++) {
+            CHECK_GE(dptr[i], 0)
+                     << "index values must be >= 0";
+            CHECK_LT(dptr[i], shape()[1])
+                     << "index values must be < " << shape()[1];
+          }
+        });
+      }
+    } else if (stype == kRowSparseStorage) {
+      CHECK_EQ(aux_shape(rowsparse::kIdx)[0], storage_shape()[0])
+               << "inconsistent storage shape " << storage_shape()
+               << " vs. aux shape " << aux_shape(rowsparse::kIdx);
+    }
+  }
+  /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
    */

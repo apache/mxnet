@@ -571,6 +571,16 @@ def test_sparse_nd_exception():
                      a, invalid_arg="garbage_value")
     assert_exception(mx.nd.sparse.zeros, NotImplementedError,
                      'csr', (2,2), aux_types=[np.int32, np.int32])
+    try:
+        shape = (3, 4)
+        data_list = [7, 8, 9]
+        indices_list = [0, 2, 1]
+        indptr_list = [0, 2, 2, 3, 4]
+        a = mx.nd.sparse.csr_matrix(data_list, indptr_list, indices_list, shape)
+        a.check_format()
+        assert(False)
+    except mx.base.MXNetError:
+        return
 
 
 if __name__ == '__main__':
