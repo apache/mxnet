@@ -508,7 +508,9 @@ struct SumCsrKernel<req, 0> {
       // in_idx[in_indptr[i + 1]]
       IType start = row_indptr_start;
       IType end = row_indptr_end;
-      IType mid;
+
+      // Initialize mid with the first indice of the row
+      IType mid = start;
       while (start <= end) {
         mid = start + (end - start) / 2;
         if (in_idx[mid] == row_seg_start) {
