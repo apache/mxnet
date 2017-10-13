@@ -575,11 +575,11 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   mutable_vars.push_back(res.var());
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([from, residual, to, neg_threshold, pos_threshold](RunContext ctx) {
+      Engine::Get()->PushSync([from, res, ret, neg_threshold, pos_threshold](RunContext ctx) {
           std::vector<TBlob> inputs(3);
           inputs[0] = from.data();
-          inputs[1] = residual->data();
-          inputs[2] = to->data();
+          inputs[1] = res.data();
+          inputs[2] = ret.data();
           mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
                                                     neg_threshold, pos_threshold);
         }, from.ctx(), const_vars, mutable_vars,
@@ -591,11 +591,11 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([from, residual, to, neg_threshold, pos_threshold](RunContext ctx) {
+        Engine::Get()->PushSync([from, res, ret, neg_threshold, pos_threshold](RunContext ctx) {
             std::vector<TBlob> inputs(3);
             inputs[0] = from.data();
-            inputs[1] = residual->data();
-            inputs[2] = to->data();
+            inputs[1] = res.data();
+            inputs[2] = ret.data();
             mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
                                                       neg_threshold, pos_threshold);
           }, from.ctx(), const_vars, mutable_vars,
@@ -621,10 +621,10 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
   int b = to->ctx().dev_mask();
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([from, to](RunContext ctx) {
+      Engine::Get()->PushSync([from, ret](RunContext ctx) {
         std::vector<TBlob> inputs(2);
         inputs[0] = from.data();
-        inputs[1] = to->data();
+        inputs[1] = ret.data();
         mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
           }, from.ctx(), {from.var()}, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
@@ -635,10 +635,10 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([from, to](RunContext ctx) {
+        Engine::Get()->PushSync([from, ret](RunContext ctx) {
           std::vector<TBlob> inputs(2);
           inputs[0] = from.data();
-          inputs[1] = to->data();
+          inputs[1] = ret.data();
             mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
           }, from.ctx(), {from.var()}, {ret.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
