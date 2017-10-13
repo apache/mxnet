@@ -19,7 +19,7 @@ MXNet Change Log
 ### Performance
   - Enabled JIT compilation. Autograd and Gluon hybridize now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
   - Full support for NVidia Volta GPU Architecture and Cuda 9. Training is up to 3.5x faster than Pascal when using float16.
-### - API Changes
+### API Changes
   - Operators like `mx.sym.linalg_*` and `mx.sym.random_*` are now moved to `mx.sym.linalg.*` and `mx.sym.random.*`. The old names are still available but deprecated.
   - `sample_*` and `random_*` are now merged as `random.*`, which supports both scalar and  `NDArray` distribution parameters.
 ### Bug-fixes
