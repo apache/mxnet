@@ -44,10 +44,12 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 
-# spawn off a new seeded random number generator based on the
+# spawn off a new seeded random number generator, by default based on the
 # global random number generator's current state.
-def get_rng():
-    return np.random.RandomState(np.random.randint(0,np.iinfo(np.uint32).max))
+def get_rng(seed=None):
+    if seed is None:
+        seed = np.random.randint(0, np.iinfo(np.uint32).max)
+    return np.random.RandomState(seed)
 
 def default_context():
     """Get default context for regression test."""
