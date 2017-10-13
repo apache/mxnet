@@ -19,6 +19,7 @@ import sys
 import os
 import time
 import unittest
+import struct
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
@@ -1445,14 +1446,26 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
-def test_two_bit_quantization_op():
-    neg_threshold = -4.0
-    pos_threshold = 4.0
+def test_two_bit_quantization():
+    def binary(num):
+        return ''.join(bin(ord(c)).replace('0b', '').rjust(8, '0') for c in struct.pack('!f', num))
 
-    grad = mx.nd.array([1.0, 1.0, 1.0], ctx=mx.gpu(0))
-    residual = mx.nd.array([0.0, 0.0, 0.0], ctx=mx.gpu(0))
+    neg_threshold = -0.5
+    pos_threshold = 0.5
+
+    orig_shape = (16)
+
+    # push all 0s
+    grad = mx.nd.zeros(orig_shape, ctx=mx.gpu(0))
+    residual = mx.nd.zeros(grad.shape, ctx=mx.gpu(0))
     compr = mx.contrib.nd.create_2bit(grad)
     mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
+    f1 = binary(compr.asnumpy()[3])
+
+
+
+
+
     decompr = mx.nd.zeros(grad.shape)
     mx.contrib.ndarray.dequantize_2bit(compr, decompr)
     exp_residual = np.ones(grad.shape)
