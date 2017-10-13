@@ -583,9 +583,9 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
           mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
                                                     neg_threshold, pos_threshold);
         }, from.ctx(), const_vars, mutable_vars,
-        FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
+        FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
     } else {
-      LOG(FATAL) << "Unsupported dequantization";
+      LOG(FATAL) << "Unsupported Quantization";
     }
   } else {
 #if MXNET_USE_CUDA
@@ -599,9 +599,9 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
             mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
                                                       neg_threshold, pos_threshold);
           }, from.ctx(), const_vars, mutable_vars,
-          FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
+          FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
         } else {
-          LOG(FATAL) << "Unsupported dequantization";
+          LOG(FATAL) << "Unsupported Quantization";
         }
     } else {
       LOG(FATAL) << "unknown device mask";
