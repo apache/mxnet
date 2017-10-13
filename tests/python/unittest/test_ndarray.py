@@ -813,6 +813,15 @@ def test_ndarray_indexing():
         np_index = index
         if isinstance(index, mx.nd.NDArray):
             np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = []
+            for idx in index:
+                if isinstance(idx, mx.nd.NDArray):
+                    np_index.append(idx.asnumpy())
+                else:
+                    np_index.append(idx)
+            np_index = tuple(np_index)
+
         np_indexed_array = np_array[np_index]
         mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
         mx_indexed_array = mx_array[index]
@@ -840,6 +849,7 @@ def test_ndarray_indexing():
                   ([3, 2, 2, 3], False),
                   (np.ones(shape=(2,), dtype=np.int32), False), (np.ones(shape=(2, 2), dtype=np.int32), False),
                   (np.array([[2, 3, 4, 5], [0, 1, 5, 4], [2, 3, 0, 4]], dtype=np.int32), False),
+                  (np.array([[2], [0], [2]], dtype=np.int32), False),
                   (mx.nd.ones(shape=(2,), dtype=np.int32), False), (mx.nd.ones(shape=(2, 2), dtype=np.int32), False),
                   (mx.nd.array([[2, 3, 4, 5], [0, 1, 5, 4], [2, 3, 0, 4]], dtype=np.int32), False),
                   ((1, [2, 3]), False), ((1, [2, 3], np.ones(shape=(2, 1), dtype=np.int32)), False),
@@ -847,6 +857,9 @@ def test_ndarray_indexing():
                   ((1, [2, 3], np.ones(shape=(2, 1), dtype=np.int32), slice(2, 5)), False),
                   ((1, [2, 3], np.ones(shape=(2, 1), dtype=np.int32), slice(2, 5, 2)), False),
                   ((1, [2], np.ones(shape=(1, 1), dtype=np.int32), slice(None, None, -1)), False),
+                  ((1, [2], np.ones(shape=(1, 1), dtype=np.int32), np.ones(shape=(2, 2), dtype=np.int64)), False),
+                  ((1, [2], mx.nd.ones(shape=(1, 1), dtype=np.int32), mx.nd.array([[1, 1], [1, 1]], dtype='int64')),
+                   False),
                   ([0], False), ([0, 1], False), ([1, 2, 3], False), ([2, 0, 5, 6], False),
                   (([1, 1], [2, 3]), False), (([1], [4], [5]), False), (([1], [4], [5], [6]), False),
                   (([[1]], [[2]]), False), (([[1]], [[2]], [[3]], [[4]]), False),

@@ -97,6 +97,7 @@ _GRAD_REQ_MAP = {
 # pylint: enable= no-member
 
 # Return code for dispatching indexing function call
+_NDARRAY_INDEXING_UNSUPPORTED = -1
 _BASIC_INDEXING_STEP_EQUAL_ONE = 0
 _BASIC_INDEXING_STEP_NOT_ONE = 1
 _ADVANCED_INDEXING = 2
@@ -545,11 +546,11 @@ fixed-size items.
                 if key.step == 0:
                     raise ValueError("slice step cannot be zero")
                 start, stop, step = _get_index_range(key.start, key.stop, self.shape[0], key.step)
-                indices = [i for i in range(start, stop, step)]
+                indices = arange(start, stop, step, ctx=self.context, dtype='int32')
                 if len(indices) == 0:
                     raise ValueError('slicing NDArray with %s is not valid'
                                      ' since it would generate an empty ndarray' % key)
-                return self.take(array(indices, ctx=self.context, dtype=np.int32))
+                return self.take(indices)
             elif key.start is not None or key.stop is not None:
                 return self._slice(key.start, key.stop)
             else:
@@ -558,29 +559,15 @@ fixed-size items.
         # Start dealing with more complicated indexing cases than only slicing at axis=0.
         # if key is any type of NDArray, list, or np.ndarray make a tuple from it
         # Note: Only support integer list as index if key is a list.
-        if isinstance(key, (NDArray, np.ndarray)):
-            key = (key,)
-        elif isinstance(key, list):
-            # TODO(junwu): Add support for nested lists besides integer list
-            for i in key:
-                if not isinstance(i, integer_types):
-                    raise TypeError('Indexing NDArray only supports a list of integers as index'
-                                    ' when key is of list type, received element=%s of type=%s'
-                                    % (str(i), str(type(i))))
-            key = (key,)
-
-        if isinstance(key, tuple):
-            indexing_dispatch_code = _get_indexing_dispatch_code(key)
-            if indexing_dispatch_code == _BASIC_INDEXING_STEP_EQUAL_ONE:
-                return self._basic_indexing_step_equal_one(key)
-            elif indexing_dispatch_code == _BASIC_INDEXING_STEP_NOT_ONE:
-                return self._basic_indexing_step_not_one(key)
-            elif indexing_dispatch_code == _ADVANCED_INDEXING:
-                return self._advanced_indexing(key)
-            else:
-                raise ValueError('Indexing NDArray with index=%s is not supported' % str(key))
+        indexing_dispatch_code = _get_indexing_dispatch_code(key)
+        if indexing_dispatch_code == _BASIC_INDEXING_STEP_EQUAL_ONE:
+            return self._basic_indexing_step_equal_one(key)
+        elif indexing_dispatch_code == _BASIC_INDEXING_STEP_NOT_ONE:
+            return self._basic_indexing_step_not_one(key)
+        elif indexing_dispatch_code == _ADVANCED_INDEXING:
+            return self._advanced_indexing(key)
         else:
-            raise ValueError('NDArray does not support slicing with key %s of type %s'
+            raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
 
     def _advanced_indexing(self, key):
@@ -594,15 +581,19 @@ fixed-size items.
             slices and integers."""
             return not isinstance(index, py_slice)
 
-        if not isinstance(key, tuple):
-            raise ValueError('index=%s must be a tuple type to use advanced indexing,'
-                             ' received type=%s' % (str(key), str(type(key))))
+        if isinstance(key, (NDArray, np.ndarray, list, integer_types)):
+            key = (key,)
+
+        assert isinstance(key, tuple),\
+            'index=%s must be a NDArray, or np.ndarray, or list, or tuple ' \
+            ' type to use advanced indexing, received type=%s' % (str(key), str(type(key)))
+
         assert len(key) > 0, "Cannot slice with empty indices"
         shape = self.shape
         assert len(shape) >= len(key),\
             "Slicing dimensions exceeds array dimensions, %d vs %d" % (len(key), len(shape))
         indices = []
-        dtype = 'int32'
+        dtype = 'int32'  # index data type passed to gather_nd op
         need_broadcast = (len(key) != 1)
         advanced_indices = []  # include list, NDArray, np.ndarray, integer
         basic_indices = []  # include only slices
@@ -622,7 +613,8 @@ fixed-size items.
                 idx_i = arange(start, stop, step, ctx=self.context, dtype=dtype)
                 advanced_indices.append(i)
             elif isinstance(idx_i, NDArray):
-                dtype = idx_i.dtype
+                if dtype != idx_i.dtype:
+                    idx_i = idx_i.astype(dtype)
                 advanced_indices.append(i)
             else:
                 raise IndexError('Indexing NDArray with index=%s of type=%s is not supported'
@@ -1997,33 +1989,45 @@ fixed-size items.
 
 
 def _get_indexing_dispatch_code(key):
-    """When key is a tuple, return a indexing function call dispatch code
+    """Returns a indexing function call dispatch code
     so that the right indexing function can be called for the key.
-    The dispatch code is determined based upon the following criteria.
-    1. If the key contains only slices and integers, and the slices' steps
+    1. If key is a list, or NDArray, or np.ndarray, return _ADVANCED_INDEXING.
+    2. If key is an integer, return _BASIC_INDEXING_STEP_EQUAL_ONE.
+    3. If key is a tuple containing only slices and integers, and the slices' steps
        are all either None or equal to 1, return `_BASIC_INDEXING_STEP_EQUAL_ONE`.
-    2. If the key contains only slices and integers, and at least of slices'
+    4. If key is a tuple containing only slices and integers, and at least of slices'
        step is not equal to 1, return `_BASIC_INDEXING_STEP_NOT_ONE`.
-    3. If the key contains any advanced index type, that is, list, tuple,
+    5. If key is a tuple containing any advanced index type, that is, list, tuple,
        np.ndarray, NDArray, return `_ADVANCED_INDEXING`.
     """
-    if not isinstance(key, tuple):
-        raise ValueError("key=%s must be of type tuple, provided type=%s"
-                         % (str(key), str(type(key))))
-    step_not_equal_one = False
-    for idx in key:
-        if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
-            return _ADVANCED_INDEXING
-        elif isinstance(idx, py_slice):
-            if idx.step is not None and idx.step != 1:
-                step_not_equal_one = True
-        elif not isinstance(idx, integer_types):
-            raise ValueError("NDArray does not support slicing with key %s of type %s."
-                             % (str(idx), str(type(idx))))
-    if step_not_equal_one:
-        return _BASIC_INDEXING_STEP_NOT_ONE
-
-    return _BASIC_INDEXING_STEP_EQUAL_ONE
+    if isinstance(key, (NDArray, np.ndarray)):
+        return _ADVANCED_INDEXING
+    elif isinstance(key, list):
+        # TODO(junwu): Add support for nested lists besides integer list
+        for i in key:
+            if not isinstance(i, integer_types):
+                raise TypeError('Indexing NDArray only supports a list of integers as index'
+                                ' when key is of list type, received element=%s of type=%s'
+                                % (str(i), str(type(i))))
+        return _ADVANCED_INDEXING
+    elif isinstance(key, integer_types):
+        return _BASIC_INDEXING_STEP_EQUAL_ONE
+    elif isinstance(key, tuple):
+        step_not_one = False
+        for idx in key:
+            if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+                return _ADVANCED_INDEXING
+            elif isinstance(idx, py_slice):
+                if idx.step is not None and idx.step != 1:
+                    step_not_one = True
+            elif not isinstance(idx, integer_types):
+                raise ValueError("NDArray does not support slicing with key %s of type %s."
+                                 % (str(idx), str(type(idx))))
+        if step_not_one:
+            return _BASIC_INDEXING_STEP_NOT_ONE
+        return _BASIC_INDEXING_STEP_EQUAL_ONE
+    else:
+        return _NDARRAY_INDEXING_UNSUPPORTED
 
 
 def _get_index_range(start, stop, length, step=1):
