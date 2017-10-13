@@ -871,11 +871,13 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     if not isinstance(indices, NDArray):
         indices = _array(indices, ctx, indices_type)
     if shape is None:
+        if indices.shape[0] == 0:
+            raise ValueError('invalid shape')
         shape = (len(indptr) - 1, op.max(indices).asscalar() + 1)
     # verify shapes
     aux_shapes = [indptr.shape, indices.shape]
     if data.ndim != 1 or indptr.ndim != 1 or indices.ndim != 1 or \
-        indptr.shape[0] == 0 or indices.shape[0] == 0 or len(shape) != 2:
+        indptr.shape[0] == 0 or len(shape) != 2:
         raise ValueError('invalid shape')
     result = CSRNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                           [indptr_type, indices_type], aux_shapes))
@@ -1080,7 +1082,7 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     if stype == 'row_sparse' or stype == 'csr':
         aux_types = _STORAGE_AUX_TYPES[stype]
     else:
-        raise Exception("unknown storage type")
+        raise ValueError("unknown storage type" + stype)
     out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
 

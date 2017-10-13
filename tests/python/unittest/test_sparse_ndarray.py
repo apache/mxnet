@@ -396,11 +396,11 @@ def test_sparse_nd_astype():
 
 def test_sparse_nd_pickle():
     np.random.seed(0)
-    repeat = 10
+    repeat = 1
     dim0 = 40
     dim1 = 40
     stypes = ['row_sparse', 'csr']
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5]
     stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
     for _ in range(repeat):
         shape = rand_shape_2d(dim0, dim1)
@@ -420,7 +420,7 @@ def test_sparse_nd_save_load():
     stypes = ['default', 'row_sparse', 'csr']
     stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
     num_data = 20
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5]
     fname = 'tmp_list.bin'
     for _ in range(repeat):
         data_list1 = []
@@ -499,7 +499,7 @@ def test_create_csr():
 
     dim0 = 50
     dim1 = 50
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5]
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
         check_create_csr_from_nd(shape, density)
