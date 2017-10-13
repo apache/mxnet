@@ -2,8 +2,11 @@ MXNet Change Log
 ================
 ## 0.12.0
 ### New Features - Sparse Tensor Support
-  - Added comprehensive support for sparse matrices. See help on `mx.sym.sparse` and `mx.nd.sparse` for more info.
-  - Limited support for fancy indexing. x[idx_arr0, idx_arr1, ..., idx_arrn] is now supported. Full support coming soon in next release. Checkout master to get a preview.
+  - Added limited cpu support for two sparse formats for Symbol and NDArray - CSRNDArray and RowSparseNDArray
+  - Added a sparse dot product operator and many element-wise sparse operators
+  - Added a data iterator for sparse data input - LibSVMIter
+  - Added three optimizers for sparse gradient updates: Ftrl, SGD and Adam
+  - Added push and row_sparse_pull with RowSparseNDArray in distributed kvstore
   - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/MXNet+0.12.0+Release+Notes)
 ### New Features - Autograd and Gluon
   - New loss functions added - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`
@@ -12,6 +15,7 @@ MXNet Change Log
   - Added `ConvLSTM` etc to `gluon.contrib`
   - Autograd now supports cross-device graphs. Use `x.copyto(mx.gpu(i))` and `x.copyto(mx.cpu())` to do computation on multiple devices.
 ### Other New Features
+  - Limited support for fancy indexing. x[idx_arr0, idx_arr1, ..., idx_arrn] is now supported. Full support coming soon in next release. Checkout master to get a preview.
   - Random number generators in `mx.nd.random.*` and `mx.sym.random.*` now supports both CPU and GPU
   - `NDArray` and `Symbol` now supports "fluent" methods. You can now use `x.exp()` etc instead of `mx.nd.exp(x)` or `mx.sym.exp(x)`
   - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python
