@@ -564,6 +564,7 @@ class PyRMSProp(mx.optimizer.Optimizer):
 #                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 #                                if (default_context() == mx.cpu()):
 #                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse')
+#
 
 class PyFtrl(mx.optimizer.Optimizer):
     """The Ftrl optimizer.
