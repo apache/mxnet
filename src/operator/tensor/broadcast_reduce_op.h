@@ -661,7 +661,6 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
       });
     });
   }
-
 }
 
 template <typename xpu, typename reducer, bool normalize = false>
