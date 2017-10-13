@@ -347,7 +347,7 @@ inline bool SumOpForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  int& in_stype = in_attrs->at(0);
+  int in_stype = in_attrs->at(0);
   int& out_stype = out_attrs->at(0);
   bool dispatched = false;
   // sum only supported for CPU for now. TODO: Remove when support for GPU added
