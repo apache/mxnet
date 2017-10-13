@@ -145,6 +145,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
         from scipy import sparse as spsp
         while True:
             csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+            # regenerate matrix if density != 0 but result is empty
             if csr.nnz == 0 and density != 0:
                 continue
             break

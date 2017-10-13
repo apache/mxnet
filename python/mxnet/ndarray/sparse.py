@@ -875,8 +875,8 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     # verify shapes
     aux_shapes = [indptr.shape, indices.shape]
     if data.ndim != 1 or indptr.ndim != 1 or indices.ndim != 1 or \
-       indptr.shape[0] == 0 or indices.shape[0] == 0 or len(shape) != 2:
-       raise ValueError('invalid shape')
+        indptr.shape[0] == 0 or indices.shape[0] == 0 or len(shape) != 2:
+        raise ValueError('invalid shape')
     result = CSRNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                           [indptr_type, indices_type], aux_shapes))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
