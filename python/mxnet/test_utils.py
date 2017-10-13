@@ -149,7 +149,7 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
         if shuffle_csr_indices is True:
             shuffle_csr_column_indices(csr)
         result = mx.nd.sparse.csr_matrix((csr.data, csr.indices, csr.indptr),
-                                         (num_rows, num_cols), dtype=dtype)
+                                         shape=(num_rows, num_cols), dtype=dtype)
     except ImportError:
         assert(data_init is None), \
                "data_init option is not supported when scipy is absent"
@@ -316,7 +316,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         if modifier_func is not None:
             val = assign_each(val, modifier_func)
 
-        arr = mx.nd.sparse.row_sparse_array((val, indices), shape, indices_type=np.int64, dtype=dtype)
+        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2

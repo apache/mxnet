@@ -38,7 +38,7 @@ __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
-from ..base import c_array, mx_real_t
+from ..base import c_array, mx_real_t, integer_types
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
@@ -278,6 +278,10 @@ class CSRNDArray(BaseSparseNDArray):
     array([1, 0, 2])
     >>> a.indptr.asnumpy()
     array([0, 1, 2, 2, 3])
+
+    See Also
+    --------
+    csr_matrix: Several ways to construct a CSRNDArray
     """
 
     def __reduce__(self):
@@ -318,7 +322,7 @@ class CSRNDArray(BaseSparseNDArray):
         >>> indptr = np.array([0, 2, 3, 6])
         >>> indices = np.array([0, 2, 2, 0, 1, 2])
         >>> data = np.array([1, 2, 3, 4, 5, 6])
-        >>> a = mx.nd.sparse.csr_matrix((data, indices, indptr), (3, 3))
+        >>> a = mx.nd.sparse.csr_matrix((data, indices, indptr), shape=(3, 3))
         >>> a.asnumpy()
         array([[1, 0, 2],
                [0, 0, 3],
@@ -526,6 +530,10 @@ class RowSparseNDArray(BaseSparseNDArray):
 
     RowSparseNDArray is used principally in the definition of gradients for operations
     that have sparse gradients (e.g. sparse dot and sparse embedding).
+
+    See Also
+    --------
+    row_sparse_array: Several ways to construct a RowSparseNDArray
     """
     def __reduce__(self):
         return RowSparseNDArray, (None,), super(RowSparseNDArray, self).__getstate__()
@@ -711,20 +719,17 @@ class RowSparseNDArray(BaseSparseNDArray):
             raise TypeError('copyto does not support type ' + str(type(other)))
 
 
-def _prepare_src_array(src, dtype, default_dtype):
-    """Prepare `src` and its dtype so that they can be used to construct NDArray.
-    `src` is converted to a `np.ndarray` if it's neither an `NDArray` nor an `np.ndarray`.
+def _prepare_src_array(source_array, dtype):
+    """Prepare `source_array` so that it can be used to construct NDArray.
+    `source_array` is converted to a `np.ndarray` if it's neither an `NDArray` \
+    nor an `np.ndarray`.
     """
-    if isinstance(src, NDArray):
-        dtype = src.dtype if dtype is None else dtype
-    else:
-        dtype = default_dtype if dtype is None else dtype
-        if not isinstance(src, np.ndarray):
-            try:
-                src = np.array(src, dtype=dtype)
-            except:
-                raise TypeError('values must be array like object')
-    return src, dtype
+    if not isinstance(source_array, NDArray) and not isinstance(source_array, np.ndarray):
+       try:
+           source_array = np.array(source_array, dtype=dtype)
+       except:
+           raise TypeError('values must be array like object')
+    return source_array
 
 
 def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
@@ -840,12 +845,15 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     # context
     if ctx is None:
         ctx = Context.default_ctx
+    # types
+    dtype = mx_real_t if dtype is None else dtype
+    indptr_type = _STORAGE_AUX_TYPES[storage_type][0] if indptr_type is None else indptr_type
+    indices_type = _STORAGE_AUX_TYPES[storage_type][1] if indices_type is None else indices_type
     # prepare src array and types
-    data, dtype = _prepare_src_array(data, dtype, mx_real_t)
-    indptr, indptr_type = _prepare_src_array(indptr, indptr_type,
-                                             _STORAGE_AUX_TYPES[storage_type][0])
-    indices, indices_type = _prepare_src_array(indices, indices_type,
-                                               _STORAGE_AUX_TYPES[storage_type][1])
+    data = _prepare_src_array(data, dtype)
+    indptr = _prepare_src_array(indptr, indptr_type)
+    indices = _prepare_src_array(indices, indices_type)
+
     # TODO(junwu): Convert data, indptr, and indices to mxnet NDArrays
     # if they are not for now. In the future, we should provide a c-api
     # to accept np.ndarray types to copy from to result.data and aux_data
@@ -982,17 +990,19 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
         # construct a csr matrix from a dense one
         return _array(source_array, ctx=ctx, dtype=dtype).tostype('rowsparse')
 
-def _rowsparse_ndarray_from_definition(data, indices, indptr, shape=None, ctx=None,
+def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
                                        dtype=None, indices_type=None):
     """Create a `RowSparseNDArray` based on data and indices"""
     storage_type = 'row_sparse'
     # context
     if ctx is None:
         ctx = Context.default_ctx
+    # types
+    dtype = mx_real_t if dtype is None else dtype
+    indices_type = _STORAGE_AUX_TYPES[storage_type][0] if indices_type is None else indices_type
     # prepare src array and types
-    data, dtype = _prepare_src_array(data, dtype, mx_real_t)
-    indices, indices_type = _prepare_src_array(indices, indices_type,
-                                               _STORAGE_AUX_TYPES[storage_type][0])
+    data = _prepare_src_array(data, dtype)
+    indices = _prepare_src_array(indices, indices_type)
 
     # TODO(junwu): Convert data, indptr, and indices to mxnet NDArrays
     # if they are not for now. In the future, we should provide a c-api
@@ -1120,8 +1130,8 @@ def array(source_array, ctx=None, dtype=None):
 
     Examples
     --------
-    >>> import scipy.sparse as sp
-    >>> csr = sp.csr_matrix((2, 100))
+    >>> import scipy.sparse as spsp
+    >>> csr = spsp.csr_matrix((2, 100))
     >>> mx.nd.sparse.array(csr)
     <CSRNDArray 2x100 @cpu(0)>
     >>> mx.nd.sparse.array(mx.nd.sparse.zeros('csr', (3, 2)))
@@ -1141,7 +1151,7 @@ def array(source_array, ctx=None, dtype=None):
         # preprocess scipy csr to canonical form
         csr = source_array.sorted_indices()
         csr.sum_duplicates()
-        return csr_matrix((csr.data, csr.indices, csr.indptr), csr.shape, dtype=dtype)
+        return csr_matrix((csr.data, csr.indices, csr.indptr), shape=csr.shape, dtype=dtype)
     elif isinstance(source_array, (np.ndarray, np.generic)):
         raise ValueError("Please use mx.nd.array to create an NDArray with source_array of type ",
                          type(source_array))

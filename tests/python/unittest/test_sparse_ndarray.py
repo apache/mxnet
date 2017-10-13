@@ -568,8 +568,8 @@ def test_sparse_nd_exception():
     a = mx.nd.zeros((2,2))
     assert_exception(mx.nd.sparse.retain, mx.base.MXNetError,
                      a, invalid_arg="garbage_value")
-    assert_exception(mx.nd.sparse.zeros, NotImplementedError,
-                     'csr', (2,2), aux_types=[np.int32, np.int32])
+    #assert_exception(mx.nd.sparse.zeros, NotImplementedError,
+    #                 'csr', (2,2), aux_types=[np.int32, np.int32])
 
 
 if __name__ == '__main__':
