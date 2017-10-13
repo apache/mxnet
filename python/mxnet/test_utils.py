@@ -44,8 +44,10 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 
-_rng = np.random.RandomState(1234)
-
+# spawn off a new seeded random number generator based on the
+# global random number generator's current state.
+def get_rng():
+    return np.random.RandomState(np.random.randint(0,np.iinfo(np.uint32).max))
 
 def default_context():
     """Get default context for regression test."""
@@ -830,6 +832,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     if ctx is None:
         ctx = default_context()
 
+    _rng = get_rng()
+
     def random_projection(shape):
         """Get a random weight matrix with not too small elements
 
@@ -1063,6 +1067,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
 
+    _rng = get_rng()
     args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
@@ -1155,6 +1160,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
     if grad_req is None:
         grad_req = 'write'
+    _rng = get_rng()
     if location is None:
         exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
         location = {k: _rng.normal(size=arr.shape, scale=1.0) for k, arr in
