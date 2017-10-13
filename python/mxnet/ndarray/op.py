@@ -20,17 +20,4 @@
 """Backend ops in mxnet.ndarray namespace"""
 __all__ = ['CachedOp']
 
-import sys as _sys
-import os as _os
-
-try:
-    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, CachedOp
-    elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, CachedOp
-    else:
-        from .._cy2.ndarray import NDArrayBase, CachedOp
-except ImportError:
-    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
-        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, CachedOp
+from ._internal import NDArrayBase, CachedOp

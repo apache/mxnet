@@ -16,32 +16,15 @@
 # under the License.
 
 """Register backend ops in mxnet.ndarray namespace"""
-__all__ = []
-
-import sys as _sys
 import os as _os
 import ctypes
 import numpy as np  # pylint: disable=unused-import
 
+from . import _internal
+from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-import
 from ..ndarray_doc import _build_doc
 
-# Use different version of SymbolBase
-# When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import
-try:
-    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import NDArrayBase, _imperative_invoke
-    elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import NDArrayBase, _imperative_invoke
-    else:
-        from .._cy2.ndarray import NDArrayBase, _imperative_invoke
-except ImportError:
-    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
-        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import NDArrayBase, _imperative_invoke
-
-from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null
-# pylint: enable=unused-import
+from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null # pylint: disable=unused-import
 
 
 def _generate_ndarray_function_code(handle, name, func_name):
@@ -177,5 +160,5 @@ def _make_ndarray_function(handle, name, func_name):
     ndarray_function.__module__ = 'mxnet.ndarray'
     return ndarray_function
 
-
-_init_op_module('mxnet', 'ndarray', _make_ndarray_function)
+if not _internal.__dict__.get('skip_register'):
+    _init_op_module('mxnet', 'ndarray', _make_ndarray_function)

@@ -15,36 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=unused-import
 """Register backend ops in mxnet.symbol namespace."""
-__all__ = []
-
-import sys as _sys
 import os as _os
 import ctypes
-import numpy as _numpy  # pylint: disable=unused-import
+import numpy as np
 
+from . import _internal
+from ._internal import SymbolBase, _symbol_creator
 from ..base import mx_uint, check_call, _LIB, py_str
 from ..symbol_doc import _build_doc
-
-# Use different version of SymbolBase
-# When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import
-try:
-    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.symbol import SymbolBase, _set_symbol_class
-        from .._ctypes.symbol import _symbol_creator
-    elif _sys.version_info >= (3, 0):
-        from .._cy3.symbol import SymbolBase, _set_symbol_class
-        from .._cy3.symbol import _symbol_creator
-    else:
-        from .._cy2.symbol import SymbolBase, _set_symbol_class
-        from .._cy2.symbol import _symbol_creator
-except ImportError:
-    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
-        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.symbol import SymbolBase, _set_symbol_class
-    from .._ctypes.symbol import _symbol_creator
-
 from ..base import _Null, _init_op_module
 from ..name import NameManager
 from ..attribute import AttrScope
@@ -128,7 +108,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         if dtype_name is not None:
             code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = _numpy.dtype(kwargs['%s']).name"""%(
+        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
         code.append("""
     attr = kwargs.pop('attr', None)
@@ -187,7 +167,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
             code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(_numpy.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
         code.append("""
     name = NameManager.current.get(name, '%s')
@@ -213,5 +193,5 @@ def _make_symbol_function(handle, name, func_name):
     symbol_function.__module__ = 'mxnet.symbol'
     return symbol_function
 
-
-_init_op_module('mxnet', 'symbol', _make_symbol_function)
+if not _internal.__dict__.get('skip_register'):
+    _init_op_module('mxnet', 'symbol', _make_symbol_function)

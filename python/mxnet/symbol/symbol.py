@@ -43,7 +43,7 @@ from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
 from . import op
-from .op import SymbolBase, _set_symbol_class
+from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
