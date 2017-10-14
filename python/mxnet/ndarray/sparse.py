@@ -310,7 +310,7 @@ class CSRNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : int or slice
             Indexing key.
 
         Examples
@@ -320,11 +320,15 @@ class CSRNDArray(BaseSparseNDArray):
         >>> data = np.array([1, 2, 3, 4, 5, 6])
         >>> a = mx.nd.sparse.csr_matrix(data, indptr, indices, (3, 3))
         >>> a.asnumpy()
-        array([[1, 0, 2],
-               [0, 0, 3],
-               [4, 5, 6]])
+        array([[ 1.,  0.,  2.],
+               [ 0.,  0.,  3.],
+               [ 4.,  5.,  6.]], dtype=float32)
         >>> a[1:2].asnumpy()
-        array([[0, 0, 3]], dtype=float32)
+        array([[ 0.,  0.,  3.]], dtype=float32)
+        >>> a[1].asnumpy()
+        array([[ 0.,  0.,  3.]], dtype=float32)
+        >>> a[-1].asnumpy()
+        array([[ 4.,  5.,  6.]], dtype=float32)
         """
         if isinstance(key, int):
             if key == -1:
