@@ -1546,3 +1546,27 @@ def discard_stderr():
     finally:
         os.dup2(old_stderr, stderr_fileno)
         bit_bucket.close()
+
+@contextmanager
+def rng_seed(seed=None):
+    """
+    Runs a code block with a new state of np.random.
+    To impose rng determinism, invoke e.g. as in:
+
+    with rng_seed(1234):
+        ...
+
+    To impose rng non-determinism, invoke as in:
+
+    with rng_seed():
+        ...
+
+    """
+
+    try:
+        saved_rng_state = np.random.get_state()
+        np.random.seed(seed)
+        yield
+    finally:
+        # Reinstate prior state of np.random
+        np.random.set_state(saved_rng_state)
