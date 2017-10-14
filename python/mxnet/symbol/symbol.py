@@ -2628,7 +2628,7 @@ def hypot(left, right):
 
 
 def eye(N, M=0, k=0, dtype=None, **kwargs):
-    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal 
+    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal
        and zeros elsewhere.
 
     Parameters

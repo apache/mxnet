@@ -151,7 +151,7 @@ void EyeFillCsrImpl(mshadow::Stream<xpu> *s, const NDArray& out,
   const nnvm::dim_t cnnz = std::max(num_cols - std::abs(k), (nnvm::dim_t)0);
   const nnvm::dim_t rnnz = std::max(N - std::abs(k), (nnvm::dim_t)0);
   const nnvm::dim_t nnz = k > 0 ? std::min(cnnz, N) :
-                                  std::min(rnnz, num_cols);  
+                                  std::min(rnnz, num_cols);
   using namespace mxnet_op;
   out.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(N + 1));
   out.CheckAndAllocAuxData(csr::kIdx, mshadow::Shape1(nnz));
