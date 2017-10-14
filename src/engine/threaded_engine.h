@@ -312,15 +312,7 @@ class ThreadedEngine : public Engine {
                             omp_get_num_procs() : omp_get_num_threads();
     return max_threads;
 #else
-<<<<<<< HEAD
-<<<<<<< HEAD
     return 1;
-=======
-    return 0;
->>>>>>> origin/master
-=======
-    return 1;
->>>>>>> omp_to_1
 #endif
   }
 
