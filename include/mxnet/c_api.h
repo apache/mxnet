@@ -1893,6 +1893,14 @@ MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle handle,
 MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
 
 /**
+ * \brief Get the current writer pointer position
+ * \param handle handle to RecordIO object
+ * \param pos handle to output position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos);
+
+/**
  * \brief Create a MXRtc object
 */
 MXNET_DLL int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
