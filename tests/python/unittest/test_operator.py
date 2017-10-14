@@ -4268,7 +4268,6 @@ def test_scatter_gather_nd():
 
     assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
