@@ -191,6 +191,8 @@ class Block(object):
                 for i, c in enumerate(self._children):
                     if c is existing:
                         self._children[i] = value
+            if isinstance(value, Block):
+                self.register_child(value)
         else:
             if isinstance(value, Block):
                 self.register_child(value)
