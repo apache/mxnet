@@ -319,15 +319,21 @@ class HybridBlock(Block):
     Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
     the end-to-end usage.
     """
-    def __init__(self, prefix=None, params=None):
+    def __init__(self, prefix=None, params=None, key_setter=None):
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
         self._reg_params = {}
-        self._cached_graph = ()
-        self._cached_op = None
+        self._cached_op = {}
         self._cached_params = None
+        self._cached_graph = {}
         self._out_format = None
         self._in_format = None
         self._active = False
+        self._key = None
+        self._key_setter = key_setter
+
+    @property
+    def key(self):
+        return self._key
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -340,8 +346,8 @@ class HybridBlock(Block):
                 "Block construction instead."
             self._reg_params[name] = value
 
-    def _get_graph(self, *args):
-        if not self._cached_graph:
+    def _get_graph(self, *args, key):
+        if key not in self._cached_graph:
             args, self._in_format = _flatten(args)
             if len(args) > 1:
                 inputs = [symbol.var('data%d'%i) for i in range(len(args))]
@@ -354,31 +360,31 @@ class HybridBlock(Block):
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out)
 
-            self._cached_graph = inputs, symbol.Group(out)
+            self._cached_graph[key] = inputs, symbol.Group(out)
 
-        return self._cached_graph
+        return self._cached_graph[key]
 
-    def _build_cache(self, *args):
-        inputs, out = self._get_graph(*args)
-        self._cached_op = ndarray.CachedOp(out)
+    def _build_cache(self, *args, key):
+        inputs, out = self._get_graph(*args, key=key)
+        self._cached_op[key] = ndarray.CachedOp(out)
 
         params = dict(self.collect_params().items())
         self._cached_params = [params.get(name, None) for name in out.list_inputs()]
-        assert len(params) + len(self._cached_graph[0]) == len(out.list_inputs()), \
+        assert len(params) + len(self._cached_graph[key][0]) == len(out.list_inputs()), \
             "Wrong number of inputs."
 
         name2pos = {var.name: i for i, var in enumerate(inputs)}
         self._in_idx = [(i, name2pos[name]) for i, name in enumerate(out.list_inputs())
                         if name not in params]
 
-    def _call_cached_op(self, *args):
-        if self._cached_op is None:
-            self._build_cache(*args)
+    def _call_cached_op(self, *args, key):
+        if key not in self._cached_op:
+            self._build_cache(*args, key=key)
 
         try:
             cargs = [i.data() if i else None for i in self._cached_params]
         except DeferredInitializationError:
-            self.infer_shape(*args)
+            self.infer_shape(*args, key=key)
             for i in self._cached_params:
                 if i is not None:
                     i._finish_deferred_init()
@@ -388,14 +394,14 @@ class HybridBlock(Block):
         assert fmt == self._in_format, "Invalid input format"
         for i, j in self._in_idx:
             cargs[i] = args[j]
-        out = self._cached_op(*cargs)
+        out = self._cached_op[key](*cargs)
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)[0]
 
-    def _clear_cached_op(self):
-        self._cached_graph = ()
-        self._cached_op = None
+    def _clear_all_cached_ops(self):
+        self._cached_graph = {}
+        self._cached_op = {}
 
     def register_child(self, block):
         if not isinstance(block, HybridBlock):
@@ -405,7 +411,7 @@ class HybridBlock(Block):
                 "please try HybridSequential instead"%(
                     str(block), str(type(block))))
         super(HybridBlock, self).register_child(block)
-        self._clear_cached_op()
+        self._clear_all_cached_ops()
 
     def hybridize(self, active=True):
         self._active = active
@@ -423,7 +429,7 @@ class HybridBlock(Block):
         for i in self.collect_params().values():
             i.shape = sdict[i.name]
 
-    def export(self, path):
+    def export(self, path, key=None):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
         or the C++ interface.
 
@@ -436,11 +442,13 @@ class HybridBlock(Block):
             Path to save model. Two files `path-symbol.json` and `path-0000.params`
             will be created.
         """
-        if not self._cached_graph:
+        if key is None:
+            key = self._key
+        if key not in self._cached_graph:
             raise RuntimeError(
                 "Please first call block.hybridize() and then run forward with "
                 "this block at least once before calling export.")
-        sym = self._cached_graph[1]
+        sym = self._cached_graph[key][1]
         sym.save('%s-symbol.json'%path)
 
         arg_names = set(sym.list_arguments())
@@ -457,14 +465,19 @@ class HybridBlock(Block):
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
         :py:class:`NDArray` or :py:class:`Symbol`."""
+        if self._key_setter:
+            self._key = self._key_setter(x, *args)
+            for c in self._children:
+                c._key = self._key
+
         if isinstance(x, NDArray):
             with x.context as ctx:
                 if self._active:
-                    return self._call_cached_op(x, *args)
+                    return self._call_cached_op(x, *args, key=self._key)
                 try:
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 except DeferredInitializationError:
-                    self.infer_shape(x, *args)
+                    self.infer_shape(x, *args, key=self._key)
                     for i in self.collect_params().values():
                         i._finish_deferred_init()
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
@@ -550,21 +563,22 @@ class SymbolBlock(HybridBlock):
             if i not in input_names:
                 self.params.get(i, grad_req='null', allow_deferred_init=True)
 
-        self._cached_graph = syms, out
-        self._build_cache()
+        self._cached_graph[self._key] = syms, out
+        self._build_cache(key=self._key)
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
             with x.context:
-                return self._call_cached_op(x, *args)
+                return self._call_cached_op(x, *args, key=self._key)
 
         assert isinstance(x, Symbol), \
             "HybridBlock requires the first argument to forward be either " \
             "Symbol or NDArray, but got %s"%type(x)
         args, in_fmt = _flatten([x] + list(args))
         assert in_fmt == self._in_format, "Invalid input format"
-        ret = copy.copy(self._cached_graph[1])
-        ret._compose(**{k.name: v for k, v in zip(self._cached_graph[0], args)})
+        ret = copy.copy(self._cached_graph[self._key][1])
+        ret._compose(**{k.name: v for k, v in
+                        zip(self._cached_graph[self._key][0], args)})
         return _regroup(list(ret), self._out_format)[0]
 
     def hybrid_forward(self, F, x, *args, **kwargs):
