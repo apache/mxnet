@@ -279,7 +279,7 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
   const size_t alloc_size = nr_cols * sizeof(IType) + 2 * nr_cols * sizeof(DType);
 
   Tensor<cpu, 1, uint8_t> workspace =
-    ctx.requested[ResourceRequest::kTempSpace].get_space_typed<cpu, 1, uint8_t>(
+    ctx.requested[ResourceRequestType::kTempSpace].get_space_typed<cpu, 1, uint8_t>(
       mshadow::Shape1(alloc_size), s);
 
   // Allocate temp space and partition into three tensors

@@ -81,10 +81,8 @@ class ElemwiseBinaryOp : public OpBase {
   /*!
    * \brief CSR operation requires temp space
    */
-  struct ResourceRequest {
-    enum Type {
-      kTempSpace
-    };
+  enum ResourceRequestType {
+    kTempSpace
   };
 
   /*! \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input */
