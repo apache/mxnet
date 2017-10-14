@@ -1,11 +1,42 @@
 MXNet Change Log
 ================
+## 0.12.0
+### New Features - Sparse Tensor Support
+  - Added limited cpu support for two sparse formats for `Symbol` and `NDArray` - `CSRNDArray` and `RowSparseNDArray`
+  - Added a sparse dot product operator and many element-wise sparse operators
+  - Added a data iterator for sparse data input - `LibSVMIter`
+  - Added three optimizers for sparse gradient updates: `Ftrl`, `SGD` and `Adam`
+  - Added `push` and `row_sparse_pull` with `RowSparseNDArray` in distributed kvstore
+### New Features - Autograd and Gluon
+  - New loss functions added - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`
+  - `gluon.Trainer` now allows reading and setting learning rate with `trainer.learning_rate` property.
+  - Added `mx.autograd.grad` and experimental second order gradient support (though most operators don't support second order gradient yet)
+  - Added `ConvLSTM` etc to `gluon.contrib`
+  - Autograd now supports cross-device graphs. Use `x.copyto(mx.gpu(i))` and `x.copyto(mx.cpu())` to do computation on multiple devices.
+### Other New Features
+  - Limited support for fancy indexing. x[idx_arr0, idx_arr1, ..., idx_arrn] is now supported. Full support coming soon in next release. Checkout master to get a preview.
+  - Random number generators in `mx.nd.random.*` and `mx.sym.random.*` now supports both CPU and GPU
+  - `NDArray` and `Symbol` now supports "fluent" methods. You can now use `x.exp()` etc instead of `mx.nd.exp(x)` or `mx.sym.exp(x)`
+  - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python
+  - Added `multi_precision` option to optimizer for easier float16 training
+### Performance
+  - Enabled JIT compilation. Autograd and Gluon hybridize now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
+  - Full support for NVidia Volta GPU Architecture and Cuda 9. Training is up to 3.5x faster than Pascal when using float16.
+### API Changes
+  - Operators like `mx.sym.linalg_*` and `mx.sym.random_*` are now moved to `mx.sym.linalg.*` and `mx.sym.random.*`. The old names are still available but deprecated.
+  - `sample_*` and `random_*` are now merged as `random.*`, which supports both scalar and  `NDArray` distribution parameters.
+### Bug-fixes
+  - Fixed a bug that causes `argsort` operator to fail on large tensors.
+  - Fixed numerical stability issues when summing large tensors.
+For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/MXNet+0.12.0+Release+Notes)
+
+
 ## 0.11.0
-### - Major Features
+### Major Features
   - Apple Core ML model converter
   - Support for Keras v1.2.2
   - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/v0.11.0+Release+Notes)
-### - API Changes
+### API Changes
   - Added `CachedOp`. You can now cache the operators that’s called frequently with the same set of arguments to reduce overhead.
   - Added sample_multinomial for sampling from multinomial distributions.
   - Added `trunc` operator for rounding towards zero.
@@ -16,9 +47,9 @@ MXNet Change Log
   - `allow_extra` is added to Module.set_params to ignore extra parameters.
   - Added `mod` operator for modulo.
   - Added `multi_precision` option to SGD optimizer to improve training with float16. Resnet50 now achieves the same accuracy when trained with float16 and gives 50% speedup on Titan XP.
-### - Performance Improvements
+### Performance Improvements
   - ImageRecordIter now stores data in pinned memory to improve GPU memcopy speed.
-### - Bugfixes
+### Bugfixes
   - Cython interface is fixed. `make cython` and `python setup.py install --with-cython` should install the cython interface and reduce overhead in applications that use imperative/bucketing.
   - Fixed various bugs in Faster-RCNN example: https://github.com/dmlc/mxnet/pull/6486
   - Fixed various bugs in SSD example.
@@ -28,7 +59,7 @@ MXNet Change Log
   - Fixed context mismatch when loading optimizer states.
   - Fixed a bug in ReLU activation when using MKL.
   - Fixed a few race conditions that causes crashes on shutdown.
-### - Refactors
+### Refactors
   - Refactored TShape/TBlob to use int64 dimensions and DLTensor as internal storage. Getting ready for migration to DLPack. As a result TBlob::dev_mask_ and TBlob::stride_ are removed.
 
 
