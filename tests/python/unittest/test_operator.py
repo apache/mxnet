@@ -4270,6 +4270,5 @@ def test_scatter_gather_nd():
 
 
 if __name__ == '__main__':
-    test_init()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()
