@@ -147,6 +147,12 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
 
+# Use gperftools if found
+USE_GPERFTOOLS = 1
+
+# Use JEMalloc if found, and not using gperftools
+USE_JEMALLOC = 1
+
 #----------------------------
 # additional operators
 #----------------------------
