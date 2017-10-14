@@ -431,7 +431,7 @@ parameter values:
     }
     if (!dispatched) {
       // otherwise, output is dense (print warning anyway)
-      if(!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
+      if (!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
                               dispatch_mode, DispatchMode::kFComputeFallback)) {
         dispatch_fallback(out_attrs, dispatch_mode);
       }
