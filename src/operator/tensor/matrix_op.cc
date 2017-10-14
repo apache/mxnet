@@ -424,13 +424,17 @@ parameter values:
     const auto& param = nnvm::get<ClipParam>(attrs.parsed);
     if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
       const int this_stype = (*in_attrs)[0];
-      if (this_stype != kUndefinedStorage && this_stype != kDefaultStorage) {
+      if (this_stype != kUndefinedStorage) {
         dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
                                          dispatch_mode, DispatchMode::kFComputeEx);
       }
     }
     if (!dispatched) {
-      dispatch_fallback(out_attrs, dispatch_mode);
+      // otherwise, output is dense (print warning anyway)
+      if(!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
+                              dispatch_mode, DispatchMode::kFComputeFallback)) {
+        dispatch_fallback(out_attrs, dispatch_mode);
+      }
       LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
     }
     return true;
