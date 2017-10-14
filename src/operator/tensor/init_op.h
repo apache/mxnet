@@ -175,10 +175,10 @@ void EyeFillCsrImpl(mshadow::Stream<xpu> *s, const NDArray& out,
 
 template<typename xpu>
 void EyeFillEx(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<NDArray>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<NDArray>& outputs) {
+               const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
