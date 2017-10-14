@@ -176,7 +176,7 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
     // this is where the magic happens. Depending on how the layouts are
     // configured, we should get a prv pointer with valid layout for the input.
     std::shared_ptr<memory> input_memory =
-        input_dnn_data->get_converted_prv((float *) in_data[i].dptr_,
+        input_dnn_data->get_converted_prv(static_cast<float *>(in_data[i].dptr_),
                                           false,
                                           in_data[i]);
     inputs.push_back(*input_memory);
