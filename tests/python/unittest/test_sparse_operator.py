@@ -922,10 +922,11 @@ def test_sparse_mathematical_core():
                                            ograd_density=ograd_density)
 
             # log10
+
             check_sparse_mathematical_core("log10", stype,
                                            lambda x: mx.sym.sparse.log10(x),
                                            lambda x: np.log10(x),
-                                           lambda x: (1 / x),
+                                           lambda x: (1 / (x * np.log(10.))),
                                            output_grad_stype=output_grad_stype,
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap, density=density,
@@ -935,7 +936,7 @@ def test_sparse_mathematical_core():
             check_sparse_mathematical_core("log2", stype,
                                            lambda x: mx.sym.sparse.log2(x),
                                            lambda x: np.log2(x),
-                                           lambda x: (1 / x),
+                                           lambda x: (1 / (x * np.log(2.))),
                                            output_grad_stype=output_grad_stype,
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap, density=density,
