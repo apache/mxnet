@@ -3719,13 +3719,13 @@ def test_deformable_psroipooling():
                                                                pooled_size=num_group, output_dim=num_classes,
                                                                trans_std=0.1, no_trans=False, name='test_op')
                     if grad_nodes[0] == 'offset_data':
-                        # wider tolerance needed for coordinate differential
-                        rtol, atol = 1.0, 1e-2
+                        # wider tolerance needed for coordinate differential, smaller eps
+                        rtol, atol, eps = 1.0, 1e-2, 2**(-14)
                     else:
-                        rtol, atol = 1e-2, 1e-3
+                        rtol, atol, eps = 1e-2, 1e-3, 1e-3
                     # By now we only have gpu implementation
                     if mx.Context.default_ctx.device_type == 'gpu':
-                        check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
+                        check_numeric_gradient(op, [im_data, rois_data, offset_data], numeric_eps=eps, rtol=rtol, atol=atol,
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
