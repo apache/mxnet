@@ -2,12 +2,11 @@ MXNet Change Log
 ================
 ## 0.12.0
 ### New Features - Sparse Tensor Support
-  - Added limited cpu support for two sparse formats for Symbol and NDArray - CSRNDArray and RowSparseNDArray
+  - Added limited cpu support for two sparse formats for `Symbol` and `NDArray` - `CSRNDArray` and `RowSparseNDArray`
   - Added a sparse dot product operator and many element-wise sparse operators
-  - Added a data iterator for sparse data input - LibSVMIter
-  - Added three optimizers for sparse gradient updates: Ftrl, SGD and Adam
-  - Added push and row_sparse_pull with RowSparseNDArray in distributed kvstore
-  - For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/MXNet+0.12.0+Release+Notes)
+  - Added a data iterator for sparse data input - `LibSVMIter`
+  - Added three optimizers for sparse gradient updates: `Ftrl`, `SGD` and `Adam`
+  - Added `push` and `row_sparse_pull` with `RowSparseNDArray` in distributed kvstore
 ### New Features - Autograd and Gluon
   - New loss functions added - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`
   - `gluon.Trainer` now allows reading and setting learning rate with `trainer.learning_rate` property.
@@ -29,6 +28,7 @@ MXNet Change Log
 ### Bug-fixes
   - Fixed a bug that causes `argsort` operator to fail on large tensors.
   - Fixed numerical stability issues when summing large tensors.
+For more information see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/MXNet+0.12.0+Release+Notes)
 
 
 ## 0.11.0
