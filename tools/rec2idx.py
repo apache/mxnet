@@ -98,6 +98,7 @@ def parse_args():
     args.index = os.path.abspath(args.index)
     return args
 
+
 if __name__ == '__main__':
     args = parse_args()
     creator = IndexCreator(args.record, args.index)
