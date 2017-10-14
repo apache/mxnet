@@ -922,7 +922,6 @@ def test_sparse_mathematical_core():
                                            ograd_density=ograd_density)
 
             # log10
-
             check_sparse_mathematical_core("log10", stype,
                                            lambda x: mx.sym.sparse.log10(x),
                                            lambda x: np.log10(x),
