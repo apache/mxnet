@@ -910,14 +910,16 @@ def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
 
     Returns
     -------
-    RowSparseNDArray or CSRNDArray
+    NDArray or CSRNDArray
         A created array
     Examples
     --------
-    >>> mx.nd.sparse.eye('csr', 1, 2)
-    <CSRNDArray 1x2 @cpu(0)>
-    >>> mx.nd.sparse.eye('row_sparse', 1, 2, dtype='float16').asnumpy()
-    array([[ 1.,  0.]], dtype=float16)
+    >>> mx.nd.sparse.eye('csr', 2).asnumpy()
+    array([[ 1.,  0.],
+           [ 0.,  1.]], dtype=float32)
+    >>> mx.nd.sparse.eye('csr', 2, 3, 1).asnumpy()
+    array([[ 0.,  1.,  0.],
+           [ 0.,  0.,  1.]], dtype=float32)
     """
     if stype == 'default':
         return _eye_ndarray(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)

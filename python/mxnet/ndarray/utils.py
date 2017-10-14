@@ -61,16 +61,27 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs)
 
     Returns
     -------
+    NDArray or CSRNDArray
         A created array
 
     Examples
     --------
-    >>> mx.nd.eye(1, 2)
+    >>> mx.nd.eye(2)
 
-    [[ 1.  0.]]
-    <NDArray 1x2 @cpu(0)>
-    >>> mx.nd.eye(1, 2, 1).asnumpy()
-    array([[ 0.,  1.]], dtype=float32)
+    [[ 1.  0.]
+     [ 0.  1.]]
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.eye(2, 3, 1)
+
+    [[ 0.  1.  0.]
+     [ 0.  0.  1.]]
+    <NDArray 2x3 @cpu(0)>
+    >>> mx.nd.eye(2, stype='csr').asnumpy()
+    array([[ 1.,  0.],
+           [ 0.,  1.]], dtype=float32)
+    >>> mx.nd.eye(2, 3, 1, stype='csr').asnumpy()
+    array([[ 0.,  1.,  0.],
+           [ 0.,  0.,  1.]], dtype=float32)
     """
     if stype is None or stype == 'default':
         return _eye_ndarray(N, M, k, ctx, dtype, **kwargs)
