@@ -288,7 +288,6 @@ class ThreadedEngine : public Engine {
 
     /*! \brief Set default OMP threads per kernel worker to default */
     set_num_omp_threads_per_worker(DefaultOMPThreadsPerWorker());
-    CHECK_GT(num_omp_threads_per_worker(), 0);
   }
   ~ThreadedEngine() {
     {
@@ -313,7 +312,7 @@ class ThreadedEngine : public Engine {
                             omp_get_num_procs() : omp_get_num_threads();
     return max_threads;
 #else
-    return 0;
+    return 1;
 #endif
   }
 
@@ -446,7 +445,7 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
 
   /*! \brief Number of OMP threads to be used per worker */
-  int num_omp_threads_per_worker_{0};
+  int num_omp_threads_per_worker_{1};
 
   /*!
    * \brief Disallow copy construction and assignment.
