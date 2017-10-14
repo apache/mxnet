@@ -94,8 +94,8 @@ if __name__ == '__main__':
     metric = mx.metric.create(['nll_loss'])
 
     # get the sparse weight parameter
-    arg_params, _ = mod.get_params()
-    weight = arg_params['weight']
+    weight_index = mod._exec_group.param_names.index('weight')
+    weight_param = mod._exec_group.param_arrays[weight_index]
     speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
@@ -108,7 +108,8 @@ if __name__ == '__main__':
             # for distributed training, we need to manually pull sparse weights from kvstore
             if kv:
                 row_ids = batch.data[0].indices
-                kv.row_sparse_pull('weight', weight, row_ids=[row_ids])
+                kv.row_sparse_pull('weight', weight_param, row_ids=[row_ids],
+                                   priority=-weight_index)
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
