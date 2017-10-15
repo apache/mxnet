@@ -25,10 +25,11 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 import unittest
 
+# Set seed and output to stderr (to avoid default nosetests filtering of stdout)
 def set_and_announce_seed():
     seed = np.random.randint(0, np.iinfo(np.uint32).max)
-    print('test_operator.py: Setting np.random seed to %s.' % seed)
-    sys.stdout.flush()
+    sys.stderr.write('\ntest_operator: Setting np.random seed to %s.\n\n' % seed)
+    sys.stderr.flush()
     np.random.seed(seed)
 
 set_and_announce_seed()
