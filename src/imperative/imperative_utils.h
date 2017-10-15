@@ -562,21 +562,17 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
 
   std::vector<Context> vctx(
       idx.num_nodes(), Context::Create(static_cast<Context::DeviceType>(-1), 0));
-  size_t num_unknown = idx.num_nodes();
   // forward pass
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
     if (!idx[i].source->info.empty()) {
       vctx[i] = dmlc::get<Imperative::AGInfo>(idx[i].source->info).ctx;
-      --num_unknown;
     } else if (idx[i].source->op() == _copyto) {
       CHECK_GT(idx[i].source->control_deps.size(), 0);
       auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
       CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
       vctx[i] = vctx[idx[fwd_nid].inputs[0].node_id];
-      --num_unknown;
-    } else if (idx[i].inputs.size()) {
+    } else if (idx[i].inputs.size() && vctx[i].dev_type == -1) {
       vctx[i] = vctx[idx[i].inputs[0].node_id];
-      --num_unknown;
     }
   }
   // backward pass
@@ -589,16 +585,17 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
       auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
       CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
       vctx[in_nid] = vctx[fwd_nid];
-      --num_unknown;
       continue;
     }
     for (const auto& j : idx[i].inputs) {
       if (vctx[j.node_id].dev_type != -1) continue;
       vctx[j.node_id] = vctx[i];
-      --num_unknown;
     }
   }
-  CHECK_EQ(num_unknown, 0) << "Unabled to decied context for nodes";
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    CHECK_NE(vctx[i].dev_type, -1)
+        << "Cannot decide context for node " << idx[i].source->attrs.name;
+  }
 
   return vctx;
 }
