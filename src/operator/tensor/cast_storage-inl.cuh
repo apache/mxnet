@@ -29,6 +29,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <nnvm/tuple.h>
+#include "./util/tensor_util-inl.h"
 #include "./util/tensor_util-inl.cuh"
 
 namespace mxnet {

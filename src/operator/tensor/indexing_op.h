@@ -38,20 +38,16 @@
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "./util/tensor_util-inl.h"
 #include "../mxnet_op.h"
 #include "./sort_op.h"
 #include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
+#include "./indexing_op-inl.h"
 
 namespace mxnet {
 namespace op {
-
-namespace embedding {
-enum EmbeddingOpInputs {kData, kWeight};
-enum EmbeddingOpOutputs {kOut};
-enum EmbeddingOpResource {kTempSpace};
-}  // namespace embedding
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
   int input_dim;
@@ -173,6 +169,62 @@ inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                                const int dev_mask,
+                                                DispatchMode* dispatch_mode,
+                                                std::vector<int>* in_attrs,
+                                                std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int& data_stype = in_attrs->at(embedding::kData);
+  const int& weight_stype = in_attrs->at(embedding::kWeight);
+  int& out_stype = out_attrs->at(embedding::kOut);
+  bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  if (!dispatched && data_stype == kDefaultStorage &&
+      weight_stype == kRowSparseStorage && !invalid_ctx) {
+    // dns, rsp -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    // nothing to fallback on
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  }
+  return true;
+}
+
+
+inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
+                                                 const int dev_mask,
+                                                 DispatchMode* dispatch_mode,
+                                                 std::vector<int>* in_attrs,
+                                                 std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 2U);
+  const int ograd_stype = in_attrs->at(0);
+  const int data_stype = in_attrs->at(1);
+  int& data_grad_stype = out_attrs->at(0);
+  int& weight_grad_stype = out_attrs->at(1);
+  bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  if (!dispatched && ograd_stype == kDefaultStorage &&
+      data_stype == kDefaultStorage && !invalid_ctx) {
+    // dns, dns -> dns, rsp
+    if (type_assign(&data_grad_stype, kDefaultStorage) &&
+        type_assign(&weight_grad_stype, kRowSparseStorage) &&
+        dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx)) {
+      dispatched = true;
+    }
+  }
+  if (!dispatched) {
+    // nothing to fallback on
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  }
+  return true;
+}
 /*! \brief name the struct Take instead of take
  * to avoid conflict with the take function in mshadow
  */
@@ -192,13 +244,93 @@ struct Take {
   }
 };
 
+// Embedding forward implementation with dense weight
+template<typename xpu>
+void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
+                               const TBlob& data,
+                               const TBlob& weight,
+                               const OpReqType req,
+                               const TBlob& output) {
+  using namespace mxnet_op;
+  const TShape& ishape = data.shape_;
+  const TShape& oshape = output.shape_;
+
+  MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
+      Tensor<xpu, 1, IType> idx = data.get_with_shape<xpu, 1, IType>(
+        Shape1(ishape.ProdShape(0, ishape.ndim())), s);
+      Tensor<xpu, 2, DType> wmat = weight.get<xpu, 2, DType>(s);
+      Tensor<xpu, 2, DType> out = output.get_with_shape<xpu, 2, DType>(
+        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+      Kernel<Take, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+                                idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+    });
+  });
+}
+
+struct CheckBoundKernel {
+  /*!
+   * \brief             check if all data belongs to range [min, max]
+   * \param i           global thread id
+   * \param is_valid    whether all data is valid
+   * \param data        data to inspect
+   * \param max         max value for data
+   * \param min         min value for data
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  bool* is_valid,
+                                  const DType* data,
+                                  const DType min,
+                                  const DType max) {
+    DType val = data[i];
+    if (val > max || val < min) *is_valid = false;
+  }
+};
+
+
+// Embedding forward implementation with row_sparse weight
+template<typename xpu>
+void SparseEmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
+                                     const TBlob& data,
+                                     const NDArray& weight,
+                                     const OpReqType req,
+                                     const TBlob& output) {
+  if (req == kNullOp) return;
+  CHECK((std::is_same<xpu, mshadow::cpu>::value)) << "SparseEmbedding is only implemented for CPU";
+  using namespace rowsparse;
+  using namespace mxnet_op;
+  // zeros weight
+  if (req == kWriteTo && !weight.storage_initialized()) {
+    size_t out_size = output.shape_.Size();
+    MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+      Kernel<set_zero, xpu>::Launch(s, out_size, output.dptr<DType>());
+    })
+    return;
+  }
+  // check out-of-bound indices
+  bool is_valid = true;
+  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+    DType min = 0;
+    DType max = static_cast<DType>(weight.shape()[0] - 1);
+    size_t data_size = data.shape_.Size();
+    Kernel<CheckBoundKernel, xpu>::Launch(s, data_size, &is_valid, data.dptr<DType>(), min, max);
+  })
+  CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
+  // the weight is actually dense
+  if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
+    EmbeddingOpForwardDnsImpl(s, data, weight.data(), req, output);
+  } else {
+    EmbeddingOpForwardRspImpl(s, xpu(), data, weight, req, output);
+  }
+}
+
 template<typename xpu>
 void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
   CHECK_EQ(req[embedding::kOut], kWriteTo);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -206,22 +338,36 @@ void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
           << "Embedding layer expects its weight to be two-dimensional. "
           << inputs[embedding::kWeight].ndim()
           << " dimensional input is given instead";
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  EmbeddingOpForwardDnsImpl<xpu>(s, inputs[embedding::kData], inputs[embedding::kWeight],
+                                 req[embedding::kOut], outputs[embedding::kOut]);
+}
 
-  const TShape& ishape = inputs[embedding::kData].shape_;
-  const TShape& oshape = outputs[embedding::kOut].shape_;
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
-      Tensor<xpu, 1, IType> data = inputs[embedding::kData].get_with_shape<xpu, 1, IType>(
-        Shape1(ishape.ProdShape(0, ishape.ndim())), s);
-      Tensor<xpu, 2, DType> wmat = inputs[embedding::kWeight].get<xpu, 2, DType>(s);
-      Tensor<xpu, 2, DType> out = outputs[embedding::kOut].get_with_shape<xpu, 2, DType>(
-        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<Take, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
-        data.dptr_, wmat.shape_[1], wmat.shape_[0]);
-    });
-  });
+template<typename xpu>
+void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(req[embedding::kOut], kWriteTo);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  const NDArray& data = inputs[embedding::kData];
+  const NDArray& weight = inputs[embedding::kWeight];
+  const NDArray& out = outputs[embedding::kOut];
+  CHECK_EQ(weight.shape().ndim(), 2U)
+          << "Embedding layer expects its weight to be two-dimensional. "
+          << weight.shape().ndim() << " dimensional input is given instead";
+  const auto data_stype = data.storage_type();
+  const auto weight_stype = weight.storage_type();
+  const auto out_stype = out.storage_type();
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (data_stype == kDefaultStorage && weight_stype == kRowSparseStorage &&
+      out_stype == kDefaultStorage) {
+    SparseEmbeddingOpForwardRspImpl<xpu>(s, data.data(), weight, req[0], out.data());
+  } else {
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 // Returns integer log2(a) rounded up
@@ -334,6 +480,31 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
       }
     });
   });
+}
+
+template<typename xpu>
+void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 2U);
+  const NDArray& weight_grad = outputs[1];
+  const NDArray& ograd = inputs[0];
+  const NDArray& data = inputs[1];
+  // check dtype
+  CHECK_EQ(weight_grad.dtype(), ograd.dtype());
+  // check req
+  CHECK_EQ(req[embedding::kData], kNullOp)
+          << "SparseEmbedding layer doesn't support calculate data gradient";
+  if (data.storage_type() == kDefaultStorage && ograd.storage_type() == kDefaultStorage &&
+      weight_grad.storage_type() == kRowSparseStorage) {
+    SparseEmbeddingOpBackwardRspImpl(ctx, xpu(), ograd.data(), data.data(),
+                                     req[embedding::kWeight], weight_grad);
+  } else {
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 namespace take_ {  // to avoid name conflict
