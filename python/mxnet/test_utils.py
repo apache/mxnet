@@ -615,7 +615,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Returns
@@ -638,7 +638,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -672,7 +672,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         *In either case, all aux states of `sym` must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Returns
@@ -697,7 +697,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -734,7 +734,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     References
@@ -744,7 +744,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     def as_stype(var, stype, dtype):
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
@@ -819,14 +819,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Check the gradient computation on the specified device.
     grad_stype_dict : dict of str->str, optional
         Storage type dictionary for gradient ndarrays.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -951,7 +951,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     equal_nan: Boolean
@@ -968,7 +968,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -1034,7 +1034,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         dictionary of mapping argument name to stype for the gradient
     equal_nan: Boolean
         if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Example
@@ -1053,7 +1053,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 

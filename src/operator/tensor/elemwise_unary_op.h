@@ -431,13 +431,13 @@ struct sigmoid {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out,
                                   const DType *in) {
-    out[i] = DType(DType(1.0f) / (DType(1.0f) + expf(-in[i])));
+    out[i] = mshadow_op::sigmoid::Map<DType>(in[i]);
   }
 };
 struct sigmoid_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType out_grad, DType in) {
-    return out_grad * DType(in * (DType(1.0f) - in));
+    return out_grad * mshadow_op::sigmoid_grad::Map<DType>(in);
   }
 };
 /*! \brief Rectified Linear Operation */
@@ -445,14 +445,13 @@ struct relu {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out,
                                   const DType *in) {
-    DType x = in[i];
-    out[i] = x > DType(0.0f) ? x : DType(0.0f);
+    out[i] = mshadow_op::relu::Map<DType>(in[i]);
   }
 };
 struct relu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType out_grad, DType in) {
-    return out_grad * DType(in > DType(0.0f) ? DType(1.0f) : DType(0.0f));
+    return out_grad * mshadow_op::relu_grad::Map<DType>(in);
   }
 };
 }  // namespace kernel_launch_op

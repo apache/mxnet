@@ -660,7 +660,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(log10)
 The storage type of ``log10`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log10"});
 
 // log2
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(log2, cpu, mshadow_op::log2)
@@ -672,9 +672,16 @@ MXNET_ADD_SPARSE_OP_ALIAS(log2)
 The storage type of ``log2`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log2"});
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log, unary_bwd<mshadow_op::log_grad>);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
+                                                  unary_bwd<mshadow_op::log_grad>);
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
+                                                  unary_bwd<mshadow_op::log10_grad>);
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
+                                                  unary_bwd<mshadow_op::log2_grad>);
 
 // log1p
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(log1p, cpu, mshadow_op::log1p)
