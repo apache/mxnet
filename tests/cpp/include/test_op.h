@@ -676,8 +676,8 @@ class Validator {
     const TBlob& b1 = bv1[idx];
     const TBlob& b2 = bv2[idx];
     if (print && test::debugOutput) {
-      test::print(&(std::cout << "Blob 1:"), b1, true, true);
-      test::print(&(std::cout << "Blob 2:"), b2, true, true);
+      test::print(RunContext(), &(std::cout << "Blob 1:"), b1, true, true);
+      test::print(RunContext(), &(std::cout << "Blob 2:"), b2, true, true);
     }
     return compare(b1, b2);
   }

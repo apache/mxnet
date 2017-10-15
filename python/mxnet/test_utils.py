@@ -866,7 +866,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
     out = sym * proj
-    out = mx.sym.MakeLoss(out)
+    out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),

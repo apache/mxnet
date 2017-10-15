@@ -32,18 +32,15 @@ namespace exec {
 Graph AttachOpResources(Graph g) {
   static auto& fresource =
       nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
-  static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   auto& op_execs = nnvm::get<OpExecVector>(*g.attrs.at("op_execs"));
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& vdispatch = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  const auto& vstype = g.GetAttr<StorageTypeVector>("storage_type");
   const auto& idx = g.indexed_graph();
   // Use global resource pool for each executor for now.
   std::map<Context, Resource> cached_temp;
   // Resource allocation
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
-    const auto dispatch_mode = vdispatch[nid];
     if (inode.source->is_variable()) continue;
     const Context &ctx = vctx[nid];
     auto& requested = op_execs[nid]->op_ctx.requested;
