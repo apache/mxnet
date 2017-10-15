@@ -932,7 +932,7 @@ def eye(stype, N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, out=out, **kwargs)
 
 
-def zeros(stype, shape, ctx=None, dtype=None, aux_types=None, **kwargs):
+def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
     Parameters
