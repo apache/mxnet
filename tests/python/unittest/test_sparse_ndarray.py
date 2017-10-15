@@ -382,11 +382,11 @@ def test_sparse_nd_random():
         rsp_out = mx.nd.zeros(shape=shape, stype='row_sparse')
         dns_out = mx.nd.zeros(shape=shape, stype='default')
         mx.random.seed(0)
-        np.random.seed(0)
-        fn(shape=shape, out=dns_out)
+        with rng_seed(0):
+            fn(shape=shape, out=dns_out)
         mx.random.seed(0)
-        np.random.seed(0)
-        fn(shape=shape, out=rsp_out)
+        with rng_seed(0):
+            fn(shape=shape, out=rsp_out)
         assert_almost_equal(dns_out.asnumpy(), rsp_out.asnumpy())
 
 
@@ -399,56 +399,56 @@ def test_sparse_nd_astype():
 
 
 def test_sparse_nd_pickle():
-    np.random.seed(0)
-    repeat = 1
-    dim0 = 40
-    dim1 = 40
-    stypes = ['row_sparse', 'csr']
-    densities = [0, 0.5]
-    stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
-    for _ in range(repeat):
-        shape = rand_shape_2d(dim0, dim1)
-        for stype in stypes:
-            for density in densities:
-                a, _ = rand_sparse_ndarray(shape, stype, density)
-                assert isinstance(a, stype_dict[stype])
-                data = pkl.dumps(a)
-                b = pkl.loads(data)
-                assert isinstance(b, stype_dict[stype])
-                assert same(a.asnumpy(), b.asnumpy())
+    with rng_seed(0):
+        repeat = 1
+        dim0 = 40
+        dim1 = 40
+        stypes = ['row_sparse', 'csr']
+        densities = [0, 0.5]
+        stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
+        for _ in range(repeat):
+            shape = rand_shape_2d(dim0, dim1)
+            for stype in stypes:
+                for density in densities:
+                    a, _ = rand_sparse_ndarray(shape, stype, density)
+                    assert isinstance(a, stype_dict[stype])
+                    data = pkl.dumps(a)
+                    b = pkl.loads(data)
+                    assert isinstance(b, stype_dict[stype])
+                    assert same(a.asnumpy(), b.asnumpy())
 
 
 def test_sparse_nd_save_load():
-    np.random.seed(0)
-    repeat = 1
-    stypes = ['default', 'row_sparse', 'csr']
-    stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
-    num_data = 20
-    densities = [0, 0.5]
-    fname = 'tmp_list.bin'
-    for _ in range(repeat):
-        data_list1 = []
-        for i in range(num_data):
-            stype = stypes[np.random.randint(0, len(stypes))]
-            shape = rand_shape_2d(dim0=40, dim1=40)
-            density = densities[np.random.randint(0, len(densities))]
-            data_list1.append(rand_ndarray(shape, stype, density))
-            assert isinstance(data_list1[-1], stype_dict[stype])
-        mx.nd.save(fname, data_list1)
+    with rng_seed(0):
+        repeat = 1
+        stypes = ['default', 'row_sparse', 'csr']
+        stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
+        num_data = 20
+        densities = [0, 0.5]
+        fname = 'tmp_list.bin'
+        for _ in range(repeat):
+            data_list1 = []
+            for i in range(num_data):
+                stype = stypes[np.random.randint(0, len(stypes))]
+                shape = rand_shape_2d(dim0=40, dim1=40)
+                density = densities[np.random.randint(0, len(densities))]
+                data_list1.append(rand_ndarray(shape, stype, density))
+                assert isinstance(data_list1[-1], stype_dict[stype])
+            mx.nd.save(fname, data_list1)
 
-        data_list2 = mx.nd.load(fname)
-        assert len(data_list1) == len(data_list2)
-        for x, y in zip(data_list1, data_list2):
-            assert same(x.asnumpy(), y.asnumpy())
+            data_list2 = mx.nd.load(fname)
+            assert len(data_list1) == len(data_list2)
+            for x, y in zip(data_list1, data_list2):
+                assert same(x.asnumpy(), y.asnumpy())
 
-        data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
-        mx.nd.save(fname, data_map1)
-        data_map2 = mx.nd.load(fname)
-        assert len(data_map1) == len(data_map2)
-        for k, x in data_map1.items():
-            y = data_map2[k]
-            assert same(x.asnumpy(), y.asnumpy())
-    os.remove(fname)
+            data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
+            mx.nd.save(fname, data_map1)
+            data_map2 = mx.nd.load(fname)
+            assert len(data_map1) == len(data_map2)
+            for k, x in data_map1.items():
+                y = data_map2[k]
+                assert same(x.asnumpy(), y.asnumpy())
+        os.remove(fname)
 
 def test_sparse_nd_unsupported():
     nd = mx.nd.zeros((2,2), stype='row_sparse')

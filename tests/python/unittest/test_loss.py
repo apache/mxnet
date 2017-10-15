@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from mxnet.test_utils import assert_almost_equal, default_context
+from mxnet.test_utils import assert_almost_equal, default_context, rng_seed
 
 
 def test_loss_ndarray():
@@ -63,39 +63,39 @@ def get_net(num_hidden, flatten=True):
 
 
 def test_ce_loss():
-    np.random.seed(1234)
-    nclass = 10
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, nclass))
-    label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
-    output = get_net(nclass)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        nclass = 10
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, nclass))
+        label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+        output = get_net(nclass)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.SoftmaxCrossEntropyLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                eval_metric=mx.metric.Loss(), optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_bce_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 20))
-    label = mx.nd.array(np.random.randint(2, size=(N,)), dtype='float32')
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
-    output = get_net(1)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam',
-            initializer=mx.init.Xavier(magnitude=2))
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 20))
+        label = mx.nd.array(np.random.randint(2, size=(N,)), dtype='float32')
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+        output = get_net(1)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                eval_metric=mx.metric.Loss(), optimizer='adam',
+                initializer=mx.init.Xavier(magnitude=2))
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
 
 def test_bce_equal_ce2():
     N = 100
@@ -108,56 +108,56 @@ def test_bce_equal_ce2():
 
 
 def test_kl_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    label = mx.nd.softmax(mx.random.uniform(0, 1, shape=(N, 2)))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
-    output = mx.sym.log_softmax(get_net(2))
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.KLDivLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        label = mx.nd.softmax(mx.random.uniform(0, 1, shape=(N, 2)))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+        output = mx.sym.log_softmax(get_net(2))
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.KLDivLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                eval_metric=mx.metric.Loss(), optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_l2_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    label = mx.random.uniform(-1, 1, shape=(N, 1))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
-    output = get_net(1)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.L2Loss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        label = mx.random.uniform(-1, 1, shape=(N, 1))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+        output = get_net(1)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.L2Loss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_l1_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    label = mx.random.uniform(-1, 1, shape=(N, 1))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
-    output = get_net(1)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.L1Loss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        label = mx.random.uniform(-1, 1, shape=(N, 1))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+        output = get_net(1)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.L1Loss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
 def test_ctc_loss():
@@ -187,144 +187,144 @@ def test_ctc_loss():
 
 
 def test_ctc_loss_train():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
-    label = mx.nd.arange(4, repeat=N).reshape((N, 4))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
-    output = get_net(5, False)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.CTCLoss(layout='NTC', label_layout='NT')
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
+        label = mx.nd.arange(4, repeat=N).reshape((N, 4))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+        output = get_net(5, False)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.CTCLoss(layout='NTC', label_layout='NT')
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
 def test_sample_weight_loss():
-    np.random.seed(1234)
-    nclass = 10
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, nclass))
-    label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
-    weight = mx.nd.array([1 for i in range(10)] + [0 for i in range(10)])
-    data_iter = mx.io.NDArrayIter(data, {'label': label, 'w': weight}, batch_size=10)
-    output = get_net(nclass)
-    l = mx.symbol.Variable('label')
-    w = mx.symbol.Variable('w')
-    Loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    loss = Loss(output, l, w)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'w'))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
-    data_iter = mx.io.NDArrayIter(data[10:], {'label': label, 'w': weight}, batch_size=10)
-    score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
-    assert score > 1
-    data_iter = mx.io.NDArrayIter(data[:10], {'label': label, 'w': weight}, batch_size=10)
-    score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
-    assert score < 0.05
+    with rng_seed(1234):
+        nclass = 10
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, nclass))
+        label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
+        weight = mx.nd.array([1 for i in range(10)] + [0 for i in range(10)])
+        data_iter = mx.io.NDArrayIter(data, {'label': label, 'w': weight}, batch_size=10)
+        output = get_net(nclass)
+        l = mx.symbol.Variable('label')
+        w = mx.symbol.Variable('w')
+        Loss = gluon.loss.SoftmaxCrossEntropyLoss()
+        loss = Loss(output, l, w)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'w'))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                eval_metric=mx.metric.Loss(), optimizer='adam')
+        data_iter = mx.io.NDArrayIter(data[10:], {'label': label, 'w': weight}, batch_size=10)
+        score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+        assert score > 1
+        data_iter = mx.io.NDArrayIter(data[:10], {'label': label, 'w': weight}, batch_size=10)
+        score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+        assert score < 0.05
 
 
 def test_saveload():
     mx.random.seed(1234)
-    np.random.seed(1234)
-    nclass = 10
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, nclass))
-    label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
-    output = get_net(nclass)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
-    mod.save_checkpoint('test', 100, save_optimizer_states=True)
-    mod = mx.mod.Module.load('test', 100, load_optimizer_states=True,
-                             data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        nclass = 10
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, nclass))
+        label = mx.nd.array(np.random.randint(0, nclass, size=(N,)), dtype='int32')
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label')
+        output = get_net(nclass)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.SoftmaxCrossEntropyLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.},
+                eval_metric=mx.metric.Loss())
+        mod.save_checkpoint('test', 100, save_optimizer_states=True)
+        mod = mx.mod.Module.load('test', 100, load_optimizer_states=True,
+                                 data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.},
+                eval_metric=mx.metric.Loss())
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 def test_huber_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    label = mx.random.uniform(-1, 1, shape=(N, 1))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
-    output = get_net(1)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.HuberLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        label = mx.random.uniform(-1, 1, shape=(N, 1))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+        output = get_net(1)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.HuberLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_hinge_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    label = mx.nd.sign(mx.random.uniform(-1, 1, shape=(N, 1)))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
-    output = get_net(1)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.HingeLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        label = mx.nd.sign(mx.random.uniform(-1, 1, shape=(N, 1)))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+        output = get_net(1)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.HingeLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_squared_hinge_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    label = mx.nd.sign(mx.random.uniform(-1, 1, shape=(N, 1)))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
-    output = get_net(1)
-    l = mx.symbol.Variable('label')
-    Loss = gluon.loss.SquaredHingeLoss()
-    loss = Loss(output, l)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        label = mx.nd.sign(mx.random.uniform(-1, 1, shape=(N, 1)))
+        data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+        output = get_net(1)
+        l = mx.symbol.Variable('label')
+        Loss = gluon.loss.SquaredHingeLoss()
+        loss = Loss(output, l)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 def test_triplet_loss():
-    np.random.seed(1234)
-    N = 20
-    data = mx.random.uniform(-1, 1, shape=(N, 10))
-    pos = mx.random.uniform(-1, 1, shape=(N, 10))
-    neg = mx.random.uniform(-1, 1, shape=(N, 10))
-    data_iter = mx.io.NDArrayIter(data, {'pos': pos, 'neg': neg}, batch_size=10,
-                                  label_name='label', shuffle=True)
-    output = get_net(10)
-    pos = mx.symbol.Variable('pos')
-    neg = mx.symbol.Variable('neg')
-    Loss = gluon.loss.TripletLoss()
-    loss = Loss(output, pos, neg)
-    loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos','neg'))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
-            optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    with rng_seed(1234):
+        N = 20
+        data = mx.random.uniform(-1, 1, shape=(N, 10))
+        pos = mx.random.uniform(-1, 1, shape=(N, 10))
+        neg = mx.random.uniform(-1, 1, shape=(N, 10))
+        data_iter = mx.io.NDArrayIter(data, {'pos': pos, 'neg': neg}, batch_size=10,
+                                      label_name='label', shuffle=True)
+        output = get_net(10)
+        pos = mx.symbol.Variable('pos')
+        neg = mx.symbol.Variable('neg')
+        Loss = gluon.loss.TripletLoss()
+        loss = Loss(output, pos, neg)
+        loss = mx.sym.make_loss(loss)
+        mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos','neg'))
+        mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+                initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+                optimizer='adam')
+        assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
 if __name__ == '__main__':
