@@ -2508,18 +2508,20 @@ def test_init():
         assert exe.outputs[0].asnumpy().dtype == dtype
 
     def test_arange():
-        for i in range(5):
-            start = np.random.rand() * 10
-            stop = start + np.random.rand() * 100
-            step = np.random.rand() * 4
-            repeat = int(np.random.rand() * 5) + 1
-            gt = np.arange(start=start, stop=stop, step=step)
-            gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
-            x = mx.sym.arange(start=start, stop=stop, step=step, repeat=repeat)
-            exe = x.simple_bind(ctx=default_context())
-            assert len(exe.grad_arrays) == 0
-            pred = exe.forward(is_train=False)[0].asnumpy()
-            assert_almost_equal(pred, gt)
+        # General Random Tests
+        dtype_list = [np.float32, np.float64, np.int32, np.uint8]
+        config_list = [(10,),
+                       (0, 10),
+                       (5, 100, 4),
+                       (50, -50, -2),
+                       (1.3, 456.6, 1.3)]
+        for dtype in dtype_list:
+            for config in config_list:
+                repeats = random.choice([1, 3])
+                np_out = np.repeat(np.arange(*config, dtype=dtype), repeats)
+                nd_out = mx.nd.arange(*config, repeat=repeats, dtype=dtype)
+                assert_almost_equal(np_out, nd_out.asnumpy())
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
@@ -4265,7 +4267,6 @@ def test_scatter_gather_nd():
     idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
 
     assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
-
 
 if __name__ == '__main__':
     import nose

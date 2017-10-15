@@ -497,6 +497,10 @@ def test_arange():
         gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
         pred = mx.nd.arange(start=start, stop=stop, step=step, repeat=repeat).asnumpy()
         assert_almost_equal(pred, gt)
+    gt = np.arange(start=0, stop=10000**2, step=10001, dtype=np.int32)
+    pred = mx.nd.arange(start=0, stop=10000**2, step=10001,
+                        dtype="int32").asnumpy()
+    assert_almost_equal(pred, gt)
 
 def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):

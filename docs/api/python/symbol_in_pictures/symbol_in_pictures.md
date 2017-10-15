@@ -1,7 +1,7 @@
 # Symbolic Configuration and Execution in Pictures
 
 This topic explains symbolic construction and execution in pictures.
-We recommend that you also read [Symbolic API](symbol.md).
+We recommend that you also read [Symbolic API](../symbol/symbol.md).
 
 ## Compose Symbols
 
@@ -74,4 +74,4 @@ Auxiliary states are just like arguments, except that you can't take the gradien
 
 ## Next Steps
 
-See [Symbolic API](symbol.md) and [Python Documentation](index.md).
+See [Symbolic API](../symbol/symbol.md) and [Python Documentation](../index.md).
