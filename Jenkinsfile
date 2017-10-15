@@ -485,17 +485,6 @@ try {
           }
         }
       },
-      'Caffe': {
-        node('mxnetlinux') {
-          ws('workspace/it-caffe') {
-            init_git()
-            unpack_lib('gpu')
-            timeout(time: max_time, unit: 'MINUTES') {
-              sh "${docker_run} caffe_gpu PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
-            }
-          }
-        }
-      },
       'cpp-package': {
         node('mxnetlinux') {
           ws('workspace/it-cpp-package') {
