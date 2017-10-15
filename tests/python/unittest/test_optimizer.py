@@ -18,6 +18,7 @@
 import numpy as np
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
+import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
@@ -532,39 +533,39 @@ class PyRMSProp(mx.optimizer.Optimizer):
         if self.clip_weights:
              mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
-#def test_rms():
-#    mx.random.seed(0)
-#    opt1 = PyRMSProp
-#    opt2 = mx.optimizer.RMSProp
-#    shape = (3, 4, 5)
-#    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
-#    cw_options = [{}, {'clip_weights': 0.01}]
-#    center_options = [{}, {'centered': False}, {'centered': True}]
-#    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-#    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-#    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-#    for dtype in [np.float16, np.float32]:
-#        for cw_option in cw_options:
-#            for cg_option in cg_options:
-#                for center_option in center_options:
-#                    for rg_option in rg_options:
-#                        for wd_option in wd_options:
-#                            for mp_option in mp_options:
-#                                kwarg = {}
-#                                kwarg.update(cw_option)
-#                                kwarg.update(cg_option)
-#                                kwarg.update(center_option)
-#                                kwarg.update(rg_option)
-#                                kwarg.update(wd_option)
-#                                kwarg.update(mp_option)
-#                                if (dtype == np.float16 and
-#                                        ('multi_precision' not in kwarg or
-#                                            not kwarg['multi_precision'])):
-#                                    continue
-#                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
-#                                if (default_context() == mx.cpu()):
-#                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse')
-#
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8230")
+def test_rms():
+    mx.random.seed(0)
+    opt1 = PyRMSProp
+    opt2 = mx.optimizer.RMSProp
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    cw_options = [{}, {'clip_weights': 0.01}]
+    center_options = [{}, {'centered': False}, {'centered': True}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float16, np.float32]:
+        for cw_option in cw_options:
+            for cg_option in cg_options:
+                for center_option in center_options:
+                    for rg_option in rg_options:
+                        for wd_option in wd_options:
+                            for mp_option in mp_options:
+                                kwarg = {}
+                                kwarg.update(cw_option)
+                                kwarg.update(cg_option)
+                                kwarg.update(center_option)
+                                kwarg.update(rg_option)
+                                kwarg.update(wd_option)
+                                kwarg.update(mp_option)
+                                if (dtype == np.float16 and
+                                        ('multi_precision' not in kwarg or
+                                            not kwarg['multi_precision'])):
+                                    continue
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                                if (default_context() == mx.cpu()):
+                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse')
 
 class PyFtrl(mx.optimizer.Optimizer):
     """The Ftrl optimizer.
