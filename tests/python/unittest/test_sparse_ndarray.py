@@ -533,14 +533,16 @@ def test_sparse_nd_empty():
 
 
 def test_sparse_eye():
-    import random
     stypes = ['csr', 'row_sparse', 'default']
     for stype in stypes:
-        for i in range(20):
-            N = random.randint(1, 10)
-            M = random.randint(1, 10)
-            k = random.randint(-15, 15)
-            assert_almost_equal(mx.nd.sparse.eye(stype, N, M, k).asnumpy(), np.eye(N, M, k))
+        N_array = np.random.randint(1, high=5, size=10)
+        M_array = np.random.randint(1, high=5, size=10)
+        k_array = np.random.randint(-10, high=10, size=10)
+        for i in range(10):
+            N = N_array[i]
+            M = M_array[i]
+            k = k_array[i]
+            same(mx.nd.sparse.eye(stype, N, M, k).asnumpy(), np.eye(N, M, k))
 
 
 def test_synthetic_dataset_generator():

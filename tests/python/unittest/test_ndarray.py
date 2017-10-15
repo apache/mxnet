@@ -730,11 +730,13 @@ def test_output():
     assert_almost_equal(out.asnumpy(), zeros.asnumpy())
     mx.nd.full(shape, 2, out=out)
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
-    import random
-    for i in range(20):
-        N = random.randint(1, 10)
-        M = random.randint(1, 10)
-        k = random.randint(-15, 15)
+    N_array = np.random.randint(1, high=5, size=10)
+    M_array = np.random.randint(1, high=5, size=10)
+    k_array = np.random.randint(-10, high=10, size=10)
+    for i in range(10):
+        N = N_array[i]
+        M = M_array[i]
+        k = k_array[i]
         assert_almost_equal(np.eye(N, M, k), mx.nd.eye(N, M, k).asnumpy())
 
 

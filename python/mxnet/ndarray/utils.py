@@ -38,7 +38,7 @@ except ImportError:
 __all__ = ['zeros', 'empty', 'array', 'load', 'save', 'eye']
 
 
-def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
+def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, **kwargs):
     """Return Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
     Parameters
@@ -55,9 +55,6 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs)
         An optional device context (default is the current default context)
     dtype: str or numpy.dtype, optional
         An optional value type (default is `float32`)
-    aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depends on the storage type)
 
     Returns
     -------
@@ -86,7 +83,7 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs)
     if stype is None or stype == 'default':
         return _eye_ndarray(N, M, k, ctx, dtype, **kwargs)
     else:
-        return _eye_sparse_ndarray(stype, N, M, k, ctx, dtype, aux_types, **kwargs)
+        return _eye_sparse_ndarray(stype, N, M, k, ctx, dtype, **kwargs)
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):

@@ -884,7 +884,7 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
 _set_ndarray_class(_ndarray_cls)
 
 
-def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
+def eye(stype, N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """Return Return a 2-D array with ones on the diagonal and zeros elsewhere
        of given shape and type.
 
@@ -904,9 +904,6 @@ def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
         An optional device context (default is the current default context)
     dtype : str or numpy.dtype, optional
         An optional value type (default is `float32`)
-    aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depends on the storage type)
 
     Returns
     -------
@@ -926,12 +923,10 @@ def eye(stype, N, M=0, k=0, ctx=None, dtype=None, aux_types=None, **kwargs):
     if ctx is None:
         ctx = Context.default_ctx
     dtype = mx_real_t if dtype is None else dtype
-    if aux_types is None:
-        if stype == 'row_sparse' or stype == 'csr':
-            aux_types = _STORAGE_AUX_TYPES[stype]
-        else:
-            raise Exception("unknown storage type")
-    assert(len(aux_types) == len(_STORAGE_AUX_TYPES[stype]))
+    if stype == 'row_sparse' or stype == 'csr':
+        aux_types = _STORAGE_AUX_TYPES[stype]
+    else:
+        raise ValueError("unknown storage type" + stype)
     ncols = M if M > 0 else N
     out = _ndarray_cls(_new_alloc_handle(stype, (N, ncols), ctx, True, dtype, aux_types))
     return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, out=out, **kwargs)
