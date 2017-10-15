@@ -4545,4 +4545,3 @@ def test_binary_math_operators():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-
