@@ -491,6 +491,52 @@ class HybridBlock(Block):
         raise NotImplementedError
 
 
+class KeyHybridBlock(HybridBlock):
+    def __init__(self, prefix=None, params=None, key_setter=None):
+        self._key_cached_op = {}
+        self._key_cached_graph = {}
+        self._key = None
+        self._key_setter = key_setter
+
+        super().__init__(prefix=prefix, params=params)
+
+    @property
+    def _cached_op(self):
+        if self._key in self._key_cached_op:
+            return self._key_cached_op[self._key]
+        else:
+            return None
+
+    @_cached_op.setter
+    def _cached_op(self, op):
+        self._key_cached_op[self._key] = op
+
+    @property
+    def _cached_graph(self):
+        if self._key in self._key_cached_graph:
+            return self._key_cached_graph[self._key]
+        else:
+            return ()
+
+    @_cached_graph.setter
+    def _cached_graph(self, graph):
+        self._key_cached_graph[self._key] = graph
+
+    @property
+    def key(self):
+        return self._key
+
+    def forward(self, x, *args):
+        """Defines the forward computation. Arguments can be either
+        :py:class:`NDArray` or :py:class:`Symbol`."""
+        if self._key_setter:
+            self._key = self._key_setter(x, *args)
+            for c in self._children:
+                c._key = self._key
+
+        return super().forward(x, *args)
+
+
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
     as feature extractors. For example, you may want to extract get the output
