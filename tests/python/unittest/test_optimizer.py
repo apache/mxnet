@@ -18,6 +18,7 @@
 import numpy as np
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
+import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
@@ -532,6 +533,7 @@ class PyRMSProp(mx.optimizer.Optimizer):
         if self.clip_weights:
              mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8230")
 def test_rms():
     mx.random.seed(0)
     opt1 = PyRMSProp

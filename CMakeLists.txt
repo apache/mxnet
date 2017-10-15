@@ -18,7 +18,8 @@ mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
 mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
-mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
+mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
+mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
@@ -165,16 +166,33 @@ if(UNIX)
   endif()
 endif()
 
+set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+# ---[ gperftools
+if(USE_GPERFTOOLS)
+  find_package(Gperftools)
+  if(GPERFTOOLS_FOUND)
+    message(STATUS "Using Gperftools malloc (tcmalloc)")
+    include_directories(${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${GPERFTOOLS_LIBRARIES})
+    set(USE_JEMALLOC 0)
+  endif()
+endif()
+
 # ---[ jemalloc
 if(USE_JEMALLOC)
   find_package(JeMalloc)
   if(JEMALLOC_FOUND)
+    message(STATUS "Using JEMalloc malloc")
     add_definitions(-DUSE_JEMALLOC)
     include_directories(${JEMALLOC_INCLUDE_DIRS})
     set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
   endif()
 endif()
 
+# ---[ OpenCV
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
@@ -197,6 +215,7 @@ else(USE_OPENCV)
   add_definitions(-DMXNET_USE_OPENCV=0)
 endif()
 
+# ---[ OpenMP
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   if(OPENMP_FOUND)
@@ -209,6 +228,7 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
+# ---[ LAPack
 if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
@@ -249,7 +269,7 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
   add_subdirectory("mshadow")
 endif()
-FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
+FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source

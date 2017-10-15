@@ -84,7 +84,7 @@ sub test_ce_loss
     $loss = mx->sym->make_loss($loss);
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
     local($AI::MXNet::Logging::silent) = 1;
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 0.01},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             eval_metric=>mx->metric->Loss(), optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.1);
 }
@@ -104,7 +104,7 @@ sub test_bce_loss
     $loss = mx->sym->make_loss($loss);
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
     local($AI::MXNet::Logging::silent) = 1;
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 0.01},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             eval_metric=>mx->metric->Loss(), optimizer=>'adam',
             initializer=>mx->init->Xavier(magnitude=>2));
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.01);
@@ -138,7 +138,7 @@ sub test_kl_loss
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 0.01},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             eval_metric=>mx->metric->Loss(), optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.05);
 }
@@ -158,7 +158,7 @@ sub test_l2_loss
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 0.01},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             eval_metric=>mx->metric->Loss(), optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.1);
 }
@@ -178,7 +178,7 @@ sub test_l1_loss
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 0.01},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             eval_metric=>mx->metric->Loss(), optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 0.1);
 }
@@ -227,7 +227,7 @@ sub test_ctc_loss_train
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 1},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 1},
             initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
             optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 10);
@@ -255,7 +255,7 @@ sub test_sample_weight_loss
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label', 'w']);
-    $mod->fit($data_iter, num_epoch=>50, optimizer_params=>{learning_rate => 0.01},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             eval_metric=>mx->metric->Loss(), optimizer=>'adam');
     $data_iter = mx->io->NDArrayIter(
         $data->slice([10,$data->len-1]),
