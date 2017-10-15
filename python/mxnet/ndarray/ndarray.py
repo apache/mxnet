@@ -2942,9 +2942,6 @@ def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
         An optional device context (default is the current default context)
     dtype: str or numpy.dtype, optional
         An optional value type (default is `float32`)
-    aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray
-        (default values depends on the storage type)
 
     Returns
     -------
