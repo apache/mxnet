@@ -17,6 +17,7 @@
 
 import numpy as np
 import mxnet as mx
+from mxnet.test_utils import rng_seed
 
 
 def reldiff(a, b):
