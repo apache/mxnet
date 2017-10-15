@@ -3515,13 +3515,15 @@ def test_quantization_op():
 
 
 def test_reciprocal_op():
+    eps = 2**(-11)
     data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors
-    data_tmp[data_tmp == 0] = 1.0
+    # Avoid possible division by 0 errors and finite difference method inaccuracies.
+    # Factor of 6 below set empirically, depends on eps.
+    data_tmp[abs(data_tmp) < 6*eps] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.reciprocal(data)
 
-    check_numeric_gradient(test, [data_tmp])
+    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
     check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
 def test_cbrt_op():
