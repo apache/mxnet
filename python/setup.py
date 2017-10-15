@@ -103,7 +103,6 @@ def config_cython():
         print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
-
 setup(name='mxnet',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
