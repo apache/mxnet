@@ -47,6 +47,11 @@ namespace mxnet {
 namespace common {
 
 template<typename xpu>
+void CheckFormatImpl(mshadow::Stream<xpu>* s, NDArray* input, const bool full_check) {
+  std::cout<<"CheckFormatImpl"<<std::endl;
+}
+
+template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
 /*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.

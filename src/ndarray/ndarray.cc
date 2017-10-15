@@ -1214,6 +1214,27 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   }
 }
 
+void NDArray::check_format(const bool full_check) {
+    if (this->ctx().dev_mask() == cpu::kDevMask) {
+      Engine::Get()->PushSync([&](RunContext rctx) {
+          common::CheckFormatImpl<cpu>(rctx.get_stream<cpu>(), this, full_check);
+        }, this->ctx(), {this->var()}, {},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+      this->WaitToWrite();
+    } else {
+#if MXNET_USE_CUDA
+      Engine::Get()->PushSync([&](RunContext rctx) {
+          common::CheckFormatImpl<gpu>(rctx.get_stream<gpu>(), this, full_check);
+          rctx.get_stream<gpu>()->Wait();
+        }, this->ctx(), {this->var()}, {},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+      this->WaitToWrite();
+#else
+    LOG(FATAL) << "GPU is not enabled";
+#endif
+    }
+}
+
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
