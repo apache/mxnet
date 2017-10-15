@@ -49,8 +49,8 @@ from .ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import NDArray, _storage_type
-from .ndarray import eye as _eye_ndarray
 from .ndarray import zeros as _zeros_ndarray
+from .ndarray import eye as _eye_ndarray
 from .ndarray import array as _array
 from . import op
 
