@@ -24,8 +24,6 @@ from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
 from collections import namedtuple
 
-import numpy.random as rnd
-
 
 def test_module_dtype():
     dtype = np.float16
@@ -465,7 +463,6 @@ def test_factorization_machine_module():
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
         print("check_factorization_machine_module( {} )".format(optimizer))
         mx.random.seed(11)
-        rnd.seed(11)
 
         def fm(factor_size, feature_dim, init):
             x = mx.symbol.Variable("data", stype='csr')
@@ -493,74 +490,75 @@ def test_factorization_machine_module():
             model = mx.symbol.LinearRegressionOutput(data=model, label=y)
             return model
 
-        # model
-        init = mx.initializer.Normal(sigma=0.01)
-        factor_size = 4
-        feature_dim = 10000
-        model = fm(factor_size, feature_dim, init)
+        with rng_seed(11):
+            # model
+            init = mx.initializer.Normal(sigma=0.01)
+            factor_size = 4
+            feature_dim = 10000
+            model = fm(factor_size, feature_dim, init)
 
-        # data iter
-        num_batches = 5
-        batch_size = 64
-        num_samples = batch_size * num_batches
-        # generate some random csr data
-        csr_nd = rand_ndarray((num_samples, feature_dim), 'csr', 0.1)
-        label = mx.nd.ones((num_samples,1))
-        # the alternative is to use LibSVMIter
-        train_iter = mx.io.NDArrayIter(data=csr_nd,
-                                       label={'label':label},
-                                       batch_size=batch_size,
-                                       last_batch_handle='discard')
-        # create module
-        mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
-        # allocate memory by given the input data and lable shapes
-        mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-        # initialize parameters by uniform random numbers
-        mod.init_params(initializer=init)
-        if optimizer == 'sgd':
-            # use Sparse SGD with learning rate 0.1 to train
-            sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
-                                   rescale_grad=1.0/batch_size)
-            mod.init_optimizer(optimizer=sgd)
-            if num_epochs is None:
-                num_epochs = 10
-            expected_accuracy = 0.02
-        elif optimizer == 'adam':
-            # use Sparse Adam to train
-            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001,
-                                     rescale_grad=1.0/batch_size)
-            mod.init_optimizer(optimizer=adam)
-            if num_epochs is None:
-                num_epochs = 10
-            expected_accuracy = 0.05
-        elif optimizer == 'adagrad':
-            # use Sparse AdaGrad with learning rate 0.1 to train
-            adagrad = mx.optimizer.AdaGrad(clip_gradient=5.0, learning_rate=0.01,
-                                           rescale_grad=1.0/batch_size)
-            mod.init_optimizer(optimizer=adagrad)
-            if num_epochs is None:
-                num_epochs = 20
-            expected_accuracy = 0.09
-        else:
-            raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
-        # use accuracy as the metric
-        metric = mx.metric.create('MSE')
-        # train 'num_epochs' epoch
-        for epoch in range(num_epochs):
-            train_iter.reset()
-            metric.reset()
-            for batch in train_iter:
-                mod.forward(batch, is_train=True)       # compute predictions
-                mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
-                mod.backward()                          # compute gradients
-                mod.update()                            # update parameters
-            print('Epoch %d, Training %s' % (epoch, metric.get()))
-        if num_epochs > 1:
-            assert(metric.get()[1] < expected_accuracy)
+            # data iter
+            num_batches = 5
+            batch_size = 64
+            num_samples = batch_size * num_batches
+            # generate some random csr data
+            csr_nd = rand_ndarray((num_samples, feature_dim), 'csr', 0.1)
+            label = mx.nd.ones((num_samples,1))
+            # the alternative is to use LibSVMIter
+            train_iter = mx.io.NDArrayIter(data=csr_nd,
+                                           label={'label':label},
+                                           batch_size=batch_size,
+                                           last_batch_handle='discard')
+            # create module
+            mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
+            # allocate memory by given the input data and lable shapes
+            mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
+            # initialize parameters by uniform random numbers
+            mod.init_params(initializer=init)
+            if optimizer == 'sgd':
+                # use Sparse SGD with learning rate 0.1 to train
+                sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
+                                       rescale_grad=1.0/batch_size)
+                mod.init_optimizer(optimizer=sgd)
+                if num_epochs is None:
+                    num_epochs = 10
+                expected_accuracy = 0.02
+            elif optimizer == 'adam':
+                # use Sparse Adam to train
+                adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001,
+                                         rescale_grad=1.0/batch_size)
+                mod.init_optimizer(optimizer=adam)
+                if num_epochs is None:
+                    num_epochs = 10
+                expected_accuracy = 0.05
+            elif optimizer == 'adagrad':
+                # use Sparse AdaGrad with learning rate 0.1 to train
+                adagrad = mx.optimizer.AdaGrad(clip_gradient=5.0, learning_rate=0.01,
+                                               rescale_grad=1.0/batch_size)
+                mod.init_optimizer(optimizer=adagrad)
+                if num_epochs is None:
+                    num_epochs = 20
+                expected_accuracy = 0.09
+            else:
+                raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
+            # use accuracy as the metric
+            metric = mx.metric.create('MSE')
+            # train 'num_epochs' epoch
+            for epoch in range(num_epochs):
+                train_iter.reset()
+                metric.reset()
+                for batch in train_iter:
+                    mod.forward(batch, is_train=True)       # compute predictions
+                    mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+                    mod.backward()                          # compute gradients
+                    mod.update()                            # update parameters
+                print('Epoch %d, Training %s' % (epoch, metric.get()))
+            if num_epochs > 1:
+                assert(metric.get()[1] < expected_accuracy)
 
-    check_factorization_machine_module('adam')
-    check_factorization_machine_module('sgd')
-    check_factorization_machine_module('adagrad')
+        check_factorization_machine_module('adam')
+        check_factorization_machine_module('sgd')
+        check_factorization_machine_module('adagrad')
 
 
 def test_module_initializer():

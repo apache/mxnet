@@ -82,56 +82,56 @@ def test_bind(disable_bulk_exec=False):
         prev_bulk_inf_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", "0", "1")
         prev_bulk_train_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", "0", "1")
 
-    np.random.seed(0)
-    nrepeat = 10
-    maxdim = 4
-    for repeat in range(nrepeat):
-        for dim in range(1, maxdim):
-            check_bind_with_uniform(lambda x, y: x + y,
-                                    lambda g, x, y: (g, g),
-                                    dim)
-            check_bind_with_uniform(lambda x, y: x - y,
-                                    lambda g, x, y: (g, -g),
-                                    dim)
-            check_bind_with_uniform(lambda x, y: x * y,
-                                    lambda g, x, y: (y * g, x * g),
-                                    dim)
-            check_bind_with_uniform(lambda x, y: x / y,
-                                    lambda g, x, y: (g / y, -x * g/ (y**2)),
-                                    dim)
+    with rng_seed(0):
+        nrepeat = 10
+        maxdim = 4
+        for repeat in range(nrepeat):
+            for dim in range(1, maxdim):
+                check_bind_with_uniform(lambda x, y: x + y,
+                                        lambda g, x, y: (g, g),
+                                        dim)
+                check_bind_with_uniform(lambda x, y: x - y,
+                                        lambda g, x, y: (g, -g),
+                                        dim)
+                check_bind_with_uniform(lambda x, y: x * y,
+                                        lambda g, x, y: (y * g, x * g),
+                                        dim)
+                check_bind_with_uniform(lambda x, y: x / y,
+                                        lambda g, x, y: (g / y, -x * g/ (y**2)),
+                                        dim)
 
-            check_bind_with_uniform(lambda x, y: np.maximum(x, y),
-                                    lambda g, x, y: (g * (x>y), g * (y>x)),
-                                    dim,
-                                    sf=mx.symbol.maximum)
-            check_bind_with_uniform(lambda x, y: np.minimum(x, y),
-                                    lambda g, x, y: (g * (x<y), g * (y<x)),
-                                    dim,
-                                    sf=mx.symbol.minimum)
-    if disable_bulk_exec:
-       mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", prev_bulk_inf_val)
-       mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", prev_bulk_train_val)
+                check_bind_with_uniform(lambda x, y: np.maximum(x, y),
+                                        lambda g, x, y: (g * (x>y), g * (y>x)),
+                                        dim,
+                                        sf=mx.symbol.maximum)
+                check_bind_with_uniform(lambda x, y: np.minimum(x, y),
+                                        lambda g, x, y: (g * (x<y), g * (y<x)),
+                                        dim,
+                                        sf=mx.symbol.minimum)
+        if disable_bulk_exec:
+           mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", prev_bulk_inf_val)
+           mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", prev_bulk_train_val)
 
 def test_dot():
-    np.random.seed(0)
-    nrepeat = 10
-    maxdim = 4
-    for repeat in range(nrepeat):
-        s =tuple(np.random.randint(1, 500, size=3))
-        check_bind_with_uniform(lambda x, y: np.dot(x, y),
-                                lambda g, x, y: (np.dot(g, y.T), np.dot(x.T, g)),
-                                2,
-                                lshape=(s[0], s[1]),
-                                rshape=(s[1], s[2]),
-                                sf = mx.symbol.dot)
-    for repeat in range(nrepeat):
-        s =tuple(np.random.randint(1, 500, size=1))
-        check_bind_with_uniform(lambda x, y: np.dot(x, y),
-                                lambda g, x, y: (g * y, g * x),
-                                2,
-                                lshape=(s[0],),
-                                rshape=(s[0],),
-                                sf = mx.symbol.dot)
+    with rng_seed(0):
+        nrepeat = 10
+        maxdim = 4
+        for repeat in range(nrepeat):
+            s =tuple(np.random.randint(1, 500, size=3))
+            check_bind_with_uniform(lambda x, y: np.dot(x, y),
+                                    lambda g, x, y: (np.dot(g, y.T), np.dot(x.T, g)),
+                                    2,
+                                    lshape=(s[0], s[1]),
+                                    rshape=(s[1], s[2]),
+                                    sf = mx.symbol.dot)
+        for repeat in range(nrepeat):
+            s =tuple(np.random.randint(1, 500, size=1))
+            check_bind_with_uniform(lambda x, y: np.dot(x, y),
+                                    lambda g, x, y: (g * y, g * x),
+                                    2,
+                                    lshape=(s[0],),
+                                    rshape=(s[0],),
+                                    sf = mx.symbol.dot)
 
 
 def test_reshape():
