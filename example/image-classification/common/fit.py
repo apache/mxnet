@@ -19,6 +19,8 @@ import mxnet as mx
 import logging
 import os
 import time
+import re
+import math
 
 def _get_lr_scheduler(args, kv):
     if 'lr_factor' not in args or args.lr_factor >= 1:
@@ -27,6 +29,13 @@ def _get_lr_scheduler(args, kv):
     if 'dist' in args.kv_store:
         epoch_size /= kv.num_workers
     begin_epoch = args.load_epoch if args.load_epoch else 0
+    if 'pow' in args.lr_step_epochs:
+        lr = args.lr
+        nup = begin_epoch * epoch_size
+        max_up = args.num_epochs * epoch_size
+        pwr = float(re.sub('pow[- ]*', '', args.lr_step_epochs))
+        poly_sched = mx.lr_scheduler.PolyScheduler(nup, max_up, lr, pwr)
+        return (lr, poly_sched)
     step_epochs = [int(l) for l in args.lr_step_epochs.split(',')]
     lr = args.lr
     for s in step_epochs:
@@ -81,6 +90,8 @@ def add_fit_args(parser):
                        help='the ratio to reduce lr on each step')
     train.add_argument('--lr-step-epochs', type=str,
                        help='the epochs to reduce the lr, e.g. 30,60')
+    train.add_argument('--initializer', type=str, default='default',
+                       help='the initializer type')
     train.add_argument('--optimizer', type=str, default='sgd',
                        help='the optimizer type')
     train.add_argument('--mom', type=float, default=0.9,
@@ -108,6 +119,13 @@ def add_fit_args(parser):
                              takes `2bit` or `none` for now')
     train.add_argument('--gc-threshold', type=float, default=0.5,
                        help='threshold for 2bit gradient compression')
+    ## additional parameters for large batch sgd
+    train.add_argument('--macrobatch-size', type=int, default=0,
+                       help='distributed effective batch size')
+    train.add_argument('--warmup-epochs', type=int, default=5,
+                       help='the epochs to ramp-up lr to scaled large-batch value')
+    train.add_argument('--warmup-strategy', type=str, default='linear',
+                       help='the ramping-up strategy for large batch sgd')
     return train
 
 def fit(args, network, data_loader, **kwargs):
@@ -180,15 +198,52 @@ def fit(args, network, data_loader, **kwargs):
     if args.optimizer in has_momentum:
         optimizer_params['momentum'] = args.mom
 
+    # A limited number of optimizers have a warmup period
+    has_warmup = {'lbsgd', 'lbnag'}
+    if args.optimizer in has_warmup:
+        if 'dist' in args.kv_store:
+            nworkers = kv.num_workers
+        else:
+            nworkers = 1
+        epoch_size = args.num_examples / args.batch_size / nworkers
+        if epoch_size < 1:
+            epoch_size = 1
+        macrobatch_size = args.macrobatch_size
+        if macrobatch_size < args.batch_size*nworkers:
+            macrobatch_size= args.batch_size*nworkers
+        #batch_scale = round(float(macrobatch_size) / args.batch_size / nworkers +0.4999)
+        batch_scale = math.ceil(float(macrobatch_size) / args.batch_size / nworkers)
+        optimizer_params['updates_per_epoch'] = epoch_size
+        optimizer_params['begin_epoch'] = args.load_epoch if args.load_epoch else 0
+        optimizer_params['batch_scale'] = batch_scale
+        optimizer_params['warmup_strategy'] = args.warmup_strategy
+        optimizer_params['warmup_epochs'] = args.warmup_epochs
+        optimizer_params['num_epochs'] = args.num_epochs
+
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 
-    if args.network == 'alexnet':
-        # AlexNet will not converge using Xavier
-        initializer = mx.init.Normal()
-    else:
-        initializer = mx.init.Xavier(
-            rnd_type='gaussian', factor_type="in", magnitude=2)
+    if args.initializer == 'default':
+        if args.network == 'alexnet':
+            # AlexNet will not converge using Xavier
+            initializer = mx.init.Normal()
+        else:
+            initializer = mx.init.Xavier(
+                rnd_type='gaussian', factor_type="in", magnitude=2)
     # initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34),
+    elif args.initializer == 'xavier':
+            initializer = mx.init.Xavier()
+    elif args.initializer == 'msra':
+            initializer = mx.init.MSRAPrelu()
+    elif args.initializer == 'orthogonal':
+            initializer = mx.init.Orthogonal()
+    elif args.initializer == 'normal':
+            initializer = mx.init.Normal()
+    elif args.initializer == 'uniform':
+            initializer = mx.init.Uniform()
+    elif args.initializer == 'one':
+            initializer = mx.init.One()
+    elif args.initializer == 'zero':
+            initializer = mx.init.Zero()
 
     # evaluation metrices
     eval_metrics = ['accuracy']
