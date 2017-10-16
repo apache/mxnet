@@ -22,14 +22,30 @@ import os
 import sys
 # need to use distutils.core for correct placement of cython dll
 kwargs = {}
+required_packages = ['numpy', 'requests', 'graphviz']
 if "--inplace" in sys.argv:
     from distutils.core import setup
     from distutils.extension import Extension
+    from distutils.command.install import install
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy', 'requests', 'graphviz'], 'zip_safe': False}
+    kwargs = {'install_requires': required_packages,
+              'setup_requires': required_packages,
+              'tests_require': required_packages,
+              'zip_safe': False}
+    from setuptools.command.install import install
 from setuptools import find_packages
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode."""
+    def run(self):
+        install.run(self)
+        from mxnet.base import _generate_op_module_signature
+        from mxnet.ndarray.register import _generate_ndarray_function_code
+        from mxnet.symbol.register import _generate_symbol_function_code
+        _generate_op_module_signature('mxnet', 'symbol', _generate_symbol_function_code)
+        _generate_op_module_signature('mxnet', 'ndarray', _generate_ndarray_function_code)
 
 with_cython = False
 if '--with-cython' in sys.argv:
@@ -87,7 +103,6 @@ def config_cython():
         print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
-
 setup(name='mxnet',
       version=__version__,
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
@@ -95,4 +110,5 @@ setup(name='mxnet',
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/dmlc/mxnet',
       ext_modules=config_cython(),
+      cmdclass={'install': PostInstallCommand},
       **kwargs)

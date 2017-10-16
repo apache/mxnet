@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-parent_2.11</artifactId>
-  <version>0.11.1-SNAPSHOT</version>
+  <version>0.12.0-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/dmlc/mxnet/tree/master/scala-package</url>
   <description>MXNet Scala Package</description>

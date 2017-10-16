@@ -21,7 +21,6 @@
  * \file matrix_op.cu
  * \brief GPU Implementation of matrix operations
  */
-// this will be invoked by gcc and compile GPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
 
@@ -58,7 +57,8 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
 
 NNVM_REGISTER_OP(clip)
-.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ClipEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<gpu>", ClipGrad_<gpu>);
