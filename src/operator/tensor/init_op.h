@@ -179,6 +179,13 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct PopulateFullIdxRspKernel {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* out) {
+    KERNEL_ASSIGN(out[i], kWriteTo, i);
+  }
+};
+
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
 // instead of the usual compact representation.
 template<typename xpu>
@@ -192,20 +199,13 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
     MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
       auto num_rows = dst->shape()[0];
       dst->CheckAndAlloc({Shape1(num_rows)});
-      auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
+      auto idx = dst->aux_data(kIdx);
       auto val = dst->data();
       Kernel<set_zero, xpu>::Launch(s, val.Size(), val.dptr<DType>());
-      ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1));
+      Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr<IType>());
     });
   });
 }
-
-struct PopulateFullIdxRspKernel {
-  template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* out) {
-    KERNEL_ASSIGN(out[i], kWriteTo, i);
-  }
-};
 
 // Fill full indices NDArray with zeros by updating the aux shape.
 template<typename xpu>
