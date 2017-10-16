@@ -24,6 +24,7 @@ from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
 from collections import namedtuple
 
+set_np_random_seed()
 
 def test_module_dtype():
     dtype = np.float16
@@ -490,7 +491,7 @@ def test_factorization_machine_module():
             model = mx.symbol.LinearRegressionOutput(data=model, label=y)
             return model
 
-        with rng_seed(11):
+        with np_random_seed(11):
             # model
             init = mx.initializer.Normal(sigma=0.01)
             factor_size = 4
@@ -556,9 +557,9 @@ def test_factorization_machine_module():
             if num_epochs > 1:
                 assert(metric.get()[1] < expected_accuracy)
 
-        check_factorization_machine_module('adam')
-        check_factorization_machine_module('sgd')
-        check_factorization_machine_module('adagrad')
+    check_factorization_machine_module('adam')
+    check_factorization_machine_module('sgd')
+    check_factorization_machine_module('adagrad')
 
 
 def test_module_initializer():

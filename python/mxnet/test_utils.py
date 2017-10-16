@@ -1548,17 +1548,17 @@ def discard_stderr():
         bit_bucket.close()
 
 @contextmanager
-def rng_seed(seed=None):
+def np_random_seed(seed=None):
     """
     Runs a code block with a new state of np.random.
     To impose rng determinism, invoke e.g. as in:
 
-    with rng_seed(1234):
+    with np_random_seed(1234):
         ...
 
     To impose rng non-determinism, invoke as in:
 
-    with rng_seed():
+    with np_random_seed():
         ...
 
     """
@@ -1570,3 +1570,29 @@ def rng_seed(seed=None):
     finally:
         # Reinstate prior state of np.random
         np.random.set_state(saved_rng_state)
+
+# Set seed and output to stderr (to avoid default nosetests filtering of stdout)
+def set_np_random_seed(seed=None, ostream=sys.stderr):
+    """Set the np.random seed and announce the value to an output stream
+
+    Parameters
+    ----------
+
+    seed: int
+        Seed to pass to np.random.seed().  Should be None to set and output
+        a randomly chosen value.
+    ostream :
+        Stream to announce the new seed value to.
+
+    The expected use of this function is to set the seed globally before
+    a suite of tests and output the set value to help reproduce any failures
+    that are dependent on the random data.  To fix the seed for a single test
+    without modifying the randomness of subsequent tests in the same file,
+    use 'np_random_seed'.
+    """
+    if seed is None:
+        seed = np.random.randint(0, np.iinfo(np.uint32).max)
+    if ostream is not None:
+        ostream.write('Setting np.random seed to %s.\n' % seed)
+        ostream.flush()
+    np.random.seed(seed)

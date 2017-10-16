@@ -25,14 +25,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 import unittest
 
-# Set seed and output to stderr (to avoid default nosetests filtering of stdout)
-def set_and_announce_seed():
-    seed = np.random.randint(0, np.iinfo(np.uint32).max)
-    sys.stderr.write('\ntest_operator: Setting np.random seed to %s.\n\n' % seed)
-    sys.stderr.flush()
-    np.random.seed(seed)
-
-set_and_announce_seed()
+set_np_random_seed()
 
 def np_softmax(x, axis=-1):
     # fix for old numpy on Travis not supporting keepdims
@@ -72,7 +65,7 @@ def check_elementwise_sum_with_shape(shape, n):
 def test_elementwise_sum():
     # Comparing random sums that are close to zero is troublesome.
     # Pick a specific seed without altering the determinism of the other tests.
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 2
         maxdim = 4
         for repeat in range(nrepeat):
@@ -1736,7 +1729,7 @@ def test_stn():
 
 
 def test_dot(ctx=default_context()):
-    with rng_seed(1234):
+    with np_random_seed(1234):
         dtypes = ['float32', 'float64']
 
         # Test normal dot.
@@ -2067,7 +2060,7 @@ def test_support_vector_machine_l2_svm():
 
 
 def test_roipooling():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         data = mx.symbol.Variable(name='data')
         rois = mx.symbol.Variable(name='rois')
         test = mx.symbol.ROIPooling(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1)
@@ -2164,7 +2157,7 @@ def check_l2_normalization(in_shape, mode, ctx=default_context(), norm_eps=1e-10
     data = mx.symbol.Variable('data')
     out = mx.symbol.L2Normalization(data=data, mode=mode, eps=norm_eps)
     # TODO(szha): Seeding this masks failures. We need to do a deep dive for failures without this seed.
-    with rng_seed(1234):
+    with np_random_seed(1234):
         in_data = np.random.uniform(-1, 1, in_shape)
         # calculate numpy results
         if mode == 'channel':
@@ -2885,7 +2878,7 @@ def test_bilinear_sampler():
 
         return data_grad, grid_grad
 
-    with rng_seed(1234):
+    with np_random_seed(1234):
         data = mx.sym.Variable('data')
         grid = mx.sym.Variable('grid')
         net = mx.sym.BilinearSampler(data=data,grid=grid)
@@ -3754,7 +3747,7 @@ def test_laop():
     shape3 = (3, 3)
     shape4 = (2, 2)
     # Ensure this test doesn't get changed by other calls to random.
-    with rng_seed(42):
+    with np_random_seed(42):
         data_in1 = np.random.uniform(1, 10, shape1)
         data_in2 = np.random.uniform(1, 10, shape2)
         data_in3 = np.random.uniform(1, 10, shape3)
@@ -4004,7 +3997,7 @@ def _syevd_combined_symbol(a):
     return mx.sym.Group([u_ut, ut_lam_u])
 
 def test_laop_2():
-    with rng_seed(1896893923):
+    with np_random_seed(1896893923):
         dtype = np.float64
         rtol_fw = 1e-7
         atol_fw = 1e-9
@@ -4130,7 +4123,7 @@ def test_laop_3():
     # Operators implemented for CPU only currently
     if not (default_context() == mx.cpu()):
         return
-    with rng_seed(1896893923):
+    with np_random_seed(1896893923):
         dtype = np.float64
         rtol_fw = 1e-6
         atol_fw = 1e-6
@@ -4200,7 +4193,7 @@ def test_laop_4():
     # Operators implemented for CPU only currently
     if not(default_context() == mx.cpu()):
         return
-    with rng_seed(1896893923):
+    with np_random_seed(1896893923):
         rtol_fw = 1e-6
         atol_fw = 1e-6
 

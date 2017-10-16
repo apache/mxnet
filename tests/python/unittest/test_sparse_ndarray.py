@@ -24,6 +24,7 @@ import numpy.random as rnd
 
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
+set_np_random_seed()
 
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
@@ -378,10 +379,10 @@ def test_sparse_nd_random():
         rsp_out = mx.nd.zeros(shape=shape, stype='row_sparse')
         dns_out = mx.nd.zeros(shape=shape, stype='default')
         mx.random.seed(0)
-        with rng_seed(0):
+        with np_random_seed(0):
             fn(shape=shape, out=dns_out)
         mx.random.seed(0)
-        with rng_seed(0):
+        with np_random_seed(0):
             fn(shape=shape, out=rsp_out)
         assert_almost_equal(dns_out.asnumpy(), rsp_out.asnumpy())
 
@@ -395,7 +396,7 @@ def test_sparse_nd_astype():
 
 
 def test_sparse_nd_pickle():
-    with rng_seed(0):
+    with np_random_seed(0):
         repeat = 1
         dim0 = 40
         dim1 = 40
@@ -415,7 +416,7 @@ def test_sparse_nd_pickle():
 
 
 def test_sparse_nd_save_load():
-    with rng_seed(0):
+    with np_random_seed(0):
         repeat = 1
         stypes = ['default', 'row_sparse', 'csr']
         stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}

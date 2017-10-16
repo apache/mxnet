@@ -25,6 +25,8 @@ from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import unittest
 
+set_np_random_seed()
+
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
     if isinstance(arg_shapes, int):
@@ -112,7 +114,7 @@ def test_ndarray_setitem():
 
 
 def test_ndarray_elementwise():
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 10
         maxdim = 4
         all_type = [np.float32, np.float64, np.float16, np.uint8, np.int32]
@@ -220,7 +222,7 @@ def test_ndarray_scalar():
     assert(np.sum(d.asnumpy()) < 1e-5)
 
 def test_ndarray_pickle():
-    with rng_seed(0):
+    with np_random_seed(0):
         maxdim = 5
         nrepeat = 10
         for repeat in range(nrepeat):
@@ -236,7 +238,7 @@ def test_ndarray_pickle():
 
 
 def test_ndarray_saveload():
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 10
         fname = 'tmp_list.bin'
         for repeat in range(nrepeat):
