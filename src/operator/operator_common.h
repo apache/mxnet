@@ -470,54 +470,6 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-/*! \brief Temporary storage for Alpha release of Sparse Tensors. Please do not use, as this
- * function will be removed
- */
-template<typename DType>
-class SparseTempStorage {
-  inline DType *Alloc(const size_t count) {
-    CHECK_GT(count, 0U);  // You've probably made a mistake
-    CHECK_EQ(handle_.dptr, static_cast<void *>(nullptr));
-    Storage *storage = mxnet::Storage::Get();
-    if (storage) {
-      handle_ = storage->Alloc(count * sizeof(DType), op_ctx_.run_ctx.ctx);
-    }
-    return static_cast<DType *>(handle_.dptr);
-  }
-  inline void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      if (storage) {
-        storage->DirectFree(handle_);
-        handle_.dptr = nullptr;
-      }
-    }
-  }
-  inline DType *dptr() {
-    return static_cast<DType *>(handle_.dptr);
-  }
-
- public:
-  explicit inline SparseTempStorage(const OpContext& op_ctx)
-    : op_ctx_(op_ctx) {
-    handle_.dptr = nullptr;
-  }
-  inline ~SparseTempStorage() {
-    Free();
-  }
-  template<typename xpu, int ndim>
-  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(const mshadow::Shape<ndim>& shape) {
-    if (!dptr()) {
-      Alloc(shape.Size());
-    }
-    return mshadow::Tensor<xpu, ndim, DType>(dptr(), shape, op_ctx_.run_ctx.get_stream<xpu>());
-  }
-
- private:
-  const OpContext& op_ctx_;
-  Storage::Handle  handle_;
-};
-
 /*! \brief get string representation of the operator stypes */
 inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -568,7 +520,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
   auto warning_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
-  bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
   if (log_verbose) {
     std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
     if (warning_printed->find(warning) == warning_printed->end()) {
