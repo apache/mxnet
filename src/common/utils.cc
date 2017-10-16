@@ -29,6 +29,12 @@ namespace mxnet {
 namespace common {
 
 template<>
+void CheckFormatWrapper<cpu>(const RunContext &rctx, const NDArray *input,
+                             const bool &full_check) {
+  CheckFormatImpl<cpu>(rctx, input, full_check);
+}
+
+template<>
 void CastStorageDispatch<cpu>(const OpContext& ctx,
                               const NDArray& input,
                               const NDArray& output) {

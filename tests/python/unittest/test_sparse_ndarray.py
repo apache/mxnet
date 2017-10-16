@@ -647,17 +647,20 @@ def test_sparse_nd_exception():
                      (2,2), shape=(3,2))
     assert_exception(mx.nd.sparse.zeros, ValueError,
                      "invalid_stype", (2,2))
+    stypes = ["default", "csr", "row_sparse"]
+    for stype in stypes:
+        a.tostype(stype).check_format()
     try:
         shape = (3, 4)
         data_list = [7, 8, 9]
         indices_list = [0, 2, 1]
-        indptr_list = [0, 2, 2, 3, 4]
-        a = mx.nd.sparse.csr_matrix(data_list, indptr_list, indices_list, shape)
+        indptr_list = [0, 5, 2, 3]
+        a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape)
         a.check_format()
         assert(False)
     except mx.base.MXNetError:
         return
-
+    
 
 if __name__ == '__main__':
     import nose

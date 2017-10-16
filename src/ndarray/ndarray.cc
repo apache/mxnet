@@ -1214,17 +1214,17 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   }
 }
 
-void NDArray::check_format(const bool full_check) {
+void NDArray::CheckFormat(const bool full_check) const {
     if (this->ctx().dev_mask() == cpu::kDevMask) {
       Engine::Get()->PushSync([&](RunContext rctx) {
-          common::CheckFormatImpl<cpu>(rctx.get_stream<cpu>(), this, full_check);
+          common::CheckFormatWrapper<cpu>(rctx, this, full_check);
         }, this->ctx(), {this->var()}, {},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
       this->WaitToWrite();
     } else {
 #if MXNET_USE_CUDA
       Engine::Get()->PushSync([&](RunContext rctx) {
-          common::CheckFormatImpl<gpu>(rctx.get_stream<gpu>(), this, full_check);
+          common::CheckFormatWrapper<gpu>(rctx, this, full_check);
           rctx.get_stream<gpu>()->Wait();
         }, this->ctx(), {this->var()}, {},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
