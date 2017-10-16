@@ -193,9 +193,8 @@ class Block(object):
                         self._children[i] = value
             elif isinstance(value, Block):
                 self.register_child(value)
-        else:
-            if isinstance(value, Block):
-                self.register_child(value)
+        elif isinstance(value, Block):
+            self.register_child(value)
 
         super(Block, self).__setattr__(name, value)
 
