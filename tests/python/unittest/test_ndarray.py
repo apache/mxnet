@@ -345,6 +345,7 @@ def test_clip():
         assert B1[i] <= 2
 
 def test_dot():
+    atol = 1e-5
     # Test normal dot
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (4, 5))
@@ -352,7 +353,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (3, 5))
@@ -360,7 +361,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -368,7 +369,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (4, 3))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -376,7 +377,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
 
 
 
