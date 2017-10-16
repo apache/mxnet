@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=wildcard-import, unused-wildcard-import, too-many-lines
 """Sparse NDArray API of MXNet."""
 
 from __future__ import absolute_import
@@ -30,13 +31,9 @@ except ImportError:
 import ctypes
 import warnings
 
-import os as _os
-import sys as _sys
-
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
            "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
 
-# import operator
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
@@ -44,29 +41,18 @@ from ..base import c_array, mx_real_t, integer_types
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
-from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .ndarray import _STORAGE_TYPE_STR_TO_ID
+from . import op
+try:
+    from .gen_sparse import * # pylint: disable=redefined-builtin
+except ImportError:
+    pass
+from ._internal import _set_ndarray_class
+from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
-from .ndarray import _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
-from .ndarray import NDArray, _storage_type
 from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
-from . import op
 
-# When possible, use cython to speedup part of computation.
-# pylint: disable=unused-import, too-many-lines
-try:
-    if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
-        from .._ctypes.ndarray import _set_ndarray_class
-    elif _sys.version_info >= (3, 0):
-        from .._cy3.ndarray import _set_ndarray_class
-    else:
-        from .._cy2.ndarray import _set_ndarray_class
-except ImportError:
-    if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
-        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
-    from .._ctypes.ndarray import _set_ndarray_class
-# pylint: enable=unused-import
 
 try:
     import scipy.sparse as spsp

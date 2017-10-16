@@ -31,6 +31,7 @@ from numbers import Number
 
 import numpy as _numpy
 
+from ..attribute import AttrScope
 from ..base import _LIB, numeric_types
 from ..base import c_array, c_str, mx_uint, py_str, string_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
@@ -42,7 +43,7 @@ from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
 from . import op
-from .op import SymbolBase, _set_symbol_class, AttrScope, _Null  # pylint: disable=unused-import
+from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
