@@ -206,7 +206,7 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
  * @param out_data
  */
 template<typename xpu>
-void MKLDNNElementWiseAddCompute(const nnvm::NodeAttrs &attrs,
+inline void MKLDNNElementWiseAddCompute(const nnvm::NodeAttrs &attrs,
                                  const OpContext &ctx,
                                  const std::vector<TBlob> &in_data,
                                  const std::vector<OpReqType> &req,
