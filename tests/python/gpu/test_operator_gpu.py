@@ -1446,57 +1446,6 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
-def test_two_bit_quantization():
-    def binary(num):
-        return ''.join(bin(ord(c)).replace('0b', '').rjust(8, '0') for c in struct.pack('!f', num))
-
-    neg_threshold = -0.5
-    pos_threshold = 0.5
-
-    orig_shape = (16)
-
-    # push all 0s
-    grad = mx.nd.zeros(orig_shape, ctx=mx.gpu(0))
-    residual = mx.nd.zeros(grad.shape, ctx=mx.gpu(0))
-    compr = mx.contrib.nd.create_2bit(grad)
-    mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
-    f1 = binary(compr.asnumpy()[3])
-
-
-
-
-
-    decompr = mx.nd.zeros(grad.shape)
-    mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    exp_residual = np.ones(grad.shape)
-    exp_grad = np.zeros(grad.shape)
-    assert same(np.zeros(grad.shape), decompr.asnumpy()), (decompr.asnumpy(), exp_grad)
-    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
-
-    grad = mx.nd.array([3.0, 3.0, 3.0], ctx=mx.gpu(0))
-    mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
-    mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    exp_grad = np.ones(grad.shape)*pos_threshold
-    exp_residual = np.zeros(grad.shape)
-    assert same(exp_grad, decompr.asnumpy()), (decompr.asnumpy(),exp_grad)
-    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
-
-    grad = mx.nd.array([1.0, 1.0, 1.0], ctx=mx.gpu(0))
-    mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
-    mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    exp_grad = np.zeros(grad.shape)
-    exp_residual = np.ones(grad.shape)
-    assert same(exp_grad, decompr.asnumpy()), (decompr.asnumpy(), exp_grad)
-    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
-
-    grad = mx.nd.array([6.0, 6.0, 6.0], ctx=mx.gpu(0))
-    mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
-    mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-    exp_grad = np.ones(grad.shape)*pos_threshold
-    exp_residual = np.ones(grad.shape)*3
-    assert same(exp_grad, decompr.asnumpy()), (decompr.asnumpy(), exp_grad)
-    assert same(residual.asnumpy(), exp_residual), (residual.asnumpy(), exp_residual)
-
 
 if __name__ == '__main__':
     import nose
