@@ -78,7 +78,7 @@ class ActivationOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TBlob& input = in_data[activation::kData];
     const size_t sz = input.shape_.Size();
-    if(sz) {
+    if (sz) {
       MXNET_ASSIGN_REQ_SWITCH(req[activation::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
           s, sz,
@@ -105,7 +105,7 @@ class ActivationOp : public Operator {
     const TBlob& m_out_data = out_data[activation::kOut];
     const TBlob&  m_in_grad = in_grad[activation::kData];
     const size_t sz = m_out_data.shape_.Size();
-    if(sz) {
+    if (sz) {
       MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<
           mxnet::op::mxnet_op::backward_grad<BackwardOp>, Req>, xpu>::Launch(
