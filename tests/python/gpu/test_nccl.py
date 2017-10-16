@@ -6,6 +6,7 @@ shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
 gpus = range(1,1+len(mx.test_utils.list_gpus()))
 
+@unittest.skip("Test requires NCCL library installed and enabled during build")
 def test_nccl_pushpull():
     for shape, key in zip(shapes, keys):
         for n_gpus in gpus:
