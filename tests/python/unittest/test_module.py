@@ -24,6 +24,7 @@ from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
 from collections import namedtuple
 
+set_np_random_seed()
 
 def test_module_dtype():
     dtype = np.float16
@@ -490,7 +491,7 @@ def test_factorization_machine_module(verbose=False):
             model = mx.symbol.LinearRegressionOutput(data=model, label=y)
             return model
 
-        with rng_seed(11):
+        with np_random_seed(11):
             # model
             init = mx.initializer.Normal(sigma=0.01)
             factor_size = 4

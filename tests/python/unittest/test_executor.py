@@ -17,8 +17,9 @@
 
 import numpy as np
 import mxnet as mx
-from mxnet.test_utils import rng_seed
+from mxnet.test_utils import np_random_seed, set_np_random_seed
 
+set_np_random_seed()
 
 def reldiff(a, b):
     diff = np.sum(np.abs(a - b))
@@ -83,7 +84,7 @@ def test_bind(disable_bulk_exec=False):
         prev_bulk_inf_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", "0", "1")
         prev_bulk_train_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", "0", "1")
 
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 10
         maxdim = 4
         for repeat in range(nrepeat):
@@ -114,7 +115,7 @@ def test_bind(disable_bulk_exec=False):
            mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", prev_bulk_train_val)
 
 def test_dot():
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 10
         maxdim = 4
         for repeat in range(nrepeat):

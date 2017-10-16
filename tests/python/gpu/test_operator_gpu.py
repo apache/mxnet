@@ -83,7 +83,7 @@ def check_countsketch(in_dim,out_dim,n):
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
 
 def test_countsketch():
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 2
         minindim = 40
         maxindim = 100
@@ -169,7 +169,7 @@ def check_ifft(shape):
 
 
 def test_ifft():
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 2
         maxdim = 10
         for repeat in range(nrepeat):
@@ -256,7 +256,7 @@ def check_fft(shape):
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
 
 def test_fft():
-    with rng_seed(0):
+    with np_random_seed(0):
         nrepeat = 2
         maxdim = 10
         for repeat in range(nrepeat):
@@ -411,7 +411,7 @@ def test_batchnorm_versions():
 
 
 def test_convolution_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
 
         data = mx.sym.Variable('conv_data')
@@ -626,7 +626,7 @@ def test_deconvolution_options():
 #    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 def test_bilinear_sampler_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         data = mx.sym.Variable('data')
         grid = mx.sym.Variable('grid')
         sym = mx.sym.BilinearSampler(data=data, grid=grid)
@@ -658,7 +658,7 @@ def test_grid_generator_with_type():
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7645")
 def test_spatial_transformer_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         data = mx.sym.Variable('data')
         loc = mx.sym.Flatten(data)
         loc = mx.sym.FullyConnected(data=loc, num_hidden=10)
@@ -675,7 +675,7 @@ def test_spatial_transformer_with_type():
 # as one max value in a float32 data set may not be the max value in a float16 data set.
 # This function will not be called.
 def test_pooling_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                     {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
                     {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
@@ -1153,7 +1153,7 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 def test_psroipooling_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         arg_params = {
             'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
@@ -1177,7 +1177,7 @@ def test_psroipooling_with_type():
                                                    'psroipool_rois': 'null'}, arg_params=arg_params)
 
 def test_deformable_psroipooling_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         arg_params = {
             'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
@@ -1210,7 +1210,7 @@ def test_deformable_psroipooling_with_type():
                                                    'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
 
 def test_deformable_convolution_with_type():
-    with rng_seed(1234):
+    with np_random_seed(1234):
         sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
         # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
         ctx_list = [{'ctx': mx.gpu(0),
