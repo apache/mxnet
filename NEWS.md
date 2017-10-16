@@ -11,9 +11,9 @@ MXNet Change Log
   - Added new loss functions - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`.
   - `gluon.Trainer` now allows reading and setting learning rate with `trainer.learning_rate` property.
   - Added API `HybridBlock.export` for exporting gluon models to MXNet format.
-  - Added gluon.contrib package.
+  - Added `gluon.contrib` package.
     - Convolutional recurrent network cells for RNN, LSTM and GRU.
-    - VariationalDropoutCell
+    - `VariationalDropoutCell`
 ### New Features - Autograd
   - Added enhancements to `autograd` package, which enables automatic differentiation of NDArray operations.
   - `autograd.Function` allows defining both forward and backward computation for custom operators.
