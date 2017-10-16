@@ -67,29 +67,28 @@ struct idx_check {
 };
 
 template<typename xpu>
-void CheckFormatWrapper(const RunContext &rctx, const NDArray *input, const bool &full_check);
+void CheckFormatWrapper(const RunContext &rctx, const NDArray *input,
+                        NDArray *cpu_ret, const bool &full_check);
 
 template<typename xpu>
-void CheckFormatImpl(const RunContext &rctx, const NDArray *input, const bool &full_check) {
+void CheckFormatImpl(const RunContext &rctx, const NDArray *input,
+                     NDArray *cpu_ret, const bool &full_check) {
   using namespace op::mxnet_op;
   auto stype = input->storage_type();
+  auto err = cpu_ret->data().dptr<mshadow::default_real_t>();
+  *err = 0;
   if (stype == kCSRStorage) {
     const TShape shape = input->shape();
     const TShape idx_shape = input->aux_shape(csr::kIdx);
     const TShape indptr_shape = input->aux_shape(csr::kIndPtr);
     const TShape storage_shape = input->storage_shape();
-    CHECK_EQ(shape.ndim(), 2)
-             << "CSR only for two dimension";
-    CHECK(idx_shape.ndim() == 1 &&
-          indptr_shape.ndim() == 1 &&
-          storage_shape.ndim() == 1)
-          << "data, indices, and indptr should be 1-D";
-    CHECK_EQ(indptr_shape[0], shape[0] + 1)
-             << "index pointer size" << indptr_shape[0]
-             << "should be " << (shape[0] + 1);
-    CHECK_EQ(idx_shape[0], storage_shape[0])
-             << "indices and data should have the same size";
-
+    if ((shape.ndim() != 2) ||
+        (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
+        (indptr_shape[0] != shape[0] + 1) ||
+        (idx_shape[0] != storage_shape[0])) {
+          *err = 1;
+          return;
+    }
     if (full_check) {
       NDArray xpu_ret = NDArray(mshadow::Shape1(1), rctx.get_ctx());
       TBlob xpu_tmp = xpu_ret.data();
@@ -109,18 +108,15 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray *input, const bool &f
           input->aux_data(csr::kIdx).dptr<IType>(), shape[1]);
       });
       rctx.get_stream<xpu>()->Wait();
-      NDArray cpu_ret = NDArray(mshadow::Shape1(1), Context::CPU());
-      TBlob cpu_tmp = cpu_ret.data();
+      TBlob cpu_tmp = cpu_ret->data();
       ndarray::Copy<xpu, cpu>(xpu_ret.data(), &cpu_tmp,
-                              xpu_ret.ctx(), cpu_ret.ctx(), rctx);
+                              xpu_ret.ctx(), cpu_ret->ctx(), rctx);
       rctx.get_stream<xpu>()->Wait();
-      auto err = cpu_ret.data().dptr<mshadow::default_real_t>()[0];
-      CHECK_EQ(err, 0) << "Check validity of the CSRNDArray";
     }
   } else if (stype == kRowSparseStorage) {
-    CHECK_EQ(input->aux_shape(rowsparse::kIdx)[0], input->storage_shape()[0])
-             << "inconsistent storage shape " << input->storage_shape()
-             << " vs. aux shape " << input->aux_shape(rowsparse::kIdx);
+    if (input->aux_shape(rowsparse::kIdx)[0] != input->storage_shape()[0]) {
+      *err = 1;
+    }
   }
 }
 

@@ -1215,24 +1215,28 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 }
 
 void NDArray::CheckFormat(const bool full_check) const {
-    if (this->ctx().dev_mask() == cpu::kDevMask) {
-      Engine::Get()->PushSync([&](RunContext rctx) {
-          common::CheckFormatWrapper<cpu>(rctx, this, full_check);
-        }, this->ctx(), {this->var()}, {},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
-      this->WaitToWrite();
-    } else {
+  NDArray cpu_ret = NDArray(mshadow::Shape1(1), Context::CPU());
+  auto err = cpu_ret.data().dptr<mshadow::default_real_t>();
+  *err = 0;
+  if (this->ctx().dev_mask() == cpu::kDevMask) {
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        common::CheckFormatWrapper<cpu>(rctx, this, &cpu_ret, full_check);
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+    this->WaitToWrite();
+  } else {
 #if MXNET_USE_CUDA
-      Engine::Get()->PushSync([&](RunContext rctx) {
-          common::CheckFormatWrapper<gpu>(rctx, this, full_check);
-          rctx.get_stream<gpu>()->Wait();
-        }, this->ctx(), {this->var()}, {},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
-      this->WaitToWrite();
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        common::CheckFormatWrapper<gpu>(rctx, this, &cpu_ret, full_check);
+        rctx.get_stream<gpu>()->Wait();
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+    this->WaitToWrite();
 #else
     LOG(FATAL) << "GPU is not enabled";
 #endif
-    }
+  }
+  CHECK_EQ(*err, 0) << "Check validity of the CSRNDArray";
 }
 
 #if MXNET_PREDICT_ONLY == 0
