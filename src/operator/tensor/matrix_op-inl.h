@@ -559,8 +559,11 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   if (req == kNullOp) return;
   CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
+  const TShape ishape = in.shape();
   int begin = *param.begin[0];
+  if (begin < 0) begin += ishape[0];
   int end = *param.end[0];
+  if (end < 0) end += ishape[0];
   int indptr_len = end - begin + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
   if (!in.storage_initialized()) {
