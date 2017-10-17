@@ -4305,7 +4305,120 @@ def test_scatter_gather_nd():
 
     assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
+def test_two_bit_quantization():
+    neg_threshold = -0.5
+    pos_threshold = 0.5
+    orig_shape = [(25,),(16,),(1121)]
+    num_repeat = 10
+    from struct import pack,unpack
+    # from bitstring import BitArray
 
+    def twos_comp(val, bits):
+        """compute the 2's complement of int value val"""
+        if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
+            val = val - (1 << bits)        # compute negative value
+        return val                         # return positive value as is
+        # Where the bits2int function converts bits to an integer.
+
+    def bits2int(bits):
+        # You may want to change ::-1 if depending on which bit is assumed
+        # to be most significant.
+        bits = [int(x) for x in bits[::-1]]
+        x = 0
+        for i in range(len(bits)):
+            x += bits[i]*2**i
+        return x
+
+    def as_float32(s):
+        """
+        See: http://en.wikipedia.org/wiki/IEEE_754-2008
+        """
+        return unpack("f",pack("I", bits2int(s)))[0]
+
+    def compute_expected(arr, neg, pos, curr_residual):
+        # stores the quantized representation as a sequence of bits
+        str_quant = ''
+        new_residual = []
+        decompr = []
+        for i, a in np.ndenumerate(arr.asnumpy()):
+            a+=curr_residual.asnumpy()[i]
+            if a>=pos:
+                str_quant += '10'
+                new_residual.append(a - pos)
+                decompr.append(pos)
+            elif a<= neg:
+                str_quant += '01'
+                new_residual.append(a - neg)
+                decompr.append(neg)
+            else:
+                str_quant += '00'
+                new_residual.append(a)
+                decompr.append(0)
+        # append extra bits when size of array not a factor of 16
+        if len(str_quant)%16 != 0:
+            str_quant += '0'*(16 - len(str_quant)%16)
+
+        compr = [neg, pos, len(arr)]
+        # converts the string generated into integers 32chars at a time
+        i = 0
+        while i<len(str_quant):
+            cur_float = str_quant[i+24:i+32] + str_quant[i+16:i+24] + str_quant[i+8:i+16] + str_quant[i:i+8]
+            compr.append(as_float32(cur_float))
+            i+=32
+        return compr, new_residual, decompr
+
+    def check(grad, residual):
+        exp_compr, exp_residual, exp_decompr = compute_expected(grad, neg_threshold, pos_threshold, residual)
+        compr = mx.contrib.nd.create_2bit(grad)
+        mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
+        decompr = mx.nd.zeros(grad.shape)
+        mx.contrib.ndarray.dequantize_2bit(compr, decompr)
+        # # print(exp_compr)
+        # for l in list(compr.asnumpy()[3:]):
+        #     print(BitArray(float=l, length=32, endian='little').bin)
+        assert np.array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
+        assert np.array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
+        # use almost equal for residual as this involves addition operation
+        assert_almost_equal(residual.asnumpy(), np.array(exp_residual)) , (residual, exp_residual)
+
+    def zerodata(shape):
+        # all 0s
+        grad = mx.nd.zeros(shape)
+        residual = mx.nd.zeros(grad.shape)
+        return grad, residual
+
+    def onesdata(shape):
+        # all 1s
+        grad = mx.nd.ones(shape)
+        residual = mx.nd.zeros(grad.shape)
+        return grad, residual
+
+    def random_data(shape):
+        # push random data and residual
+        grad = mx.nd.random_uniform(-0.9,0.9, shape=shape, ctx=default_context())
+        residual = mx.nd.random_uniform(-1,1, shape=shape, ctx=default_context())
+        return grad, residual
+
+    def random_large_range(shape):
+        grad = mx.nd.random_uniform(-2,2, shape=shape, ctx=default_context())
+        residual = mx.nd.random_uniform(-2,2, shape=shape, ctx=default_context())
+        return grad, residual
+
+    def random_small_range(shape):
+        grad = mx.nd.random_uniform(-0.6,6, shape=shape, ctx=default_context())
+        residual = mx.nd.random_uniform(-0.1,0.1, shape=shape, ctx=default_context())
+        return grad, residual
+
+    for shape in orig_shape:
+        for i in range(num_repeat):
+            data = []
+            data.append(zerodata(shape))
+            data.append(onesdata(shape))
+            data.append(random_data(shape))
+            data.append(random_large_range(shape))
+            data.append(random_small_range(shape))
+            for d in data:
+                check(d[0], d[1])
 
 if __name__ == '__main__':
     import nose

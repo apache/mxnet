@@ -187,18 +187,10 @@ class KVStoreLocal : public KVStore {
         if (merged.storage_type() != local.storage_type()) {
           local = merged.Copy(local.ctx());
         } else {
-          CopyFromTo(merged, local);
-//          local = merged;
+          local = merged;
         }
       }
-      NDArray localtemp = NDArray(local.shape(), pinned_ctx_, false, localtemp.dtype());
-      CopyFromTo(local, localtemp, 0);
-      localtemp.WaitToRead();
-      std::cout<<"push local "<<*(localtemp.data().dptr<float>())<<std::endl;
     }
-
-
-
   }
 
   virtual void PullImpl(const std::vector<int>& keys,
@@ -211,10 +203,6 @@ class KVStoreLocal : public KVStore {
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       const NDArray& local = local_[key];
-      NDArray localtemp = NDArray(local.shape(), pinned_ctx_, false, local.dtype());
-      CopyFromTo(local, localtemp, 0);
-      localtemp.WaitToRead();
-      std::cout<<"pull local "<<*(localtemp.data().dptr<float>())<<std::endl;
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
       comm_->Broadcast(key, local, grouped_vals[i], priority);
     }

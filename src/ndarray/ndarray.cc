@@ -628,8 +628,6 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
         inputs[0] = from.data();
         inputs[1] = ret.data();
         mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
-        // Wait GPU kernel to complete
-        ctx.get_stream<gpu>()->Wait();
       }, from.ctx(), {from.var()}, {ret.var()},
       FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {

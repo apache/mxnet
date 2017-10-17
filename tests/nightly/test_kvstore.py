@@ -65,7 +65,7 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
     rate = 2
     kv = mx.kv.create(kv_type)
     kv.set_compress({'compress':compress, 'neg_threshold':neg, 'pos_threshold':pos})
-#    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
+    kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
 
@@ -117,6 +117,8 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
                 check_diff_to_scalar(o, curval)
             return curval
 
+
+
     def check_ones(kv, pos, rate, curval):
         newval = curval + rate*nworker*pos
         for j in range(len(keys)):
@@ -128,12 +130,12 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
 
     pull_before_push(kv)
     push_zeros(kv)
-    #curval = verify_residual(kv, neg, pos, rate)
-    #check_ones(kv, pos, rate, curval)
+    curval = verify_residual(kv, neg, pos, rate)
+    check_ones(kv, pos, rate, curval)
 
-#test_kvstore('local_update_cpu')
-#test_kvstore('local_allreduce_cpu')
-#test_kvstore('local_allreduce_device')
+test_kvstore('local_update_cpu')
+test_kvstore('local_allreduce_cpu')
+test_kvstore('local_allreduce_device')
 
 test_compress_kvstore('local_allreduce_device')
 
@@ -157,6 +159,6 @@ def test_group_kvstore(kv_type):
             err = sum(err) / np.sum(np.abs(a))
             assert(err < 1e-6), (err, a.shape)
 
-#test_group_kvstore('local_update_cpu')
-#test_group_kvstore('local_allreduce_cpu')
-#test_group_kvstore('local_allreduce_device')
+test_group_kvstore('local_update_cpu')
+test_group_kvstore('local_allreduce_cpu')
+test_group_kvstore('local_allreduce_device')

@@ -41,6 +41,7 @@ struct init_mem_2bit {
   }
 };
 
+
 struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
   float pos_threshold, neg_threshold;
   DMLC_DECLARE_PARAMETER(TwoBitParam) {
@@ -122,27 +123,60 @@ struct quantize_2bit {
                                   const float neg_threshold,
                                   const float pos_threshold) {
 
+//    int num = 1;
+//    if(*(char *)&num == 1)
+//    {
+//      std::cout<<"Little-Endian"<<std::endl;
+//    }
+//    else
+//    {
+//      std::cout<<"Big-Endian"<<std::endl;
+//    }
+
     float* out_block = out + block_id;
     // start and end are indices in original grad array
     int start = block_id*16;
     int end = ( start + 16 <= gradsize) ? start+16 : gradsize;
-
+    char* ch_ptr = reinterpret_cast<char*>(out_block);
     for (int i=start; i<end; i++){
       grad[i] += residual[i];
-      char* ch_ptr = reinterpret_cast<char*>(out_block + i%4);
+      char* curr_ptr = ch_ptr + (i-start)/4;
       if (grad[i] >= pos_threshold) {
         residual[i] = grad[i] - pos_threshold;
         // set data to 10
-        (*ch_ptr) |= (2u<<(6-((i%4)*2)));
+//        std::cout<<"or "<<(2u<<(6-((i%4)*2)))<<std::endl;
+        (*curr_ptr) |= (2u<<(6-((i%4)*2)));
       } else if (grad[i] <= neg_threshold) {
         residual[i] = grad[i] - neg_threshold;
         // set data to 01
-        (*ch_ptr) |= (1u<<(6-((i%4)*2)));
+//        std::cout<<"or "<<(1u<<(6-((i%4)*2)))<<std::endl;
+        (*curr_ptr) |= (1u<<(6-((i%4)*2)));
       } else {
         // leave data as 00
         residual[i] = grad[i];
       }
+//      std::cout<<grad[i]<<std::endl;
     }
+
+//    std::cout<<*out_block<<std::endl;
+    std::string fstr;
+    union { float f; uint32_t i; } u;
+    u.f = *out_block;
+    fstr.clear();
+
+    for (int i = 0; i < 32; i++)
+    {
+      if (u.i % 2)  fstr.push_back('1');
+      else fstr.push_back('0');
+      u.i >>= 1;
+    }
+
+    // Reverse the string since now it's backwards
+    std::string temp(fstr.rbegin(), fstr.rend());
+    fstr = temp;
+
+//    floatToBinary3(*out_block, fstr);
+//    std::cout<<fstr<<std::endl;
   }
 };
 

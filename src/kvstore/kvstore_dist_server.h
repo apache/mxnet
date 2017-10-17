@@ -410,14 +410,16 @@ class KVStoreDistServer {
           decomp_buf = NDArray(dshape, Context());
         }
       }
-//      if(compress_!="none") {
+      if(compress_!="none") {
 //        CHECK_EQ(*((float *) recved.data().dptr_),-0.5);
 //        CHECK_EQ(*((float *) recved.data().dptr_+1),0.5);
 //        CHECK_EQ(*((float *) recved.data().dptr_+2),dshape.Size());
-//        for(int i=3; i<recved.shape().Size(); i++){
-//          CHECK_EQ(*((float *) recved.data().dptr_+i),0);
+//        std::cout<<"recvd ";
+//        for(int i=0; i<recved.shape().Size(); i++){
+//          std::cout<<*((float *) recved.data().dptr_+i)<<" ";
 //        }
-//      }
+//        std::cout<<std::endl;
+      }
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
@@ -453,6 +455,12 @@ class KVStoreDistServer {
             CopyFromTo(recved, &merged.array, 0);
           } else {
             Dequantize(recved, &merged.array, compress_, 0);
+//            merged.array.WaitToRead();
+//            std::cout<<"merged array ";
+//            for(int i=0; i<merged.array.shape().Size(); i++){
+//              std::cout<<*((float *) merged.array.data().dptr_+i)<<" ";
+//            }
+//            std::cout<<std::endl;
 //            decomp_buf.WaitToRead();
 //            CopyFromTo(decomp_buf, &merged.array, 0);
           }
@@ -462,6 +470,11 @@ class KVStoreDistServer {
           } else {
             Dequantize(recved, &decomp_buf, compress_, 0);
 //            decomp_buf.WaitToRead();
+//            std::cout<<"decompbuf ";
+//            for(int i=0; i<decomp_buf.shape().Size(); i++){
+//              std::cout<<*((float *) decomp_buf.data().dptr_+i)<<" ";
+//            }
+//            std::cout<<std::endl;
             merged.array += decomp_buf;
           }
         }

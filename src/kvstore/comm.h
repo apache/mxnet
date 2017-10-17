@@ -555,59 +555,16 @@ class CommDevice : public Comm {
       if (compress_=="none") {
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       } else if (compress_ == "2bit") {
-
-        NDArray resbufitemp = NDArray(buf.residual[i].shape(), pinned_ctx(), false, buf.residual[i].dtype());
-        CopyFromTo(buf.residual[i], resbufitemp, 0);
-        resbufitemp.WaitToRead();
-        std::cout<<buf.residual[i].ctx().dev_id<<" initial res"<<*(resbufitemp.data().dptr<float>())<<std::endl;
-
-        NDArray srcitemp = NDArray(src[i].shape(), pinned_ctx(), false, src[i].dtype());
-        CopyFromTo(src[i], srcitemp, 0);
-        srcitemp.WaitToRead();
-        std::cout<<src[i].ctx().dev_id<<" src "<<*(srcitemp.data().dptr<float>())<<std::endl;
-
         Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]),
                  neg_threshold_, pos_threshold_, compress_, priority);
-
-        NDArray sendbufitemp = NDArray(buf.small_send_buf[i].shape(), pinned_ctx(), false, buf.small_send_buf[i].dtype());
-        CopyFromTo(buf.small_send_buf[i], sendbufitemp, 0);
-        sendbufitemp.WaitToRead();
-        std::cout<<"quantized on gpu "<<buf.small_send_buf[i].ctx().dev_id<<" "<<*(sendbufitemp.data().dptr<float>())<<" "<<*(sendbufitemp.data().dptr<float>()+1)<<
-                 " "<<*(sendbufitemp.data().dptr<float>()+2)<< " "<< *(sendbufitemp.data().dptr<float>()+3)<<std::endl;
-
         CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
-
-        NDArray recvbufitemp = NDArray(buf.small_recv_buf[i].shape(), pinned_ctx(), false, buf.small_recv_buf[i].dtype());
-        CopyFromTo(buf.small_recv_buf[i], recvbufitemp, 0);
-        recvbufitemp.WaitToRead();
-        std::cout<<"quantized copied to gpu "<<buf.small_recv_buf[i].ctx().dev_id<<" "<<*(recvbufitemp.data().dptr<float>())
-                 <<" "<<*(recvbufitemp.data().dptr<float>()+1)
-                 <<" "<<*(recvbufitemp.data().dptr<float>()+2)<< " "<< *(recvbufitemp.data().dptr<float>()+3)<<std::endl;
-
         Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
-
-        NDArray copybufitemp = NDArray(buf.copy_buf[i].shape(), pinned_ctx(), false, buf.copy_buf[i].dtype());
-        CopyFromTo(buf.copy_buf[i], copybufitemp, 0);
-        copybufitemp.WaitToRead();
-        std::cout<<"dequantized on gpu "<<buf.copy_buf[i].ctx().dev_id<<" "<<*copybufitemp.data().dptr<float>()<< " for i="<<i<<std::endl;
-
-        CopyFromTo(buf.residual[i], resbufitemp, 0);
-        resbufitemp.WaitToRead();
-        std::cout<<"res on gpu"<<buf.residual[i].ctx().dev_id<<" "<<*(resbufitemp.data().dptr<float>())<<std::endl;
       } else {
         LOG(FATAL) << "Unsupported compression "<<compress_;
       }
       reduce[i] = buf.copy_buf[i];
-//      CopyFromTo(buf.copy_buf[i], reduce[i]);
     }
     ElementwiseSum(reduce, &buf.merged);
-
-//    buf.merged.WaitToRead();
-
-    NDArray mergedtmp = NDArray(buf.merged.shape(), pinned_ctx(), false, buf.merged.dtype());
-    CopyFromTo(buf.merged, mergedtmp, 0);
-    mergedtmp.WaitToRead();
-    std::cout<<"merged "<<*(mergedtmp.data().dptr<float>())<<std::endl;
     return buf.merged;
   }
 

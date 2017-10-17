@@ -53,23 +53,23 @@ namespace kvstore {
  * workers. see details on \ref ServerHandle::Start
  */
 
-  void floatToBinary(float f, std::string& str)
-  {
-    union { float f; uint32_t i; } u;
-    u.f = f;
-    str.clear();
-
-    for (int i = 0; i < 32; i++)
-    {
-      if (u.i % 2)  str.push_back('1');
-      else str.push_back('0');
-      u.i >>= 1;
-    }
-
-    // Reverse the string since now it's backwards
-    std::string temp(str.rbegin(), str.rend());
-    str = temp;
-  }
+//  void floatToBinary(float f, std::string& str)
+//  {
+//    union { float f; uint32_t i; } u;
+//    u.f = f;
+//    str.clear();
+//
+//    for (int i = 0; i < 32; i++)
+//    {
+//      if (u.i % 2)  str.push_back('1');
+//      else str.push_back('0');
+//      u.i >>= 1;
+//    }
+//
+//    // Reverse the string since now it's backwards
+//    std::string temp(str.rbegin(), str.rend());
+//    str = temp;
+//  }
 
 
   class KVStoreDist : public KVStoreLocal {

@@ -193,6 +193,7 @@ template<>
 void Quantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs,
                           const float neg_threshold, const float pos_threshold) {
 	mxnet::op::Quantize2BitImpl<cpu>(s,inputs, neg_threshold, pos_threshold);
+
 }
 
 }  // namespace ndarray
