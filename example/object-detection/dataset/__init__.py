@@ -1,2 +1,2 @@
 """Dataset gallery."""
-from voc import VOCDetection
+from dataset.voc import VOCDetection
