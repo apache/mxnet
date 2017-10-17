@@ -210,6 +210,7 @@ void MKLDNNMemoryDescriptor<Dtype>::sync_converted_prv(Dtype* cpu_data,
         = get_mkldnn_prv_descriptor<Dtype>(blob);
       if (*blob_prv_mkldnn_mem_descr->prv_memory_pd() != *this->prv_memory_pd()) {
         // prv in blob and in this descrptor may have different layouts
+        this->convert_from_extprv(blob_prv_mkldnn_mem_descr->get_prv_memory(true));
         if (set_prv_ptr) {
           blob->set_prv_descriptor(this->get_shared_ptr(), true);
         }
