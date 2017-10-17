@@ -84,7 +84,7 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray *input,
                      TBlob *cpu_err, const bool &full_check) {
   using namespace op::mxnet_op;
   auto stype = input->storage_type();
-  auto *err = cpu_err->dptr<mshadow::default_real_t>();
+  auto err = cpu_err->dptr<mshadow::default_real_t>();
   if (stype == kCSRStorage) {
     const TShape shape = input->shape();
     const TShape idx_shape = input->aux_shape(csr::kIdx);
