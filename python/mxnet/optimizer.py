@@ -321,7 +321,7 @@ class Optimizer(object):
             compatibility, and we recommend to use the name instead.
         """
         self.lr_mult = {}
-        if self.sym_info is not None:
+        if self.sym_info:
             attr, arg_names = self.sym_info
             for name in arg_names:
                 if name in attr and '__lr_mult__' in attr[name]:
