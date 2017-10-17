@@ -598,6 +598,8 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
             inputs[2] = ret.data();
             mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
                                                       neg_threshold, pos_threshold);
+            // Wait GPU kernel to complete
+            ctx.get_stream<gpu>()->Wait();
           }, from.ctx(), const_vars, mutable_vars,
           FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
         } else {
@@ -626,8 +628,10 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
         inputs[0] = from.data();
         inputs[1] = ret.data();
         mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs);
-          }, from.ctx(), {from.var()}, {ret.var()},
-          FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
+        // Wait GPU kernel to complete
+        ctx.get_stream<gpu>()->Wait();
+      }, from.ctx(), {from.var()}, {ret.var()},
+      FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
       LOG(FATAL) << "Unsupported dequantization " << compress << std::endl;
     }
@@ -639,12 +643,14 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
           std::vector<TBlob> inputs(2);
           inputs[0] = from.data();
           inputs[1] = ret.data();
-            mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
-          }, from.ctx(), {from.var()}, {ret.var()},
-          FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
-        } else {
-          LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
-        }
+          mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, from.ctx(), {from.var()}, {ret.var()},
+        FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
+      } else {
+        LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
+      }
     } else {
       LOG(FATAL) << "unknown device mask";
     }

@@ -37,7 +37,7 @@ namespace op {
 struct init_mem_2bit {
   // Initialize output array
   MSHADOW_XINLINE static void Map(int i, float* out) {
-    *reinterpret_cast<int*>(out+i) = 0x00000000;
+    *(out+i) = 0x00000000;
   }
 };
 
