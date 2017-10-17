@@ -56,7 +56,7 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
       default:
         break;
       }
-      if (enableMKLDNNWarnGenerated())
+      if (EnableMkldnnWarnGenerated())
         LOG(INFO) << "MKLDNNPoolingOp Skip MKL DNN optimization";
     }
 #endif

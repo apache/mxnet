@@ -47,7 +47,7 @@ Operator* CreateOp<cpu>(DeconvolutionParam param, int dtype,
       break;
     }
   }
-  if (enableMKLDNNWarnGenerated())
+  if (EnableMkldnnWarnGenerated())
     LOG(INFO) << "MKLDNNDeConvolutionOp Skip MKL DNN optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
