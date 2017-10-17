@@ -159,21 +159,21 @@ struct quantize_2bit {
     }
 
 //    std::cout<<*out_block<<std::endl;
-    std::string fstr;
-    union { float f; uint32_t i; } u;
-    u.f = *out_block;
-    fstr.clear();
-
-    for (int i = 0; i < 32; i++)
-    {
-      if (u.i % 2)  fstr.push_back('1');
-      else fstr.push_back('0');
-      u.i >>= 1;
-    }
-
-    // Reverse the string since now it's backwards
-    std::string temp(fstr.rbegin(), fstr.rend());
-    fstr = temp;
+//    std::string fstr;
+//    union { float f; uint32_t i; } u;
+//    u.f = *out_block;
+//    fstr.clear();
+//
+//    for (int i = 0; i < 32; i++)
+//    {
+//      if (u.i % 2)  fstr.push_back('1');
+//      else fstr.push_back('0');
+//      u.i >>= 1;
+//    }
+//
+//    // Reverse the string since now it's backwards
+//    std::string temp(fstr.rbegin(), fstr.rend());
+//    fstr = temp;
 
 //    floatToBinary3(*out_block, fstr);
 //    std::cout<<fstr<<std::endl;

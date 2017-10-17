@@ -23,7 +23,6 @@ sys.path.insert(0, "../../python/")
 import mxnet as mx
 import numpy as np
 import numpy.random as rnd
-import time
 from mxnet.test_utils import assert_almost_equal
 
 def check_diff_to_scalar(A, x, rank=None):
@@ -179,7 +178,6 @@ def test_sync_push_pull():
         check_diff_to_scalar(val, expected, rank=my_rank)
 
     def check_compr_residual(kv, pos_threshold, nworker):
-        import time
         for d in [('21', shape),('2221',irregular_shape),('221', big_shape), ('21', shape)]:
             # doesn't meet threshold
             kv.push(d[0], mx.nd.ones(d[1])*0.4)
