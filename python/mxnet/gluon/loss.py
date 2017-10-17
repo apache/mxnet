@@ -128,7 +128,7 @@ class L1Loss(Loss):
     """Calculates the mean absolute error between output and label:
 
     .. math::
-        L = \\frac{1}{2}\\sum_i \\vert {output}_i - {label}_i \\vert.
+        L = \\sum_i \\vert {output}_i - {label}_i \\vert.
 
     Output and label must have the same shape.
 
