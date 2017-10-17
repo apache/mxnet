@@ -29,7 +29,7 @@ def topsort(nodes):
   deg = [0]*n
   g = [[] for _ in xrange(n)]
   for i,node in enumerate(nodes):
-    if node.has_key('inputs'):
+    if 'inputs' in node:
       for j in node['inputs']:
         deg[i] += 1
         g[j[0]].append(i)
@@ -45,7 +45,7 @@ def topsort(nodes):
         q.append(j)
   new_ids=dict([(node['name'],i) for i,node in enumerate(res)])
   for node in res:
-    if node.has_key('inputs'):
+    if 'inputs' in node:
       for j in node['inputs']:
         j[0]=new_ids[nodes[j[0]]['name']]
   return res
