@@ -197,12 +197,12 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
           // ---  init primitive and prv_memory descriptors ---------
         fwd_bottom_data_primitive =
           fwd_bottom_data->get_converted_prv(data_ptr, false, in_data[conv::kData]);
-        fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, false,
+        fwd_weights_data_primitive = fwd_weights_data->get_converted_prv(wmat_ptr, true,
           in_data[conv::kWeight]);
         if (!this->param_.no_bias) {
           Tensor<xpu, 1, DType> bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
           fwd_bias_data_primitive =
-            fwd_bias_data->get_converted_prv(bias.dptr_, false, in_data[conv::kBias]);
+            fwd_bias_data->get_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
         }
         fwd_top_data_memory = fwd_top_data->create_output_memory(out_ptr, out_data[conv::kOut],
           fwd_top_data);
@@ -217,10 +217,10 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
         }
       } else {
           fwd_bottom_data->sync_converted_prv(data_ptr, false, in_data[conv::kData]);
-          fwd_weights_data->sync_converted_prv(wmat_ptr, false, in_data[conv::kWeight]);
+          fwd_weights_data->sync_converted_prv(wmat_ptr, true, in_data[conv::kWeight]);
           if (!this->param_.no_bias) {
               Tensor<xpu, 1, DType> bias = mkl_experimental_direct_get<xpu, 1, DType>(in_data[conv::kBias], s);
-              fwd_bias_data->sync_converted_prv(bias.dptr_, false, in_data[conv::kBias]);
+              fwd_bias_data->sync_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
           }
           fwd_top_data->sync_output_memory(out_data[conv::kOut],
             fwd_top_data);
