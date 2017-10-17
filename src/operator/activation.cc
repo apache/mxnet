@@ -44,9 +44,6 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype, const TShape& dshape) 
   if (param.act_type == activation::kReLU) {
     switch (dtype) {
     case mshadow::kFloat32:
-    case mshadow::kInt8:
-    case mshadow::kInt32:
-    case mshadow::kUint8:
       return new MKLDNNReluOp<cpu, float>();
     default:
       break;

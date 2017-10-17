@@ -33,7 +33,7 @@
 #include "mkldnn.hpp"
 
 namespace mxnet {
-extern bool enableMKLDNNWarnGenerated();
+extern bool EnableMkldnnWarnGenerated();
 // =====  CpuEngine =======================================
 // cpu_engine singleton
 class CpuEngine {

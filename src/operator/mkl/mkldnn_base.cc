@@ -29,7 +29,7 @@
 using namespace mkldnn;
 namespace mxnet {
 
-bool enableMKLDNNWarnGenerated() {
+bool EnableMkldnnWarnGenerated() {
   return false;
 }
 std::shared_ptr<MKLDNNStream> StreamHolder::get_stream() {

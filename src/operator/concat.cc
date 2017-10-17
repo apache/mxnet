@@ -40,6 +40,18 @@ namespace op {
 template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  if ((1 == param.dim) && (param.num_args > 1)) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        return new MKLDNNConcatOp<cpu, float>(param);
+    default:
+      break;
+    }
+  }
+  if (EnableMkldnnWarnGenerated())
+    LOG(INFO) << MKLDNNConcatOp<cpu, float>::getName() << " Skip MKL optimization";
+#endif
 #if MXNET_USE_MKL2017 == 1
   if ((1 == param.dim) &&
     (param.num_args < (dnnResourceMultipleDst - dnnResourceMultipleSrc))) {
@@ -52,20 +64,8 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
       break;
     }
   }
-  if (enableMKLWarnGenerated())
+  if (EnableMklWarnGenerated())
     LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
-#endif
-#if MXNET_USE_MKLDNN == 1
-  if ((1 == param.dim) && (param.num_args > 1)) {
-    switch (dtype) {
-      case mshadow::kFloat32:
-        return new MKLDNNConcatOp<cpu, float>(param);
-    default:
-      break;
-    }
-  }
-  if (enableMKLDNNWarnGenerated())
-    LOG(INFO) << MKLDNNConcatOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);

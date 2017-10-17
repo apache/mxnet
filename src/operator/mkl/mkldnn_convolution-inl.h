@@ -72,7 +72,6 @@ class MKLDNNConvolutionOp : public Operator, public MKLDNNLayer<DType>,
   }
  private:
   void InitForward(const OpContext &ctx) {
-      // if (std::is_same<DType, double>::value)   NOT_IMPLEMENTED;
       auto propagation =
         (!ctx.is_train) ? prop_kind::forward_scoring : prop_kind::forward_training;
 

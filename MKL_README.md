@@ -88,7 +88,7 @@ sudo apt-get install -y build-essential cmake git wget curl libatlas-base-dev li
 
     1.4 MKL version compatibility
         
-        1.3.2.1 If you already have MKL installed and MKLROOT being set in your system, by default, it will not attempt to download the latest mklml package unless you unset MKLROOT. 
+        1.4.1 If you already have MKL installed and MKLROOT being set in your system, by default, it will not attempt to download the latest mklml package unless you unset MKLROOT. 
 
   2. Run 'make -jX'
        
