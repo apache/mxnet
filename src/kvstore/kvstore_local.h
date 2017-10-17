@@ -61,10 +61,8 @@ class KVStoreLocal : public KVStore {
   }
 
   virtual ~KVStoreLocal() {
-    if (comm_ != nullptr) {
-      delete comm_;
-      comm_ = nullptr;
-    }
+    delete comm_;
+    comm_ = nullptr;
   }
 
   void Init(const std::vector<int>& keys,

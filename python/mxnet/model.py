@@ -110,7 +110,7 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     # Use aggregation by default only with NCCL
     default_batch = 16 if 'nccl' in kvstore.type else 1
     batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
-    while(start < size):
+    while start < size:
         end = start + batch if start + batch < size else size
         # push gradient, priority is negative index
         kvstore.push(param_names[start:end], grad_arrays[start:end], priority=-start)

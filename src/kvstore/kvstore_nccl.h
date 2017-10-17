@@ -53,10 +53,8 @@ class KVStoreNCCL : public KVStoreLocal {
   }
 
   virtual ~KVStoreNCCL() {
-    if (comm_ != nullptr) {
-      delete comm_;
-      comm_ = nullptr;
-    }
+    delete comm_;
+    comm_ = nullptr;
   }
 
  private:
