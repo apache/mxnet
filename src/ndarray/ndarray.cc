@@ -1215,19 +1215,20 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 }
 
 void NDArray::CheckFormat(const bool full_check) const {
-  NDArray cpu_ret = NDArray(mshadow::Shape1(1), Context::CPU());
-  auto err = cpu_ret.data().dptr<mshadow::default_real_t>();
-  *err = 0;
+  mshadow::default_real_t err = kNormalErr;
+  void *err_ptr = static_cast<void*>(&err);
+  TBlob cpu_err(err_ptr, mshadow::Shape1(1), cpu::kDevMask,
+                mshadow::default_type_flag, 0);
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     Engine::Get()->PushSync([&](RunContext rctx) {
-        common::CheckFormatWrapper<cpu>(rctx, this, &cpu_ret, full_check);
+        common::CheckFormatWrapper<cpu>(rctx, this, &cpu_err, full_check);
       }, this->ctx(), {this->var()}, {},
       FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
     this->WaitToWrite();
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
-        common::CheckFormatWrapper<gpu>(rctx, this, &cpu_ret, full_check);
+        common::CheckFormatWrapper<gpu>(rctx, this, &cpu_err, full_check);
         rctx.get_stream<gpu>()->Wait();
       }, this->ctx(), {this->var()}, {},
       FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
@@ -1236,7 +1237,14 @@ void NDArray::CheckFormat(const bool full_check) const {
     LOG(FATAL) << "GPU is not enabled";
 #endif
   }
-  CHECK_EQ(*err, 0) << "Check validity of the CSRNDArray";
+  CHECK_NE(err, kCSRShapeErr) << "Shape mismatch of this CSRNDArray";
+  CHECK_NE(err, kCSRIndPtrErr)
+           << "IndPtr should be in non-decreasing order, start with 0, "
+           << "and end with value greater or equal than size of indices.";
+  CHECK_NE(err, kCSRIdxErr)
+           << "Indices of this CSRNDArray should be less than the number of columns.";
+  CHECK_NE(err, kRSPShapeErr) << "Shape mismatch of this RSPNDArray";
+  CHECK_EQ(err, kNormalErr) << "Check the validity of this CSRNDArray";
 }
 
 #if MXNET_PREDICT_ONLY == 0

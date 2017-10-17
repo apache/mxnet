@@ -49,34 +49,42 @@
 namespace mxnet {
 namespace common {
 
+
+/*! 
+ * \brief IndPtr should be in non-decreasing order, start with 0
+ *           and end with value greater or equal than size of indices.
+ */
 struct indptr_check {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, mshadow::default_real_t* out, const DType* in,
                                   const nnvm::dim_t end, const nnvm::dim_t idx_size) {
     if ((in[i+1] < in[i]) || (i == 0 && in[i] != static_cast<DType>(0)) ||
-        (i == end && in[i] < static_cast<DType>(idx_size))) out[0] = 1;
+        (i == end && in[i] < static_cast<DType>(idx_size)))
+          *out = kCSRIndPtrErr;
   }
 };
 
+/*!
+ *  \brief Indices should be less than the number of columns.
+ */
 struct idx_check {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, mshadow::default_real_t* out,
                                   const DType* in, const nnvm::dim_t ncols) {
-    if (in[i] >= static_cast<DType>(ncols)) out[0] = 1;
+    if (in[i] >= static_cast<DType>(ncols)) *out = kCSRIdxErr;
   }
 };
 
 template<typename xpu>
 void CheckFormatWrapper(const RunContext &rctx, const NDArray *input,
-                        NDArray *cpu_ret, const bool &full_check);
+                        TBlob *cpu_err, const bool &full_check);
 
 template<typename xpu>
 void CheckFormatImpl(const RunContext &rctx, const NDArray *input,
-                     NDArray *cpu_ret, const bool &full_check) {
+                     TBlob *cpu_err, const bool &full_check) {
   using namespace op::mxnet_op;
   auto stype = input->storage_type();
-  auto err = cpu_ret->data().dptr<mshadow::default_real_t>();
-  *err = 0;
+  auto *err = cpu_err->dptr<mshadow::default_real_t>();
   if (stype == kCSRStorage) {
     const TShape shape = input->shape();
     const TShape idx_shape = input->aux_shape(csr::kIdx);
@@ -86,36 +94,32 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray *input,
         (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
         (indptr_shape[0] != shape[0] + 1) ||
         (idx_shape[0] != storage_shape[0])) {
-          *err = 1;
+          *err = kCSRShapeErr;
           return;
     }
     if (full_check) {
       NDArray xpu_ret = NDArray(mshadow::Shape1(1), rctx.get_ctx());
       TBlob xpu_tmp = xpu_ret.data();
-      ndarray::Eval<xpu>(0, &xpu_tmp, rctx);
-      rctx.get_stream<xpu>()->Wait();
-      auto indptr_type = input->aux_type(csr::kIndPtr);
+      ndarray::Eval<xpu>(kNormalErr, &xpu_tmp, rctx);
+      int indptr_type = input->aux_type(csr::kIndPtr);
       MSHADOW_TYPE_SWITCH(indptr_type, IType, {
         Kernel<indptr_check, xpu>::Launch(
           rctx.get_stream<xpu>(), indptr_shape[0]-1, xpu_ret.data().dptr<mshadow::default_real_t>(),
           input->aux_data(csr::kIndPtr).dptr<IType>(),
           indptr_shape[0]-1, idx_shape[0]);
       });
-      auto idx_type = input->aux_type(csr::kIdx);
+      int idx_type = input->aux_type(csr::kIdx);
       MSHADOW_TYPE_SWITCH(idx_type, IType, {
         Kernel<idx_check, xpu>::Launch(
           rctx.get_stream<xpu>(), idx_shape[0], xpu_ret.data().dptr<mshadow::default_real_t>(),
           input->aux_data(csr::kIdx).dptr<IType>(), shape[1]);
       });
-      rctx.get_stream<xpu>()->Wait();
-      TBlob cpu_tmp = cpu_ret->data();
-      ndarray::Copy<xpu, cpu>(xpu_ret.data(), &cpu_tmp,
-                              xpu_ret.ctx(), cpu_ret->ctx(), rctx);
-      rctx.get_stream<xpu>()->Wait();
+      ndarray::Copy<xpu, cpu>(xpu_ret.data(), cpu_err,
+                              xpu_ret.ctx(), Context::CPU(), rctx);
     }
   } else if (stype == kRowSparseStorage) {
     if (input->aux_shape(rowsparse::kIdx)[0] != input->storage_shape()[0]) {
-      *err = 1;
+      *err = kRSPShapeErr;
     }
   }
 }

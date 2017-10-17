@@ -30,8 +30,8 @@ namespace common {
 
 template<>
 void CheckFormatWrapper<gpu>(const RunContext &rctx, const NDArray *input,
-                            NDArray *cpu_ret,  const bool &full_check) {
-  CheckFormatImpl<gpu>(rctx, input, cpu_ret, full_check);
+                             TBlob *cpu_err,  const bool &full_check) {
+  CheckFormatImpl<gpu>(rctx, input, cpu_err, full_check);
 }
 
 template<>

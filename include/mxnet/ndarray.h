@@ -62,6 +62,14 @@ enum NDArrayStorageType {
   kCSRStorage,             // csr
 };
 
+enum NDArrayFormatErr {
+  kNormalErr,     // normal
+  kCSRShapeErr,   // shape mismatch for csr
+  kCSRIndPtrErr,  // indptr error for csr
+  kCSRIdxErr,     // idx error for csr
+  kRSPShapeErr,   // shape mismatch for row sparse
+};
+
 
 /*!
  * \brief ndarray interface
