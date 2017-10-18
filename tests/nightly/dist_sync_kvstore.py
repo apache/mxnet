@@ -69,7 +69,6 @@ def init_kv_compressed(kv):
 
 def test_sync_push_pull():
     kv, my_rank, nworker = init_kv()
-
     def check_default_keys(kv, my_rank, nworker):
         nrepeat = 3
         # checks pull after push in loop, because behavior during
@@ -224,14 +223,12 @@ def test_sync_push_pull():
 
     def check_compr_pull_before_push(kv):
         for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
-            print(k,s)
             val = mx.nd.ones(s)
             kv.pull(k, val)
             check_diff_to_scalar(val, 0)
 
     def check_compr_zero(kv):
         for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
-            print(k,s)
             kv.push(k, mx.nd.zeros(s))
             # to check that all are set to 0s
             val = mx.nd.ones(s)
@@ -239,6 +236,8 @@ def test_sync_push_pull():
             check_diff_to_scalar(val, 0)
 
     def check_compr_random(kv, pos, neg, nworker):
+        # set a seed so all workers generate same data. knowing this helps
+        # calculate expected value after pull
         mx.random.seed(123)
         rnd.seed(123)
         for k,s in [('2221',irregular_shape),('221', big_shape), ('21', shape)]:
@@ -252,8 +251,7 @@ def test_sync_push_pull():
             kv.pull(k, val)
 
             expected_diff = val - orig_val
-            
-            # use copy because push modifies grad
+
             compr = mx.contrib.nd.create_2bit(grad_cpy)
             mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, neg, pos)
             decompr = mx.nd.zeros(grad.shape)
@@ -269,7 +267,7 @@ def test_sync_push_pull():
     check_big_row_sparse_keys(kv, my_rank, nworker)
     print('worker ' + str(my_rank) + ' is done with non compression tests')
 
-    # dont run non compressed keys after this as kvstore now is set to compressed
+    # don't run non compressed keys after this as kvstore now is set to compressed
     kv, pos, neg = init_kv_compressed(kv)
     check_compr_pull_before_push(kv)
     check_compr_zero(kv)

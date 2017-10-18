@@ -45,7 +45,7 @@ def test_kvstore(kv_type):
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=lr))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
-       
+
     res = [np.zeros(s) for s in shapes]
     for i in range(nrepeat):
         for j in range(len(keys)):
@@ -61,7 +61,7 @@ def test_kvstore(kv_type):
             assert(err < 1e-6), (err, shapes[j])
 
 def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
-    print(kv_type, compress)
+    print(kv_type + ' with ' + compress + ' compression')
     rate = 2
     kv = mx.kv.create(kv_type)
     kv.set_compress({'compress':compress, 'neg_threshold':neg, 'pos_threshold':pos})
@@ -135,6 +135,7 @@ test_kvstore('local_update_cpu')
 test_kvstore('local_allreduce_cpu')
 test_kvstore('local_allreduce_device')
 
+# compression for local kvstore happens only when reduce is on device
 test_compress_kvstore('local_allreduce_device')
 
 ## group keys interface

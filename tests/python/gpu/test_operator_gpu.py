@@ -19,7 +19,6 @@ import sys
 import os
 import time
 import unittest
-import struct
 import mxnet as mx
 import numpy as np
 import unittest
@@ -1446,7 +1445,6 @@ def test_cross_device_autograd():
         y.backward()
 
     assert_almost_equal(dx, x.grad.asnumpy())
-
 
 if __name__ == '__main__':
     import nose
