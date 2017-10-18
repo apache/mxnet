@@ -109,27 +109,55 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
             for o in out:
                 check_diff_to_scalar(o, curval)
 
-            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*(pos_threshold-0.2) for g in range(nworker)])
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*(pos_threshold-0.3) for g in range(nworker)])
             out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
             kv.pull(keys[j],out=out)
             curval += pos_threshold*rate*nworker
             for o in out:
                 check_diff_to_scalar(o, curval)
+            # residual would be 0 now
         return curval
 
     def check_ones(kv, pos, rate, curval):
         newval = curval + rate*nworker*pos
         for j in range(len(keys)):
-            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*pos*4 for g in range(nworker)])
+            kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*pos for g in range(nworker)])
             out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
             kv.pull(keys[j], out=out)
             for o in out:
                 check_diff_to_scalar(o, newval)
+        # residual would be 0 again
+
+    def check_compr_random(kv, pos, neg):
+        for j in range(len(keys)):
+            orig_val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(k, out=orig_val)
+
+            grads = [mx.nd.random_uniform(-0.6,0.6, shape=shapes[j], ctx=mx.gpu(g)) for g in range(nworker)]
+            kv.push(k, grads)
+            val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(k, out=val)
+
+            diff = val - orig_val
+
+            # compute expected by directly using operators
+            comprs = []
+            decomprs = []
+            # on cpu
+            sum_dequantized_vals = np.zeros(shapes[j])
+            for g in range(nworker):
+                comprs.append(mx.contrib.nd.create_2bit(grads[g]))
+                decomprs.append(mx.nd.zeros(grads[g].shape, ctx=mx.gpu(g)))
+                mx.contrib.ndarray.quantize_2bit(grads[j], mx.nd.zeros(s, ctx=mx.gpu(g)), comprs[g], neg, pos)
+                mx.contrib.ndarray.dequantize_2bit(comprs[g], decomprs[g])
+                sum_dequantized_vals += decomprs[g].asnumpy()
+            assert_almost_equal(diff.asnumpy(), sum_dequantized_vals)
 
     pull_before_push(kv)
     push_zeros(kv)
     curval = verify_residual(kv, neg, pos, rate)
     check_ones(kv, pos, rate, curval)
+    check_compr_random(kv, pos, neg)
 
 test_kvstore('local_update_cpu')
 test_kvstore('local_allreduce_cpu')

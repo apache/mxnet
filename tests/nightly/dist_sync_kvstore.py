@@ -250,15 +250,16 @@ def test_sync_push_pull():
             val = mx.nd.zeros(s)
             kv.pull(k, val)
 
-            expected_diff = val - orig_val
+            diff = val - orig_val
 
+            # compute expected by directly using operators
             compr = mx.contrib.nd.create_2bit(grad_cpy)
             mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, neg, pos)
             decompr = mx.nd.zeros(grad.shape)
             mx.contrib.ndarray.dequantize_2bit(compr, decompr)
 
             decompr *= nworker * rate
-            assert_almost_equal(expected_diff, decompr)
+            assert_almost_equal(diff, decompr)
 
     print ('worker '+str(my_rank)+' started')
     check_default_keys(kv, my_rank, nworker)

@@ -4365,7 +4365,6 @@ def test_two_bit_quantization():
         mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
         decompr = mx.nd.zeros(grad.shape)
         mx.contrib.ndarray.dequantize_2bit(compr, decompr)
-        mx.nd.waitall()
         assert np.array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
         assert np.array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
         # use almost equal for residual as this involves addition operation
