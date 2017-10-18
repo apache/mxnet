@@ -134,6 +134,10 @@ struct quantize_2bit {
 //    }
 
     float* out_block = out + block_id;
+
+    // init to 0
+    *out_block = 0;
+
     // start and end are indices in original grad array
     int start = block_id*16;
     int end = ( start + 16 <= gradsize) ? start+16 : gradsize;
@@ -184,8 +188,8 @@ template<typename xpu>
 void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                       const float neg_threshold, const float pos_threshold) {
   // First, init the memory of output to 0x00000000
-  mxnet_op::Kernel<init_mem_2bit, xpu>::Launch(s, inputs[2].Size(),
-                              inputs[2].dptr<float>());  // compressed array
+//  mxnet_op::Kernel<init_mem_2bit, xpu>::Launch(s, inputs[2].Size(),
+//                              inputs[2].dptr<float>());  // compressed array
   // Then, init threshold and original size
   mxnet_op::Kernel<init_threshold_2bit, xpu>::Launch(s, 1,
                               inputs[2].dptr<float>(),   // compressed array
