@@ -4308,8 +4308,8 @@ def test_scatter_gather_nd():
 def test_two_bit_quantization():
     neg_threshold = -0.5
     pos_threshold = 0.5
-    orig_shape = [(25,),(16,),(1121)]
-    num_repeat = 10
+    orig_shape = [(144000)]#[(25,),(16,),(1121),(14400000)]
+    num_repeat = 1
     from struct import pack,unpack
     # from bitstring import BitArray
 
@@ -4413,10 +4413,10 @@ def test_two_bit_quantization():
         for i in range(num_repeat):
             data = []
             data.append(zerodata(shape))
-            data.append(onesdata(shape))
-            data.append(random_data(shape))
-            data.append(random_large_range(shape))
-            data.append(random_small_range(shape))
+           # data.append(onesdata(shape))
+           # data.append(random_data(shape))
+           # data.append(random_large_range(shape))
+           # data.append(random_small_range(shape))
             for d in data:
                 check(d[0], d[1])
 

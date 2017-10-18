@@ -178,98 +178,101 @@ def test_sync_push_pull():
         check_diff_to_scalar(val, expected, rank=my_rank)
 
     def check_compr_residual(kv, pos_threshold, nworker):
-        for d in [('21', shape),('2221',irregular_shape),('221', big_shape), ('21', shape)]:
+        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
             # doesn't meet threshold
-            kv.push(d[0], mx.nd.ones(d[1])*0.4)
-            val=mx.nd.zeros(d[1])
-            kv.pull(d[0],val)
+            kv.push(k, mx.nd.ones(s)*0.4)
+            val=mx.nd.zeros(s)
+            kv.pull(k,val)
             check_diff_to_scalar(val, 0)
 
             # just meets threshold with residual
-            kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold - 0.4))
-            val2 = mx.nd.zeros(d[1])
-            kv.pull(d[0],val2)
+            kv.push(k, mx.nd.ones(s)*(pos_threshold - 0.4))
+            val2 = mx.nd.zeros(s)
+            kv.pull(k,val2)
             curval = pos_threshold * rate * nworker
             check_diff_to_scalar(val2, curval)
 
             # doesn't meet threshold
-            kv.push(d[0], mx.nd.ones(d[1])*0.2)
-            val3= mx.nd.zeros(d[1])
-            kv.pull(d[0], val3)
+            kv.push(k, mx.nd.ones(s)*0.2)
+            val3= mx.nd.zeros(s)
+            kv.pull(k, val3)
             check_diff_to_scalar(val3, curval)
 
             # exceeds again
-            kv.push(d[0], mx.nd.ones(d[1])*(pos_threshold-0.2))
-            val4 = mx.nd.zeros(d[1])
-            kv.pull(d[0],val4)
+            kv.push(k, mx.nd.ones(s)*(pos_threshold-0.2))
+            val4 = mx.nd.zeros(s)
+            kv.pull(k,val4)
             curval += pos_threshold*rate*nworker
             check_diff_to_scalar(val4, curval)
             # residual is 0 now
 
     def check_compr_ones(kv, pos, nworker):
-        val = mx.nd.zeros(big_shape)
-        kv.pull('221', val)
-        curval = val[0][0].asnumpy()[0]
-        kv.push('221',mx.nd.ones(big_shape)*pos)
-        val2 = mx.nd.zeros(big_shape)
-        kv.pull('221', val2)
-        newval = curval + rate*nworker*pos
-        check_diff_to_scalar(val2, newval)
-        # residual = 0  again
+        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+            val = mx.nd.zeros(s)
+            kv.pull(k, val)
+            curval = val[0][0].asnumpy()[0]
+            kv.push(k,mx.nd.ones(s)*pos)
+            val2 = mx.nd.zeros(s)
+            kv.pull(k, val2)
+            newval = curval + rate*nworker*pos
+            check_diff_to_scalar(val2, newval)
+            # residual = 0  again
 
     def check_compr_pull_before_push(kv):
-        val = mx.nd.ones(irregular_shape)
-        kv.pull('2221', val)
-        check_diff_to_scalar(val, 0)
+        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+            print(k,s)
+            val = mx.nd.ones(s)
+            kv.pull(k, val)
+            check_diff_to_scalar(val, 0)
 
     def check_compr_zero(kv):
-        kv.push('221', mx.nd.zeros(big_shape))
-        # to check that all are set to 0s
-        val = mx.nd.ones(big_shape)
-        kv.pull('221', val)
-        check_diff_to_scalar(val, 0)
+        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+            print(k,s)
+            kv.push(k, mx.nd.zeros(s))
+            # to check that all are set to 0s
+            val = mx.nd.ones(s)
+            kv.pull(k, val)
+            check_diff_to_scalar(val, 0)
 
     def check_compr_random(kv, pos, neg, nworker):
         mx.random.seed(123)
         rnd.seed(123)
         nrepeat = 3
-        for d in [('2221',irregular_shape),('221', big_shape), ('21', shape)]:
-            orig_val = mx.nd.zeros(d[1])
-            kv.pull(d[0], orig_val)
+        for k,s in [('2221',irregular_shape),('221', big_shape), ('21', shape)]:
+            orig_val = mx.nd.zeros(s)
+            kv.pull(k, orig_val)
 
-            # v = mx.nd.zeros(d[1][0]*d[1][1])
-            grad = mx.nd.array(rnd.rand(d[1][0], d[1][1]))
+            grad = mx.nd.array(rnd.rand(s[0], s[1]))
             grad_cpy = mx.nd.array(grad)
-            kv.push(d[0], grad)
-            val = mx.nd.zeros(d[1])
-            kv.pull(d[0], val)
+            kv.push(k, grad)
+            val = mx.nd.zeros(s)
+            kv.pull(k, val)
 
             expected_diff = val - orig_val
             
             # use copy because push modifies grad
             compr = mx.contrib.nd.create_2bit(grad_cpy)
-            mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(d[1]), compr, neg, pos)
+            mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, neg, pos)
             decompr = mx.nd.zeros(grad.shape)
             mx.contrib.ndarray.dequantize_2bit(compr, decompr)
 
             decompr *= nworker * rate
             assert_almost_equal(expected_diff, decompr)
 
-    # print ('worker '+str(my_rank)+' started')
-    # check_default_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys(kv, my_rank, nworker)
-    # check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
-    # check_big_row_sparse_keys(kv, my_rank, nworker)
-    # print('worker ' + str(my_rank) + ' is done with non compression tests')
+ #   print ('worker '+str(my_rank)+' started')
+ #   check_default_keys(kv, my_rank, nworker)
+ #   check_row_sparse_keys(kv, my_rank, nworker)
+ #   check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
+ #   check_big_row_sparse_keys(kv, my_rank, nworker)
+ #   print('worker ' + str(my_rank) + ' is done with non compression tests')
 
-    # dont run non compressed keys after this
+    # dont run non compressed keys after this as kvstore now is set to compressed
     kv, pos, neg = init_kv_compressed(kv)
     check_compr_pull_before_push(kv)
     check_compr_zero(kv)
     check_compr_residual(kv, pos, nworker)
     check_compr_ones(kv, pos, nworker)
     check_compr_random(kv, pos, neg, nworker)
-
     print('worker ' + str(my_rank) + ' is done with compression tests')
 
 if __name__ == "__main__":
