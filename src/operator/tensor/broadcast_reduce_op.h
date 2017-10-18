@@ -566,7 +566,7 @@ struct SumCsrKernel<req, 1> {
   }
 };
 
-/*! \brief If normalize is true the mean should be computed instead of sum */
+/*! \brief If normalize is true, the mean should be computed instead of sum */
 template <typename xpu, bool normalize = false>
 void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
                 const NDArray& input, const OpReqType req, NDArray* output) {
