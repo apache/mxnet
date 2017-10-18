@@ -131,12 +131,12 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
     def check_compr_random(kv, pos, neg):
         for j in range(len(keys)):
             orig_val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
-            kv.pull(k, out=orig_val)
+            kv.pull(keys[j], out=orig_val)
 
             grads = [mx.nd.random_uniform(-0.6,0.6, shape=shapes[j], ctx=mx.gpu(g)) for g in range(nworker)]
-            kv.push(k, grads)
+            kv.push(keys[j], grads)
             val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
-            kv.pull(k, out=val)
+            kv.pull(keys[j], out=val)
 
             diff = val - orig_val
 
@@ -148,7 +148,7 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
             for g in range(nworker):
                 comprs.append(mx.contrib.nd.create_2bit(grads[g]))
                 decomprs.append(mx.nd.zeros(grads[g].shape, ctx=mx.gpu(g)))
-                mx.contrib.ndarray.quantize_2bit(grads[j], mx.nd.zeros(s, ctx=mx.gpu(g)), comprs[g], neg, pos)
+                mx.contrib.ndarray.quantize_2bit(grads[j], mx.nd.zeros(shapes[j], ctx=mx.gpu(g)), comprs[g], neg, pos)
                 mx.contrib.ndarray.dequantize_2bit(comprs[g], decomprs[g])
                 sum_dequantized_vals += decomprs[g].asnumpy()
             assert_almost_equal(diff.asnumpy(), sum_dequantized_vals)
