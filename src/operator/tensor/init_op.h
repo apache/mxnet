@@ -171,7 +171,7 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
-  if(req[0] != kNullOp) {
+  if (req[0] != kNullOp) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       mxnet_op::Kernel<mxnet_op::set_to<value>, xpu>::Launch(s,
@@ -188,9 +188,9 @@ inline void FillCompute<cpu, 0>(const nnvm::NodeAttrs& attrs,
                                 const std::vector<TBlob>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<TBlob>& outputs) {
-  if(req[0] != kNullOp) {
+  if (req[0] != kNullOp) {
     const size_t size = outputs[0].Size();
-    if(size) {
+    if (size) {
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         memset(outputs[0].dptr<DType>(), 0, size * sizeof(DType));
