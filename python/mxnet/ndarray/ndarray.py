@@ -736,6 +736,14 @@ fixed-size items.
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def reshape_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reshape_like`.
+
+        The arguments are the same as for :py:func:`reshape_like`, with
+        this array as data.
+        """
+        return op.reshape_like(self, *args, **kwargs)
+
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
 
@@ -863,6 +871,14 @@ fixed-size items.
         this array as data.
         """
         return op.argmax(self, *args, **kwargs)
+
+    def argmax_channel(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmax_channel`.
+
+        The arguments are the same as for :py:func:`argmax_channel`, with
+        this array as data.
+        """
+        return op.argmax_channel(self, *args, **kwargs)
 
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
@@ -1224,6 +1240,22 @@ fixed-size items.
         """
         return op.rsqrt(self, *args, **kwargs)
 
+    def cbrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cbrt`.
+
+        The arguments are the same as for :py:func:`cbrt`, with
+        this array as data.
+        """
+        return op.cbrt(self, *args, **kwargs)
+
+    def rcbrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rcbrt`.
+
+        The arguments are the same as for :py:func:`rcbrt`, with
+        this array as data.
+        """
+        return op.rcbrt(self, *args, **kwargs)
+
     def square(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`square`.
 
@@ -1231,6 +1263,46 @@ fixed-size items.
         this array as data.
         """
         return op.square(self, *args, **kwargs)
+
+    def reciprocal(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reciprocal`.
+
+        The arguments are the same as for :py:func:`reciprocal`, with
+        this array as data.
+        """
+        return op.reciprocal(self, *args, **kwargs)
+
+    def relu(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`relu`.
+
+        The arguments are the same as for :py:func:`relu`, with
+        this array as data.
+        """
+        return op.relu(self, *args, **kwargs)
+
+    def sigmoid(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sigmoid`.
+
+        The arguments are the same as for :py:func:`sigmoid`, with
+        this array as data.
+        """
+        return op.sigmoid(self, *args, **kwargs)
+
+    def softmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmax`.
+
+        The arguments are the same as for :py:func:`softmax`, with
+        this array as data.
+        """
+        return op.softmax(self, *args, **kwargs)
+
+    def log_softmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log_softmax`.
+
+        The arguments are the same as for :py:func:`log_softmax`, with
+        this array as data.
+        """
+        return op.log_softmax(self, *args, **kwargs)
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
