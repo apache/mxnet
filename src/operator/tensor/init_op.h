@@ -191,7 +191,6 @@ inline void FillCompute<cpu, 0>(const nnvm::NodeAttrs& attrs,
   if (req[0] != kNullOp) {
     const size_t size = outputs[0].Size();
     if (size) {
-      mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         memset(outputs[0].dptr<DType>(), 0, size * sizeof(DType));
       });
