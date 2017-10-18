@@ -61,7 +61,7 @@ Operator *CreateOp<cpu>(ActivationParam param, int dtype, const TShape& dshape) 
           break;
       }
   }
-  if (enableMKLWarnGenerated())
+  if (EnableMklWarnGenerated())
     LOG(INFO) << MKLReluOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
