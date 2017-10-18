@@ -566,14 +566,15 @@ struct SumCsrKernel<req, 1> {
   }
 };
 
+/*! \brief If normalize is true the mean should be computed instead of sum */
 template <typename xpu, bool normalize = false>
 void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
                 const NDArray& input, const OpReqType req, NDArray* output) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr) only supports axis 0 or 1";
+  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr)/mean(csr) only supports axis 0 or 1";
   CHECK(param.axis[0] == 0 || param.axis[0] == 1)
-      << "sum(csr) only support axis 0 or 1";
+      << "sum(csr)/mean(csr) only support axis 0 or 1";
   CHECK(!param.keepdims) << "keepdims not supported for sparse";
   CHECK(!param.exclude) << "exclude not supported for sparse";
   int64_t out_data_size = 0;
@@ -675,7 +676,7 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   const NDArrayStorageType istype = inputs[0].storage_type();
   if (istype == kCSRStorage) {
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
-        << "sum(csr) op only supports 2D ndarray as input";
+        << "sum(csr)/mean(csr) op only supports 2D ndarray as input";
     NDArray output = outputs[0];
     SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
   } else {
