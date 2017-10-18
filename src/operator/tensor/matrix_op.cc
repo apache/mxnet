@@ -363,6 +363,8 @@ Examples::
 .set_attr_parser(ParamParser<SliceAxisParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", SliceAxisForwardInferStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SliceAxisEx<cpu>)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxis<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
 .add_argument("data", "NDArray-or-Symbol", "Source input")
