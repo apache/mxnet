@@ -178,7 +178,7 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
         input_dnn_data->get_converted_prv(static_cast<float *>(in_data[i].dptr_),
                                           false,
                                           in_data[i]));
-    inputs.push_back(*(input_memory_sp[i].get()));
+    inputs.push_back(*input_memory_sp[i]);
   }
 
   // scaling factor for each input data
@@ -215,7 +215,7 @@ inline void MKLDNNElementWiseAddCompute(const nnvm::NodeAttrs &attrs,
   if (req[0] == kNullOp) return;
   CHECK_EQ(in_data.size(), 2U);
   CHECK_EQ(out_data.size(), 1U);
-  auto& shape = in_data[0].shape_;
+  const auto& shape = in_data[0].shape_;
   if (shape.ndim() == 4 && shape[0] > 0 && shape[1] > 0 && shape[2] > 0 &&
       shape[3] > 0 &&
       out_data[0].type_flag_ == mshadow::kFloat32) {

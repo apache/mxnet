@@ -26,7 +26,8 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
-#include <math.h>
+#include "math.h"
+#include "math_functions-inl.h"
 #include "special_functions-inl.h"
 
 #ifdef __CUDACC__
@@ -36,6 +37,7 @@
 namespace mxnet {
 namespace op {
 namespace mshadow_op {
+
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
 #else
@@ -44,6 +46,22 @@ using std::isnan;
 #endif
 using std::enable_if;
 using std::is_unsigned;
+
+#define MXNET_UNARY_MATH_OP(name) \
+struct name { \
+  template<typename DType> \
+  MSHADOW_XINLINE static DType Map(DType a) { \
+    return math::name(a); \
+  } \
+}
+
+#define MXNET_BINARY_MATH_OP(name) \
+struct name { \
+  template<typename DType> \
+  MSHADOW_XINLINE static DType Map(DType a, DType b) { \
+    return math::name(a, b); \
+  } \
+}
 
 /*! \brief identity Operation */
 struct identity {
@@ -99,26 +117,35 @@ struct reciprocal_grad {
 struct sigmoid {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / (DType(1.0f) + expf(-a)));
+    float af(static_cast<float>(a));
+    return DType(1.0f / (1.0f + math::exp(-af)));
   }
 };
+
+template<>
+MSHADOW_XINLINE double sigmoid::Map<double>(double a) {
+  return 1.0 / (1.0 + math::exp(-a));
+}
+
 struct sigmoid_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(a * (DType(1.0f) - a));
   }
 };
+
 /*! \brief Rectified Linear Operation */
 struct relu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a > DType(0.0f) ? a : DType(0.0f));
+    return a > DType(0.0f) ? a : DType(0.0f);
   }
 };
+
 struct relu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a > DType(0.0f) ? DType(1.0f) : DType(0.0f));
+    return a > DType(0.0f) ? DType(1.0f) : DType(0.0f);
   }
 };
 
@@ -141,23 +168,19 @@ struct xelu_grad {
 struct elu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    return DType(x > DType(0.0f) ? x : a * (expf(x) - DType(1.0f)));
+    float af(static_cast<float>(a));
+    return x > DType(0.0f) ? x : DType(af * math::expm1f(x));
   }
 };
 
 struct elu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    return DType(x > DType(0.0f) ? DType(1.0f) : a + x);
+    return x > DType(0.0f) ? DType(1.0f) : DType(a + x);
   }
 };
 
-struct tanh {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(tanhf( a ));
-  }
-};
+MXNET_UNARY_MATH_OP(tanh);
 
 struct tanh_grad {
   template<typename DType>
@@ -166,61 +189,42 @@ struct tanh_grad {
   }
 };
 
-/*! \brief SoftReLU, also known as softplus activation. */
+/*! \brief SoftReLU, also known as softplus activation */
 struct softrelu {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // Avoid overflow of exp for large inputs.
     // Thresholds 20.0 is chosen such that softrelu(a) = a
     // for a > 20 using floating precision.
-    if (a > DType(20.0)) {
+    if (a > DType(20.0f)) {
       return a;
     } else {
-      return DType(log1pf(expf(a)));
+      return DType(math::log1p(math::expf(a)));
     }
   }
 };
+
+template<>
+MSHADOW_XINLINE double softrelu::Map<double>(double a) {
+  if (a > 20.0) {
+    return a;
+  } else {
+    return math::log1p(math::exp(a));
+  }
+}
+
 struct softrelu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return -DType(expm1f(-a));
+    return -math::expm1(-a);
   }
 };
 
-struct exp {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(expf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(exp);
 
-struct expm1 {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(expm1f(a));
-  }
-};
+MXNET_UNARY_MATH_OP(expm1);
 
-struct log {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(logf(a));
-  }
-};
-
-struct log10 {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log10f(a));
-  }
-};
-
-struct log2 {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log2f(a));
-  }
-};
+MXNET_UNARY_MATH_OP(log);
 
 struct log_grad {
   template<typename DType>
@@ -229,26 +233,46 @@ struct log_grad {
   }
 };
 
-struct sin {
+MXNET_UNARY_MATH_OP(log10);
+
+// Constant is 1 / log(10)
+struct log10_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(sinf(a));
+    return DType(0.43429448190325182765f / static_cast<float>(a));
   }
 };
+
+template<>
+MSHADOW_XINLINE double log10_grad::Map<double>(double a) {
+  return 0.43429448190325182765 / a;
+}
+
+MXNET_UNARY_MATH_OP(log2);
+
+// Constant is 1 / log(2)
+struct log2_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1.44269504088896340737f / static_cast<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double log2_grad::Map<double>(double a) {
+  return 1.44269504088896340737 / a;
+}
+
+MXNET_UNARY_MATH_OP(sin);
 
 struct sin_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(cosf(a));
+    return math::cos(a);
   }
 };
 
-struct log1p {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(log1pf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(log1p);
 
 struct log1p_grad {
   template<typename DType>
@@ -257,96 +281,105 @@ struct log1p_grad {
   }
 };
 
-struct cos {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(cosf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(cos);
 
 struct cos_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-sinf(a));
+    return -math::sin(a);
   }
 };
 
-struct tan {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(tanf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(tan);
 
 struct tan_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a * a + 1);
+    return DType(a * a + DType(1.0f));
   }
 };
 
 struct arcsin {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(asinf(a));
+    return math::asin(a);
   }
 };
 
 struct arcsin_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0 / (sqrtf(1 - a*a)));
+    float af(static_cast<float>(a));
+    return DType(1.0f / math::sqrt(1.0f - af * af));
   }
 };
+
+template<>
+MSHADOW_XINLINE double arcsin_grad::Map<double>(double a) {
+  return 1.0 / math::sqrt(1.0 - a * a);
+}
 
 struct arccos {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(acosf(a));
+    return math::acos(a);
   }
 };
 
 struct arccos_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-1.0 / (sqrtf(1 - a*a)));
+    float af(static_cast<float>(a));
+    return DType(-1.0f / math::sqrt(1.0f - af * af));
   }
 };
+
+template<>
+MSHADOW_XINLINE double arccos_grad::Map<double>(double a) {
+  return -1.0 / math::sqrt(1.0 - a * a);
+}
 
 struct arctan {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(atanf(a));
+    return math::atan(a);
   }
 };
 
 struct arctan_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1 / (a*a + 1));
+    return DType(DType(1.0f) / (a * a + DType(1.0f)));
   }
 };
 
-struct hypot {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(sqrtf(a * a + b * b));
-  }
-};
+MXNET_BINARY_MATH_OP(hypot);
 
 struct hypot_grad_left {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a/sqrtf(a * a + b * b));
+    float af(static_cast<float>(a));
+    return DType(af / math::hypotf(a, b));
   }
 };
+
+template<>
+MSHADOW_XINLINE double hypot_grad_left::Map<double>(double a, double b) {
+  return a / math::hypot(a, b);
+}
 
 struct hypot_grad_right {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(b/sqrtf(a * a + b * b));
+    float bf(static_cast<float>(b));
+    return DType(bf / math::hypotf(a, b));
   }
 };
+
+template<>
+MSHADOW_XINLINE double hypot_grad_right::Map<double>(double a, double b) {
+  return b / math::hypot(a, b);
+}
 
 struct degrees {
   template<typename DType>
@@ -376,73 +409,75 @@ struct radians_grad {
   }
 };
 
-struct sinh {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(sinhf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(sinh);
 
 struct sinh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(coshf(a));
+    return math::cosh(a);
   }
 };
 
-struct cosh {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(coshf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(cosh);
 
 struct cosh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(sinhf(a));
+    return math::sinh(a);
   }
 };
 
 struct arcsinh {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(asinhf(a));
+    return math::asinh(a);
   }
 };
 
 struct arcsinh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0 / (sqrtf(1 + a*a)));
+    float af(static_cast<float>(a));
+    return DType(1.0f / math::sqrt(1.0f + af * af));
   }
 };
+
+template<>
+MSHADOW_XINLINE double arcsinh_grad::Map<double>(double a) {
+  return 1.0 / math::sqrt(1.0 + a * a);
+}
 
 struct arccosh {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(acoshf(a));
+    return math::acosh(a);
   }
 };
 
 struct arccosh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0 / (sqrtf(a*a - 1.0)));
+    float af(static_cast<float>(a));
+    return DType(1.0f / math::sqrt(af * af - 1.0f));
   }
 };
+
+template<>
+MSHADOW_XINLINE double arccosh_grad::Map<double>(double a) {
+  return 1.0 / math::sqrt(a * a - 1.0);
+}
 
 struct arctanh {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(atanhf(a));
+    return math::atanh(a);
   }
 };
 
 struct arctanh_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-1.0 / (a*a - 1.0));
+    return DType(DType(1.0f) / (DType(1.0f) - a * a));
   }
 };
 
@@ -464,7 +499,7 @@ struct square_grad {
 struct threshold {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a < b ? DType(1.0f) : DType(0.0f));
+    return a < b ? DType(1.0f) : DType(0.0f);
   }
 };
 
@@ -472,7 +507,7 @@ struct threshold {
 struct abs {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(fabsf(float(a)));  // NOLINT(*)
+    return math::fabs(a);  // NOLINT(*)
   }
 };
 
@@ -481,58 +516,76 @@ struct sign {
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
   Map(DType a) {
-    if (a < 0.0f) return DType(-DType(1.0f));
-    if (a > 0.0f) return DType(1.0f);
+    if (a < DType(0.0f)) return DType(-DType(1.0f));
+    if (a > DType(0.0f)) return DType(1.0f);
     return DType(0.0f);
   }
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
   Map(DType a) {
-    if (a > 0.0f) return DType(1.0f);
+    if (a > DType(0.0f)) return DType(1.0f);
     return DType(0.0f);
   }
 };
+
 struct sign_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     return DType(0.0f);
   }
 };
+
 /*! \brief used for generate element of power */
 struct power {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(powf( a, b ));
+    return math::pow(a, b);
   }
 };
 
 struct power_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(powf( a, b - 1 )*b);
+    float bf(static_cast<float>(b));
+    return DType(math::pow(static_cast<float>(a), bf - 1.0f) * bf);
   }
 };
+
+template<>
+MSHADOW_XINLINE double power_grad::Map<double>(double a, double b) {
+  return math::pow(a, b - 1.0) * b;
+}
 
 struct power_rgrad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(powf( a, b )*logf(a));
+    return DType(math::powf(a, b) * math::logf(a));
   }
 };
+
+template<>
+MSHADOW_XINLINE double power_rgrad::Map<double>(double a, double b) {
+  return math::pow(a, b) * math::log(a);
+}
 
 struct rpower {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(powf( b, a ));
+    return math::pow(b, a);
   }
 };
 
 struct rpower_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a*logf(b));
+    return DType(static_cast<float>(a) * math::logf(b));
   }
 };
+
+template<>
+MSHADOW_XINLINE double rpower_grad::Map<double>(double a, double b) {
+  return a * math::log(b);
+}
 
 /*! \brief used for generate element of maximum */
 struct maximum {
@@ -553,42 +606,42 @@ struct minimum {
 struct ge {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a >= b ? DType(1) : DType(0);
+    return a >= b ? DType(1.0f) : DType(0.0f);
   }
 };
 
 struct gt {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a > b ? DType(1) : DType(0);
+    return a > b ? DType(1.0f) : DType(0.0f);
   }
 };
 
 struct lt {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a < b ? DType(1) : DType(0);
+    return a < b ? DType(1.0f) : DType(0.0f);
   }
 };
 
 struct le {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a <= b ? DType(1) : DType(0);
+    return a <= b ? DType(1.0f) : DType(0.0f);
   }
 };
 
 struct eq {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a == b ? DType(1) : DType(0);
+    return a == b ? DType(1.0f) : DType(0.0f);
   }
 };
 
 struct ne {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a != b ? DType(1) : DType(0);
+    return a != b ? DType(1.0f) : DType(0.0f);
   }
 };
 
@@ -596,7 +649,7 @@ struct ne {
 struct square_root {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(sqrtf(a));
+    return math::sqrt(a);
   }
 };
 
@@ -611,29 +664,40 @@ struct square_root_grad {
 struct reciprocal_square_root {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f)/sqrtf(a));
+    return DType(1.0f / math::sqrtf(a));
   }
 };
+
+template<>
+MSHADOW_XINLINE double reciprocal_square_root::Map<double>(double a) {
+  return 1.0 / math::sqrt(a);
+}
 
 struct reciprocal_square_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-(DType(1.0f) / (DType(2.0f) * a * sqrtf(a))));
+    float af(static_cast<float>(a));
+    return DType(-0.5f / (af * math::sqrt(af)));
   }
 };
+
+template<>
+MSHADOW_XINLINE double reciprocal_square_root_grad::Map<double>(double a) {
+  return -0.5 / (a * math::sqrt(a));
+}
 
 /*!\ \brief used for generate element cbrt */
 struct cube_root {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(cbrtf(a));
+    return math::cbrt(a);
   }
 };
 
 struct cube_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / ( DType(3.0f) * a * a));
+    return DType(DType(1.0f) / (DType(3.0f) * a * a));
   }
 };
 
@@ -641,55 +705,46 @@ struct cube_root_grad {
 struct reciprocal_cube_root {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f)/cbrtf(a));
+    return DType(1.0f / math::cbrtf(a));
   }
 };
+
+template<>
+MSHADOW_XINLINE double reciprocal_cube_root::Map<double>(double a) {
+  return 1.0 / math::cbrt(a);
+}
 
 struct reciprocal_cube_root_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-(DType(1.0f) / (DType(3.0f) * a * cbrtf(a))));
+    float af(static_cast<float>(a));
+    return DType(-1.0f / (3.0f * af * math::cbrt(af)));
   }
 };
+
+template<>
+MSHADOW_XINLINE double reciprocal_cube_root_grad::Map<double>(double a) {
+  return -1.0 / (3.0 * a * math::cbrt(a));
+}
 
 /*! \brief used for generate element of round */
-struct round {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(roundf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(round);
 
 /*! \brief used for generate element of ceil */
-struct ceil {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(ceilf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(ceil);
 
 /*! \brief used for generate element of floor */
-struct floor {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(floorf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(floor);
 
 /*! \brief used to round towards zero */
-struct trunc {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(truncf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(trunc);
 
 /*! \brief used to round number to nearest integer */
 struct rint {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    float floor = floorf(a);
-    float ceil = ceilf(a);
+    float floor = math::floorf(a);
+    float ceil = math::ceilf(a);
     return DType((a - floor) <= (ceil - a) ? floor : ceil);
   }
 };
@@ -698,8 +753,8 @@ struct rint {
 struct fix {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    float floor = floorf(a);
-    float ceil = ceilf(a);
+    float floor = math::floorf(a);
+    float ceil = math::ceilf(a);
     return DType((floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil);
   }
 };
@@ -715,35 +770,35 @@ struct minus_sign {
 struct rminus {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(b-a);
+    return DType(b - a);
   }
 };
 
 struct div_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(DType(1)/b);
+    return DType(DType(1.0f) / b);
   }
 };
 
 struct div_rgrad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(-a/(b*b));
+    return DType(-a / (b * b));
   }
 };
 
 struct rdiv {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(b/a);
+    return DType(b / a);
   }
 };
 
 struct rdiv_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(-b/(a*a));
+    return DType(-b / (a * a));
   }
 };
 
@@ -798,7 +853,7 @@ struct mod_grad {
 };
 template<>
 MSHADOW_XINLINE double mod_grad::Map<double>(double a, double b) {
-  return 1.0f;
+  return 1.0;
 }
 template<>
 MSHADOW_XINLINE float mod_grad::Map<float>(float a, float b) {
@@ -959,27 +1014,22 @@ struct clip {
 struct gamma {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    // default implementation using floating precision
-    return DType(tgammaf(a));
+    return math::tgamma(a);
   }
 };
-
-template<>
-MSHADOW_XINLINE double gamma::Map<double>(double a) {
-  return tgamma(a);
-}
 
 struct gamma_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
     // default implementation using floating precision
-    return DType(tgammaf(a) * special_functions::cephes::psi<float>(a));
+    float af(static_cast<float>(a));
+    return DType(math::tgamma(af) * special_functions::cephes::psi<float>(af));
   }
 };
 
 template<>
 MSHADOW_XINLINE double gamma_grad::Map<double>(double a) {
-  return tgamma(a) * special_functions::cephes::psi<double>(a);
+  return math::tgamma(a) * special_functions::cephes::psi<double>(a);
 }
 
 /***** gammaln ******/
@@ -987,15 +1037,9 @@ MSHADOW_XINLINE double gamma_grad::Map<double>(double a) {
 struct gammaln {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    // default implementation using floating precision
-    return DType(lgammaf(a));
+    return math::lgamma(a);
   }
 };
-
-template<>
-MSHADOW_XINLINE double gammaln::Map<double>(double a) {
-  return lgamma(a);
-}
 
 struct gammaln_grad {
   template<typename DType>
@@ -1024,12 +1068,12 @@ struct smooth_l1_loss {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     b *= b;
-    if (a > 1.0f / b) {
-      return a - 0.5f / b;
-    } else if (a < -1.0f / b) {
-      return -a - 0.5f / b;
+    if (a > DType(1.0f) / b) {
+      return a - DType(0.5f) / b;
+    } else if (a < DType(-1.0f) / b) {
+      return -a - DType(0.5f) / b;
     } else {
-      return 0.5f * a * a * b;
+      return DType(0.5f) * a * a * b;
     }
   }
 };  // struct smooth_l1_loss
@@ -1043,10 +1087,10 @@ struct smooth_l1_gradient {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     b *= b;
-    if (a > 1.0f / b) {
-      return 1.0f;
-    } else if (a < -1.0f / b) {
-      return DType(-1);
+    if (a > DType(1.0f) / b) {
+      return DType(1.0f);
+    } else if (a < DType(-1.0f) / b) {
+      return DType(-1.0f);
     } else {
       return b * a;
     }
@@ -1059,6 +1103,11 @@ struct product {
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
     dst *= src;
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
+    Reduce(dst, src);
   }
   /*!
   *\brief calculate gradient of redres with respect to redsrc,
@@ -1074,6 +1123,13 @@ struct product {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
     initv = 1;
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
+    SetInitValue(initv);
   }
 };
 
@@ -1106,19 +1162,17 @@ struct nansum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(dst)) {
-      if (isnan_typed::IsNan(src)) {
-        dst = DType(0);
-      } else {
-        dst = src;
-      }
-    } else {
-      if (isnan_typed::IsNan(src)) {
-        dst = dst;
-      } else {
-        dst += src;
-      }
-    }
+    if (isnan_typed::IsNan(src)) return;
+    dst += src;
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& residual) { // NOLINT(*)
+    if (isnan_typed::IsNan(src)) return;
+    DType y = src - residual;
+    DType t = dst + y;
+    residual = (t - dst) - y;
+    dst = t;
   }
   /*!
   *\brief set the initial value during reduction
@@ -1126,6 +1180,14 @@ struct nansum {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
       initv = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    SetInitValue(initv);
+    residual = 0;
   }
 };
 
@@ -1141,19 +1203,13 @@ struct nanprod {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(dst)) {
-      if (isnan_typed::IsNan(src)) {
-        dst = DType(1);
-      } else {
-        dst = src;
-      }
-    } else {
-      if (isnan_typed::IsNan(src)) {
-        dst = dst;
-      } else {
-        dst *= src;
-      }
-    }
+    if (isnan_typed::IsNan(src)) return;
+    dst *= src;
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
+    Reduce(dst, src);
   }
   /*!
   *\brief set the initial value during reduction
@@ -1161,6 +1217,13 @@ struct nanprod {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
     initv = 1;
+  }
+  /*!
+  *\brief set the initial value during reduction
+  */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
+    SetInitValue(initv);
   }
 };
 

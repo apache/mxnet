@@ -58,9 +58,6 @@ class MKLDNNBatchNormOp : public Operator, public MKLDNNLayer<Dtype> {
     // name = name + std::to_string(m_id);
     return name;
   }
-  // static std::string getName() {
-  //   return "MKLDNNBatchNormOp";
-  // }
 
  private:
   void LayerSetUp(const mshadow::Tensor<xpu, 4, Dtype> &data,

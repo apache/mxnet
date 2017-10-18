@@ -27,6 +27,49 @@ use AI::MXNet::Function::Parameters;
     AI::MXNet:Image - Read individual image files and perform augmentations.
 =cut
 
+=head2 imread
+
+    Read and decode an image to an NDArray.
+
+    Note: `imread` uses OpenCV.
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+
+    Parameters
+    ----------
+    $filename : str
+        Name of the image file to be loaded.
+    :$flag : int
+        0 for grayscale. 1 for colored.
+    :$to_rgb : int
+        0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
+    :$out : NDArray
+        Output buffer. Do not specify for automatic allocation.
+
+    Returns
+    -------
+    An NDArray containing the image.
+
+    Example
+    -------
+    >>> mx->img->imread("flower.jpg");
+    <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> mx->img->imdecode("flower.jpg", flag=>0);
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> mx->img->imdecode($str_image, to_rgb=>0);
+    <NDArray 224x224x3 @cpu(0)>
+=cut
+
+method imread(Str $filename, Int :$flag=1, Int :$to_rgb=1, Maybe[AI::MXNet::NDArray] :$out=)
+{
+    return AI::MXNet::NDArray->_cvimread($filename, { flag => $flag, to_rgb => $to_rgb, ($out ? (out => $out) : ()) });
+}
+
 =head2 imdecode
 
     Decode an image from string. Requires OpenCV to work.
@@ -396,7 +439,7 @@ method RandomOrderAug(ArrayRef[CodeRef] $ts)
         my @tmp;
         for my $t (@ts)
         {
-            push @tmp, &{$t}($src);
+            push @tmp, $t->($src);
         }
         return \@tmp;
     };
@@ -647,6 +690,11 @@ Int            :$inter_method=2
     }
 
     return \@auglist;
+}
+
+method imresize(AI::MXNet::NDArray $src, Int $w, Int $h, Int $interp=2)
+{
+    return AI::MXNet::NDArray->_cvimresize($src, $w, $h, { interp=>$interp });
 }
 
 method ImageIter(@args) { AI::MXNet::ImageIter->new(@args) }

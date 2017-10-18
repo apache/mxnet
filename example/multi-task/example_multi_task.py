@@ -17,8 +17,11 @@
 
 # pylint: skip-file
 import sys
+import os
 sys.path.insert(0, "../../python/")
-from data import mnist_iterator
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
+from get_data import MNISTIterator
 import mxnet as mx
 import numpy as np
 import logging
@@ -76,7 +79,13 @@ class Multi_Accuracy(mx.metric.EvalMetric):
     """Calculate accuracies of multi label"""
 
     def __init__(self, num=None):
-        super(Multi_Accuracy, self).__init__('multi-accuracy', num)
+        self.num = num
+        super(Multi_Accuracy, self).__init__('multi-accuracy')
+
+    def reset(self):
+        """Resets the internal evaluation result to initial state."""
+        self.num_inst = 0 if self.num is None else [0] * self.num
+        self.sum_metric = 0.0 if self.num is None else [0.0] * self.num
 
     def update(self, labels, preds):
         mx.metric.check_label_shapes(labels, preds)
@@ -90,12 +99,42 @@ class Multi_Accuracy(mx.metric.EvalMetric):
 
             mx.metric.check_label_shapes(label, pred_label)
 
-            if i is None:
+            if self.num is None:
                 self.sum_metric += (pred_label.flat == label.flat).sum()
                 self.num_inst += len(pred_label.flat)
             else:
                 self.sum_metric[i] += (pred_label.flat == label.flat).sum()
                 self.num_inst[i] += len(pred_label.flat)
+
+    def get(self):
+        """Gets the current evaluation result.
+
+        Returns
+        -------
+        names : list of str
+           Name of the metrics.
+        values : list of float
+           Value of the evaluations.
+        """
+        if self.num is None:
+            return super(Multi_Accuracy, self).get()
+        else:
+            return zip(*(('%s-task%d'%(self.name, i), float('nan') if self.num_inst[i] == 0
+                                                      else self.sum_metric[i] / self.num_inst[i])
+                       for i in range(self.num)))
+
+    def get_name_value(self):
+        """Returns zipped name and value pairs.
+
+        Returns
+        -------
+        list of tuples
+            A (name, value) tuple list.
+        """
+        if self.num is None:
+            return super(Multi_Accuracy, self).get_name_value()
+        name, value = self.get()
+        return list(zip(name, value))
 
 
 batch_size=100
@@ -104,7 +143,7 @@ device = mx.gpu(0)
 lr = 0.01
 
 network = build_network()
-train, val = mnist_iterator(batch_size=batch_size, input_shape = (784,))
+train, val = MNISTIterator(batch_size=batch_size, input_shape = (784,))
 train = Multi_mnist_iterator(train)
 val = Multi_mnist_iterator(val)
 

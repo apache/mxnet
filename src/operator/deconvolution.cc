@@ -38,7 +38,7 @@ Operator* CreateOp<cpu>(DeconvolutionParam param, int dtype,
                         std::vector<TShape> *out_shape,
                         Context ctx) {
   Operator *op = NULL;
-  #if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1
   if (param.kernel.ndim() == 2) {
     switch (dtype) {
     case mshadow::kFloat32:
@@ -47,7 +47,7 @@ Operator* CreateOp<cpu>(DeconvolutionParam param, int dtype,
       break;
     }
   }
-  if (enableMKLDNNWarnGenerated())
+  if (EnableMkldnnWarnGenerated())
     LOG(INFO) << "MKLDNNDeConvolutionOp Skip MKL DNN optimization";
 #endif
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

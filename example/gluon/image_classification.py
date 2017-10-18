@@ -39,7 +39,7 @@ parser.add_argument('--val-data', type=str, default='',
                     help='validation record file to use, required for imagenet.')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
-parser.add_argument('--gpus', type=int, default=0,
+parser.add_argument('--num-gpus', type=int, default=0,
                     help='number of gpus to use.')
 parser.add_argument('--epochs', type=int, default=3,
                     help='number of training epochs.')
@@ -51,8 +51,6 @@ parser.add_argument('--wd', type=float, default=0.0001,
                     help='weight decay rate. default is 0.0001.')
 parser.add_argument('--seed', type=int, default=123,
                     help='random seed to use. Default=123.')
-parser.add_argument('--benchmark', action='store_true',
-                    help='whether to run benchmark.')
 parser.add_argument('--mode', type=str,
                     help='mode in which to train the model. options are symbolic, imperative, hybrid')
 parser.add_argument('--model', type=str, required=True,
@@ -76,15 +74,10 @@ dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
 
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 
-gpus = opt.gpus
+num_gpus = opt.num_gpus
 
-if opt.benchmark:
-    batch_size = 32
-    dataset = 'dummy'
-    classes = 1000
-
-batch_size *= max(1, gpus)
-context = [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()]
+batch_size *= max(1, num_gpus)
+context = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 
 model_name = opt.model
 
@@ -178,7 +171,7 @@ if __name__ == '__main__':
         data = mx.sym.var('data')
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-        mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()])
+        mod = mx.mod.Module(softmax, context=[mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()])
         mod.fit(train_data,
                 eval_data = val_data,
                 num_epoch=opt.epochs,

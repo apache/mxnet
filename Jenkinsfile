@@ -13,6 +13,7 @@ err = null
 
 // initialize source codes
 def init_git() {
+  deleteDir()
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
@@ -22,13 +23,14 @@ def init_git() {
       }
     } catch (exc) {
       deleteDir()
-      error "Failed to fetch source codes"
+      error "Failed to fetch source codes with ${exc}"
       sleep 2
     }
   }
 }
 
 def init_git_win() {
+  deleteDir()
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
@@ -38,7 +40,7 @@ def init_git_win() {
       }
     } catch (exc) {
       deleteDir()
-      error "Failed to fetch source codes"
+      error "Failed to fetch source codes with ${exc}"
       sleep 2
     }
   }
@@ -52,7 +54,7 @@ def make(docker_type, make_flag) {
     try {
       sh "${docker_run} ${docker_type} make ${make_flag}"
     } catch (exc) {
-      echo 'Incremental compilation failed. Fall back to build from scratch'
+      echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
       sh "${docker_run} ${docker_type} sudo make clean"
       sh "${docker_run} ${docker_type} sudo make -C amalgamation/ clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
@@ -84,8 +86,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 def python2_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/train"
   }
 }
 
@@ -103,7 +105,7 @@ def python3_ut(docker_type) {
 def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/gpu"
   }
 }
 
@@ -523,7 +525,7 @@ try {
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {
     node("mxnetlinux") {
-        sh "echo caught error"
+        sh "echo caught ${caughtError}"
         err = caughtError
         currentBuild.result = "FAILURE"
     }

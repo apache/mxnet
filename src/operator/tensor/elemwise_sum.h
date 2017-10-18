@@ -112,7 +112,7 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
 #if MXNET_USE_MKLDNN == 1
-  auto& shape = inputs[0].shape_;
+  const auto& shape = inputs[0].shape_;
   if (shape.ndim() == 4 && shape[0] > 0 && shape[1] > 0 && shape[2] > 0 &&
       shape[3] > 0 &&
       outputs[0].type_flag_ == mshadow::kFloat32) {

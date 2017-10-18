@@ -38,10 +38,27 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
+Operator* CreateOp<cpu>(ConcatParam param, int dtype, std::vector<TShape> *in_shape) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  if ((1 == param.dim) && (param.num_args > 1)) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        return new MKLDNNConcatOp<cpu, float>(param);
+    default:
+      break;
+    }
+  }
+  if (EnableMkldnnWarnGenerated())
+    LOG(INFO) << MKLDNNConcatOp<cpu, float>::getName() << " Skip MKL optimization";
+#endif
 #if MXNET_USE_MKL2017 == 1
-  if ((1 == param.dim) &&
+  // MKL supports 4D input tensors only for concat operation
+  // 2D/3D input tensors are reshaped to 4D in mkl_concat-inl.h
+  // hence MKL supports 2D/3D/4D input tensors for concat operation
+  size_t dims = (*in_shape)[0].ndim();
+  bool supportedDim = (dims >= 2 && dims <= 4);
+  if ((1 == param.dim) && supportedDim &&
     (param.num_args < (dnnResourceMultipleDst - dnnResourceMultipleSrc))) {
     switch (dtype) {
       case mshadow::kFloat32:
@@ -52,20 +69,8 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
       break;
     }
   }
-  if (enableMKLWarnGenerated())
+  if (EnableMklWarnGenerated())
     LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
-#endif
-#if MXNET_USE_MKLDNN == 1
-  if ((1 == param.dim) && (param.num_args > 1)) {
-    switch (dtype) {
-      case mshadow::kFloat32:
-        return new MKLDNNConcatOp<cpu, float>(param);
-    default:
-      break;
-    }
-  }
-  if (enableMKLDNNWarnGenerated())
-    LOG(INFO) << MKLDNNConcatOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     op = new ConcatOp<cpu, DType>(param);
@@ -75,7 +80,7 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
 
 Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                        std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0), in_shape);
 }
 
 DMLC_REGISTER_PARAMETER(ConcatParam);
