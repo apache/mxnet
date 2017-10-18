@@ -318,10 +318,10 @@ class UnaryOp : public OpBase {
 
   template<typename xpu>
   static void IdentityCompute(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -374,6 +374,30 @@ class UnaryOp : public OpBase {
     }
   }
 };
+
+template<>
+inline void UnaryOp::IdentityCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                                          const OpContext& ctx,
+                                          const std::vector<TBlob>& inputs,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  if (req[0] != kNullOp) {
+    if (req[0] != kWriteInplace) {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        const size_t size = inputs[0].Size() * sizeof(DType);
+        const DType *src = inputs[0].dptr<DType>();
+        DType *dest = outputs[0].dptr<DType>();
+        if (src != dest) {
+          memcpy(dest, src, size);
+        }
+      });
+    } else {
+      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+    }
+  }
+}
 
 template<typename GRAD_OP>
 struct unary_bwd {
