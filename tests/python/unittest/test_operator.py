@@ -236,6 +236,53 @@ def test_regression():
                      lambda x, y : x - y)
 
 
+def check_softmax_grad(xpu):
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.zeros((1,4))
+    expected_grad_out[0, k] = -1
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
+def check_smoothed_softmax_grad(xpu):
+    alpha = 0.2
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False, smooth_alpha=alpha)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.full((1,4), fill_value=-alpha/float(4-1))
+    expected_grad_out[0, k] = - (1 - alpha)
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
 def check_softmax_with_ignore_label(xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
@@ -284,12 +331,6 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
     exec1.backward()
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
-
-
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
 
 
 def test_python_op():
@@ -4540,6 +4581,14 @@ def test_binary_math_operators():
         finite_diff_binary_op(
             name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
             num_eps)
+
+
+def test_softmax():
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
+    check_softmax_grad(default_context())
+    check_smoothed_softmax_grad(default_context())
 
 
 if __name__ == '__main__':
