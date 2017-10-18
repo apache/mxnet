@@ -41,7 +41,6 @@ struct init_mem_2bit {
   }
 };
 
-
 struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
   float pos_threshold, neg_threshold;
   DMLC_DECLARE_PARAMETER(TwoBitParam) {

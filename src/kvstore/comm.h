@@ -80,11 +80,12 @@ class Comm {
   }
 
   /**
-   * \brief set to use low-bit compression
+   * \brief Sets gradient compression parameters to be able to
+   * perform reduce with compressed gradients
    */
   inline void SetCompress(const std::string& compress,
-                   float const pos_threshold,
-                   float const neg_threshold) {
+                   const float neg_threshold,
+                   const float pos_threshold) {
     compress_ = compress;
     pos_threshold_ = pos_threshold;
     neg_threshold_ = neg_threshold;
@@ -92,8 +93,20 @@ class Comm {
 
  protected:
   Context pinned_ctx_;
+
+  /*
+   * \brief Sets type of gradient compression
+   */
   std::string compress_ = "none";
+
+  /*
+   * \brief sets positive threshold for 2bit gradient compression
+   */
   float pos_threshold_;
+
+  /*
+   * \brief sets negative threshold for 2bit gradient compression
+   */
   float neg_threshold_;
 };
 
@@ -494,9 +507,9 @@ class CommDevice : public Comm {
                         int priority) override {
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
-//    if (src.size() == 1) {
-//      return src[0];
-//    }
+    if (src.size() == 1 && compress_=="none") {
+      return src[0];
+    }
 
     if (!inited_) {
       std::vector<Context> devs;
@@ -512,57 +525,77 @@ class CommDevice : public Comm {
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
 
-    if (buf.copy_buf.empty()) {
-      // TODO(mli) this results in large device memory usage for huge ndarray,
-      // such as the largest fullc in VGG. consider to do segment reduce with
-      // NDArray.Slice or gpu direct memory access. for the latter, we need to
-      // remove some ctx check, and also it reduces 20% perf
-      buf.copy_buf.resize(src.size());
+    if (compress_=="none"){
+      CopyFromTo(src[0], &(buf.merged), priority);
+      reduce[0] = buf.merged;
 
-      if (compress_!="none") {
+      if (buf.copy_buf.empty()) {
+        // TODO(mli) this results in large device memory usage for huge ndarray,
+        // such as the largest fullc in VGG. consider to do segment reduce with
+        // NDArray.Slice or gpu direct memory access. for the latter, we need to
+        // remove some ctx check, and also it reduces 20% perf
+        buf.copy_buf.resize(src.size()-1);
+        for (size_t i = 0; i < src.size()-1; ++i) {
+          buf.copy_buf[i] = NDArray(
+            buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        }
+      }
+      for (size_t i = 0; i < src.size()-1; ++i) {
+        CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
+        reduce[i+1] = buf.copy_buf[i];
+      }
+    } else {
+      if (buf.copy_buf.empty()) {
         // one buf for each context
+        buf.copy_buf.resize(src.size());
         buf.small_recv_buf.resize(src.size());
         buf.small_send_buf.resize(src.size());
         buf.residual.resize(src.size());
-      }
 
-      for (size_t i = 0; i < src.size(); ++i) {
-        buf.copy_buf[i] = NDArray(
-          buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
-        if (compress_ != "none") {
-          buf.residual[i] = NDArray(
-            buf.merged.shape(), src[i].ctx(), false, buf.merged.dtype());
+        for (size_t i = 0; i < src.size(); ++i) {
+          buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
+                                    false, buf.merged.dtype());
+          buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
+                                    false, buf.merged.dtype());
           buf.residual[i] = 0;
-          int bits;
-          if (compress_ =="2bit") {
-            bits = 16;
+          if (compress_ == "2bit") {
+            int bits = 16;
             long int small_size = buf.merged.shape().Size() % bits == 0 ?
                                   buf.merged.shape().Size() / bits + 3 :
                                   buf.merged.shape().Size() / bits + 4;
-            buf.small_recv_buf[i] = NDArray(
-              TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
-            buf.small_send_buf[i] = NDArray(
-              TShape{small_size}, src[i].ctx(), false, buf.merged.dtype());
+            buf.small_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
+                                            false, buf.merged.dtype());
+            buf.small_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
+                                            false, buf.merged.dtype());
+          } else {
+            LOG(FATAL) << "Unsupported type of compression "<<compress_;
           }
         }
       }
+
+      for (size_t i = 0; i < src.size(); ++i) {
+        // compress before copy
+        // this is done even if the data is on same context as copy_buf because
+        // we don't want the training to be biased towards data on this GPU
+        if (compress_ == "2bit") {
+          Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
+                   neg_threshold_, pos_threshold_, priority);
+          if (buf.small_send_buf[i].ctx()!=buf.small_recv_buf[i].ctx()){
+            CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
+          } else {
+            // avoid memory copy when they are on same context
+            buf.small_recv_buf[i] = buf.small_send_buf[i];
+          }
+          Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
+        } else {
+          LOG(FATAL) << "Unsupported type of compression "<<compress_;
+        }
+        reduce[i] = buf.copy_buf[i];
+      }
     }
 
-    for (size_t i = 0; i < src.size(); ++i) {
-      // compress before copy
-      if (compress_=="none") {
-        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
-      } else if (compress_ == "2bit") {
-        Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
-                 neg_threshold_, pos_threshold_, priority);
-        CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
-        Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
-      } else {
-        LOG(FATAL) << "Unsupported compression "<<compress_;
-      }
-      reduce[i] = buf.copy_buf[i];
-    }
     ElementwiseSum(reduce, &buf.merged);
+
     return buf.merged;
   }
 

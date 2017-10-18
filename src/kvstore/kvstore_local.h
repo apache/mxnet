@@ -151,7 +151,7 @@ class KVStoreLocal : public KVStore {
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
-    comm_->SetCompress(compress_, pos_threshold_, neg_threshold_);
+    comm_->SetCompress(compress_, neg_threshold_, pos_threshold_);
   }
 
   virtual void PushImpl(const std::vector<int>& keys,

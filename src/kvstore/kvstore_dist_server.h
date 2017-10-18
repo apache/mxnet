@@ -31,7 +31,6 @@
 #include <functional>
 #include <future>
 #include <vector>
-#include <bitset>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op-inl.h"
@@ -46,23 +45,7 @@ static const int kDefaultPushPull = 0;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
 static const int kSetCompress = 2;
-  void floatToBinary2(float f, std::string& str)
-  {
-    union { float f; uint32_t i; } u;
-    u.f = f;
-    str.clear();
 
-    for (int i = 0; i < 32; i++)
-    {
-      if (u.i % 2)  str.push_back('1');
-      else str.push_back('0');
-      u.i >>= 1;
-    }
-
-    // Reverse the string since now it's backwards
-    std::string temp(str.rbegin(), str.rend());
-    str = temp;
-  }
 /**
  * \brief executor runs a function using the thread called \ref Start
  */
@@ -404,30 +387,22 @@ class KVStoreDistServer {
       NDArray recved = NDArray(recv_blob, 0);
       NDArray decomp_buf = decomp_buf_[key];
       if (compress_ != "none") {
-        long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
-        dshape = TShape{original_size};
+        if (compress_ == "2bit") {
+          long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
+          // changing dshape to original size as value is stored in
+          // original size even when compressed data is received
+          dshape = TShape{original_size};
+        } else {
+          LOG(FATAL) << "Unsupported compression type";
+        }
+        // TODO(huilgolr) check and merge with init of stored
         if (decomp_buf.is_none()) {
           decomp_buf = NDArray(dshape, Context());
         }
       }
-      if(compress_!="none") {
-//        CHECK_EQ(*((float *) recved.data().dptr_),-0.5);
-//        CHECK_EQ(*((float *) recved.data().dptr_+1),0.5);
-//        CHECK_EQ(*((float *) recved.data().dptr_+2),dshape.Size());
-//        std::cout<<"recvd ";
-//        for(int i=0; i<recved.shape().Size(); i++){
-//          std::cout<<*((float *) recved.data().dptr_+i)<<" ";
-//        }
-//        std::cout<<std::endl;
-      }
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
-//        if(compress_!="none") {
-//          for(int i=0; i<stored.shape().Size(); i++){
-//            CHECK_EQ(*(float *) stored.data().dptr_+i,0);
-//          }
-//        }
         if (compress_ == "none") {
           CopyFromTo(recved, &stored, 0);
         } else {
@@ -435,46 +410,23 @@ class KVStoreDistServer {
         }
         server->Response(req_meta);
         stored.WaitToRead();
-//        if(compress_!="none") {
-//          CHECK_EQ(*((float *) recved.data().dptr_+2),dshape.Size());
-//          for(int i=0; i<stored.shape().Size(); i++){
-//            CHECK_EQ(*((float *) stored.data().dptr_+i),0);
-//          }
-//        }
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
         if (merged.array.is_none()) {
           merged.array = NDArray(dshape, Context());
         }
-//        std::string s;
-//        floatToBinary2(*((float *) recved.data().dptr_+3), s);
-
         if (merged.request.size() == 0) {
           if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
           } else {
             Dequantize(recved, &merged.array, compress_, 0);
-//            merged.array.WaitToRead();
-//            std::cout<<"merged array ";
-//            for(int i=0; i<merged.array.shape().Size(); i++){
-//              std::cout<<*((float *) merged.array.data().dptr_+i)<<" ";
-//            }
-//            std::cout<<std::endl;
-//            decomp_buf.WaitToRead();
-//            CopyFromTo(decomp_buf, &merged.array, 0);
           }
         } else {
           if (compress_ == "none") {
             merged.array += recved;
           } else {
             Dequantize(recved, &decomp_buf, compress_, 0);
-//            decomp_buf.WaitToRead();
-//            std::cout<<"decompbuf ";
-//            for(int i=0; i<decomp_buf.shape().Size(); i++){
-//              std::cout<<*((float *) decomp_buf.data().dptr_+i)<<" ";
-//            }
-//            std::cout<<std::endl;
             merged.array += decomp_buf;
           }
         }
@@ -548,7 +500,8 @@ class KVStoreDistServer {
 
   /**
    * \brief compress_ refers to whether values sent to kvstore server are
-   * in quantized form. It can be 'none' or '2bit' for now.
+   * in quantized form. It can be 'none' or '2bit' for now. This is set
+   * by worker by sending a command to server
    */
   std::string compress_ = "none";
 

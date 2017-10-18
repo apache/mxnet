@@ -19,7 +19,8 @@
 
 /*!
  * \file two_bit_quantize_sim.cu
- * \brief
+ * \brief registers quantize_2bit, dequantize_2bit
+ * and create_2bit operators for GPU
  */
 #include "./two_bit_quantize-inl.h"
 
