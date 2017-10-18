@@ -527,7 +527,6 @@ class CommDevice : public Comm {
         buf.residual.resize(src.size());
       }
 
-      std::cout<<"merged ctx is "<<buf.merged.ctx().dev_id<<std::endl;
       for (size_t i = 0; i < src.size(); ++i) {
         buf.copy_buf[i] = NDArray(
           buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
