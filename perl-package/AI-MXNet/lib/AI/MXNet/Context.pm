@@ -65,7 +65,8 @@ use overload
     '""' => sub {
         my ($self) = @_;
         return sprintf("%s(%s)", $self->device_type, $self->device_id);
-    };
+    },
+    fallback => 1;
 =head1 NAME
 
     AI::MXNet::Context - A device context.
@@ -142,6 +143,13 @@ method current_ctx()
 {
     return $AI::MXNet::current_ctx;
 }
+
+method set_current(AI::MXNet::Context $current)
+{
+    $AI::MXNet::current_ctx = $current;
+}
+
+*current_context = \&current_ctx;
 
 method deepcopy()
 {

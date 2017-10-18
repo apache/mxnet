@@ -18,91 +18,212 @@
 """Interface to runtime cuda kernel compile module."""
 from __future__ import absolute_import
 
+import re
 import ctypes
-from .base import _LIB, NDArrayHandle, RtcHandle, mx_uint, c_array, check_call
+import numpy as np
 
-class Rtc(object):
-    """MXRtc object in mxnet.
-    This class allow you to write CUDA kernels in Python
-    and call them with NDArray.
+from .base import _LIB, mx_uint, c_array, check_call
+from .base import c_str, CudaModuleHandle, CudaKernelHandle, numeric_types, string_types
+from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, NDArray
+
+_DTYPE_CPP_TO_NP = {
+    'float': np.float32,
+    'double': np.float64,
+    '__half': np.float16,
+    'uint8_t': np.uint8,
+    'int': np.int32,
+    'int32_t': np.int32,
+    'int8_t': np.int8,
+    'char': np.int8,
+    'int64_t': np.int64,
+}
+
+class CudaModule(object):
+    r"""Compile and run CUDA code from Python.
+
+    In CUDA 7.5, you need to prepend your kernel definitions
+    with 'extern "C"' to avoid name mangling::
+
+        source = r'''
+        extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
+            int i = threadIdx.x + blockIdx.x * blockDim.x;
+            y[i] += alpha * x[i];
+        }
+        '''
+        module = mx.rtc.CudaModule(source)
+        func = module.get_kernel("axpy", "const float *x, float *y, float alpha")
+        x = mx.nd.ones((10,), ctx=mx.gpu(0))
+        y = mx.nd.zeros((10,), ctx=mx.gpu(0))
+        func.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+        print(y)
+
+    Starting from CUDA 8.0, you can instead export functions by name.
+    This also allows you to use templates::
+
+        source = r'''
+        template<typename DType>
+        __global__ void axpy(const DType *x, DType *y, DType alpha) {
+            int i = threadIdx.x + blockIdx.x * blockDim.x;
+            y[i] += alpha * x[i];
+        }
+        '''
+        module = mx.rtc.CudaModule(source, exports=['axpy<float>', 'axpy<double>'])
+        func32 = module.get_kernel("axpy<float>", "const float *x, float *y, float alpha")
+        x = mx.nd.ones((10,), dtype='float32', ctx=mx.gpu(0))
+        y = mx.nd.zeros((10,), dtype='float32', ctx=mx.gpu(0))
+        func32.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+        print(y)
+
+        func64 = module.get_kernel("axpy<double>", "const double *x, double *y, double alpha")
+        x = mx.nd.ones((10,), dtype='float64', ctx=mx.gpu(0))
+        y = mx.nd.zeros((10,), dtype='float64', ctx=mx.gpu(0))
+        func32.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+        print(y)
+
 
     Parameters
     ----------
-    name : str
-        Name of the kernel.
-    inputs : tuple of (str, mxnet.ndarray)
-        List of input names and ndarray.
-    outputs : tuple of (str, mxnet.ndarray)
-        List of output names and ndarray.
-    kernel : str
-        The actual kernel code.
-        Note that this is only the body of the kernel, i.e.
-        after { and before }. Rtc will decorate the kernel.
-        For example, if ``name = "mykernel"`` and
-        inputs = [('x', mx.nd.zeros((10,)))]
-        outputs = [('y', mx.nd.zeros((10,)))]
-        kernel = "y[threadIdx.x] = x[threadIdx.x];",
-        then the compiled kernel will be:
-        extern "C" __global__ mykernel(float *x, float *y) {
-            const int x_ndim = 1;
-            const int x_dims = { 10 };
-            const int y_ndim = 1;
-            const int y_dims = { 10 };
-
-            y[threadIdx.x] = x[threadIdx.x];
-        }
+    source : str
+        Complete source code.
+    options : tuple of str
+        Compiler flags. For example, use "-I/usr/local/cuda/include" to
+        add cuda headers to include path.
+    exports : tuple of str
+        Export kernel names.
     """
-    def __init__(self, name, inputs, outputs, kernel):
-        self.handle = RtcHandle()
-        input_names = ctypes.cast(c_array(ctypes.c_char_p, [i[0] for i in inputs]),
-                                  ctypes.POINTER(ctypes.c_char_p))
-        output_names = ctypes.cast(c_array(ctypes.c_char_p, [i[0] for i in outputs]),
-                                   ctypes.POINTER(ctypes.c_char_p))
-        input_nds = ctypes.cast(c_array(NDArrayHandle, [i[1].handle for i in inputs]),
-                                ctypes.POINTER(NDArrayHandle))
-        output_nds = ctypes.cast(c_array(NDArrayHandle, [i[1].handle for i in outputs]),
-                                 ctypes.POINTER(NDArrayHandle))
-        check_call(_LIB.MXRtcCreate(ctypes.c_char_p(name),
-                                    mx_uint(len(inputs)),
-                                    mx_uint(len(outputs)),
-                                    input_names,
-                                    output_names,
-                                    input_nds,
-                                    output_nds,
-                                    ctypes.c_char_p(kernel),
-                                    ctypes.byref(self.handle)))
+    def __init__(self, source, options=(), exports=()):
+        if isinstance(options, string_types):
+            options = (options,)
+        if isinstance(exports, string_types):
+            exports = (exports,)
+        self.handle = CudaModuleHandle()
+        check_call(_LIB.MXRtcCudaModuleCreate(
+            c_str(source),
+            len(options),
+            c_array(ctypes.c_char_p, [c_str(opt) for opt in options]),
+            len(exports),
+            c_array(ctypes.c_char_p, [c_str(name) for name in exports]),
+            ctypes.byref(self.handle)))
 
     def __del__(self):
-        check_call(_LIB.MXRtcFree(self.handle))
+        check_call(_LIB.MXRtcCudaModuleFree(self.handle))
 
-    def push(self, inputs, outputs, grid_dims, block_dims):
-        """Run the kernel.
+    def get_kernel(self, name, signature):
+        r"""Get CUDA kernel from compiled module.
 
         Parameters
         ----------
-        inputs : list of NDArray
-            List of inputs. Can contain different NDArrays than those used for the constructor,
-            but its elements must have the same shapes and appear in the same order.
-        outputs : list of NDArray
-            List of outputs. Can contain different ndarrays than used for the constructor,
-            but must have the same shapes and appear in the same order.
-        grid_dims : tuple of 3 uint
-            Grid dimension for kernel launch.
-        block_dims : tuple of 3 uint
-            Block dimension for kernel launch.
+        name : str
+            String name of the kernel.
+        signature : str
+            Function signature for the kernel. For example, if a kernel is
+            declared as::
+
+                extern "C" __global__ void axpy(const float *x, double *y, int alpha)
+
+            Then its signature should be::
+
+                const float *x, double *y, int alpha
+
+            or::
+
+                const float *, double *, int
+
+            Note that `*` in signature marks an argument as array and
+            `const` marks an argument as constant (input) array.
+
+        Returns
+        -------
+        CudaKernel
+            CUDA kernels that can be launched on GPUs.
         """
-        input_nds = ctypes.cast(c_array(NDArrayHandle, [i.handle for i in inputs]),
-                                ctypes.POINTER(NDArrayHandle))
-        output_nds = ctypes.cast(c_array(NDArrayHandle, [i.handle for i in outputs]),
-                                 ctypes.POINTER(NDArrayHandle))
-        check_call(_LIB.MXRtcPush(self.handle,
-                                  mx_uint(len(inputs)),
-                                  mx_uint(len(outputs)),
-                                  input_nds,
-                                  output_nds,
-                                  mx_uint(grid_dims[0]),
-                                  mx_uint(grid_dims[1]),
-                                  mx_uint(grid_dims[2]),
-                                  mx_uint(block_dims[0]),
-                                  mx_uint(block_dims[1]),
-                                  mx_uint(block_dims[2])))
+        hdl = CudaKernelHandle()
+        is_ndarray = []
+        is_const = []
+        dtypes = []
+        pattern = re.compile(r"""^\s*(const)?\s*([\w_]+)\s*(\*)?\s*([\w_]+)?\s*$""")
+        args = re.sub(r"\s+", " ", signature).split(",")
+        for arg in args:
+            match = pattern.match(arg)
+            if not match or match.groups()[1] == 'const':
+                raise ValueError(
+                    'Invalid function prototype "%s". Must be in the '
+                    'form of "(const) type (*) (name)"'%arg)
+            is_const.append(bool(match.groups()[0]))
+            dtype = match.groups()[1]
+            is_ndarray.append(bool(match.groups()[2]))
+            if dtype not in _DTYPE_CPP_TO_NP:
+                raise TypeError(
+                    "Unsupported kernel argument type %s. Supported types are: %s."%(
+                        arg, ','.join(_DTYPE_CPP_TO_NP.keys())))
+            dtypes.append(_DTYPE_NP_TO_MX[_DTYPE_CPP_TO_NP[dtype]])
+
+        check_call(_LIB.MXRtcCudaKernelCreate(
+            self.handle,
+            c_str(name),
+            len(dtypes),
+            c_array(ctypes.c_int, [ctypes.c_int(i) for i in is_ndarray]),
+            c_array(ctypes.c_int, [ctypes.c_int(i) for i in is_const]),
+            c_array(ctypes.c_int, [ctypes.c_int(i) for i in dtypes]),
+            ctypes.byref(hdl)))
+
+        return CudaKernel(hdl, name, is_ndarray, dtypes)
+
+class CudaKernel(object):
+    """Constructs CUDA kernel. Should be created by `CudaModule.get_kernel`,
+    not intended to be used by users."""
+    def __init__(self, handle, name, is_ndarray, dtypes):
+        self.handle = handle
+        self._name = name
+        self._is_ndarray = is_ndarray
+        self._dtypes = [_DTYPE_MX_TO_NP[i] for i in dtypes]
+
+    def __del__(self):
+        check_call(_LIB.MXRtcCudaKernelFree(self.handle))
+
+    def launch(self, args, ctx, grid_dims, block_dims, shared_mem=0):
+        """Launch cuda kernel.
+
+        Parameters
+        ----------
+        args : tuple of NDArray or numbers
+            List of arguments for kernel. NDArrays are expected for pointer
+            types (e.g. `float*`, `double*`) while numbers are expected for
+            non-pointer types (e.g. `int`, `float`).
+        ctx : Context
+            The context to launch kernel on. Must be GPU context.
+        grid_dims : tuple of 3 integers
+            Grid dimensions for CUDA kernel.
+        block_dims : tuple of 3 integers
+            Block dimensions for CUDA kernel.
+        shared_mem : integer, optional
+            Size of dynamically allocated shared memory. Defaults to 0.
+        """
+        assert ctx.device_type == 'gpu', "Cuda kernel can only be launched on GPU"
+        assert len(grid_dims) == 3, "grid_dims must be a tuple of 3 integers"
+        assert len(block_dims) == 3, "grid_dims must be a tuple of 3 integers"
+        assert len(args) == len(self._dtypes), \
+            "CudaKernel(%s) expects %d arguments but got %d"%(
+                self._name, len(self._dtypes), len(args))
+        void_args = []
+        ref_holder = []
+        for i, (arg, is_nd, dtype) in enumerate(zip(args, self._is_ndarray, self._dtypes)):
+            if is_nd:
+                assert isinstance(arg, NDArray), \
+                    "The %d-th argument is expected to be a NDArray but got %s"%(
+                        i, type(arg))
+                void_args.append(arg.handle)
+            else:
+                assert isinstance(arg, numeric_types), \
+                    "The %d-th argument is expected to be a number, but got %s"%(
+                        i, type(arg))
+                ref_holder.append(np.array(arg, dtype=dtype))
+                void_args.append(ref_holder[-1].ctypes.data_as(ctypes.c_void_p))
+
+        check_call(_LIB.MXRtcCudaKernelCall(
+            self.handle,
+            ctx.device_id,
+            c_array(ctypes.c_void_p, void_args),
+            mx_uint(grid_dims[0]), mx_uint(grid_dims[1]), mx_uint(grid_dims[2]),
+            mx_uint(block_dims[0]), mx_uint(block_dims[1]), mx_uint(block_dims[2]),
+            mx_uint(shared_mem)))

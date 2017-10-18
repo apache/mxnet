@@ -31,6 +31,7 @@ from numbers import Number
 
 import numpy as _numpy
 
+from ..attribute import AttrScope
 from ..base import _LIB, numeric_types
 from ..base import c_array, c_str, mx_uint, py_str, string_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
@@ -42,7 +43,7 @@ from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
 from . import op
-from .op import SymbolBase, _set_symbol_class, AttrScope, _Null  # pylint: disable=unused-import
+from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "maximum", "minimum", "hypot", "zeros", "ones", "full", "arange"]
@@ -1744,6 +1745,14 @@ class Symbol(SymbolBase):
         """
         return op.reshape(self, *args, **kwargs)
 
+    def reshape_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reshape_like`.
+
+        The arguments are the same as for :py:func:`reshape_like`, with
+        this array as data.
+        """
+        return op.reshape_like(self, *args, **kwargs)
+
     def astype(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cast`.
 
@@ -1879,6 +1888,14 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.argmax(self, *args, **kwargs)
+
+    def argmax_channel(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmax_channel`.
+
+        The arguments are the same as for :py:func:`argmax_channel`, with
+        this array as data.
+        """
+        return op.argmax_channel(self, *args, **kwargs)
 
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
@@ -2071,6 +2088,246 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.trunc(self, *args, **kwargs)
+
+    def sin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sin`.
+
+        The arguments are the same as for :py:func:`sin`, with
+        this array as data.
+        """
+        return op.sin(self, *args, **kwargs)
+
+    def cos(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cos`.
+
+        The arguments are the same as for :py:func:`cos`, with
+        this array as data.
+        """
+        return op.cos(self, *args, **kwargs)
+
+    def tan(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`tan`.
+
+        The arguments are the same as for :py:func:`tan`, with
+        this array as data.
+        """
+        return op.tan(self, *args, **kwargs)
+
+    def arcsin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`arcsin`.
+
+        The arguments are the same as for :py:func:`arcsin`, with
+        this array as data.
+        """
+        return op.arcsin(self, *args, **kwargs)
+
+    def arccos(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`arccos`.
+
+        The arguments are the same as for :py:func:`arccos`, with
+        this array as data.
+        """
+        return op.arccos(self, *args, **kwargs)
+
+    def arctan(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`arctan`.
+
+        The arguments are the same as for :py:func:`arctan`, with
+        this array as data.
+        """
+        return op.arctan(self, *args, **kwargs)
+
+    def degrees(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`degrees`.
+
+        The arguments are the same as for :py:func:`degrees`, with
+        this array as data.
+        """
+        return op.degrees(self, *args, **kwargs)
+
+    def radians(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`radians`.
+
+        The arguments are the same as for :py:func:`radians`, with
+        this array as data.
+        """
+        return op.radians(self, *args, **kwargs)
+
+    def sinh(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sinh`.
+
+        The arguments are the same as for :py:func:`sinh`, with
+        this array as data.
+        """
+        return op.sinh(self, *args, **kwargs)
+
+    def cosh(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cosh`.
+
+        The arguments are the same as for :py:func:`cosh`, with
+        this array as data.
+        """
+        return op.cosh(self, *args, **kwargs)
+
+    def tanh(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`tanh`.
+
+        The arguments are the same as for :py:func:`tanh`, with
+        this array as data.
+        """
+        return op.tanh(self, *args, **kwargs)
+
+    def arcsinh(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`arcsinh`.
+
+        The arguments are the same as for :py:func:`arcsinh`, with
+        this array as data.
+        """
+        return op.arcsinh(self, *args, **kwargs)
+
+    def arccosh(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`arccosh`.
+
+        The arguments are the same as for :py:func:`arccosh`, with
+        this array as data.
+        """
+        return op.arccosh(self, *args, **kwargs)
+
+    def arctanh(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`arctanh`.
+
+        The arguments are the same as for :py:func:`arctanh`, with
+        this array as data.
+        """
+        return op.arctanh(self, *args, **kwargs)
+
+    def exp(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`exp`.
+
+        The arguments are the same as for :py:func:`exp`, with
+        this array as data.
+        """
+        return op.exp(self, *args, **kwargs)
+
+    def expm1(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`expm1`.
+
+        The arguments are the same as for :py:func:`expm1`, with
+        this array as data.
+        """
+        return op.expm1(self, *args, **kwargs)
+
+    def log(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log`.
+
+        The arguments are the same as for :py:func:`log`, with
+        this array as data.
+        """
+        return op.log(self, *args, **kwargs)
+
+    def log10(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log10`.
+
+        The arguments are the same as for :py:func:`log10`, with
+        this array as data.
+        """
+        return op.log10(self, *args, **kwargs)
+
+    def log2(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log2`.
+
+        The arguments are the same as for :py:func:`log2`, with
+        this array as data.
+        """
+        return op.log2(self, *args, **kwargs)
+
+    def log1p(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log1p`.
+
+        The arguments are the same as for :py:func:`log1p`, with
+        this array as data.
+        """
+        return op.log1p(self, *args, **kwargs)
+
+    def sqrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sqrt`.
+
+        The arguments are the same as for :py:func:`sqrt`, with
+        this array as data.
+        """
+        return op.sqrt(self, *args, **kwargs)
+
+    def rsqrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rsqrt`.
+
+        The arguments are the same as for :py:func:`rsqrt`, with
+        this array as data.
+        """
+        return op.rsqrt(self, *args, **kwargs)
+
+    def cbrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cbrt`.
+
+        The arguments are the same as for :py:func:`cbrt`, with
+        this array as data.
+        """
+        return op.cbrt(self, *args, **kwargs)
+
+    def rcbrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rcbrt`.
+
+        The arguments are the same as for :py:func:`rcbrt`, with
+        this array as data.
+        """
+        return op.rcbrt(self, *args, **kwargs)
+
+    def square(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`square`.
+
+        The arguments are the same as for :py:func:`square`, with
+        this array as data.
+        """
+        return op.square(self, *args, **kwargs)
+
+    def reciprocal(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reciprocal`.
+
+        The arguments are the same as for :py:func:`reciprocal`, with
+        this array as data.
+        """
+        return op.reciprocal(self, *args, **kwargs)
+
+    def relu(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`relu`.
+
+        The arguments are the same as for :py:func:`relu`, with
+        this array as data.
+        """
+        return op.relu(self, *args, **kwargs)
+
+    def sigmoid(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sigmoid`.
+
+        The arguments are the same as for :py:func:`sigmoid`, with
+        this array as data.
+        """
+        return op.sigmoid(self, *args, **kwargs)
+
+    def softmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmax`.
+
+        The arguments are the same as for :py:func:`softmax`, with
+        this array as data.
+        """
+        return op.softmax(self, *args, **kwargs)
+
+    def log_softmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log_softmax`.
+
+        The arguments are the same as for :py:func:`log_softmax`, with
+        this array as data.
+        """
+        return op.log_softmax(self, *args, **kwargs)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)

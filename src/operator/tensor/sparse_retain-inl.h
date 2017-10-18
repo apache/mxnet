@@ -70,28 +70,51 @@ inline bool SparseRetainOpType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SparseRetainForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                                const Context& ctx,
+                                                const int dev_mask,
+                                                DispatchMode* dispatch_mode,
                                                 std::vector<int> *in_attrs,
                                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  type_assign(&(in_attrs->at(sr::kArr)), kRowSparseStorage);
-  type_assign(&(in_attrs->at(sr::kIdx)), kDefaultStorage);
-  type_assign(&(out_attrs->at(sr::kOut)), kRowSparseStorage);
+  bool dispatched = false;
+  auto &arr_stype = in_attrs->at(sr::kArr);
+  auto &idx_stype = in_attrs->at(sr::kIdx);
+  auto &out_stype = out_attrs->at(sr::kOut);
+  if (!dispatched && arr_stype == kRowSparseStorage && idx_stype == kDefaultStorage) {
+    // rsp, dns -> rsp
+    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  }
   return true;
 }
 
 inline bool SparseRetainBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                                 const Context& ctx,
+                                                 const int dev_mask,
+                                                 DispatchMode* dispatch_mode,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 2U);
-
-  type_assign(&(in_attrs->at(sr::kOut)), kDefaultStorage);
-  type_assign(&(in_attrs->at(sr::kIdx)), kDefaultStorage);
-  type_assign(&(out_attrs->at(sr::kArr)), kRowSparseStorage);
-  type_assign(&(out_attrs->at(sr::kIdx)), kDefaultStorage);
+  bool dispatched = false;
+  const auto &ograd_stype = in_attrs->at(sr::kOut);
+  const auto &idx_stype = in_attrs->at(sr::kArr);
+  auto &arr_grad_stype = out_attrs->at(sr::kArr);
+  auto &idx_grad_stype = out_attrs->at(sr::kIdx);
+  if (!dispatched && ograd_stype == kDefaultStorage && idx_stype == kDefaultStorage) {
+    if (type_assign(&arr_grad_stype, kRowSparseStorage) &&
+        type_assign(&idx_grad_stype, kDefaultStorage)) {
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+      dispatched = true;
+    }
+  }
+  if (!dispatched) {
+    LOG(FATAL) << "Not implemented: "
+               << operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  }
   return true;
 }
 
@@ -244,7 +267,7 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
   if (!input_nd.storage_initialized()
       || idx_data.Size() == 0U
       || input_nd.shape()[0] == 0) {
-    FillZerosRspImpl(s, output_nd);
+    FillZerosRspImpl(s, *output_nd);
     return;
   }
 
@@ -363,8 +386,7 @@ void SparseRetainOpBackwardEx(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob idx_data = inputs[sr::kIdx].data();
   if (idx_data.Size() == 0U) {
-    NDArray output = outputs[sr::kArr];
-    FillZerosRspImpl<xpu>(s, &output);
+    FillZerosRspImpl(s, outputs[sr::kArr]);
     return;
   }
 

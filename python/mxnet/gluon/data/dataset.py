@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
+__all__ = ['Dataset', 'ArrayDataset', 'RecordFileDataset']
+
 import os
 
 from ... import recordio, ndarray

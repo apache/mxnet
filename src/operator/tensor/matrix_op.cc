@@ -279,7 +279,7 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
@@ -389,6 +389,17 @@ Example::
 
     clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
 
+The storage type of ``clip`` output depends on storage types of inputs and the a_min, a_max \
+parameter values:
+
+   - clip(default) = default
+   - clip(row_sparse, a_min <= 0, a_max >= 0) = row_sparse
+   - clip(csr, a_min <= 0, a_max >= 0) = csr
+   - clip(row_sparse, a_min < 0, a_max < 0) = default
+   - clip(row_sparse, a_min > 0, a_max > 0) = default
+   - clip(csr, a_min < 0, a_max < 0) = csr
+   - clip(csr, a_min > 0, a_max > 0) = csr
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -396,6 +407,38 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ClipEx<cpu>)
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+    bool dispatched = false;
+    // For clipping ranges that cross zero, sparse output is possible
+    CHECK_EQ(in_attrs->size(), 1U) << " in operator " << attrs.name;
+    CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
+    if ((*in_attrs)[0] == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_attrs[0], kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
+    const auto& param = nnvm::get<ClipParam>(attrs.parsed);
+    if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
+      const int this_stype = (*in_attrs)[0];
+      if (this_stype != kUndefinedStorage) {
+        dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+                                         dispatch_mode, DispatchMode::kFComputeEx);
+      }
+    }
+    if (!dispatched) {
+      // otherwise, output is dense (print warning anyway)
+      if (!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
+                              dispatch_mode, DispatchMode::kFComputeFallback)) {
+        dispatch_fallback(out_attrs, dispatch_mode);
+      }
+      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    }
+    return true;
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(ClipParam::__FIELDS__());

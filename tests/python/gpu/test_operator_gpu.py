@@ -21,6 +21,7 @@ import time
 import unittest
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from numpy.testing import assert_allclose
 
@@ -33,7 +34,7 @@ from test_gluon import *
 from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_ndarray import test_create_csr, test_create_row_sparse
+from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -1358,7 +1359,7 @@ def test_rnn_layer():
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
-
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8211")
 def test_autograd_save_memory():
     x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
     x.attach_grad()
@@ -1389,6 +1390,61 @@ def test_gluon_ctc_consistency():
 
     assert_almost_equal(cpu_data.grad.asnumpy(), gpu_data.grad.asnumpy(), atol=1e-3, rtol=1e-3)
 
+
+def test_cuda_rtc():
+    source = r'''
+    extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
+        int i = threadIdx.x + blockIdx.x * blockDim.x;
+        y[i] += alpha * x[i];
+    }
+
+    extern "C" __global__ void saxpy(const float *x, float *y, float alpha) {
+        extern __shared__ float smem[];
+        int i = threadIdx.x + blockIdx.x * blockDim.x;
+        smem[threadIdx.x] = x[i];
+        y[i] += alpha * smem[threadIdx.x];
+    }
+    '''
+    module = mx.rtc.CudaModule(source)
+    axpy = module.get_kernel("axpy", "const float *x, float *y, float alpha")
+    x = mx.nd.ones((10,), ctx=mx.gpu(0))
+    y = mx.nd.zeros((10,), ctx=mx.gpu(0))
+    axpy.launch([x, y, 3.0], mx.gpu(0), (1, 1, 1), (10, 1, 1))
+    assert (y.asnumpy() == 3).all()
+
+    saxpy = module.get_kernel("saxpy", "const float *x, float *y, float alpha")
+    saxpy.launch([x, y, 4.0], mx.gpu(0), (1, 1, 1), (10, 1, 1), 10)
+    assert (y.asnumpy() == 7).all()
+
+    saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
+    assert (y.asnumpy() == 12).all()
+
+
+def test_cross_device_autograd():
+    x = mx.nd.random.uniform(shape=(10,))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        y = mx.nd.tanh(x)
+        y = y.copyto(mx.gpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.cpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.gpu(0))
+        y = y.copyto(mx.gpu(0))
+
+        y.backward()
+
+    dx = x.grad.asnumpy()
+    x.grad[:] = 0
+
+    with mx.autograd.record():
+        y = x
+        for i in range(3):
+            y = mx.nd.tanh(y)
+        y.backward()
+
+    assert_almost_equal(dx, x.grad.asnumpy())
 
 if __name__ == '__main__':
     import nose
