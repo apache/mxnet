@@ -239,14 +239,16 @@ def test_sync_push_pull():
 
             # v = mx.nd.zeros(d[1][0]*d[1][1])
             grad = mx.nd.array(rnd.rand(d[1][0], d[1][1]))
+            grad_cpy = mx.nd.array(grad)
             kv.push(d[0], grad)
             val = mx.nd.zeros(d[1])
             kv.pull(d[0], val)
 
             expected_diff = val - orig_val
-
-            compr = mx.contrib.nd.create_2bit(grad)
-            mx.contrib.ndarray.quantize_2bit(grad, mx.nd.zeros(d[1]), compr, neg, pos)
+            
+            # use copy because push modifies grad
+            compr = mx.contrib.nd.create_2bit(grad_cpy)
+            mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(d[1]), compr, neg, pos)
             decompr = mx.nd.zeros(grad.shape)
             mx.contrib.ndarray.dequantize_2bit(compr, decompr)
 
