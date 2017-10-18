@@ -199,21 +199,16 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   return stride;
 }
 
-
-struct fill {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType val) {
-    out[i] = val;
-  }
-};
-
-
-struct set_zero {
+template<int val>
+struct set_to {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out) {
-    out[i] = static_cast<DType>(0);
+    out[i] = DType(val);
   }
 };
+
+using set_zero = set_to<0>;
+
 
 /*! \brief Select assignment operation based upon the req value
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch

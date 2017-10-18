@@ -164,19 +164,39 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+/*! \brief Fill output with a scalar integer value */
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(out, req[0], scalar<DType>(value));
-  });
+  if(req[0] != kNullOp) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      mxnet_op::Kernel<mxnet_op::set_to<value>, xpu>::Launch(s,
+                                                             outputs[0].Size(),
+                                                             outputs[0].dptr<DType>());
+    });
+  }
+}
+
+/*! \brief Fast CPU fill-zero version using memset */
+template<>
+inline void FillCompute<cpu, 0>(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  if(req[0] != kNullOp) {
+    const size_t size = outputs[0].Size();
+    if(size) {
+      mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        memset(outputs[0].dptr<DType>(), 0, size * sizeof(DType));
+      });
+    }
+  }
 }
 
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
