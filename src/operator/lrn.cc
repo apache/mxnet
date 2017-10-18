@@ -43,11 +43,21 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(LRNParam param, int dtype) {
-#if MXNET_USE_MKL2017 == 1
-  return new MKLLRNOp<cpu, float>(param);
-#endif
 #if MXNET_USE_MKLDNN == 1
-  return new MKLDNNLRNOp<cpu, float>(param);
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLDNNLRNOp<cpu, float>(param);
+  default:
+    break;
+  }
+#endif
+#if MXNET_USE_MKL2017 == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLLRNOp<cpu, float>(param);
+  default:
+    break;
+  }
 #endif
   return new LocalResponseNormOp<cpu>(param);
 }

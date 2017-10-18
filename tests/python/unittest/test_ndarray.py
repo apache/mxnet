@@ -19,8 +19,11 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
+import unittest
+from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
+import unittest
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -494,6 +497,10 @@ def test_arange():
         gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
         pred = mx.nd.arange(start=start, stop=stop, step=step, repeat=repeat).asnumpy()
         assert_almost_equal(pred, gt)
+    gt = np.arange(start=0, stop=10000**2, step=10001, dtype=np.int32)
+    pred = mx.nd.arange(start=0, stop=10000**2, step=10001,
+                        dtype="int32").asnumpy()
+    assert_almost_equal(pred, gt)
 
 def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
@@ -673,7 +680,7 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8049")
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
@@ -687,6 +694,34 @@ def test_cached():
     o2[:] = 0
     op(data, weight, bias, out=o2)
     assert_almost_equal(o2.asnumpy(), o1.asnumpy()+1)
+
+    weight.attach_grad()
+    bias.attach_grad()
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward(retain_graph=True)
+        o.backward()
+
+    # try a different shape
+    data = mx.nd.ones((5, 2, 10, 10))
+    weight = mx.nd.ones((10, 2, 3, 3))
+    bias = mx.nd.ones((10,))
+    data.attach_grad()
+
+    with mx.autograd.record():
+        bias = bias + 1
+        o = op(data, weight, bias)
+        o = o * 2
+        o.backward()
+
 
 def test_output():
     shape = (2,2)
@@ -705,21 +740,31 @@ def test_ndarray_fluent():
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
                     'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'take',
                     'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
-                    'clip', 'abs' 'sign'])
-    def check_fluent_regular(func, kwargs, shape=(5, 17, 1)):
+                    'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
+                    'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
+                    'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square',
+                    'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax',
+                    'reciprocal'])
+    def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.nd.random_uniform(shape=shape, ctx=default_context())
             regular = getattr(mx.ndarray, func)(data, **kwargs)
             fluent = getattr(data, func)(**kwargs)
             if isinstance(regular, list):
                 for r, f in zip(regular, fluent):
-                    assert almost_equal(r.asnumpy(), f.asnumpy())
+                    assert almost_equal(r.asnumpy(), f.asnumpy(), equal_nan=equal_nan)
             else:
-                assert almost_equal(regular.asnumpy(), fluent.asnumpy())
+                assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
-                 'ones_like', 'abs', 'sign']:
+                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
+                 'exp', 'expm1', 'square', 'reciprocal', 'argmax_channel']:
         check_fluent_regular(func, {})
+
+    for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
+                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
+                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax']:
+        check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
         check_fluent_regular(func, {'axis': 1})
@@ -736,6 +781,7 @@ def test_ndarray_fluent():
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
+    check_fluent_regular('reshape_like', {'rhs': mx.nd.ones((30, 17))}, shape=(5, 17, 2, 3))
 
     for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
         check_fluent_regular(func, {'axis': (1, 2)})
@@ -743,6 +789,14 @@ def test_ndarray_fluent():
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
 
+@raises(ValueError)
+def test_bool_ambiguous():
+    bool(mx.nd.ones((2,3,4)))
+
+def test_bool():
+    assert not bool(mx.nd.array([]))
+    assert not bool(mx.nd.zeros((1,)))
+    assert bool(mx.nd.ones((1,)))
 
 if __name__ == '__main__':
     import nose

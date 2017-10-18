@@ -75,43 +75,8 @@ class MKLDNNConcatOp : public Operator, public MKLDNNLayer<Dtype> {
 
   void InitConcatFwd(const OpContext &ctx, const std::vector<TBlob> &in_data,
                        const std::vector<TBlob> &out_data) {
-    using namespace mshadow;
-    CHECK_EQ(static_cast<int>(in_data.size()), size_);
-    CHECK_EQ(out_data.size(), 1);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    std::vector<Tensor<xpu, 4, Dtype> > data(size_);
-    Tensor<xpu, 4, Dtype> out;
-    if (in_data[0].ndim() == 2) {
-      for (size_t i = 0; i < size_; ++i) {
-        Shape<4> dshape = Shape4(in_data[i].shape_[0],
-                                 in_data[i].shape_[1], 1, 1);
-        data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
-          in_data[i], dshape, s);
-      }
-      Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
-                               out_data[concat_enum::kOut].shape_[1], 1, 1);
-      out = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
-        out_data[concat_enum::kOut], dshape, s);
-    } else if (in_data[0].ndim() == 3) {
-      for (size_t i = 0; i < size_; ++i) {
-        Shape<4> dshape = Shape4(in_data[i].shape_[0],
-          in_data[i].shape_[1], in_data[i].shape_[2], 1);
-        data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
-          in_data[i], dshape, s);
-      }
-      Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
-        out_data[concat_enum::kOut].shape_[1],
-        out_data[concat_enum::kOut].shape_[2], 1);
-      out = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
-        out_data[concat_enum::kOut], dshape, s);
-    } else {
-      for (size_t i = 0; i < size_; ++i) {
-        data[i] = mkl_experimental_direct_get<xpu, 4, Dtype>(in_data[i], s);
-      }
-      out = mkl_experimental_direct_get<xpu, 4, Dtype>(out_data[concat_enum::kOut], s);
-    }
+    
 
-    LayerSetup(data, 4);
     mkldnn::engine cpu_engine = CpuEngine::Instance().get_engine();
     memory::data_type mtype = memory::data_type::f32;
     memory::format mfmt_nchw = memory::format::nchw;
@@ -151,17 +116,7 @@ class MKLDNNConcatOp : public Operator, public MKLDNNLayer<Dtype> {
 
     fwd_top_data_.reset(new MKLDNNData<Dtype>(usr_dst_mpd, prv_dst_mpd));
 
-    for (size_t i = 0; i < size_; ++i) {
-      inputs.push_back(fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false, in_data[i]));
-    }
-
-    for (size_t i = 0; i < inputs.size(); i++) {
-        inputs_at.push_back(*inputs[i]);
-    }
-    output_memory = fwd_top_data_->create_output_memory(
-      out.dptr_, out_data[concat_enum::kOut], fwd_top_data_);
-    concatFwd.reset(new mkldnn::concat(*fwd_pd, inputs_at, *output_memory));
-  }
+ }
 
  public:
   virtual void Forward(const OpContext &ctx,
@@ -169,12 +124,59 @@ class MKLDNNConcatOp : public Operator, public MKLDNNLayer<Dtype> {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-     if (!init_mkldnn_) {
-        InitConcatFwd(ctx, in_data, out_data);
+    using namespace mshadow;
+    CHECK_EQ(static_cast<int>(in_data.size()), size_);
+    CHECK_EQ(out_data.size(), 1);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    std::vector<Tensor<xpu, 4, Dtype> > data(size_);
+    Tensor<xpu, 4, Dtype> out;
+    if (in_data[0].ndim() == 2) {
+      for (size_t i = 0; i < size_; ++i) {
+        Shape<4> dshape = Shape4(in_data[i].shape_[0],
+                                 in_data[i].shape_[1], 1, 1);
+        data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
+          in_data[i], dshape, s);
+      }
+      Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
+                               out_data[concat_enum::kOut].shape_[1], 1, 1);
+      out = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
+        out_data[concat_enum::kOut], dshape, s);
+    } else if (in_data[0].ndim() == 3) {
+      for (size_t i = 0; i < size_; ++i) {
+        Shape<4> dshape = Shape4(in_data[i].shape_[0],
+          in_data[i].shape_[1], in_data[i].shape_[2], 1);
+        data[i] = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
+          in_data[i], dshape, s);
+      }
+      Shape<4> dshape = Shape4(out_data[concat_enum::kOut].shape_[0],
+        out_data[concat_enum::kOut].shape_[1],
+        out_data[concat_enum::kOut].shape_[2], 1);
+      out = mkl_experimental_direct_get_with_shape<xpu, 4, Dtype>(
+        out_data[concat_enum::kOut], dshape, s);
+    } else {
+      for (size_t i = 0; i < size_; ++i) {
+        data[i] = mkl_experimental_direct_get<xpu, 4, Dtype>(in_data[i], s);
+      }
+      out = mkl_experimental_direct_get<xpu, 4, Dtype>(out_data[concat_enum::kOut], s);
+    }
+    
+    if (!init_mkldnn_) {
         init_mkldnn_ = true;
+        LayerSetup(data, 4);
+        InitConcatFwd(ctx, in_data, out_data);
+        for (size_t i = 0; i < size_; ++i) {
+          inputs.push_back(fwd_bottom_data_[i]->get_converted_prv(data[i].dptr_, false, in_data[i]));
+        }
+  
+        for (size_t i = 0; i < inputs.size(); i++) {
+            inputs_at.push_back(*inputs[i]);
+        }
+        output_memory = fwd_top_data_->create_output_memory(
+          out.dptr_, out_data[concat_enum::kOut], fwd_top_data_);
+        concatFwd.reset(new mkldnn::concat(*fwd_pd, inputs_at, *output_memory));
       } else {
         for (size_t i = 0; i < size_; ++i) {
-          fwd_bottom_data_[i]->sync_converted_prv(false, in_data[i]);
+          fwd_bottom_data_[i]->sync_converted_prv(data[i].dptr_, false, in_data[i]);
         }
         fwd_top_data_->sync_output_memory(
           out_data[concat_enum::kOut], fwd_top_data_);

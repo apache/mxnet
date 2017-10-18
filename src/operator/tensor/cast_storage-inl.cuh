@@ -28,7 +28,7 @@
 #include <cub/cub.cuh>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
-#include <nnvm/tuple.h>
+#include "../mxnet_op.h"
 #include "./util/tensor_util-inl.cuh"
 
 namespace mxnet {
@@ -66,6 +66,123 @@ struct CastDnsRspValsKernel {
 };
 
 /*!
+ * \brief Inline implementation of typed CastStorageDnsRspImpl
+ * \tparam DType Data type
+ * \tparam RType Index type
+ * \param ctx Operator context
+ * \param dns Dense array (source)
+ * \param rsp Row-sparse array (destination)
+ */
+template<typename DType, typename RType>
+void CastStorageDnsRspGPUImpl_(const OpContext& ctx,
+                               const TBlob& dns,
+                               NDArray* rsp) {
+  using mshadow::Shape1;
+  using mxnet_op::Kernel;
+  using nnvm::dim_t;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  const dim_t num_rows = dns.shape_[0];
+  const dim_t row_length = dns.shape_.ProdShape(1, dns.shape_.ndim());
+  const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
+  const dim_t threads_per_block = mshadow::cuda::kBaseThreadNum;
+  const dim_t min_num_warps = 512;
+  dim_t num_threads;
+  // TODO: remove kernel dependency on warpSize=32
+  if (threads_per_warp != 32) {
+    LOG(FATAL) << "CastStorageDnsRspImpl GPU kernels expect warpSize=32";
+  }
+  // Determine temporary device storage requirements
+  dim_t *row_flg = NULL;
+  void *d_temp_storage = NULL;
+  size_t temp_storage_bytes = 0;
+  cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                temp_storage_bytes,
+                                row_flg,
+                                row_flg,
+                                num_rows,
+                                mshadow::Stream<gpu>::GetStream(s));
+
+  // Allocate temp storage for marking non-zero rows and for cub's prefix sum
+  CHECK_GT(ctx.requested.size(), 0);
+  // The resource is located at the end of requested resource array
+  mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[ctx.requested.size() - 1]
+    .get_space_typed<gpu, 1, char>(Shape1(num_rows * sizeof(RType) + temp_storage_bytes), s);
+
+  row_flg = reinterpret_cast<RType *>(workspace.dptr_);
+  d_temp_storage = workspace.dptr_ + num_rows * sizeof(RType);
+
+  // Mark non-zero rows as 'one' in row_flg
+  // Different kernel versions are optimized for different matrix instances
+  // (1) 'Thread kernel' (one thread       computing one row)
+  // (2) 'Warp kernel'   (one warp         computing one row)
+  // (3) 'Block kernel'  (one thread block computing one row)
+  const int kernel_version = 0;
+  switch (kernel_version) {
+    case 1:
+      num_threads = num_rows;
+      Kernel<MarkRspRowThreadKernel, gpu>::Launch(s, num_threads,
+                                                  row_flg, dns.dptr<DType>(), num_rows, row_length);
+      break;
+    case 2:
+      num_threads = num_rows * threads_per_warp;
+      Kernel<MarkRspRowWarpKernel, gpu>::Launch(s, num_threads,
+                                                row_flg, dns.dptr<DType>(), num_rows, row_length);
+      break;
+    case 3:
+      num_threads = num_rows * threads_per_block;
+      Kernel<MarkRspRowBlockKernel, gpu>::Launch(s, num_threads,
+                                                 row_flg, dns.dptr<DType>(), num_rows, row_length);
+      break;
+    default:
+      if (row_length < threads_per_warp) {
+        num_threads = num_rows;
+        Kernel<MarkRspRowThreadKernel, gpu>::Launch(s, num_threads,
+                                                    row_flg, dns.dptr<DType>(), num_rows,
+                                                    row_length);
+      } else if (row_length < threads_per_block || num_rows > min_num_warps) {
+        num_threads = num_rows * threads_per_warp;
+        Kernel<MarkRspRowWarpKernel, gpu>::Launch(s, num_threads,
+                                                  row_flg, dns.dptr<DType>(), num_rows, row_length);
+      } else {
+        num_threads = num_rows * threads_per_block;
+        Kernel<MarkRspRowBlockKernel, gpu>::Launch(s, num_threads,
+                                                   row_flg, dns.dptr<DType>(), num_rows,
+                                                   row_length);
+      }
+      break;
+  }
+  // Compute non-zero row indices through inclusive prefix sum
+  cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                temp_storage_bytes,
+                                row_flg,
+                                row_flg,
+                                num_rows,
+                                mshadow::Stream<gpu>::GetStream(s));
+
+  // Get total number of non-zero rows from device
+  dim_t nnr = 0;
+  CUDA_CALL(cudaMemcpy(&nnr, &row_flg[num_rows - 1], sizeof(dim_t), cudaMemcpyDeviceToHost));
+
+  // Allocate rsp tensor row index array and fill
+  rsp->CheckAndAllocAuxData(rowsparse::kIdx, Shape1(nnr));
+  if (0 == nnr) return;
+  RType *row_idx = rsp->aux_data(rowsparse::kIdx).dptr<RType>();
+  num_threads = num_rows;
+  Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_threads,
+                                           row_idx, row_flg, num_rows);
+
+  // Construct shape of rsp tensor data, allocate, and fill
+  auto storage_shape = dns.shape_;
+  storage_shape[0] = nnr;
+  rsp->CheckAndAllocData(storage_shape);
+  num_threads = nnr * row_length;
+  Kernel<CastDnsRspValsKernel, gpu>::Launch(s, num_threads,
+                                            rsp->data().dptr<DType>(), row_idx, dns.dptr<DType>(),
+                                            nnr, row_length);
+}
+
+
+/*!
  * \brief GPU implementation of casting a dns tensor to rsp type.
  */
 inline void CastStorageDnsRspImpl(const OpContext& ctx,
@@ -81,100 +198,7 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
   mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(dns.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(rsp->aux_type(rowsparse::kIdx), RType, {  // row idx type
-      const dim_t num_rows = dns.shape_[0];
-      const dim_t row_length = dns.shape_.ProdShape(1, dns.shape_.ndim());
-      const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
-      const dim_t threads_per_block = mshadow::cuda::kBaseThreadNum;
-      const dim_t min_num_warps = 512;
-      dim_t num_threads;
-      // TODO: remove kernel dependency on warpSize=32
-      if (threads_per_warp != 32) {
-        LOG(FATAL) << "CastStorageDnsRspImpl GPU kernels expect warpSize=32";
-      }
-      // Determine temporary device storage requirements
-      dim_t* row_flg = NULL;
-      void* d_temp_storage = NULL;
-      size_t temp_storage_bytes = 0;
-      cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                    temp_storage_bytes,
-                                    row_flg,
-                                    row_flg,
-                                    num_rows,
-                                    mshadow::Stream<gpu>::GetStream(s));
-
-      // Allocate temp storage for marking non-zero rows and for cub's prefix sum
-
-      SparseTempStorage<char> sparseTempStorage(ctx);
-      auto workspace = sparseTempStorage.get_space_typed<gpu, 1>(
-        Shape1(num_rows * sizeof(RType) + temp_storage_bytes));
-      row_flg = reinterpret_cast<RType*>(workspace.dptr_);
-      d_temp_storage = workspace.dptr_ + num_rows * sizeof(RType);
-
-      // Mark non-zero rows as 'one' in row_flg
-      // Different kernel versions are optimized for different matrix instances
-      // (1) 'Thread kernel' (one thread       computing one row)
-      // (2) 'Warp kernel'   (one warp         computing one row)
-      // (3) 'Block kernel'  (one thread block computing one row)
-      const int kernel_version = 0;
-      switch (kernel_version) {
-        case 1:
-          num_threads = num_rows;
-          Kernel<MarkRspRowThreadKernel, gpu>::Launch(s, num_threads,
-              row_flg, dns.dptr<DType>(), num_rows, row_length);
-          break;
-        case 2:
-          num_threads = num_rows * threads_per_warp;
-          Kernel<MarkRspRowWarpKernel, gpu>::Launch(s, num_threads,
-              row_flg, dns.dptr<DType>(), num_rows, row_length);
-          break;
-        case 3:
-          num_threads = num_rows * threads_per_block;
-          Kernel<MarkRspRowBlockKernel, gpu>::Launch(s, num_threads,
-              row_flg, dns.dptr<DType>(), num_rows, row_length);
-          break;
-        default:
-          if (row_length < threads_per_warp) {
-            num_threads = num_rows;
-            Kernel<MarkRspRowThreadKernel, gpu>::Launch(s, num_threads,
-                row_flg, dns.dptr<DType>(), num_rows, row_length);
-          } else if (row_length < threads_per_block || num_rows > min_num_warps) {
-            num_threads = num_rows * threads_per_warp;
-            Kernel<MarkRspRowWarpKernel, gpu>::Launch(s, num_threads,
-                row_flg, dns.dptr<DType>(), num_rows, row_length);
-          } else {
-            num_threads = num_rows * threads_per_block;
-            Kernel<MarkRspRowBlockKernel, gpu>::Launch(s, num_threads,
-                row_flg, dns.dptr<DType>(), num_rows, row_length);
-          }
-          break;
-      }
-      // Compute non-zero row indices through inclusive prefix sum
-      cub::DeviceScan::InclusiveSum(d_temp_storage,
-                                    temp_storage_bytes,
-                                    row_flg,
-                                    row_flg,
-                                    num_rows,
-                                    mshadow::Stream<gpu>::GetStream(s));
-
-      // Get total number of non-zero rows from device
-      dim_t nnr = 0;
-      CUDA_CALL(cudaMemcpy(&nnr, &row_flg[num_rows-1], sizeof(dim_t), cudaMemcpyDeviceToHost));
-
-      // Allocate rsp tensor row index array and fill
-      rsp->CheckAndAllocAuxData(rowsparse::kIdx, Shape1(nnr));
-      if (0 == nnr) return;
-      RType* row_idx = rsp->aux_data(rowsparse::kIdx).dptr<RType>();
-      num_threads = num_rows;
-      Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_threads,
-          row_idx, row_flg, num_rows);
-
-      // Construct shape of rsp tensor data, allocate, and fill
-      auto storage_shape = dns.shape_;
-      storage_shape[0] = nnr;
-      rsp->CheckAndAllocData(storage_shape);
-      num_threads = nnr * row_length;
-      Kernel<CastDnsRspValsKernel, gpu>::Launch(s, num_threads,
-          rsp->data().dptr<DType>(), row_idx, dns.dptr<DType>(), nnr, row_length);
+      CastStorageDnsRspGPUImpl_<DType, RType>(ctx, dns, rsp);
     });
   });
 }
@@ -511,11 +535,12 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
                                       num_rows+1,
                                       mshadow::Stream<gpu>::GetStream(s));
 
-        // Allocate temporary storage
-        SparseTempStorage<char> sparseTempStorage(ctx);
-        auto workspace = sparseTempStorage.get_space_typed<gpu, 1>(Shape1(temp_storage_bytes));
-
-        d_temp_storage = workspace.dptr_;
+        // Allocate temporary storage from requested resource.
+       CHECK_GT(ctx.requested.size(), 0);
+       // The resource is located at the end of requested resource array
+       auto workspace = ctx.requested[ctx.requested.size() - 1].
+          get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
+       d_temp_storage = workspace.dptr_;
 
         // Compute indptr through inclusive prefix sum
         cub::DeviceScan::InclusiveSum(d_temp_storage,

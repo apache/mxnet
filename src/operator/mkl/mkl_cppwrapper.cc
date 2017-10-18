@@ -38,7 +38,7 @@ int getMKLBuildDate() {
     return build;
 }
 
-bool enableMKLWarnGenerated() {
+bool EnableMklWarnGenerated() {
   return false;
 }
 #endif  // MSHADOW_USE_MKL2017

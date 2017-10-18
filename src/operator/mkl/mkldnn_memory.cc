@@ -194,13 +194,14 @@ std::shared_ptr<memory> MKLDNNMemoryDescriptor<Dtype>::get_converted_prv(Dtype* 
 }
 
 template <typename Dtype>
-void MKLDNNMemoryDescriptor<Dtype>::sync_converted_prv(
+void MKLDNNMemoryDescriptor<Dtype>::sync_converted_prv(Dtype* cpu_data,
                                             bool set_prv_ptr, const TBlob &tblob) {
   std::shared_ptr<MKLMemHolder> blob = tblob.Mkl_mem_;
   if (this->conversion_needed()) {
     // have private format
     const Dtype* prv_ptr = reinterpret_cast<Dtype*>(blob->prv_data());
     if (prv_ptr == NULL) {
+      this->convert_to_prv(const_cast<Dtype*>(cpu_data));
       if (set_prv_ptr) {
         blob->set_prv_descriptor(this->get_shared_ptr(), true);
       }
@@ -209,6 +210,7 @@ void MKLDNNMemoryDescriptor<Dtype>::sync_converted_prv(
         = get_mkldnn_prv_descriptor<Dtype>(blob);
       if (*blob_prv_mkldnn_mem_descr->prv_memory_pd() != *this->prv_memory_pd()) {
         // prv in blob and in this descrptor may have different layouts
+        this->convert_from_extprv(blob_prv_mkldnn_mem_descr->get_prv_memory(true));
         if (set_prv_ptr) {
           blob->set_prv_descriptor(this->get_shared_ptr(), true);
         }
@@ -216,6 +218,13 @@ void MKLDNNMemoryDescriptor<Dtype>::sync_converted_prv(
         // MKL_DLOG(INFO) << "layout OK ";
       }
       // Need:    CHECK(blob_prv_mkldnn_mem_descr->mkldnn_primitive());
+    }
+  } else {
+    const Dtype* prv_ptr = reinterpret_cast<Dtype*>(blob->prv_data());
+    if (prv_ptr != NULL) {
+      std::shared_ptr<MKLDNNData<Dtype> > blob_prv_mkldnn_mem_descr
+        = get_mkldnn_prv_descriptor<Dtype>(blob);
+      blob_prv_mkldnn_mem_descr->convert_from_prv(cpu_data);
     }
   }
 }

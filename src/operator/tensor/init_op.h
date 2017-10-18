@@ -62,9 +62,9 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
 };
 
 struct RangeParam : public dmlc::Parameter<RangeParam> {
-  real_t start;
-  dmlc::optional<real_t> stop;
-  real_t step;
+  double start;
+  dmlc::optional<double> stop;
+  double step;
   int repeat;
   std::string ctx;
   int dtype;
@@ -72,7 +72,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     DMLC_DECLARE_FIELD(start)
     .describe("Start of interval. The interval includes this value. The default start value is 0.");
     DMLC_DECLARE_FIELD(stop)
-    .set_default(dmlc::optional<real_t>())
+    .set_default(dmlc::optional<double>())
     .describe("End of interval. The interval does not include this value,"
               " except in some cases where step is not an integer and"
               " floating point round-off affects the length of out.");
@@ -128,6 +128,39 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
+  return true;
+}
+
+template<typename ParamType, bool rsp, bool csr>
+inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
+                            const int dev_mask,
+                            DispatchMode* dispatch_mode,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto &out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  type_assign(&out_stype, kDefaultStorage);
+  if (!dispatched && out_stype == kDefaultStorage) {
+    // default
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && rsp && out_stype == kRowSparseStorage) {
+    // rsp
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched && csr && out_stype == kCSRStorage) {
+    // csr
+    dispatched = storage_type_assign(out_attrs, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
   return true;
 }
 
@@ -187,26 +220,45 @@ void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   });
 }
 
-// Fill a rsp NDArray with zeros by updating the aux shape.
+/*!
+ * \brief Fill a rsp NDArray with zeros by updating the aux shape.
+ * \tparam xpu - cpu or gpu
+ * \param s - The device stream
+ * \param dst - NDArray which is to be set to "all zeroes"
+ */
 template<typename xpu>
-void FillZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
-  // reset the shapes if it's not zeros
-  auto storage_shape = dst->storage_shape();
-  storage_shape[0] = 0;
-  dst->set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
+  if (dst.storage_initialized()) {
+    // reset the shapes if it's not zeros (set_aux_shape() will set storage_shape to zero as well)
+    dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+  }
 }
 
-// Fill a CSR NDArray with zeros by updating the aux shape.
-template<typename xpu>
-void FillZerosCsrImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  if (!dst->storage_initialized()) return;
-  // reset the shapes if it's not zeros
-  TShape new_shape(mshadow::Shape1(0));
-  dst->set_aux_shape(csr::kIndPtr, new_shape);
-  dst->set_aux_shape(csr::kIdx, new_shape);
+/*!
+ * \brief Fill a CSR NDArray with zeros by updating the aux shape
+ * \param s - The device stream
+ * \param dst - NDArray which is to be set to "all zeroes"
+ */
+inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, const NDArray& dst) {
+  dst.set_aux_shape(csr::kIdx, mshadow::Shape1(0));
+  dst.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst.shape()[0] + 1));
+  TBlob indptr_data = dst.aux_data(csr::kIndPtr);
+  MSHADOW_IDX_TYPE_SWITCH(dst.aux_type(csr::kIndPtr), IType, {
+    mxnet_op::Kernel<mxnet_op::set_zero, mshadow::cpu>::Launch(
+      s, indptr_data.Size(), indptr_data.dptr<IType>());
+  });
 }
+void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst);
 
+/*!
+ * \brief Fill an NDArray with zeros
+ * \tparam xpu - cpu or gpu
+ * \param attrs  - node attributes (unused)
+ * \param ctx - Device context
+ * \param inputs - NDArray inputs (unused)
+ * \param req - Request type (i.e. kWrite, kNullOp, etc.)
+ * \param outputs - Array which contains at position zero (0) the array to be set to zeros
+ */
 template<typename xpu>
 void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -221,16 +273,21 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) return;
   CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
   if (stype == kRowSparseStorage) {
-    NDArray nd(outputs[0]);
-    FillZerosRspImpl<xpu>(s, &nd);
+    FillZerosRspImpl(s, outputs[0]);
   } else if (stype == kCSRStorage) {
-    NDArray nd(outputs[0]);
-    FillZerosCsrImpl<xpu>(s, &nd);
+    FillZerosCsrImpl(s, outputs[0]);
   } else {
-    // no fallback is required since the output doesn't depend on input
-    LOG(FATAL) << "storage type " << stype << " not implemented.";
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
+
+struct range_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int repeat, DType start, DType step,
+                                  int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req, start + (i/repeat) * step);
+  }
+};
 
 template<typename xpu>
 void RangeCompute(const nnvm::NodeAttrs& attrs,
@@ -238,16 +295,13 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
+  using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(out, req[0], range<DType>(param.start,
-                                              param.stop.value(),
-                                              param.step,
-                                              param.repeat));
+    Kernel<range_fwd, xpu>::Launch(s, outputs[0].Size(),
+        static_cast<int>(param.repeat), static_cast<DType>(param.start),
+        static_cast<DType>(param.step), req[0], outputs[0].dptr<DType>());
   });
 }
 
@@ -258,24 +312,22 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_NE(param.step, 0U)
+  CHECK_NE(param.step, 0)
     << "Range does not support step=0, received " << param.step;
   CHECK(param.repeat > 0)
     << "Range only supports repeat > 0, received " << param.repeat;
   if (param.step > 0) {
     CHECK(param.start < param.stop.value())
-      << "Range does not support (start, stop, step) = "
+      << "Invalid range (start, stop, step) = "
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   } else {
     CHECK(param.start > param.stop.value())
-      << "Range does not support (start, stop, step)= "
+      << "Invalid range (start, stop, step)= "
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-                     mshadow::Shape1(mshadow::expr::RangeOutSize(param.start,
-                                                                 param.stop.value(),
-                                                                 param.step,
-                                                                 param.repeat)));
+  const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
+                          * param.repeat;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({static_cast<nnvm::dim_t>(out_size)}));
   return true;
 }
 

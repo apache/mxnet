@@ -179,7 +179,6 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
-    if (!init_mkldnn_) {
       using namespace mshadow;
       using namespace mshadow::expr;
       CHECK_EQ(in_data.size(), 1);
@@ -192,6 +191,7 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
         in_data[pool_enum::kData], s);
       Tensor<xpu, 4, Dtype> out = mkl_experimental_direct_get<xpu, 4, Dtype>(
         out_data[pool_enum::kOut], s);
+    if (!init_mkldnn_) {
       LayerSetUp(data, out);
       init_mkldnn_ = true;
 
@@ -210,7 +210,7 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
           *fwd_output_memory));
       }
     } else {
-      fwd_bottom_data->sync_converted_prv(false,
+      fwd_bottom_data->sync_converted_prv(data.dptr_, false,
         in_data[pool_enum::kData]);
       fwd_top_data->sync_output_memory(out_data[pool_enum::kOut],
         fwd_top_data);
@@ -308,19 +308,22 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
       out_grad[pool_enum::kOut], s);
     Tensor<xpu, 4, Dtype> input_grad = mkl_experimental_direct_get<xpu, 4, Dtype>(
       in_grad[pool_enum::kData], s);
-    if (poolingBwd_pd == NULL)
+    if (poolingBwd_pd == NULL) {
       InitPoolingBwd(out_grad);
-    std::shared_ptr<memory> diff_dst_memory, diff_src_memory;
-    diff_dst_memory = bwd_top_diff->get_converted_prv(grad.dptr_, true, out_grad[pool_enum::kOut]);
-    diff_src_memory = bwd_bottom_diff->create_output_memory(input_grad.dptr_,
-      in_grad[pool_enum::kData], bwd_bottom_diff);
-    MKLDNNPrimitive<Dtype>  poolingBwd;
-    if (param_.pool_type != pool_enum::kAvgPooling) {
-      poolingBwd.reset(new pooling_backward(*poolingBwd_pd, *diff_dst_memory,
-        *indices_memory, *diff_src_memory));
+      diff_dst_memory = bwd_top_diff->get_converted_prv(grad.dptr_, false, out_grad[pool_enum::kOut]);
+      diff_src_memory = bwd_bottom_diff->create_output_memory(input_grad.dptr_,
+        in_grad[pool_enum::kData], bwd_bottom_diff);
+      if (param_.pool_type != pool_enum::kAvgPooling) {
+        poolingBwd.reset(new pooling_backward(*poolingBwd_pd, *diff_dst_memory,
+          *indices_memory, *diff_src_memory));
+      } else {
+        poolingBwd.reset(new pooling_backward(*poolingBwd_pd, *diff_dst_memory,
+          *diff_src_memory));
+      }
     } else {
-      poolingBwd.reset(new pooling_backward(*poolingBwd_pd, *diff_dst_memory,
-        *diff_src_memory));
+      bwd_top_diff->sync_converted_prv(grad.dptr_, false, out_grad[pool_enum::kOut]);
+      bwd_bottom_diff->sync_output_memory(
+        in_grad[pool_enum::kData], bwd_bottom_diff);
     }
     poolingBwd.submit();
   }
@@ -342,7 +345,9 @@ class MKLDNNPoolingOp : public Operator, public MKLDNNLayer<Dtype> {
   bool init_mkldnn_;
   algorithm pooling_algorithm_;
   MKLDNNPrimitive<Dtype> poolingFwd;
+  MKLDNNPrimitive<Dtype>  poolingBwd;
   std::shared_ptr<memory> fwd_input_primitive, fwd_output_memory;
+  std::shared_ptr<memory> diff_dst_memory, diff_src_memory;
 };  // class MKLDNNPoolingOp
 }   // namespace op
 }   // namespace mxnet

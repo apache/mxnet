@@ -46,7 +46,7 @@ Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
   default:
     break;
   }
-  if (enableMKLDNNWarnGenerated())
+  if (EnableMkldnnWarnGenerated())
     LOG(INFO) << "MKLDNNFullyConnectedOp Skip MKL DNN optimization";
 #endif
 #if MXNET_USE_NNPACK == 1

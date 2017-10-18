@@ -68,14 +68,19 @@ MKLDNN_COMMIT="v0.10"
 
 # MKLDNN install destination
 HOME_MKLDNN=$1
-if [ ! -z "$HOME_MKLDNN" ] && [ ! -d "$HOME_MKLDNN" ]; then
+if [ ! -z "$HOME_MKLDNN" ]; then
   mkdir -p $HOME_MKLDNN
+  if [ ! -w $HOME_MKLDNN ]; then
+    echo "MKLDNN install to $HOME_MKLDNN failed, please try with sudo" >&2
+    exit 1
+  fi
 fi
 
 if [ -z $MKLDNNROOT ]; then
 if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     mkdir -p $MKLDNN_INSTALLDIR
     if [ ! -d $MKLDNN_SRCDIR/.git ]; then
+      echo "Downloading MKLDNN ..." >&2
       rm -rf $MKLDNN_SRCDIR
       git clone --quiet --no-checkout $MKLDNN_GITHUB $MKLDNN_TMPDIR
       rsync -a $MKLDNN_TMPDIR/ $MKLDNN_SRCDIR && rm -rf $MKLDNN_TMPDIR
@@ -85,6 +90,7 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
         rm -rf external && cd scripts && ./prepare_mkl.sh && cd ..
         cp -a external/*/* $MKLDNN_INSTALLDIR/.
     fi 
+    echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
     cmake $MKLDNN_SRCDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR
     make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l)
@@ -100,9 +106,13 @@ fi
 
 # user specified MKLDNN install folder
 if [ -d "$HOME_MKLDNN" ]; then
-  # skip if same (usually for /usr/local)
+  # skip if user specificed MKLDNNROOT
   [ "$MKLDNNROOT" != "$HOME_MKLDNN" ] && rsync -a $MKLDNNROOT/include $MKLDNNROOT/lib $HOME_MKLDNN/.
   [ "$MKLROOT" != "$HOME_MKLDNN" ] && rsync -a $MKLROOT/include $MKLROOT/lib $HOME_MKLDNN/.
+  # update ldconfig if possible
+  if [ -w /etc/ld.so.conf.d ]; then
+    echo "$HOME_MKLDNN/lib" > /etc/ld.so.conf.d/mxnmkldnn.conf && ldconfig
+  fi
 # return value to calling script (Makefile,cmake)
   echo $HOME_MKLDNN $HOME_MKLDNN
 else

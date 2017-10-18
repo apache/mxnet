@@ -10,22 +10,56 @@ Intel MKL-DNN includes functionality similar to Intel(R) Math Kernel Library (In
 
 This README shows the user how to setup and install MXNet with MKL2017 and the newer MKL-DNN. Please choose one, we cannot build with both the options. 
 
+## Quick Start
+-----
+The below quick start instructions assume the user wants to install MKL2017 or MKLDNN under default /usr/local folder, hence requires sudo.
+
+Please refer to detailed instructions for custom options. 
+
+* Quick start assumes you already installed system dependencies. We used the following to validate quick start instructions.
+
+``` bash
+# centos 7
+sudo yum -y install make gcc gcc-c++ cmake git wget curl atlas-devel opencv-devel python-devel python-setuptools graphviz 
+```
+
+``` bash
+# ubuntu 14.04 or ubuntu 16.04
+sudo apt-get install -y build-essential cmake git wget curl libatlas-base-dev libopencv-dev python-dev graphviz
+```
+
+``` bash
+# python dependencies for all platforms
+
+ # install pip if needed
+ pushd /tmp && curl -LO https://bootstrap.pypa.io/get-pip.py && sudo -H python get-pip.py && popd
+
+ # sample python packages
+ sudo -H pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
+```
+
 * Quick Start for MXNet with MKL2017
   ``` bash
-  # this will install MKLDNN under /usr/local by default. Please refer to detailed instructions for custom options.
   sudo make -j$(nproc) USE_MKL2017=1 USE_MKL2017_EXPERIMENTAL=1
-  cd python
-  sudo python setup.py install
+  cd python && sudo python setup.py install
   ```
 * Quick Start for MXNet with MKL-DNN
   ``` bash
-  # MKL-DNN uses cmake, please ensure you have installed it.
-  # this will install MKLDNN under /usr/local by default. Please refer to detailed instructions for custom options.
   sudo make -j$(nproc) USE_MKLDNN=1
-  cd python
-  sudo python setup.py install
+  cd python && sudo python setup.py install
+  
+  # in user mode, without sudo.
+  make -j$(nproc) USE_MKLDNN=1 MKLDNN_ROOT=~/mkldnn
+  cd python && python setup.py install --user --prefix=
+  export LD_LIBRARY_PATH=~/mkldnn/lib:$LD_LIBRARY_PATH
   ```
+* Quick test, with recommended tuning settings.
+  ``` bash
+  export OMP_NUM_THREADS=$(lscpu | awk -F":" '/^Socket/{s=$2} /^Core/{c=$2} END{print s*c}')
+  export KMP_AFFINITY=granularity=fine,compact,1,0;
 
+  python example/image-classification/benchmark_score.py
+  ```
 
 ## Build/Install MXNet with MKL2017:
 -------------
@@ -54,7 +88,7 @@ This README shows the user how to setup and install MXNet with MKL2017 and the n
 
     1.4 MKL version compatibility
         
-        1.3.2.1 If you already have MKL installed and MKLROOT being set in your system, by default, it will not attempt to download the latest mklml package unless you unset MKLROOT. 
+        1.4.1 If you already have MKL installed and MKLROOT being set in your system, by default, it will not attempt to download the latest mklml package unless you unset MKLROOT. 
 
   2. Run 'make -jX'
        
@@ -69,13 +103,13 @@ This README shows the user how to setup and install MXNet with MKL2017 and the n
 
      - MKLDNN_ROOT option in make/config.mk allows user to choose install folder for MKLDNN. By default it is set to /usr/local, hence requires sudo. If set to empty, MKLDNN will be installed under external/mkldnn/install folder. 
 
-     - when you excute make, Makefile will execute "prepare_mkldnn.sh" to download and build MKLDNN with mklml under external/mkldnn folder.
+     - when you excute make, Makefile will execute "prepare_mkldnn.sh" to download and build MKLDNN with mklml under external/mkldnn folder. It will then install the library into the location specified in above option.
 
      - If you choose to install MKLDNN in custom folder, please set 
 
          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MKLDNN_ROOT/lib
 
-     - If you set USE_BLAS=mkl, mshadow can utilize mkl blas function in MKLDNN mklml package  
+     - By default, mshadow can utilize mkl blas functions in MKLDNN mklml package.  
 
   2. Run 'make -jX'
        

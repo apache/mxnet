@@ -966,4 +966,61 @@ LINALG_GPU_GELQF_WORKSPACE_QUERY(D, double)
 
 #endif  // __CUDACC__
 
+//////////////////////////////// SYEVD ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "syevd"
+
+template<typename xpu, typename DType> inline
+void check_syevd(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 1, DType>& L) {
+  // Any checking that helps user debug potential problems.
+  CHECK_EQ(A.size(0), A.size(1))
+    << "A must be square symmetric matrix";
+  CHECK_EQ(A.size(0), L.size(0))
+    << "A, L have incompatible sizes";
+}
+
+#define LINALG_CPU_SYEVD(fname, DType) \
+template<> inline \
+void linalg_syevd<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& L, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              const Tensor<cpu, 1, int>& iwork, \
+                              Stream<cpu> *s) { \
+  check_syevd(A, L); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                               A.dptr_, A.stride_, L.dptr_, work.dptr_, \
+                               work.size(0), iwork.dptr_, iwork.size(0))); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+// LINALG_CPU_SYEVD(ssyevd, float)
+LINALG_CPU_SYEVD(dsyevd, double)
+
+template<> inline
+void linalg_syevd<cpu, float>(const Tensor<cpu, 2, float>& A,
+                              const Tensor<cpu, 1, float>& L,
+                              const Tensor<cpu, 1, float>& work,
+                              const Tensor<cpu, 1, int>& iwork,
+                              Stream<cpu> *s) {
+  CHECK(false) << "linalg_syevd is not currently implemented for float32." << std::endl
+               << "Please use float64 for now. If the rest of your code runs on float32,"
+               << " please use the Cast operator.";
+}
+
+#define LINALG_CPU_SYEVD_WORKSPACE_QUERY(func, DType) \
+template<> inline \
+void linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                                              int* lwork, int* liwork, \
+                                              Stream<cpu> *s) { \
+  DType work(0.0); \
+  int iwork(0); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                      A.dptr_, A.stride_, &work, &work, -1, &iwork, \
+                      -1); \
+  *lwork = static_cast<int>(work); \
+  *liwork = iwork; \
+}
+LINALG_CPU_SYEVD_WORKSPACE_QUERY(ssyevd, float)
+LINALG_CPU_SYEVD_WORKSPACE_QUERY(dsyevd, double)
+
 #endif  // MXNET_OPERATOR_LINALG_IMPL_H_

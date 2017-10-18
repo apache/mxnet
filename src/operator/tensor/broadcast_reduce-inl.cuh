@@ -95,8 +95,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       Shape<ndim> coord = unravel(idx, small_shape);
       int idx_big0 = ravel(coord, big_shape0);
 
-      DType val;
-      Reducer::SetInitValue(val);
+      DType val, residual;
+      Reducer::SetInitValue(val, residual);
       if (idx < N) {
         for (int k = tidy + Mstart; k < Mend; k += by*unroll) {
           int idx_big[unroll];
@@ -113,7 +113,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u]);
+            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u], residual);
           }
         }
       }
@@ -126,11 +126,11 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         shTile[it0] = val;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp;
-          Reducer::SetInitValue(tmp);
+          DType tmp, residual;
+          Reducer::SetInitValue(tmp, residual);
           if (tidy + t < by) tmp = shTile[it0 + t*fbx];
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp);
+          Reducer::Reduce(shTile[it0], tmp, residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
@@ -175,8 +175,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       int idx_lhs0 = ravel(coord, lhs_shape0);
       int idx_rhs0 = ravel(coord, rhs_shape0);
 
-      DType val;
-      Reducer::SetInitValue(val);
+      DType val, residual;
+      Reducer::SetInitValue(val, residual);
       if (idx < N) {
         for (int k = tidy + Mstart; k < Mend; k += by*unroll) {
           int idx_big[unroll];
@@ -197,7 +197,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u]);
+            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u], residual);
           }
         }
       }
@@ -210,11 +210,11 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         shTile[it0] = val;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp;
-          Reducer::SetInitValue(tmp);
+          DType tmp, residual;
+          Reducer::SetInitValue(tmp, residual);
           if (tidy + t < by) tmp = shTile[it0 + t*fbx];
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp);
+          Reducer::Reduce(shTile[it0], tmp, residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
@@ -237,10 +237,10 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
   const int small_in_stride, const DType* __restrict small_in, DType *small_out) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
 
-    DType val;
-    Reducer::SetInitValue(val);
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
     for (int k = 0; k < M; k++) {
-      Reducer::Reduce(val, small_in[idx + k*small_in_stride]);
+      Reducer::Reduce(val, small_in[idx + k*small_in_stride], residual);
     }
 
     if (idx < N) {

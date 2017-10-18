@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file elementwise_unary_op-inl.h
+ * \file elementwise_unary_op.h
  * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_
@@ -70,15 +70,11 @@ class OpBase {
                                const NDArray* clone_from = nullptr) {
     if (req != kNullOp) {
       if (clone_from) {
-        const TShape ishape = clone_from->storage_shape();
-        TShape sshape = dest->storage_shape();
-        CHECK(shape_assign(&sshape, ishape));
-        dest->CheckAndAllocData(sshape);
+        const TShape& ishape = clone_from->storage_shape();
+        dest->CheckAndAllocData(ishape);
         CHECK_EQ(dest->storage_type(), clone_from->storage_type());
         for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
-          TShape ashape = dest->aux_shape(i);
-          CHECK(shape_assign(&ashape, clone_from->aux_shape(i)));
-          dest->CheckAndAllocAuxData(i, ashape);
+          dest->CheckAndAllocAuxData(i, clone_from->aux_shape(i));
         }
         DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
       } else {
@@ -113,7 +109,6 @@ class OpBase {
                                  const NDArray *dest,
                                  const OpReqType reqi,
                                  const NDArray& src) {
-    DCHECK_NE(dest->storage_type(), kDefaultStorage);
     DCHECK_EQ(dest->storage_type(), src.storage_type());
     AllocateGeometry(dest, reqi, &src);
     CopyGeometryBlobs(s, dest, reqi, src);
@@ -214,7 +209,7 @@ class UnaryOp : public OpBase {
     return false;
   }
 
- protected:
+ public:
   /*! \brief Map NDArray vectors to TBlob vectors and pass to compute function */
   template<typename xpu, typename FComputer>
   static inline void MapToFCompute(const nnvm::NodeAttrs &attrs,
@@ -235,7 +230,6 @@ class UnaryOp : public OpBase {
     }
   }
 
- public:
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
@@ -311,11 +305,14 @@ class UnaryOp : public OpBase {
                               const std::vector<NDArray>& outputs) {
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
-    CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
-    CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
-      << "Operation requires a sparse output storage type";
-    if (inputs[0].storage_shape().Size()) {
-      MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, KernelCompute<xpu, OP>);
+    const auto in_stype = inputs[0].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if (in_stype == out_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
+      if (inputs[0].storage_shape().Size()) {
+        MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, KernelCompute<xpu, OP>);
+      }
+    } else {
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -348,25 +345,33 @@ class UnaryOp : public OpBase {
                                 const std::vector<NDArray>& outputs) {
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
-    if (inputs[0].storage_type() == outputs[0].storage_type()) {
+    const auto in_stype = inputs[0].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if (in_stype == out_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
       MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>);
     } else {
-      FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                           IdentityCompute<xpu>, "IdentityComputeEx");
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
   template<typename xpu>
-  static void IdentityComputeFirstItemsEx(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<NDArray>& inputs,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<NDArray>& outputs) {
+  static void IdentityComputeFirstItemEx(const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
-    OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    const auto lhs_stype = inputs[0].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if (lhs_stype == out_stype && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage)) {
+      // csr, _ -> csr, or rsp, _ -> rsp
+      OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
+    } else {
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+    }
   }
 };
 
@@ -426,13 +431,13 @@ struct sigmoid {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out,
                                   const DType *in) {
-    out[i] = DType(DType(1.0f) / (DType(1.0f) + expf(-in[i])));
+    out[i] = mshadow_op::sigmoid::Map<DType>(in[i]);
   }
 };
 struct sigmoid_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType out_grad, DType in) {
-    return out_grad * DType(in * (DType(1.0f) - in));
+    return out_grad * mshadow_op::sigmoid_grad::Map<DType>(in);
   }
 };
 /*! \brief Rectified Linear Operation */
@@ -440,32 +445,19 @@ struct relu {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out,
                                   const DType *in) {
-    DType x = in[i];
-    out[i] = x > DType(0.0f) ? x : DType(0.0f);
+    out[i] = mshadow_op::relu::Map<DType>(in[i]);
   }
 };
 struct relu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType out_grad, DType in) {
-    return out_grad * DType(in > DType(0.0f) ? DType(1.0f) : DType(0.0f));
+    return out_grad * mshadow_op::relu_grad::Map<DType>(in);
   }
 };
 }  // namespace kernel_launch_op
 
+/*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY(__name$)                      \
-  NNVM_REGISTER_OP(__name$)                                         \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>) \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "The input array.")
-
-#define MXNET_OPERATOR_REGISTER_UNARY_DR(__name$)                   \
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
@@ -481,15 +473,25 @@ struct relu_grad {
 #define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
   .add_alias("_sparse_" #__name$)
 
-/*! \brief Unary compute */
-#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE(__name$, __xpu$, __kernel$)              \
-  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                   \
-  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)        \
+/*! \brief Unary compute, with FComputeEx for csr and rsp available  */
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)                     \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                           \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)  \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)                \
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
-/*! \brief Unary compute, dense result */
-#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)           \
-  MXNET_OPERATOR_REGISTER_UNARY_DR(__name$)                                                \
+/*! \brief Unary compute, with FComputeEx for rsp available  */
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$)                         \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                           \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>) \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)                \
+  .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
+
+/*! \brief Unary compute, dense result.
+ *  FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
+ */
+#define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
+  MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
 
 }  // namespace op

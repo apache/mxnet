@@ -841,11 +841,12 @@ method _bind_ith_exec(
     my $context = $self->contexts->[$i];
     my $shared_data_arrays = $self->_p->shared_data_arrays->[$i];
     my %input_shapes = map { $_->name => $_->shape } @{ $data_shapes };
+    my %input_types  = map { $_->name => $_->dtype } @{ $data_shapes };
     if(defined $label_shapes)
     {
         %input_shapes = (%input_shapes, map { $_->name => $_->shape } @{ $label_shapes });
+        %input_types  = (%input_types,  map { $_->name => $_->dtype } @{ $label_shapes });
     }
-    my %input_types = map { $_->name => $_->dtype } @{ $data_shapes };
     my $executor = $self->symbol->simple_bind(
         ctx              => $context,
         grad_req         => $self->grad_req,

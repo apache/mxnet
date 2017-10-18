@@ -65,7 +65,7 @@ Operator* CreateOp<cpu>(ConvolutionParam param, int dtype,
             break;
         }
     }
-    if (enableMKLDNNWarnGenerated())
+    if (EnableMkldnnWarnGenerated())
       LOG(INFO) << "MKLDNNConvolutionOp Skip MKL DNN optimization";
 #endif
 #if MXNET_USE_MKL2017 == 1

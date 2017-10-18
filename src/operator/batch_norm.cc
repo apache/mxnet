@@ -322,23 +322,6 @@ template<>
 Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& shape) {
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
   Operator *op = nullptr;
-#if MXNET_USE_MKL2017 == 1
-  if (shape.ndim() == 4
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && !mxnet::op::batchnorm::disable_mkl) {
-    switch (dtype) {
-      case mshadow::kFloat32:
-        op = new MKLBatchNormOp<cpu, float>(param);
-        break;
-      case mshadow::kFloat64:
-        op = new MKLBatchNormOp<cpu, double>(param);
-        break;
-      default:
-        // MKL operator doesn't support half_t, so fall through
-        break;
-    }
-  }
-#endif
 #if MXNET_USE_MKLDNN == 1
   if (shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
@@ -362,6 +345,23 @@ Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& sha
   } while (0)
 #else
 #define BATCHNORM_LOG_MKL_INFO() ((void)0)
+#endif
+#if MXNET_USE_MKL2017 == 1
+  if (shape.ndim() == 4
+      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
+      && !mxnet::op::batchnorm::disable_mkl) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        op = new MKLBatchNormOp<cpu, float>(param);
+        break;
+      case mshadow::kFloat64:
+        op = new MKLBatchNormOp<cpu, double>(param);
+        break;
+      default:
+        // MKL operator doesn't support half_t, so fall through
+        break;
+    }
+  }
 #endif
   if (!op) {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype,

@@ -37,7 +37,7 @@ namespace op {
 class BinaryScalarOp : public UnaryOp {
   /*! \brief Tensor operation against a scalar with a dense result */
   template<typename OP, typename DType, typename IType>
-  static void ComputeExDenseResultRSP(mshadow::Stream<cpu> *stream,
+  static void ComputeExDenseResultRsp(mshadow::Stream<cpu> *stream,
                                       const nnvm::NodeAttrs &attrs,
                                       const OpContext &ctx,
                                       const NDArray &input,
@@ -115,8 +115,19 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   /*! \brief Tensor operation against a scalar with a dense result */
+  template<typename OP, typename DType, typename IType>
+  static void ComputeExDenseResultRsp(mshadow::Stream<gpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
+    LOG(FATAL) << "NOT IMPLEMENTED";
+  }
+
+  /*! \brief Tensor operation against a scalar with a dense result */
   template<typename OP, typename DType, typename IType, typename CType>
-  static void ComputeExDenseResultCSR(mshadow::Stream<cpu> *stream,
+  static void ComputeExDenseResultCsr(mshadow::Stream<cpu> *stream,
                                       const nnvm::NodeAttrs &attrs,
                                       const OpContext &ctx,
                                       const NDArray &input,
@@ -175,6 +186,17 @@ class BinaryScalarOp : public UnaryOp {
     }
   }
 
+  /*! \brief Tensor operation against a scalar with a dense result */
+  template<typename OP, typename DType, typename IType, typename CType>
+  static void ComputeExDenseResultCsr(mshadow::Stream<gpu> *stream,
+                                      const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const NDArray &input,
+                                      const OpReqType req,
+                                      const NDArray &output) {
+    LOG(FATAL) << "NOT IMPLEMENTED";
+  }
+
   template<typename xpu, typename OP, typename DType, typename IType>
   static void ComputeExDenseResult(const nnvm::NodeAttrs &attrs,
                                    const OpContext &ctx,
@@ -185,12 +207,12 @@ class BinaryScalarOp : public UnaryOp {
     CHECK_EQ(output.storage_type(), kDefaultStorage);
     switch (input.storage_type()) {
       case kRowSparseStorage: {
-        ComputeExDenseResultRSP<OP, DType, IType>(stream, attrs, ctx, input, req, output);
+        ComputeExDenseResultRsp<OP, DType, IType>(stream, attrs, ctx, input, req, output);
         break;
       }
       case kCSRStorage: {
         MSHADOW_IDX_TYPE_SWITCH(input.aux_data(csr::kIndPtr).type_flag_, CType, {
-          ComputeExDenseResultCSR<OP, DType, IType, CType>(stream, attrs, ctx, input, req, output);
+          ComputeExDenseResultCsr<OP, DType, IType, CType>(stream, attrs, ctx, input, req, output);
         });
         break;
       }
@@ -232,24 +254,24 @@ class BinaryScalarOp : public UnaryOp {
                         const std::vector<NDArray> &outputs) {
     DCHECK_EQ(inputs.size(), 1);
     DCHECK_EQ(outputs.size(), 1);
-    CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
-    if (outputs[0].storage_type() != kDefaultStorage) {
-      CHECK_EQ(outputs[0].storage_type(), inputs[0].storage_type());
-      if (req[0] != kNullOp) {
-        UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
-      }
-    } else {
-      if (typeid(xpu) == typeid(gpu)) {
-        mxnet::op::FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                                        Compute<xpu, OP>,
-                                        "ComputeEx");
-      } else {
-        MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
-          MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-            ComputeExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
-          });
+    const auto in_stype = inputs[0].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if (req[0] == kNullOp) {
+      return;
+    }
+    if ((in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) ||
+        (in_stype == kCSRStorage && out_stype == kCSRStorage)) {
+      // csr -> csr, or rsp -> rsp
+      UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
+    } else if (out_stype == kDefaultStorage &&
+              (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
+      MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
+        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
+          ComputeExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
         });
-      }
+      });
+    } else {
+      LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
     }
   }
 
@@ -281,7 +303,6 @@ class BinaryScalarOp : public UnaryOp {
     })                                                              \
   .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1>) \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
