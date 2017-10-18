@@ -115,9 +115,7 @@ def test_compress_kvstore(kv_type, compress='2bit', neg=-0.5, pos=0.5):
             curval += pos_threshold*rate*nworker
             for o in out:
                 check_diff_to_scalar(o, curval)
-            return curval
-
-
+        return curval
 
     def check_ones(kv, pos, rate, curval):
         newval = curval + rate*nworker*pos
