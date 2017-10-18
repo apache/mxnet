@@ -63,7 +63,7 @@ def check_elementwise_sum_with_shape(shape, n):
 def test_elementwise_sum():
     np.random.seed(0)
     nrepeat = 2
-    maxdim = 4
+    maxdim = 5
     for repeat in range(nrepeat):
         for dim in range(1, maxdim):
             shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
