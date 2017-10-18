@@ -388,7 +388,7 @@ class KVStoreDistServer {
       NDArray decomp_buf = decomp_buf_[key];
       if (compress_ != "none") {
         if (compress_ == "2bit") {
-          long int original_size  = (long int)(*(recv_blob.dptr<float>()+2));
+          int64_t original_size  = (int64_t) (*(recv_blob.dptr<float>()+2));
           // changing dshape to original size as value is stored in
           // original size even when compressed data is received
           dshape = TShape{original_size};
@@ -504,7 +504,6 @@ class KVStoreDistServer {
    * by worker by sending a command to server
    */
   std::string compress_ = "none";
-
 };
 
 }  // namespace kvstore

@@ -109,7 +109,8 @@ struct init_threshold_2bit {
     // The third element is the original size of the array
     out[0] = neg_threshold;
     out[1] = pos_threshold;
-    out[2] = (float)size;
+    // TODO(huilgolr) check potential problem here?
+    out[2] = static_cast<float>(size);
   }
 };
 
@@ -127,18 +128,18 @@ struct quantize_2bit {
     // start and end are indices in original grad array
     int start = block_id*16;
     int end = (start+16 <= grad_size) ? start+16 : grad_size;
-    char* block_ptr = reinterpret_cast<char*>(compr_block);
-    for (int i=start; i<end; i++){
+    char* block_ptr = reinterpret_cast < char* > (compr_block);
+    for (int i=start; i < end; i++){
       char* curr_byte = block_ptr + (i-start)/4;
       float curr_value = grad[i] + residual[i];
       if (curr_value >= pos_threshold) {
         residual[i] = curr_value - pos_threshold;
         // set data to 10
-        (*curr_byte) |= (2u<<(6-((i%4)*2)));
+        (*curr_byte) |= (2u << (6-((i%4)*2)));
       } else if (curr_value <= neg_threshold) {
         residual[i] = curr_value - neg_threshold;
         // set data to 01
-        (*curr_byte) |= (1u<<(6-((i%4)*2)));
+        (*curr_byte) |= (1u << (6-((i%4)*2)));
       } else {
         // leave data as 00
         residual[i] = curr_value;
@@ -312,7 +313,7 @@ inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,
   // check input
   CHECK(!shape_is_none(in_attrs->at(0)));
   CHECK(!shape_is_none(in_attrs->at(1)));
-  //TODO(huilgolr) check
+  // TODO(huilgolr) check
   CHECK_LE(in_attrs->at(1).Size(),
            in_attrs->at(0).Size()*16)
     << "The shape of the second input array are "

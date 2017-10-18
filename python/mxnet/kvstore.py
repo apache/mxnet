@@ -349,7 +349,7 @@ class KVStore(object):
             check_call(_LIB.MXKVStorePullRowSparse(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 
-    def set_compress(self, compress_params={'compress':'none'}):
+    def set_compress(self, compress_params=None):
         """ Specifies type of low-bit quantization for gradient compression if any,
          and additional arguments depending on the type of compression being used.
 
@@ -414,11 +414,12 @@ class KVStore(object):
                 negative threshold. Negative values greater than negative threshold will
                 be set to 0.
         """
+        compress_params = compress_params if compress_params else {'compress':'none'}
         if 'compress' not in compress_params:
             raise ValueError('compress_params requires compress to be set')
         elif not isinstance(compress_params['compress'], string_types):
             raise TypeError('compress must be a string')
-        elif compress_params['compress'] not in ['none','2bit']:
+        elif compress_params['compress'] not in ['none', '2bit']:
             raise ValueError('Unsupported type of compression')
 
         if compress_params['compress'] == '2bit':
@@ -440,9 +441,9 @@ class KVStore(object):
 
         if compress_params['compress'] == '2bit':
             check_call(_LIB.MXKVStoreSetCompress(self.handle,
-                                             c_str(compress_params['compress']),
-                                             mx_float(compress_params['neg_threshold']),
-                                             mx_float(compress_params['pos_threshold'])))
+                                                 c_str(compress_params['compress']),
+                                                 mx_float(compress_params['neg_threshold']),
+                                                 mx_float(compress_params['pos_threshold'])))
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.

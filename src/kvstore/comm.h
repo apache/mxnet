@@ -507,7 +507,7 @@ class CommDevice : public Comm {
                         int priority) override {
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
-    if (src.size() == 1 && compress_=="none") {
+    if (src.size() == 1 && compress_ == "none") {
       return src[0];
     }
 
@@ -525,7 +525,7 @@ class CommDevice : public Comm {
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
 
-    if (compress_=="none"){
+    if (compress_ == "none") {
       CopyFromTo(src[0], &(buf.merged), priority);
       reduce[0] = buf.merged;
 
@@ -560,7 +560,7 @@ class CommDevice : public Comm {
           buf.residual[i] = 0;
           if (compress_ == "2bit") {
             int bits = 16;
-            long int small_size = buf.merged.shape().Size() % bits == 0 ?
+            int64_t small_size = buf.merged.shape().Size() % bits == 0 ?
                                   buf.merged.shape().Size() / bits + 3 :
                                   buf.merged.shape().Size() / bits + 4;
             buf.small_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
@@ -568,7 +568,7 @@ class CommDevice : public Comm {
             buf.small_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
                                             false, buf.merged.dtype());
           } else {
-            LOG(FATAL) << "Unsupported type of compression "<<compress_;
+            LOG(FATAL) << "Unsupported type of compression " << compress_;
           }
         }
       }
@@ -580,7 +580,7 @@ class CommDevice : public Comm {
         if (compress_ == "2bit") {
           Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
                    neg_threshold_, pos_threshold_, priority);
-          if (buf.small_send_buf[i].ctx()!=buf.small_recv_buf[i].ctx()){
+          if (buf.small_send_buf[i].ctx() != buf.small_recv_buf[i].ctx()) {
             CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
           } else {
             // avoid memory copy when they are on same context
@@ -588,7 +588,7 @@ class CommDevice : public Comm {
           }
           Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
         } else {
-          LOG(FATAL) << "Unsupported type of compression "<<compress_;
+          LOG(FATAL) << "Unsupported type of compression " << compress_;
         }
         reduce[i] = buf.copy_buf[i];
       }

@@ -558,7 +558,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   }
 }
 
-void Quantize(const NDArray &from, NDArray *to, NDArray *residual, std::string& compress,
+void Quantize(const NDArray &from, NDArray *to, NDArray *residual, const std::string& compress,
               const float neg_threshold, const float pos_threshold,
               int priority) {
   CHECK(from.shape().ndim() != 0)
@@ -609,7 +609,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual, std::string& 
   }
 }
 
-void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int priority) {
+void Dequantize(const NDArray &from, NDArray *to, const std::string& compress, int priority) {
   CHECK(from.shape().ndim() != 0)
     << "source operands have zero dimension shape";
   // important: callback must always capture by value
@@ -642,7 +642,7 @@ void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int pri
         }, from.ctx(), {from.var()}, {ret.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
       } else {
-        LOG(FATAL) << "Unsupported dequantization "<<compress<<std::endl;
+        LOG(FATAL) << "Unsupported dequantization " << compress << std::endl;
       }
     } else {
       LOG(FATAL) << "unknown device mask";

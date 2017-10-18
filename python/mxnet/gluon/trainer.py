@@ -74,7 +74,7 @@ class Trainer(object):
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
             self._params.append(param)
-        if compress_params :
+        if compress_params:
             if not isinstance(compress_params, dict):
                 raise ValueError("compress_params needs to be a dictionary")
         self._compress_params = compress_params if compress_params else {'compress':'none'}

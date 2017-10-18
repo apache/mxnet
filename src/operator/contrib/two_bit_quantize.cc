@@ -71,7 +71,7 @@ The residual is also updated to [1.0, -3.0, -1.0, -3.0].
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_quantize_2bit"})
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
 [](const nnvm::NodeAttrs& attrs) {
-    return std::vector<uint32_t>{1,2};
+    return std::vector<uint32_t>{1, 2};
 })
 .add_argument("gradient_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_argument("residual_array", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")

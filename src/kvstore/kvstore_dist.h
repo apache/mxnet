@@ -90,7 +90,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  virtual void SetCompress(const std::string& compress, const float neg_threshold,
+  void SetCompress(const std::string& compress, const float neg_threshold,
                      const float pos_threshold) override {
     KVStoreLocal::SetCompress(compress, neg_threshold, pos_threshold);
     if (get_rank() == 0) {
@@ -309,7 +309,8 @@ class KVStoreDist : public KVStoreLocal {
             // small buffer for quantize
             small_buf = NDArray(TShape{pskv.size}, comm_buf.ctx(), false, comm_buf.dtype());
             // residual buffer for quantize
-            res_buf = NDArray(TShape{(long int) original_size}, comm_buf.ctx(), false, comm_buf.dtype());
+            res_buf = NDArray(TShape{(int64_t) original_size}, comm_buf.ctx(),
+                              false, comm_buf.dtype());
             res_buf = 0;
           } else {
             LOG(FATAL) << "compression for non default storage type unsupported";
@@ -340,7 +341,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void PushDefault(int key, NDArray &send_buf, int priority){
+  void PushDefault(int key, const NDArray &send_buf, int priority) {
     auto push_to_servers =
         [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
@@ -480,7 +481,8 @@ class KVStoreDist : public KVStoreLocal {
    */
   std::mutex mu_;
 
-  void PushCompressed(int key, NDArray& comm_buf, NDArray &small_buf, PSKV& pskv, int priority){
+  void PushCompressed(int key, const NDArray& comm_buf, const NDArray &small_buf,
+                      const PSKV& pskv, int priority) {
     auto push_to_servers =
       [this, key, comm_buf, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size();
@@ -509,15 +511,16 @@ class KVStoreDist : public KVStoreLocal {
    * \brief Compresses data by dividing original data into a part for each server, then
    * quantizing each of these data blocks. The sizes of these parts come from pskv.
    */
-  void Compress(NDArray& comm_buf, NDArray* small_buf, NDArray* res_buf, PSKV& pskv, int priority){
+  void Compress(const NDArray& comm_buf, NDArray* small_buf, NDArray* res_buf,
+                const PSKV& pskv, int priority) {
     size_t orig_size = comm_buf.shape().Size();
     // to allow indexing parts for each server
-    NDArray flattened_comm_buf = comm_buf.Reshape(TShape{(long int) orig_size});
+    NDArray flattened_comm_buf = comm_buf.Reshape(TShape{(int64_t) orig_size});
 
     if (compress_ == "2bit") {
-      //should be start of data in original commbuf
+      // should be start of data in original commbuf
       size_t cur_from = 0;
-      //should be start of meta in new small_buf
+      // should be start of meta in new small_buf
       size_t cur_to = 0;
       for (size_t i = 0; i < pskv.keys.size(); i++) {
         NDArray part_compr = small_buf->Slice(cur_to, cur_to + pskv.lens[i]);
@@ -532,7 +535,8 @@ class KVStoreDist : public KVStoreLocal {
         NDArray part_data = flattened_comm_buf.Slice(cur_from, end_part_data);
         NDArray part_res = res_buf->Slice(cur_from, end_part_data);
 
-        Quantize(part_data, &part_compr, &part_res, compress_, neg_threshold_, pos_threshold_, priority);
+        Quantize(part_data, &part_compr, &part_res, compress_,
+                 neg_threshold_, pos_threshold_, priority);
 
         cur_from = end_part_data;
         cur_to = cur_to + pskv.lens[i];
@@ -545,7 +549,7 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   PSKV& EncodeKey(int key, size_t size, bool is_push) {
-    if (compress_!="none") {
+    if (compress_ != "none") {
       return EncodeCompressedKey(key, size, is_push);
     } else {
       return EncodeDefaultKey(key, size, is_push);
@@ -565,7 +569,7 @@ class KVStoreDist : public KVStoreLocal {
     if (compress_ == "2bit") {
       bits = 16;
     } else {
-      LOG(FATAL)<<"Unsupported compression type";
+      LOG(FATAL) << "Unsupported compression type";
     }
 
     // represents size of data to be sent

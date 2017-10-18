@@ -189,7 +189,7 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
  */
 template<>
 void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs) {
-	mxnet::op::Dequantize2BitImpl<cpu>(s,inputs);
+  mxnet::op::Dequantize2BitImpl<cpu>(s, inputs);
 }
 
 /*
@@ -198,7 +198,7 @@ void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& i
 template<>
 void Quantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs,
                           const float neg_threshold, const float pos_threshold) {
-	mxnet::op::Quantize2BitImpl<cpu>(s,inputs, neg_threshold, pos_threshold);
+  mxnet::op::Quantize2BitImpl<cpu>(s, inputs, neg_threshold, pos_threshold);
 }
 
 }  // namespace ndarray

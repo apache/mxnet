@@ -904,7 +904,7 @@ void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
  * \param pos_threshold positive threshold for 2bit quantization
  * \param priority Priority of the action.
  */
-void Quantize(const NDArray &from, NDArray *to, NDArray *residual, std::string& compress,
+void Quantize(const NDArray &from, NDArray *to, NDArray *residual, const std::string& compress,
               const float neg_threshold, const float pos_threshold,
               int priority);
 
@@ -916,7 +916,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual, std::string& 
  * \param compress type of compression
  * \param priority Priority of the action.
  */
-void Dequantize(const NDArray &from, NDArray *to, std::string& compress, int priority);
+void Dequantize(const NDArray &from, NDArray *to, const std::string& compress, int priority);
 
 /*!
  * \brief issue an copy operation from one NDArray to another
