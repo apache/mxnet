@@ -4311,8 +4311,8 @@ def test_scatter_gather_nd():
 def test_two_bit_quantization():
     neg_threshold = -0.5
     pos_threshold = 0.5
-    orig_shape = [(25,),(16,),(1121),(144000)]
-    num_repeat = 3
+    orig_shape = [(25,),(16,),(1121),(14400)]
+    num_repeat = 1
     from struct import pack,unpack
 
     def bits2int(bits):
@@ -4330,8 +4330,10 @@ def test_two_bit_quantization():
         str_quant = ''
         new_residual = []
         decompr = []
-        for i, a in np.ndenumerate(arr.asnumpy()):
-            a += curr_residual.asnumpy()[i]
+        arr_npy = arr.asnumpy()
+        curr_res_npy = curr_residual.asnumpy()
+        for i, a in np.ndenumerate(arr_npy):
+            a += curr_res_npy[i]
             if a >= pos:
                 str_quant += '10'
                 new_residual.append(a - pos)
@@ -4363,6 +4365,7 @@ def test_two_bit_quantization():
         mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
         decompr = mx.nd.zeros(grad.shape)
         mx.contrib.ndarray.dequantize_2bit(compr, decompr)
+        mx.nd.waitall()
         assert np.array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
         assert np.array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
         # use almost equal for residual as this involves addition operation
@@ -4383,17 +4386,12 @@ def test_two_bit_quantization():
     def random_data(shape):
         # push random data and residual
         grad = mx.nd.random_uniform(-0.9,0.9, shape=shape, ctx=default_context())
-        residual = mx.nd.random_uniform(-1,1, shape=shape, ctx=default_context())
+        residual = mx.nd.random_uniform(-0.6,0.6, shape=shape, ctx=default_context())
         return grad, residual
 
     def random_large_range(shape):
         grad = mx.nd.random_uniform(-2,2, shape=shape, ctx=default_context())
         residual = mx.nd.random_uniform(-2,2, shape=shape, ctx=default_context())
-        return grad, residual
-
-    def random_small_range(shape):
-        grad = mx.nd.random_uniform(-0.6,6, shape=shape, ctx=default_context())
-        residual = mx.nd.random_uniform(-0.1,0.1, shape=shape, ctx=default_context())
         return grad, residual
 
     for shape in orig_shape:
@@ -4403,7 +4401,6 @@ def test_two_bit_quantization():
             data.append(onesdata(shape))
             data.append(random_data(shape))
             data.append(random_large_range(shape))
-            data.append(random_small_range(shape))
             for d in data:
                 check(d[0], d[1])
 
