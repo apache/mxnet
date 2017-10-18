@@ -39,7 +39,7 @@ from ..base import ctypes2buffer
 from ..context import Context
 from . import _internal
 from . import op
-from .op import NDArrayBase
+from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
@@ -1869,11 +1869,11 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
 
     Parameters
     ----------
-    start : float, optional
+    start : number, optional
         Start of interval. The default start value is 0.
-    stop : float
+    stop : number
         End of interval.
-    step : float, optional
+    step : number, optional
         Spacing between values. The default step size is 1.
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.

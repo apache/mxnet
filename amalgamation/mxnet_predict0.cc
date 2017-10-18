@@ -76,9 +76,11 @@
 #include "src/operator/softmax_activation.cc"
 #include "src/operator/softmax_output.cc"
 #include "src/operator/tensor/elemwise_binary_broadcast_op_basic.cc"
+#include "src/operator/tensor/elemwise_binary_op.cc"
 #include "src/operator/tensor/elemwise_binary_op_basic.cc"
 #include "src/operator/tensor/elemwise_binary_scalar_op_basic.cc"
-#include "src/operator/tensor/elemwise_unary_op.cc"
+#include "src/operator/tensor/elemwise_unary_op_basic.cc"
+#include "src/operator/tensor/elemwise_unary_op_trig.cc"
 #include "src/operator/tensor/matrix_op.cc"
 
 #include "src/storage/storage.cc"
@@ -90,3 +92,4 @@
 #include "src/c_api/c_api_symbolic.cc"
 #include "src/c_api/c_api_ndarray.cc"
 #include "src/c_api/c_api_error.cc"
+

@@ -18,6 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
 from mxnet.base import py_str, MXNetError
 
@@ -42,6 +43,7 @@ def init_kv_with_str(stype='default'):
     # list
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
+
 
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
@@ -297,3 +299,5 @@ def test_invalid_pull():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
+
+    

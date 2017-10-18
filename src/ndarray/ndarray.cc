@@ -402,7 +402,7 @@ inline void CopyFromToCsrImpl(const NDArray& from, const NDArray& to, RunContext
   // if source storage is not initialized, fill destination with zeros
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosCsrImpl<to_xpu>(s, to);
+    op::FillZerosCsrImpl(s, to);
     return;
   }
   // Allocate storage
@@ -428,7 +428,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
   // if source is zeros, fill destination with zeros, too
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosRspImpl<to_xpu>(s, to);
+    op::FillZerosRspImpl(s, to);
     return;
   }
   auto aux_shape = from.aux_shape(rowsparse::kIdx);

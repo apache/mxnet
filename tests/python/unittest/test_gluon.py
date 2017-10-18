@@ -480,6 +480,57 @@ def test_embedding():
     assert (layer.weight.grad()[5:] == 0).asnumpy().all()
 
 
+def test_export():
+    ctx = mx.context.current_context()
+    model = gluon.model_zoo.vision.resnet18_v1(
+        prefix='resnet', ctx=ctx, pretrained=True)
+    model.hybridize()
+    data = mx.nd.random.normal(shape=(1, 3, 224, 224))
+    out = model(data)
+
+    model.export('gluon')
+
+    module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
+    module.bind(data_shapes=[('data', data.shape)])
+    module.forward(mx.io.DataBatch([data], None), is_train=False)
+    mod_out, = module.get_outputs()
+
+    assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
+
+    model2 = gluon.model_zoo.vision.resnet18_v1(prefix='resnet', ctx=ctx)
+    model2.collect_params().load('gluon-0000.params', ctx)
+    out2 = model2(data)
+
+    assert_almost_equal(out.asnumpy(), out2.asnumpy())
+
+
+def test_hybrid_stale_cache():
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(mx.gluon.nn.Dense(10, weight_initializer='zeros', bias_initializer='ones', flatten=False))
+
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5)))
+
+    net.add(mx.gluon.nn.Flatten())
+    assert net(mx.nd.ones((2,3,5))).shape == (2, 30)
+
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.fc1 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=False)
+        net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=False)
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5)))
+
+    net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                bias_initializer='ones', flatten=True)
+    net.initialize()
+    assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

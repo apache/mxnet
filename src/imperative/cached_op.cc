@@ -310,11 +310,24 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
                                          const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
   using namespace imperative;
+
   bool recording = Imperative::Get()->set_is_recording(false);
   // Initialize
   nnvm::Graph g = GetForwardGraph(recording, inputs);
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
+
+  CHECK_EQ(num_inputs, inputs.size())
+      << "CachedOp requires " << num_inputs << " but got " << inputs.size();
+
+  Context default_ctx = inputs[0]->ctx();
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    CHECK_EQ(inputs[i]->ctx(), default_ctx)
+        << "CachedOp requires all inputs to live on the same context. But "
+        << idx[idx.input_nodes()[0]].source->attrs.name << " is on " << default_ctx
+        << " while " << idx[idx.input_nodes()[i]].source->attrs.name << " is on "
+        << inputs[i]->ctx();
+  }
 
   auto op_state_ptr = OpStatePtr::Create<CachedOpState>();
   auto& cached_op_state = op_state_ptr.get_state<CachedOpState>();
@@ -346,7 +359,6 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
 
-  Context default_ctx = inputs[0]->ctx();
   const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
       recording ? "full_mem_plan" : "forward_mem_plan");
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
