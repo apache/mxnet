@@ -83,9 +83,9 @@ inline void KVStore::RunServer() {
 }
 
 inline void KVStore::SetCompress(const std::string& compress,
-                          const float pos_threshold, const float neg_threshold) {
+                          const float neg_threshold, const float pos_threshold) {
     CHECK_EQ(MXKVStoreSetCompress(get_kvstore()->get_handle(),
-                                  compress.c_str(), pos_threshold, neg_threshold),0);
+                                  compress.c_str(), neg_threshold, pos_threshold),0);
 }
 
 inline void KVStore::Init(int key, const NDArray& val) {

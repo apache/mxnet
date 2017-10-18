@@ -113,9 +113,9 @@ namespace kvstore {
     }
   }
 
-  virtual void SetCompress(const std::string& compress, const float pos_threshold,
-                     const float neg_threshold) override {
-    KVStoreLocal::SetCompress(compress, pos_threshold, neg_threshold);
+  virtual void SetCompress(const std::string& compress, const float neg_threshold,
+                     const float pos_threshold) override {
+    KVStoreLocal::SetCompress(compress, neg_threshold, pos_threshold);
     if (get_rank() == 0) {
       SendCommandToServers(kSetCompress, compress_);
     }
@@ -302,28 +302,15 @@ namespace kvstore {
       // merge over devices
       int key = uniq_keys[i];
       const auto &vals = grouped_vals[i];
-//      if (compress_!="none") {
-//        vals[0].WaitToRead();
-//        for (int i = 0; i < vals[0].shape().Size(); i++) {
-//          CHECK_EQ(*((float *) vals[0].data().dptr_ + i), 0);
-//        }
-//      }
-
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
       const auto storage_type = merged.storage_type();
-//      if (compress_!="none") {
-//        merged.WaitToRead();
-//        for (int i = 0; i < merged.shape().Size(); i++) {
-//          CHECK_EQ(*((float *) merged.data().dptr_ + i), 0);
-//        }
-//      }
       auto &comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        comm_buf= merged;  // avoid memory copy
         // Start of a push doesn't guarantee that the previous pushes are completed.
         // This shouldn't affect training of networks though because training involves
         // a sequence of push, pull, then push. This imposes ordering that the
         // second push happens after the first pull, and the pull happens after first push.
+        comm_buf= merged;  // avoid memory copy
       } else {
         if (comm_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
@@ -556,26 +543,10 @@ namespace kvstore {
         end_part_data = orig_size;
       }
       NDArray part_data = flattened_comm_buf.Slice(cur_from, end_part_data);
-//      for(int i=0; i<part_data.shape().Size(); i++){
-//        CHECK_EQ(*((float *) part_data.data().dptr_+i),0);
-//      }
       NDArray part_res = res_buf->Slice(cur_from, end_part_data);
-      Quantize(part_data, &part_compr, &part_res, neg_threshold_, pos_threshold_, compress_, priority);
+      Quantize(part_data, &part_compr, &part_res, compress_, neg_threshold_, pos_threshold_, priority);
       part_compr.WaitToRead();
 
-//        CHECK_EQ(*(float *) part_compr.data().dptr_,-0.5);
-//        CHECK_EQ(*((float *) part_compr.data().dptr_+1),0.5);
-//        for(int i=3; i<part_compr.shape().Size(); i++){
-//          CHECK_EQ(*((float *) part_compr.data().dptr_+i),0);
-//        }
-
-
-//      std::string s;
-//      float d = *((float *) part_compr.data().dptr_+3);
-//      float n = *((float *) part_compr.data().dptr_);
-//      float p = *((float *) part_compr.data().dptr_+1);
-//      floatToBinary(d , s);
-//      std::cout<<"sent "<<n<<" "<<p<<" "<<s<<std::endl;
       cur_from = end_part_data;
       cur_to = cur_to + pskv.lens[i];
     }
@@ -607,7 +578,6 @@ namespace kvstore {
       LOG(FATAL)<<"Unsupported compression type";
     }
     // represents size of data to be sent
-//    size_t size = 0;
     size_t compr_size = 0;
     // add 3 values as meta info
     if (original_size >= bigarray_bound_) {
@@ -618,8 +588,6 @@ namespace kvstore {
       compr_size = original_size % bits == 0 ?
              original_size / bits + 3: original_size / bits + 4;
     }
-
-//  size = original_size;
 
     mu_.lock();
     PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
@@ -782,23 +750,34 @@ namespace kvstore {
     return pskv;
   }
 
-
   /**
    * \brief for worker to push and pull data
    */
   ps::KVWorker<real_t>* ps_worker_;
+
   /**
    * \brief the server handle
    */
   KVStoreDistServer* server_;
+
   /**
    * \brief threshold for partition
    */
   size_t bigarray_bound_;
+
+  /**
+   * \brief buffer for non-compressed data
+   */
   std::unordered_map<int, NDArray> comm_buf_;
-  /// \brief small buffer for quantize
+
+  /**
+   * \brief buffer for compressed data
+   */
   std::unordered_map<int, NDArray> compr_buf_;
-  /// \brief residual buffer for quantize
+
+  /**
+   * \brief residual buffer to accumulate quantization error
+   */
   std::unordered_map<int, NDArray> residual_;
 
   bool log_verbose_;

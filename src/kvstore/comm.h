@@ -48,7 +48,6 @@ class Comm {
    */
   virtual void Init(int key, const NDArrayStorageType stype,
                     const TShape& shape, int dtype = mshadow::kFloat32) = 0;
-
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -554,8 +553,8 @@ class CommDevice : public Comm {
       if (compress_=="none") {
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
       } else if (compress_ == "2bit") {
-        Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]),
-                 neg_threshold_, pos_threshold_, compress_, priority);
+        Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
+                 neg_threshold_, pos_threshold_, priority);
         CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
         Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
       } else {

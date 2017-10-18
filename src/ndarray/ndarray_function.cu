@@ -202,12 +202,18 @@ void ElementwiseSum<gpu>(mshadow::Stream<gpu>* s,
         << nds[0].storage_type();
   }
 }
-  
+
+/*
+ * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
+ */
 template<>
 void Dequantize2BitDispatch(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs) {
 	mxnet::op::Dequantize2BitImpl<gpu>(s,inputs);
 }
 
+/*
+ * \brief Enables use of function defined under Quantize2Bit operator for an ndarray
+ */
 template<>
 void Quantize2BitDispatch(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
                               const float neg_threshold, const float pos_threshold) {

@@ -135,8 +135,8 @@ class KVStoreLocal : public KVStore {
     PullRowSparseImpl(keys, val_rowids, priority);
   }
 
-  virtual void SetCompress(const std::string& compress, const float pos_threshold,
-                   const float neg_threshold) override {
+  virtual void SetCompress(const std::string& compress, const float neg_threshold,
+                   const float pos_threshold) override {
     compress_ = compress;
     pos_threshold_ = pos_threshold;
     neg_threshold_ = neg_threshold;

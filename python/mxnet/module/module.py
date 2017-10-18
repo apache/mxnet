@@ -59,6 +59,15 @@ class Module(BaseModule):
     state_names : list of str
         states are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by `set_states()`.
+    compress_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used.
+        For example, 2bit compression requires a positive threshold and negative threshold.
+        So to completely the arguments for 2bit compression, we would need to pass
+        a dictionary like the following.
+        {'compress':'2bit', 'positive_threshold':0.5, 'negative_threshold':-0.5}
+        See mxnet.KVStore.set_compress method for more details on gradient compression.
+
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,

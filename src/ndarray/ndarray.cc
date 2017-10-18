@@ -558,9 +558,9 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   }
 }
 
-void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
+void Quantize(const NDArray &from, NDArray *to, NDArray *residual, std::string& compress,
               const float neg_threshold, const float pos_threshold,
-              std::string& compress, int priority) {
+              int priority) {
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
@@ -568,11 +568,6 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
   NDArray res = *residual;
   int a = from.ctx().dev_mask();
   int b = to->ctx().dev_mask();
-  std::vector<Engine::VarHandle> const_vars;
-  const_vars.push_back(from.var());
-  std::vector<Engine::VarHandle> mutable_vars;
-  mutable_vars.push_back(ret.var());
-  mutable_vars.push_back(res.var());
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
       Engine::Get()->PushSync([from, res, ret, neg_threshold, pos_threshold](RunContext ctx) {
@@ -582,7 +577,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
           inputs[2] = ret.data();
           mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
                                                     neg_threshold, pos_threshold);
-        }, from.ctx(), const_vars, mutable_vars,
+        }, from.ctx(), {from.var()}, {ret.var(), res.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
     } else {
       LOG(FATAL) << "Unsupported Quantization";
@@ -600,7 +595,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual,
                                                       neg_threshold, pos_threshold);
             // Wait GPU kernel to complete
             ctx.get_stream<gpu>()->Wait();
-          }, from.ctx(), const_vars, mutable_vars,
+          }, from.ctx(), {from.var()}, {ret.var(), res.var()},
           FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
         } else {
           LOG(FATAL) << "Unsupported Quantization";

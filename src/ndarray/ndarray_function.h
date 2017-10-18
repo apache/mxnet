@@ -164,9 +164,15 @@ void Copy(const TBlob &from, TBlob *to,
           Context from_ctx, Context to_ctx,
           RunContext ctx);
 
+/*
+ * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
+ */
 template<typename xpu>
 void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs);
 
+/*
+ * \brief Enables use of function defined under Quantize2Bit operator for an ndarray
+ */
 template<typename xpu>
 void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                           const float neg_threshold, const float pos_threshold);
