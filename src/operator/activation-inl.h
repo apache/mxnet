@@ -22,6 +22,7 @@
  * \brief Activation operator
  * \author Bing Xu
 */
+
 #ifndef MXNET_OPERATOR_ACTIVATION_INL_H_
 #define MXNET_OPERATOR_ACTIVATION_INL_H_
 
