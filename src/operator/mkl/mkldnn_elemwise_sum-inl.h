@@ -31,6 +31,7 @@
 #include <vector>
 #include <mkldnn_types.h>
 #include "../operator_common.h"
+#include "../tensor/elemwise_binary_op.h"
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
@@ -60,17 +61,13 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
   using namespace mshadow::expr;
 
   if (req[0] == kNullOp) return;
-  // expecting to sum at least two input buffers
-  assert(in_data.size() >= 2);
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   mkldnn::engine cpu_engine = mxnet::CpuEngine::Instance().get_engine();
 
+  // TODO lfeng: MKLDNN might support other layouts (1D, 2D). leaving as
+  // future work.
   // assuming all in_data TBlobs have same shape
-  assert(in_data[0].shape_[0] == in_data[1].shape_[0]);
-  assert(in_data[0].shape_[1] == in_data[1].shape_[1]);
-  assert(in_data[0].shape_[2] == in_data[1].shape_[2]);
-  assert(in_data[0].shape_[3] == in_data[1].shape_[3]);
   // get data shape info
   int32_t n = in_data[0].shape_[0];
   int32_t c = in_data[0].shape_[1];
@@ -90,8 +87,8 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
   // same as default usr descriptor.
   memory::desc output_prv_desc(default_usr_desc);
 
-  std::shared_ptr<memory::primitive_desc> output_usr_mpd;
-  std::shared_ptr<memory::primitive_desc> output_prv_mpd;
+  std::shared_ptr<memory::primitive_desc> output_usr_mpd(nullptr);
+  std::shared_ptr<memory::primitive_desc> output_prv_mpd(nullptr);
   // check if output data has a valid prv buffer set up
   // TODO lfeng: it's possible that mkl prv data exists but is not valid
   // (head_ != HEAD_AT_PRV), this should not happen in general and could mean
@@ -136,7 +133,10 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
   // store an input memory primitive descriptor for each input data, this is
   // required for creating sum primitive descriptor
   std::vector<memory::primitive_desc> input_prv_mpd_array;
-  std::shared_ptr<MKLDNNData<DType>> input_dnn_data;
+  std::shared_ptr<MKLDNNData<DType>> input_dnn_data(nullptr);
+  // TODO lfeng: don't really want to store these shared_ptrs, but have to
+  // keep these memory alive.
+  std::vector<std::shared_ptr<memory>> input_memory_sp;
   for (size_t i = 0; i < in_data.size(); ++i) {
     std::shared_ptr<memory::primitive_desc> input_usr_mpd;
     std::shared_ptr<memory::primitive_desc> input_prv_mpd;
@@ -159,7 +159,6 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
         input_dnn_data.reset(new MKLDNNData<DType>(input_usr_mpd,
                                                    input_prv_mpd));
       }
-      input_prv_mpd_array.push_back(*input_prv_mpd);
     } else {
       // default usr descriptor
       input_usr_mpd.reset(new memory::primitive_desc(default_usr_desc,
@@ -168,18 +167,18 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
       // for prv buffer, we want to match with the output prv desc
       input_prv_mpd.reset(new memory::primitive_desc(output_prv_desc,
                                                      cpu_engine));
-      input_prv_mpd_array.push_back(*input_prv_mpd);
 
       input_dnn_data.reset(new MKLDNNData<DType>(input_usr_mpd, input_prv_mpd));
     }
+    input_prv_mpd_array.push_back(*input_prv_mpd);
 
     // this is where the magic happens. Depending on how the layouts are
     // configured, we should get a prv pointer with valid layout for the input.
-    std::shared_ptr<memory> input_memory =
+    input_memory_sp.push_back(
         input_dnn_data->get_converted_prv(static_cast<float *>(in_data[i].dptr_),
                                           false,
-                                          in_data[i]);
-    inputs.push_back(*input_memory);
+                                          in_data[i]));
+    inputs.push_back(*input_memory_sp[i]);
   }
 
   // scaling factor for each input data
@@ -206,7 +205,7 @@ void MKLDNNElementWiseSumCompute(const nnvm::NodeAttrs &attrs,
  * @param out_data
  */
 template<typename xpu>
-void MKLDNNElementWiseAddCompute(const nnvm::NodeAttrs &attrs,
+inline void MKLDNNElementWiseAddCompute(const nnvm::NodeAttrs &attrs,
                                  const OpContext &ctx,
                                  const std::vector<TBlob> &in_data,
                                  const std::vector<OpReqType> &req,
@@ -216,10 +215,19 @@ void MKLDNNElementWiseAddCompute(const nnvm::NodeAttrs &attrs,
   if (req[0] == kNullOp) return;
   CHECK_EQ(in_data.size(), 2U);
   CHECK_EQ(out_data.size(), 1U);
-  CHECK_EQ(out_data[0].type_flag_, mshadow::kFloat32) << "elemwise_add data"
-      " type must be float";
-
-  MKLDNNElementWiseSumCompute<cpu, float>(attrs, ctx, in_data, req, out_data);
+  const auto& shape = in_data[0].shape_;
+  if (shape.ndim() == 4 && shape[0] > 0 && shape[1] > 0 && shape[2] > 0 &&
+      shape[3] > 0 &&
+      out_data[0].type_flag_ == mshadow::kFloat32) {
+    // MKLDNN does not work for certain shapes (requires dim = 4, non of which
+    // can be 0, and supports floats only)
+    MKLDNNElementWiseSumCompute<cpu, float>(attrs, ctx, in_data, req, out_data);
+  }
+  else {
+    // fallback to CPU implementation
+    ElemwiseBinaryOp::Compute<cpu, mshadow::op::plus>(attrs, ctx, in_data,
+                                                      req, out_data);
+  }
 }
 }
 }

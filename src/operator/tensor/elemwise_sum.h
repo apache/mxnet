@@ -112,8 +112,20 @@ void ElementWiseSumCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
 #if MXNET_USE_MKLDNN == 1
-  CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32);
-  MKLDNNElementWiseSumCompute<xpu, float>(attrs, ctx, inputs, req, outputs);
+  const auto& shape = inputs[0].shape_;
+  if (shape.ndim() == 4 && shape[0] > 0 && shape[1] > 0 && shape[2] > 0 &&
+      shape[3] > 0 &&
+      outputs[0].type_flag_ == mshadow::kFloat32) {
+    // MKLDNN does not work for certain shapes (requires dim = 4, non of which
+    // can be 0)
+    MKLDNNElementWiseSumCompute<xpu, float>(attrs, ctx, inputs, req, outputs);
+  }
+  else {
+    // fallback to cpu implementation
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
+    });
+  }
 #else
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       ElementWiseSumCompute_<xpu, DType>(attrs, ctx, inputs, req, outputs);
