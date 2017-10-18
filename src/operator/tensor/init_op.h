@@ -325,11 +325,9 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
       << "Invalid range (start, stop, step)= "
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
-  MSHADOW_TYPE_SWITCH(param.dtype, DType, {
-    double out_size = std::ceil((param.stop.value() - param.start) / param.step)
-                      * param.repeat;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({static_cast<nnvm::dim_t>(out_size)}));
-  });
+  const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
+                          * param.repeat;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({static_cast<nnvm::dim_t>(out_size)}));
   return true;
 }
 
