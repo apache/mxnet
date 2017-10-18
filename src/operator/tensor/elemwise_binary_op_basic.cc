@@ -32,7 +32,8 @@ namespace op {
 
 #if MXNET_USE_MKLDNN == 1
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1>)       \
+.set_attr<FInferStorageType>("FInferStorageType", 
+                              ElemwiseStorageType<2, 1, true, false, false>)       \
 .set_attr<FCompute>("FCompute<cpu>", MKLDNNElementWiseAddCompute<cpu>)             \
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>)
 #else
