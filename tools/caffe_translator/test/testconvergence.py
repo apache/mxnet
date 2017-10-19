@@ -1,6 +1,7 @@
 from enum import Enum
 import re
 import os
+import sys
 import subprocess
 import traceback
 
@@ -31,6 +32,7 @@ class Test:
 input_dir = "CaffeModels"
 output_dir = "out"
 converted_file_name = "converted.py"
+train_log_name = "train.log"
 test_desc_path = input_dir + "/test.txt"
 
 tests = []
@@ -95,7 +97,7 @@ def translate(train_prototxt_path, solver_prototxt, out_dir_path):
     args = "--training-prototxt %s --solver %s --output-file %s" % (train_prototxt_path, solver_prototxt, converted_file_path)
     
     try:
-        subprocess.run(["caffetranslator", args], shell=True, check=True, timeout=5)
+        subprocess.run("caffetranslator " + args, shell=True, check=True, timeout=5)
     except:
         print("Failed to translate")
         traceback.print_exc(file=sys.stdout)
@@ -109,7 +111,19 @@ def get_test_result(out_dir_path, criteria):
     return (result, result_str)
 
 def train_network(out_dir_path):
+    # Run python <output_dir_path>/<converted_file_name>
     print("Training translated network at %s" % out_dir_path)
+    converted_file_path = out_dir_path + "/" + converted_file_name
+    train_log_path = out_dir_path + "/" + train_log_name 
+    command = "python " + converted_file_path + " > " + train_log_path + " 2>&1"
+    try:
+        subprocess.run(command, shell=True, check=True, timeout=5)
+    except:
+        print("Failed training the converted network")
+        traceback.print_exc(file=sys.stdout)
+        return 1
+    
+    return 0
 
 for test in tests:
 
