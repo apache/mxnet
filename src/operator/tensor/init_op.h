@@ -97,6 +97,32 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
   }
 };
 
+/*! \brief Initialize and fill output with an arbitrary value */
+struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
+  TShape shape;
+  std::string ctx;
+  int dtype;
+  double value;
+  DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
+    DMLC_DECLARE_FIELD(shape)
+      .set_default(TShape())
+      .describe("The shape of the output");
+    DMLC_DECLARE_FIELD(ctx)
+      .set_default("")
+      .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+                  "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("float16", mshadow::kFloat16)
+      .add_enum("uint8", mshadow::kUint8)
+      .add_enum("int32", mshadow::kInt32)
+      .describe("Target data type.");
+    DMLC_DECLARE_FIELD(value)
+      .describe("Value with which to fill newly created tensor");
+  }
+};
+
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */
 inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   RangeParam param;
@@ -222,6 +248,19 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
   Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], value);
+}
+
+/*! \brief Fill output with an arbitrary value */
+template<typename xpu>
+void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 0);
+  CHECK_EQ(outputs.size(), 1U);
+  const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
+  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
