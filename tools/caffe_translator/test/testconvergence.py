@@ -1,5 +1,8 @@
 from enum import Enum
 import re
+import os
+import subprocess
+import traceback
 
 class Criteria:
     def __init__(self, metric_name, relation, value):
@@ -27,8 +30,8 @@ class Test:
 
 input_dir = "CaffeModels"
 output_dir = "out"
+converted_file_name = "converted.py"
 test_desc_path = input_dir + "/test.txt"
-
 
 tests = []
 criterions = []
@@ -72,17 +75,34 @@ with open(test_desc_path) as f:
 for test in tests:
     print(test)
 
+def create_dir(path):
+    if not os.path.exists(path):
+        print("Creating directory %s" % path)
+        os.makedirs(path)
+    else:
+        print("%s already exists" % path)
+
+create_dir(output_dir)
 out_dir_num = 0
 
 report_path = output_dir + "/" + "test_report.txt"
 test_report = open(report_path, 'w')
 
-def create_dir(path):
-    print("Creating directory %s" % path)
-
 def translate(train_prototxt_path, solver_prototxt, out_dir_path):
+	# Run caffetranslator --training-prototxt <train_val_prototxt_path> --solver <solver_prototxt_path> --output-file <output_file_path>
     print("Translating %s and %s. Writing output to %s" % (train_prototxt_path, solver_prototxt, out_dir_path))
-
+    converted_file_path = out_dir_path + "/" + converted_file_name
+    args = "--training-prototxt %s --solver %s --output-file %s" % (train_prototxt_path, solver_prototxt, converted_file_path)
+    
+    try:
+        subprocess.run(["caffetranslator", args], shell=True, check=True, timeout=5)
+    except:
+        print("Failed to translate")
+        traceback.print_exc(file=sys.stdout)
+        return 1
+   
+    return 0
+	
 def get_test_result(out_dir_path, criteria):
     result = True
     result_str = "accuracy/top1: 99.1 (passed)"
