@@ -29,9 +29,9 @@ namespace mxnet {
 namespace common {
 
 template<>
-void CheckFormatWrapper<cpu>(const RunContext &rctx, const NDArray *input,
-                             TBlob *cpu_err, const bool &full_check) {
-  CheckFormatImpl<cpu>(rctx, input, cpu_err, full_check);
+void CheckFormatWrapper<cpu>(const RunContext &rctx, const NDArray &input,
+                             const TBlob &err_cpu, const bool full_check) {
+  CheckFormatImpl<cpu>(rctx, input, err_cpu, full_check);
 }
 
 template<>

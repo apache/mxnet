@@ -44,83 +44,151 @@
 #include <functional>
 
 #include "../operator/mxnet_op.h"
-#include "../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace common {
 
 
-/*! 
+/*!
  * \brief IndPtr should be in non-decreasing order, start with 0
  *           and end with value greater or equal than size of indices.
  */
-struct indptr_check {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, mshadow::default_real_t* out, const DType* in,
+struct csr_indptr_check {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* in,
                                   const nnvm::dim_t end, const nnvm::dim_t idx_size) {
-    if ((in[i+1] < in[i]) || (i == 0 && in[i] != static_cast<DType>(0)) ||
-        (i == end && in[i] < static_cast<DType>(idx_size)))
-          *out = kCSRIndPtrErr;
+    if ((in[i+1] < in[i]) || (i == 0 && in[i] != static_cast<IType>(0)) ||
+        (i == end && in[i] < static_cast<IType>(idx_size)))
+      *out = kCSRIndPtrErr;
   }
 };
 
 /*!
  *  \brief Indices should be less than the number of columns.
  */
-struct idx_check {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, mshadow::default_real_t* out,
-                                  const DType* in, const nnvm::dim_t ncols) {
-    if (in[i] >= static_cast<DType>(ncols)) *out = kCSRIdxErr;
+struct csr_idx_check {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out,
+                                  const IType* in, const nnvm::dim_t ncols) {
+    if (in[i] >= static_cast<IType>(ncols)) *out = kCSRIdxErr;
+  }
+};
+
+/*!
+ *  \brief Indices of RSPNDArray should be less than the size of first dimension"
+ *           and in ascending order
+ */
+struct rsp_idx_check {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* in,
+                                  const nnvm::dim_t nrows) {
+    if ((in[i+1] <= in[i]) ||
+        (in[i] >= static_cast<DType>(nrows)))
+      *out = kRSPIdxErr;
   }
 };
 
 template<typename xpu>
-void CheckFormatWrapper(const RunContext &rctx, const NDArray *input,
-                        TBlob *cpu_err, const bool &full_check);
+void CheckFormatWrapper(const RunContext &rctx, const NDArray &input,
+                        const TBlob &err_cpu, const bool full_check);
+
+/*!
+ * \brief Check the validity of CSRNDArray.
+ * \param rctx Execution context.
+ * \param input Input NDArray of CSRStorage.
+ * \param err_cpu Error number on cpu.
+ * \param full_check If true, rigorous check, O(N) operations,
+ *          otherwise basic check, O(1) operations.
+ */
+template<typename xpu>
+void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
+                        const TBlob &err_cpu, const bool full_check) {
+  using namespace op::mxnet_op;
+  CHECK_EQ(input.storage_type(), kCSRStorage)
+          << "CheckFormatCSRImpl is for CSRNDArray";
+  const TShape shape = input.shape();
+  const TShape idx_shape = input.aux_shape(csr::kIdx);
+  const TShape indptr_shape = input.aux_shape(csr::kIndPtr);
+  const TShape storage_shape = input.storage_shape();
+  if ((shape.ndim() != 2) ||
+      (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
+      (indptr_shape[0] != shape[0] + 1) ||
+      (idx_shape[0] != storage_shape[0])) {
+     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+       auto err = err_cpu.dptr<DType>();
+       *err = kCSRShapeErr;
+     });
+     return;
+  }
+  if (full_check) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(csr::kIndPtr), RType, {
+        MSHADOW_IDX_TYPE_SWITCH(input.aux_type(csr::kIdx), IType, {
+          mshadow::Stream<xpu> *s = rctx.get_stream<xpu>();
+          NDArray ret_xpu = NDArray(mshadow::Shape1(1),
+                                    rctx.get_ctx(), false, err_cpu.type_flag_);
+          TBlob val_xpu = ret_xpu.data();
+          Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
+          Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0]-1, val_xpu.dptr<DType>(),
+            input.aux_data(csr::kIndPtr).dptr<RType>(),
+            indptr_shape[0]-1, idx_shape[0]);
+          Kernel<csr_idx_check, xpu>::Launch(s, idx_shape[0], val_xpu.dptr<DType>(),
+            input.aux_data(csr::kIdx).dptr<IType>(), shape[1]);
+          mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
+                        val_xpu.get<xpu, 1, DType>(s), s);
+        });
+      });
+    });
+  }
+}
+
+/*!
+ * \brief Check the validity of RowSparseNDArray.
+ * \param rctx Execution context.
+ * \param input Input NDArray of RowSparseStorage.
+ * \param err_cpu Error number on cpu.
+ * \param full_check If true, rigorous check, O(N) operations,
+ *          otherwise basic check, O(1) operations.
+ */
+template<typename xpu>
+void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
+                        const TBlob &err_cpu, const bool full_check) {
+  using namespace op::mxnet_op;
+  CHECK_EQ(input.storage_type(), kRowSparseStorage)
+          << "CheckFormatRSPImpl is for RSPNDArray";
+  if (input.aux_shape(rowsparse::kIdx)[0] != input.storage_shape()[0]) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      auto err = err_cpu.dptr<DType>();
+      *err = kRSPShapeErr;
+    });
+    return;
+  }
+  if (full_check) {
+    MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(rowsparse::kIdx), IType, {
+        mshadow::Stream<xpu> *s = rctx.get_stream<xpu>();
+        NDArray ret_xpu = NDArray(mshadow::Shape1(1),
+                                  rctx.get_ctx(), false, err_cpu.type_flag_);
+        TBlob val_xpu = ret_xpu.data();
+        Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
+        Kernel<rsp_idx_check, xpu>::Launch(s, input.aux_shape(rowsparse::kIdx)[0],
+          val_xpu.dptr<DType>(), input.aux_data(rowsparse::kIdx).dptr<IType>(),
+          input.shape()[0]);
+        mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
+                      val_xpu.get<xpu, 1, DType>(s), s);
+      });
+    });
+  }
+}
 
 template<typename xpu>
-void CheckFormatImpl(const RunContext &rctx, const NDArray *input,
-                     TBlob *cpu_err, const bool &full_check) {
-  using namespace op::mxnet_op;
-  auto stype = input->storage_type();
-  auto err = cpu_err->dptr<mshadow::default_real_t>();
+void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
+                     const TBlob &err_cpu, const bool full_check) {
+  int stype = input.storage_type();
   if (stype == kCSRStorage) {
-    const TShape shape = input->shape();
-    const TShape idx_shape = input->aux_shape(csr::kIdx);
-    const TShape indptr_shape = input->aux_shape(csr::kIndPtr);
-    const TShape storage_shape = input->storage_shape();
-    if ((shape.ndim() != 2) ||
-        (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
-        (indptr_shape[0] != shape[0] + 1) ||
-        (idx_shape[0] != storage_shape[0])) {
-          *err = kCSRShapeErr;
-          return;
-    }
-    if (full_check) {
-      NDArray xpu_ret = NDArray(mshadow::Shape1(1), rctx.get_ctx());
-      TBlob xpu_tmp = xpu_ret.data();
-      ndarray::Eval<xpu>(kNormalErr, &xpu_tmp, rctx);
-      int indptr_type = input->aux_type(csr::kIndPtr);
-      MSHADOW_TYPE_SWITCH(indptr_type, IType, {
-        Kernel<indptr_check, xpu>::Launch(
-          rctx.get_stream<xpu>(), indptr_shape[0]-1, xpu_ret.data().dptr<mshadow::default_real_t>(),
-          input->aux_data(csr::kIndPtr).dptr<IType>(),
-          indptr_shape[0]-1, idx_shape[0]);
-      });
-      int idx_type = input->aux_type(csr::kIdx);
-      MSHADOW_TYPE_SWITCH(idx_type, IType, {
-        Kernel<idx_check, xpu>::Launch(
-          rctx.get_stream<xpu>(), idx_shape[0], xpu_ret.data().dptr<mshadow::default_real_t>(),
-          input->aux_data(csr::kIdx).dptr<IType>(), shape[1]);
-      });
-      ndarray::Copy<xpu, cpu>(xpu_ret.data(), cpu_err,
-                              xpu_ret.ctx(), Context::CPU(), rctx);
-    }
+    CheckFormatCSRImpl<xpu>(rctx, input, err_cpu, full_check);
   } else if (stype == kRowSparseStorage) {
-    if (input->aux_shape(rowsparse::kIdx)[0] != input->storage_shape()[0]) {
-      *err = kRSPShapeErr;
-    }
+    CheckFormatRSPImpl<xpu>(rctx, input, err_cpu, full_check);
   }
 }
 

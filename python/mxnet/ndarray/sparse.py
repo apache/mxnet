@@ -222,7 +222,8 @@ class BaseSparseNDArray(NDArray):
             raise TypeError('copyto does not support type ' + str(type(other)))
 
     def check_format(self, full_check=True):
-        """check whether the matrix format is valid.
+        """Check whether the NDArray format is valid.
+
         Parameters
         ----------
         full_check : bool, optional

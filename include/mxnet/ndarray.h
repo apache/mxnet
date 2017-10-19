@@ -68,6 +68,7 @@ enum NDArrayFormatErr {
   kCSRIndPtrErr,  // indptr error for csr
   kCSRIdxErr,     // idx error for csr
   kRSPShapeErr,   // shape mismatch for row sparse
+  kRSPIdxErr,     // indices error for row sparse
 };
 
 

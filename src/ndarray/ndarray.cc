@@ -1215,20 +1215,18 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 }
 
 void NDArray::CheckFormat(const bool full_check) const {
-  mshadow::default_real_t err = kNormalErr;
-  void *err_ptr = static_cast<void*>(&err);
-  TBlob cpu_err(err_ptr, mshadow::Shape1(1), cpu::kDevMask,
-                mshadow::default_type_flag, 0);
+  int32_t err = kNormalErr;
+  TBlob err_cpu(&err, mshadow::Shape1(1), cpu::kDevMask, 0);
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     Engine::Get()->PushSync([&](RunContext rctx) {
-        common::CheckFormatWrapper<cpu>(rctx, this, &cpu_err, full_check);
+        common::CheckFormatWrapper<cpu>(rctx, *this, err_cpu, full_check);
       }, this->ctx(), {this->var()}, {},
       FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
     this->WaitToWrite();
   } else {
 #if MXNET_USE_CUDA
     Engine::Get()->PushSync([&](RunContext rctx) {
-        common::CheckFormatWrapper<gpu>(rctx, this, &cpu_err, full_check);
+        common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
         rctx.get_stream<gpu>()->Wait();
       }, this->ctx(), {this->var()}, {},
       FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
@@ -1239,12 +1237,15 @@ void NDArray::CheckFormat(const bool full_check) const {
   }
   CHECK_NE(err, kCSRShapeErr) << "Shape mismatch of this CSRNDArray";
   CHECK_NE(err, kCSRIndPtrErr)
-           << "IndPtr should be in non-decreasing order, start with 0, "
+           << "IndPtr of CSRNDArray should be in non-decreasing order, start with 0, "
            << "and end with value greater or equal than size of indices.";
   CHECK_NE(err, kCSRIdxErr)
-           << "Indices of this CSRNDArray should be less than the number of columns.";
+           << "Indices of CSRNDArray should be less than the number of columns.";
   CHECK_NE(err, kRSPShapeErr) << "Shape mismatch of this RSPNDArray";
-  CHECK_EQ(err, kNormalErr) << "Check the validity of this CSRNDArray";
+  CHECK_NE(err, kRSPIdxErr)
+          << "Indices of RSPNDArray should be less than the size of first dimension"
+          << " and in ascending order";
+  CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
 }
 
 #if MXNET_PREDICT_ONLY == 0
