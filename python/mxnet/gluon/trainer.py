@@ -44,6 +44,14 @@ class Trainer(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
         :any:`mxnet.kvstore.create` for more information.
+    compress_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used.
+        For example, 2bit compression requires a positive threshold and negative threshold.
+        So to completely the arguments for 2bit compression, we would need to pass
+        a dictionary like the following.
+        {'compress':'2bit', 'positive_threshold':0.5, 'negative_threshold':-0.5}
+        See mxnet.KVStore.set_compress method for more details on gradient compression.
 
     Properties
     ----------
@@ -51,7 +59,8 @@ class Trainer(object):
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
-    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
+    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
+                 compress_params=None):
         if isinstance(params, (dict, ParameterDict)):
             params = list(params.values())
         if not isinstance(params, (list, tuple)):
@@ -65,7 +74,10 @@ class Trainer(object):
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
             self._params.append(param)
-
+        if compress_params:
+            if not isinstance(compress_params, dict):
+                raise ValueError("compress_params needs to be a dictionary")
+        self._compress_params = compress_params if compress_params else {'compress':'none'}
         optimizer_params = optimizer_params if optimizer_params else {}
         self._scale = optimizer_params.get('rescale_grad', 1.0)
         self._contexts = self._check_contexts()
@@ -104,6 +116,7 @@ class Trainer(object):
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
         if kvstore:
+            kvstore.set_compress(self._compress_params)
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
             for i, param in enumerate(self._params):

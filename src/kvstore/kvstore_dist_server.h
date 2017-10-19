@@ -35,6 +35,7 @@
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
+#include "../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -43,6 +44,7 @@ static const int kRowSparsePushPull = 1;
 static const int kDefaultPushPull = 0;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
+static const int kSetCompress = 2;
 
 /**
  * \brief executor runs a function using the thread called \ref Start
@@ -151,6 +153,8 @@ class KVStoreDistServer {
       exec_.Stop();
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
+    } else if (recved.head == kSetCompress) {
+      compress_ = recved.body;
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -381,10 +385,29 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
+      NDArray decomp_buf = decomp_buf_[key];
+      if (compress_ != "none") {
+        if (compress_ == "2bit") {
+          int64_t original_size  = (int64_t) (*(recv_blob.dptr<float>()+2));
+          // changing dshape to original size as value is stored in
+          // original size even when compressed data is received
+          dshape = TShape{original_size};
+        } else {
+          LOG(FATAL) << "Unsupported compression type";
+        }
+        // TODO(huilgolr) check and merge with init of stored
+        if (decomp_buf.is_none()) {
+          decomp_buf = NDArray(dshape, Context());
+        }
+      }
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
-        CopyFromTo(recved, &stored, 0);
+        if (compress_ == "none") {
+          CopyFromTo(recved, &stored, 0);
+        } else {
+          Dequantize(recved, &stored, compress_, 0);
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
@@ -394,18 +417,35 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          CopyFromTo(recved, &merged.array, 0);
+          if (compress_ == "none") {
+            CopyFromTo(recved, &merged.array, 0);
+          } else {
+            Dequantize(recved, &merged.array, compress_, 0);
+          }
         } else {
-          merged.array += recved;
+          if (compress_ == "none") {
+            merged.array += recved;
+          } else {
+            Dequantize(recved, &decomp_buf, compress_, 0);
+            merged.array += decomp_buf;
+          }
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-        exec_.Exec([this, key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(key, recved, &stored);
+        if (compress_ == "none") {
+          exec_.Exec([this, key, &recved, &stored]() {
+              CHECK(updater_);
+              updater_(key, recved, &stored);
           });
+        } else {
+          Dequantize(recved, &decomp_buf, compress_, 0);
+          exec_.Exec([this, key, &decomp_buf, &stored]() {
+              CHECK(updater_);
+              updater_(key, decomp_buf, &stored);
+          });
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       }
@@ -428,20 +468,42 @@ class KVStoreDistServer {
   }
 
   /**
-   * \brief user defined
+   * \brief user defined mode for push
    */
   bool sync_mode_;
   KVStore::Controller controller_;
   KVStore::Updater updater_;
 
+  /**
+   * \brief store_ contains the value at kvstore for each key
+   */
   std::unordered_map<int, NDArray> store_;
+
+  /**
+   * \brief merge_buf_ is a buffer used if sync_mode is true. It represents
+   * values from different workers being merged. The store will be updated
+   * to this value when values from all workers are pushed into this buffer.
+   */
   std::unordered_map<int, MergeBuf> merge_buf_;
+
+  /**
+   * \brief decomp_buf_ is a buffer into which compressed values are
+   * decompressed before merging to the store. used when compress_!='none'
+   */
+  std::unordered_map<int, NDArray> decomp_buf_;
 
   Executor exec_;
   ps::KVServer<float>* ps_server_;
 
   // whether to LOG verbose information
   bool log_verbose_;
+
+  /**
+   * \brief compress_ refers to whether values sent to kvstore server are
+   * in quantized form. It can be 'none' or '2bit' for now. This is set
+   * by worker by sending a command to server
+   */
+  std::string compress_ = "none";
 };
 
 }  // namespace kvstore

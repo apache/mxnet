@@ -64,6 +64,15 @@ class KVStore {
    */
   inline const std::string& type() { return type_; }
 
+  /**
+   * \brief Set parameters to use low-bit compressed gradients
+   * \param compress type of compression
+   * \param neg_threshold set the negative threshold for 2bit compression
+   * \param pos_threshold set the positive threshold for 2bit compression
+   */
+  virtual void SetCompress(const std::string& compress, const float neg_threshold,
+                           const float pos_threshold) = 0;
+
   /*!
    * \brief Initialize a list of key-value pair to the store.
    *
@@ -386,6 +395,22 @@ class KVStore {
    * \brief the kvstore type
    */
   std::string type_;
+
+  /**
+   * \brief Specifies whether or not to use compressed gradients
+   * Can be `none` or `2bit` for now
+   */
+  std::string compress_ = "none";
+
+  /**
+   * \brief positive threshold for 2bit compression
+   */
+  float pos_threshold_ = 0.1;
+
+  /**
+   * \brief negative threshold for 2bit compression
+   */
+  float neg_threshold_ = -0.1;
 
   /**
    * \brief whether to do barrier when finalize

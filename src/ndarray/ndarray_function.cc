@@ -26,6 +26,7 @@
 #include "./ndarray_function.h"
 #include "./ndarray_function-inl.h"
 #include "../common/utils.h"
+#include "../operator/contrib/two_bit_quantize-inl.h"
 
 namespace mxnet {
 namespace ndarray {
@@ -181,6 +182,23 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
     LOG(FATAL) << "ElementwiseSum<cpu> has not been implemented for storage_type = << "
                << nds[0].storage_type();
   }
+}
+
+/*
+ * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
+ */
+template<>
+void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs) {
+  mxnet::op::Dequantize2BitImpl<cpu>(s, inputs);
+}
+
+/*
+ * \brief Enables use of function defined under Quantize2Bit operator for an ndarray
+ */
+template<>
+void Quantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs,
+                          const float neg_threshold, const float pos_threshold) {
+  mxnet::op::Quantize2BitImpl<cpu>(s, inputs, neg_threshold, pos_threshold);
 }
 
 }  // namespace ndarray
