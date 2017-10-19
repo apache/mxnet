@@ -176,6 +176,9 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
         # name, val_acc = test(ctx)
         logging.info('[Epoch %d] validation: %s=%f'%(epoch, map_name, mean_ap))
 
-ctx = [mx.gpu(i) for i in range(8)]
-# ctx = mx.cpu()
+try:
+    _ = nd.array([1], ctx=mx.gpu(0))
+    ctx = [mx.gpu(i) for i in range(8)]
+except:
+    ctx = mx.cpu()
 train(net, train_data, val_data, 100, ctx=ctx)

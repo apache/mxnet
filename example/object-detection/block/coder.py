@@ -117,13 +117,15 @@ class MultiClassEncoder(ClassEncoder):
     """
 
     """
-    def __init__(self):
+    def __init__(self, ignore_label=-1):
         super(MultiClassEncoder, self).__init__()
+        self._ignore_label = ignore_label
 
     def forward(self, samples, matches, refs, *args, **kwargs):
         refs = nd.repeat(refs.reshape((0, 1, -1)), axis=1, repeats=matches.shape[1])
         target_ids = nd.pick(refs, matches, axis=2) + 1
-        targets = nd.where(samples > 0.5, target_ids, nd.zeros_like(target_ids))
+        targets = nd.where(samples > 0.5, target_ids, nd.ones_like(target_ids) * self._ignore_label)
+        targets = nd.where(samples < -0.5, nd.zeros_like(targets), targets)
         return targets
 
 @register

@@ -47,25 +47,40 @@ class OHEMSampler(Sampler):
     ----------
 
     """
-    def __init__(self, ratio):
+    def __init__(self, ratio, min_samples=0, thresh=0.5):
         super(OHEMSampler, self).__init__()
+        assert ratio > 0, "OHEMSampler ratio must > 0, {} given".format(ratio)
         self._ratio = ratio
+        self._min_samples = min_samples
+        self._thresh = thresh
 
-    def forward(self, x, logits, *args):
+    def forward(self, x, logits, ious, *args):
         """
 
         """
         F = nd
         num_positive = F.sum(x >= 0, axis=1)
         num_negative = self._ratio * num_positive
-        num_total = x.shape[1]
-        num_negative = num_negative.clip(a_min=0, a_max=num_total)
-        positive = logits.slice_axis(axis=2, begin=1, end=None)
+        num_total = x.shape[1]  # scalar
+        num_negative = F.minimum(F.maximum(self._min_samples, num_negative),
+                                 num_total - num_positive)
+        positive = logits.slice_axis(axis=2, begin=1, end=-1)
+        background = logits.slice_axis(axis=2, begin=0, end=1).reshape((0, -1))
         maxval = positive.max(axis=2)
-        esum = F.exp(logits - maxval).sum(axis=2)
-        score = -F.log(maxval / esum)
-        score = F.where(x < 0, scores, -1)  # mask out positive samples
+        esum = F.exp(logits - maxval.reshape((0, 0, 1))).sum(axis=2)
+        score = -F.log(F.exp(background - maxval) / esum)
+        mask = F.ones_like(score) * -1
+        score = F.where(x < 0, score, mask)  # mask out positive samples
+        if len(ious.shape) == 3:
+            ious = F.max(ious, axis=2)
+        score = F.where(ious < self._thresh, score, mask)  # mask out if iou is large
         argmaxs = F.argsort(score, axis=1, is_ascend=False)
-        pos = F.ones_like(x)
-        ignore = F.zeros_like(x)
-        y = F.where(x >= 0, pos, ignore)
+
+        # neg number is different in each batch, using dynamic numpy operations.
+        y = np.zeros(x.shape)
+        y[np.where(x.asnumpy() >= 0)] = 1  # assign positive samples
+        argmaxs = argmaxs.asnumpy()
+        for i, num_neg in zip(range(x.shape[0]), num_negative.asnumpy().astype(np.int32)):
+            indices = argmaxs[i, :num_neg]
+            y[i, indices.astype(np.int32)] = -1  # assign negative samples
+        return F.array(y)
