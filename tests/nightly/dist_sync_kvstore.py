@@ -110,11 +110,10 @@ def test_sync_push_pull():
         for i in range(nrepeat):
             kv.push('11', v)
             kv.push('100', big_v)
-
             # pull a subset of rows this worker is interested in
             all_row_ids = np.arange(shape[0])
-            val = mx.nd.ones(shape).tostype('row_sparse')
-            big_val = mx.nd.ones(big_shape).tostype('row_sparse')
+            val = mx.nd.sparse.zeros('row_sparse', shape)
+            big_val = mx.nd.sparse.zeros('row_sparse', big_shape)
             kv.row_sparse_pull('11', out=val, row_ids=mx.nd.array(all_row_ids))
             big_all_row_ids = np.arange(big_shape[0])
             kv.row_sparse_pull('100', out=big_val, row_ids=mx.nd.array(big_all_row_ids))
