@@ -62,9 +62,9 @@ def init_kv_compressed(kv):
     neg_threshold = -0.5
     kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
     # init kv compression keys
-    kv.init('221', mx.nd.zeros(big_shape))
-    kv.init('2221', mx.nd.zeros(irregular_shape))
-    kv.init('21', mx.nd.zeros(shape))
+    kv.init('11221', mx.nd.zeros(big_shape))
+    kv.init('112221', mx.nd.zeros(irregular_shape))
+    kv.init('1121', mx.nd.zeros(shape))
     return kv, pos_threshold, neg_threshold
 
 def test_sync_push_pull():
@@ -181,7 +181,7 @@ def test_sync_push_pull():
             check_diff_to_scalar(val, expected, rank=my_rank)
 
     def check_compr_residual(kv, pos_threshold, nworker):
-        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             # doesn't meet threshold
             kv.push(k, mx.nd.ones(s)*0.4)
             val=mx.nd.zeros(s)
@@ -210,7 +210,7 @@ def test_sync_push_pull():
             # residual is 0 now
 
     def check_compr_ones(kv, pos, nworker):
-        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             val = mx.nd.zeros(s)
             kv.pull(k, val)
             curval = val[0][0].asnumpy()[0]
@@ -222,13 +222,13 @@ def test_sync_push_pull():
             # residual = 0  again
 
     def check_compr_pull_before_push(kv):
-        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             val = mx.nd.ones(s)
             kv.pull(k, val)
             check_diff_to_scalar(val, 0)
 
     def check_compr_zero(kv):
-        for k,s in [('21', shape),('2221',irregular_shape),('221', big_shape)]:
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             kv.push(k, mx.nd.zeros(s))
             # to check that all are set to 0s
             val = mx.nd.ones(s)
@@ -240,7 +240,7 @@ def test_sync_push_pull():
         # calculate expected value after pull
         mx.random.seed(123)
         rnd.seed(123)
-        for k,s in [('2221',irregular_shape),('221', big_shape), ('21', shape)]:
+        for k,s in [('112221',irregular_shape),('11221', big_shape), ('1121', shape)]:
             orig_val = mx.nd.zeros(s)
             kv.pull(k, orig_val)
 
