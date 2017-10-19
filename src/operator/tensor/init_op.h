@@ -34,7 +34,7 @@
 #include <limits>
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
-
+#include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -164,6 +164,56 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+/*!
+ * \brief General-purpose blob value-filling function
+ * \tparam xpu cpu or gpu
+ * \tparam ValueType Data type of supplied value
+ * \tparam is_integer Whether to optimize for an integer value
+ * \param s Stream
+ * \param b The blob to fill with a value
+ * \param req Request type (kNullOp, kWriteTo, etc)
+ * \param val The value to use for the filling operation
+ */
+template <bool is_integer = false, typename ValueType, typename xpu>
+void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
+  if (req != kNullOp) {
+    const size_t size = b.Size();
+    if (val == 0) {
+      if (req != kAddTo) {
+        if (b.dev_mask() == cpu::kDevMask) {
+          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+            memset(b.dptr_, 0, size * sizeof(DType));
+          });
+        } else {
+          // Optimize common use-case of filling with ones
+          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+            MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+              mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
+                s, b.Size(), b.dptr<DType>());
+            });
+          });
+        }
+      }
+    } else if (is_integer && val == 1) {
+      // Optimize common use-case of filling with ones
+      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<1>, Req>, xpu>::Launch(
+            s, b.Size(), b.dptr<DType>());
+        });
+      });
+    } else {
+      // Generic fill kernel from variable
+      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
+            s, b.Size(), b.dptr<DType>(), static_cast<DType>(val));
+        });
+      });
+    }
+  }
+}
+
 /*! \brief Fill output with a scalar integer value */
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
@@ -171,31 +221,7 @@ void FillCompute(const nnvm::NodeAttrs& attrs,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
-  if (req[0] != kNullOp) {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      mxnet_op::Kernel<mxnet_op::set_to<value>, xpu>::Launch(s,
-                                                             outputs[0].Size(),
-                                                             outputs[0].dptr<DType>());
-    });
-  }
-}
-
-/*! \brief Fast CPU fill-zero version using memset */
-template<>
-inline void FillCompute<cpu, 0>(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
-  if (req[0] != kNullOp) {
-    const size_t size = outputs[0].Size();
-    if (size) {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        memset(outputs[0].dptr<DType>(), 0, size * sizeof(DType));
-      });
-    }
-  }
+  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], value);
 }
 
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
@@ -207,15 +233,12 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   using namespace mshadow;
   using namespace mxnet_op;
   CHECK_EQ(dst->storage_type(), kRowSparseStorage);
-  MSHADOW_REAL_TYPE_SWITCH(dst->dtype(), DType, {
-    MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
-      auto num_rows = dst->shape()[0];
-      dst->CheckAndAlloc({Shape1(num_rows)});
-      auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
-      auto val = dst->data();
-      Kernel<set_zero, xpu>::Launch(s, val.Size(), val.dptr<DType>());
-      ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1));
-    });
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+    const index_t num_rows = dst->shape()[0];
+    dst->CheckAndAlloc({Shape1(num_rows)});
+    Fill<true>(s, dst->data(), kWriteTo, 0);
+    auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
+    ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1));
   });
 }
 
@@ -262,10 +285,7 @@ inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, const NDArray& ds
   dst.set_aux_shape(csr::kIdx, mshadow::Shape1(0));
   dst.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst.shape()[0] + 1));
   TBlob indptr_data = dst.aux_data(csr::kIndPtr);
-  MSHADOW_IDX_TYPE_SWITCH(dst.aux_type(csr::kIndPtr), IType, {
-    mxnet_op::Kernel<mxnet_op::set_zero, mshadow::cpu>::Launch(
-      s, indptr_data.Size(), indptr_data.dptr<IType>());
-  });
+  Fill<true>(s, dst.aux_data(csr::kIndPtr), kWriteTo, 0);
 }
 void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst);
 

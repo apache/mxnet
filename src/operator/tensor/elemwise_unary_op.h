@@ -30,21 +30,17 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
+#include "../../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace op {
 
 class OpBase {
  protected:
+  /*! \brief simple kernel to set to a scalar value of arbitrary type */
   template<int req>
-  struct SetToScalar {
-    template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType *out, const DType value) {
-      KERNEL_ASSIGN(out[i], req, value);
-    }
-  };
+  using set_to_scalar = mxnet_op::op_with_req<mshadow_op::identity, req>;
 
- protected:
   /*! \brief Copy blob data */
   template<typename xpu>
   static void inline CopyBlob(mshadow::Stream<xpu> *s,
@@ -159,7 +155,7 @@ class OpBase {
                                const OpReqType req,
                                DType *out) {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, out, val);
+      mxnet_op::Kernel<set_to_scalar<Req>, xpu>::Launch(s, size, out, val);
     });
   }
 };  // OpBase
@@ -324,17 +320,13 @@ class UnaryOp : public OpBase {
                               const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     if (req[0] == kNullOp) return;
     if (req[0] == kWriteInplace) {
-      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_); return;
+      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+      return;
     }
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
-          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-      });
-    });
+    TBlob tmp = outputs[0];
+    ndarray::Copy<xpu, xpu>(inputs[0], &tmp, ctx.run_ctx.ctx, ctx.run_ctx.ctx, ctx.run_ctx);
   }
 
   template<typename xpu>
@@ -374,30 +366,6 @@ class UnaryOp : public OpBase {
     }
   }
 };
-
-template<>
-inline void UnaryOp::IdentityCompute<cpu>(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<TBlob>& inputs,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  if (req[0] != kNullOp) {
-    if (req[0] != kWriteInplace) {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        const size_t size = inputs[0].Size() * sizeof(DType);
-        const DType *src = inputs[0].dptr<DType>();
-        DType *dest = outputs[0].dptr<DType>();
-        if (src != dest) {
-          memcpy(dest, src, size);
-        }
-      });
-    } else {
-      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
-    }
-  }
-}
 
 template<typename GRAD_OP>
 struct unary_bwd {

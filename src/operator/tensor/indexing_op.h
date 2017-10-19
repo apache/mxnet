@@ -867,10 +867,7 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   mshadow::Shape<10> strides;
   for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    if (req[0] == kWriteTo) {
-      mxnet_op::Kernel<mxnet_op::set_to<0>, xpu>::Launch(s, oshape.Size(),
-                                                         outputs[0].dptr<DType>());
-    }
+    Fill<true>(s, outputs[0], req[0], 0);
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
