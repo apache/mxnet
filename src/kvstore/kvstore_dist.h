@@ -368,7 +368,6 @@ class KVStoreDist : public KVStoreLocal {
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
       real_t* data = send_buf.data().dptr<real_t>();
-      bool init = send_buf.storage_initialized();
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
