@@ -63,8 +63,8 @@ class SSDNet(Block):
             for feat, bp in zip(features, self.box_predictors)]
         anchors = [nd.reshape(ag(feat), shape=(1, -1))
             for feat, ag in zip(features, self.anchor_generators)]
-        for i in range(len(features)):
-            print(features[i].shape, cls_preds[i].shape, box_preds[i].shape, anchors[i].shape)
+        # for i in range(len(features)):
+        #     print(features[i].shape, cls_preds[i].shape, box_preds[i].shape, anchors[i].shape)
         # concat
         cls_preds = nd.concat(*cls_preds, dim=1).reshape((0, -1, self.num_classes))
         box_preds = nd.concat(*box_preds, dim=1).reshape((0, -1, 4))
