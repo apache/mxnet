@@ -7,24 +7,31 @@ class Criteria:
         self.relation = relation
         self.value = value
 
+    def __str__(self):
+        return "%s %s %s" % (self.metric_name, self.relation, self.value)
+
 class Test:
-    def __init__(self, train_val_prototxt, solver_prototxt, lst_criteria):
+    def __init__(self, train_val_prototxt, solver_prototxt, criterions):
         self.train_val_prototxt = train_val_prototxt
         self.solver_prototxt = solver_prototxt
-        self.lst_criteria = lst_criteria
+        self.criterions = criterions
 
     def __str__(self):
         out  = "train_val_prototxt: %s\n" % train_val_prototxt
         out += "solver_prototxt: %s\n" % solver_prototxt
-        for criteria in lst_criteria:
-            out += "  Criteria: %s %s %s\n" % (criteria.metric_name, criteria.relation, criteria.value)
+        # Apologies for using 'Criteria' as singular in the interest of readability.
+        out += ("Criterions" if len(criterions)>1 else "Criteria") + ":\n"
+        for criteria in criterions:
+            out += "  %s\n" % criteria
         return out
 
 input_dir = "CaffeModels"
+output_dir = "out"
 test_desc_path = input_dir + "/test.txt"
 
+
 tests = []
-lst_criteria = []
+criterions = []
 train_val_prototxt = None
 solver_prototxt = None
 
@@ -37,31 +44,79 @@ with open(test_desc_path) as f:
         
         # If this line is a criteria definition
         if re.match(r'\s', line):
-            # Extract the criteria and append it to the criterias list
+            # Extract the criteria and append it to the criterions list
             line = line.strip()
             metric_name, relation, value = line.split()
             criteria = Criteria(metric_name, relation, value)
-            lst_criteria.append(criteria)
+            criterions.append(criteria)
 
         else:
             # If we have finished seeing one test definition and starting to see the next one 
-            if (len(lst_criteria) > 0) and (train_val_prototxt is not None) and (solver_prototxt is not None):
+            if (len(criterions) > 0) and (train_val_prototxt is not None) and (solver_prototxt is not None):
 
                 # Create a test with the information we have and append it to the tests list
-                test = Test(train_val_prototxt, solver_prototxt, lst_criteria)
+                test = Test(train_val_prototxt, solver_prototxt, criterions)
                 tests.append(test)
                 
-                # reset lst_criteria
-                lst_criteria = []
+                # reset criterions
+                criterions = []
             else:
                 # The first test definition
                 train_val_prototxt, solver_prototxt = line.split()
     
     # Process the last test definition
-    test = Test(train_val_prototxt, solver_prototxt, lst_criteria)
+    test = Test(train_val_prototxt, solver_prototxt, criterions)
     tests.append(test)
 
 
 for test in tests:
     print(test)
+
+out_dir_num = 0
+
+report_path = output_dir + "/" + "test_report.txt"
+test_report = open(report_path, 'w')
+
+def create_dir(path):
+    print("Creating directory %s" % path)
+
+def translate(train_prototxt_path, solver_prototxt, out_dir_path):
+    print("Translating %s and %s. Writing output to %s" % (train_prototxt_path, solver_prototxt, out_dir_path))
+
+def get_test_result(out_dir_path, criteria):
+    result = True
+    result_str = "accuracy/top1: 99.1 (passed)"
+    return (result, result_str)
+
+def train_network(out_dir_path):
+    print("Training translated network at %s" % out_dir_path)
+
+for test in tests:
+
+    out_dir_path = output_dir + "/" + str(out_dir_num) + "/"
+    create_dir(out_dir_path)
+    out_dir_num += 1
+
+    train_prototxt_path = input_dir + "/" + test.train_val_prototxt
+    solver_prototxt     = input_dir + "/" + test.solver_prototxt
+    translate(train_prototxt_path, solver_prototxt, out_dir_path)
+    train_network(out_dir_path)
+
+    all_tests_passed = True
+    
+    observed_metrics = ""
+    for criteria in test.criterions:
+        result, result_str = get_test_result(out_dir_path, criteria)
+        observed_metrics += result_str + "\n"
+
+        if result == False:
+            all_tests_passed = False
+
+    test_report.write("Test details:\n")
+    test_report.write(str(test) + "\n")
+    test_report.write("Observed metrics:\n")
+    test_report.write(str(observed_metrics) + "\n")
+    test_report.write("Result: " + ("Passed" if all_tests_passed else "Failed") + "\n\n")
+    test_report.write("------------------------------------------------------------------\n\n")
+
 
