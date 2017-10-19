@@ -61,12 +61,14 @@ class SSDNet(Block):
             for feat, cp in zip(features, self.class_predictors)]
         box_preds = [nd.flatten(nd.transpose(bp(feat), (0, 2, 3, 1)))
             for feat, bp in zip(features, self.box_predictors)]
-        anchors = [nd.flatten(ag(feat))
+        anchors = [nd.reshape(ag(feat), shape=(1, -1))
             for feat, ag in zip(features, self.anchor_generators)]
+        for i in range(len(features)):
+            print(features[i].shape, cls_preds[i].shape, box_preds[i].shape, anchors[i].shape)
         # concat
         cls_preds = nd.concat(*cls_preds, dim=1).reshape((0, -1, self.num_classes))
         box_preds = nd.concat(*box_preds, dim=1).reshape((0, -1, 4))
-        anchors = nd.concat(*anchors, dim=0).reshape((1, -1, 4))
+        anchors = nd.concat(*anchors, dim=1).reshape((1, -1, 4))
         # sync device since anchors are always generated on cpu currently
         anchors = anchors.as_in_context(cls_preds.context)
         return [cls_preds, box_preds, anchors]

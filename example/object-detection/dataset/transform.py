@@ -249,7 +249,7 @@ class Transpose(object):
         return nd.transpose(src, axes=self._order), label
 
 class SSDAugmentation(object):
-    def __init__(self, data_shape, mean_pixel=[123, 117, 104]):
+    def __init__(self, data_shape, mean_pixel=[123, 117, 104], std_pixel=[58, 57, 58]):
         self._augments = Compose([
             Cast(),
             # ToAbsoluteCoords(),
@@ -258,7 +258,7 @@ class SSDAugmentation(object):
             # ToPercentCoords(),
             # image.det.DetHorizontalFlipAug(0.5),
             ForceResize(data_shape),
-            # image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, None)),
+            image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
             Transpose(),
         ])
 

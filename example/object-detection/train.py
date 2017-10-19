@@ -104,7 +104,8 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     net.hybridize()
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
         {'learning_rate': lr, 'wd': wd, 'momentum':momentum})
-    cls_loss = FocalLoss(num_class=(num_class+1), weight=1.0)
+    # cls_loss = FocalLoss(num_class=(num_class+1), weight=1.0)
+    cls_loss = gluon.loss.SoftmaxCrossEntropyLoss()
     # box_loss = gluon.loss.L1Loss()
     box_loss = SmoothL1Loss(weight=4)
     cls_metric = Accuracy(axis=-1, ignore_label=0)

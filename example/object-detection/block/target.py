@@ -7,6 +7,7 @@ from mxnet.gluon import Block
 from block.matcher import CompositeMatcher, BipartiteMatcher, MaximumMatcher
 from block.sampler import NaiveSampler, OHEMSampler
 from block.coder import MultiClassEncoder, NormalizedBoxCenterEncoder
+import numpy as np
 
 class SSDTargetGenerator(Block):
     """
@@ -43,4 +44,10 @@ class SSDTargetGenerator(Block):
         # print('cls-targets', cls_targets[0])
         box_targets, box_masks = self._box_encoder(samples, matches, anchors, gt_boxes)
         # print('box-targets', box_targets[0], 'box-masks', box_masks[0])
+        # ref = nd.contrib.MultiBoxTarget(*[predictions[2], labels, predictions[0].transpose(axes=(0, 2, 1))])
+        # loc_target, loc_mask, ref_cls_target = ref
+        # print('diff', np.sum(np.abs(ref_cls_target.asnumpy().flatten() - cls_targets.asnumpy().flatten())))
+        # print(loc_target[0].asnumpy())
+        # print(box_targets[0].asnumpy())
+        # raise
         return cls_targets, box_targets, box_masks
