@@ -8,7 +8,6 @@ endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
-
 include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
@@ -91,6 +90,9 @@ if(USE_VTUNE)
   if(NOT VTUNE_ROOT)
     set(VTUNE_ROOT /opt/intel/vtune_amplifier_xe_2017)
   endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
   add_definitions(-DMXNET_USE_VTUNE=1)
   include_directories(${VTUNE_ROOT}/include)
   list(APPEND mxnet_LINKER_LIBS ${VTUNE_ROOT}/lib64/libittnotify.a)

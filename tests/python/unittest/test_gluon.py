@@ -516,6 +516,20 @@ def test_hybrid_stale_cache():
     net.add(mx.gluon.nn.Flatten())
     assert net(mx.nd.ones((2,3,5))).shape == (2, 30)
 
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.fc1 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=False)
+        net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=False)
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5)))
+
+    net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                bias_initializer='ones', flatten=True)
+    net.initialize()
+    assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
 
 if __name__ == '__main__':
     import nose

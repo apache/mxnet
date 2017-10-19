@@ -111,8 +111,11 @@ def test_sparse_nd_slice():
         start = rnd.randint(0, shape[0] - 1)
         end = rnd.randint(start + 1, shape[0])
         assert same(A[start:end].asnumpy(), A2[start:end])
+        assert same(A[start - shape[0]:end].asnumpy(), A2[start:end])
         assert same(A[start:].asnumpy(), A2[start:])
         assert same(A[:end].asnumpy(), A2[:end])
+        ind = rnd.randint(-shape[0], shape[0] - 1)
+        assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
     
     def check_slice_nd_csr_fallback(shape):
         stype = 'csr'
