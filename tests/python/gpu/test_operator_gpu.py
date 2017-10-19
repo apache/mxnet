@@ -990,13 +990,12 @@ def test_embedding_with_type():
 
 def test_svmoutput_with_type():
     sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
-    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list)
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare cpu and gpu results only within a given precision.
+    for data_type in [np.float64, np.float32, np.float16]:
+        ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': data_type}},
+                    {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': data_type}}]
+        check_consistency(sym, ctx_list)
 
 
 def test_take_with_type():
