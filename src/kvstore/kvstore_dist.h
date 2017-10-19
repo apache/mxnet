@@ -497,12 +497,9 @@ class KVStoreDist : public KVStoreLocal {
             llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
             llround(static_cast<double>(total_num_rows) / num_servers * i);
           auto end_row = start_row + part_num_rows;
-          // the last row has to be included for the last partition
-          if (i == num_servers - 1) end_row++;
           // search for offsets in [start_row, end_row)
           auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
           auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
-
           for (auto offset = lb; offset < ub; offset++) {
             ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
             CHECK_LT(ps_key, krs[i].end());
