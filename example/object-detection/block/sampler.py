@@ -9,6 +9,7 @@ Note: 1 for positive, -1 for negative, 0 for ignore.
 import numpy as np
 from mxnet import gluon
 from mxnet import nd
+from mxnet import autograd
 from .registry import register, alias, create
 
 
