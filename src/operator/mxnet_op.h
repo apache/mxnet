@@ -199,6 +199,23 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   return stride;
 }
 
+/*!
+ * \brief Simple copy data from one blob to another
+ * \param to Destination blob
+ * \param from Source blob
+ */
+MSHADOW_CINLINE void copy(const TBlob& to, const TBlob& from) {
+  MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
+    if (to.type_flag_ == from.type_flag_) {
+      mshadow::Copy(to.FlatTo1D<cpu, DType>(), from.FlatTo1D<cpu, DType>());
+    } else {
+      MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+        to.FlatTo1D<cpu, DType>() = mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
+      })
+    }
+  })
+}
+
 /*! \brief Select assignment operation based upon the req value
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
  */

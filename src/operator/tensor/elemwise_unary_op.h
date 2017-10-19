@@ -320,13 +320,24 @@ class UnaryOp : public OpBase {
                               const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    if (req[0] == kNullOp) return;
-    if (req[0] == kWriteInplace) {
-      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
-      return;
+    switch(req[0]) {
+      case kWriteTo:
+        mxnet_op::copy(outputs[0], inputs[0]);
+        break;
+      case kAddTo: {
+          Stream<xpu> *s = ctx.get_stream<xpu>();
+          MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
+              s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+          });
+        }
+        break;
+      case kWriteInplace:
+        CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+        break;
+      case kNullOp:
+        break;
     }
-    TBlob tmp = outputs[0];
-    ndarray::Copy<xpu, xpu>(inputs[0], &tmp, ctx.run_ctx.ctx, ctx.run_ctx.ctx, ctx.run_ctx);
   }
 
   template<typename xpu>
