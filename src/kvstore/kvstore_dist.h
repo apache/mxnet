@@ -42,10 +42,6 @@ namespace kvstore {
 /**
  * \brief distributed kvstore
  *
- * for a worker node, it always guarantees that all push and pull issued from
- * this worker on the same key are serialized. namely push(3) and then pull(3),
- * then the data pulled is always containing the modification from the push(3).
- *
  * it's the server node's job to control the data consistency among all
  * workers. see details on \ref ServerHandle::Start
  */
