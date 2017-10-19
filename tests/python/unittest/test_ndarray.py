@@ -471,11 +471,13 @@ def test_broadcast_binary():
     check_broadcast_binary(lambda x, y: x - y)
     check_broadcast_binary(lambda x, y: x * y)
     check_broadcast_binary(lambda x, y: x / y)
-    check_broadcast_binary(lambda x, y: x > y)
-    check_broadcast_binary(lambda x, y: x < y)
-    check_broadcast_binary(lambda x, y: x >= y)
-    check_broadcast_binary(lambda x, y: x <= y)
-    check_broadcast_binary(lambda x, y: x == y)
+    # The following ops are sensitive to the precision of the calculation.
+    # Force numpy to match mxnet's float32.
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) > y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) < y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) >= y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) <= y.astype(np.float32))
+    check_broadcast_binary(lambda x, y: x.astype(np.float32) == y.astype(np.float32))
 
 def test_moveaxis():
     X = mx.nd.array([[[1, 2, 3], [4, 5, 6]],
