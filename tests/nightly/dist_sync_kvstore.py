@@ -245,13 +245,13 @@ def test_sync_push_pull():
             kv.pull(k, orig_val)
 
             grad = mx.nd.array(rnd.rand(s[0], s[1]))
+            # creates a copy because pull changes grad
             grad_cpy = mx.nd.array(grad)
             kv.push(k, grad)
             val = mx.nd.zeros(s)
             kv.pull(k, val)
 
             diff = val - orig_val
-
             # compute expected by directly using operators
             compr = mx.contrib.nd.create_2bit(grad_cpy)
             mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, neg, pos)
@@ -259,7 +259,7 @@ def test_sync_push_pull():
             mx.contrib.ndarray.dequantize_2bit(compr, decompr)
 
             decompr *= nworker * rate
-            assert_almost_equal(diff, decompr)
+            assert_almost_equal(diff.asnumpy(), decompr.asnumpy())
 
     print ('worker '+str(my_rank)+' started')
     check_default_keys(kv, my_rank, nworker)
