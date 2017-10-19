@@ -331,9 +331,11 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward(is_train=True)
     out = exec1.outputs[0].asnumpy()
-    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
+    rtol = 1e-4
+    atol = 1e-6
+    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=rtol, atol=atol)
     exec1.backward()
-    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
+    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=rtol, atol=atol)
 
 
 def test_python_op():
