@@ -476,6 +476,18 @@ def test_create_csr():
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
 
+    def check_create_csr_from_coo(shape, density):
+        matrix = rand_ndarray(shape, 'csr', density)
+        sp_csr = matrix.asscipy()
+        sp_coo = sp_csr.tocoo()
+        csr_created = mx.nd.sparse.csr_matrix((sp_coo.data, (sp_coo.row, sp_coo.col)), shape=shape)
+        assert csr_created.stype == 'csr'
+        assert same(csr_created.data.asnumpy(), sp_csr.data)
+        assert same(csr_created.indptr.asnumpy(), sp_csr.indptr)
+        assert same(csr_created.indices.asnumpy(), sp_csr.indices)
+        csr_copy = mx.nd.array(csr_created)
+        assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+
     def check_create_csr_from_scipy(shape, density, f):
         def assert_csr_almost_equal(nd, sp):
             assert_almost_equal(nd.data.asnumpy(), sp.data)
@@ -500,14 +512,22 @@ def test_create_csr():
         except ImportError:
             print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
 
+    def check_asscipy(shape, density):
+        matrix = rand_ndarray(shape, 'csr', density)
+        sp_csr = matrix.asscipy()
+        assert(same(sp_csr.toarray(), matrix.asnumpy()))
+
+
     dim0 = 50
     dim1 = 50
     densities = [0, 0.5]
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
         check_create_csr_from_nd(shape, density)
+        check_create_csr_from_coo(shape, density)
         check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
         check_create_csr_from_scipy(shape, density, mx.nd.array)
+        check_asscipy(shape, density)
 
 
 def test_create_row_sparse():

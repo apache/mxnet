@@ -492,6 +492,24 @@ class CSRNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def asscipy(self):
+        """Returns a ``scipy.sparse.csr.csr_matrix`` object with value copied from this array
+
+        Examples
+        --------
+        >>> x = mx.nd.sparse.zeros('csr', (2,3))
+        >>> y = x.asscipy()
+        >>> type(y)
+        <type 'scipy.sparse.csr.csr_matrix'>
+        >>> y
+        <2x3 sparse matrix of type '<type 'numpy.float32'>'
+        with 0 stored elements in Compressed Sparse Row format>
+        """
+        data = self.data.asnumpy()
+        indices = self.indices.asnumpy()
+        indptr = self.indptr.asnumpy()
+        return spsp.csr_matrix((data, indices, indptr), shape=self.shape)
+
 # pylint: disable=abstract-method
 class RowSparseNDArray(BaseSparseNDArray):
     """A sparse representation of a set of NDArray row slices at given indices.
@@ -621,7 +639,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 raise ValueError('Assignment with slice for RowSparseNDArray ' \
                                  'is not implmented yet.')
             if isinstance(value, NDArray):
-                # avoid copying to itself
+#avoid copying to itself
                 if value.handle is not self.handle:
                     value.copyto(self)
             elif isinstance(value, numeric_types):
@@ -786,6 +804,14 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
             The default dtype is float32.
 
+    - csr_matrix((data, (row, col)))
+        to construct a CSRNDArray based on the COOrdinate format \
+        using three seperate arrays, \
+        where ``row[i]`` is the row index of the element, \
+        ``col[i]`` is the column index of the element \
+        and ``data[i]`` is the data corresponding to the element. All the missing \
+        elements in the input are taken to be zeroes.
+
     Parameters
     ----------
     arg1: tuple of int, tuple of array_like, array_like, CSRNDArray or scipy.sparse.csr_matrix
@@ -820,9 +846,25 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
     if isinstance(arg1, tuple):
         arg_len = len(arg1)
         if arg_len == 2:
-            # empty matrix with shape
-            _check_shape(arg1, shape)
-            return empty('csr', arg1, ctx=ctx, dtype=dtype)
+            # construct a sparse csr matrix from
+            # scipy coo matrix if input format is coo
+            if isinstance(arg1[1], tuple) and len(arg1[1]) == 2:
+                data, (row, col) = arg1
+                if isinstance(data, NDArray):
+                    data = data.asnumpy()
+                if isinstance(row, NDArray):
+                    row = row.asnumpy()
+                if isinstance(col, NDArray):
+                    col = col.asnumpy()
+                coo = spsp.coo_matrix((data, (row, col)), shape=shape)
+                if shape:
+                    _check_shape(coo.shape, shape)
+                csr = coo.tocsr()
+                return array(csr, ctx=ctx, dtype=dtype)
+            else:
+                # empty matrix with shape
+                _check_shape(arg1, shape)
+                return empty('csr', arg1, ctx=ctx, dtype=dtype)
         elif arg_len == 3:
             # data, indices, indptr
             return _csr_matrix_from_definition(arg1[0], arg1[1], arg1[2], shape=shape,
