@@ -493,6 +493,10 @@ def test_create_csr():
             assert_almost_equal(nd.data.asnumpy(), sp.data)
             assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
             assert_almost_equal(nd.indices.asnumpy(), sp.indices)
+            sp_csr = nd.asscipy()
+            assert_almost_equal(sp_csr.data, sp.data)
+            assert_almost_equal(sp_csr.indptr, sp.indptr)
+            assert_almost_equal(sp_csr.indices, sp.indices)
         try:
             import scipy.sparse as spsp
             # random canonical csr
@@ -512,12 +516,6 @@ def test_create_csr():
         except ImportError:
             print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
 
-    def check_asscipy(shape, density):
-        matrix = rand_ndarray(shape, 'csr', density)
-        sp_csr = matrix.asscipy()
-        assert(same(sp_csr.toarray(), matrix.asnumpy()))
-
-
     dim0 = 50
     dim1 = 50
     densities = [0, 0.5]
@@ -527,8 +525,6 @@ def test_create_csr():
         check_create_csr_from_coo(shape, density)
         check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
         check_create_csr_from_scipy(shape, density, mx.nd.array)
-        check_asscipy(shape, density)
-
 
 def test_create_row_sparse():
     dim0 = 50
