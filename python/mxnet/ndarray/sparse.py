@@ -639,7 +639,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 raise ValueError('Assignment with slice for RowSparseNDArray ' \
                                  'is not implmented yet.')
             if isinstance(value, NDArray):
-                #avoid copying to itself
+                # avoid copying to itself
                 if value.handle is not self.handle:
                     value.copyto(self)
             elif isinstance(value, numeric_types):
