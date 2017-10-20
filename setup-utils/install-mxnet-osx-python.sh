@@ -33,7 +33,7 @@ then
 	# TODO: Change this to latest tag
 	#       to avoid updating this value for every release
 	#
-	export MXNET_TAG="v0.10.0"
+	export MXNET_TAG="0.12.0"
 fi
 
 export TARIKH=`/bin/date +%Y-%m-%d-%H:%M:%S`

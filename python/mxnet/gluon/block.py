@@ -191,9 +191,10 @@ class Block(object):
                 for i, c in enumerate(self._children):
                     if c is existing:
                         self._children[i] = value
-        else:
-            if isinstance(value, Block):
+            elif isinstance(value, Block):
                 self.register_child(value)
+        elif isinstance(value, Block):
+            self.register_child(value)
 
         super(Block, self).__setattr__(name, value)
 
@@ -332,6 +333,8 @@ class HybridBlock(Block):
     def __setattr__(self, name, value):
         """Registers parameters."""
         super(HybridBlock, self).__setattr__(name, value)
+        if isinstance(value, HybridBlock):
+            self._clear_cached_op()
         if isinstance(value, Parameter):
             assert name not in self._reg_params or \
                 not isinstance(self._reg_params[name], Parameter), \

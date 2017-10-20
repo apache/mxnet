@@ -28,6 +28,46 @@
 namespace mxnet {
 namespace op {
 
+// infer storage function for _identity_with_attr_like_rhs op
+static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  auto& lhs_stype = in_attrs->at(0);
+  const auto& rhs_stype = in_attrs->at(1);
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+
+  CHECK_NE(rhs_stype, kUndefinedStorage);
+  type_assign(&out_stype, rhs_stype);
+  type_assign(&lhs_stype, rhs_stype);
+  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
+      out_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
+      (lhs_stype == out_stype)) {
+    // rsp, _ -> rsp, or csr, _ -> csr
+    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched && (rhs_stype == kRowSparseStorage || rhs_stype == kCSRStorage)) {
+    // rsp, _ -> rsp, or csr, _ -> csr
+    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(rhs_stype),
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+  return true;
+}
+
 // relu
 MXNET_OPERATOR_REGISTER_UNARY(relu)
 MXNET_ADD_SPARSE_OP_ALIAS(relu)
@@ -620,7 +660,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(log10)
 The storage type of ``log10`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log10"});
 
 // log2
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(log2, cpu, mshadow_op::log2)
@@ -632,9 +672,16 @@ MXNET_ADD_SPARSE_OP_ALIAS(log2)
 The storage type of ``log2`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log2"});
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log, unary_bwd<mshadow_op::log_grad>);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
+                                                  unary_bwd<mshadow_op::log_grad>);
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
+                                                  unary_bwd<mshadow_op::log10_grad>);
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
+                                                  unary_bwd<mshadow_op::log2_grad>);
 
 // log1p
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(log1p, cpu, mshadow_op::log1p)

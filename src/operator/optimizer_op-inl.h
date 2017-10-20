@@ -1070,7 +1070,6 @@ inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray> &outputs) {
   const FtrlParam& param = nnvm::get<FtrlParam>(attrs.parsed);
   const auto weight_stype = inputs[0].storage_type();
-  const auto grad_stype = inputs[1].storage_type();
   const auto z_stype = inputs[2].storage_type();
   const auto n_stype = inputs[3].storage_type();
 
