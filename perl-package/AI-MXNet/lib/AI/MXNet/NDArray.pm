@@ -96,12 +96,12 @@ method at(Index @indices)
                    or full crop")
         if $isize > 1 and $dsize != $isize;
     my $i = 0;
-    zip(sub {
-        my ($idx, $dim_size) = @_;
+    for(zip(\@indices, $shape)) {
+        my ($idx, $dim_size) = @$_;
         confess("Dimension $i mismatch Idx: $idx >= Dim Size: $dim_size")
             if $idx >= $dim_size or ($idx + $dim_size) < 0;
         ++$i;
-    }, \@indices, $shape);
+    }
     $i = 0;
     for my $v (@indices)
     {
@@ -151,8 +151,8 @@ method slice(Slice|AdvancedSlice @slices)
         ++$i;
         ref $_ ? (@$_ == 1 ? [$_->[0], $_->[0]] : $_) : ($_ eq 'X' ? [0, $shape->[$i] - 1] : [$_, $_]);
     } @slices;
-    zip(sub {
-        my ($slice, $dim_size) = @_;
+    for(zip(\@slices, $shape)) {
+        my ($slice, $dim_size) = @$_;
         my ($begin, $end, $stride) = @$slice;
         confess("NDArray does not support slice strides != 1")
             if ($stride//0) > 1;
@@ -160,7 +160,7 @@ method slice(Slice|AdvancedSlice @slices)
             if $begin >= $dim_size or ($begin + $dim_size) < 0;
         confess("Dimension $i mismatch slice end : $end >= Dim Size: $dim_size")
             if $end >= $dim_size or ($end + $dim_size) < 0;
-    }, \@slices, $shape);
+    }
     $i = 0;
     my ($begin, $end) = ([], []);
     for my $s (@slices)
