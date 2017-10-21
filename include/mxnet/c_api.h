@@ -1529,7 +1529,8 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
-                              KVStoreHandle *out);
+                              const char *data_type,
+			      KVStoreHandle *out);
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
