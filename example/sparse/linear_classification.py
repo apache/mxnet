@@ -96,6 +96,7 @@ if __name__ == '__main__':
     # get the sparse weight parameter
     weight_index = mod._exec_group.param_names.index('weight')
     weight_param = mod._exec_group.param_arrays[weight_index]
+    all_row_ids = mx.nd.arange(0, num_features, dtype='int64')
     speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
@@ -118,9 +119,15 @@ if __name__ == '__main__':
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=metric, locals=locals())
             speedometer(speedometer_param)
+        # pull all rows before making a checkpoint
+        if kv:
+            kv.row_sparse_pull('weight', weight_param, row_ids=[all_row_ids],
+                               priority=-weight_index)
         # evaluate metric on validation dataset
         score = mod.score(eval_data, ['nll_loss'])
         logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
+        save_optimizer_states = 'dist' not in kv.type
+        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=False)
         # reset the iterator for next pass of data
         data_iter.reset()
     logging.info('Training completed.')
