@@ -181,6 +181,93 @@ void NDArray::set_fresh_out_grad(bool state) const {
   info.fresh_out_grad = state;
 }
 
+static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
+  switch(dtype) {
+    case mshadow::kFloat32:
+      return mkldnn::memory::data_type::f32;
+    default:
+      return mkldnn::memory::data_type::data_undef;
+  }
+}
+
+#if MXNET_USE_MKLDNN == 1
+void NDArray::SetMKLMem() {
+  if (Mkl_mem_ || storage_type() != kDefaultStorage)
+    return;
+
+  mkldnn::memory::dims dims(shape_.ndim());
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = shape_[i];
+  mkldnn::memory::desc data_md({dims}, get_mkldnn_type(dtype_),
+      // TODO is this the right layout?
+      mkldnn::memory::format::nchw);
+  // TODO do I specify the right CPU index?
+  auto cpu_engine = mkldnn::engine(mkldnn::engine::cpu, 0);
+  Mkl_mem_.reset(new mkldnn::memory(mkldnn::memory::primitive_desc(data_md,
+          cpu_engine), data().dptr_));
+}
+
+std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
+    const mkldnn::memory::primitive_desc &desc,
+    std::vector<mkldnn::primitive> &net) const {
+  const_cast<NDArray *>(this)->SetMKLMem();
+  if (Mkl_mem_ && Mkl_mem_->get_primitive_desc() == desc)
+    return Mkl_mem_;
+  else if (Mkl_mem_) {
+    // TODO we should manage the memory allocation here.
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
+    net.push_back(mkldnn::reorder(*Mkl_mem_, *ret));
+    return ret;
+  }
+  else
+    // TODO We don't support converting sparse format.
+    return nullptr;
+}
+
+std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData() const {
+  const_cast<NDArray *>(this)->SetMKLMem();
+  if (Mkl_mem_)
+    return Mkl_mem_;
+  else
+    // TODO We don't support converting sparse format.
+    return nullptr;
+}
+
+std::shared_ptr<mkldnn::memory> NDArray::GetMKLDNNData() {
+  SetMKLMem();
+  if (Mkl_mem_)
+    return Mkl_mem_;
+  else
+    // TODO We don't support converting sparse format.
+    return nullptr;
+}
+
+std::shared_ptr<mkldnn::memory> NDArray::GetMKLDNNData(
+    const mkldnn::memory::primitive_desc &desc,
+    std::vector<mkldnn::primitive> &net) {
+  SetMKLMem();
+  if (Mkl_mem_ && Mkl_mem_->get_primitive_desc() == desc)
+    return Mkl_mem_;
+  else if (Mkl_mem_) {
+    // TODO we should manage the memory allocation here.
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
+    net.push_back(mkldnn::reorder(*Mkl_mem_, *ret));
+    return ret;
+  }
+  else
+    // TODO We don't support converting sparse format.
+    return nullptr;
+}
+
+std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
+    const mkldnn::memory::primitive_desc &desc) {
+  CHECK(Mkl_mem_ == nullptr);
+  CHECK(storage_type() == kMKLDNNStorage);
+  // TODO we should manage the memory allocation here.
+  Mkl_mem_.reset(new mkldnn::memory(desc));
+  return Mkl_mem_;
+}
+#endif
 
 /*!
 * \brief run a ternary operation
