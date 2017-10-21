@@ -141,7 +141,7 @@ def test_sparse_nd_slice():
         assert same(mx.nd.slice_axis(A, begin=start-shape[1], end=end, axis=1).asnumpy(),
                     A2[:, start:end])
 
-    shape = (rnd.randint(2, 10), rnd.randint(1, 10))
+    shape = (rnd.randint(2, 10), rnd.randint(2, 10))
     check_sparse_nd_csr_slice(shape)
     check_slice_nd_csr_fallback(shape)
     check_sparse_nd_csr_slice_axis(shape)

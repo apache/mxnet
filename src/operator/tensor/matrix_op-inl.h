@@ -956,6 +956,22 @@ inline bool SliceAxisForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+struct SliceAxisOneCsrAssign {
+  template<typename IType, typename RType, typename DType>
+  MSHADOW_XINLINE static void Map(int i, IType* out_idx, DType* out_data,
+                                  const RType* out_indptr, const IType* in_idx,
+                                  const DType* in_data, const RType* in_indptr,
+                                  int begin, int end) {
+    RType ind = out_indptr[i];
+    for (int j=in_indptr[i]; j < in_indptr[i+1]; j++) {
+      if (in_idx[j] >= begin && in_idx[j] < end) {
+        out_idx[ind] = in_idx[j] - static_cast<IType>(begin);
+        out_data[ind] = in_data[j];
+        ind++;
+      }
+    }
+  }
+};
 
 template<typename xpu>
 void SliceAxisOneCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
@@ -975,32 +991,31 @@ void SliceAxisOneCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
   MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
     MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
       MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-        auto in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-        auto in_idx = in.aux_data(kIdx).dptr<IType>();
-        auto in_data = in.data().dptr<DType>();
-
-        int idx_len = in.aux_shape(kIdx)[0];
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
         // retrieve nnz (CPU implementation)
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         int nnz = 0;
-        for (int i=0; i < idx_len; i++) {
-          if (in_idx[i] >= begin && in_idx[i] < end) nnz++;
-        }
-        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
-        out.CheckAndAllocData(Shape1(nnz));
-        auto out_idx = out.aux_data(kIdx).dptr<IType>();
-        auto out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        auto out_data = out.data().dptr<DType>();
         out_indptr[0] = 0;
         for (int i=0; i < indptr_len - 1; i++) {
           out_indptr[i+1] = out_indptr[i];
           for (int j=in_indptr[i]; j < in_indptr[i+1]; j++) {
             if (in_idx[j] >= begin && in_idx[j] < end) {
-              out_idx[out_indptr[i+1]] = in_idx[j];
-              out_data[out_indptr[i+1]] = in_data[j];
               out_indptr[i+1]++;
+              nnz++;
             }
           }
         }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Kernel<SliceAxisOneCsrAssign, xpu>::Launch(s, indptr_len-1, out_idx, out_data,
+                                                   out_indptr, in_idx, in_data, in_indptr,
+                                                   begin, end);
       });
     });
   });
