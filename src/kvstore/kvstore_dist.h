@@ -45,12 +45,14 @@ namespace kvstore {
  * it's the server node's job to control the data consistency among all
  * workers. see details on \ref ServerHandle::Start
  */
+
+template <typename DType>
 class KVStoreDist : public KVStoreLocal {
  public:
   explicit KVStoreDist(bool use_device_comm)
       : KVStoreLocal(use_device_comm), ps_worker_(nullptr), server_(nullptr) {
     if (IsWorkerNode()) {
-      ps_worker_ = new ps::KVWorker<real_t>(0);
+      ps_worker_ = new ps::KVWorker<DType>(0);
       ps::StartAsync("mxnet\0");
       if (!ps::Postoffice::Get()->is_recovery()) {
         ps::Postoffice::Get()->Barrier(
@@ -113,7 +115,7 @@ class KVStoreDist : public KVStoreLocal {
   void RunServer(const Controller& controller) override {
     CHECK(!IsWorkerNode());
     if (IsServerNode()) {
-      server_ = new KVStoreDistServer();
+      server_ = new KVStoreDistServer<DType>();
       server_->set_controller(controller);
     }
 
@@ -175,7 +177,11 @@ class KVStoreDist : public KVStoreLocal {
       if (recv_buf.is_none()) {
         // it may happen for the first time a no-rank-0 worker pull the weight.
         recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
-                           true, grouped_vals[i][0]->dtype());
+                           true, mshadow::DataType<DType>::kFlag);
+      }
+	  auto& tmp = tmp_buf_[key];
+      if (tmp.is_none()) {
+	    tmp = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,true, grouped_vals[i][0]->dtype());
       }
       auto pull_from_servers = [this, key, recv_buf](
           RunContext rctx, Engine::CallbackOnComplete cb) {
@@ -185,9 +191,9 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
         mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
-        real_t* data = recv_buf.data().dptr<real_t>();
+        DType* data = recv_buf.data().dptr<DType>();
         // false means not to delete data when SArray is deleted
-        auto vals = new ps::SArray<real_t>(data, size, false);
+        auto vals = new ps::SArray<DType>(data, size, false);
         // issue pull
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, kDefaultPushPull, [vals, cb](){ delete vals; cb(); });
@@ -201,8 +207,14 @@ class KVStoreDist : public KVStoreLocal {
           FnProperty::kNormal,
           priority,
           PROFILER_MESSAGE("KVStoreDistDefaultPull"));
-
-      comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
+	  if (grouped_vals[i][0]->dtype() != mshadow::DataType<DType>::kFlag) {
+        //NDArray tmp = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,true, grouped_vals[i][0]->dtype());
+        CopyFromTo(recv_buf, &tmp, 0);
+        comm_->Broadcast(key, tmp, grouped_vals[i], priority);
+      }
+      else {
+        comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
+      }
     }
   }
 
@@ -272,16 +284,33 @@ class KVStoreDist : public KVStoreLocal {
         // This shouldn't affect training of networks though because training involves
         // a sequence of push, pull, then push. This imposes ordering that the
         // second push happens after the first pull, and the pull happens after first push.
-        send_buf = merged;  // avoid memory copy
+        if (send_buf.is_none()) {
+          if (storage_type == kDefaultStorage) {
+            send_buf = NDArray(merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
+          } else {
+            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
+          }
+        }
+		if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
+		  send_buf = merged;
+		} else {
+          CopyFromTo(merged, &send_buf);
+		}
       } else {
         if (send_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
-            send_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
+            send_buf = NDArray(merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
           } else {
-            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, merged.dtype());
+            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
           }
         }
-        CopyFromTo(merged, &send_buf);
+        if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
+          CopyFromTo(merged, &send_buf);
+        } else {
+          NDArray tmp = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
+          CopyFromTo(merged, &tmp);
+          CopyFromTo(tmp, &send_buf);
+        }
       }
 
       // push to servers
@@ -295,9 +324,9 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-          real_t* data = send_buf.data().dptr<real_t>();
+          DType* data = send_buf.data().dptr<DType>();
           // do push. false means no delete
-          ps::SArray<real_t> vals(data, size, false);
+          ps::SArray<DType> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
               pskv.keys, vals, pskv.lens, 0, [cb]() { cb(); });
         };
@@ -329,7 +358,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
-      real_t* data = recv_buf.data().dptr<real_t>();
+      DType* data = recv_buf.data().dptr<DType>();
       const auto offsets = indices.data().dptr<int64_t>();
       const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
@@ -340,7 +369,7 @@ class KVStoreDist : public KVStoreLocal {
         LOG(INFO) << "worker " << get_rank() << " pull lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
       }
-      auto vals = new ps::SArray<real_t>(data, size, false);
+      auto vals = new ps::SArray<DType>(data, size, false);
       // copy indices to recv_buf. this needs to be done before ZPull
       // because after pull is done, the callback function returns and locks are released.
       // at this point, later functions may access the indices variable while copy happens
@@ -367,7 +396,7 @@ class KVStoreDist : public KVStoreLocal {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-      real_t* data = send_buf.data().dptr<real_t>();
+      DType* data = send_buf.data().dptr<DType>();
       const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
       const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
@@ -380,7 +409,7 @@ class KVStoreDist : public KVStoreLocal {
         LOG(INFO) << "worker " << get_rank() << " push lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
       }
-      ps::SArray<real_t> vals(data, size, false);
+      ps::SArray<DType> vals(data, size, false);
       CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens, kRowSparsePushPull, [cb]() {
         cb();
       });
@@ -531,11 +560,11 @@ class KVStoreDist : public KVStoreLocal {
   /**
    * \brief for worker to push and pull data
    */
-  ps::KVWorker<real_t>* ps_worker_;
+  ps::KVWorker<DType>* ps_worker_;
   /**
    * \brief the server handle
    */
-  KVStoreDistServer* server_;
+  KVStoreDistServer<DType>* server_;
   /**
    * \brief threshold for partition
    */
