@@ -571,6 +571,7 @@ class KVStoreDist : public KVStoreLocal {
   size_t bigarray_bound_;
   /// \brief send & recver buffer
   std::unordered_map<int, NDArray> comm_buf_;
+  std::unordered_map<int, NDArray> tmp_buf_;
   bool log_verbose_;
 };
 

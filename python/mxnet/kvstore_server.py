@@ -77,8 +77,8 @@ def _init_kvstore_server_module(data_type='float32'):
     is_worker = ctypes.c_int()
     check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
     if is_worker.value == 0:
-        kvstore = create('dist')
-        server = KVStoreServer(kvstore, data_type)
+        kvstore = create('dist', data_type)
+        server = KVStoreServer(kvstore)
         server.run()
         sys.exit()
 
