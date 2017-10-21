@@ -23,8 +23,8 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_LRN_INL_H_
-#define MXNET_OPERATOR_LRN_INL_H_
+#ifndef MXNET_OPERATOR_NN_LRN_INL_H_
+#define MXNET_OPERATOR_NN_LRN_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -124,4 +124,4 @@ void LRNGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_LRN_INL_H_
+#endif  // MXNET_OPERATOR_NN_LRN_INL_H_

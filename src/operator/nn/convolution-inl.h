@@ -118,6 +118,29 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
            this->cudnn_off == other.cudnn_off &&
            this->layout == other.layout;
   }
+#if MXNET_USE_MKLDNN == 1
+  static uint64_t ComputeHash(const TShape &shape) {
+    uint64_t hash = 0;
+    for (size_t i = 0; i < shape.ndim(); i++)
+      hash = hash * 2 + shape[i];
+    return hash;
+  }
+
+  uint64_t GetHash() const {
+    uint64_t hash = 0;
+    hash = hash * 2 + ComputeHash(kernel);
+    hash = hash * 2 + ComputeHash(stride);
+    hash = hash * 2 + ComputeHash(dilate);
+    hash = hash * 2 + ComputeHash(pad);
+    hash = hash * 2 + num_filter;
+    hash = hash * 2 + num_group;
+    hash = hash * 2 + workspace;
+    hash = hash * 2 + no_bias;
+    if (layout.has_value())
+      hash = hash * 2 + layout.value();
+    return hash;
+  }
+#endif
 };
 
 }  // namespace op

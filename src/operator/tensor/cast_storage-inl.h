@@ -32,6 +32,9 @@
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
+#if MXNET_USE_MKLDNN == 1
+#include "../nn/mkldnn/mkldnn_base-inl.h"
+#endif
 
 
 namespace mxnet {
@@ -342,8 +345,16 @@ void CastStorageComputeImpl(const OpContext& ctx,
   } else if (src_stype == kCSRStorage && dst_stype == kDefaultStorage) {
     TBlob ret = output.data();
     CastStorageCsrDnsImpl<xpu>(ctx, input, &ret);
+#if MXNET_USE_MKLDNN == 1
+  } else if (src_stype == kDefaultStorage && dst_stype == kDefaultStorage) {
+    // In this case, one of the arrays must use non-default layout.
+    CHECK(input.IsMKLDNNData() || output.IsMKLDNNData());
+    auto in_mem = input.GetMKLDNNData();
+    const_cast<NDArray &>(output).CopyFrom(*in_mem);
+    MKLDNNStream::Get()->Submit();
+#endif
   } else {
-    LOG(FATAL) << "Not implemented";
+    LOG(FATAL) << "Not implemented from " << src_stype << " to " << dst_stype;
   }
 }
 

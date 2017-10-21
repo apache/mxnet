@@ -78,7 +78,45 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
     .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
   }
+
+  bool operator==(const PoolingParam& other) const {
+    return this->kernel             == other.kernel &&
+           this->stride             == other.stride &&
+           this->pad                == other.pad &&
+           this->pool_type          == other.pool_type &&
+           this->pooling_convention == other.pooling_convention &&
+           this->global_pool        == other.global_pool &&
+           this->cudnn_off          == other.cudnn_off;
+  }
+
+#if MXNET_USE_MKLDNN == 1
+  static uint64_t ComputeHash(const TShape &shape) {
+    uint64_t hash = 0;
+    for (size_t i = 0; i < shape.ndim(); i++)
+      hash = hash * 2 + shape[i];
+    return hash;
+  }
+
+  uint64_t GetHash() const {
+    uint64_t hash = 0;
+    hash = hash * 2 + ComputeHash(kernel);
+    hash = hash * 2 + ComputeHash(stride);
+    hash = hash * 2 + ComputeHash(pad);
+    hash = hash * 2 + pool_type;
+    hash = hash * 2 + pooling_convention;
+    hash = hash * 2 + global_pool;
+    hash = hash * 2 + cudnn_off;
+    return hash;
+  }
+#endif
 };
+
+/*
+ * When MKLDNN is enabled, we might want 2 outputs instead of one inputs, which
+ * also changes the number of inputs for backward.
+ */
+int GetNumOutputs(const PoolingParam &param);
+int GetNumBackInputs(const PoolingParam &param);
 
 template<typename xpu, typename DType>
 void PoolingForward(const OpContext& ctx, const PoolingParam &param,
@@ -122,9 +160,9 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), GetNumOutputs(param));
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
@@ -142,16 +180,28 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 3U);
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), GetNumBackInputs(param));
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  off_t ograd_idx, in_data_idx, out_data_idx;
+  // When MKLDNN is enabled, the input data may contains arrays for workspace.
+  if (GetNumBackInputs(param) == 5) {
+    ograd_idx = 0;
+    in_data_idx = 2;
+    out_data_idx = 3;
+  } else {
+    ograd_idx = 0;
+    in_data_idx = 1;
+    out_data_idx = 2;
+  }
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      PoolingBackward<xpu, DType>(ctx, param,
-          inputs[0], inputs[1], inputs[2], req[0], outputs[0]);
+      PoolingBackward<xpu, DType>(ctx, param, inputs[ograd_idx],
+                                  inputs[in_data_idx], inputs[out_data_idx],
+                                  req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }
