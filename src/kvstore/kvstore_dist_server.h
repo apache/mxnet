@@ -106,11 +106,12 @@ class Executor {
   std::condition_variable cond_;
 };
 
+template <typename DType>
 class KVStoreDistServer {
  public:
   KVStoreDistServer() {
     using namespace std::placeholders;
-    ps_server_ = new ps::KVServer<float>(0);
+    ps_server_ = new ps::KVServer<DType>(0);
     static_cast<ps::SimpleApp*>(ps_server_)->set_request_handle(
         std::bind(&KVStoreDistServer::CommandHandle, this, _1, _2));
     ps_server_->set_request_handle(
@@ -162,8 +163,8 @@ class KVStoreDistServer {
   }
 
   void DataHandleEx(const ps::KVMeta& req_meta,
-                    const ps::KVPairs<real_t>& req_data,
-                    ps::KVServer<real_t>* server) {
+                    const ps::KVPairs<DType>& req_data,
+                    ps::KVServer<DType>* server) {
     if (req_meta.cmd == kRowSparsePushPull) {
       DataHandleRowSparse(req_meta, req_data, server);
     } else {
@@ -173,7 +174,7 @@ class KVStoreDistServer {
   }
 
   inline void ApplyUpdates(const int key, MergeBuf *merged, NDArray *stored,
-                           ps::KVServer<real_t>* server) {
+                           ps::KVServer<DType>* server) {
     if (merged->request.size() == (size_t) ps::NumWorkers()) {
       // let the main thread to execute updater_, which is necessary for python
       if (updater_) {
@@ -209,15 +210,15 @@ class KVStoreDistServer {
   }
 
   void DataHandleRowSparse(const ps::KVMeta& req_meta,
-                       const ps::KVPairs<real_t>& req_data,
-                       ps::KVServer<real_t>* server) {
+                       const ps::KVPairs<DType>& req_data,
+                       ps::KVServer<DType>* server) {
     int master_key = DecodeKey(req_data.keys[0]);
     auto num_rows = req_data.keys.size() - 1;
     auto& stored = store_[master_key];
     if (req_meta.push) {
       CHECK_GT(req_data.lens.size(), 0) << "req_data.lens cannot be empty";
       CHECK_EQ(req_data.lens[0], 0);
-      real_t* data = req_data.vals.data();
+      DType* data = req_data.vals.data();
       if (stored.is_none()) {
         if (log_verbose_) LOG(INFO) << "initial push: " << master_key;
         // initialization
@@ -235,8 +236,8 @@ class KVStoreDistServer {
             stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
             mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
             op::PopulateFullIdxRspImpl(s, &rsp);
-            mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
-                          recved.data().FlatTo1D<cpu, float>(), s);
+            mshadow::Copy(rsp.data().FlatTo1D<cpu, DType>(),
+                          recved.data().FlatTo1D<cpu, DType>(), s);
           }, recved.ctx(), {recved.var()}, {stored.var()},
           FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
         stored.WaitToRead();
@@ -325,7 +326,7 @@ class KVStoreDistServer {
     } else {
       // pull
       if (log_verbose_) LOG(INFO) << "pull: " << master_key;
-      ps::KVPairs<real_t> response;
+      ps::KVPairs<DType> response;
       if (num_rows == 0) {
         std::vector<int> lens(req_data.keys.size(), 0);
         response.keys = req_data.keys;
@@ -336,7 +337,7 @@ class KVStoreDistServer {
       CHECK(!stored.is_none()) << "init " << master_key << " first";
       auto shape = stored.shape();
       auto unit_len = shape.ProdShape(1, shape.ndim());
-      const float* data = stored.data().dptr<float>();
+      const DType* data = stored.data().dptr<DType>();
       auto len = unit_len * num_rows;
       // concat values
       response.vals.resize(len);
@@ -359,8 +360,8 @@ class KVStoreDistServer {
   }
 
   void DataHandleDefault(const ps::KVMeta& req_meta,
-                         const ps::KVPairs<real_t> &req_data,
-                         ps::KVServer<real_t>* server) {
+                         const ps::KVPairs<DType> &req_data,
+                         ps::KVServer<DType>* server) {
     CHECK_EQ(req_meta.cmd, kDefaultPushPull);
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
@@ -378,25 +379,49 @@ class KVStoreDistServer {
     if (req_meta.push) {
       size_t ds[] = {(size_t)req_data.lens[0]};
       TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
+      TBlob recv_blob((DType*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
+	  NDArray recved_tmp;
+      if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
+        recved.WaitToRead();
+        //recved_tmp = NDArray(dshape, Context::GPU(0), false, mshadow::DataType<DType>::kFlag);
+        recved_tmp = NDArray(dshape, Context::CPU(0), false, mshadow::DataType<real_t>::kFlag);
+        CopyFromTo(recved, &recved_tmp, 0);
+        recved_tmp.WaitToRead();
+      }
       if (stored.is_none()) {
         // initialization
-        stored = NDArray(dshape, Context());
-        CopyFromTo(recved, &stored, 0);
+		if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
+          //stored = NDArray(dshape, Context::GPU(0), false, mshadow::DataType<DType>::kFlag);
+          stored = NDArray(dshape, Context::CPU(0), false, mshadow::DataType<real_t>::kFlag);
+          CopyFromTo(recved_tmp, &stored, 0);
+        } else {
+          stored = NDArray(dshape, Context());
+          CopyFromTo(recved, &stored, 0);
+        }
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
         if (merged.array.is_none()) {
-          merged.array = NDArray(dshape, Context());
+          if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
+            //merged.array = NDArray(dshape, Context::GPU(0), false, mshadow::DataType<DType>::kFlag);
+            merged.array = NDArray(dshape, Context::CPU(0), false, mshadow::DataType<real_t>::kFlag);
+          } else {
+            merged.array = NDArray(dshape, Context());
+          }
         }
         if (merged.request.size() == 0) {
           CopyFromTo(recved, &merged.array, 0);
         } else {
-          merged.array += recved;
+          //merged.array += recved;
+          if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
+            merged.array += recved_tmp;
+          } else {
+            merged.array += recved;
+          }
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
@@ -411,13 +436,22 @@ class KVStoreDistServer {
       }
     } else {
       // pull
-      ps::KVPairs<real_t> response;
+      ps::KVPairs<DType> response;
       CHECK(!stored.is_none()) << "init " << key << " first";
       auto len = stored.shape().Size();
       response.keys = req_data.keys;
       response.lens = {len};
       // TODO(mli) try to remove this CopyFrom
-      response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
+	  if (stored.dtype() != mshadow::DataType<DType>::kFlag || stored.ctx().dev_mask() != cpu::kDevMask) {
+        stored.WaitToRead();
+        NDArray tmp = NDArray(stored.shape(), Context::CPU(0), false, mshadow::DataType<DType>::kFlag);
+        CopyFromTo(stored, &tmp, 0);
+        tmp.WaitToRead();
+        response.vals.CopyFrom(static_cast<const DType*>(tmp.data().dptr_), len);
+      } else {
+		//response.vals = ps::SArray<float>(stored.data().dptr<float>(), len, false);
+        response.vals.CopyFrom(static_cast<const DType*>(stored.data().dptr_), len);
+      }
       server->Response(req_meta, response);
     }
   }
@@ -438,7 +472,7 @@ class KVStoreDistServer {
   std::unordered_map<int, MergeBuf> merge_buf_;
 
   Executor exec_;
-  ps::KVServer<float>* ps_server_;
+  ps::KVServer<DType>* ps_server_;
 
   // whether to LOG verbose information
   bool log_verbose_;
