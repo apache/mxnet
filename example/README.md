@@ -53,7 +53,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Fast R-CNN](https://github.com/precedenceguo/mx-rcnn) by [Jian Guo](https://github.com/precedenceguo)
 * "End2End Captcha Recognition (OCR)" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/ocr) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-ocr-cnn/)
 * "Prediction step of xlvector's lstm ocr" by [melody-rain](https://github.com/melody-rain) [github link](https://github.com/melody-rain/mxnet/commit/46002e31fc34c746c01bcaa7ade999187068ad3c) [Blog in Chinese](https://zhuanlan.zhihu.com/p/22698511)
-* "Solving classificiation + regression with MXnet in Multi Input + Multi Obj" by [xlvector](https://github.com/xlvector) [github link](https://gist.github.com/xlvector/c304d74f9dd6a3b68a3387985482baac) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-regression-classification-for-concret-continuous-features/)
+* "Solving classification + regression with MXnet in Multi Input + Multi Obj" by [xlvector](https://github.com/xlvector) [github link](https://gist.github.com/xlvector/c304d74f9dd6a3b68a3387985482baac) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-regression-classification-for-concret-continuous-features/)
 * "Learn to sort by LSTM" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/lstm_sort) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-lstm-example/)
 * [Neural Art using extremely lightweight (<500K) neural network](https://github.com/pavelgonchar/neural-art-mini) Lightweight version of mxnet neural art implementation by [Pavel Gonchar](https://github.com/pavelgonchar)
 * [Neural Art with generative networks](https://github.com/zhaw/neural_style) by [zhaw](https://github.com/zhaw)
@@ -62,7 +62,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [Deep Q-learning in MXNet](https://github.com/zmonoid/DQN-MXNet) by [zmonoid](https://github.com/zmonoid)
 * [Face Detection with End-to-End Integration of a ConvNet and a 3D Model (ECCV16)](https://github.com/tfwu/FaceDetection-ConvNet-3D) by [tfwu](https://github.com/tfwu), source code for paper Yunzhu Li, Benyuan Sun, Tianfu Wu and Yizhou Wang, "Face Detection with End-to-End Integration of a ConvNet and a 3D Model", ECCV 2016 <https://arxiv.org/abs/1606.00850>
 * [End-to-End Chinese plate recognition base on MXNet](https://github.com/szad670401/end-to-end-for-chinese-plate-recognition) by [szad670401](https://github.com/szad670401)
-* [Reproduce ResNet-v2 (Identity Mappings in Deep Residual Networks) using MXNet](https://github.com/tornadomeet/ResNet) by [tornadomeet](https://github.com/tornadomeet)
+* [Reproduce ResNet-v2v0.11.0 (Identity Mappings in Deep Residual Networks) using MXNet](https://github.com/tornadomeet/ResNet) by [tornadomeet](https://github.com/tornadomeet)
 * [Learning similarity among images in MXNet](http://www.jianshu.com/p/70a66c8f73d3) by xlvector in Chinese. Github [link](https://github.com/xlvector/learning-dl/tree/master/mxnet/triple-loss)
 * [Matrix decomposition (SVD) with MXNet](http://www.jianshu.com/p/ebf7bf53ed3e) by xlvector in Chinese. Github [link](https://github.com/xlvector/mxnet/blob/svd/example/svd/svd.py)
 * [MultiGPU enabled image generative models (GAN and DCGAN)](https://github.com/tqchen/mxnet-gan) by [Tianqi Chen](https://github.com/tqchen)
@@ -86,7 +86,7 @@ If you want to contribute to this list and the examples, please open a new pull 
 * [simple bind](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/simple_bind.ipynb) - A demo of low level training API.
 * [Multi task tutorial](https://github.com/haria/mxnet-multi-task-example/blob/master/multi-task.ipynb) - A demo of how to train and predict multi-task network on both MNIST and your own dataset.
 * [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
-* [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
+* [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of Mv0.11.0XNet to state-of-the-art deep learning applications.
 * [AWS Seoul Summit 2017 Demos](https://github.com/sxjscience/aws-summit-2017-seoul) The demo codes and ipython notebooks in AWS Seoul Summit 2017.
 
 ### <a name="mobile-apps-examples"></a>Mobile App Examples
