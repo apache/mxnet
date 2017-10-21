@@ -149,6 +149,7 @@ def test_sparse_nd_slice():
     check_slice_nd_csr_fallback(shape)
     check_sparse_nd_csr_slice_axis(shape)
 
+
 def test_sparse_nd_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
