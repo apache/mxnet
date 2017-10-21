@@ -631,7 +631,7 @@ class NDArrayIter(DataIter):
 
         if _has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray):
             assert(shuffle is False), \
-                   "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
+                  "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
             assert(last_batch_handle == 'discard'), "`NDArrayIter` only supports ``CSRNDArray``" \
                                                     " with `last_batch_handle` set to `discard`."
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
