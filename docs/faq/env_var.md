@@ -56,6 +56,9 @@ export MXNET_GPU_WORKER_NTHREADS=3
     - NaiveEngine: A very simple engine that uses the master thread to do the computation synchronously. Setting this engine disables multi-threading. You can use this type for debugging in case of any error. Backtrace will give you the series of calls that lead to the error. Remember to set MXNET_ENGINE_TYPE back to empty after debugging.
     - ThreadedEngine: A threaded engine that uses a global thread pool to schedule jobs.
     - ThreadedEnginePerDevice: A threaded engine that allocates thread per GPU and executes jobs asynchronously.
+  - Note: ThreadedEngine and ThreadedEnginePerDevice are not thread-safe. Switch to using NaiveEngine
+          if you want to have multiple threads interacting with a single MXNet model at the same time.
+          The NaiveEngine will execute the requests sequentially in the order received.
 
 ## Execution Options
 
