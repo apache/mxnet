@@ -19,7 +19,7 @@ GetMNIST_csv <- function() {
   }
   if (!file.exists('data/train.csv') |
       !file.exists('data/test.csv')) {
-    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/mnist_csv.zip',
+    download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/mnist_csv.zip',
                   destfile = 'data/mnist_csv.zip')
     unzip('data/mnist_csv.zip', exdir = 'data/')
     file.remove('data/mnist_csv.zip')
@@ -61,7 +61,7 @@ GetCatDog <- function() {
   }
   if (!file.exists('data/cats_dogs/cats_dogs_train.rec') |
       !file.exists('data/cats_dogs/cats_dogs_val.rec')) {
-    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/cats_dogs.zip',
+    download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/cats_dogs.zip',
                   destfile = 'data/cats_dogs.zip')
     unzip('data/cats_dogs.zip', exdir = 'data/')
     file.remove('data/cats_dogs.zip')
@@ -86,7 +86,7 @@ GetISBI_data <- function() {
   }
   if (!file.exists('data/ISBI/train-volume.tif') |
       !file.exists('data/ISBI/train-labels.tif')) {
-    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/ISBI.zip',
+    download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/ISBI.zip',
                   destfile = 'data/ISBI.zip')
     unzip('data/ISBI.zip', exdir = 'data/')
     file.remove('data/ISBI.zip')
@@ -99,7 +99,7 @@ GetCaptcha_data <- function() {
   }
   if (!file.exists('data/captcha_example/captcha_train.rec') |
       !file.exists('data/captcha_example/captcha_test.rec')) {
-    download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/captcha_example.zip',
+    download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/captcha_example.zip',
                   destfile = 'data/captcha_example.zip')
     unzip('data/captcha_example.zip', exdir = 'data/')
     file.remove('data/captcha_example.zip')

@@ -41,11 +41,11 @@ class Storage {
     /*!
      * \brief Pointer to the data.
      */
-    void* dptr;
+    void* dptr{nullptr};
     /*!
      * \brief Size of the storage.
      */
-    size_t size;
+    size_t size{0};
     /*!
      * \brief Context information about device and ID.
      */

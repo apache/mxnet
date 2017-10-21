@@ -35,9 +35,72 @@
 #include <string>
 #include <utility>
 #include "./operator_common.h"
+#include "./mxnet_op.h"
 
 namespace mxnet {
 namespace op {
+
+/*! \brief storge type inference function for elemwise operators.
+ *         It infers output stypes the same as input stypes when input stypes are the same
+ *  \tparam cpu_only whether fcompute_ex can only be dispatched on cpu context
+ *  \tparam rsp whether row sparse stype is supported
+ *  \tparam rsp whether csr stype is supported
+ */
+template<bool cpu_only, bool rsp, bool csr>
+inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  using namespace common;
+  bool dispatched = false;
+  const bool invalid_ctx = cpu_only && dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    // dns, dns ... -> dns
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+    // rsp, rsp, ... -> rsp
+    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched && csr && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+    // csr, csr, ... -> csr
+    dispatched = storage_type_assign(out_attrs, kCSRStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (static_cast<DispatchMode>(*dispatch_mode) == DispatchMode::kFComputeFallback) {
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+  return true;
+}
+
+/*! \brief storge type inference function for elemwise operators.
+ *         It infers output stypes the same as input stypes when input stypes are the same
+ *  \tparam n_in the number of inputs
+ *  \tparam n_in the number of outputs
+ *  \tparam cpu_only whether fcompute_ex can only be dispatched on cpu context
+ *  \tparam rsp whether row sparse stype is supported
+ *  \tparam rsp whether csr stype is supported
+ */
+template<int n_in, int n_out, bool cpu_only, bool rsp, bool csr>
+inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), n_in);
+  CHECK_EQ(out_attrs->size(), n_out);
+  return ElemwiseStorageAttr<cpu_only, rsp, csr>(attrs, dev_mask, dispatch_mode,
+                                                 in_attrs, out_attrs);
+}
+
 template<typename AttrType, bool (*is_none)(const AttrType&),
          bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
          std::string (*attr_string)(const AttrType&),
@@ -112,7 +175,7 @@ inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
 struct ElemwiseGradUseIn {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, n->inputs, n->attrs.dict);
   }
 };
@@ -121,7 +184,7 @@ struct ElemwiseGradUseIn {
 struct ElemwiseGradUseOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     index_t n_out = n->num_outputs();
     for (index_t i = 0; i < n_out; ++i) {
@@ -135,7 +198,7 @@ struct ElemwiseGradUseOut {
 struct ElemwiseGradUseInOut {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     for (auto& h : n->inputs) {
       heads.push_back(h);
@@ -152,7 +215,7 @@ struct ElemwiseGradUseInOut {
 struct ElemwiseGradUseNone {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     return MakeNonlossGradNode(op_name, n, ograds, {}, n->attrs.dict);
   }
 };
@@ -160,13 +223,16 @@ struct ElemwiseGradUseNone {
 struct CloneGradient {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) {
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> ret;
-    for (size_t i = 0; i < n->inputs.size(); ++i)
+    const size_t input_count = n->inputs.size();
+    ret.reserve(input_count);
+    for (size_t i = 0; i < input_count; ++i)
       ret.emplace_back(ograds[0]);
     return ret;
   }
 };
+
 }  // namespace op
 }  // namespace mxnet
 

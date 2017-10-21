@@ -229,6 +229,40 @@ inline DType __device__ CudaMin(DType a, DType b) {
         << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
   }
 
+/*!
+ * \brief Protected NVRTC call.
+ * \param func Expression to call.
+ *
+ * It checks for NVRTC errors after invocation of the expression.
+ */
+#define NVRTC_CALL(x)                                   \
+  {                                                     \
+    nvrtcResult result = x;                             \
+    CHECK_EQ(result, NVRTC_SUCCESS)                     \
+      << #x " failed with error "                       \
+      << nvrtcGetErrorString(result);                   \
+  }
+
+/*!
+ * \brief Protected CUDA driver call.
+ * \param func Expression to call.
+ *
+ * It checks for CUDA driver errors after invocation of the expression.
+ */
+#define CUDA_DRIVER_CALL(func)                                          \
+  {                                                                     \
+    CUresult e = (func);                                                \
+    if (e != CUDA_SUCCESS) {                                            \
+      char const * err_msg = nullptr;                                         \
+      if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) {  \
+        LOG(FATAL) << "CUDA Driver: Unknown error " << e;               \
+      } else {                                                          \
+        LOG(FATAL) << "CUDA Driver: " << err_msg;                       \
+      }                                                                 \
+    }                                                                   \
+  }
+
+
 #if !defined(_MSC_VER)
 #define CUDA_UNROLL _Pragma("unroll")
 #define CUDA_NOUNROLL _Pragma("nounroll")
@@ -274,26 +308,31 @@ inline int SMArch(int device_id) {
 
 /*!
  * \brief Determine whether a cuda-capable gpu's architecture supports float16 math.
+ *        Assume not if device_id is negative.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports float16 math.
  */
 inline bool SupportsFloat16Compute(int device_id) {
-  // Kepler and most Maxwell GPUs do not support fp16 compute
-  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
-  int computeCapabilityMinor = ComputeCapabilityMinor(device_id);
-  return (computeCapabilityMajor > 5) ||
-      (computeCapabilityMajor == 5 && computeCapabilityMinor >= 3);
+  if (device_id < 0) {
+    return false;
+  } else {
+    // Kepler and most Maxwell GPUs do not support fp16 compute
+    int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
+    return (computeCapabilityMajor > 5) ||
+           (computeCapabilityMajor == 5 && ComputeCapabilityMinor(device_id) >= 3);
+  }
 }
 
 /*!
  * \brief Determine whether a cuda-capable gpu's architecture supports Tensor Core math.
+ *        Assume not if device_id is negative.
  * \param device_id The device index of the cuda-capable gpu of interest.
  * \return whether the gpu's architecture supports Tensor Core math.
  */
 inline bool SupportsTensorCore(int device_id) {
   // Volta (sm_70) supports TensorCore algos
-  int computeCapabilityMajor = ComputeCapabilityMajor(device_id);
-  return (computeCapabilityMajor >= 7);
+  return device_id >= 0 &&
+         ComputeCapabilityMajor(device_id) >=7;
 }
 
 // The policy if the user hasn't set the environment variable MXNET_CUDA_ALLOW_TENSOR_CORE

@@ -17,15 +17,17 @@ mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
 mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
-mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
+mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
+mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
-mxnet_option(USE_PLUGINS_WARPCTC	"Use WARPCTC Plugins" OFF)
+mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
 mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
 mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
+mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -33,6 +35,7 @@ if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOISE_MAKEFILE ON)
 endif()
+
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -87,6 +90,9 @@ if(USE_VTUNE)
   if(NOT VTUNE_ROOT)
     set(VTUNE_ROOT /opt/intel/vtune_amplifier_xe_2017)
   endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
   add_definitions(-DMXNET_USE_VTUNE=1)
   include_directories(${VTUNE_ROOT}/include)
   list(APPEND mxnet_LINKER_LIBS ${VTUNE_ROOT}/lib64/libittnotify.a)
@@ -150,7 +156,7 @@ include_directories("dlpack/include")
 #  add_subdirectory(dlpack)
 #endif()
 
-if(NOT MSVC)
+if(NOT MSVC AND NOT APPLE)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
   set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
 endif()
@@ -162,16 +168,33 @@ if(UNIX)
   endif()
 endif()
 
+set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+# ---[ gperftools
+if(USE_GPERFTOOLS)
+  find_package(Gperftools)
+  if(GPERFTOOLS_FOUND)
+    message(STATUS "Using Gperftools malloc (tcmalloc)")
+    include_directories(${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${GPERFTOOLS_LIBRARIES})
+    set(USE_JEMALLOC 0)
+  endif()
+endif()
+
 # ---[ jemalloc
 if(USE_JEMALLOC)
   find_package(JeMalloc)
   if(JEMALLOC_FOUND)
+    message(STATUS "Using JEMalloc malloc")
     add_definitions(-DUSE_JEMALLOC)
     include_directories(${JEMALLOC_INCLUDE_DIRS})
     set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
   endif()
 endif()
 
+# ---[ OpenCV
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
@@ -194,6 +217,7 @@ else(USE_OPENCV)
   add_definitions(-DMXNET_USE_OPENCV=0)
 endif()
 
+# ---[ OpenMP
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   if(OPENMP_FOUND)
@@ -206,6 +230,7 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
+# ---[ LAPack
 if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
@@ -213,14 +238,6 @@ else(USE_LAPACK)
   # Workaround for Windows until using new Jenkinsfile.
   if(USE_BLAS STREQUAL "open")
     add_definitions(-DMXNET_USE_LAPACK=1)
-  endif()
-endif()
-
-
-if(UNIX)
-  find_library(RTLIB rt)
-  if(RTLIB)
-    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
   endif()
 endif()
 
@@ -254,7 +271,7 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
   add_subdirectory("mshadow")
 endif()
-FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
+FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
@@ -354,14 +371,13 @@ if(USE_CUDA)
     FIND_LIBRARY(CUDA_cufft_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
     list(APPEND mxnet_LINKER_LIBS "${CUDA_cufft_LIBRARY}/../cufft.lib") # For fft operator
     FIND_LIBRARY(CUDA_cusolver_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
-    list(APPEND mxnet_LINKER_LIBS "${CUDA_cusolver_LIBRARY}/../cusolver.lib") # For cusolver 
+    list(APPEND mxnet_LINKER_LIBS "${CUDA_cusolver_LIBRARY}/../cusolver.lib") # For cusolver
   else(MSVC)
     list(APPEND mxnet_LINKER_LIBS nvrtc cuda cufft cusolver)
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
   endif()
   list(APPEND SOURCE ${cuda_objs} ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
-  add_definitions(-DMXNET_USE_NVRTC=1)
   if(CUDA_LIBRARY_PATH)
     if(IS_CONTAINER_BUILD)
       # In case of building on a production-like build container which may not have Cuda installed
@@ -398,53 +414,57 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
 
+set(MXNET_INSTALL_TARGETS mxnet)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
+  add_library(mxnet_static STATIC ${SOURCE})
 else()
   if(UNIX)
+    list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
     add_library(mxnet_static STATIC ${SOURCE})
     # Need an arbitrary source file to trigger CMake to build the library
     add_library(mxnet SHARED)
-    # This has prolems, as it adds libmxnet_static to INTERFACE_LINK_LIBRARIES
-    target_link_libraries(mxnet "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
-    target_link_libraries(mxnet mxnet_static) # Let cmake understand the dependency
-    add_custom_target(
-        StaticallyLinkStaticMXNetLibrary ALL
-        BYPRODUCTS ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/libmxnet.a
-        WORKING_DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-        COMMAND ln -sf libmxnet_static.a libmxnet.a
-        DEPENDS mxnet_static
-    )
+    set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
+    target_link_libraries(mxnet PRIVATE "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
+    target_link_libraries(mxnet PRIVATE mxnet_static) # Let cmake understand the dependency
   else()
     add_library(mxnet SHARED ${SOURCE})
   endif()
 endif()
-target_link_libraries(mxnet ${mxnet_LINKER_LIBS})
-
-if(USE_PLUGINS_WARPCTC)
-  target_link_libraries(mxnet debug ${WARPCTC_LIB_DEBUG})
-  target_link_libraries(mxnet optimized ${WARPCTC_LIB_RELEASE})
-endif()
-
-target_link_libraries(mxnet dmlc)
-
-if(MSVC AND USE_MXNET_LIB_NAMING)
-  set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
-endif()
-
 
 if(USE_DIST_KVSTORE)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
     add_subdirectory("ps-lite")
-    list(APPEND pslite_LINKER_LIBS pslite)
-    target_link_libraries(mxnet debug ${pslite_LINKER_LIBS_DEBUG})
-    target_link_libraries(mxnet optimized ${pslite_LINKER_LIBS_RELEASE})
+    list(APPEND pslite_LINKER_LIBS pslite protobuf)
+    target_link_libraries(mxnet PUBLIC debug ${pslite_LINKER_LIBS_DEBUG})
+    target_link_libraries(mxnet PUBLIC optimized ${pslite_LINKER_LIBS_RELEASE})
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS_DEBUG})
+    else()
+      list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS_RELEASE})
+    endif()
+    target_link_libraries(mxnet PUBLIC debug ${pslite_LINKER_LIBS_DEBUG})
+    target_link_libraries(mxnet PUBLIC optimized ${pslite_LINKER_LIBS_RELEASE})
+
   else()
-    set(pslite_LINKER_LIBS protobuf zmq-static )
+    set(pslite_LINKER_LIBS protobuf zmq-static)
   endif()
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
-  target_link_libraries(mxnet ${pslite_LINKER_LIBS})
   include_directories(SYSTEM ${pslite_INCLUDE_DIR})
+  list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
+endif()
+
+target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+
+if(USE_PLUGINS_WARPCTC)
+  target_link_libraries(mxnet PUBLIC debug ${WARPCTC_LIB_DEBUG})
+  target_link_libraries(mxnet PUBLIC optimized ${WARPCTC_LIB_RELEASE})
+endif()
+
+target_link_libraries(mxnet PUBLIC dmlc)
+
+if(MSVC AND USE_MXNET_LIB_NAMING)
+  set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
 if(USE_PROFILER)
@@ -452,6 +472,18 @@ if(USE_PROFILER)
 endif()
 
 add_subdirectory(tests)
+
+include(GNUInstallDirs)
+install(TARGETS ${MXNET_INSTALL_TARGETS}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+if (INSTALL_EXAMPLES)
+  install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+endif()
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
 if(AUTO_INSTALL_DIR)

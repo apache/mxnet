@@ -62,13 +62,13 @@ class BiLSTM_CRF(Block):
 
             # Matrix of transition parameters.  Entry i,j is the score of
             # transitioning *to* i *from* j.
-            self.transitions = nd.random_normal(shape=(self.tagset_size, self.tagset_size))
+            self.transitions = nd.random.normal(shape=(self.tagset_size, self.tagset_size))
 
             self.hidden = self.init_hidden()
 
     def init_hidden(self):
-        return [nd.random_normal(shape=(2, 1, self.hidden_dim // 2)),
-                nd.random_normal(shape=(2, 1, self.hidden_dim // 2))]
+        return [nd.random.normal(shape=(2, 1, self.hidden_dim // 2)),
+                nd.random.normal(shape=(2, 1, self.hidden_dim // 2))]
 
     def _forward_alg(self, feats):
         # Do the forward algorithm to compute the partition function

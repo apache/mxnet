@@ -82,11 +82,11 @@ struct CTASegReduce {
 // S elements where S = 2L + 1.
 //
 // We only need to read in probabilities corresponding to the labels, thus a sparse
-// set of values are read from the probs matrix since the character set is much smaller
+// set of values are read from the log probs matrix since the character set is much smaller
 // than the labels. This is much more true for Mandarin than English.
 template<typename ProbT, int NT, int VT>
 __global__
-void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
+void compute_alpha_kernel (const ProbT* log_probs, const int *label_sizes,
                            const int *utt_length, const int *repeats_in_labels,
                            const int *labels_without_blanks, const int *label_offsets, 
                            int *labels_with_blanks, ProbT *alphas, 
@@ -146,7 +146,7 @@ void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
 
     // Initialize the first row corresponding to t=0;
     for(int i = tid; i < (end-start); i += blockDim.x)
-        alpha[i + start] = log(probs[prob_offset + label[i + start]]);
+        alpha[i + start] = log_probs[prob_offset + label[i + start]];
 
     __syncthreads();
 
@@ -165,7 +165,7 @@ void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
         if (tid == 0) {
             if (start == 0) {
                 alpha[start_cur_row] = alpha[start_prev_row] +
-                                       log(probs[prob_offset + start_prob_col + blank_label]);
+                                       log_probs[prob_offset + start_prob_col + blank_label];
             }
             else if (start == 1) {
                 alpha[start_cur_row] = alpha[start_prev_row];
@@ -189,7 +189,7 @@ void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
                 prev_sum = log_plus_f(prev_sum, alpha[(idx-2) + start_prev_row]);
 
             alpha[idx + start_cur_row] =
-                prev_sum + log(probs[prob_offset + start_prob_col + label[idx]]);
+                prev_sum + log_probs[prob_offset + start_prob_col + label[idx]];
         }
 
         __syncthreads();
@@ -217,7 +217,7 @@ void compute_alpha_kernel (const ProbT* probs, const int *label_sizes,
 // See comments above compute_alphas for more context.
 template<typename ProbT, int NT, int VT>
 __global__
-void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
+void compute_betas_and_grad_kernel (const ProbT* log_probs, const int *label_sizes,
                                     const int *utt_length, const int *repeats_in_labels,
                                     const int *labels_with_blanks, ProbT *alphas,
                                     const ProbT* nll_forward, ProbT *nll_backward,
@@ -321,7 +321,7 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
     // Initialize the two rightmost values in the last row (assuming L non-zero)
     for(int i = tid; i < (end-start); i += blockDim.x)
         temp_buffer.beta[i + start] =
-            log(probs[prob_offset + (T - 1) * (out_dim * stride) + label[i + start]]);
+            log_probs[prob_offset + (T - 1) * (out_dim * stride) + label[i + start]];
 
     __syncthreads();
 
@@ -339,7 +339,7 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
         // Start offsets into the current and next row
         const int start_cur_row = t * S;
 
-        // Starting offset of column that we read from the probs array
+        // Starting offset of column that we read from the log probs array
         const int start_prob_col = t * (out_dim * stride);
 
         if (t < T-1) {
@@ -356,7 +356,7 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
                     (idx != (S-2)) && (label[idx] != label[idx+2]))
                     next_sum = log_plus_f(next_sum, temp_buffer.beta[idx+2]);
 
-                beta_val[i] = next_sum + log(probs[prob_offset + start_prob_col + label[idx]]);
+                beta_val[i] = next_sum + log_probs[prob_offset + start_prob_col + label[idx]];
             }
 
             __syncthreads();
@@ -365,7 +365,7 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
             // Update input buffer for next iteration
             if ((tid == 0) && (end == S))
                 temp_buffer.beta[(S-1)] = temp_buffer.beta[(S-1)] +
-                                          log(probs[prob_offset + start_prob_col + blank_label]);
+                                          log_probs[prob_offset + start_prob_col + blank_label];
 
             #pragma unroll
             for(int idx = tid, i = 0; idx < (S-1); idx += NT, i++) {
@@ -409,7 +409,7 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
 
             for (int idx = tid; idx < out_dim; idx += blockDim.x) {
                 const int grads_offset = prob_offset + start_prob_col + idx;
-                grads[grads_offset] = probs[grads_offset];
+                grads[grads_offset] = exp(log_probs[grads_offset]);
             }
 
             __syncthreads();
@@ -419,11 +419,11 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
 
                 ProbT grad = output[idx];
 
-                if ((grad == 0.0) || (probs[grads_offset] == 0.0) ||
+                if ((grad == 0.0) || (log_probs[grads_offset] == ctc_helper::neg_inf<ProbT>()) ||
                     (grad == ctc_helper::neg_inf<ProbT>())) {
                 } else {
                     grads[grads_offset] =
-                        probs[grads_offset] - exp(grad - log(probs[grads_offset]) - log_partition);
+                        exp(log_probs[grads_offset]) - exp(grad - log_probs[grads_offset] - log_partition);
                 }
             }
 
@@ -452,7 +452,7 @@ void compute_betas_and_grad_kernel (const ProbT* probs, const int *label_sizes,
 }
 
 template <typename ProbT, int VT = 1, typename Op>
-__global__ void compute_probs_kernel(Op f, ProbT* probs,
+__global__ void compute_log_probs_kernel(Op f, ProbT* log_probs,
                                      const ProbT* const denom,
                                      int alphabet_size,
                                      int count) {
@@ -463,14 +463,14 @@ __global__ void compute_probs_kernel(Op f, ProbT* probs,
     for(int i = 0; i < VT; i++) {
         if (idx < count) {
             const int column_idx = idx / alphabet_size;
-            probs[idx] = f(probs[idx]) / denom[column_idx];
+            log_probs[idx] = log_probs[idx] - log(denom[column_idx]);
         }
         idx += stride;
     }
 }
 
 template <typename ProbT, int VT = 1, typename Op>
-__global__ void prepare_stable_SM_kernel(Op f, ProbT* probs,
+__global__ void prepare_stable_LSM_kernel(Op f, ProbT* log_probs,
                                          const ProbT* const col_max,
                                          int alphabet_size,
                                          int count) {
@@ -481,7 +481,7 @@ __global__ void prepare_stable_SM_kernel(Op f, ProbT* probs,
     for(int i = 0; i < VT; i++) {
         if (idx < count) {
             const int column_idx = idx / alphabet_size;
-            probs[idx] = f(probs[idx] - col_max[column_idx]);
+            log_probs[idx] = f(log_probs[idx] - col_max[column_idx]);
         }
         idx += stride;
     }

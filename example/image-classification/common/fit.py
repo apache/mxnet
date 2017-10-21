@@ -163,10 +163,14 @@ def fit(args, network, data_loader, **kwargs):
     lr_scheduler  = lr_scheduler
     optimizer_params = {
             'learning_rate': lr,
-            'momentum' : args.mom,
             'wd' : args.wd,
             'lr_scheduler': lr_scheduler,
             'multi_precision': True}
+
+    # Only a limited number of optimizers have 'momentum' property
+    has_momentum = {'sgd', 'dcasgd', 'nag'}
+    if args.optimizer in has_momentum:
+        optimizer_params['momentum'] = args.mom
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 

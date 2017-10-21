@@ -20,6 +20,7 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+import os
 import sys
 import ctypes
 import atexit
@@ -72,6 +73,20 @@ class NotImplementedForSymbol(MXNetError):
         msg += ' is not implemented for Symbol and only available in NDArray.'
         return msg
 
+class NotSupportedForSparseNDArray(MXNetError):
+    def __init__(self, function, alias, *args):
+        super(NotSupportedForSparseNDArray, self).__init__()
+        self.function = function.__name__
+        self.alias = alias
+        self.args = [str(type(a)) for a in args]
+    def __str__(self):
+        msg = 'Function {}'.format(self.function)
+        if self.alias:
+            msg += ' (namely operator "{}")'.format(self.alias)
+        if self.args:
+            msg += ' with arguments ({})'.format(', '.join(self.args))
+        msg += ' is not supported for SparseNDArray and only available in NDArray.'
+        return msg
 
 class MXCallbackList(ctypes.Structure):
     """Structure that holds Callback information. Passed to CustomOpProp."""
@@ -111,6 +126,8 @@ DataIterHandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p
+CudaModuleHandle = ctypes.c_void_p
+CudaKernelHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
@@ -293,6 +310,7 @@ def _notify_shutdown():
 
 atexit.register(_notify_shutdown)
 
+
 def add_fileline_to_docstring(module, incursive=True):
     """Append the definition position to each function contained in module.
 
@@ -328,6 +346,7 @@ def add_fileline_to_docstring(module, incursive=True):
         if inspect.isclass(obj) and incursive:
             add_fileline_to_docstring(obj, False)
 
+
 def _as_list(obj):
     """A utility function that converts the argument to a list if it is not already.
 
@@ -345,3 +364,169 @@ def _as_list(obj):
         return obj
     else:
         return [obj]
+
+
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_']
+
+
+def _get_op_name_prefix(op_name):
+    """
+    Check whether the given op_name starts with any words in `_OP_NAME_PREFIX_LIST`.
+    If found, return the prefix; else, return an empty string.
+    """
+    for prefix in _OP_NAME_PREFIX_LIST:
+        if op_name.startswith(prefix):
+            return prefix
+    return ""
+
+
+# pylint: enable=too-many-locals, invalid-name
+def _init_op_module(root_namespace, module_name, make_op_func):
+    """
+    Registers op functions created by `make_op_func` under
+    `root_namespace.module_name.[submodule_name]`,
+    where `submodule_name` is one of `_OP_SUBMODULE_NAME_LIST`.
+
+    Parameters
+    ----------
+    root_namespace : str
+        Top level module name, `mxnet` in the current cases.
+    module_name : str
+        Second level module name, `ndarray` and `symbol` in the current cases.
+    make_op_func : function
+        Function for creating op functions for `ndarray` and `symbol` modules.
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+    op_names = []
+    for i in range(size.value):
+        op_names.append(py_str(plist[i]))
+
+    module_op = sys.modules["%s.%s.op" % (root_namespace, module_name)]
+    module_internal = sys.modules["%s.%s._internal" % (root_namespace, module_name)]
+    # contrib module in the old format (deprecated)
+    # kept here for backward compatibility
+    # use mx.nd.contrib or mx.sym.contrib from now on
+    contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
+    contrib_module_old = sys.modules[contrib_module_name_old]
+    submodule_dict = {}
+    for op_name_prefix in _OP_NAME_PREFIX_LIST:
+        submodule_dict[op_name_prefix] =\
+            sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        op_name_prefix = _get_op_name_prefix(name)
+        if len(op_name_prefix) > 0:
+            func_name = name[len(op_name_prefix):]
+            cur_module = submodule_dict[op_name_prefix]
+            module_name = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+        elif name.startswith('_'):
+            func_name = name
+            cur_module = module_internal
+        else:
+            func_name = name
+            cur_module = module_op
+
+        function = make_op_func(hdl, name, func_name)
+        function.__module__ = module_name
+        setattr(cur_module, function.__name__, function)
+        cur_module.__all__.append(function.__name__)
+
+        if op_name_prefix == '_contrib_':
+            hdl = OpHandle()
+            check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+            func_name = name[len(op_name_prefix):]
+
+            function = make_op_func(hdl, name, func_name)
+            function.__module__ = contrib_module_name_old
+            setattr(contrib_module_old, function.__name__, function)
+            contrib_module_old.__all__.append(function.__name__)
+
+
+def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func):
+    """
+    Generate op functions created by `op_code_gen_func` and write to the source file
+    of `root_namespace.module_name.[submodule_name]`,
+    where `submodule_name` is one of `_OP_SUBMODULE_NAME_LIST`.
+
+    Parameters
+    ----------
+    root_namespace : str
+        Top level module name, `mxnet` in the current cases.
+    module_name : str
+        Second level module name, `ndarray` and `symbol` in the current cases.
+    op_code_gen_func : function
+        Function for creating op functions for `ndarray` and `symbol` modules.
+    """
+    def get_module_file(module_name):
+        """Return the generated module file based on module name."""
+        path = os.path.dirname(__file__)
+        module_path = module_name.split('.')
+        module_path[-1] = 'gen_'+module_path[-1]
+        file_name = os.path.join(path, '..', *module_path) + '.py'
+        module_file = open(file_name, 'w')
+        dependencies = {'symbol': ['from ._internal import SymbolBase',
+                                   'from ..base import _Null'],
+                        'ndarray': ['from ._internal import NDArrayBase',
+                                    'from ..base import _Null']}
+        module_file.write('# File content is auto-generated. Do not modify.'+os.linesep)
+        module_file.write('# pylint: skip-file'+os.linesep)
+        module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))
+        return module_file
+    def write_all_str(module_file, module_all_list):
+        """Write the proper __all__ based on available operators."""
+        module_file.write(os.linesep)
+        module_file.write(os.linesep)
+        all_str = '__all__ = [' + ', '.join(["'%s'"%s for s in module_all_list]) + ']'
+        module_file.write(all_str)
+
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+    op_names = []
+    for i in range(size.value):
+        op_names.append(py_str(plist[i]))
+
+    module_op_file = get_module_file("%s.%s.op" % (root_namespace, module_name))
+    module_op_all = []
+    module_internal_file = get_module_file("%s.%s._internal"%(root_namespace, module_name))
+    module_internal_all = []
+    submodule_dict = {}
+    for op_name_prefix in _OP_NAME_PREFIX_LIST:
+        submodule_dict[op_name_prefix] =\
+            (get_module_file("%s.%s.%s" % (root_namespace, module_name,
+                                           op_name_prefix[1:-1])), [])
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        op_name_prefix = _get_op_name_prefix(name)
+        if len(op_name_prefix) > 0:
+            func_name = name[len(op_name_prefix):]
+            cur_module_file, cur_module_all = submodule_dict[op_name_prefix]
+        elif name.startswith('_'):
+            func_name = name
+            cur_module_file = module_internal_file
+            cur_module_all = module_internal_all
+        else:
+            func_name = name
+            cur_module_file = module_op_file
+            cur_module_all = module_op_all
+
+        code, _ = op_code_gen_func(hdl, name, func_name, True)
+        cur_module_file.write(os.linesep)
+        cur_module_file.write(code)
+        cur_module_all.append(func_name)
+
+    for (submodule_f, submodule_all) in submodule_dict.values():
+        write_all_str(submodule_f, submodule_all)
+        submodule_f.close()
+    write_all_str(module_op_file, module_op_all)
+    module_op_file.close()
+    write_all_str(module_internal_file, module_internal_all)
+    module_internal_file.close()

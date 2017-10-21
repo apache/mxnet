@@ -17,10 +17,30 @@
 
 import numpy as np
 import mxnet as mx
+import mxnet.lr_scheduler as lr_scheduler
+import unittest
+from nose.tools import raises
 import math
 from mxnet.test_utils import *
 
-# Common
+def test_learning_rate():
+    o1 = mx.optimizer.Optimizer(learning_rate=0.01)
+    o1.set_learning_rate(0.2)
+    assert o1.learning_rate == 0.2
+
+    lr_s = lr_scheduler.FactorScheduler(step=1)
+    o2 = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
+    assert o2.learning_rate == 0.3
+    o2.lr_scheduler.base_lr = 0.4
+    assert o2.learning_rate == 0.4
+
+
+@raises(UserWarning)
+def test_learning_rate_expect_user_warning():
+    lr_s = lr_scheduler.FactorScheduler(step=1)
+    o = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
+    o.set_learning_rate(0.5)
+
 
 def test_lr_wd_mult():
     data = mx.sym.Variable('data')
@@ -46,27 +66,40 @@ def test_lr_wd_mult():
     assert not mx.test_utils.almost_equal(args1['fc1_bias'], args2['fc1_bias'], 1e-1)
     assert not mx.test_utils.almost_equal(args1['fc2_weight'], args2['fc2_weight'], 1e-1)
 
+def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
+    if t1 is not None and t2 is not None:
+        if isinstance(t1, tuple):
+            for s1, s2 in zip(t1, t2):
+                compare_ndarray_tuple(s1, s2, rtol, atol)
+        else:
+            assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
 
-def compare_optimizer(opt1, opt2, shape, dtype):
-    w1 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-    g1 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
 
-    w2 = w1.copyto(default_context())
-    g2 = g1.copyto(default_context())
+def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default'):
+    if w_stype == 'default':
+        w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+        w1 = w2.copyto(default_context())
+    elif w_stype == 'row_sparse' or w_stype == 'csr':
+        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+        w1 = w2.copyto(default_context()).tostype('default')
+    else:
+        raise Exception("type not supported yet")
+    if g_stype == 'default':
+        g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+        g1 = g2.copyto(default_context())
+    elif g_stype == 'row_sparse' or g_stype == 'csr':
+        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+        g1 = g2.copyto(default_context()).tostype('default')
+    else:
+        raise Exception("type not supported yet")
 
-    state1 = opt1.create_state(0, w1)
-    state2 = opt2.create_state(0, w2)
-    if state1 is not None and state2 is not None:
-        for s1, s2, in zip(state1, state2):
-            if s1 is not None or s2 is not None:
-                assert(same(s1.asnumpy(), s2.asnumpy()))
+    state1 = opt1.create_state_multi_precision(0, w1)
+    state2 = opt2.create_state_multi_precision(0, w2)
+    compare_ndarray_tuple(state1, state2)
 
-    opt1.update(0, w1, g1, state1)
-    opt2.update(0, w2, g2, state2)
-    if state1 is not None and state2 is not None:
-        for s1, s2, in zip(state1, state2):
-            if s1 is not None or s2 is not None:
-                assert_almost_equal(s1.asnumpy(), s2.asnumpy(), rtol=1e-4, atol=1e-5)
+    opt1.update_multi_precision(0, w1, g1, state1)
+    opt2.update_multi_precision(0, w2, g2, state2)
+    compare_ndarray_tuple(state1, state2, rtol=1e-4, atol=1e-5)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=1e-4, atol=1e-5)
 
 # SGD
@@ -99,6 +132,9 @@ class PySGD(mx.optimizer.Optimizer):
             if self.momentum != 0.0:
                 momentum = mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)
             return momentum
+
+    def create_state_multi_precision(self, index, weight):
+        return self.create_state(index, weight)
 
     def update(self, index, weight, grad, state):
         """Update the parameters.
@@ -159,6 +195,9 @@ class PySGD(mx.optimizer.Optimizer):
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
+    def update_multi_precision(self, index, weight, grad, state):
+        self.update(index, weight, grad, state)
+
 def test_sgd():
     mx.random.seed(0)
     opt1 = PySGD
@@ -186,18 +225,120 @@ def test_sgd():
                                         not kwarg['multi_precision'])):
                                 continue
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            # test operator fallback on cpu
+                            if (default_context() == mx.cpu()):
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                                  g_stype='row_sparse')
+                                if dtype != np.float16:
+                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
+                                                      dtype, w_stype='csr', g_stype='csr')
+
+class PySparseSGD(mx.optimizer.Optimizer):
+    """python reference implemenation of sgd"""
+    def __init__(self, learning_rate=0.01, momentum=0.0, **kwargs):
+        super(PySparseSGD, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.momentum = momentum
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state: momentum
+
+        Parameters
+        ----------
+        weight : NDArray
+        The weight data
+
+        """
+        if self.momentum == 0.0:
+            return None
+        else:
+            return mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+        An unique integer key used to index the parameters
+
+        weight : NDArray
+        weight ndarray
+
+        grad : NDArray
+        grad ndarray
+
+        state : NDArray or other objects returned by init_state
+        The auxiliary state used in optimization.
+        """
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+        self._update_count(index)
+        num_rows = weight.shape[0]
+        if self.momentum == 0.0:
+            # Update on a per row basis, skip all-zero rows
+            for row in range(num_rows):
+                grad_row = grad[row].asnumpy()
+                all_zeros = mx.test_utils.almost_equal(grad_row, np.zeros_like(grad_row))
+                if all_zeros:
+                   continue
+                if self.clip_gradient is not None:
+                    weight[row] = ((1 - lr*wd)*weight[row] -
+                        lr*mx.nd.clip(grad[row]*self.rescale_grad,
+                                     -self.clip_gradient, self.clip_gradient))
+                else:
+                    weight[row] = (1 - lr*wd)*weight[row] - lr*self.rescale_grad*grad[row]
+        else:
+            mom = state
+            for row in range(num_rows):
+              grad_row = grad[row].asnumpy()
+              all_zeros = mx.test_utils.almost_equal(grad_row, np.zeros_like(grad_row))
+              if all_zeros:
+                  continue
+              if self.clip_gradient is not None:
+                  mom[row] = (self.momentum*mom[row] - lr*wd*weight[row] -
+                      lr*mx.nd.clip(grad[row]*self.rescale_grad, -self.clip_gradient, self.clip_gradient))
+                  weight[row] += mom[row]
+              else:
+                  mom[row] = self.momentum*mom[row] - lr*wd*weight[row] - lr*self.rescale_grad*grad[row]
+                  weight[row] += mom[row]
+
+def test_sparse_sgd():
+    mx.random.seed(0)
+    opt1 = PySparseSGD
+    opt2 = mx.optimizer.SGD
+    shape = (3, 4, 5)
+    mom_options = [{}, {'momentum': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float32]:
+        for mom_option in mom_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        for mp_option in mp_options:
+                            kwarg = {}
+                            kwarg.update(mom_option)
+                            kwarg.update(cg_option)
+                            kwarg.update(rg_option)
+                            kwarg.update(wd_option)
+                            kwarg.update(mp_option)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              w_stype='row_sparse', g_stype='row_sparse')
 
 # ADAM
 
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), **kwargs):
+                 decay_factor=(1 - 1e-8), sparse_update=False, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
         self.decay_factor = decay_factor
+        self.sparse_update = sparse_update
 
     def create_state(self, index, weight):
         """Create additional optimizer state: mean, variance
@@ -235,21 +376,28 @@ class PyAdam(mx.optimizer.Optimizer):
         mean, variance = state
 
         wd = self._get_wd(index)
-        grad = grad * self.rescale_grad + wd * weight
-        if self.clip_gradient is not None:
-            mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
-
-        mean *= self.beta1
-        mean += grad * (1. - self.beta1)
-
-        variance *= self.beta2
-        variance += (1 - self.beta2) * mx.nd.square(grad, out=grad)
-
+        num_rows = weight.shape[0]
         coef1 = 1. - self.beta1**t
         coef2 = 1. - self.beta2**t
         lr *= math.sqrt(coef2)/coef1
-
-        weight -= lr*mean/(mx.nd.sqrt(variance) + self.epsilon)
+        for row in range(num_rows):
+            # check row slices of all zeros
+            all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
+            # skip zeros during sparse update
+            if all_zeros and self.sparse_update:
+                continue
+            grad[row] = grad[row] * self.rescale_grad + wd * weight[row]
+            # clip gradients
+            if self.clip_gradient is not None:
+                mx.nd.clip(grad[row], -self.clip_gradient, self.clip_gradient, out=grad[row])
+            # update mean
+            mean[row] *= self.beta1
+            mean[row] += grad[row] * (1. - self.beta1)
+            # update variance
+            variance[row] *= self.beta2
+            variance[row] += (1 - self.beta2) * mx.nd.square(grad[row], out=grad[row])
+            # update weight
+            weight[row] -= lr*mean[row]/(mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
 def test_adam():
@@ -257,15 +405,28 @@ def test_adam():
     opt1 = PyAdam
     opt2 = mx.optimizer.Adam
     shape = (3, 4, 5)
-    kwargs = [{},
-              {'clip_gradient': 0.5},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14},
-              {'rescale_grad': 0.8},
-              {'clip_gradient': 0.5, 'wd': 0.07},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
-              {'rescale_grad': 0.8, 'wd': 0.05}]
-    for kwarg in kwargs:
-        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float16, np.float32, np.float64]:
+        for cg_option in cg_options:
+            for rg_option in rg_options:
+                for wd_option in wd_options:
+                    for mp_option in mp_options:
+                        kwarg = {}
+                        kwarg.update(cg_option)
+                        kwarg.update(rg_option)
+                        kwarg.update(wd_option)
+                        kwarg.update(mp_option)
+                        if (dtype == np.float16 and
+                                ('multi_precision' not in kwarg or
+                                    not kwarg['multi_precision'])):
+                            continue
+                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                        if (default_context() == mx.cpu()):
+                            compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                                          dtype, w_stype='row_sparse', g_stype='row_sparse')
 
 # RMSProp
 class PyRMSProp(mx.optimizer.Optimizer):
@@ -372,10 +533,97 @@ class PyRMSProp(mx.optimizer.Optimizer):
         if self.clip_weights:
              mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8230")
 def test_rms():
     mx.random.seed(0)
     opt1 = PyRMSProp
     opt2 = mx.optimizer.RMSProp
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    cw_options = [{}, {'clip_weights': 0.01}]
+    center_options = [{}, {'centered': False}, {'centered': True}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float16, np.float32]:
+        for cw_option in cw_options:
+            for cg_option in cg_options:
+                for center_option in center_options:
+                    for rg_option in rg_options:
+                        for wd_option in wd_options:
+                            for mp_option in mp_options:
+                                kwarg = {}
+                                kwarg.update(cw_option)
+                                kwarg.update(cg_option)
+                                kwarg.update(center_option)
+                                kwarg.update(rg_option)
+                                kwarg.update(wd_option)
+                                kwarg.update(mp_option)
+                                if (dtype == np.float16 and
+                                        ('multi_precision' not in kwarg or
+                                            not kwarg['multi_precision'])):
+                                    continue
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                                if (default_context() == mx.cpu()):
+                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse')
+
+class PyFtrl(mx.optimizer.Optimizer):
+    """The Ftrl optimizer.
+
+    Referenced from *Ad Click Prediction: a View from the Trenches*, available at
+    http://dl.acm.org/citation.cfm?id=2488200.
+
+    Parameters
+    ----------
+    lamda1 : float, optional
+        L1 regularization coefficient.
+    learning_rate : float, optional
+        The initial learning rate.
+    beta : float, optional
+        Per-coordinate learning rate correlation parameter.
+    eta :
+        .. math::
+           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^t}}
+    """
+
+    def __init__(self, lamda1=0.01, learning_rate=0.1, beta=1, sparse_update=False, **kwargs):
+        super(PyFtrl, self).__init__(**kwargs)
+        self.lamda1 = lamda1
+        self.beta = beta
+        self.lr = learning_rate
+        self.sparse_update = sparse_update
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # dn
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))  # n
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        wd = self._get_wd(index)
+        lr = self._get_lr(index)
+        num_rows = weight.shape[0]
+
+        dn, n = state
+        for row in range(num_rows):
+            all_zeros = mx.test_utils.almost_equal(grad[row].asnumpy(), np.zeros_like(grad[row].asnumpy()))
+            if all_zeros and self.sparse_update:
+                continue
+            grad[row] = grad[row] * self.rescale_grad
+            if self.clip_gradient is not None:
+                mx.nd.clip(grad[row], -self.clip_gradient, self.clip_gradient, out=grad[row])
+
+            #update dn, n
+            dn[row] += grad[row] - (mx.nd.sqrt(n[row] + grad[row] * grad[row]) - mx.nd.sqrt(n[row])) * weight[row] / lr
+            n[row] += grad[row] * grad[row]
+
+            # update weight
+            weight[row] = (mx.nd.sign(dn[row]) * self.lamda1 - dn[row]) / \
+                          ((self.beta + mx.nd.sqrt(n[row])) / lr + wd) * (mx.nd.abs(dn[row]) > self.lamda1)
+
+def test_ftrl():
+    mx.random.seed(0)
+    opt1 = PyFtrl
+    opt2 = mx.optimizer.Ftrl
     shape = (3, 4, 5)
     kwargs = [{},
               {'clip_gradient': 0.5},
@@ -384,30 +632,14 @@ def test_rms():
               {'clip_gradient': 0.5, 'wd': 0.07},
               {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03},
               {'rescale_grad': 0.8, 'wd': 0.05},
-              {'centered': True},
-              {'clip_gradient': 0.5, 'centered': True},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'centered': True},
-              {'rescale_grad': 0.8, 'centered': True},
-              {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True},
-              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True},
-              {'clip_gradient': 0.5, 'clip_weights': 0.01},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'clip_weights': 0.01},
-              {'rescale_grad': 0.8, 'clip_weights': 0.01},
-              {'clip_gradient': 0.5, 'wd': 0.07, 'clip_weights': 0.01},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'clip_weights': 0.01},
-              {'rescale_grad': 0.8, 'wd': 0.05, 'clip_weights': 0.01},
-              {'centered': True, 'clip_weights': 0.01},
-              {'clip_gradient': 0.5, 'centered': True, 'clip_weights': 0.01},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'centered': True, 'clip_weights': 0.01},
-              {'rescale_grad': 0.8, 'centered': True, 'clip_weights': 0.01},
-              {'clip_gradient': 0.5, 'wd': 0.07, 'centered': True, 'clip_weights': 0.01},
-              {'clip_gradient': 0.4, 'rescale_grad': 0.14, 'wd': 0.03, 'centered': True, 'clip_weights': 0.01},
-              {'rescale_grad': 0.8, 'wd': 0.05, 'centered': True, 'clip_weights': 0.01}]
+              {'rescale_grad': 0.8, 'wd': 0.05, 'lamda1': 0.01},
+              {'clip_gradient': 0.5, 'wd': 0.07, 'lamda1': 1.0}]
     for kwarg in kwargs:
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
+        compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
+                          np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
 if __name__ == '__main__':
-    test_adam()
-    test_rms()
-    test_sgd()
+    import nose
+    nose.runmodule()
+

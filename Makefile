@@ -1,5 +1,11 @@
 ROOTDIR = $(CURDIR)
 
+ifeq ($(OS),Windows_NT)
+	UNAME_S := Windows
+else
+	UNAME_S := $(shell uname -s)
+endif
+
 ifndef config
 ifdef CXXNET_CONFIG
 	config = $(CXXNET_CONFIG)
@@ -36,8 +42,8 @@ include $(config)
 
 ifeq ($(USE_MKL2017), 1)
 # must run ./prepare_mkl before including mshadow.mk
-	RETURN_STRING = $(shell ./prepare_mkl.sh $(MKLML_ROOT))
-	MKLROOT = $(firstword $(RETURN_STRING))
+	RETURN_STRING := $(shell ./prepare_mkl.sh $(MKLML_ROOT))
+	MKLROOT := $(firstword $(RETURN_STRING))
 	export USE_MKLML = $(lastword $(RETURN_STRING))
 endif
 
@@ -72,9 +78,14 @@ ifeq ($(USE_PROFILER), 1)
 	CFLAGS += -DMXNET_USE_PROFILER=1
 endif
 
+# CFLAGS for segfault logger
+ifeq ($(USE_SIGNAL_HANDLER), 1)
+	CFLAGS += -DMXNET_USE_SIGNAL_HANDLER=1
+endif
+
 # Caffe Plugin
 ifdef CAFFE_PATH
-  CFLAGS += -DMXNET_USE_CAFFE=1
+	CFLAGS += -DMXNET_USE_CAFFE=1
 endif
 
 ifndef LINT_LANG
@@ -91,7 +102,9 @@ else
 endif
 
 ifeq ($(USE_OPENMP), 1)
-	CFLAGS += -fopenmp
+	ifneq ($(UNAME_S), Darwin)
+		CFLAGS += -fopenmp
+	endif
 endif
 
 ifeq ($(USE_NNPACK), 1)
@@ -105,11 +118,17 @@ ifeq ($(USE_MKL2017), 1)
 	CFLAGS += -I$(ROOTDIR)/src/operator/mkl/
 	CFLAGS += -I$(MKLML_ROOT)/include
 	LDFLAGS += -L$(MKLML_ROOT)/lib
-ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
-	CFLAGS += -DMKL_EXPERIMENTAL=1
-else
-	CFLAGS += -DMKL_EXPERIMENTAL=0
-endif
+	ifeq ($(USE_MKL2017_EXPERIMENTAL), 1)
+		CFLAGS += -DMKL_EXPERIMENTAL=1
+	else
+		CFLAGS += -DMKL_EXPERIMENTAL=0
+	endif
+	ifeq ($(UNAME_S), Darwin)
+		LDFLAGS += -lmklml
+	else
+		LDFLAGS += -Wl,--as-needed -lmklml_intel -lmklml_gnu
+	endif
+	LDFLAGS +=  -liomp5
 endif
 
 # verify existence of separate lapack library when using blas/openblas/atlas
@@ -146,7 +165,60 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+# gperftools malloc library (tcmalloc)
+ifeq ($(USE_GPERFTOOLS), 1)
+#	FIND_LIBNAME=tcmalloc_and_profiler
+	FIND_LIBNAME=tcmalloc
+	FIND_LIBFILEEXT=so
+	FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+	ifeq (,$(FIND_LIBFILE))
+		FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+		ifeq (,$(FIND_LIBFILE))
+			FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+			ifeq (,$(FIND_LIBFILE))
+				USE_GPERFTOOLS=0
+			endif
+		endif
+	endif
+	ifeq ($(USE_GPERFTOOLS), 1)
+		CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+		LDFLAGS += $(FIND_LIBFILE)
+	endif
+endif
 
+# jemalloc malloc library (if not using gperftools)
+ifneq ($(USE_GPERFTOOLS), 1)
+	ifeq ($(USE_JEMALLOC), 1)
+		FIND_LIBNAME=jemalloc
+		FIND_LIBFILEEXT=so
+		FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+		ifeq (,$(FIND_LIBFILE))
+			FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+			ifeq (,$(FIND_LIBFILE))
+				FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+				ifeq (,$(FIND_LIBFILE))
+					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+					ifeq (,$(FIND_LIBFILE))
+						USE_JEMALLOC=0
+					endif
+				endif
+			endif
+		endif
+		ifeq ($(USE_JEMALLOC), 1)
+			CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
+			-fno-builtin-free -DUSE_JEMALLOC
+			LDFLAGS += $(FIND_LIBFILE)
+		endif
+	endif
+endif
+
+# If not using tcmalloc or jemalloc, print a warning (user should consider installing)
+ifneq ($(USE_GPERFTOOLS), 1)
+	ifneq ($(USE_JEMALLOC), 1)
+$(warning WARNING: Significant performance increases can be achieved by installing and \
+enabling gperftools or jemalloc development packages)
+	endif
+endif
 
 ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
@@ -180,8 +252,8 @@ ifeq ($(CUDA_ARCH),)
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
-                  $(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
-                          echo -gencode arch=compute_$(arch),code=sm_$(arch)))
+				$(shell $(NVCC) -arch=sm_$(arch) -E --x cu /dev/null >/dev/null 2>&1 && \
+						echo -gencode arch=compute_$(arch),code=sm_$(arch)))
 	# Convert a trailing "code=sm_NN" to "code=[sm_NN,compute_NN]" to also
 	# include the PTX of the most recent arch in the fat-binaries for
 	# forward compatibility with newer GPUs.
@@ -189,7 +261,7 @@ ifeq ($(CUDA_ARCH),)
 	# Add fat binary compression if supported by nvcc.
 	COMPRESS := --fatbin-options -compress-all
 	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
-	                     echo $(COMPRESS))
+						 echo $(COMPRESS))
 endif
 endif
 
@@ -231,20 +303,18 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
-# scala package profile
-ifeq ($(OS),Windows_NT)
+ifeq ($(UNAME_S), Windows)
 	# TODO(yizhi) currently scala package does not support windows
 	SCALA_PKG_PROFILE := windows
 else
-	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Darwin)
 		WHOLE_ARCH= -all_load
 		NO_WHOLE_ARCH= -noall_load
 		SCALA_PKG_PROFILE := osx-x86_64
 	else
-		SCALA_PKG_PROFILE := linux-x86_64
 		WHOLE_ARCH= --whole-archive
 		NO_WHOLE_ARCH= --no-whole-archive
+		SCALA_PKG_PROFILE := linux-x86_64
 	endif
 endif
 
@@ -255,21 +325,25 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcuda -lcufft
+	LDFLAGS += -lcuda -lcufft -lnvrtc
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
+ifeq ($(USE_LIBJPEG_TURBO), 1)
+	ifneq ($(USE_LIBJPEG_TURBO_PATH), NONE)
+		CFLAGS += -I$(USE_LIBJPEG_TURBO_PATH)/include
+		LDFLAGS += -L$(USE_LIBJPEG_TURBO_PATH)/lib
+	endif
+	LDFLAGS += -lturbojpeg
+	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=1
+else
+	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
+endif
+
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
-
-ifeq ($(USE_NVRTC), 1)
-	LDFLAGS += -lnvrtc
-	CFLAGS += -DMXNET_USE_NVRTC=1
-else
-	CFLAGS += -DMXNET_USE_NVRTC=0
-endif
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)
@@ -307,9 +381,9 @@ lib/libmxnet.a: $(ALLX_DEP)
 	ar crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALLX_DEP)
-	 @mkdir -p $(@D)
-	 $(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
-	 -Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
+	@mkdir -p $(@D)
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -400,10 +474,8 @@ rpkg:
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
-	R CMD build --no-build-vignettes R-package
-	rm -rf mxnet_current_r.tar.gz
+	R CMD INSTALL R-package
 	rm -rf R-package/src/image_recordio.h
-	mv mxnet_*.tar.gz mxnet_current_r.tar.gz
 
 rpkgtest:
 	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"

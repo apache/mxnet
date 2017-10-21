@@ -89,18 +89,20 @@ def main():
     args = parser.parse_args()
     if args.cpu:
         gpus = [-1]
-        batch_size = 32
+        default_batch_size = 32
     else:
         gpus = mx.test_utils.list_gpus()
         assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
-        batch_size = 32 * len(gpus)
+        default_batch_size = 32 * len(gpus)
 
     models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
 
     val = download_data()
     for m in models:
         test_model_weights_and_outputs(m, args.image_url, gpus[0])
-        test_imagenet_model_performance(m, val, gpus, batch_size)
+        # Build/testing machines tend to be short on GPU memory
+        this_batch_size = default_batch_size / 4 if m == 'vgg-16' else default_batch_size
+        test_imagenet_model_performance(m, val, gpus, this_batch_size)
 
 if __name__ == '__main__':
     main()

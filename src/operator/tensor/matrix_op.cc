@@ -34,7 +34,6 @@ DMLC_REGISTER_PARAMETER(ClipParam);
 DMLC_REGISTER_PARAMETER(SimpleCropAssignScalarParam);
 DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(SliceAxisParam);
-DMLC_REGISTER_PARAMETER(DotParam);
 DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
@@ -110,7 +109,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_attr<nnvm::FInferShape>("FInferShape", ReshapeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -153,7 +152,7 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -243,11 +242,12 @@ will return a new array with shape ``(2,1,3,4)``.
     return std::vector<bool>{true};
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
-.set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice)
+.add_alias("_sparse_slice")
 .add_alias("crop")
 .describe(R"code(Slices a contiguous region of the array.
 
@@ -263,6 +263,9 @@ and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
 The resulting array's *k*-th dimension contains elements
 from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
 
+For an input array of non-default storage type(e.g. `csr` or `row_sparse`), it only supports
+slicing on the first dimension.
+
 Example::
 
   x = [[  1.,   2.,   3.,   4.],
@@ -276,8 +279,10 @@ Example::
 .set_attr_parser(ParamParser<SliceParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", Slice<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
@@ -370,94 +375,6 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxisGrad_<cpu>);
 
-NNVM_REGISTER_OP(dot)
-.describe(R"doc(Dot product of two arrays.
-
-``dot``'s behavior depends on the input array dimensions:
-
-- 1-D arrays: inner product of vectors
-- 2-D arrays: matrix multiplication
-- N-D arrays: a sum product over the last axis of the first input and the first
-  axis of the second input
-
-  For example, given 3-D ``x`` with shape `(n,m,k)` and ``y`` with shape `(k,r,s)`, the
-  result array will have shape `(n,m,r,s)`. It is computed by::
-
-    dot(x,y)[i,j,a,b] = sum(x[i,j,:]*y[:,a,b])
-
-  Example::
-
-    x = reshape([0,1,2,3,4,5,6,7], shape=(2,2,2))
-    y = reshape([7,6,5,4,3,2,1,0], shape=(2,2,2))
-    dot(x,y)[0,0,1,1] = 0
-    sum(x[0,0,:]*y[:,1,1]) = 0
-)doc" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<DotParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"lhs", "rhs"};
-  })
-.set_attr<nnvm::FInferShape>("FInferShape", DotShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FCompute>("FCompute<cpu>", DotForward_<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_dot"})
-.add_argument("lhs", "NDArray-or-Symbol", "The first input")
-.add_argument("rhs", "NDArray-or-Symbol", "The second input")
-.add_arguments(DotParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_backward_dot)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<DotParam>)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", DotBackward_<cpu>)
-.add_arguments(DotParam::__FIELDS__());
-
-NNVM_REGISTER_OP(batch_dot)
-.describe(R"doc(Batchwise dot product.
-
-``batch_dot`` is used to compute dot product of ``x`` and ``y`` when ``x`` and
-``y`` are data in batch, namely 3D arrays in shape of `(batch_size, :, :)`.
-
-For example, given ``x`` with shape `(batch_size, n, m)` and ``y`` with shape
-`(batch_size, m, k)`, the result array will have shape `(batch_size, n, k)`,
-which is computed by::
-
-   batch_dot(x,y)[i,:,:] = dot(x[i,:,:], y[i,:,:])
-
-)doc" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<DotParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"lhs", "rhs"};
-  })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchDotShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<FCompute>("FCompute<cpu>", BatchDotForward_<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_batch_dot"})
-.add_argument("lhs", "NDArray-or-Symbol", "The first input")
-.add_argument("rhs", "NDArray-or-Symbol", "The second input")
-.add_arguments(DotParam::__FIELDS__());
-
-NNVM_REGISTER_OP(_backward_batch_dot)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<DotParam>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", BatchDotBackward_<cpu>);
-
 NNVM_REGISTER_OP(clip)
 .describe(R"code(Clips (limits) the values in an array.
 
@@ -472,6 +389,17 @@ Example::
 
     clip(x,1,8) = [ 1.,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  8.]
 
+The storage type of ``clip`` output depends on storage types of inputs and the a_min, a_max \
+parameter values:
+
+   - clip(default) = default
+   - clip(row_sparse, a_min <= 0, a_max >= 0) = row_sparse
+   - clip(csr, a_min <= 0, a_max >= 0) = csr
+   - clip(row_sparse, a_min < 0, a_max < 0) = default
+   - clip(row_sparse, a_min > 0, a_max > 0) = default
+   - clip(csr, a_min < 0, a_max < 0) = csr
+   - clip(csr, a_min > 0, a_max > 0) = csr
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -479,6 +407,38 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ClipEx<cpu>)
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+    bool dispatched = false;
+    // For clipping ranges that cross zero, sparse output is possible
+    CHECK_EQ(in_attrs->size(), 1U) << " in operator " << attrs.name;
+    CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
+    if ((*in_attrs)[0] == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_attrs[0], kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
+    const auto& param = nnvm::get<ClipParam>(attrs.parsed);
+    if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
+      const int this_stype = (*in_attrs)[0];
+      if (this_stype != kUndefinedStorage) {
+        dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+                                         dispatch_mode, DispatchMode::kFComputeEx);
+      }
+    }
+    if (!dispatched) {
+      // otherwise, output is dense (print warning anyway)
+      if (!storage_type_assign(&(*out_attrs)[0], kDefaultStorage,
+                              dispatch_mode, DispatchMode::kFComputeFallback)) {
+        dispatch_fallback(out_attrs, dispatch_mode);
+      }
+      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    }
+    return true;
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_clip" })
 .add_argument("data", "NDArray-or-Symbol", "Input array.")
 .add_arguments(ClipParam::__FIELDS__());

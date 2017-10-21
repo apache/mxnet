@@ -25,8 +25,15 @@
 #ifndef MXNET_OPERATOR_MXNET_OP_H_
 #define MXNET_OPERATOR_MXNET_OP_H_
 
+#include <dmlc/omp.h>
 #include <mxnet/base.h>
+#include <mxnet/engine.h>
+#include <mxnet/op_attr_types.h>
 #include <algorithm>
+
+#ifdef __CUDACC__
+#include "../common/cuda_utils.h"
+#endif  // __CUDACC__
 
 namespace mxnet {
 namespace op {
@@ -40,6 +47,8 @@ const float PI = 3.14159265358979323846;
 using std::isnan;
 #endif
 
+template<typename xpu>
+int get_num_threads(const int N);
 
 #ifdef __CUDACC__
 #define CUDA_KERNEL_LOOP(i, n) \
@@ -47,6 +56,13 @@ using std::isnan;
       i < (n); \
       i += blockDim.x * gridDim.x)
 
+inline cudaDeviceProp cuda_get_device_prop() {
+  int device;
+  CUDA_CALL(cudaGetDevice(&device));
+  cudaDeviceProp deviceProp;
+  CUDA_CALL(cudaGetDeviceProperties(&deviceProp, device));
+  return deviceProp;
+}
 
 /*!
  * \brief Get the number of blocks for cuda kernel given N
@@ -55,8 +71,18 @@ inline int cuda_get_num_blocks(const int N) {
   using namespace mshadow::cuda;
   return std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
 }
+
+template<>
+inline int get_num_threads<gpu>(const int N) {
+  using namespace mshadow::cuda;
+  return kBaseThreadNum * cuda_get_num_blocks(N);
+}
 #endif  // __CUDACC__
 
+template<>
+inline int get_num_threads<cpu>(const int N) {
+  return omp_get_max_threads();
+}
 
 /*! \brief operator request type switch */
 #define MXNET_ASSIGN_REQ_SWITCH(req, ReqType, ...)  \
@@ -66,13 +92,13 @@ inline int cuda_get_num_blocks(const int N) {
   case kWriteInplace:                               \
   case kWriteTo:                                    \
     {                                               \
-      const int ReqType = kWriteTo;                 \
+      const OpReqType ReqType = kWriteTo;           \
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
   case kAddTo:                                      \
     {                                               \
-      const int ReqType = kAddTo;                   \
+      const OpReqType ReqType = kAddTo;             \
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
@@ -189,6 +215,26 @@ struct set_zero {
   }
 };
 
+/*! \brief Select assignment operation based upon the req value
+ * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
+ */
+template<typename OP, int req>
+struct op_with_req {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs, const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+};
 
 template<typename OP, typename xpu>
 struct Kernel;
@@ -197,13 +243,25 @@ struct Kernel;
 template<typename OP>
 struct Kernel<OP, cpu> {
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *s, int N, Args... args) {
-#if (MXNET_USE_CUDA == 0)
-    #pragma omp parallel for
-#endif
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, args...);
+  inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+#ifdef _OPENMP
+    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
+    if (omp_cores <= 1) {
+      // Zero means not to use OMP, but don't interfere with external OMP behavior
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_cores)
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
     }
+#else
+    for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+    }
+#endif
   }
 };
 
@@ -215,7 +273,6 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
     OP::Map(i, args...);
   }
 }
-
 
 template<typename OP>
 struct Kernel<OP, gpu> {
@@ -229,7 +286,6 @@ struct Kernel<OP, gpu> {
   }
 };
 #endif  // __CUDACC__
-
 
 }  // namespace mxnet_op
 }  // namespace op

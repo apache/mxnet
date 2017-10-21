@@ -59,5 +59,5 @@ if __name__ == '__main__':
     tmp = prefix.rsplit('/', 1)
     save_prefix = '/deploy_'.join(tmp)
     mx.model.save_checkpoint(save_prefix, args.epoch, net, arg_params, aux_params)
-    print("Saved model: {}-{:04d}.param".format(save_prefix, args.epoch))
+    print("Saved model: {}-{:04d}.params".format(save_prefix, args.epoch))
     print("Saved symbol: {}-symbol.json".format(save_prefix))

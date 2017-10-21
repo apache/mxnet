@@ -45,64 +45,19 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
     return op;
   }
 #if MXNET_USE_CUDNN == 1
-  // The NVIDIA Pascal architecture was the first to include 16-bit ALUs.
-  // Thus, when the framework is compiled with MSHADOW_USE_PASCAL == 1, we
-  // perform the deconvolution calculation in 16-bit when the tensor type is
-  // also 16-bit.  For NVIDIA architectures earlier than Pascal (so Maxwell
-  // and Kepler), the computation precision is always at least 32-bits.
-#if MSHADOW_USE_PASCAL == 1
-  // true fp16
-  int desired_forward_compute_type = dtype;
-  int desired_backward_compute_type = dtype;
-#else
-  // pseudo fp16
-  int desired_forward_compute_type =
-    (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
-  int desired_backward_compute_type =
-    (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
-#endif  // MSHADOW_USE_PASCAL == 1
+  // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
+  int compute_type = (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off) {
       op = new DeconvolutionOp<gpu, DType>(param);
+    } else if (!CuDNNDeconvolutionOp<DType>::Supports(param, compute_type, compute_type, ctx)) {
+      LOG(WARNING) <<
+        "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
+      op = new DeconvolutionOp<gpu, DType>(param);
     } else {
-      int forward_compute_type = desired_forward_compute_type;
-      int backward_compute_type = desired_backward_compute_type;
-      bool deconvolutionIsSupported = CuDNNDeconvolutionOp<DType>::Supports(param,
-                                          forward_compute_type,
-                                          backward_compute_type, ctx);
-
-      // If cuDNN can't handle this case with fp16 backprop kernels, try fp32 backprop.
-      if (!deconvolutionIsSupported && backward_compute_type == mshadow::kFloat16) {
-        backward_compute_type = mshadow::kFloat32;
-        deconvolutionIsSupported = CuDNNDeconvolutionOp<DType>::Supports(param,
-                                          forward_compute_type,
-                                          backward_compute_type, ctx);
-      }
-
-      // If cuDNN can't handle this case with fp16 forward kernels, try fp32
-      if (!deconvolutionIsSupported && forward_compute_type == mshadow::kFloat16) {
-        forward_compute_type = mshadow::kFloat32;
-        deconvolutionIsSupported = CuDNNDeconvolutionOp<DType>::Supports(param,
-                                          forward_compute_type,
-                                          backward_compute_type, ctx);
-      }
-      if (!deconvolutionIsSupported) {
-        LOG(WARNING) <<
-          "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
-        op = new DeconvolutionOp<gpu, DType>(param);
-      } else {
-        if ((forward_compute_type != desired_forward_compute_type) ||
-            (backward_compute_type != desired_backward_compute_type)) {
-          LOG(WARNING) <<
-            "True fp16 deconvolution by cudnn not supported in this configuration.  " <<
-            "Falling back to pseudo fp16.";
-        }
-        op = new CuDNNDeconvolutionOp<DType>(param,
-                                         forward_compute_type,
-                                         backward_compute_type,
-                                         *in_shape, *out_shape, ctx);
-      }
+      op = new CuDNNDeconvolutionOp<DType>(param, compute_type, compute_type,
+                                           *in_shape, *out_shape, ctx);
     }
   })
 #else

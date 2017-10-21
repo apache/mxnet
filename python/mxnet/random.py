@@ -17,18 +17,14 @@
 
 # coding: utf-8
 # pylint: disable=no-member, protected-access, unused-import, no-name-in-module
+# pylint: disable=wildcard-import, unused-wildcard-import
 """Random number interface of MXNet."""
 from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call
-from ._ndarray_internal import _sample_uniform as uniform
-from ._ndarray_internal import _sample_normal as normal
-from ._ndarray_internal import _sample_gamma as gamma
-from ._ndarray_internal import _sample_exponential as exponential
-from ._ndarray_internal import _sample_poisson as poisson
-from ._ndarray_internal import _sample_negbinomial as negative_binomial
-from ._ndarray_internal import _sample_gennegbinomial as generalized_negative_binomial
+from .ndarray.random import *
+
 
 def seed(seed_state):
     """Seeds the random number generators in MXNet.
@@ -48,19 +44,19 @@ def seed(seed_state):
 
     Example
     -------
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.36481571 -0.62203991]
      [-1.4962182  -0.08511394]]
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.09544981 -0.20014545]
      [-0.20808885  0.2527658 ]]
     >>>
     >>> mx.random.seed(128)
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     >>> mx.random.seed(128)
-    >>> print(mx.nd.random_normal(shape=(2,2)).asnumpy())
+    >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
     """

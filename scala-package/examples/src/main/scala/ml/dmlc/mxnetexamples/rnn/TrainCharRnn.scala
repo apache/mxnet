@@ -70,8 +70,10 @@ object TrainCharRnn {
       }
 
       // initalize states for LSTM
-      val initC = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_c", (batchSize, numHidden))
-      val initH = for (l <- 0 until numLstmLayer) yield (s"l${l}_init_h", (batchSize, numHidden))
+      val initC = for (l <- 0 until numLstmLayer)
+        yield (s"l${l}_init_c_beta", (batchSize, numHidden))
+      val initH = for (l <- 0 until numLstmLayer)
+        yield (s"l${l}_init_h_beta", (batchSize, numHidden))
       val initStates = initC ++ initH
 
       val dataTrain = new BucketIo.BucketSentenceIter(incr.dataPath, vocab, buckets,

@@ -1,6 +1,6 @@
 # Hybrid - Faster training and easy deployment
 
-*Note: a newer version is available [here](http://gluon.mxnet.io/P14-C05-hybridize.html).*
+*Note: a newer version is available [here](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html).*
 
 Deep learning frameworks can be roughly divided into two categories: declarative
 and imperative. With declarative frameworks (including Tensorflow, Theano, etc)
@@ -39,7 +39,7 @@ from mxnet.gluon import nn
 class Net(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
-        with self.name_scope:
+        with self.name_scope():
             # layers created in name_scope will inherit name space
             # from parent layer.
             self.conv1 = nn.Conv2D(6, kernel_size=5)

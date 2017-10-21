@@ -31,6 +31,27 @@
 
 namespace tf {
 namespace depthwise_conv {
+
+#define FULL_WARP_MASK 0xFFFFFFFF
+#if CUDA_VERSION < 9000
+template<typename DType>
+__forceinline__ __device__ DType  __shfl_xor_sync(unsigned, DType val, int delta) {
+  return __shfl_xor(val, delta);
+}
+
+template<typename DType>
+__forceinline__ __device__ DType  __shfl_down_sync(unsigned, DType val, int delta) {
+  return __shfl_down(val, delta);
+}
+
+// shuffle masks not used before CUDA 9.
+#define CREATE_SHFL_MASK(mask, predicate) \
+    unsigned mask = 0u;
+#else
+#define CREATE_SHFL_MASK(mask, predicate) \
+    unsigned mask = __ballot_sync(FULL_WARP_MASK, (predicate))
+#endif
+
 struct DepthwiseArgs {
   // Input layer dimensions
   int batch;
@@ -464,6 +485,10 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
     // Note: the condition to reach this is uniform across the entire block.
     __syncthreads();
 
+    // Not all threads of a warp may reach the __shfl_down_sync instruction
+    // so we cannot use the FULL_WARP_MASK there
+    CREATE_SHFL_MASK(active_threads, slice_in_range);
+
     if (slice_in_range) {
       const DType* const out_ptr = inout_offset + output;
       const DType out1 = ldg(out_ptr);
@@ -476,7 +501,7 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
           DType val = out1 * tile_ptr[0] + out2 * tile_ptr[tile_offset];
           // Warp-accumulate pixels of the same depth and write to accumulator.
           for (int delta = 16 / kBlockSlices; delta > 0; delta /= 2) {
-            val += __shfl_down(val, delta);
+            val += __shfl_down_sync(active_threads, val, delta);
           }
           if (!(thread_idx & 32 / kBlockSlices - 1)) {
             *accum_ptr = val;
@@ -503,8 +528,13 @@ __launch_bounds__(1024, 2) void DepthwiseConv2dBackwardFilterKernelSmall(
       if (filter_channel < in_channel) {
         DType val = accum_data[i];
         // Warp-accumulate pixels of the same depth from the accumulator.
+        int lane_id;
+        asm volatile ("mov.u32 %0, %laneid;" : "=r"(lane_id));
+        int sub_warp = lane_id / kAccumPixels;
+        int zeros = sub_warp * kAccumPixels;
+        unsigned mask = (kAccumPixels == 32) ? FULL_WARP_MASK : (((1U << kAccumPixels) - 1) << zeros);
         for (int delta = kAccumPixels / 2; delta > 0; delta /= 2) {
-          val += __shfl_down(val, delta);
+          val += __shfl_xor_sync(mask, val, delta);
         }
         if (!(thread_idx & kAccumPixels - 1)) {
           atomicAdd(filter_offset + filter, val);

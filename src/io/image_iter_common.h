@@ -102,6 +102,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   std::string path_imglist;
   /*! \brief path to image recordio */
   std::string path_imgrec;
+  /*! \brief path to index file */
+  std::string path_imgidx;
   /*! \brief a sequence of names of image augmenters, seperated by , */
   std::string aug_seq;
   /*! \brief label-width */
@@ -129,6 +131,9 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
                   "<index of record>\t<one or more labels>\t<relative path from root folder>.");
     DMLC_DECLARE_FIELD(path_imgrec).set_default("")
         .describe("Path to the image RecordIO (.rec) file or a directory path. "\
+                  "Created with tools/im2rec.py.");
+    DMLC_DECLARE_FIELD(path_imgidx).set_default("")
+        .describe("Path to the image RecordIO index (.idx) file. "\
                   "Created with tools/im2rec.py.");
     DMLC_DECLARE_FIELD(aug_seq).set_default("aug_default")
         .describe("The augmenter names to represent"\
@@ -206,6 +211,14 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
   float mean_b;
   /*! \brief mean value for alpha channel */
   float mean_a;
+  /*! \brief standard deviation for r channel */
+  float std_r;
+  /*! \brief standard deviation for g channel */
+  float std_g;
+  /*! \brief standard deviation for b channel */
+  float std_b;
+  /*! \brief standard deviation for alpha channel */
+  float std_a;
   /*! \brief scale on color space */
   float scale;
   /*! \brief maximum ratio of contrast variation */
@@ -235,6 +248,14 @@ struct ImageNormalizeParam :  public dmlc::Parameter<ImageNormalizeParam> {
         .describe("The mean value to be subtracted on the B channel");
     DMLC_DECLARE_FIELD(mean_a).set_default(0.0f)
         .describe("The mean value to be subtracted on the alpha channel");
+    DMLC_DECLARE_FIELD(std_r).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on R channel.");
+    DMLC_DECLARE_FIELD(std_g).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on G channel.");
+    DMLC_DECLARE_FIELD(std_b).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on B channel.");
+    DMLC_DECLARE_FIELD(std_a).set_default(1.0f)
+        .describe("Augmentation Param: Standard deviation on Alpha channel.");
     DMLC_DECLARE_FIELD(scale).set_default(1.0f)
         .describe("Multiply the image with a scale value.");
     DMLC_DECLARE_FIELD(max_random_contrast).set_default(0.0f)

@@ -19,7 +19,7 @@ You can install the CPU package directly from the R console:
 
 ```r
 cran <- getOption("repos")
-cran["dmlc"] <- "https://s3-us-west-2.amazonaws.com/apache-mxnet/R/CRAN/"
+cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/"
 options(repos = cran)
 install.packages("mxnet")
 ```
