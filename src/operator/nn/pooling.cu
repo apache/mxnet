@@ -51,9 +51,9 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), GetNumOutputs(param));
 
 #if MXNET_USE_CUDNN == 1
   if (!param.cudnn_off && param.kernel.ndim() > 1) {
@@ -88,10 +88,21 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
                              const std::vector<TBlob>& inputs,
                              const std::vector<OpReqType>& req,
                              const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 3U);
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), GetNumBackInputs(param));
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  off_t ograd_idx, in_data_idx, out_data_idx;
+  // When MKLDNN is enabled, the input data may contains arrays for workspace.
+  if (GetNumBackInputs(param) == 5) {
+    ograd_idx = 0;
+    in_data_idx = 2;
+    out_data_idx = 3;
+  } else {
+    ograd_idx = 0;
+    in_data_idx = 1;
+    out_data_idx = 2;
+  }
 
 #if MXNET_USE_CUDNN == 1
   if (!param.cudnn_off && param.kernel.ndim() > 1) {
@@ -99,8 +110,8 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       switch (param.pool_type) {
         case pool_enum::kMaxPooling:
         case pool_enum::kAvgPooling:
-          GetCuDNNPoolingOp<DType>(param).Backward(ctx,
-              inputs[0], inputs[1], inputs[2], req[0], outputs[0]);
+          GetCuDNNPoolingOp<DType>(param).Backward(ctx, inputs[ograd_idx],
+              inputs[in_data_idx], inputs[out_data_idx], req[0], outputs[0]);
           return;
         case pool_enum::kSumPooling:
           LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
@@ -114,8 +125,8 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      PoolingBackward<gpu, DType>(ctx, param, inputs[0],
-          inputs[1], inputs[2], req[0], outputs[0]);
+      PoolingBackward<gpu, DType>(ctx, param, inputs[ograd_idx],
+          inputs[in_data_idx], inputs[out_data_idx], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }

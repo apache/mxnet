@@ -23,8 +23,8 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_CONCAT_INL_H_
-#define MXNET_OPERATOR_CONCAT_INL_H_
+#ifndef MXNET_OPERATOR_NN_CONCAT_INL_H_
+#define MXNET_OPERATOR_NN_CONCAT_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -42,6 +42,7 @@ namespace op {
 
 namespace concat_enum {
 enum ConcatOpInputs {kData0, kData1, kData2, kData3, kData4};
+enum ConcatOpResource {kTempSpace};
 enum ConcatOpOutputs {kOut};
 }  // namespace concat_enum
 
@@ -94,28 +95,26 @@ class ConcatOp {
     Concatenate(data, &out, 1, req[concat_enum::kOut]);
   }
 
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
+  void Backward(const OpContext &ctx, const TBlob &out_grad,
                 const std::vector<OpReqType> &req,
                 const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1U);
     CHECK_EQ(in_grad.size(), static_cast<size_t>(size_));
-    int axis = CheckAxis(dimension_, out_grad[concat_enum::kData0].ndim());
+    int axis = CheckAxis(dimension_, out_grad.ndim());
     Stream<xpu> *s = ctx.get_stream<xpu>();
     std::vector<Tensor<xpu, 3, DType> > grad_in(size_);
     Tensor<xpu, 3, DType> grad;
     size_t leading = 1, trailing = 1;
     for (int i = 0; i < axis; ++i) {
-      leading *= out_grad[concat_enum::kOut].shape_[i];
+      leading *= out_grad.shape_[i];
     }
-    for (int i = axis + 1; i < out_grad[concat_enum::kOut].ndim(); ++i) {
-      trailing *= out_grad[concat_enum::kOut].shape_[i];
+    for (int i = axis + 1; i < out_grad.ndim(); ++i) {
+      trailing *= out_grad.shape_[i];
     }
-    size_t mid = out_grad[concat_enum::kOut].shape_[axis];
+    size_t mid = out_grad.shape_[axis];
     Shape<3> oshape = Shape3(leading, mid, trailing);
-    grad = out_grad[concat_enum::kOut].get_with_shape<xpu, 3, DType>(oshape, s);
+    grad = out_grad.get_with_shape<xpu, 3, DType>(oshape, s);
 
     for (int i = 0; i < size_; ++i) {
       Shape<3> dshape = Shape3(leading, in_grad[i].shape_[axis], trailing);
@@ -151,11 +150,11 @@ void ConcatGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   MSHADOW_TYPE_SWITCH(inputs[concat_enum::kOut].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(param);
-    op.Backward(ctx, inputs, req, outputs);
+    op.Backward(ctx, inputs[concat_enum::kOut], req, outputs);
   });
 }
 
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CONCAT_INL_H_
+#endif  // MXNET_OPERATOR_NN_CONCAT_INL_H_

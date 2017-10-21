@@ -26,11 +26,10 @@
 #include "./activation-inl.h"
 #include "../mshadow_op.h"
 #include "../tensor/elemwise_unary_op.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "../mkl/mkl_memory-inl.h"
-#include "../mkl/mkl_relu-inl.h"
-#endif  // MXNET_USE_MKL2017
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_base-inl.h"
+#include "./mkldnn/mkldnn_ops-inl.h"
+#endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
 namespace op {
@@ -51,6 +50,91 @@ struct ActivationGrad {
   }
 };
 
+#if MXNET_USE_MKLDNN == 1
+static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNActivationForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  ActivationComputeImpl<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
+}
+
+void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+#if MXNET_USE_CUDNN == 1
+  CHECK_EQ(inputs.size(), 3U);
+#else
+  CHECK_EQ(inputs.size(), 2U);
+#endif
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[1], req[0],
+                             outputs[0]);
+    return;
+  }
+  ActivationGradComputeImpl<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
+                                 req[0], outputs[0].data());
+}
+#endif
+
+inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int> *in_attrs,
+                                         std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask,
+                                                            dispatch_mode,
+                                                            in_attrs, out_attrs);
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  return ret;
+}
+
+inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
+#if MXNET_USE_CUDNN == 1
+  CHECK_EQ(in_attrs->size(), 3U);
+#else
+  CHECK_EQ(in_attrs->size(), 2U);
+#endif
+  CHECK_EQ(out_attrs->size(), 1U);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+#if MXNET_USE_CUDNN == 1
+  bool ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
+                                                            dispatch_mode,
+                                                            in_attrs, out_attrs);
+#else
+  bool ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
+                                                            dispatch_mode,
+                                                            in_attrs, out_attrs);
+#endif
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  return ret;
+}
+
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
 .describe(R"code(Applies an activation function element-wise to the input.
 
@@ -63,7 +147,11 @@ The following activation functions are supported:
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
+.set_attr<FInferStorageType>("FInferStorageType", ActivationStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ActivationGrad{"_backward_Activation"})
 .add_arguments(ActivationParam::__FIELDS__());
 
@@ -71,12 +159,21 @@ NNVM_REGISTER_OP(_backward_Activation)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardActStorageType)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr_parser(ParamParser<ActivationParam>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", ActivationGradComputeExCPU)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", ActivationGradCompute<cpu>);
 
 }  // namespace op

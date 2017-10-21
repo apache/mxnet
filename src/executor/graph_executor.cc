@@ -828,7 +828,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
           auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
           if (nullptr != shared_exec && grad_stype == kDefaultStorage &&
-              shared_exec->arg_grad_map().at(arg_name).storage_type() == kDefaultStorage) {
+              shared_exec->arg_grad_map().at(arg_name).storage_type() == grad_stype) {
             // try to reuse memory from shared_exec
             arg_grad_vec->emplace_back(shared_exec->arg_grad_map().at(arg_name));
           } else {
@@ -1209,7 +1209,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       const NDArray& src = data_pool_.at(storage_id);
       data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
     } else {
-      data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i]);
+      data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i],
+                               true, vdtype[i]);
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit data entry\t" << i << "\tas " << common::stype_string(storage_type);

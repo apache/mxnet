@@ -25,8 +25,8 @@
 */
 
 #include "./lrn-inl.h"
-#if MXNET_USE_CUDNN == 1
-#include "./cudnn_lrn-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_lrn-inl.h"
 #endif
 
 namespace mxnet {
@@ -71,14 +71,81 @@ static bool LRNType(const nnvm::NodeAttrs& attrs,
 struct LRNGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+                const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
-    heads.push_back(ograds[0]); // out_grad
+    heads.push_back(ograds[0]);  // out_grad
     heads.push_back(n->inputs[lrn_enum::kData]);
     heads.emplace_back(nnvm::NodeEntry{n, lrn_enum::kTmpNorm, 0});
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
+
+inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int> *in_attrs,
+                                              std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  CHECK(!in_attrs->empty());
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
+  return true;
+}
+
+inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                               const int dev_mask,
+                                               DispatchMode* dispatch_mode,
+                                               std::vector<int> *in_attrs,
+                                               std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  CHECK(!in_attrs->empty());
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
+  return true;
+}
+
+#if MXNET_USE_MKLDNN == 1
+void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
+                     const OpContext &ctx,
+                     const std::vector<NDArray> &inputs,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<NDArray> &outputs) {
+  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNLRN_Forward(ctx, param, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+void LRNGradComputeExCPU(const nnvm::NodeAttrs &attrs,
+                         const OpContext &ctx,
+                         const std::vector<NDArray> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<NDArray> &outputs) {
+  const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
+  const NDArray &out_grad = inputs[0];
+  const NDArray &in_data = inputs[1];
+  const NDArray &in_grad = outputs[0];
+
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNLRN_Backward(ctx, param, out_grad, in_data,
+                           req[0], in_grad);
+    return;
+  }
+  FallBackCompute(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+}
+#endif
 
 DMLC_REGISTER_PARAMETER(LRNParam);
 
@@ -106,7 +173,11 @@ number of kernels in the layer.
 .set_attr_parser(ParamParser<LRNParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
+.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
 .add_argument("data", "NDArray-or-Symbol", "Input data to LRN")
 .add_arguments(LRNParam::__FIELDS__());
@@ -114,7 +185,11 @@ number of kernels in the layer.
 NNVM_REGISTER_OP(_backward_LRN)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LRNParam>)
+.set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 
 }  // namespace op

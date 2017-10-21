@@ -41,6 +41,7 @@ class CuDNNActivationOp {
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
     CUDNN_CALL(cudnnCreateActivationDescriptor(&desc_));
     #endif
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
   }
 
   void Init(const ActivationParam &param) {
@@ -62,7 +63,6 @@ class CuDNNActivationOp {
     #if CUDNN_MAJOR >= 5
     CUDNN_CALL(cudnnSetActivationDescriptor(desc_, mode_, nan_prop_, relu_ceil_));
     #endif
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
   }
 
   ~CuDNNActivationOp() {
