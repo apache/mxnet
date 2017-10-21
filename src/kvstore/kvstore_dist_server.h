@@ -174,7 +174,8 @@ class KVStoreDistServer {
 
   inline void ApplyUpdates(const int key, MergeBuf *merged, NDArray *stored,
                            ps::KVServer<real_t>* server) {
-    if (merged->request.size() == (size_t) ps::NumWorkers()) {
+    if (merged->request.size() == (size_t) ps::NumWorkers() 
+        || (key >= key_thre && merged.request.size() == 1)) {
       // let the main thread to execute updater_, which is necessary for python
       if (updater_) {
         exec_.Exec([this, key, merged, stored](){
@@ -382,6 +383,17 @@ class KVStoreDistServer {
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
       if (stored.is_none()) {
+        // init the key_thre
+        // the value is designed as [-99999999, key_thre]
+        if (key_thre == 99999999) {
+          if((size_t)req_data.lens[0] == 2) {
+            DType* tmp = (DType*)recv_blob.dptr_;
+            if (tmp[0] == -99999999) {
+              key_thre = tmp[1];
+            }
+          }
+        }
+       
         // initialization
         stored = NDArray(dshape, Context());
         CopyFromTo(recved, &stored, 0);
@@ -442,6 +454,10 @@ class KVStoreDistServer {
 
   // whether to LOG verbose information
   bool log_verbose_;
+ // threshold for keys, 
+ // when key smaller than key_thre, value will update in sync model
+ // when key lager than key_thre, value will update in async model
+ int key_thre = 99999999;
 };
 
 }  // namespace kvstore
