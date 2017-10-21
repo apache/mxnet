@@ -26,6 +26,7 @@
 
 namespace mxnet {
 namespace op {
+
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_add, mshadow::op::plus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")
@@ -57,7 +58,8 @@ NNVM_REGISTER_OP(_backward_add)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity,
                       mshadow_op::identity>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, true, false>);
+.set_attr<FInferStorageType>("FInferStorageType",
+                             ElemwiseStorageType<1, 2, true, true, true>);
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(elemwise_sub, mshadow::op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
@@ -85,7 +87,8 @@ NNVM_REGISTER_OP(_backward_sub)
   mshadow_op::identity, mshadow_op::negation>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseNoneEx<cpu,
   mshadow_op::identity, mshadow_op::negation>)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 2, true, true, false>);
+.set_attr<FInferStorageType>("FInferStorageType",
+                             ElemwiseStorageType<1, 2, true, true, true>);
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
@@ -100,10 +103,15 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
    - otherwise, ``elemwise_mul`` generates output with default storage
 
 )code")
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseMulStorageType)
+.set_attr<FInferStorageType>("FInferStorageType",
+                             ElemwiseBinaryOp::AllowLRDenseInputWithSparseOutputStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::ComputeDnsLRValueEx<cpu, mshadow::op::mul, true, true>)
+.set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */
+                              [](const NodeAttrs& attrs) {
+                                return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                              })
 .add_alias("_mul").add_alias("_Mul")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
 
@@ -115,7 +123,11 @@ NNVM_REGISTER_OP(_backward_mul)
                                 [](const NodeAttrs &attrs) {
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryBackwardUseInStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseBinaryOp::BackwardUseInStorageType)
+.set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */
+                              [](const NodeAttrs& attrs) {
+                                return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                              })
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::right, mshadow_op::left>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
@@ -140,6 +152,8 @@ NNVM_REGISTER_OP(_backward_div)
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
+  cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
   cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_mod)

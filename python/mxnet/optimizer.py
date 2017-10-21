@@ -26,7 +26,10 @@ import numpy
 from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update, ftrl_update)
+                      mp_sgd_update, mp_sgd_mom_update, square, ftrl_update)
+from .ndarray import _internal
+from .ndarray import op
+from .ndarray import sparse
 from .random import normal
 
 
@@ -735,13 +738,14 @@ class AdaGrad(Optimizer):
     ----------
     eps: float, optional
         Small value to avoid division by 0.
+
     """
     def __init__(self, eps=1e-7, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
 
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context)  # history
+        return zeros(weight.shape, weight.context, stype=weight.stype)  # history
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -750,12 +754,42 @@ class AdaGrad(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
+        is_sparse = True if weight.stype == 'row_sparse' and grad.stype == 'row_sparse' else False
+
+        if is_sparse is True:
+            grad_indices_count = len(grad.indices)
+
         grad = grad * self.rescale_grad
+
+        if is_sparse is True:
+            grad_indices = grad.indices
+            # Make sure that the scalar multiply still has a sparse result
+            assert grad_indices_count == len(grad_indices)
+
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
-        history[:] += (grad * grad)
-        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
+        save_history_stype = history.stype
+
+        if is_sparse:
+            history[:] = sparse.elemwise_add(sparse.square(grad),
+                                             sparse.retain(history, grad_indices))
+            history_indices = history.indices
+            assert len(history_indices) == grad_indices_count
+            adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
+            srt = op.sqrt(adjusted_add)
+            div = _internal._scatter_elemwise_div(grad, srt)
+            retained_weight = sparse.retain(weight, grad.indices)
+            to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, wd))
+            assert len(to_add.indices) == grad_indices_count
+            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, -lr))
+            state[:] = history
+            assert state.stype == save_history_stype
+            assert len(history_indices) == grad_indices_count
+        else:
+            history[:] += square(grad)
+            div = grad / sqrt(history + self.float_stable_eps)
+            weight[:] += (div + weight * wd) * -lr
 
 @register
 class RMSProp(Optimizer):

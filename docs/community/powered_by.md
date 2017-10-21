@@ -1,4 +1,4 @@
-# Collaborators
+# Powered By
 
 <div class="section-inst">
 <div class="container">
@@ -60,9 +60,7 @@
 </div>
 </div>
     <p>
-        MXNet is developed by collaborators from multiple universities and
-        companies. We sincerely thank the following organizations for supporting
-        MXNet and sponsoring its major developers (alphabetical order).
+        <b>These are some of the organizations that use MXNet. If you'd like to be added to this list, please send a message to <a href="mailto:dev@mxnet.incubator.apache.org">dev@mxnet.incubator.apache.org</a> </b>
     </p>
 </div>
 </div>

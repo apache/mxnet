@@ -125,6 +125,7 @@ The `ndarray` package provides several classes:
 
     NDArray.T
     NDArray.reshape
+    NDArray.reshape_like
     NDArray.flatten
     NDArray.expand_dims
     NDArray.split
@@ -194,6 +195,7 @@ The `ndarray` package provides several classes:
     NDArray.topk
     NDArray.argmax
     NDArray.argmin
+    NDArray.argmax_channel
 ```
 
 ### Arithmetic operations
@@ -266,7 +268,22 @@ The `ndarray` package provides several classes:
 
     NDArray.sqrt
     NDArray.rsqrt
+    NDArray.cbrt
+    NDArray.rcbrt
     NDArray.square
+    NDArray.reciprocal
+```
+
+## Basic neural network functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.relu
+    NDArray.sigmoid
+    NDArray.softmax
+    NDArray.log_softmax
 ```
 
 ### In-place arithmetic operations
@@ -358,6 +375,7 @@ The `ndarray` package provides several classes:
 
     cast
     reshape
+    reshape_like
     flatten
     expand_dims
 ```
@@ -394,6 +412,7 @@ The `ndarray` package provides several classes:
 
     concat
     split
+    stack
 ```
 
 ### Indexing routines
@@ -514,11 +533,13 @@ The `ndarray` package provides several classes:
     power
     sqrt
     rsqrt
+    cbrt
+    rcbrt
     square
     reciprocal
 ```
 
-### Logic functions
+### Comparison
 
 ```eval_rst
 .. autosummary::
@@ -559,6 +580,18 @@ The `ndarray` package provides several classes:
     argsort
     argmax
     argmin
+    argmax_channel
+```
+
+### Sequence operation
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    SequenceLast
+    SequenceMask
+    SequenceReverse
 ```
 
 ### Miscellaneous
@@ -592,6 +625,8 @@ The `ndarray` package provides several classes:
     SoftmaxOutput
     softmax
     log_softmax
+    relu
+    sigmoid
 ```
 
 ### More

@@ -46,11 +46,8 @@ def check_with_device(device, dtype):
                 ('mean', lambda x, params: np.mean(x.astype(np.float64)) - (params['low'] + params['high']) / 2.0, tol),
                 ('std', lambda x,  params: np.std(x.astype(np.float64)) - np.sqrt(1.0 / 12.0) * (params['high'] - params['low']), tol)
             ]
-        }
-    ]
-    if device.device_type == 'cpu':
-        symbols.extend([
-            {
+        },
+        {
                 'name': 'gamma',
                 'symbol': mx.sym.random.gamma,
                 'ndop': mx.nd.random.gamma,
@@ -77,7 +74,7 @@ def check_with_device(device, dtype):
                 'symbol': mx.sym.random.poisson,
                 'ndop': mx.nd.random.poisson,
                 'params': { 'lam': 4.0 },
-                'inputs': [ ('lam', [ [ 1.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
+                'inputs': [ ('lam', [ [ 25.0, 8.5 ], [ 2.7 , 0.5 ] ]) ],
                 'checks': [
                     ('mean', lambda x, params: np.mean(x.astype(np.float64)) - params['lam'], tol),
                     ('std', lambda x, params: np.std(x.astype(np.float64)) - np.sqrt(params['lam']), tol)
@@ -106,9 +103,10 @@ def check_with_device(device, dtype):
                 ]
             }
 
-        ])
+        ]
 
-    shape = (100, 100)
+    # Create enough samples such that we get a meaningful distribution.
+    shape = (500, 500)
     for symbdic in symbols:
         name = symbdic['name']
         ndop = symbdic['ndop']
@@ -126,23 +124,21 @@ def check_with_device(device, dtype):
         for check_name, check_func, tol in symbdic['checks']:
             assert np.abs(check_func(ret1, params)) < tol, "ndarray test: %s check for `%s` did not pass" % (check_name, name)
 
-        # check multi-distribution sampling, only supports cpu for now
-        if device.device_type == 'cpu':
-            params = {'shape': shape, 'dtype': dtype, 'ctx': device}
-            params.update({k : mx.nd.array(v, ctx=device, dtype=dtype) for k, v in symbdic['inputs']})
-            mx.random.seed(128)
-            ret1 = ndop(**params).asnumpy()
-            mx.random.seed(128)
-            ret2 = ndop(**params).asnumpy()
-            assert device.device_type == 'gpu' or same(ret1, ret2), \
-                    "ndarray test: `%s` should give the same result with the same seed" % name
-            for i in range(2):
-                for j in range(2):
-                    stats = {k : v[i][j] for k, v in symbdic['inputs']}
-                    for check_name, check_func, tol in symbdic['checks']:
-                        err = np.abs(check_func(ret2[i,j], stats))
-                        assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
-
+        # check multi-distribution sampling
+        params = {'shape': shape, 'dtype': dtype, 'ctx': device}
+        params.update({k : mx.nd.array(v, ctx=device, dtype=dtype) for k, v in symbdic['inputs']})
+        mx.random.seed(128)
+        ret1 = ndop(**params).asnumpy()
+        mx.random.seed(128)
+        ret2 = ndop(**params).asnumpy()
+        assert device.device_type == 'gpu' or same(ret1, ret2), \
+                "ndarray test: `%s` should give the same result with the same seed" % name
+        for i in range(2):
+            for j in range(2):
+                stats = {k : v[i][j] for k, v in symbdic['inputs']}
+                for check_name, check_func, tol in symbdic['checks']:
+                    err = np.abs(check_func(ret2[i,j], stats))
+                    assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
 
         # check symbolic
         symbol = symbdic['symbol']
@@ -168,29 +164,28 @@ def check_with_device(device, dtype):
         for check_name, check_func, tol in symbdic['checks']:
             assert np.abs(check_func(ret1, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
-        # check multi-distribution sampling, only supports cpu for now
-        if device.device_type == 'cpu':
-            symbol = symbdic['symbol']
-            params = { 'shape' : shape, 'dtype' : dtype }
-            single_param = len(symbdic['inputs']) == 1;
-            v1 = mx.sym.Variable('v1')
-            v2 = mx.sym.Variable('v2')
-            Y = symbol(v1,**params) if single_param else symbol(v1,v2,**params)
-            bindings = { 'v1' : mx.nd.array(symbdic['inputs'][0][1]) }
-            if not single_param :
-                bindings.update({ 'v2' : mx.nd.array(symbdic['inputs'][1][1]) })
-            yexec = Y.bind(ctx=device, args=bindings)
-            yexec.forward()
-            un1 = yexec.outputs[0].copyto(device).asnumpy()
-            params = {}
-            for i, r in enumerate(symbdic['inputs'][0][1]):
-                for j, p1 in enumerate(r):
-                    params.update({ symbdic['inputs'][0][0] : p1 })
-                    if not single_param:
-                       params.update({ symbdic['inputs'][1][0] : symbdic['inputs'][1][1][i][j] })
-                    samples = un1[i,j]
-                    for check_name, check_func, tol in symbdic['checks']:
-                        assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
+        # check multi-distribution sampling
+        symbol = symbdic['symbol']
+        params = { 'shape' : shape, 'dtype' : dtype }
+        single_param = len(symbdic['inputs']) == 1;
+        v1 = mx.sym.Variable('v1')
+        v2 = mx.sym.Variable('v2')
+        Y = symbol(v1,**params) if single_param else symbol(v1,v2,**params)
+        bindings = { 'v1' : mx.nd.array(symbdic['inputs'][0][1]) }
+        if not single_param :
+            bindings.update({ 'v2' : mx.nd.array(symbdic['inputs'][1][1]) })
+        yexec = Y.bind(ctx=device, args=bindings)
+        yexec.forward()
+        un1 = yexec.outputs[0].copyto(device).asnumpy()
+        params = {}
+        for i, r in enumerate(symbdic['inputs'][0][1]):
+            for j, p1 in enumerate(r):
+                params.update({ symbdic['inputs'][0][0] : p1 })
+                if not single_param:
+                   params.update({ symbdic['inputs'][1][0] : symbdic['inputs'][1][1][i][j] })
+                samples = un1[i,j]
+                for check_name, check_func, tol in symbdic['checks']:
+                    assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
 def test_random():
     check_with_device(mx.context.current_context(), 'float16')

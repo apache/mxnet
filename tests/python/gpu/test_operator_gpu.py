@@ -21,6 +21,7 @@ import time
 import unittest
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from numpy.testing import assert_allclose
 
@@ -1358,7 +1359,7 @@ def test_rnn_layer():
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
-
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8211")
 def test_autograd_save_memory():
     x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
     x.attach_grad()
