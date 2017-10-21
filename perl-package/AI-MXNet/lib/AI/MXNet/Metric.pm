@@ -241,8 +241,8 @@ has '+name'   => (default => 'accuracy');
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred_label) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred_label) = @$_;
         if(join(',', @{$pred_label->shape}) ne join(',', @{$label->shape}))
         {
             $pred_label = AI::MXNet::NDArray->argmax_channel($pred_label);
@@ -251,7 +251,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         my $sum = ($pred_label->aspdl->flat == $label->aspdl->flat)->sum;
         $self->sum_metric($self->sum_metric + $sum);
         $self->num_inst($self->num_inst + $pred_label->size);
-    }, $labels, $preds);
+    }
 }
 
 package AI::MXNet::TopKAccuracy;
@@ -274,8 +274,8 @@ sub BUILD
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred_label) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred_label) = @$_;
         confess('Predictions should be no more than 2 dims')
             unless @{ $pred_label->shape } <= 2;
         $pred_label = $pred_label->aspdl->qsorti;
@@ -299,7 +299,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             }
         }
         $self->num_inst($self->num_inst + $num_samples);
-    }, $labels, $preds);
+    }
 }
 
 # Calculate the F1 score of a binary classification problem.
@@ -312,16 +312,16 @@ has '+name'   => (default => 'f1');
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred_label) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred_label) = @$_;
         AI::MXNet::Metric::check_label_shapes($label, $pred_label);
         $pred_label = $pred_label->aspdl->maximum_ind;
         $label = $label->astype('int32')->aspdl;
         confess("F1 currently only supports binary classification.")
             if $label->uniq->shape->at(0) > 2;
         my ($true_positives, $false_positives, $false_negatives) = (0,0,0);
-        zip(sub{
-            my ($y_pred, $y_true) = @_;
+        for(zip($pred_label->unpdl, $label->unpdl)) {
+            my ($y_pred, $y_true) = @$_;
             if($y_pred == 1 and $y_true == 1)
             {
                 $true_positives += 1;
@@ -334,7 +334,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             {
                 $false_negatives += 1;
             }
-        }, $pred_label->unpdl, $label->unpdl);
+        }
         my $precision;
         my $recall;
         if($true_positives + $false_positives > 0)
@@ -364,7 +364,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         }
         $self->sum_metric($self->sum_metric + $f1_score);
         $self->num_inst($self->num_inst + 1);
-    }, $labels, $preds);
+    }
 }
 
 package AI::MXNet::Perplexity;
@@ -408,8 +408,8 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
     my ($loss, $num) = (0, 0);
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         my $label_shape = $label->shape;
         my $pred_shape  = $pred->shape;
         assert(
@@ -426,7 +426,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         }
         $loss -= $pred->maximum(1e-10)->log->sum->asscalar;
         $num  += $pred->size;
-    }, $labels, $preds);
+    }
     $self->sum_metric($self->sum_metric + $loss);
     $self->num_inst($self->num_inst + $num);
 }
@@ -450,8 +450,8 @@ has '+name'   => (default => 'mae');
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         $label = $label->aspdl;
         $pred =  $pred->aspdl;
         if($label->ndims == 1)
@@ -460,7 +460,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         }
         $self->sum_metric($self->sum_metric + ($label - $pred)->abs->avg);
         $self->num_inst($self->num_inst + 1);
-    }, $labels, $preds);
+    }
 }
 
 # Calculate Mean Squared Error loss
@@ -473,8 +473,8 @@ has '+name'   => (default => 'mse');
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         $label = $label->aspdl;
         $pred =  $pred->aspdl;
         if($label->ndims == 1)
@@ -483,7 +483,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         }
         $self->sum_metric($self->sum_metric + (($label - $pred)**2)->avg);
         $self->num_inst($self->num_inst + 1);
-    }, $labels, $preds);
+    }
 }
 
 # Calculate Root Mean Squred Error loss
@@ -496,8 +496,8 @@ has '+name'   => (default => 'rmse');
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         $label = $label->aspdl;
         $pred =  $pred->aspdl;
         if($label->ndims == 1)
@@ -506,7 +506,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         }
         $self->sum_metric($self->sum_metric + sqrt((($label - $pred)**2)->avg));
         $self->num_inst($self->num_inst + 1);
-    }, $labels, $preds);
+    }
 }
 
 # Calculate Cross Entropy loss
@@ -521,8 +521,8 @@ method python_constructor_arguments() { ['eps'] }
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         $label = $label->aspdl->flat;
         $pred =  $pred->aspdl;
         my $label_shape = $label->shape->at(0);
@@ -534,7 +534,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         my $prob = $pred->index($label);
         $self->sum_metric($self->sum_metric + (-($prob + $self->eps)->log)->sum);
         $self->num_inst($self->num_inst + $label_shape);
-    }, $labels, $preds);
+    }
 }
 
 package AI::MXNet::PearsonCorrelation;
@@ -570,8 +570,8 @@ has '+name'   => (default => 'pearson-correlation');
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         AI::MXNet::Metric::check_label_shapes($label, $pred);
         $label = $label->aspdl->flat;
         $pred  = $pred->aspdl->flat;
@@ -583,7 +583,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
             ((($label-$label_mean)*($pred-$pred_mean))->sum/$label->nelem)/(($label_stdv*$pred_stdv)->at(0))
         );
         $self->num_inst($self->num_inst + 1);
-    }, $labels, $preds);
+    }
 }
 
 package AI::MXNet::Loss;
@@ -749,8 +749,8 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 {
     AI::MXNet::Metric::check_label_shapes($labels, $preds)
         unless $self->allow_extra_outputs;
-    zip(sub {
-        my ($label, $pred) = @_;
+    for(zip($labels, $preds)) {
+        my ($label, $pred) = @$_;
         $label = $label->aspdl;
         $pred =  $pred->aspdl;
         my $value = $self->eval_function->($label, $pred);
@@ -758,7 +758,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         my $num_inst   = ref $value ? $value->[1] : 1;
         $self->sum_metric($self->sum_metric + $sum_metric);
         $self->num_inst($self->num_inst + $num_inst);
-    }, $labels, $preds);
+    }
 }
 
 package AI::MXNet::Metric;
