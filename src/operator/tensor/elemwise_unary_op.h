@@ -27,6 +27,7 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <utility>
+#include <algorithm>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
@@ -320,7 +321,7 @@ class UnaryOp : public OpBase {
                               const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    switch(req[0]) {
+    switch (req[0]) {
       case kWriteTo:
         mxnet_op::copy(outputs[0], inputs[0]);
         break;
