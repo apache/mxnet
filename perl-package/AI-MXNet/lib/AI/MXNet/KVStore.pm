@@ -481,12 +481,12 @@ sub _key_value
         assert(not blessed($vals) and @$keys == @$vals);
         my @c_keys;
         my @c_vals;
-        zip(sub {
-            my ($key, $val) = @_;
+        for(zip($keys, $vals)) {
+            my ($key, $val) = @$_;
             my ($c_key, $c_val) = _key_value($key, $val);
             push @c_keys, @$c_key;
             push @c_vals, @$c_val;
-        }, $keys, $vals);
+        }
         return (\@c_keys, \@c_vals);
     }
 }

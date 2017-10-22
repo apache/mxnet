@@ -93,6 +93,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
     .describe("Target data type.");
   }
 };
@@ -263,6 +264,13 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
+struct PopulateFullIdxRspKernel {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* out) {
+    KERNEL_ASSIGN(out[i], kWriteTo, i);
+  }
+};
+
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
 // instead of the usual compact representation.
 template<typename xpu>
@@ -277,16 +285,9 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
     dst->CheckAndAlloc({Shape1(num_rows)});
     Fill<true>(s, dst->data(), kWriteTo, 0);
     auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
-    ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1));
+    Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr<IType>());
   });
 }
-
-struct PopulateFullIdxRspKernel {
-  template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* out) {
-    KERNEL_ASSIGN(out[i], kWriteTo, i);
-  }
-};
 
 // Fill full indices NDArray with zeros by updating the aux shape.
 template<typename xpu>
