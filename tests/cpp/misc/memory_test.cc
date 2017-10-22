@@ -78,7 +78,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
     for (size_t x = 0; x < 5; ++x) {
       // Init memory with different values
       memset(src, 3, test_size);
-      memset(dest, 255, test_size);
+      memset(dest, 255, test_size);  // wipe out some/all of src cache
 
       // memset
       uint64_t start = test::perf::getNannoTickCount();
@@ -88,13 +88,17 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
       start = test::perf::getNannoTickCount();
 #pragma omp parallel for num_threads(omp_get_max_threads())
       for (int i = 0; i < test_size; ++i) {
-        src[i] = 123;
+        src[i] = 42;
       }
       const uint64_t omp_set_time = test::perf::getNannoTickCount() - start;
 
       start = test::perf::getNannoTickCount();
       memcpy(dest, src, test_size);
       const uint64_t memcpy_time = test::perf::getNannoTickCount() - start;
+
+      // bounce the cache and dirty logic
+      memset(src, 6, test_size);
+      memset(dest, 200, test_size);
 
       start = test::perf::getNannoTickCount();
 #pragma omp parallel for num_threads(omp_get_max_threads())
