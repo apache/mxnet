@@ -163,10 +163,10 @@ method split_and_load(
     }
     my $slices = __PACKAGE__->split_data($data, scalar(@$ctx_list), $batch_axis, $even_split);
     my @ret;
-    zip(sub {
-        my ($i, $ctx) = @_;
+    for(zip($slices, $ctx_list)) {
+        my ($i, $ctx) = @$_;
         push @ret, $i->as_in_context($ctx);
-    }, $slices, $ctx_list);
+    }
     return \@ret;
 }
 
