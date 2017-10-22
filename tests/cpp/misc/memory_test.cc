@@ -35,7 +35,7 @@ template<typename Container>
 static typename Container::value_type average(const Container& cont) {
   typename Container::value_type avg = 0;
   const size_t sz = cont.size();
-  for(auto iter = cont.begin(), e_iter = cont.end(); iter != e_iter; ++iter) {
+  for (auto iter = cont.begin(), e_iter = cont.end(); iter != e_iter; ++iter) {
     avg += *iter / sz;  // Attempt to not overflow by dividing up incrementally
   }
   return avg;
@@ -45,8 +45,8 @@ static typename Container::value_type average(const Container& cont) {
 static std::string pretty_num(uint64_t val) {
   std::string res, s = std::to_string(val);
   size_t ctr = 0;
-  for(int i = s.size() - 1; i >= 0; --i, ++ctr) {
-    if(ctr && (ctr % 3) == 0) {
+  for (int i = s.size() - 1; i >= 0; --i, ++ctr) {
+    if (ctr && (ctr % 3) == 0) {
       res += ",";
     }
     res.push_back(s[i]);
@@ -120,10 +120,10 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
                 << std::endl;
     }
     std::cout << "------------------------------------" << std::endl;
-    if(average(memset_times) > average(omp_set_times)) {
+    if (average(memset_times) > average(omp_set_times)) {
       std::cout << "<< MEMSET SLOWER FOR " << pretty_num(test_size) << " items >>" << std::endl;
     }
-    if(average(memcpy_times) > average(omp_copy_times)) {
+    if (average(memcpy_times) > average(omp_copy_times)) {
       std::cout << "<< MEMCPY SLOWER FOR " << pretty_num(test_size) << " items >>" << std::endl;
     }
     base *= 10;
