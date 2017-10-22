@@ -285,7 +285,7 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
     dst->CheckAndAlloc({Shape1(num_rows)});
     Fill<true>(s, dst->data(), kWriteTo, 0);
     auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
-    Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr<IType>());
+    Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr_);
   });
 }
 
