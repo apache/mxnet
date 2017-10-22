@@ -30,6 +30,7 @@
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
+#include <cmath>
 
 namespace mxnet {
 namespace op {
@@ -126,20 +127,24 @@ struct quantize_2bit {
     // init to 0
     *compr_block = 0;
     // start and end are indices in original grad array
-    int start = block_id*16;
-    int end = (start+16 <= grad_size) ? start+16 : grad_size;
+    int start = block_id << 4;
+    int end = (start + 16 <= grad_size) ? start + 16 : grad_size;
     char* block_ptr = reinterpret_cast < char* > (compr_block);
-    for (int i=start; i < end; i++){
-      char* curr_byte = block_ptr + (i-start)/4;
+
+//    char* curr_byte = block_ptr;
+    for (int i = start; i < end; i++) {
+      // // adds 1 when i-start divisible by 4
+      char * curr_byte = block_ptr + ((i-start) >> 2);
       float curr_value = grad[i] + residual[i];
+
       if (curr_value >= pos_threshold) {
         residual[i] = curr_value - pos_threshold;
         // set data to 10
-        (*curr_byte) |= (2u << (6-((i%4)*2)));
+        *curr_byte |= (2u << (6 - ((i & 3) << 1)));
       } else if (curr_value <= neg_threshold) {
         residual[i] = curr_value - neg_threshold;
         // set data to 01
-        (*curr_byte) |= (1u << (6-((i%4)*2)));
+        *curr_byte |= (1u << (6 - ((i & 3) << 1)));
       } else {
         // leave data as 00
         residual[i] = curr_value;
@@ -157,7 +162,7 @@ void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                               neg_threshold, pos_threshold,
                               inputs[0].Size());
   // Finally, compress the data and calculate new residual
-  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size()-3,
+  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, (inputs[2].Size()-3),
                           inputs[0].Size(),            // original grad size
                           inputs[2].dptr<float>()+3,   // compressed array
                           inputs[0].dptr<float>(),     // input array
@@ -223,15 +228,15 @@ struct dequantize_2bit {
                                   float *neg_threshold,
                                   float *pos_threshold) {
     // get block ptr
-    int block_id = i / 16;
-    char* ch_ptr = reinterpret_cast<char*>(in+block_id);
+//    char* ch_ptr = reinterpret_cast<char*>(in + (i << 4));
+
     // get row ptr
-    int row_id = (i%16)/4;
-    ch_ptr += row_id;
+    char* ch_ptr = (reinterpret_cast<char*>(in + (i >> 4))) + ((i & 15) >> 2);
+
     // get column id
-    int col_id = (i%16)%4;
+//    int col_id = (i & 15) & 3;
     // Decompress
-    switch (col_id) {
+    switch ((i & 15) & 3) {
       case 0:
         // positve
         if (((*ch_ptr) & (0xc0)) == 0x80) {  // binary: (10)00 0000
@@ -248,7 +253,7 @@ struct dequantize_2bit {
         if (((*ch_ptr) & (0x30)) == 0x20) {  // binary: 00(10) 0000
           out[i] = *pos_threshold;
         // negative
-        } else if (((*ch_ptr) & (0x30)) == 0x10) {  // binary: 00(01) 0000
+        } else if ( ((*ch_ptr) & (0x30)) == 0x10) {  // binary: 00(01) 0000
           out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
@@ -256,7 +261,7 @@ struct dequantize_2bit {
         break;
       case 2:
         // positve
-        if (((*ch_ptr) & (0x0c)) == 0x08) {  // binary: 00(10) 0000
+        if ( ((*ch_ptr) & (0x0c)) == 0x08) {  // binary: 00(10) 0000
           out[i] = *pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x0c)) == 0x04) {  // binary: 00(01) 0000
@@ -267,7 +272,7 @@ struct dequantize_2bit {
         break;
       case 3:
         // positve
-        if (((*ch_ptr) & (0x03)) == 0x02) {  // binary: 00(10) 0000
+        if (((*ch_ptr) & (0x03))== 0x02) {  // binary: 00(10) 0000
           out[i] = *pos_threshold;
         // negative
         } else if (((*ch_ptr) & (0x03)) == 0x01) {  // binary: 00(01) 0000

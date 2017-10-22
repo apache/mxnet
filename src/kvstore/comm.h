@@ -84,8 +84,8 @@ class Comm {
    * perform reduce with compressed gradients
    */
   inline void SetCompress(const std::string& compress,
-                   const float neg_threshold,
-                   const float pos_threshold) {
+                          const float neg_threshold,
+                          const float pos_threshold) {
     compress_ = compress;
     pos_threshold_ = pos_threshold;
     neg_threshold_ = neg_threshold;
