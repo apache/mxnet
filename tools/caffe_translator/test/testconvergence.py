@@ -10,6 +10,9 @@ class Criteria:
         self.metric_name = metric_name
         self.relation = relation
         self.value = value
+        
+        self.lt = True if relation.lower() == "lt" else False
+        self.gt = True if relation.lower() == "gt" else False
 
     def __str__(self):
         return "%s %s %s" % (self.metric_name, self.relation, self.value)
@@ -106,8 +109,33 @@ def translate(train_prototxt_path, solver_prototxt, out_dir_path):
     return 0
 	
 def get_test_result(out_dir_path, criteria):
-    result = True
-    result_str = "accuracy/top1: 99.1 (passed)"
+    log_file_path = out_dir_path + "/" + train_log_name
+    log_full_text = open(log_file_path).read()
+
+    metric_name = criteria.metric_name
+    search_pattern = r"'%s': \d+\.\d+" % metric_name
+    metric_lines = re.findall(search_pattern, log_full_text)
+
+    best_metric = sys.float_info.max if criteria.lt is True else sys.float_info.min
+
+    for metric_line in metric_lines:
+        metric = re.findall(r"\d+\.\d+", metric_line)
+        metric = float(metric[0])
+
+        if criteria.lt is True:
+            best_metric = min(best_metric, metric)
+        elif criteria.gt is True:
+            best_metric = max(best_metric, metric)
+    
+    result = False
+    if criteria.lt is True:
+        result = True if best_metric <= criteria.value else False
+    elif criteria.gt is True:
+        result = True if best_metric >= criteria.value else False
+    
+    result_str = "passed" if result == True else "failed"
+    result_str = "%s: %f (%s)" % (criteria.metric_name, best_metric, result_str)
+
     return (result, result_str)
 
 def train_network(out_dir_path):
