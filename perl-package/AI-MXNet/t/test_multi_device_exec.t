@@ -41,8 +41,8 @@ sub test_ctx_group
         shapes    => { data => [1,200] }
     );
 
-    zip(sub {
-        my ($arr, $name) = @_;
+    for(zip($texec->arg_arrays, $mlp->list_arguments())) {
+        my ($arr, $name) = @$_;
         if(exists $set_stage1{ $name })
         {
             ok($arr->context == $group2ctx->{stage1});
@@ -51,7 +51,7 @@ sub test_ctx_group
         {
             ok($arr->context == $group2ctx->{stage2});
         }
-    }, $texec->arg_arrays, $mlp->list_arguments());
+    }
 }
 
 test_ctx_group();
