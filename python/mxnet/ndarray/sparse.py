@@ -1050,6 +1050,21 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
 _set_ndarray_class(_ndarray_cls)
 
 
+def _init_op(ndarray_op, internal_op, stype, shape,
+             ctx, dtype, *args, **kwargs):
+    if stype == 'default':
+        return ndarray_op(*args, ctx=ctx, dtype=dtype, **kwargs)
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    if stype == 'row_sparse' or stype == 'csr':
+        aux_types = _STORAGE_AUX_TYPES[stype]
+    else:
+        raise ValueError("unknown storage type" + stype)
+    out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
+    return internal_op(*args, ctx=ctx, dtype=dtype, out=out, **kwargs)
+
+
 def eye(stype, N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     """Return Return a 2-D array with ones on the diagonal and zeros elsewhere
        of given shape and type.
@@ -1084,18 +1099,10 @@ def eye(stype, N, M=0, k=0, ctx=None, dtype=None, **kwargs):
     array([[ 0.,  1.,  0.],
            [ 0.,  0.,  1.]], dtype=float32)
     """
-    if stype == 'default':
-        return _eye_ndarray(N=N, M=M, k=k, ctx=ctx, dtype=dtype, **kwargs)
-    if ctx is None:
-        ctx = Context.default_ctx
-    dtype = mx_real_t if dtype is None else dtype
-    if stype == 'row_sparse' or stype == 'csr':
-        aux_types = _STORAGE_AUX_TYPES[stype]
-    else:
-        raise ValueError("unknown storage type" + stype)
     ncols = M if M > 0 else N
-    out = _ndarray_cls(_new_alloc_handle(stype, (N, ncols), ctx, True, dtype, aux_types))
-    return _internal._eye(N=N, M=M, k=k, ctx=ctx, dtype=dtype, out=out, **kwargs)
+    shape = (N, ncols)
+    return _init_op(_eye_ndarray, _internal._eye, stype, shape,
+                    ctx, dtype, N, M, k, **kwargs)
 
 
 def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
@@ -1123,17 +1130,8 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     >>> mx.nd.sparse.zeros('row_sparse', (1,2), ctx=mx.cpu(), dtype='float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
-    if stype == 'default':
-        return _zeros_ndarray(shape, ctx=ctx, dtype=dtype, **kwargs)
-    if ctx is None:
-        ctx = Context.default_ctx
-    dtype = mx_real_t if dtype is None else dtype
-    if stype == 'row_sparse' or stype == 'csr':
-        aux_types = _STORAGE_AUX_TYPES[stype]
-    else:
-        raise ValueError("unknown storage type" + stype)
-    out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
+    return _init_op(_zeros_ndarray, _internal._zeros, stype, shape,
+                    ctx, dtype, shape, **kwargs)
 
 
 def empty(stype, shape, ctx=None, dtype=None):
