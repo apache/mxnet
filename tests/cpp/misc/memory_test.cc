@@ -46,58 +46,72 @@ inline typename Container::value_type average(const Container& cont) {
  * \brief Generic bidirectional sanity test
  */
 TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
-  //const size_t GB = 1000000000;  // memset sometimes slower
-  const size_t   GB = 1000000000;  // memset never slower
-  const size_t test_size = 2 * GB;
-  std::cout << "Data size: " << test_size << std::endl << std::flush;
-
+  const size_t GB = 1000000000;  // memset never slower
+  uint64_t base = 100000;
   std::list<uint64_t> memset_times, omp_set_times, memcpy_times, omp_copy_times;
-  std::unique_ptr<uint8_t> buffer_1(new uint8_t[test_size]), buffer_2(new uint8_t[test_size]);
-  uint8_t *src = buffer_1.get(), *dest = buffer_2.get();
+  do {
+    memset_times.resize(0);
+    omp_set_times.resize(0);
+    memcpy_times.resize(0);
+    omp_copy_times.resize(0);;
 
-  for(size_t x = 0; x < 10; ++x) {
-    // Init memory with different values
-    memset(src, 3, test_size);
-    memset(dest, 255, test_size);
+    const size_t test_size = 2 * base;
+    std::cout << "====================================" << std::endl
+              << "Data size: " << test_size << std::endl << std::flush;
 
-    // memset
-    uint64_t start = test::perf::getNannoTickCount();
-    memset(src, 123, test_size);
-    const uint64_t memset_time = test::perf::getNannoTickCount() - start;
+    std::unique_ptr<uint8_t> buffer_1(new uint8_t[test_size]), buffer_2(new uint8_t[test_size]);
+    uint8_t *src = buffer_1.get(), *dest = buffer_2.get();
 
-    start = test::perf::getNannoTickCount();
-    #pragma omp parallel for num_threads(omp_get_max_threads())
-    for (int i = 0; i < test_size; ++i) {
-      src[i] = 123;
+    for (size_t x = 0; x < 5; ++x) {
+      // Init memory with different values
+      memset(src, 3, test_size);
+      memset(dest, 255, test_size);
+
+      // memset
+      uint64_t start = test::perf::getNannoTickCount();
+      memset(src, 123, test_size);
+      const uint64_t memset_time = test::perf::getNannoTickCount() - start;
+
+      start = test::perf::getNannoTickCount();
+#pragma omp parallel for num_threads(omp_get_max_threads())
+      for (int i = 0; i < test_size; ++i) {
+        src[i] = 123;
+      }
+      const uint64_t omp_set_time = test::perf::getNannoTickCount() - start;
+
+      start = test::perf::getNannoTickCount();
+      memcpy(dest, src, test_size);
+      const uint64_t memcpy_time = test::perf::getNannoTickCount() - start;
+
+      start = test::perf::getNannoTickCount();
+#pragma omp parallel for num_threads(omp_get_max_threads())
+      for (int i = 0; i < test_size; ++i) {
+        dest[i] = src[i];
+      }
+      const uint64_t omp_copy_time = test::perf::getNannoTickCount() - start;
+
+      memset_times.push_back(memset_time);
+      omp_set_times.push_back(omp_set_time);
+      memcpy_times.push_back(memcpy_time);
+      omp_copy_times.push_back(omp_copy_time);
+
+      std::cout << "memset time:   " << memcpy_time << " ns" << std::endl
+                << "omp set time:  " << omp_set_time << " ns" << std::endl
+                << std::endl;
+      std::cout << "memcpy time:   " << memcpy_time << " ns" << std::endl
+                << "omp copy time: " << omp_copy_time << " ns" << std::endl
+                << std::endl;
     }
-    const uint64_t omp_set_time = test::perf::getNannoTickCount() - start;
-
-    start = test::perf::getNannoTickCount();
-    memcpy(dest, src, test_size);
-    const uint64_t memcpy_time = test::perf::getNannoTickCount() - start;
-
-    start = test::perf::getNannoTickCount();
-    #pragma omp parallel for num_threads(omp_get_max_threads())
-    for (int i = 0; i < test_size; ++i) {
-      dest[i] = src[i];
+    std::cout << "------------------------------------" << std::endl;
+    if(average(memset_times) > average(omp_set_times)) {
+      std::cout << "<< MEMSET SLOWER FOR " << test_size << " items >>" << std::endl;
     }
-    const uint64_t omp_copy_time = test::perf::getNannoTickCount() - start;
-
-    memset_times.push_back(memset_time);
-    omp_set_times.push_back(omp_set_time);
-    memcpy_times.push_back(memcpy_time);
-    omp_copy_times.push_back(omp_copy_time);
-
-    std::cout << "memset time:   " << memcpy_time << " ns" << std::endl
-              << "omp set time:  " << omp_set_time << " ns" << std::endl
-              << std::endl;
-    std::cout << "memcpy time:   " << memcpy_time << " ns" << std::endl
-              << "omp copy time: " << omp_copy_time << " ns" << std::endl
-              << std::endl;
-  }
-
-  ASSERT_LE(average(memset_times), average(omp_set_times));
-  ASSERT_LE(average(memcpy_times), average(omp_copy_times));
-
+    if(average(memcpy_times) > average(omp_copy_times)) {
+      std::cout << "<< MEMCPY SLOWER FOR " << test_size << " items >>" << std::endl;
+    }
+    base *= 10;
+  } while(base <= GB
+          && (average(memset_times) < average(omp_set_times)
+              || average(memcpy_times), average(omp_copy_times)));
 }
 #endif  // _OPENMP
