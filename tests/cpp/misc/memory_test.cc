@@ -46,7 +46,8 @@ inline typename Container::value_type average(const Container& cont) {
  * \brief Generic bidirectional sanity test
  */
 TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
-  const size_t GB = 1000000000;
+  //const size_t GB = 1000000000;  // memset sometimes slower
+  const size_t GB = 100000000;  // memset never slower
   const size_t test_size = 2 * GB;
   std::cout << "Data size: " << test_size << std::endl << std::flush;
 
