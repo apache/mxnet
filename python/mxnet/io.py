@@ -522,7 +522,7 @@ def _has_instance(data, dtype):
             if isinstance(v, dtype):
                 return True
     if isinstance(data, dict):
-        for v in data.items():
+        for v in data.values():
             if isinstance(v, dtype):
                 return True
     return False
