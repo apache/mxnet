@@ -47,7 +47,7 @@ inline typename Container::value_type average(const Container& cont) {
  */
 TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
   //const size_t GB = 1000000000;  // memset sometimes slower
-  const size_t   GB = 10000000;  // memset never slower
+  const size_t   GB = 1000000000;  // memset never slower
   const size_t test_size = 2 * GB;
   std::cout << "Data size: " << test_size << std::endl << std::flush;
 
@@ -56,6 +56,11 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
   uint8_t *src = buffer_1.get(), *dest = buffer_2.get();
 
   for(size_t x = 0; x < 10; ++x) {
+    // Init memory with different values
+    memset(src, 3, test_size);
+    memset(dest, 255, test_size);
+
+    // memset
     uint64_t start = test::perf::getNannoTickCount();
     memset(src, 123, test_size);
     const uint64_t memset_time = test::perf::getNannoTickCount() - start;
@@ -83,10 +88,12 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
     memcpy_times.push_back(memcpy_time);
     omp_copy_times.push_back(omp_copy_time);
 
-    std::cout << "memset: " << memcpy_time
-              << " ns, omp set time:  " << omp_set_time << " ns" << std::endl;
-    std::cout << "memcpy: " << memcpy_time
-              << " ns, omp copy time: " << omp_copy_time << " ns" << std::endl;
+    std::cout << "memset time:   " << memcpy_time << " ns" << std::endl
+              << "omp set time:  " << omp_set_time << " ns" << std::endl
+              << std::endl;
+    std::cout << "memcpy time:   " << memcpy_time << " ns" << std::endl
+              << "omp copy time: " << omp_copy_time << " ns" << std::endl
+              << std::endl;
   }
 
   ASSERT_LE(average(memset_times), average(omp_set_times));
