@@ -460,7 +460,7 @@ def test_executor_group():
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
 
-def test_factorization_machine_module():
+def test_factorization_machine_module(verbose=False):
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
         print("check_factorization_machine_module( {} )".format(optimizer))
@@ -558,9 +558,22 @@ def test_factorization_machine_module():
         if num_epochs > 1:
             assert(metric.get()[1] < expected_accuracy)
 
-    check_factorization_machine_module('adam')
+    if verbose is True:
+        print("============ SGD ==========================")
+        start = time.clock()
     check_factorization_machine_module('sgd')
+    if verbose is True:
+        print("Duration: {}".format(time.clock() - start))
+        print("============ ADAM ==========================")
+        start = time.clock()
+    check_factorization_machine_module('adam')
+    if verbose is True:
+        print("Duration: {}".format(time.clock() - start))
+        print("============ ADAGRAD ==========================")
+        start = time.clock()
     check_factorization_machine_module('adagrad')
+    if verbose is True:
+        print("Duration: {}".format(time.clock() - start))
 
 
 def test_module_initializer():
