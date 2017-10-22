@@ -1052,6 +1052,7 @@ _set_ndarray_class(_ndarray_cls)
 
 def _init_op(ndarray_op, internal_op, stype, shape,
              ctx, dtype, *args, **kwargs):
+    """Common interface to initialize the NDArray."""
     if stype == 'default':
         return ndarray_op(*args, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
@@ -1066,7 +1067,7 @@ def _init_op(ndarray_op, internal_op, stype, shape,
 
 
 def eye(stype, N, M=0, k=0, ctx=None, dtype=None, **kwargs):
-    """Return Return a 2-D array with ones on the diagonal and zeros elsewhere
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere
        of given shape and type.
 
     Parameters

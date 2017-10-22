@@ -39,7 +39,7 @@ __all__ = ['zeros', 'empty', 'array', 'load', 'save', 'eye']
 
 
 def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, **kwargs):
-    """Return Return a 2-D array with ones on the diagonal and zeros elsewhere.
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
     Parameters
     ----------

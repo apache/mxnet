@@ -2998,7 +2998,7 @@ def imdecode(str_img, clip_rect=(0, 0, 0, 0), out=None, index=0, channels=3, mea
 
 
 def eye(N, M=0, k=0, ctx=None, dtype=None, **kwargs):
-    """Return Return a 2-D array with ones on the diagonal and zeros elsewhere.
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
     Parameters
     ----------
