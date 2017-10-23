@@ -629,11 +629,11 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
-        if _has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray):
-            assert(shuffle is False), \
-                  "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
-            assert(last_batch_handle == 'discard'), "`NDArrayIter` only supports ``CSRNDArray``" \
-                                                    " with `last_batch_handle` set to `discard`."
+        if ((_has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray)) and
+                (shuffle or last_batch_handle != 'discard')):
+            raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
+                                      " with `shuffle` set to `False`" \
+                                      " and `last_batch_handle` set to `discard`.")
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
 

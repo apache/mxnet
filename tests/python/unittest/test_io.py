@@ -164,10 +164,10 @@ def test_NDArrayIter_csr():
 
     #test CSRNDArray with shuffle=True will throw AssertionError 
     try:
-        csr_iter = iter(mx.io.NDArrayIter({'data': csr}, dns, batch_size, shuffle=True,
-                                          last_batch_handle='discard'))
-        sys.exit(1)
-    except AssertionError:
+        csr_iter = mx.io.NDArrayIter({'data': csr}, dns, batch_size, shuffle=True,
+                                     last_batch_handle='discard')
+        assert(False)
+    except NotImplementedError:
         pass
 
     # make iterators
