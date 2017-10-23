@@ -323,7 +323,8 @@ class UnaryOp : public OpBase {
     using namespace mshadow::expr;
     switch (req[0]) {
       case kWriteTo:
-        mxnet_op::copy(outputs[0], inputs[0]);
+        CHECK_EQ(outputs[0].dev_mask(), inputs[0].dev_mask());
+        mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
         break;
       case kAddTo: {
           Stream<xpu> *s = ctx.get_stream<xpu>();

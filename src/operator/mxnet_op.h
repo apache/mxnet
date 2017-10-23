@@ -204,13 +204,16 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
  * \param to Destination blob
  * \param from Source blob
  */
-MSHADOW_CINLINE void copy(const TBlob& to, const TBlob& from) {
+template <typename xpu>
+MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob& from) {
+  CHECK_EQ(from.Size(), to.Size());
+  CHECK_EQ(from.dev_mask(), to.dev_mask());
   MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
     if (to.type_flag_ == from.type_flag_) {
-      mshadow::Copy(to.FlatTo1D<cpu, DType>(), from.FlatTo1D<cpu, DType>());
+      mshadow::Copy(to.FlatTo1D<xpu, DType>(), from.FlatTo1D<xpu, DType>(), s);
     } else {
       MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
-        to.FlatTo1D<cpu, DType>() = mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
+        to.FlatTo1D<xpu, DType>(s) = mshadow::expr::tcast<DType>(from.FlatTo1D<xpu, SrcDType>(s));
       })
     }
   })
