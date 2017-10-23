@@ -191,9 +191,12 @@ void TopKImpl(RunContext ctx,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   Tensor<xpu, 3, real_t> dat = src.FlatTo3D<xpu, real_t>(axis, axis, s);
   size_t temp_size = mxnet::op::SortByKeyWorkspaceSize<int64_t, int64_t, xpu>(src.Size());
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int64_t, real_t, xpu>(src.Size()));
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<real_t, int64_t, xpu>(src.Size()));
-  size_t workspace_size = temp_size + sizeof(real_t) * src.Size() + sizeof(int64_t) * src.Size() * 2;
+  temp_size = std::max(temp_size,
+                mxnet::op::SortByKeyWorkspaceSize<int64_t, real_t, xpu>(src.Size()));
+  temp_size = std::max(temp_size,
+                mxnet::op::SortByKeyWorkspaceSize<real_t, int64_t, xpu>(src.Size()));
+  size_t workspace_size = temp_size + sizeof(real_t) * src.Size() +
+                            sizeof(int64_t) * src.Size() * 2;
   if (param.ret_typ == topk_enum::kReturnMask) {
     workspace_size += sizeof(int64_t) * batch_size * k + sizeof(real_t) * batch_size * k;
   }
