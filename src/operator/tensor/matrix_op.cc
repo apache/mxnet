@@ -336,10 +336,16 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
+MXNET_ADD_SPARSE_OP_ALIAS(slice_axis)
 .describe(R"code(Slices along a given axis.
 
 Returns an array slice along a given `axis` starting from the `begin` index
 to the `end` index.
+
+The storage type of ``slice_axis`` output depends on storage types of inputs
+
+- slice_axis(csr, axis, begin, end) = csr
+- otherwise, ``slice_axis`` generates output with default storage
 
 Examples::
 

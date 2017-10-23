@@ -135,13 +135,17 @@ def test_sparse_nd_slice():
         end = rnd.randint(start + 1, shape[0])
         assert same(mx.nd.slice_axis(A, begin=start, end=end, axis=0).asnumpy(),
                     A2[start:end])
-        assert same(mx.nd.slice_axis(A, begin=start-shape[0], end=end, axis=0).asnumpy(),
+        assert same(mx.nd.slice_axis(A, begin=start-shape[0], end=end, axis=-2).asnumpy(),
                     A2[start:end])
         start = rnd.randint(0, shape[1] - 1)
         end = rnd.randint(start + 1, shape[1])
         assert same(mx.nd.slice_axis(A, begin=start, end=end, axis=1).asnumpy(),
                     A2[:, start:end])
-        assert same(mx.nd.slice_axis(A, begin=start-shape[1], end=end, axis=1).asnumpy(),
+        assert same(mx.nd.slice_axis(A, begin=start-shape[1], end=end, axis=-1).asnumpy(),
+                    A2[:, start:end])
+        A = mx.nd.sparse.zeros("csr", shape)
+        A2 = A.asnumpy()
+        assert same(mx.nd.slice_axis(A, begin=start, end=end, axis=1).asnumpy(),
                     A2[:, start:end])
 
     shape = (rnd.randint(2, 10), rnd.randint(2, 10))

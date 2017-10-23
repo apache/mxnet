@@ -934,9 +934,8 @@ inline bool SliceAxisForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                              std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
-  const auto& in_stype = in_attrs->at(0);
-  auto& out_stype = out_attrs->at(0);
+  const int in_stype = in_attrs->at(0);
+  int& out_stype = out_attrs->at(0);
   bool dispatched = false;
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
@@ -945,7 +944,7 @@ inline bool SliceAxisForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
-  if (!dispatched && in_stype == kCSRStorage && param.axis <= 1) {
+  if (!dispatched && in_stype == kCSRStorage) {
     dispatched = storage_type_assign(&out_stype, kCSRStorage,
                                      dispatch_mode, dispatch_ex);
   }
@@ -964,21 +963,23 @@ struct SliceAxisOneCsrAssign {
   MSHADOW_XINLINE static void Map(int i, IType* out_idx, DType* out_data,
                                   const RType* out_indptr, const IType* in_idx,
                                   const DType* in_data, const RType* in_indptr,
-                                  int begin, int end) {
+                                  const int begin, const int end) {
     RType ind = out_indptr[i];
-    for (int j=in_indptr[i]; j < in_indptr[i+1]; j++) {
-      if (in_idx[j] >= begin && in_idx[j] < end) {
-        out_idx[ind] = in_idx[j] - static_cast<IType>(begin);
-        out_data[ind] = in_data[j];
-        ind++;
+    for (RType j = in_indptr[i]; j < in_indptr[i+1]; j++) {
+      if (in_idx[j] >= end) {
+          break;
+      } else if (in_idx[j] >= begin) {
+          out_idx[ind] = in_idx[j] - begin;
+          out_data[ind] = in_data[j];
+          ind++;
       }
     }
   }
 };
 
 template<typename xpu>
-void SliceAxisOneCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
-                  const NDArray &in, OpReqType req, const NDArray &out) {
+void SliceAxisOneCsrImpl(const int begin, const int end, const OpContext& ctx,
+                         const NDArray &in, OpReqType req, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -986,9 +987,7 @@ void SliceAxisOneCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
   if (req == kNullOp) return;
   CHECK_NE(req, kAddTo) << "kAddTo for SliceAxis on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for SliceAxis on CSR input is not supported";
-  int axis, begin, end;
-  GetSliceAxisParams(param, in.shape(), &axis, &begin, &end);
-  int indptr_len = in.shape()[0] + 1;
+  nnvm::dim_t indptr_len = in.shape()[0] + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
   // assume idx indptr share the same type
   MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
@@ -1001,12 +1000,14 @@ void SliceAxisOneCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
         RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         int nnz = 0;
         out_indptr[0] = 0;
-        for (int i=0; i < indptr_len - 1; i++) {
+        for (nnvm::dim_t i=0; i < indptr_len - 1; i++) {
           out_indptr[i+1] = out_indptr[i];
-          for (int j=in_indptr[i]; j < in_indptr[i+1]; j++) {
-            if (in_idx[j] >= begin && in_idx[j] < end) {
-              out_indptr[i+1]++;
-              nnz++;
+          for (nnvm::dim_t j=in_indptr[i]; j < in_indptr[i+1]; j++) {
+            if (in_idx[j] >= end) {
+                break;
+            } else if (in_idx[j] >= begin) {
+                out_indptr[i+1]++;
+                nnz++;
             }
           }
         }
@@ -1025,10 +1026,8 @@ void SliceAxisOneCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
 }
 
 template<typename xpu>
-void SliceAxisZeroCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
-                  const NDArray &in, OpReqType req, const NDArray &out) {
-  int axis, begin, end;
-  GetSliceAxisParams(param, in.shape(), &axis, &begin, &end);
+void SliceAxisZeroCsrImpl(const int begin, const int end, const OpContext& ctx,
+                          const NDArray &in, OpReqType req, const NDArray &out) {
   SliceParam slice_param;
   slice_param.begin[0] = begin;
   slice_param.end[0] = end;
@@ -1037,22 +1036,22 @@ void SliceAxisZeroCsrImpl(const SliceAxisParam &param, const OpContext& ctx,
 
 template<typename xpu>
 void SliceAxisEx(const nnvm::NodeAttrs& attrs,
-          const OpContext& ctx,
-          const std::vector<NDArray>& inputs,
-          const std::vector<OpReqType>& req,
-          const std::vector<NDArray>& outputs) {
+                 const OpContext& ctx,
+                 const std::vector<NDArray>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
 
   const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
-  auto in_stype = inputs[0].storage_type();
-  CHECK_NE(in_stype, kDefaultStorage)
-           << "SliceAxisEx is not expected to execute for input with default storage type";
+  int axis, begin, end;
+  GetSliceAxisParams(param, inputs[0].shape(), &axis, &begin, &end);
+  int in_stype = inputs[0].storage_type();
   if (in_stype == kCSRStorage) {
-    if (param.axis == 0) {
-      SliceAxisZeroCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
-    } else if (param.axis == 1) {
-      SliceAxisOneCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+    if (axis == 0) {
+      SliceAxisZeroCsrImpl<xpu>(begin, end, ctx, inputs[0], req[0], outputs[0]);
+    } else if (axis == 1) {
+      SliceAxisOneCsrImpl<xpu>(begin, end, ctx, inputs[0], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "CSRNDArray is only for 2-D shape";
     }
