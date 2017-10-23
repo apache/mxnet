@@ -153,6 +153,14 @@ network.resnet.RCNN_FEAT_STRIDE = 16
 network.resnet.FIXED_PARAMS = ['conv0', 'stage1', 'gamma', 'beta']
 network.resnet.FIXED_PARAMS_SHARED = ['conv0', 'stage1', 'stage2', 'stage3', 'gamma', 'beta']
 
+network.pvanet = edict()
+network.pvanet.pretrained = 'model/pvanet'
+network.pvanet.pretrained_epoch = 0
+network.pvanet.PIXEL_MEANS = np.array([0, 0, 0])
+network.pvanet.RPN_FEAT_STRIDE = 16
+network.pvanet.RCNN_FEAT_STRIDE = 16
+network.pvanet.FIXED_PARAMS = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
+network.pvanet.FIXED_PARAMS_SHARED = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5']
 # dataset settings
 dataset = edict()
 

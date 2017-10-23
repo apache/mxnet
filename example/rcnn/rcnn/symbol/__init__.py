@@ -15,5 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from symbol_pvanet import *
 from symbol_vgg import *
 from symbol_resnet import *
