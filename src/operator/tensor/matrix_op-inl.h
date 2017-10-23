@@ -1000,9 +1000,9 @@ void SliceAxisOneCsrImpl(const int begin, const int end, const OpContext& ctx,
         RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         int nnz = 0;
         out_indptr[0] = 0;
-        for (nnvm::dim_t i=0; i < indptr_len - 1; i++) {
+        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
           out_indptr[i+1] = out_indptr[i];
-          for (nnvm::dim_t j=in_indptr[i]; j < in_indptr[i+1]; j++) {
+          for (RType j = in_indptr[i]; j < in_indptr[i+1]; j++) {
             if (in_idx[j] >= end) {
                 break;
             } else if (in_idx[j] >= begin) {
