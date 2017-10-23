@@ -26,6 +26,7 @@
 #include <gtest/gtest.h>
 #include <dmlc/omp.h>
 #include <mxnet/tensor_blob.h>
+#include "../include/test_util.h"
 #include "../include/test_perf.h"
 
 using namespace mxnet;
@@ -41,11 +42,10 @@ static typename Container::value_type average(const Container& cont) {
   return avg;
 }
 
-
 static std::string pretty_num(uint64_t val) {
   std::string res, s = std::to_string(val);
   size_t ctr = 0;
-  for (int i = s.size() - 1; i >= 0; --i, ++ctr) {
+  for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
     if (ctr && (ctr % 3) == 0) {
       res += ",";
     }
@@ -53,6 +53,10 @@ static std::string pretty_num(uint64_t val) {
   }
   std::reverse(res.begin(), res.end());
   return res;
+}
+
+static int GetOMPThreadCount() {
+  return omp_get_max_threads() >> 1;
 }
 
 /*!
@@ -87,7 +91,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
       const uint64_t memset_time = test::perf::getNannoTickCount() - start;
 
       start = test::perf::getNannoTickCount();
-#pragma omp parallel for num_threads(omp_get_max_threads())
+      #pragma omp parallel for num_threads(GetOMPThreadCount())
       for (int i = 0; i < test_size; ++i) {
         src[i] = 42;
       }
@@ -102,7 +106,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
       memset(dest, 200, test_size);
 
       start = test::perf::getNannoTickCount();
-#pragma omp parallel for num_threads(omp_get_max_threads())
+      #pragma omp parallel for num_threads(GetOMPThreadCount())
       for (int i = 0; i < test_size; ++i) {
         dest[i] = src[i];
       }
@@ -133,7 +137,8 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
     }
     base *= 10;
     ++pass;
-  } while(base <= GB
+  } while(test::performance_run
+          && base <= GB
           && (average(memset_times) < average(omp_set_times)
               || average(memcpy_times), average(omp_copy_times)));
 }
