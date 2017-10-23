@@ -62,6 +62,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
   const size_t GB = 1000000000;  // memset never slower
   uint64_t base = 100000;
   std::list<uint64_t> memset_times, omp_set_times, memcpy_times, omp_copy_times;
+  size_t pass = 0;
   do {
     memset_times.resize(0);
     omp_set_times.resize(0);
@@ -126,7 +127,12 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
     if (average(memcpy_times) > average(omp_copy_times)) {
       std::cout << "<< MEMCPY SLOWER FOR " << pretty_num(test_size) << " items >>" << std::endl;
     }
+    if(!pass) {
+      GTEST_ASSERT_LE(average(memset_times), average(omp_set_times));
+      GTEST_ASSERT_LE(average(memcpy_times), average(omp_copy_times));
+    }
     base *= 10;
+    ++pass;
   } while(base <= GB
           && (average(memset_times) < average(omp_set_times)
               || average(memcpy_times), average(omp_copy_times)));
