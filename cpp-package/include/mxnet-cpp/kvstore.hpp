@@ -82,10 +82,9 @@ inline void KVStore::RunServer() {
   CHECK_EQ(MXKVStoreRunServer(get_kvstore()->get_handle(), &Controller, 0), 0);
 }
 
-inline void KVStore::SetCompress(const std::string& compress,
-                          const float neg_threshold, const float pos_threshold) {
+inline void KVStore::SetGradientCompression(const std::string& compress_type, const float threshold) {
     CHECK_EQ(MXKVStoreSetCompress(get_kvstore()->get_handle(),
-                                  compress.c_str(), neg_threshold, pos_threshold), 0);
+                                  compress_type.c_str(), threshold), 0);
 }
 
 inline void KVStore::Init(int key, const NDArray& val) {
