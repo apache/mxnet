@@ -40,8 +40,9 @@ namespace mxnet {
 namespace test {
 
 extern bool unitTestsWithCuda;
-extern bool debugOutput;
+extern bool debug_output;
 extern bool quick_test;
+extern bool performance_run;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
