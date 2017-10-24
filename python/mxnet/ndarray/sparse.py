@@ -806,7 +806,7 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
     shape : tuple of int, optional
         The shape of the csr matrix.
     ctx: Context, optional
-        Device context.
+        Device context (default is the current default context).
     dtype: str or numpy.dtype, optional
         The data type of the output array.
 
@@ -956,7 +956,7 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
     shape : tuple of int, optional
         The shape of the row sparse ndarray.
     ctx : Context, optional
-        Device context.
+        Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
         The data type of the output array.
 
