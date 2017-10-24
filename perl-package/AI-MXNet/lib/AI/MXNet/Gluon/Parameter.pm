@@ -194,8 +194,8 @@ method _load_init($data, $ctx)
 {
     if($self->shape)
     {
-        zip(sub {
-            my ($i, $j) = @_;
+        for(zip($self->shape, $data->shape)) {
+            my ($i, $j) = @$_;
             assert(
                 ($i == 0 or $i == $j),
                 sprintf(
@@ -204,7 +204,7 @@ method _load_init($data, $ctx)
                     $self->name, "@{$self->shape}", "@{$data->shape}"
                 )
             );
-        }, $self->shape, $data->shape);
+        }
     }
     if($self->dtype)
     {

@@ -236,6 +236,53 @@ def test_regression():
                      lambda x, y : x - y)
 
 
+def check_softmax_grad(xpu):
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.zeros((1,4))
+    expected_grad_out[0, k] = -1
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
+def check_smoothed_softmax_grad(xpu):
+    alpha = 0.2
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False, smooth_alpha=alpha)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.full((1,4), fill_value=-alpha/float(4-1))
+    expected_grad_out[0, k] = - (1 - alpha)
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
 def check_softmax_with_ignore_label(xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
@@ -284,12 +331,6 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
     exec1.backward()
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
-
-
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
 
 
 def test_python_op():
@@ -2460,11 +2501,11 @@ def test_mathematical():
 
     # log10
     mathematical_core("log10", lambda x: mx.sym.log10(x), lambda x: np.log10(x),
-                      lambda x: (1 / x))
+                      lambda x: 1. / (x * np.log(10.)))
 
     # log2
     mathematical_core("log2", lambda x: mx.sym.log2(x), lambda x: np.log2(x),
-                      lambda x: (1 / x))
+                      lambda x: 1. / (x * np.log(2.)))
 
     # rint
     rounding("rint", lambda x: mx.sym.rint(x), lambda x: np.rint(x))
@@ -2508,18 +2549,20 @@ def test_init():
         assert exe.outputs[0].asnumpy().dtype == dtype
 
     def test_arange():
-        for i in range(5):
-            start = np.random.rand() * 10
-            stop = start + np.random.rand() * 100
-            step = np.random.rand() * 4
-            repeat = int(np.random.rand() * 5) + 1
-            gt = np.arange(start=start, stop=stop, step=step)
-            gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
-            x = mx.sym.arange(start=start, stop=stop, step=step, repeat=repeat)
-            exe = x.simple_bind(ctx=default_context())
-            assert len(exe.grad_arrays) == 0
-            pred = exe.forward(is_train=False)[0].asnumpy()
-            assert_almost_equal(pred, gt)
+        # General Random Tests
+        dtype_list = [np.float32, np.float64, np.int32, np.uint8]
+        config_list = [(10,),
+                       (0, 10),
+                       (5, 100, 4),
+                       (50, -50, -2),
+                       (1.3, 456.6, 1.3)]
+        for dtype in dtype_list:
+            for config in config_list:
+                repeats = random.choice([1, 3])
+                np_out = np.repeat(np.arange(*config, dtype=dtype), repeats)
+                nd_out = mx.nd.arange(*config, repeat=repeats, dtype=dtype)
+                assert_almost_equal(np_out, nd_out.asnumpy())
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
@@ -4265,6 +4308,287 @@ def test_scatter_gather_nd():
     idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
 
     assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
+
+def compare_forw_backw_unary_op(
+        name, forward_mxnet_call, forward_numpy_call,
+        backward_numpy_call, shape, input_low, input_high, rtol, atol,
+        dtype=np.float32):
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    check_bw = lambda sym, location, out_grads, expected :\
+        check_symbolic_backward(sym, location, out_grads, expected,
+                                rtol=rtol, atol=atol, dtype=dtype)
+    op_name = 'unary_op={}, dtype={}'.format(name, dtype)
+    data = mx.symbol.Variable(op_name + '_data', dtype=dtype)
+    # Comparison: Forward expression
+    data_np = np.random.uniform(input_low, input_high, shape).astype(dtype)
+    res_np = forward_numpy_call(data_np)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data), mx.sym.zeros_like(data),
+        name=op_name)
+    check_fw(op_ex, [data_np], [res_np])
+    # Comparison: Backward expression
+    res_grad = np.random.uniform(-2.0, 2.0, shape).astype(dtype)
+    data_grad = backward_numpy_call(data_np) * res_grad
+    check_bw(op_ex, [data_np], [res_grad], [data_grad])
+
+def finite_diff_unary_op(
+        name, forward_mxnet_call, shape, input_low, input_high, rtol, atol,
+        num_eps):
+    # Finite difference tests are done in float64
+    dtype = np.float64
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    data_np = np.random.uniform(input_low, input_high, shape).astype(dtype)
+    data = mx.symbol.Variable('data', dtype=dtype)
+    op_name = 'unary_op={}, dtype={}'.format(name, dtype)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data), mx.sym.zeros_like(data),
+        name=op_name)
+    check_grad(op_ex, [data_np])
+
+# Tests for unary operators (basic mathematical functions):
+# - Forward: Comparison to NumPy (several dtype)
+# - Backward: Comparison to NumPy (several dtype)
+# - Finite difference tests (only dtype = float64)
+def test_unary_math_operators():
+    np.random.seed(192837465)
+    have_scipy = True
+    try:
+        from scipy import special as scipy_special
+    except:
+        print("Could not import scipy. Skipping unit tests for special functions")
+        have_scipy = False
+    shape=(9, 10)
+    dtype_l = [np.float64, np.float32, np.float16]
+    rtol_l = [1e-7, 1e-6, 1e-2]
+    rtol_less_l = [1e-6, 1e-5, 1e-2]
+    atol_l = [1e-7, 1e-6, 1e-2]
+    atol_less_l = [1e-6, 1e-5, 1e-2]
+    rtol_fd = 1e-5
+    atol_fd = 1e-6
+    num_eps = 1e-6
+    unary_ops = {
+        'arccos' : [lambda x: mx.sym.arccos(x),
+                    lambda x: np.arccos(x),
+                    lambda x: -1. / np.sqrt(1. - x ** 2.),
+                    -0.95, 0.95],
+        'arccosh': [lambda x: mx.sym.arccosh(x),
+                    lambda x: np.arccosh(x),
+                    lambda x: 1. / np.sqrt(x ** 2 - 1.),
+                    1.05, 10.0],
+        'arcsin': [lambda x: mx.sym.arcsin(x),
+                   lambda x: np.arcsin(x),
+                   lambda x: 1. / np.sqrt(1. - x ** 2),
+                   -0.95, 0.95],
+        'arcsinh': [lambda x: mx.sym.arcsinh(x),
+                    lambda x: np.arcsinh(x),
+                    lambda x: 1. / np.sqrt(x**2 + 1.),
+                    -5.0, 5.0],
+        'arctan': [lambda x: mx.sym.arctan(x),
+                   lambda x: np.arctan(x),
+                   lambda x: 1. / (x ** 2. + 1.),
+                   -5.0, 5.0],
+        'arctanh': [lambda x: mx.sym.arctanh(x),
+                    lambda x: np.arctanh(x),
+                    lambda x: 1. / (1. - x ** 2),
+                    -0.95, 0.95],
+        'cbrt': [lambda x: mx.sym.cbrt(x),
+                 lambda x: np.cbrt(x),
+                 lambda x: 1. / (3. * np.cbrt(x) ** 2),
+                 -10.0, 10.0],
+        'cos': [lambda x: mx.sym.cos(x),
+                lambda x: np.cos(x),
+                lambda x: -np.sin(x),
+                -5.0, 5.0],
+        'cosh': [lambda x: mx.sym.cosh(x),
+                 lambda x: np.cosh(x),
+                 lambda x: np.sinh(x),
+                 -2.0, 2.0],
+        'exp': [lambda x: mx.sym.exp(x),
+                lambda x: np.exp(x),
+                lambda x: np.exp(x),
+                -4.0, 4.0],
+        'expm1': [lambda x: mx.sym.expm1(x),
+                  lambda x: np.expm1(x),
+                  lambda x: np.exp(x),
+                  -0.1, 0.1],
+        'log': [lambda x: mx.sym.log(x),
+                lambda x: np.log(x),
+                lambda x: 1. / x,
+                0.01, 100.0],
+        'log10': [lambda x: mx.sym.log10(x),
+                lambda x: np.log10(x),
+                lambda x: 1. / (x * np.log(10.)),
+                0.01, 100.0],
+        'log2': [lambda x: mx.sym.log2(x),
+                lambda x: np.log2(x),
+                lambda x: 1. / (x * np.log(2.)),
+                0.01, 100.0],
+        'log1p': [lambda x: mx.sym.log1p(x),
+                  lambda x: np.log1p(x),
+                  lambda x: 1. / (1. + x),
+                  -0.1, 0.1],
+        'rcbrt': [lambda x: mx.sym.rcbrt(x),
+                  lambda x: 1. / np.cbrt(x),
+                  lambda x: -1. / (3. * x * np.cbrt(x)),
+                  0.01, 100.0],
+        'reciprocal': [lambda x: mx.sym.reciprocal(x),
+                       lambda x: 1. / x,
+                       lambda x: -1. / (x ** 2),
+                       0.01, 100.0],
+        'relu': [lambda x: mx.sym.relu(x),
+                 lambda x: np.maximum(x, 0.),
+                 lambda x: 1. * (x > 0.),
+                 -5.0, 5.0],
+        'rsqrt': [lambda x: mx.sym.rsqrt(x),
+                  lambda x: 1. / np.sqrt(x),
+                  lambda x: -0.5 / (x * np.sqrt(x)),
+                  0.01, 100.0],
+        'sigmoid': [lambda x: mx.sym.sigmoid(x),
+                    lambda x: 1. / (np.exp(-x) + 1.),
+                    lambda x: 1. / (np.exp(-x) + 1.) / (np.exp(x) + 1.),
+                    -3.0, 3.0],
+        'sin': [lambda x: mx.sym.sin(x),
+                lambda x: np.sin(x),
+                lambda x: np.cos(x),
+                -5.0, 5.0],
+        'sinh': [lambda x: mx.sym.sinh(x),
+                 lambda x: np.sinh(x),
+                 lambda x: np.cosh(x),
+                 -2.0, 2.0],
+        'sqrt': [lambda x: mx.sym.sqrt(x),
+                 lambda x: np.sqrt(x),
+                 lambda x: 0.5 / np.sqrt(x),
+                 0.01, 100.0],
+        'tan': [lambda x: mx.sym.tan(x),
+                lambda x: np.tan(x),
+                lambda x: np.tan(x) ** 2 + 1.,
+                -1.5, 1.5],
+        'tanh': [lambda x: mx.sym.tanh(x),
+                 lambda x: np.tanh(x),
+                 lambda x: 1. - np.tanh(x) ** 2,
+                 -4.0, 4.0]
+    }
+    if have_scipy:
+        unary_ops['gamma'] = [lambda x: mx.sym.gamma(x),
+                              lambda x: scipy_special.gamma(x),
+                              lambda x: scipy_special.gamma(x) * scipy_special.psi(x),
+                              0.01, 5.0]
+        unary_ops['gammaln'] = [lambda x: mx.sym.gammaln(x),
+                                lambda x: scipy_special.gammaln(x),
+                                lambda x: scipy_special.psi(x),
+                                0.01, 20.0]
+    # Loop over operators
+    for name, op in unary_ops.items():
+        # Loop over dtype's
+        for ind in range(len(dtype_l)):
+            dtype = dtype_l[ind]
+            if name == 'gammaln' or name == 'gamma':
+                rtol = rtol_less_l[ind]
+                atol = atol_less_l[ind]
+            else:
+                rtol = rtol_l[ind]
+                atol = atol_l[ind]
+            compare_forw_backw_unary_op(
+                name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
+                dtype)
+        # Finite difference testing
+        finite_diff_unary_op(
+            name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
+
+def compare_forw_backw_binary_op(
+        name, forward_mxnet_call, forward_numpy_call,
+        backward1_numpy_call, backward2_numpy_call, shape, input1_low,
+        input1_high, input2_low, input2_high, rtol, atol, dtype=np.float32):
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    check_bw = lambda sym, location, out_grads, expected :\
+        check_symbolic_backward(sym, location, out_grads, expected,
+                                rtol=rtol, atol=atol, dtype=dtype)
+    op_name = 'binary_op={}, dtype={}'.format(name, dtype)
+    data1 = mx.symbol.Variable(op_name + '_data1', dtype=dtype)
+    data2 = mx.symbol.Variable(op_name + '_data2', dtype=dtype)
+    # Comparison: Forward expression
+    data1_np = np.random.uniform(input1_low, input1_high, shape).astype(dtype)
+    data2_np = np.random.uniform(input2_low, input2_high, shape).astype(dtype)
+    res_np = forward_numpy_call(data1_np, data2_np)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data1, data2), mx.sym.zeros_like(data1),
+        name=op_name)
+    check_fw(op_ex, [data1_np, data2_np], [res_np])
+    # Comparison: Backward expression
+    res_grad = np.random.uniform(-2.0, 2.0, shape).astype(dtype)
+    data1_grad = backward1_numpy_call(data1_np, data2_np) * res_grad
+    data2_grad = backward2_numpy_call(data1_np, data2_np) * res_grad
+    check_bw(op_ex, [data1_np, data2_np], [res_grad], [data1_grad, data2_grad])
+
+def finite_diff_binary_op(
+        name, forward_mxnet_call, shape, input1_low, input1_high, input2_low,
+        input2_high, rtol, atol, num_eps):
+    # Finite difference tests are done in float64
+    dtype = np.float64
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    data1_np = np.random.uniform(input1_low, input1_high, shape).astype(dtype)
+    data2_np = np.random.uniform(input2_low, input2_high, shape).astype(dtype)
+    data1 = mx.symbol.Variable('data1', dtype=dtype)
+    data2 = mx.symbol.Variable('data2', dtype=dtype)
+    op_name = 'binary_op={}, dtype={}'.format(name, dtype)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data1, data2), mx.sym.zeros_like(data1),
+        name=op_name)
+    check_grad(op_ex, [data1_np, data2_np])
+
+# Tests for unary operators (basic mathematical functions):
+# - Forward: Comparison to NumPy (several dtype)
+# - Backward: Comparison to NumPy (several dtype)
+# - Finite difference tests (only dtype = float64)
+def test_binary_math_operators():
+    np.random.seed(192837465)
+    shape=(9, 10)
+    dtype_l = [np.float64, np.float32, np.float16]
+    rtol_l = [1e-7, 1e-6, 1e-2]
+    atol_l = [1e-7, 1e-6, 1e-2]
+    rtol_fd = 1e-5
+    atol_fd = 1e-6
+    num_eps = 1e-6
+    binary_ops = {
+        'hypot' : [lambda x, y: mx.sym.hypot(x, y),
+                   lambda x, y: np.hypot(x, y),
+                   lambda x, y: x / np.hypot(x, y),
+                   lambda x, y: y / np.hypot(x, y),
+                    -5.0, 5.0, -5.0, 5.0],
+        'pow': [lambda x, y: mx.sym.pow(x, y),
+                lambda x, y: np.power(x, y),
+                lambda x, y: np.power(x, y - 1.) * y,
+                lambda x, y: np.power(x, y) * np.log(x),
+                0.2, 5.0, -4.0, 4.0]
+    }
+    # Loop over operators
+    for name, op in binary_ops.items():
+        # Loop over dtype's
+        for ind in range(len(dtype_l)):
+            dtype = dtype_l[ind]
+            compare_forw_backw_binary_op(
+                name, op[0], op[1], op[2], op[3], shape, op[4], op[5], op[6],
+                op[7], rtol_l[ind], atol_l[ind], dtype)
+        # Finite difference testing
+        finite_diff_binary_op(
+            name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
+            num_eps)
+
+
+def test_softmax():
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
+    check_softmax_grad(default_context())
+    check_smoothed_softmax_grad(default_context())
 
 
 if __name__ == '__main__':

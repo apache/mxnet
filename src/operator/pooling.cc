@@ -38,10 +38,8 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
-  // TODO(lingyan): kFull use exclude padding algorithm now
 #if MXNET_USE_MKL2017 == 1
     if (param.kernel.ndim() == 2
-      && (param.pooling_convention == pool_enum::kValid)
       && ((param.pool_type == pool_enum::kMaxPooling)
       || (param.pool_type == pool_enum::kAvgPooling))) {
       switch (dtype) {

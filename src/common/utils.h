@@ -63,6 +63,36 @@ inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
   return false;
 }
 
+/*! \brief returns true if all storage types in `vstorage` are the same as target `stype1`
+ *         or `stype2'. Sets boolean if both found.
+ *         false is returned for empty inputs.
+ */
+inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
+                                const NDArrayStorageType stype1,
+                                const NDArrayStorageType stype2,
+                                bool *has_both) {
+  if (has_both) {
+    *has_both = false;
+  }
+  if (!vstorage.empty()) {
+    uint8_t has = 0;
+    for (const auto i : vstorage) {
+      if (i == stype1) {
+        has |= 1;
+      } else if (i == stype2) {
+        has |= 2;
+      } else {
+        return false;
+      }
+    }
+    if (has_both) {
+      *has_both = has == 3;
+    }
+    return true;
+  }
+  return false;
+}
+
 /*! \brief returns true if the storage types of arrays in `ndarrays`
  *         are the same as target `stype`. false is returned for empty inputs.
  */
@@ -79,6 +109,35 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   return false;
 }
 
+/*! \brief returns true if the storage types of arrays in `ndarrays`
+ *         are the same as targets `stype1` or `stype2`. false is returned for empty inputs.
+ */
+inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
+                                const NDArrayStorageType stype1,
+                                const NDArrayStorageType stype2,
+                                bool *has_both) {
+  if (has_both) {
+    *has_both = false;
+  }
+  if (!ndarrays.empty()) {
+    uint8_t has = 0;
+    for (const auto& nd : ndarrays) {
+      const NDArrayStorageType stype = nd.storage_type();
+      if (stype == stype1) {
+        has |= 1;
+      } else if (stype == stype2) {
+        has |= 2;
+      } else {
+        return false;
+      }
+    }
+    if (has_both) {
+      *has_both = has == 3;
+    }
+    return true;
+  }
+  return false;
+}
 
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const DispatchMode x) {

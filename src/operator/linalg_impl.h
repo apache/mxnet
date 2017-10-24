@@ -1014,9 +1014,9 @@ void linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                                               Stream<cpu> *s) { \
   DType work(0.0); \
   int iwork(0); \
-  int ret(MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
-                              A.dptr_, A.stride_, &work, &work, -1, &iwork, \
-                              -1)); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                      A.dptr_, A.stride_, &work, &work, -1, &iwork, \
+                      -1); \
   *lwork = static_cast<int>(work); \
   *liwork = iwork; \
 }

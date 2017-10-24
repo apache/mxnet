@@ -107,7 +107,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1"
+          LOG(WARNING) << "Variance is not close enough to 1 "
                        << saveSum << " (" << sum << "), "
                        << saveVar << " (" << var << ")";
         }
@@ -211,7 +211,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
         // expect unit variance
         EXPECT_NEAR(1, var, kErrorBound);
         if (!Super::isNear(AccReal(1), var, kErrorBound)) {
-          LOG(WARNING) << "Variance is not close enough to 1"
+          LOG(WARNING) << "Variance is not close enough to 1 "
                        << saveSum << " (" << sum << "), "
                        << saveVar << " (" << var << ")";
         }
@@ -442,7 +442,7 @@ static StreamType& PRT(
   *os << test::op::BasicOperatorData<DType, AccReal>::bvt2String(bvt) << ": " << idx
       << ": ";
   const TBlob& blob = obj.getBlobVect(bvt)[idx];
-  test::print(os, blob);
+  test::print(RunContext(), os, blob);
   return *os;
 }
 
@@ -450,7 +450,7 @@ template<typename StreamType, typename Prop, typename DType, typename AccReal>
 static StreamType& dumpF(StreamType *os,
                          const test::op::OpInfo<Prop, DType, AccReal>& prop,
                          const size_t x = 0) {
-  if (test::debugOutput) {
+  if (test::debug_output) {
     *os << std::endl;
     if (x) {
       *os << "=============================" << std::endl;
@@ -476,7 +476,7 @@ template<typename StreamType, typename Prop, typename DType, typename AccReal>
 static StreamType& dumpB(StreamType *os,
                          const test::op::OpInfo<Prop, DType, AccReal>& prop,
                          const size_t x = 0) {
-  if (test::debugOutput) {
+  if (test::debug_output) {
     *os << std::endl;
     if (x) {
       *os << "=============================" << std::endl;
@@ -1019,7 +1019,7 @@ TEST(BATCH_NORM, Test2DBackward_Complex) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
-      test::ScopeSet<bool> noDebugOutput(&test::debugOutput, false);
+      test::ScopeSet<bool> noDebugOutput(&test::debug_output, false);
       const TShape inputShape({9, 14, 16, 91});
       test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal> bi =
         testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, DType, AccReal>(
@@ -1226,7 +1226,7 @@ class ChannelAxisTestData {
   std::vector<std::vector<DType>>   channel_data_;
 
   static void print(const std::string& label, const std::vector<std::vector<DType>>& m) {
-    if (test::debugOutput) {
+    if (test::debug_output) {
       if (!label.empty()) {
         std::cout << label << ": ";
       }
@@ -1248,7 +1248,7 @@ class ChannelAxisTestData {
   }
 
   static void print(const std::string& label, const TBlob& blob) {
-    if (test::debugOutput) {
+    if (test::debug_output) {
       if (!label.empty()) {
         std::cout << label << ": ";
       }
@@ -1364,7 +1364,7 @@ TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
 
 /*! \brief Insert the channel field `channelCount` into the shape at `channelAxis` position */
 static TShape MakeShape(const std::vector<index_t>& shape,
-                        unsigned int channelAxis,
+                        signed int channelAxis,
                         const size_t channelCount) {
   if (channelAxis < 0) {
     channelAxis += shape.size() + 1;
@@ -1533,7 +1533,7 @@ TEST(BATCH_NORM, TestChannelAxisSimple) {
  *  backward result equivalence here implies correctness for other channel positions
  */
 TEST(BATCH_NORM, TestChannelAxis) {
-  test::ScopeSet<bool> noDebugOutput(&test::debugOutput, false);
+  test::ScopeSet<bool> noDebugOutput(&test::debug_output, false);
 
   test::op::kwargs_t kwargs;
   const std::vector<std::vector<index_t>> shapes =

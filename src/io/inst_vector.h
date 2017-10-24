@@ -101,6 +101,10 @@ class InstVector {
   inline DataInst operator[](size_t i) const {
     DataInst inst;
     inst.index = index_[i];
+    // ImageRecordIter depends on data vector
+    // here having size 2. If you want to
+    // change this assumption here, change it
+    // in there as well (InitBatch section)!
     inst.data.push_back(TBlob(data_[i]));
     inst.data.push_back(TBlob(label_[i]));
     return inst;

@@ -559,8 +559,11 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   if (req == kNullOp) return;
   CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
+  const TShape ishape = in.shape();
   int begin = *param.begin[0];
+  if (begin < 0) begin += ishape[0];
   int end = *param.end[0];
+  if (end < 0) end += ishape[0];
   int indptr_len = end - begin + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
   if (!in.storage_initialized()) {
@@ -1022,15 +1025,27 @@ void Clip(const nnvm::NodeAttrs& attrs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  using namespace mxnet_op;
   const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
   CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-    inputs[0].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+    mxnet_op::Kernel<mxnet::op::clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                                   inputs[0].dptr<DType>(),
+                                                   DType(param.a_min), DType(param.a_max));
   });
+}
+
+template<typename xpu>
+void ClipEx(const nnvm::NodeAttrs& attrs,
+            const OpContext& ctx,
+            const std::vector<NDArray>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs[0].dtype(), outputs[0].dtype());
+  CHECK_EQ(inputs[0].storage_type(), outputs[0].storage_type());
+  CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
+  UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Clip<xpu>);
 }
 
 template<typename xpu>
