@@ -854,7 +854,11 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             # prepare default ctx and dtype since mx.nd.array doesn't use default values
             # based on source_array
             dtype = _prepare_default_dtype(arg1, dtype)
-            dns = _array(arg1, ctx=ctx, dtype=dtype)
+            # create dns array with provided dtype. ctx is not passed since copy across
+            # ctx requires dtype to be the same
+            dns = _array(arg1, dtype=dtype)
+            if ctx is not None and dns.context != ctx:
+                dns = dns.as_in_context(ctx)
             _check_shape(dns.shape, shape)
             return dns.tostype('csr')
 
@@ -1012,7 +1016,11 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
             # prepare default dtype since mx.nd.array doesn't use default values
             # based on source_array
             dtype = _prepare_default_dtype(arg1, dtype)
-            dns = _array(arg1, ctx=ctx, dtype=dtype)
+            # create dns array with provided dtype. ctx is not passed since copy across
+            # ctx requires dtype to be the same
+            dns = _array(arg1, dtype=dtype)
+            if ctx is not None and dns.context != ctx:
+                dns = dns.as_in_context(ctx)
             _check_shape(dns.shape, shape)
             return dns.tostype('row_sparse')
 
@@ -1038,7 +1046,9 @@ def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
         indices = _array(indices, ctx, indices_type)
     if shape is None:
         num_indices = indices.shape[0]
-        dim0 = 0 if num_indices == 0 else indices[num_indices - 1].asscalar() + 1
+        if num_indices == 0:
+            raise ValueError('invalid shape')
+        dim0 = indices[num_indices - 1].asscalar() + 1
         shape = (dim0, ) + data.shape[1:]
     # verify shapes
     if data.ndim != len(shape) or indices.ndim != 1 or np.prod(shape[1:]) == 0:
@@ -1166,13 +1176,20 @@ def array(source_array, ctx=None, dtype=None):
     >>> mx.nd.sparse.array(mx.nd.sparse.zeros('row_sparse', (3, 2)))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
+    ctx = Context.default_ctx if ctx is None else ctx
     if isinstance(source_array, NDArray):
         assert(source_array.stype != 'default'), \
                "Please use `tostype` to create RowSparseNDArray or CSRNDArray from an NDArray"
         # prepare dtype and ctx based on source_array, if not provided
         dtype = _prepare_default_dtype(source_array, dtype)
-        arr = empty(source_array.stype, source_array.shape, ctx=ctx, dtype=dtype)
-        arr[:] = source_array
+        # if both dtype and ctx are different from source_array, we cannot copy directly
+        if source_array.dtype != dtype and source_array.context != ctx:
+            arr = empty(source_array.stype, source_array.shape, dtype=dtype)
+            arr[:] = source_array
+            arr = arr.as_in_context(ctx)
+        else:
+            arr = empty(source_array.stype, source_array.shape, dtype=dtype, ctx=ctx)
+            arr[:] = source_array
         return arr
     elif spsp and isinstance(source_array, spsp.csr.csr_matrix):
         # TODO(haibin) implement `_sync_copy_from` with scipy csr object to reduce a copy
