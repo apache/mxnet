@@ -18,25 +18,23 @@
  */
 
 /*!
- * \file indexing_op.h
+ * \file indexing_op-inl.h
  * \brief
- * \author Bing Xu, Siyi Li, Chi Zhang
+ * \author Haibin Lin
 */
 #ifndef MXNET_OPERATOR_TENSOR_INDEXING_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_INDEXING_OP_INL_H_
-//TODO remove some headers
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <type_traits>
 #include "../operator_common.h"
-#include "../mshadow_op.h"
 #include "./util/tensor_util-inl.h"
 #include "../mxnet_op.h"
-#include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
 
@@ -50,15 +48,18 @@ enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
 struct AddTakeGradRspKernel {
-  // each thread i is responsible for target gradient row ids in [segment_start, segment_end)
+  // each thread i is responsible for gradient rows in [segment_start, segment_end)
   /*!
    * \brief
-   * \param tid         global thread id
-   * \param rsp_val     value array of rsp tensor to store data
-   * \param row_idx     indices of non-zero rows
-   * \param dns         dense matrix data
-   * \param nnr         number of non-zero rows
-   * \param row_length  number of elements per row
+   * \param tid             global thread id
+   * \param grad            the gradient to calculate
+   * \param prefix_sum      the inclusive prefix sum of row ids of the gradient
+   * \param ograd           output gradient
+   * \param row_length      the length of the row slices of the gradient
+   * \param data_val        the values of input data
+   * \param data_size       number of values of input data
+   * \param segment_length  the length of row segment to process for each thread
+   * \param num_rows        total number of rows (i.e. grad.shape[0])
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int tid,
@@ -77,7 +78,7 @@ struct AddTakeGradRspKernel {
     for (dim_t data_i = 0; data_i < data_size; data_i++) {
       dim_t data = static_cast<dim_t>(data_val[data_i]);
       if (data < segment_start || data >= segment_end) continue;
-      // TODO(haibin) perform projection if required
+      // no projection is performed
       dim_t ograd_i = data_i * row_length;
       dim_t grad_i = (prefix_sum[data] - 1) * row_length;
       for (dim_t offset = 0; offset < row_length; offset++) {
@@ -98,7 +99,6 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
   using namespace mshadow::expr;
   using namespace rowsparse;
   using nnvm::dim_t;
-  // TODO check indices in forward
   if (req == kNullOp) return;
   CHECK_EQ(req, kWriteTo) << "SparseEmbedding layer doesn't support "
                           << "weight gradient calculation with req != write";
@@ -107,7 +107,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   dim_t num_rows = output.shape()[0];
   dim_t row_length = output.shape()[1];
-  // TODO request bool storage to save space
+  // TODO(haibin) request less storage to save space in the future
   size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
   Tensor<cpu, 1, char> workspace =
     ctx.requested[embedding::kTempSpace].get_space_typed<cpu, 1, char>(
@@ -129,8 +129,8 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         }
         // total number of non-zero rows
         dim_t nnr = prefix_sum[num_rows - 1];
-        // TODO handle nnr = 0
         output.CheckAndAlloc({Shape1(nnr)});
+        if (nnr == 0) return;
         RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
         // fill row_idx array of output matrix, using the row_flg values
         Kernel<FillRspRowIdxKernel, cpu>::Launch(s, num_rows,
@@ -155,12 +155,13 @@ template<int req>
 struct TakeRspKernel {
   /*!
    * \brief
-   * \param i         thread id
-   * \param rsp_val     value array of rsp tensor to store data
-   * \param row_idx     indices of non-zero rows
-   * \param dns         dense matrix data
-   * \param nnr         number of non-zero rows
+   * \param i           thread id
+   * \param data        input data
+   * \param out         output
+   * \param weight_idx  indices of rsp weight
+   * \param weight_data data of rsp weight
    * \param row_length  number of elements per row
+   * \param nnr         number of non-zero rows
    */
   template<typename DType, typename IType, typename RType>
   MSHADOW_XINLINE static void Map(int i,
@@ -220,7 +221,7 @@ inline void EmbeddingOpForwardRspImpl(mshadow::Stream<mshadow::cpu>* s,
       MSHADOW_TYPE_SWITCH(weight.aux_type(kIdx), RType, {
         MXNET_ASSIGN_REQ_SWITCH(req, req_t, {
           size_t data_size = data.shape_.Size();
-          // weight.ndim() == 2
+          // only using the second dim since weight.ndim() == 2
           const nnvm::dim_t row_length = weight.shape()[1];
           Kernel<TakeRspKernel<req_t>, cpu>::Launch(s, data_size, data.dptr<IType>(),
                                                     output.dptr<DType>(),
