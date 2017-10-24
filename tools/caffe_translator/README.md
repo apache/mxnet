@@ -1,6 +1,14 @@
 # CaffeTranslator
 CaffeTranslator is a source code translator that translates Caffe training/validation prototxt into MXNet Python code. 
 
+# Prerequisites
+**To translate code:**
+1. JDK
+
+**To run the translated code:**
+1. Caffe (Why?)
+2. MXNet with Caffe plugin (why? How to build?)
+
 # Build
 Step 1: Clone the code:
 ```
