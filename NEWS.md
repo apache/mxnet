@@ -4,6 +4,13 @@
 
 * `deepcopy` for NDArray (#273)
 
+* `fill` and `fill!` for NDArray (#TBD)
+  An API correspond to Python's `mx.nd.full()`
+
+    * `fill(x, dims, ctx=cpu())`
+    * `fill(x, dims...)`
+    * `fill!(x, arr::NDArray)`
+
 ## API Changes
 
 * `reshape` of NDArray share the same interface with Base (#272).

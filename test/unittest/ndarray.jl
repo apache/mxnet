@@ -413,6 +413,42 @@ function test_reshape()
     @test size(C) == (50, 4)
 end
 
+function test_fill()
+  info("NDArray::fill")
+  thresh = 1e8
+
+  let x = mx.fill(42, 2, 3, 4)
+    @test eltype(x) == Int
+    @test size(x) == (2, 3, 4)
+    @test copy(x) == fill(42, 2, 3, 4)
+  end
+
+  let x = mx.fill(Float32(42), 2, 3, 4)
+    @test eltype(x) == Float32
+    @test size(x) == (2, 3, 4)
+    @test reldiff(copy(x), fill(Float32(42), 2, 3, 4)) < thresh
+  end
+
+  let x = mx.fill(42, (2, 3, 4))
+    @test eltype(x) == Int
+    @test size(x) == (2, 3, 4)
+    @test copy(x) == fill(42, 2, 3, 4)
+  end
+
+  let x = mx.fill(Float32(42), (2, 3, 4))
+    @test eltype(x) == Float32
+    @test size(x) == (2, 3, 4)
+    @test reldiff(copy(x), fill(Float32(42), 2, 3, 4)) < thresh
+  end
+
+  info("NDArray::fill!::arr")
+  let x = mx.fill!(42, mx.zeros(2, 3, 4))
+    @test eltype(x) == Float32
+    @test size(x) == (2, 3, 4)
+    @test reldiff(copy(x), fill(Float32(42), 2, 3, 4)) < thresh
+  end
+end  # function test_fill
+
 function test_kwargs()
   info("NDArray::kwargs")
   dims1 = (2,3,4)
@@ -454,6 +490,7 @@ end
   test_nd_as_jl()
   test_dot()
   test_reshape()
+  test_fill()
   test_kwargs()
   test_show()
 end

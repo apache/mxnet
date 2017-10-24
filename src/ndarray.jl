@@ -704,6 +704,31 @@ end
 
 
 """
+    fill!(x, arr::NDArray)
+
+Create an `NDArray` filled with the value `x`, like `Base.fill`.
+"""
+function fill!(x, arr::NDArray)
+  arr[:] = x
+  arr
+end
+
+"""
+    fill(x, dims, ctx=cpu())
+    fill(x, dims...)
+
+Create an `NDArray` filled with the value `x`, like `Base.fill`.
+"""
+function fill{N}(x, dims::NTuple{N, Integer}, ctx::Context=cpu())
+  arr = empty(typeof(x), dims, ctx)
+  arr[:] = x
+  arr
+end
+
+fill(x, dims::Integer...) = fill(x, dims)
+
+
+"""
 Manipulating as Julia Arrays
 ----------------------------
 
