@@ -728,14 +728,14 @@ def _prepare_src_array(source_array, dtype):
     return source_array
 
 def _prepare_default_ctx(src_array, context):
-    """Prepare the default context if `context` is None. If `src_array` is an NDArray,
+    """Prepare the value of context if `context` is None. If `src_array` is an NDArray,
     return src_array.context. The current default context is returned otherwise."""
     if context is None:
         context = src_array.context if isinstance(src_array, NDArray) else Context.default_ctx
     return context
 
 def _prepare_default_dtype(src_array, dtype):
-    """Prepare the default dtype if `dtype` is None. If `src_array` is an NDArray, numpy.ndarray
+    """Prepare the value of dtype if `dtype` is None. If `src_array` is an NDArray, numpy.ndarray
     or scipy.sparse.csr.csr_matrix, return src_array.dtype. float32 is returned otherwise."""
     if dtype is None:
         if isinstance(src_array, (NDArray, np.ndarray)):
@@ -861,6 +861,8 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             raise ValueError("Unexpected input type: RowSparseNDArray")
         else:
             # construct a csr matrix from a dense one
+            # prepare default ctx and dtype since mx.nd.array doesn't use default values
+            # based on source_array
             ctx = _prepare_default_ctx(arg1, ctx)
             dtype = _prepare_default_dtype(arg1, dtype)
             dns = _array(arg1, ctx=ctx, dtype=dtype)
@@ -1020,6 +1022,8 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
             raise ValueError("Unexpected input type: CSRNDArray")
         else:
             # construct a csr matrix from a dense one
+            # prepare default ctx and dtype since mx.nd.array doesn't use default values
+            # based on source_array
             ctx = _prepare_default_ctx(arg1, ctx)
             dtype = _prepare_default_dtype(arg1, dtype)
             dns = _array(arg1, ctx=ctx, dtype=dtype)
@@ -1179,6 +1183,7 @@ def array(source_array, ctx=None, dtype=None):
     if isinstance(source_array, NDArray):
         assert(source_array.stype != 'default'), \
                "Please use `tostype` to create RowSparseNDArray or CSRNDArray from an NDArray"
+        # prepare dtype and ctx based on source_array, if not provided
         dtype = _prepare_default_dtype(source_array, dtype)
         ctx = _prepare_default_ctx(source_array, ctx)
         arr = empty(source_array.stype, source_array.shape, ctx=ctx, dtype=dtype)
