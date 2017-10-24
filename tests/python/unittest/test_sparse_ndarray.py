@@ -581,6 +581,7 @@ def test_create_sparse_nd_from_dense():
         arr = f(dense_arr, dtype=dtype, ctx=ctx)
         assert(same(arr.asnumpy(), np.ones(shape)))
         assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
         # verify the default dtype inferred from dense arr
         arr2 = f(dense_arr)
         assert(arr2.dtype == default_dtype)
