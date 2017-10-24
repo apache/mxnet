@@ -510,7 +510,6 @@ def test_create_csr():
     dim0 = 20
     dim1 = 20
     densities = [0, 0.5]
-    densities = [0]
     dtype = np.float64
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
