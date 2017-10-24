@@ -137,7 +137,7 @@ struct quantize_2bit {
     int end = (start + 16 <= grad_size) ? start + 16 : grad_size;
     char* block_ptr = reinterpret_cast < char* > (compr_block);
     const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
-    const int negbits[] = {0x80, 0x10, 0x08, 0x01};
+    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
     char* curr_byte = block_ptr;
 
     for (int i = start; i < end; i++) {
@@ -150,7 +150,7 @@ struct quantize_2bit {
         *curr_byte |= posbits[(i & 3)];
       } else if (residual[i] <= neg_threshold) {
         residual[i] -= neg_threshold;
-        // set data to 01
+        // set data to 10
         *curr_byte |= negbits[(i & 3)];
       }
     }
