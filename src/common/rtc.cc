@@ -18,6 +18,10 @@
  */
 
 #include <mxnet/rtc.h>
+#include <algorithm>
+#include <cassert>
+#include <locale>
+#include <sstream>
 #include <typeinfo>
 
 #include "../common/cuda_utils.h"
@@ -27,6 +31,43 @@
 
 namespace mxnet {
 namespace rtc {
+
+namespace {
+
+  const char* gpu_arch_prefix = "--gpu-architecture=compute_";
+  const std::locale locale;
+
+  bool FindGpuArchOption(std::string option) {
+    auto lower = [&](char c) { return std::tolower(c, locale); };
+    std::transform(option.begin(), option.end(), option.begin(), lower);
+    return option.find(gpu_arch_prefix) != std::string::npos;
+  }
+
+  void SetGpuArch(std::vector<const char *>* c_options, std::string* arch_string) {
+    assert(c_options != nullptr);
+    assert(arch_string != nullptr);
+
+    // Check options for explicit device architecture information.
+    for (const auto& option : *c_options) {
+      if (FindGpuArchOption(option)) {
+        return;
+      }
+    }
+
+    // If not present, use the first gpu device present for architecture information.
+    int num_devices;
+    CUDA_CALL(cudaGetDeviceCount(&num_devices));
+
+    if (num_devices > 0) {
+      cudaDeviceProp prop;
+      CUDA_CALL(cudaGetDeviceProperties(&prop, 0));
+      std::stringstream arch_stream;
+      arch_stream << gpu_arch_prefix << prop.major << prop.minor;
+      *arch_string = arch_stream.str();
+      c_options->push_back(arch_string->c_str());
+    }
+  }
+}  // namespace
 
 CudaModule::Chunk::Chunk(
     const char* source,
@@ -46,6 +87,9 @@ CudaModule::Chunk::Chunk(
 #endif
   std::vector<const char*> c_options;
   for (const auto& i : options) c_options.push_back(i.c_str());
+  std::string arch_string;
+  SetGpuArch(&c_options, &arch_string);
+
   nvrtcResult compile_res = nvrtcCompileProgram(prog_, c_options.size(), c_options.data());
   if (compile_res != NVRTC_SUCCESS) {
     size_t err_size;
