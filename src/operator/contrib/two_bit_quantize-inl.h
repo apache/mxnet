@@ -35,6 +35,12 @@
 namespace mxnet {
 namespace op {
 
+// branchless
+template <typename T> int sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+
 struct init_mem_2bit {
   // Initialize output array
   MSHADOW_XINLINE static void Map(int i, float* out) {
@@ -237,10 +243,10 @@ struct dequantize_2bit {
     switch ((i & 15) & 3) {
       case 0:
         // positve
-        if (((*ch_ptr) & (0xc0)) == 0x80) {  // binary: (10)00 0000
+        if (((*ch_ptr) & (0xc0)) == 0xc0) {  // binary: (11)00 0000
           out[i] = *pos_threshold;
         // negative
-        } else if (((*ch_ptr) & (0xc0)) == 0x40) {  // binary: (01)00 0000
+        } else if (((*ch_ptr) & (0xc0)) == 0x80) {  // binary: (10)00 0000
           out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
@@ -248,10 +254,10 @@ struct dequantize_2bit {
         break;
       case 1:
         // positve
-        if (((*ch_ptr) & (0x30)) == 0x20) {  // binary: 00(10) 0000
+        if (((*ch_ptr) & (0x30)) == 0x30) {  // binary: 00(11) 0000
           out[i] = *pos_threshold;
         // negative
-        } else if ( ((*ch_ptr) & (0x30)) == 0x10) {  // binary: 00(01) 0000
+        } else if ( ((*ch_ptr) & (0x30)) == 0x20) {  // binary: 00(10) 0000
           out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
@@ -259,10 +265,10 @@ struct dequantize_2bit {
         break;
       case 2:
         // positve
-        if ( ((*ch_ptr) & (0x0c)) == 0x08) {  // binary: 00(10) 0000
+        if ( ((*ch_ptr) & (0x0c)) == 0x0c) {  // binary: 0000 (11)00
           out[i] = *pos_threshold;
         // negative
-        } else if (((*ch_ptr) & (0x0c)) == 0x04) {  // binary: 00(01) 0000
+        } else if (((*ch_ptr) & (0x0c)) == 0x08) {  // binary: 0000 (10)00
           out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;
@@ -270,10 +276,10 @@ struct dequantize_2bit {
         break;
       case 3:
         // positve
-        if (((*ch_ptr) & (0x03))== 0x02) {  // binary: 00(10) 0000
+        if (((*ch_ptr) & (0x03))== 0x03) {
           out[i] = *pos_threshold;
         // negative
-        } else if (((*ch_ptr) & (0x03)) == 0x01) {  // binary: 00(01) 0000
+        } else if (((*ch_ptr) & (0x03)) == 0x02) {
           out[i] = *neg_threshold;
         } else {  // 0
           out[i] = 0;

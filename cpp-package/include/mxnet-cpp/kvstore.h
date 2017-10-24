@@ -37,8 +37,8 @@ class KVStore {
  public:
   static void SetType(const std::string& type);
   static void RunServer();
-  static void SetCompress(const std::string& compress,
-                          const float neg_threshold, const float pos_threshold);
+  static void SetGradientCompression(const std::string& compress_type,
+                                     const float threshold);
   static void Init(int key, const NDArray& val);
   static void Init(const std::vector<int>& keys, const std::vector<NDArray>& vals);
   static void Push(int key, const NDArray& val, int priority = 0);
