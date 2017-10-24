@@ -130,24 +130,22 @@ struct quantize_2bit {
     int start = block_id << 4;
     int end = (start + 16 <= grad_size) ? start + 16 : grad_size;
     char* block_ptr = reinterpret_cast < char* > (compr_block);
+    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    const int negbits[] = {0x80, 0x10, 0x08, 0x01};
+    char* curr_byte = block_ptr;
 
-//    char* curr_byte = block_ptr;
     for (int i = start; i < end; i++) {
       // // adds 1 when i-start divisible by 4
-      char * curr_byte = block_ptr + ((i-start) >> 2);
-      float curr_value = grad[i] + residual[i];
-
-      if (curr_value >= pos_threshold) {
-        residual[i] = curr_value - pos_threshold;
-        // set data to 10
-        *curr_byte |= (2u << (6 - ((i & 3) << 1)));
-      } else if (curr_value <= neg_threshold) {
-        residual[i] = curr_value - neg_threshold;
+      curr_byte += ((i-start) & 3);
+      residual[i] += grad[i];
+      if (residual[i] >= pos_threshold) {
+        residual[i] -= pos_threshold;
+        // set data to 11
+        *curr_byte |= posbits[(i & 3)];
+      } else if (residual[i] <= neg_threshold) {
+        residual[i] -= neg_threshold;
         // set data to 01
-        *curr_byte |= (1u << (6 - ((i & 3) << 1)));
-      } else {
-        // leave data as 00
-        residual[i] = curr_value;
+        *curr_byte |= negbits[(i & 3)];
       }
     }
   }
