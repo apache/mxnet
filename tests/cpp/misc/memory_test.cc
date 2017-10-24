@@ -131,15 +131,15 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
     if (average(memcpy_times) > average(omp_copy_times)) {
       std::cout << "<< MEMCPY SLOWER FOR " << pretty_num(test_size) << " items >>" << std::endl;
     }
-    if(!pass) {
+    if (!pass) {
       GTEST_ASSERT_LE(average(memset_times), average(omp_set_times));
       GTEST_ASSERT_LE(average(memcpy_times), average(omp_copy_times));
     }
     base *= 10;
     ++pass;
-  } while(test::performance_run
-          && base <= GB
-          && (average(memset_times) < average(omp_set_times)
-              || average(memcpy_times), average(omp_copy_times)));
+  } while (test::performance_run
+           && base <= GB
+           && (average(memset_times) < average(omp_set_times)
+               || average(memcpy_times), average(omp_copy_times)));
 }
 #endif  // _OPENMP
