@@ -69,6 +69,7 @@ public class Converter {
         }
 
         CaffePrototxtLexer lexer = new CaffePrototxtLexer(cs);
+
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         CaffePrototxtParser parser = new CaffePrototxtParser(tokens);
 
@@ -397,6 +398,10 @@ public class Converter {
         else
             System.err.println(String.format("Data layer %s doesn't have label", layer.getName()));
         st.add("label_name", labelName);
+
+        if(layer.hasAttr("data_param.num_examples")) {
+            st.add("num_examples", layer.getAttr("data_param.num_examples"));
+        }
 
         return st.render();
     }

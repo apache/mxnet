@@ -51,4 +51,7 @@ WS  :   [ \t]+ -> channel(HIDDEN) ;
 
 NL  :   [\n\r]+ -> channel(HIDDEN) ;
 
-COMMENT :  '#' ~( '\r' | '\n' )* -> skip;
+COMMENT :  '#' ~( '\r' | '\n' )* {!getText().startsWith("#caffe2mxnet")}? -> skip;
+
+CAFFE2MXNET: '#caffe2mxnet' -> skip;
+
