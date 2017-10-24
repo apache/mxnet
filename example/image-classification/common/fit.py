@@ -114,7 +114,7 @@ def fit(args, network, data_loader, **kwargs):
     """
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
-
+    kv.set_compress({'compress':'2bit', 'pos_threshold':4.0, 'neg_threshold':-4.0})
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
