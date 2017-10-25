@@ -85,15 +85,17 @@ class ElemwiseBinaryOp : public OpBase {
     kTempSpace
   };
 
-  /*! \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input */
-  template<typename xpu, typename DType, typename OP>
-  static inline size_t FillDense(mshadow::Stream<xpu> *s,
+  /*!
+   * \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input
+   *        CPU-Only version
+   */
+  template<typename DType, typename OP>
+  static inline size_t FillDense(mshadow::Stream<cpu> *s,
                                  const size_t idx_l,
                                  const size_t idx_r,
                                  const OpReqType req,
-                                 mshadow::Tensor<xpu, 2, DType> *out,
+                                 mshadow::Tensor<cpu, 2, DType> *out,
                                  const size_t iter_out) {
-    using namespace mshadow::expr;
     const int index_out_min = std::min(idx_l, idx_r);
     if (static_cast<size_t>(index_out_min) > iter_out) {
       const size_t size = (*out)[iter_out].shape_.Size();
@@ -101,8 +103,7 @@ class ElemwiseBinaryOp : public OpBase {
       #pragma omp parallel for
       for (int i = iter_out; i < index_out_min; ++i) {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, (*out)[i].dptr_,
-                                                          zero_input_val);
+          SerialLaunchCPU<SetToScalar<Req>>(s, size, (*out)[i].dptr_, zero_input_val);
         });
       }
     }
