@@ -86,4 +86,4 @@ The program will output segment result and label in a package named "res_pic".
 
 The left one is a label picture with 11 classes. The right one below is a segment result.
 
-![label2](ref\label2.png) ![res2](ref\res2.png)
+![label2](ref/label2.png) ![res2](ref/res2.png)
