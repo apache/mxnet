@@ -326,17 +326,7 @@ inline std::string dispatch_mode_string(const DispatchMode x) {
 
 
 /*! \brief get string representation of storage_type */
-inline std::string stype_string(const int x) {
-  switch (x) {
-    case kDefaultStorage:
-      return "default";
-    case kCSRStorage:
-      return "csr";
-    case kRowSparseStorage:
-      return "row_sparse";
-  }
-  return "unknown";
-}
+std::string stype_string(const int x);
 
 /*! \brief get string representation of device type */
 inline std::string dev_type_string(const int dev_type) {
