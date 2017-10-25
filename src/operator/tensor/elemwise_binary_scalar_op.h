@@ -141,8 +141,8 @@ class BinaryScalarOp : public UnaryOp {
     const size_t item_count = column_indexes.Size();
 
     // Pre-fill dense with 0-input/output value
-    FillDense<cpu, DType>(stream, output.shape().Size(), dense_fill_val,
-                          req, output.data().dptr<DType>());
+    FillDense<DType>(stream, output.shape().Size(), dense_fill_val,
+                     req, output.data().dptr<DType>());
 
     mshadow::Tensor<cpu, 2, DType> out = AsRowise2D<DType>(stream, output.data());
     if (item_count) {
