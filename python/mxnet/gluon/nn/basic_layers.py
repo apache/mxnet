@@ -19,11 +19,13 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten']
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten', 'Lambda']
 import warnings
+import inspect
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
+from ... import nd, sym
 
 
 class Sequential(Block):
@@ -464,3 +466,66 @@ class Flatten(HybridBlock):
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class Lambda(HybridBlock):
+    r"""Wraps an operator or an expression as a HybridBlock object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in both symbol and ndarray
+        2) an operator in either symbol or ndarray, and is shared by symbol and ndarray.
+        3) a function that conforms to "def function(data, *args, **kwargs)".
+
+
+    Positional Arguments
+    --------------------
+    Positional arguments to be used in function call.
+
+
+    Keyword Arguments
+    -----------------
+    Keyword arguments to be used in function call.
+
+
+    Inputs:
+        - **data**: input data. Its shape depends on the function.
+
+    Output:
+        - **out**: output data. Its shape depends on the function.
+    """
+    def __init__(self, function, *args, **kwargs):
+        super(Lambda, self).__init__(prefix=kwargs.get('prefix'), params=kwargs.get('params'))
+        self._kwargs = {k: v for k, v in kwargs.items() if k not in ('prefix', 'params')}
+        self._args = args
+        self._func_name = None
+        self._func_impl = None
+        if isinstance(function, str):
+            assert hasattr(nd, function) and hasattr(sym, function), \
+                   "Function name %s is not found in symbol/ndarray." % function
+            self._func_name = function
+        elif inspect.isfunction(function):
+            func_name = function.__name__
+            if hasattr(nd, func_name) and hasattr(sym, func_name):
+                self._func_name = func_name
+            else:
+                self._func_impl = function
+        else:
+            raise ValueError("Unrecognized function in lambda: %s" % str(function))
+
+    def _func(self, F):
+        if self._func_impl:
+            return self._func_impl
+        else:
+            return getattr(F, self._func_name)
+
+    def hybrid_forward(self, F, x):
+        return self._func(F)(x, *self._args, **self._kwargs)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_impl.func_name if self._func_impl
+                                           else self._func_name)
