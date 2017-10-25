@@ -369,8 +369,9 @@ def test_function():
     with record():
         backward([x/y, x*y])
 
-    assert_almost_equal(x.grad.asnumpy(), dx1)
-    assert_almost_equal(y.grad.asnumpy(), dy1)
+    atol = 1e-6
+    assert_almost_equal(x.grad.asnumpy(), dx1, atol=atol)
+    assert_almost_equal(y.grad.asnumpy(), dy1, atol=atol)
 
 
 @with_seed()

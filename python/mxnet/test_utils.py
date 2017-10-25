@@ -883,7 +883,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
                                                    ctx=ctx, dtype=dtype))])
-    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
+    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape))
+                          for k in grad_nodes]
                          + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
@@ -1579,7 +1580,8 @@ def random_seed(seed=None):
 
     try:
         next_seed = np.random.randint(0, np.iinfo(np.uint32).max)
-        default_logger().info('Setting np and mx random seeds = %s' % seed)
+        logger = default_logger()
+        logger.info('Setting np and mx random seeds = %s', seed)
         np.random.seed(seed)
         mx.random.seed(seed)
         yield
@@ -1620,34 +1622,41 @@ def with_seed(seed=None):
 
         nosetests --verbose -s <test_module_name.py>:<failing_test>
 
+    To run a test repeatedly, set MXNET_TEST_COUNT=<NNN> in the environment.
+    To see the seeds of even the passing tests, add '--logging-level=DEBUG' to nosetests.
     """
     def test_helper(orig_test):
         @make_decorator(orig_test)
         def test_new(*args, **kwargs):
+            test_count = int(os.getenv('MXNET_TEST_COUNT', '1'))
             env_seed_str = os.getenv('MXNET_TEST_SEED')
-            if seed is not None:
-                this_test_seed = seed
-                print_seed = True
-            elif env_seed_str is not None:
-                this_test_seed = int(env_seed_str)
-                print_seed = True
-            else:
-                this_test_seed = np.random.randint(0, np.iinfo(np.uint32).max)
-                print_seed = False
-            post_test_state = np.random.get_state()
-            np.random.seed(this_test_seed)
-            mx.random.seed(this_test_seed)
-            # This log message will appear with 'nosetests --logging-level=DEBUG' even with core dump
-            default_logger().debug("At test start, np and mx random seeds = %s", this_test_seed)
-            try:
-                orig_test(*args, **kwargs)
-            except:
-                print_seed = True
-                raise
-            finally:
-                if print_seed:
-                    default_logger().info("At test start, np and mx random seeds = %s", this_test_seed)
-                np.random.set_state(post_test_state)
+            for _ in xrange(test_count):
+                if seed is not None:
+                    this_test_seed = seed
+                    print_seed = True
+                elif env_seed_str is not None:
+                    this_test_seed = int(env_seed_str)
+                    print_seed = True
+                else:
+                    this_test_seed = np.random.randint(0, np.iinfo(np.uint32).max)
+                    print_seed = False
+                post_test_state = np.random.get_state()
+                np.random.seed(this_test_seed)
+                mx.random.seed(this_test_seed)
+                logger = default_logger()
+                # 'nosetests --logging-level=DEBUG' shows this msg even with a core dump.
+                logger.debug(('Setting test np/mx random seeds, '
+                              'use MXNET_TEST_SEED=%s to reproduce.'), this_test_seed)
+                try:
+                    orig_test(*args, **kwargs)
+                except:
+                    print_seed = True
+                    raise
+                finally:
+                    if print_seed:
+                        logger.info(('Setting test np/mx random seeds, '
+                                     'use MXNET_TEST_SEED=%s to reproduce.'), this_test_seed)
+                    np.random.set_state(post_test_state)
         return test_new
     return test_helper
 
@@ -1664,8 +1673,10 @@ def setup_module():
        test_module.test1 ... ok
        test_module.test2 ... Illegal instruction (core dumped)
 
-    2. Copy the module-starting seed into the next command:
-       run "MXNET_MODULE_SEED=4018804151 nosetests --logging-level=DEBUG --verbose test_module.py"
+    2. Copy the module-starting seed into the next command, then run:
+
+       MXNET_MODULE_SEED=4018804151 nosetests --logging-level=DEBUG --verbose test_module.py
+
        Output might be:
 
        [WARNING] **** module-level seed is set: all tests running deterministically ****
@@ -1675,8 +1686,8 @@ def setup_module():
        test_module.test2 ... [DEBUG] np and mx random seeds = 1435005594
        Illegal instruction (core dumped)
 
-    3. Copy the segfaulting-test seed into the next command:
-       run "MXNET_TEST_SEED=1435005594 nosetests --logging-level=DEBUG --verbose test_module.py:test2"
+    3. Copy the segfaulting-test seed into the command:
+       MXNET_TEST_SEED=1435005594 nosetests --logging-level=DEBUG --verbose test_module.py:test2
        Output might be:
 
        [INFO] np and mx random seeds = 2481884723
@@ -1692,20 +1703,21 @@ def setup_module():
 
        gdb -ex r --args python test_module.py
 
-    4. When finished debugging the segfault, remember to unset any MXNET_ seed variables in the environment
-       (if you added them there) to return to non-deterministic testing (a good thing).
+    4. When finished debugging the segfault, remember to unset any exported MXNET_ seed
+       variables in the environment to return to non-deterministic testing (a good thing).
     """
 
     module_seed_str = os.getenv('MXNET_MODULE_SEED')
+    logger = default_logger()
     if module_seed_str is None:
         seed = np.random.randint(0, np.iinfo(np.uint32).max)
     else:
         seed = int(module_seed_str)
-        default_logger().warn('**** module-level seed is set: all tests running deterministically ****')
-    default_logger().info("At module start, np and mx random seeds = %s", seed)
+        logger.warn('*** module-level seed is set: all tests running deterministically ***')
+    logger.info('Setting module np/mx random seeds, use MXNET_MODULE_SEED=%s to reproduce.', seed)
     np.random.seed(seed)
     mx.random.seed(seed)
-    # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with the 'with_seed()'
-    # decoration.  Inform the user of this once here at the module level.
+    # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
+    #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
-        default_logger().warn('**** test-level seed is set: all "@with_seed()" tests running deterministically ****')
+        logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
