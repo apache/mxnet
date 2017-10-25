@@ -19,6 +19,7 @@ import pickle as pkl
 
 from mxnet.ndarray import NDArray
 from mxnet.test_utils import *
+from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 
@@ -463,9 +464,10 @@ def test_sparse_nd_unsupported():
             pass
 
 def test_create_csr():
-    def check_create_csr_from_nd(shape, density):
+    def check_create_csr_from_nd(shape, density, dtype):
         matrix = rand_ndarray(shape, 'csr', density)
-        data = matrix.data
+        # create data array with provided dtype and ctx
+        data = mx.nd.array(matrix.data.asnumpy(), dtype=dtype)
         indptr = matrix.indptr
         indices = matrix.indices
         csr_created = mx.nd.sparse.csr_matrix((data, indices, indptr), shape=shape)
@@ -473,6 +475,10 @@ def test_create_csr():
         assert same(csr_created.data.asnumpy(), data.asnumpy())
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
         assert same(csr_created.indices.asnumpy(), indices.asnumpy())
+        # verify csr matrix dtype and ctx is consistent from the ones provided
+        assert csr_created.dtype == dtype
+        assert csr_created.data.dtype == dtype
+        assert csr_created.context == Context.default_ctx
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
 
@@ -481,6 +487,7 @@ def test_create_csr():
             assert_almost_equal(nd.data.asnumpy(), sp.data)
             assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
             assert_almost_equal(nd.indices.asnumpy(), sp.indices)
+
         try:
             import scipy.sparse as spsp
             # random canonical csr
@@ -500,12 +507,13 @@ def test_create_csr():
         except ImportError:
             print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
 
-    dim0 = 50
-    dim1 = 50
+    dim0 = 20
+    dim1 = 20
     densities = [0, 0.5]
+    dtype = np.float64
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
-        check_create_csr_from_nd(shape, density)
+        check_create_csr_from_nd(shape, density, dtype)
         check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
         check_create_csr_from_scipy(shape, density, mx.nd.array)
 
@@ -569,16 +577,57 @@ def test_create_sparse_nd_infer_shape():
         check_create_rsp_infer_shape(shape_3d, density, dtype)
 
 def test_create_sparse_nd_from_dense():
-    def check_create_from_dns(shape, f, dense_arr, dtype):
-        arr = f(dense_arr, dtype=dtype)
+    def check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx):
+        arr = f(dense_arr, dtype=dtype, ctx=ctx)
         assert(same(arr.asnumpy(), np.ones(shape)))
         assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
+        # verify the default dtype inferred from dense arr
+        arr2 = f(dense_arr)
+        assert(arr2.dtype == default_dtype)
+        assert(arr2.context == Context.default_ctx)
     shape = rand_shape_2d()
     dtype = np.int32
-    dense_arrs = [mx.nd.ones(shape), np.ones(shape), np.ones(shape).tolist()]
+    src_dtype = np.float64
+    ctx = mx.cpu(1)
+    dense_arrs = [mx.nd.ones(shape, dtype=src_dtype), np.ones(shape, dtype=src_dtype), \
+                  np.ones(shape, dtype=src_dtype).tolist()]
     for f in [mx.nd.sparse.csr_matrix, mx.nd.sparse.row_sparse_array]:
         for dense_arr in dense_arrs:
-            check_create_from_dns(shape, f, dense_arr, dtype)
+            default_dtype = dense_arr.dtype if isinstance(dense_arr, (NDArray, np.ndarray)) \
+                            else np.float32
+            check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx)
+
+def test_create_sparse_nd_from_sparse():
+    def check_create_from_sp(shape, f, sp_arr, dtype, src_dtype, ctx):
+        arr = f(sp_arr, dtype=dtype, ctx=ctx)
+        assert(same(arr.asnumpy(), np.ones(shape)))
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
+        # verify the default dtype inferred from dense arr
+        arr2 = f(sp_arr)
+        assert(arr2.dtype == src_dtype)
+        assert(arr2.context == Context.default_ctx)
+
+    shape = rand_shape_2d()
+    src_dtype = np.float64
+    dtype = np.int32
+    ctx = mx.cpu(1)
+    ones = mx.nd.ones(shape, dtype=src_dtype)
+    csr_arrs = [ones.tostype('csr')]
+    rsp_arrs = [ones.tostype('row_sparse')]
+    try:
+        import scipy.sparse as spsp
+        csr_sp = spsp.csr_matrix(np.ones(shape, dtype=src_dtype))
+        csr_arrs.append(csr_sp)
+    except ImportError:
+        print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
+    f_csr = mx.nd.sparse.csr_matrix
+    f_rsp = mx.nd.sparse.row_sparse_array
+    for sp_arr in csr_arrs:
+        check_create_from_sp(shape, f_csr, sp_arr, dtype, src_dtype, ctx)
+    for sp_arr in rsp_arrs:
+        check_create_from_sp(shape, f_rsp, sp_arr, dtype, src_dtype, ctx)
 
 def test_create_sparse_nd_empty():
     def check_empty(shape, stype):
@@ -586,24 +635,38 @@ def test_create_sparse_nd_empty():
         assert(arr.stype == stype)
         assert same(arr.asnumpy(), np.zeros(shape))
 
-    def check_csr_empty(shape):
-        arr = mx.nd.sparse.csr_matrix(shape)
+    def check_csr_empty(shape, dtype, ctx):
+        arr = mx.nd.sparse.csr_matrix(shape, dtype=dtype, ctx=ctx)
         assert(arr.stype == 'csr')
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
         assert same(arr.asnumpy(), np.zeros(shape))
+        # check the default value for dtype and ctx
+        arr = mx.nd.sparse.csr_matrix(shape)
+        assert(arr.dtype == np.float32)
+        assert(arr.context == Context.default_ctx)
 
-    def check_rsp_empty(shape):
-        arr = mx.nd.sparse.row_sparse_array(shape)
+    def check_rsp_empty(shape, dtype, ctx):
+        arr = mx.nd.sparse.row_sparse_array(shape, dtype=dtype, ctx=ctx)
         assert(arr.stype == 'row_sparse')
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
         assert same(arr.asnumpy(), np.zeros(shape))
+        # check the default value for dtype and ctx
+        arr = mx.nd.sparse.row_sparse_array(shape)
+        assert(arr.dtype == np.float32)
+        assert(arr.context == Context.default_ctx)
 
     stypes = ['csr', 'row_sparse']
     shape = rand_shape_2d()
     shape_3d = rand_shape_3d()
+    dtype = np.int32
+    ctx = mx.cpu(1)
     for stype in stypes:
         check_empty(shape, stype)
-    check_csr_empty(shape)
-    check_rsp_empty(shape)
-    check_rsp_empty(shape_3d)
+    check_csr_empty(shape, dtype, ctx)
+    check_rsp_empty(shape, dtype, ctx)
+    check_rsp_empty(shape_3d, dtype, ctx)
 
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):

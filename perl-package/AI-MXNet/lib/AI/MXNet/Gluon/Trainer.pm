@@ -231,14 +231,14 @@ method step(Int $batch_size, Bool $ignore_stale_grad=0)
                 $self->_kv_store->pull($i, out => $param->list_grad, priority => -$i);
             }
         }
-        zip(sub {
-            my ($upd, $arr, $grad) = @_;
+        for(zip($self->_updaters, $param->list_data, $param->list_grad)) {
+            my ($upd, $arr, $grad) = @$_;
             if(not $ignore_stale_grad or $arr->_fresh_grad)
             {
                 $upd->($i, $grad, $arr);
                 $arr->_fresh_grad(0);
             }
-        }, $self->_updaters, $param->list_data, $param->list_grad);
+        }
     }, $self->_params);
 }
 

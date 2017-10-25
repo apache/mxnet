@@ -215,6 +215,20 @@ struct set_zero {
   }
 };
 
+/*! \brief Binary op backward gradient OP wrapper */
+template<typename GRAD_OP>
+struct backward_grad {
+  /* \brief Backward calc with grad
+   * \param a - output grad
+   * \param args... - data to grad calculation op (what this is -- input, output, etc. -- varies)
+   * \return input grad
+   */
+  template<typename DType, typename ...Args>
+  MSHADOW_XINLINE static DType Map(DType a, Args... args) {
+    return DType(a * GRAD_OP::Map(args...));
+  }
+};
+
 /*! \brief Select assignment operation based upon the req value
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
  */
