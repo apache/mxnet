@@ -15,8 +15,7 @@ julia> mx.rand(0, 1, mx.zeros(2, 2)) |> copy
 ```
 """
 function rand!(low::Real, high::Real, out::NDArray)
-  # XXX: note we reverse shape because julia and libmx has different dim order
-  _random_uniform(NDArray, low=low, high=high, shape=reverse(size(out)), out=out)
+  _random_uniform(NDArray, low=low, high=high, shape=size(out), out=out)
 end
 
 """
@@ -46,8 +45,7 @@ end
 Draw random samples from a normal (Gaussian) distribution.
 """
 function randn!(mean::Real, stdvar::Real, out::NDArray)
-  # XXX: note we reverse shape because julia and libmx has different dim order
-  _random_normal(NDArray, loc=mean, scale=stdvar, shape=reverse(size(out)), out=out)
+  _random_normal(NDArray, loc=mean, scale=stdvar, shape=size(out), out=out)
 end
 
 """

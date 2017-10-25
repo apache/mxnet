@@ -1012,19 +1012,6 @@ end
   ACCEPT_EMPTY_MUTATE_TARGET = (1 << 2)
 )
 
-function _julia_to_mx_param(val :: Any)
-  string(val)
-end
-function _julia_to_mx_param(val :: Float64)
-  @sprintf("%.16e", val)
-end
-function _julia_to_mx_param(val :: Float32)
-  @sprintf("%.8e", val)
-end
-function _julia_to_mx_param(val :: Float16)
-  @sprintf("%.4e", val)
-end
-
 # Import corresponding math functions from base so the automatically defined libmxnet
 # functions can overload them
 import Base: sqrt
@@ -1086,7 +1073,7 @@ function _get_ndarray_function_def(name :: String)
       # and in libmxnet.
       # See https://github.com/dmlc/MXNet.jl/pull/123
       if $name == "transpose"
-        kwargs = Any[key != :axes ? (key, arg) : (key, reverse(map(i->length(arg)-i, arg))) for (key, arg) in kwargs]
+        kwargs = Any[key != :axes ? (key, arg) : (key, map(i->length(arg)-i, arg)) for (key, arg) in kwargs]
       end
 
       if length(output_vars) > 0
@@ -1100,7 +1087,7 @@ function _get_ndarray_function_def(name :: String)
       num_outputs_p = [convert(Cint, num_outputs)]
 
       kw_keys_str = String[string(x[1]) for x in kwargs]
-      kw_vals_str = String[_julia_to_mx_param(x[2]) for x in kwargs]
+      kw_vals_str = String[dump_mx_param(x[2]) for x in kwargs]
 
       #op_handle = _get_cached_libmx_op_handle($(QuoteNode(name)))
       op_handle = _get_cached_libmx_op_handle($(name))
