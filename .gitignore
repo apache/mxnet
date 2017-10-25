@@ -1,3 +1,6 @@
+.env
+nvidia-docker-compose.yml
+
 # Compiled Object files
 *.slo
 *.lo
