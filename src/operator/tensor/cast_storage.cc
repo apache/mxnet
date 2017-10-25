@@ -25,9 +25,53 @@
 #include "./cast_storage-inl.h"
 #include "../elemwise_op_common.h"
 #include "../tensor/elemwise_unary_op.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
+
+static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
+  switch(dtype) {
+    case mshadow::kFloat32:
+      return mkldnn::memory::data_type::f32;
+    default:
+      return mkldnn::memory::data_type::data_undef;
+  }
+}
+
+void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns) {
+  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), cpu::kDevMask);
+  CHECK(src.shape() == dns->shape_);
+  CHECK_EQ(src.dtype(), dns->type_flag_);
+
+  mkldnn::memory::dims dims(dns->shape_.ndim());
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = dns->shape_[i];
+  mkldnn::memory::format layout = mkldnn::memory::format::format_undef;
+  switch (dns->shape_.ndim()) {
+    case 1: layout = mkldnn::memory::format::x; break;
+    case 2: layout = mkldnn::memory::format::nc; break;
+    case 4: layout = mkldnn::memory::format::nchw; break;
+    default: LOG(FATAL) << "Unsupported number of dimensions for MKLDNN";
+  }
+  mkldnn::memory::desc data_md({dims}, get_mkldnn_type(src.dtype()), layout);
+  auto cpu_engine = CpuEngine::Instance().get_engine();
+  mkldnn::memory dst_mem(mkldnn::memory::primitive_desc(data_md, cpu_engine), dns->dptr_);
+
+  std::vector<mkldnn::primitive> net;
+  net.push_back(mkldnn::reorder(*src.GetMKLDNNData(), dst_mem));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+}
+
+void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dst) {
+  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), cpu::kDevMask);
+  CHECK(dst.shape() == src.shape());
+  CHECK_EQ(dst.dtype(), src.dtype());
+
+  std::vector<mkldnn::primitive> net;
+  net.push_back(mkldnn::reorder(*src.GetMKLDNNData(), *dst.GetMKLDNNData()));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+}
 
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)

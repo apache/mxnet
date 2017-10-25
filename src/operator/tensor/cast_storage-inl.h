@@ -324,6 +324,9 @@ void CastStorageCsrDnsImpl(const OpContext& ctx,
   });
 }
 
+void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns);
+void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dns);
+
 template<typename xpu>
 void CastStorageComputeImpl(const OpContext& ctx,
                             const NDArray& input,
@@ -342,8 +345,15 @@ void CastStorageComputeImpl(const OpContext& ctx,
   } else if (src_stype == kCSRStorage && dst_stype == kDefaultStorage) {
     TBlob ret = output.data();
     CastStorageCsrDnsImpl<xpu>(ctx, input, &ret);
+#if MXNET_USE_MKLDNN == 1
+  } else if (src_stype == kMKLDNNStorage && dst_stype == kDefaultStorage) {
+    TBlob ret = output.data();
+    CastStorageMKLDnsImpl(ctx, input, &ret);
+  } else if (src_stype == kDefaultStorage && dst_stype == kMKLDNNStorage) {
+    CastStorageDnsMKLImpl(ctx, input, output);
+#endif
   } else {
-    LOG(FATAL) << "Not implemented";
+    LOG(FATAL) << "Not implemented from " << src_stype << " to " << dst_stype;
   }
 }
 
