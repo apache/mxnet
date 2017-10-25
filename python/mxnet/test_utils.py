@@ -1630,7 +1630,7 @@ def with_seed(seed=None):
         def test_new(*args, **kwargs):
             test_count = int(os.getenv('MXNET_TEST_COUNT', '1'))
             env_seed_str = os.getenv('MXNET_TEST_SEED')
-            for _ in xrange(test_count):
+            for _ in range(test_count):
                 if seed is not None:
                     this_test_seed = seed
                     print_seed = True
