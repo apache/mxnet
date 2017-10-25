@@ -36,6 +36,7 @@
 #include <string>
 #include <utility>
 #include "../../operator_common.h"
+#include "./mkldnn_base-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 
@@ -43,16 +44,6 @@
 
 namespace mxnet {
 namespace op {
-
-template<class Dtype>
-mkldnn::memory::data_type GetMKLDNNType() {
-  return mkldnn::memory::data_type::data_undef;
-}
-
-template<>
-mkldnn::memory::data_type GetMKLDNNType<float>() {
-  return mkldnn::memory::data_type::f32;
-}
 
 template<typename Dtype>
 void MKLDNNRelu_Forward(const OpContext &ctx, const NDArray &in_data,
@@ -71,9 +62,8 @@ void MKLDNNRelu_Forward(const OpContext &ctx, const NDArray &in_data,
   mkldnn::eltwise_forward::primitive_desc pdesc(desc, cpu_engine);
 
   std::vector<mkldnn::primitive> net;
-  // TODO should we allocate memory here?
   std::shared_ptr<const mkldnn::memory> output_memory
-    = out_data.GetMKLDNNData(pdesc.dst_primitive_desc(), net);
+    = const_cast<NDArray &>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
   net.push_back(mkldnn::eltwise_forward(pdesc, *input_mem, *output_memory));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
 }
@@ -104,7 +94,7 @@ void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
 
   std::vector<mkldnn::primitive> net;
   std::shared_ptr<const mkldnn::memory> diff_src_memory
-    = in_grad.GetMKLDNNData(bw_pdesc.diff_src_primitive_desc(), net);
+    = const_cast<NDArray &>(in_grad).CreateMKLDNNData(bw_pdesc.diff_src_primitive_desc());
   net.push_back(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
         *diff_dst_memory, *diff_src_memory));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
