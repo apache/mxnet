@@ -24,8 +24,8 @@ from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
 from collections import namedtuple
 
-set_np_random_seed()
 
+@with_seed()
 def test_module_dtype():
     dtype = np.float16
     dshape = (3, 8, 7)
@@ -44,6 +44,7 @@ def test_module_dtype():
       assert x.dtype == dtype
 
 
+@with_seed()
 def test_module_input_grads():
     a = mx.sym.Variable('a', __layout__='NC')
     b = mx.sym.Variable('b', __layout__='NC')
@@ -69,6 +70,7 @@ def test_module_input_grads():
     assert np.all(c_grad == 3), c_grad
 
 
+@with_seed()
 def test_module_layout():
     sym = mx.sym.Variable('data')
     sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
@@ -87,6 +89,7 @@ def test_module_layout():
         assert x.shape == hdshape
 
 
+@with_seed()
 def test_save_load():
     def dict_equ(a, b):
         assert set(a) == set(b)
@@ -127,6 +130,7 @@ def test_save_load():
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
 
 
+@with_seed()
 def test_module_reshape():
     data = mx.sym.Variable('data')
     sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
@@ -154,6 +158,7 @@ def test_module_reshape():
     assert (mod.get_params()[0]['fc_bias'].asnumpy() == -3).all()
 
 
+@with_seed()
 def test_module_states():
     stack = mx.rnn.SequentialRNNCell()
     for i in range(2):
@@ -181,6 +186,7 @@ def test_module_states():
         assert not mx.test_utils.almost_equal(x1.asnumpy(), x2.asnumpy(), rtol=1e-3)
 
 
+@with_seed()
 def test_module_switch_bucket():
     vocab_dim = 5000
     num_hidden = 100
@@ -237,9 +243,9 @@ def test_module_switch_bucket():
 
 
 
+@with_seed(11)
 def test_module_set_params():
     # data iter
-    mx.random.seed(11)
     data = mx.nd.array([[0.05, .10]]);
     label = mx.nd.array([[.01, 0.99]]);
     train_data = mx.io.NDArrayIter(data, label, batch_size=1)
@@ -300,9 +306,9 @@ def test_module_set_params():
                  aux_params={}, allow_missing=True, allow_extra=False)
 
 
+@with_seed(11)
 def test_monitor():
     # data iter
-    mx.random.seed(11)
     data = mx.nd.array([[0.05, .10]]);
     label = mx.nd.array([[.01, 0.99]]);
     train_data = mx.io.NDArrayIter(data, label, batch_size=1)
@@ -347,6 +353,7 @@ def test_monitor():
                 break
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
+@with_seed()
 def test_executor_group():
     def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len):
         stack = mx.rnn.SequentialRNNCell()
@@ -458,12 +465,11 @@ def test_executor_group():
     test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
                            shared_arg_names=shared_arg_names, extra_args=extra_args)
 
-
+@with_seed(11)
 def test_factorization_machine_module(verbose=False):
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
         print("check_factorization_machine_module( {} )".format(optimizer))
-        mx.random.seed(11)
 
         def fm(factor_size, feature_dim, init):
             x = mx.symbol.Variable("data", stype='csr')
@@ -491,71 +497,70 @@ def test_factorization_machine_module(verbose=False):
             model = mx.symbol.LinearRegressionOutput(data=model, label=y)
             return model
 
-        with np_random_seed(11):
-            # model
-            init = mx.initializer.Normal(sigma=0.01)
-            factor_size = 4
-            feature_dim = 10000
-            model = fm(factor_size, feature_dim, init)
+        # model
+        init = mx.initializer.Normal(sigma=0.01)
+        factor_size = 4
+        feature_dim = 10000
+        model = fm(factor_size, feature_dim, init)
 
-            # data iter
-            num_batches = 5
-            batch_size = 64
-            num_samples = batch_size * num_batches
-            # generate some random csr data
-            csr_nd = rand_ndarray((num_samples, feature_dim), 'csr', 0.1)
-            label = mx.nd.ones((num_samples,1))
-            # the alternative is to use LibSVMIter
-            train_iter = mx.io.NDArrayIter(data=csr_nd,
-                                           label={'label':label},
-                                           batch_size=batch_size,
-                                           last_batch_handle='discard')
-            # create module
-            mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
-            # allocate memory by given the input data and lable shapes
-            mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-            # initialize parameters by uniform random numbers
-            mod.init_params(initializer=init)
-            if optimizer == 'sgd':
-                # use Sparse SGD with learning rate 0.1 to train
-                sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
-                                       rescale_grad=1.0/batch_size)
-                mod.init_optimizer(optimizer=sgd)
-                if num_epochs is None:
-                    num_epochs = 10
-                expected_accuracy = 0.02
-            elif optimizer == 'adam':
-                # use Sparse Adam to train
-                adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001,
-                                         rescale_grad=1.0/batch_size)
-                mod.init_optimizer(optimizer=adam)
-                if num_epochs is None:
-                    num_epochs = 10
-                expected_accuracy = 0.05
-            elif optimizer == 'adagrad':
-                # use Sparse AdaGrad with learning rate 0.1 to train
-                adagrad = mx.optimizer.AdaGrad(clip_gradient=5.0, learning_rate=0.01,
-                                               rescale_grad=1.0/batch_size)
-                mod.init_optimizer(optimizer=adagrad)
-                if num_epochs is None:
-                    num_epochs = 20
-                expected_accuracy = 0.09
-            else:
-                raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
-            # use accuracy as the metric
-            metric = mx.metric.create('MSE')
-            # train 'num_epochs' epoch
-            for epoch in range(num_epochs):
-                train_iter.reset()
-                metric.reset()
-                for batch in train_iter:
-                    mod.forward(batch, is_train=True)       # compute predictions
-                    mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
-                    mod.backward()                          # compute gradients
-                    mod.update()                            # update parameters
-                print('Epoch %d, Training %s' % (epoch, metric.get()))
-            if num_epochs > 1:
-                assert(metric.get()[1] < expected_accuracy)
+        # data iter
+        num_batches = 5
+        batch_size = 64
+        num_samples = batch_size * num_batches
+        # generate some random csr data
+        csr_nd = rand_ndarray((num_samples, feature_dim), 'csr', 0.1)
+        label = mx.nd.ones((num_samples,1))
+        # the alternative is to use LibSVMIter
+        train_iter = mx.io.NDArrayIter(data=csr_nd,
+                                       label={'label':label},
+                                       batch_size=batch_size,
+                                       last_batch_handle='discard')
+        # create module
+        mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['label'])
+        # allocate memory by given the input data and lable shapes
+        mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
+        # initialize parameters by uniform random numbers
+        mod.init_params(initializer=init)
+        if optimizer == 'sgd':
+            # use Sparse SGD with learning rate 0.1 to train
+            sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
+                                   rescale_grad=1.0/batch_size)
+            mod.init_optimizer(optimizer=sgd)
+            if num_epochs is None:
+                num_epochs = 10
+            expected_accuracy = 0.02
+        elif optimizer == 'adam':
+            # use Sparse Adam to train
+            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.001,
+                                     rescale_grad=1.0/batch_size)
+            mod.init_optimizer(optimizer=adam)
+            if num_epochs is None:
+                num_epochs = 10
+            expected_accuracy = 0.05
+        elif optimizer == 'adagrad':
+            # use Sparse AdaGrad with learning rate 0.1 to train
+            adagrad = mx.optimizer.AdaGrad(clip_gradient=5.0, learning_rate=0.01,
+                                           rescale_grad=1.0/batch_size)
+            mod.init_optimizer(optimizer=adagrad)
+            if num_epochs is None:
+                num_epochs = 20
+            expected_accuracy = 0.09
+        else:
+            raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
+        # use accuracy as the metric
+        metric = mx.metric.create('MSE')
+        # train 'num_epochs' epoch
+        for epoch in range(num_epochs):
+            train_iter.reset()
+            metric.reset()
+            for batch in train_iter:
+                mod.forward(batch, is_train=True)       # compute predictions
+                mod.update_metric(metric, batch.label)  # accumulate prediction accuracy
+                mod.backward()                          # compute gradients
+                mod.update()                            # update parameters
+            print('Epoch %d, Training %s' % (epoch, metric.get()))
+        if num_epochs > 1:
+            assert(metric.get()[1] < expected_accuracy)
 
     if verbose is True:
         print("============ SGD ==========================")
@@ -575,6 +580,7 @@ def test_factorization_machine_module(verbose=False):
         print("Duration: {}".format(time.clock() - start))
 
 
+@with_seed()
 def test_module_initializer():
     def regression_model(m):
          x = mx.symbol.var("data", stype='csr')
@@ -601,6 +607,7 @@ def test_module_initializer():
     assert(v.stype == 'row_sparse')
     assert(np.sum(v.asnumpy()) != 0)
 
+@with_seed()
 def test_forward_reshape():
     num_class=10
     data1 = mx.sym.Variable('data1')

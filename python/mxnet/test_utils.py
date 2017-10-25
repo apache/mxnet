@@ -33,6 +33,7 @@ from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
+from nose.tools import make_decorator
 try:
     import requests
 except ImportError:
@@ -44,12 +45,19 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 
-# spawn off a new seeded random number generator, by default based on the
-# global random number generator's current state.
-def get_rng(seed=None):
-    if seed is None:
-        seed = np.random.randint(0, np.iinfo(np.uint32).max)
-    return np.random.RandomState(seed)
+def default_logger():
+    """A logger used to output seed information to nosetests logs."""
+    logger = logging.getLogger(__name__)
+    # getLogger() lookups will return the same logger, but only add the handler once.
+    if not len(logger.handlers):
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+        logger.addHandler(handler)
+        # print('Default log level = %s' % logger.getEffectiveLevel())
+        if (logger.getEffectiveLevel() == logging.NOTSET):
+            logger.setLevel(logging.INFO)
+    return logger
+
 
 def default_context():
     """Get default context for regression test."""
@@ -834,8 +842,6 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     if ctx is None:
         ctx = default_context()
 
-    _rng = get_rng()
-
     def random_projection(shape):
         """Get a random weight matrix with not too small elements
 
@@ -845,7 +851,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         """
         # random_projection should not have elements too small,
         # otherwise too much precision is lost in numerical gradient
-        plain = _rng.rand(*shape) + 0.1
+        plain = np.random.rand(*shape) + 0.1
         return plain
 
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
@@ -877,8 +883,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
                                                    ctx=ctx, dtype=dtype))])
-    args_grad_npy = dict([(k, _rng.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
-                         + [("__random_proj", _rng.normal(0, 0.01, size=out_shape[0]))])
+    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape)) for k in grad_nodes]
+                         + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
 
     args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
     if grad_stype_dict is not None:
@@ -1069,8 +1075,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
 
-    _rng = get_rng()
-    args_grad_npy = {k:_rng.normal(size=v.shape) for k, v in expected.items()}
+    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
         nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
@@ -1162,10 +1167,9 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
     if grad_req is None:
         grad_req = 'write'
-    _rng = get_rng()
     if location is None:
         exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
-        location = {k: _rng.normal(size=arr.shape, scale=1.0) for k, arr in
+        location = {k: np.random.normal(size=arr.shape, scale=1.0) for k, arr in
                     exe.arg_dict.items()}
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)
@@ -1548,51 +1552,160 @@ def discard_stderr():
         bit_bucket.close()
 
 @contextmanager
-def np_random_seed(seed=None):
+def random_seed(seed=None):
     """
-    Runs a code block with a new state of np.random.
-    To impose rng determinism, invoke e.g. as in:
-
-    with np_random_seed(1234):
-        ...
-
-    To impose rng non-determinism, invoke as in:
-
-    with np_random_seed():
-        ...
-
-    """
-
-    try:
-        saved_rng_state = np.random.get_state()
-        np.random.seed(seed)
-        yield
-    finally:
-        # Reinstate prior state of np.random
-        np.random.set_state(saved_rng_state)
-
-# Set seed and output to stderr (to avoid default nosetests filtering of stdout)
-def set_np_random_seed(seed=None, ostream=sys.stderr):
-    """Set the np.random seed and announce the value to an output stream
+    Runs a code block with a new seed for both np and mx random.
 
     Parameters
     ----------
 
-    seed: int
-        Seed to pass to np.random.seed().  Should be None to set and output
-        a randomly chosen value.
-    ostream :
-        Stream to announce the new seed value to.
+    seed : the seed to pass to np.random and mx.random
 
-    The expected use of this function is to set the seed globally before
-    a suite of tests and output the set value to help reproduce any failures
-    that are dependent on the random data.  To fix the seed for a single test
-    without modifying the randomness of subsequent tests in the same file,
-    use 'np_random_seed'.
+    To impose rng determinism, invoke e.g. as in:
+
+    with random_seed(1234):
+        ...
+
+    To impose rng non-determinism, invoke as in:
+
+    with random_seed():
+        ...
+
+    Upon conclusion of the block, the rng's are returned to
+    a state that is a function of their pre-block state, so
+    any prior non-determinism is preserved.
+
     """
-    if seed is None:
+
+    try:
+        next_seed = np.random.randint(0, np.iinfo(np.uint32).max)
+        default_logger().info('Setting np and mx random seeds = %s' % seed)
+        np.random.seed(seed)
+        mx.random.seed(seed)
+        yield
+    finally:
+        # Reinstate prior state of np.random
+        np.random.seed(next_seed)
+        mx.random.seed(next_seed)
+
+
+def with_seed(seed=None):
+    """
+    A decorator for nosetests test functions that manages rng seeds.
+
+    Parameters
+    ----------
+
+    seed : the seed to pass to np.random and mx.random
+
+
+    This tests decorator sets the np and mx random seeds identically
+    prior to each test, then outputs those seeds if the test fails or
+    if the test requires a fixed seed (as a reminder to make the test
+    more robust against random data).
+
+    @with_seed()
+    def test_ok_with_random_data():
+        ...
+
+    @with_seed(1234)
+    def test_not_ok_with_random_data():
+        ...
+
+    Use of the @with_seed() decorator for all tests creates
+    tests isolation and reproducability of failures.  When a
+    test fails, the decorator outputs the seed used.  The user
+    can then set the environment variable MXNET_RANDOM_SEED to
+    the value reported, then rerun the test with:
+
+        nosetests --verbose -s <test_module_name.py>:<failing_test>
+
+    """
+    def test_helper(orig_test):
+        @make_decorator(orig_test)
+        def test_new(*args, **kwargs):
+            env_seed_str = os.getenv('MXNET_TEST_SEED')
+            if seed is not None:
+                this_test_seed = seed
+                print_seed = True
+            elif env_seed_str is not None:
+                this_test_seed = int(env_seed_str)
+                print_seed = True
+            else:
+                this_test_seed = np.random.randint(0, np.iinfo(np.uint32).max)
+                print_seed = False
+            post_test_state = np.random.get_state()
+            np.random.seed(this_test_seed)
+            mx.random.seed(this_test_seed)
+            # This log message will appear with 'nosetests --logging-level=DEBUG' even with core dump
+            default_logger().debug("At test start, np and mx random seeds = %s", this_test_seed)
+            try:
+                orig_test(*args, **kwargs)
+            except:
+                print_seed = True
+                raise
+            finally:
+                if print_seed:
+                    default_logger().info("At test start, np and mx random seeds = %s", this_test_seed)
+                np.random.set_state(post_test_state)
+        return test_new
+    return test_helper
+
+def setup_module():
+    """
+    A function with a 'magic name' executed automatically before each nosetests module
+    (file of tests) that helps reproduce a test segfault by setting and outputting the rng seeds.
+
+    The segfault-debug procedure on a module called test_module.py is:
+
+    1. run "nosetests --verbose test_module.py".  A seg-faulting output might be:
+
+       [INFO] np and mx random seeds = 4018804151
+       test_module.test1 ... ok
+       test_module.test2 ... Illegal instruction (core dumped)
+
+    2. Copy the module-starting seed into the next command:
+       run "MXNET_MODULE_SEED=4018804151 nosetests --logging-level=DEBUG --verbose test_module.py"
+       Output might be:
+
+       [WARNING] **** module-level seed is set: all tests running deterministically ****
+       [INFO] np and mx random seeds = 4018804151
+       test_module.test1 ... [DEBUG] np and mx random seeds = 3935862516
+       ok
+       test_module.test2 ... [DEBUG] np and mx random seeds = 1435005594
+       Illegal instruction (core dumped)
+
+    3. Copy the segfaulting-test seed into the next command:
+       run "MXNET_TEST_SEED=1435005594 nosetests --logging-level=DEBUG --verbose test_module.py:test2"
+       Output might be:
+
+       [INFO] np and mx random seeds = 2481884723
+       test_module.test2 ... [DEBUG] np and mx random seeds = 1435005594
+       Illegal instruction (core dumped)
+
+    3. Finally reproduce the segfault directly under gdb (might need additional os packages)
+       by editing the bottom of test_module.py to be
+
+       if __name__ == '__main__':
+           logging.getLogger().setLevel(logging.DEBUG)
+           test2()
+
+       gdb -ex r --args python test_module.py
+
+    4. When finished debugging the segfault, remember to unset any MXNET_ seed variables in the environment
+       (if you added them there) to return to non-deterministic testing (a good thing).
+    """
+
+    module_seed_str = os.getenv('MXNET_MODULE_SEED')
+    if module_seed_str is None:
         seed = np.random.randint(0, np.iinfo(np.uint32).max)
-    if ostream is not None:
-        ostream.write('Setting np.random seed to %s.\n' % seed)
-        ostream.flush()
+    else:
+        seed = int(module_seed_str)
+        default_logger().warn('**** module-level seed is set: all tests running deterministically ****')
+    default_logger().info("At module start, np and mx random seeds = %s", seed)
     np.random.seed(seed)
+    mx.random.seed(seed)
+    # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with the 'with_seed()'
+    # decoration.  Inform the user of this once here at the module level.
+    if os.getenv('MXNET_TEST_SEED') is not None:
+        default_logger().warn('**** test-level seed is set: all "@with_seed()" tests running deterministically ****')

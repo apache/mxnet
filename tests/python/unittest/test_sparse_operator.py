@@ -151,6 +151,7 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
 def all_zero(var):
     return 0
 
+@with_seed()
 def test_elemwise_binary_ops():
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
@@ -504,6 +505,7 @@ def test_elemwise_binary_ops():
                                                   rhs_density=rhs_density,
                                                   ograd_density=ograd_density)
 
+@with_seed()
 def test_elemwise_csr_same_zeros():
     # Zeroes
     a = mx.nd.sparse.zeros('csr', (1,1))
@@ -679,6 +681,7 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
+@with_seed()
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1101,6 +1104,7 @@ def test_sparse_mathematical_core():
 
 
 
+@with_seed()
 def test_elemwise_add_ex():
     def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
         lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
@@ -1130,6 +1134,7 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
+@with_seed()
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1177,6 +1182,7 @@ def test_cast_storage_ex():
             check_cast_storage((dim0, rnd.randint(512, 1024)), d, 'default', 'row_sparse',
                                check_numeric_grad=False)
 
+@with_seed()
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density, shuffle_csr_indices=False)
@@ -1217,6 +1223,7 @@ def test_sparse_dot():
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
 
 
+@with_seed()
 def test_sparse_slice():
     def check_csr_slice(shape, slice_input):
         storage_type = 'csr'
@@ -1232,6 +1239,7 @@ def test_sparse_slice():
     check_csr_slice(shape, False)
 
 
+@with_seed()
 def test_sparse_retain():
     def check_sparse_retain(shape, density, index_type=np.int64):
         num_rows = shape[0]
@@ -1264,6 +1272,7 @@ def test_sparse_retain():
             check_sparse_retain(shape_3d, density, itype)
 
 
+@with_seed()
 def test_sparse_unary_with_numerics():
     def check_sparse_simple(name, stype, mxnet_func, forward_numpy_call,
                             backward_numpy_call, output_grad_stype=None,
@@ -1335,6 +1344,7 @@ def test_sparse_unary_with_numerics():
                           lambda output, outg: outg * assign_each(output, lambda x: x * (1.0 - x)),
                           backward_is_use_output=True)
 
+@with_seed()
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1346,6 +1356,7 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('csr', shape)
     check_sparse_nd_zeros('default', shape)
 
+@with_seed()
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1356,6 +1367,7 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('row_sparse', shape)
     check_sparse_nd_zeros_like('csr', shape)
 
+@with_seed()
 def test_sparse_sum_axis():
     def test_variations():
         dim0 = 30
@@ -1383,6 +1395,7 @@ def test_sparse_sum_axis():
     test_variations()
     test_fallback(axis=0, keepdims=True, exclude=True)
 
+@with_seed()
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':
         dim0 = 30
@@ -1427,6 +1440,7 @@ def test_sparse_square_sum():
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                            atol=1e-2, rtol=0.1)
 
+@with_seed()
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1495,6 +1509,7 @@ def test_sparse_storage_fallback():
             check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
             check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
+@with_seed()
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
         # forward
@@ -1525,6 +1540,7 @@ def test_sparse_elementwise_sum():
         shape = tuple(np.random.randint(5, 10, size=dim))
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
+@with_seed()
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
         """Get a unique list of points int he CSR array as well as a

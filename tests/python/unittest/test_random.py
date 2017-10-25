@@ -18,6 +18,7 @@
 import os
 import mxnet as mx
 import numpy as np
+from mxnet.test_utils import *
 
 def same(a, b):
     return np.sum(a != b) == 0
@@ -187,12 +188,14 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
+@with_seed()
 def test_random():
     check_with_device(mx.context.current_context(), 'float16')
     check_with_device(mx.context.current_context(), 'float32')
     check_with_device(mx.context.current_context(), 'float64')
 
 
+@with_seed()
 def test_sample_multinomial():
     x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
     dx = mx.nd.ones_like(x)

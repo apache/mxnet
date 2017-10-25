@@ -36,9 +36,11 @@ def _get_data(url, dirname):
 def _get_images():
     return _get_data("http://data.mxnet.io/data/test_images.tar.gz", './data')
 
+@with_seed()
 def test_init():
     _get_images()
 
+@with_seed()
 def test_imdecode():
     try:
         import cv2
@@ -52,11 +54,13 @@ def test_imdecode():
         cv_image = cv2.imread(img)
         assert_almost_equal(image.asnumpy(), cv_image)
 
+@with_seed()
 def test_scale_down():
     assert mx.image.scale_down((640, 480), (720, 120)) == (640, 106)
     assert mx.image.scale_down((360, 1000), (480, 500)) == (360, 375)
     assert mx.image.scale_down((300, 400), (0, 0)) == (0, 0)
 
+@with_seed()
 def test_resize_short():
     try:
         import cv2
@@ -79,6 +83,7 @@ def test_resize_short():
                 mx_resized = mx.image.resize_short(mx_img, new_size, interp)
                 assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
 
+@with_seed()
 def test_color_normalize():
     for _ in range(10):
         mean = np.random.rand(3) * 255
@@ -91,6 +96,7 @@ def test_color_normalize():
         assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
 
 
+@with_seed()
 def test_imageiter():
     sources = _get_images()
     im_list = [[np.random.randint(0, 5), x] for x in sources]
@@ -115,6 +121,7 @@ def test_imageiter():
         pass
 
 
+@with_seed()
 def test_augmenters():
     # only test if all augmenters will work
     # TODO(Joshua Zhang): verify the augmenter outputs
@@ -140,6 +147,7 @@ def _generate_objects():
     label = np.hstack((cid[:, np.newaxis], boxes)).ravel().tolist()
     return [2, 5] + label
 
+@with_seed()
 def test_image_detiter():
     sources = _get_images()
     im_list = [_generate_objects() + [x] for x in sources]
@@ -165,6 +173,7 @@ def test_image_detiter():
     for batch in det_iter:
         pass
 
+@with_seed()
 def test_det_augmenters():
     # only test if all augmenters will work
     # TODO(Joshua Zhang): verify the augmenter outputs

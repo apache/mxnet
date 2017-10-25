@@ -44,6 +44,7 @@ def _get_data(shape):
     download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape), dirname='data')
     download("http://data.mxnet.io/data/inception-v3-dump.npz", dirname="data")
 
+@with_seed()
 def test_consistency(dump=False):
     shape = (299, 299)
     _get_model()

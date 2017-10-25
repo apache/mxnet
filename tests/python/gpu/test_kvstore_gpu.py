@@ -19,7 +19,7 @@
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import assert_almost_equal, default_context
+from mxnet.test_utils import *
 
 shape = (4, 4)
 keys = [5, 7, 11]
@@ -37,6 +37,7 @@ def init_kv_with_str(stype='default'):
 
 
 @unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8262")
+@with_seed()
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))

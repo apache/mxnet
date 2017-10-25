@@ -25,12 +25,12 @@ import numpy.random as rnd
 
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
-set_np_random_seed()
 
 def sparse_nd_ones(shape, stype):
     return mx.nd.ones(shape).tostype(stype)
 
 
+@with_seed()
 def test_sparse_nd_elemwise_add():
     def check_sparse_nd_elemwise_binary(shapes, stypes, f, g):
         # generate inputs
@@ -56,6 +56,7 @@ def test_sparse_nd_elemwise_add():
         check_sparse_nd_elemwise_binary(shape, ['row_sparse', 'row_sparse'], op, g)
 
 
+@with_seed()
 def test_sparse_nd_copy():
     def check_sparse_nd_copy(from_stype, to_stype, shape):
         from_nd = rand_ndarray(shape, from_stype)
@@ -77,6 +78,7 @@ def test_sparse_nd_copy():
     check_sparse_nd_copy('row_sparse', 'default', shape_3d)
     check_sparse_nd_copy('default', 'row_sparse', shape_3d)
 
+@with_seed()
 def test_sparse_nd_basic():
     def check_sparse_nd_basic_rsp():
         storage_type = 'row_sparse'
@@ -89,6 +91,7 @@ def test_sparse_nd_basic():
     check_sparse_nd_basic_rsp()
 
 
+@with_seed()
 def test_sparse_nd_setitem():
     def check_sparse_nd_setitem(stype, shape, dst):
         x = mx.nd.zeros(shape=shape, stype=stype)
@@ -105,6 +108,7 @@ def test_sparse_nd_setitem():
         check_sparse_nd_setitem(stype, shape, np.ones(shape))
 
 
+@with_seed()
 def test_sparse_nd_slice():
     def check_sparse_nd_csr_slice(shape):
         stype = 'csr'
@@ -134,6 +138,7 @@ def test_sparse_nd_slice():
     check_slice_nd_csr_fallback(shape)
 
 
+@with_seed()
 def test_sparse_nd_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
@@ -145,6 +150,7 @@ def test_sparse_nd_equal():
         assert (z.asnumpy() == np.ones(shape)).all()
 
 
+@with_seed()
 def test_sparse_nd_not_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
@@ -156,6 +162,7 @@ def test_sparse_nd_not_equal():
         assert (z.asnumpy() == np.zeros(shape)).all()
 
 
+@with_seed()
 def test_sparse_nd_greater():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
@@ -169,6 +176,7 @@ def test_sparse_nd_greater():
         assert (z.asnumpy() == np.zeros(shape)).all()
 
 
+@with_seed()
 def test_sparse_nd_greater_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
@@ -184,6 +192,7 @@ def test_sparse_nd_greater_equal():
         assert (z.asnumpy() == np.ones(shape)).all()
 
 
+@with_seed()
 def test_sparse_nd_lesser():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
@@ -197,6 +206,7 @@ def test_sparse_nd_lesser():
         assert (z.asnumpy() == np.zeros(shape)).all()
 
 
+@with_seed()
 def test_sparse_nd_lesser_equal():
     for stype in ['row_sparse', 'csr']:
         shape = rand_shape_2d()
@@ -212,6 +222,7 @@ def test_sparse_nd_lesser_equal():
         assert (z.asnumpy() == np.ones(shape)).all()
 
 
+@with_seed()
 def test_sparse_nd_binary():
     N = 3
     def check_binary(fn, stype):
@@ -247,6 +258,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
+@with_seed()
 def test_sparse_nd_binary_rop():
     N = 3
     def check(fn, stype):
@@ -271,6 +283,8 @@ def test_sparse_nd_binary_rop():
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
 
+
+@with_seed()
 def test_sparse_nd_binary_iop():
     N = 3
     def check_binary(fn, stype):
@@ -299,6 +313,8 @@ def test_sparse_nd_binary_iop():
         for fn in fns:
             check_binary(fn, stype)
 
+
+@with_seed()
 def test_sparse_nd_negate():
     def check_sparse_nd_negate(shape, stype):
         npy = np.random.uniform(-10, 10, rand_shape_2d())
@@ -316,6 +332,8 @@ def test_sparse_nd_negate():
     for stype in stypes:
         check_sparse_nd_negate(shape, stype)
 
+
+@with_seed()
 def test_sparse_nd_broadcast():
     sample_num = 1000
     # TODO(haibin) test with more than 2 dimensions
@@ -343,6 +361,7 @@ def test_sparse_nd_broadcast():
         test_broadcast_to(stype)
 
 
+@with_seed()
 def test_sparse_nd_transpose():
     npy = np.random.uniform(-10, 10, rand_shape_2d())
     stypes = ['csr', 'row_sparse']
@@ -350,6 +369,8 @@ def test_sparse_nd_transpose():
         nd = mx.nd.array(npy).tostype(stype)
         assert_almost_equal(npy.T, (nd.T).asnumpy())
 
+
+@with_seed()
 def test_sparse_nd_storage_fallback():
     def check_output_fallback(shape):
         ones = mx.nd.ones(shape)
@@ -372,6 +393,8 @@ def test_sparse_nd_storage_fallback():
     check_input_fallback(shape)
     check_fallback_with_temp_resource(shape)
 
+
+@with_seed()
 def test_sparse_nd_random():
     """ test sparse random operator on cpu """
     # gpu random operator doesn't use fixed seed
@@ -382,15 +405,14 @@ def test_sparse_nd_random():
     for fn in fns:
         rsp_out = mx.nd.zeros(shape=shape, stype='row_sparse')
         dns_out = mx.nd.zeros(shape=shape, stype='default')
-        mx.random.seed(0)
-        with np_random_seed(0):
+        with random_seed(0):
             fn(shape=shape, out=dns_out)
-        mx.random.seed(0)
-        with np_random_seed(0):
+        with random_seed(0):
             fn(shape=shape, out=rsp_out)
         assert_almost_equal(dns_out.asnumpy(), rsp_out.asnumpy())
 
 
+@with_seed()
 def test_sparse_nd_astype():
     stypes = ['row_sparse', 'csr']
     for stype in stypes:
@@ -399,58 +421,60 @@ def test_sparse_nd_astype():
         assert(y.dtype == np.int32), y.dtype
 
 
+@with_seed(0)
 def test_sparse_nd_pickle():
-    with np_random_seed(0):
-        repeat = 1
-        dim0 = 40
-        dim1 = 40
-        stypes = ['row_sparse', 'csr']
-        densities = [0, 0.5]
-        stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
-        for _ in range(repeat):
-            shape = rand_shape_2d(dim0, dim1)
-            for stype in stypes:
-                for density in densities:
-                    a, _ = rand_sparse_ndarray(shape, stype, density)
-                    assert isinstance(a, stype_dict[stype])
-                    data = pkl.dumps(a)
-                    b = pkl.loads(data)
-                    assert isinstance(b, stype_dict[stype])
-                    assert same(a.asnumpy(), b.asnumpy())
+    repeat = 1
+    dim0 = 40
+    dim1 = 40
+    stypes = ['row_sparse', 'csr']
+    densities = [0, 0.5]
+    stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
+    for _ in range(repeat):
+        shape = rand_shape_2d(dim0, dim1)
+        for stype in stypes:
+            for density in densities:
+                a, _ = rand_sparse_ndarray(shape, stype, density)
+                assert isinstance(a, stype_dict[stype])
+                data = pkl.dumps(a)
+                b = pkl.loads(data)
+                assert isinstance(b, stype_dict[stype])
+                assert same(a.asnumpy(), b.asnumpy())
 
 
+@with_seed(0)
 def test_sparse_nd_save_load():
-    with np_random_seed(0):
-        repeat = 1
-        stypes = ['default', 'row_sparse', 'csr']
-        stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
-        num_data = 20
-        densities = [0, 0.5]
-        fname = 'tmp_list.bin'
-        for _ in range(repeat):
-            data_list1 = []
-            for i in range(num_data):
-                stype = stypes[np.random.randint(0, len(stypes))]
-                shape = rand_shape_2d(dim0=40, dim1=40)
-                density = densities[np.random.randint(0, len(densities))]
-                data_list1.append(rand_ndarray(shape, stype, density))
-                assert isinstance(data_list1[-1], stype_dict[stype])
-            mx.nd.save(fname, data_list1)
+    repeat = 1
+    stypes = ['default', 'row_sparse', 'csr']
+    stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
+    num_data = 20
+    densities = [0, 0.5]
+    fname = 'tmp_list.bin'
+    for _ in range(repeat):
+        data_list1 = []
+        for i in range(num_data):
+            stype = stypes[np.random.randint(0, len(stypes))]
+            shape = rand_shape_2d(dim0=40, dim1=40)
+            density = densities[np.random.randint(0, len(densities))]
+            data_list1.append(rand_ndarray(shape, stype, density))
+            assert isinstance(data_list1[-1], stype_dict[stype])
+        mx.nd.save(fname, data_list1)
 
-            data_list2 = mx.nd.load(fname)
-            assert len(data_list1) == len(data_list2)
-            for x, y in zip(data_list1, data_list2):
-                assert same(x.asnumpy(), y.asnumpy())
+        data_list2 = mx.nd.load(fname)
+        assert len(data_list1) == len(data_list2)
+        for x, y in zip(data_list1, data_list2):
+            assert same(x.asnumpy(), y.asnumpy())
 
-            data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
-            mx.nd.save(fname, data_map1)
-            data_map2 = mx.nd.load(fname)
-            assert len(data_map1) == len(data_map2)
-            for k, x in data_map1.items():
-                y = data_map2[k]
-                assert same(x.asnumpy(), y.asnumpy())
-        os.remove(fname)
+        data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
+        mx.nd.save(fname, data_map1)
+        data_map2 = mx.nd.load(fname)
+        assert len(data_map1) == len(data_map2)
+        for k, x in data_map1.items():
+            y = data_map2[k]
+            assert same(x.asnumpy(), y.asnumpy())
+    os.remove(fname)
 
+
+@with_seed()
 def test_sparse_nd_unsupported():
     nd = mx.nd.zeros((2,2), stype='row_sparse')
     fn_slice = lambda x: x._slice(None, None)
@@ -464,6 +488,8 @@ def test_sparse_nd_unsupported():
         except:
             pass
 
+
+@with_seed()
 def test_create_csr():
     def check_create_csr_from_nd(shape, density, dtype):
         matrix = rand_ndarray(shape, 'csr', density)
@@ -519,6 +545,7 @@ def test_create_csr():
         check_create_csr_from_scipy(shape, density, mx.nd.array)
 
 
+@with_seed()
 def test_create_row_sparse():
     dim0 = 50
     dim1 = 50
@@ -535,6 +562,8 @@ def test_create_row_sparse():
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
+
+@with_seed()
 def test_create_sparse_nd_infer_shape():
     def check_create_csr_infer_shape(shape, density, dtype):
         try:
@@ -577,6 +606,8 @@ def test_create_sparse_nd_infer_shape():
         check_create_rsp_infer_shape(shape, density, dtype)
         check_create_rsp_infer_shape(shape_3d, density, dtype)
 
+
+@with_seed()
 def test_create_sparse_nd_from_dense():
     def check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx):
         arr = f(dense_arr, dtype=dtype, ctx=ctx)
@@ -599,6 +630,8 @@ def test_create_sparse_nd_from_dense():
                             else np.float32
             check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx)
 
+
+@with_seed()
 def test_create_sparse_nd_from_sparse():
     def check_create_from_sp(shape, f, sp_arr, dtype, src_dtype, ctx):
         arr = f(sp_arr, dtype=dtype, ctx=ctx)
@@ -630,6 +663,8 @@ def test_create_sparse_nd_from_sparse():
     for sp_arr in rsp_arrs:
         check_create_from_sp(shape, f_rsp, sp_arr, dtype, src_dtype, ctx)
 
+
+@with_seed()
 def test_create_sparse_nd_empty():
     def check_empty(shape, stype):
         arr = mx.nd.empty(shape, stype=stype)
@@ -669,6 +704,8 @@ def test_create_sparse_nd_empty():
     check_rsp_empty(shape, dtype, ctx)
     check_rsp_empty(shape_3d, dtype, ctx)
 
+
+@with_seed()
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):
         """Test power law distribution
@@ -701,6 +738,8 @@ def test_synthetic_dataset_generator():
     test_powerlaw_generator(csr_arr_big, final_row=4)
     test_powerlaw_generator(csr_arr_square, final_row=6)
 
+
+@with_seed()
 def test_sparse_nd_exception():
     """ test invalid sparse operator will throw a exception """
     a = mx.nd.ones((2,2))
