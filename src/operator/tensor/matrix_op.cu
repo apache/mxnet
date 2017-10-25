@@ -86,5 +86,12 @@ NNVM_REGISTER_OP(stack)
 
 NNVM_REGISTER_OP(_backward_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpBackward<gpu>);
+
+NNVM_REGISTER_OP(stack_neighbor)
+.set_attr<FCompute>("FCompute<gpu>", StackNeighborOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_stack_neighbor)
+.set_attr<FCompute>("FCompute<gpu>", StackNeighborOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

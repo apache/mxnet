@@ -38,6 +38,7 @@ DMLC_REGISTER_PARAMETER(RepeatParam);
 DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
+DMLC_REGISTER_PARAMETER(StackNeighborParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -656,6 +657,40 @@ NNVM_REGISTER_OP(_backward_stack)
 .set_attr_parser(ParamParser<StackParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", StackOpBackward<cpu>);
+
+
+NNVM_REGISTER_OP(stack_neighbor)
+.describe(R"code(Stack spatial neighbors along channel axis.
+
+Given an array and a shape, this function reorganize the input by collapse the
+elements along the channel axis
+
+  Example::
+    - input shape = (1, 8, 8), kernel = (2, 2), output shape = (4, 4, 4)
+    - input shape = (3, 9, 9), kernel = (3, 3), output shape = (27, 3, 3)
+    - input shape = (2, 4, 6, 6), kernel = (2, 1), output shape = (2, 8, 3, 6)
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<StackNeighborParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+  return std::vector<std::string> {"data"};
+})
+.set_attr<nnvm::FInferShape>("FInferShape", StackNeighborShape)
+.set_attr<nnvm::FInferType>("FInferType", StackNeighborType)
+.set_attr<FCompute>("FCompute<cpu>", StackNeighborOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_stack_neighbor" })
+.add_argument("data", "NDArray-or-Symbol", "Input data array")
+.add_arguments(StackNeighborParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_stack_neighbor)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<StackNeighborParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", StackNeighborOpBackward<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet

@@ -1687,6 +1687,144 @@ void StackOpBackward(const nnvm::NodeAttrs& attrs,
   })
 }
 
+struct StackNeighborParam : public dmlc::Parameter<StackNeighborParam> {
+  TShape kernel;
+  DMLC_DECLARE_PARAMETER(StackNeighborParam) {
+    int tmp[] = {1, 1};
+    DMLC_DECLARE_FIELD(kernel).set_default(TShape(tmp, tmp + 2))
+      .enforce_nonzero()
+      .describe("Stack spatial neighbors defined by kernel along channel axis."
+                " The output has same elements as input, but the shape/dimension/order"
+                " has been changed according to the kernel shape.");
+  }
+};
+
+inline bool StackNeighborShape(const nnvm::NodeAttrs& attrs,
+                               std::vector<TShape> *in_attrs,
+                               std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const StackNeighborParam& param = nnvm::get<StackNeighborParam>(attrs.parsed);
+  const TShape& ishape = (*in_attrs)[0];
+  const TShape& kernel = param.kernel;
+  // return identical if empty
+  CHECK_GE(ishape.ndim(), 4U) << "Require at least 4-D tensor (batch-channel-h-w)";
+  CHECK_GE(kernel.ndim(), 1U) << "Invalid kernel dimension: " << kernel;
+  int kernel_y = kernel[0];
+  int kernel_x = kernel.ndim() > 1 ? kernel[1] : 1;
+  CHECK_GE(kernel_y, 1);
+  CHECK_GE(kernel_x, 1);
+  int in_height = ishape[ishape.ndim() - 2];
+  int in_width = ishape[ishape.ndim() - 1];
+  CHECK_EQ(in_height % kernel_y, 0) << "Residue not allowed for height % kernel_y";
+  CHECK_EQ(in_width % kernel_x, 0) << "Residue not allowed for width % kernel_x";
+  TShape oshape = ishape;
+  oshape[oshape.ndim() - 3] *= kernel_y * kernel_x;
+  oshape[oshape.ndim() - 2] /= kernel_y;
+  oshape[oshape.ndim() - 1] /= kernel_x;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
+inline bool StackNeighborType(const nnvm::NodeAttrs& attrs,
+                              std::vector<int>* in_attrs,
+                              std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  if ((*in_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else if ((*out_attrs)[0] != -1) {
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  }
+  return true;
+}
+
+struct stack_neighbor {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* in,
+                                  int nchannel, int h, int w, int ky, int kx) {
+    int col = i % w;
+    int row = ((i - col) / w) % h;
+    int stride1 = h * w;
+    int ch = ((i - row * w - col) / stride1) % nchannel;
+    int stride2 = stride1 * nchannel;
+    int b = (i - ch * stride1 - row * w - col) / stride2;
+
+    int new_col = col / kx;
+    int new_row = row / ky;
+    int new_ch = ch * ky * kx + (col % kx) + kx * (row % ky);
+    int new_h = h / ky;
+    int new_w = w / kx;
+    int new_i = b * stride2 + new_ch * new_h * new_w + new_row * new_w + new_col;
+    out[new_i] = in[i];
+  }
+};
+
+struct stack_neighbor_inv {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* in,
+                                  int nchannel, int h, int w, int ky, int kx) {
+    int col = i % w;
+    int row = ((i - col) / w) % h;
+    int stride1 = h * w;
+    int ch = ((i - row * w - col) / stride1) % nchannel;
+    int stride2 = stride1 * nchannel;
+    int b = (i - ch * stride1 - row * w - col) / stride2;
+
+    int new_ch = ch / (kx * ky);
+    int new_row = row * ky + (ch % (kx * ky)) / ky;
+    int new_col = col * kx + (ch % (kx * ky)) % kx;
+    int new_h = h * ky;
+    int new_w = w * kx;
+    int new_i = b * stride2 + new_ch * new_h * new_w + new_row * new_w + new_col;
+    out[new_i] = in[i];
+  }
+};
+
+template<typename xpu>
+void StackNeighborOpForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  int ndim = inputs[0].shape_.ndim();
+  int nchannel = inputs[0].shape_[ndim - 3];
+  int height = inputs[0].shape_[ndim - 2];
+  int width = inputs[0].shape_[ndim - 1];
+  int ky = height / outputs[0].shape_[ndim - 2];
+  int kx = width / outputs[0].shape_[ndim - 1];
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<stack_neighbor, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+    inputs[0].dptr<DType>(), nchannel, height, width, ky, kx);
+  });
+}
+
+template<typename xpu>
+void StackNeighborOpBackward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  int ndim = inputs[0].shape_.ndim();
+  int nchannel = inputs[0].shape_[ndim - 3];
+  int height = inputs[0].shape_[ndim - 2];
+  int width = inputs[0].shape_[ndim - 1];
+  int ky = outputs[0].shape_[ndim - 2] / height;
+  int kx = outputs[0].shape_[ndim - 1] / width;
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Kernel<stack_neighbor_inv, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+    inputs[0].dptr<DType>(), nchannel, height, width, ky, kx);
+  });
+}
 
 }  // namespace op
 }  // namespace mxnet
