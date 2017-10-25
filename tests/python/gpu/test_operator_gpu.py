@@ -34,7 +34,9 @@ from test_gluon import *
 from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice, test_sparse_eye
+from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
+from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse, test_sparse_eye
+from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
 from test_sparse_operator import *
 from test_ndarray import *
 
