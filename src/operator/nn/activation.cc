@@ -99,6 +99,52 @@ void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
       req[0], outputs[0].data());
 }
 
+inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int> *in_attrs,
+                                         std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+#if MXNET_USE_MKLDNN == 1
+  if (param.act_type == activation::kReLU
+      && dev_mask == mshadow::cpu::kDevMask) {
+    // TODO we don't know the type.
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    (*out_attrs)[0] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  return ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask,
+      dispatch_mode, in_attrs, out_attrs);
+}
+
+inline static bool backward_ActStorageType(const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int> *in_attrs,
+                                           std::vector<int> *out_attrs) {
+#if MXNET_USE_CUDNN == 1
+  CHECK_EQ(in_attrs->size(), 3U);
+#else
+  CHECK_EQ(in_attrs->size(), 2U);
+#endif
+  CHECK_EQ(out_attrs->size(), 1U);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+#if MXNET_USE_MKLDNN == 1
+  if (param.act_type == activation::kReLU
+      && dev_mask == mshadow::cpu::kDevMask) {
+    // TODO we don't know the type.
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    (*out_attrs)[0] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  return ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask,
+      dispatch_mode, in_attrs, out_attrs);
+}
+
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
 .describe(R"code(Applies an activation function element-wise to the input.
 
@@ -111,6 +157,7 @@ The following activation functions are supported:
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
+.set_attr<FInferStorageType>("FInferStorageType", ActivationStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeEx_CPU)
 .set_attr<nnvm::FGradient>("FGradient", ActivationGrad{"_backward_Activation"})
@@ -120,6 +167,7 @@ NNVM_REGISTER_OP(_backward_Activation)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", backward_ActStorageType)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
