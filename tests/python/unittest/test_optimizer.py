@@ -22,6 +22,7 @@ import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
+from common import *
 
 @with_seed()
 def test_learning_rate():

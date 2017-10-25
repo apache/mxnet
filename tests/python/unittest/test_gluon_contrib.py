@@ -18,7 +18,8 @@
 from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import contrib
-from mxnet.test_utils import *
+from mxnet.test_utils import almost_equal
+from common import *
 import numpy as np
 from numpy.testing import assert_allclose
 

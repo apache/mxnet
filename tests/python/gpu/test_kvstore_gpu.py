@@ -19,7 +19,10 @@
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import *
+from mxnet.test_utils import assert_almost_equal, default_context
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import *
 
 shape = (4, 4)
 keys = [5, 7, 11]

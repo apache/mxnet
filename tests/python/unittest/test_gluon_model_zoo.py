@@ -20,7 +20,7 @@ import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo.custom_layers import HybridConcurrent, Identity
 from mxnet.gluon.model_zoo.vision import get_model
-from mxnet.test_utils import *
+from common import *
 import sys
 
 def eprint(*args, **kwargs):

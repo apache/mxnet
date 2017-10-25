@@ -16,6 +16,7 @@
 # under the License.
 
 from mxnet.test_utils import *
+from common import *
 import random
 import warnings
 
@@ -1014,7 +1015,6 @@ def test_sparse_mathematical_core():
 
             try:
                 from scipy import special as scipy_special
-                import_succeeded = True
                 # gamma
                 check_sparse_mathematical_core("gamma", stype,
                                                lambda x: mx.sym.sparse.gamma(x),
@@ -1034,11 +1034,8 @@ def test_sparse_mathematical_core():
                                                force_overlap=force_overlap,
                                                density=density, ograd_density=ograd_density)
 
-            except:
-                if import_succeeded == False:
-                    print("Could not import scipy. Skipping unit tests for special functions")
-                else:
-                    raise
+            except ImportError:
+                print("Could not import scipy. Skipping unit tests for special functions")
 
     for i in range(1):
         print("pass", i)

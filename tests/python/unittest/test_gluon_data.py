@@ -20,7 +20,7 @@ import tarfile
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from mxnet.test_utils import *
+from common import *
 
 @with_seed()
 def test_array_dataset():

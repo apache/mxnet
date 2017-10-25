@@ -19,6 +19,9 @@ import os
 import numpy as np
 import mxnet as mx
 from mxnet.test_utils import *
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import *
 
 def _get_model():
     if not os.path.exists('model/Inception-7-symbol.json'):

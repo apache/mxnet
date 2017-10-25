@@ -19,7 +19,8 @@
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import *
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
+from common import *
 from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)

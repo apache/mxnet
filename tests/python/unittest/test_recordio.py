@@ -22,7 +22,7 @@ import numpy as np
 import tempfile
 import random
 import string
-from mxnet.test_utils import *
+from common import *
 
 @with_seed()
 def test_recordio():

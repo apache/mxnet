@@ -18,7 +18,8 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from mxnet.test_utils import *
+from mxnet.test_utils import assert_almost_equal, default_context
+from common import *
 
 
 @with_seed()

@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
-from common import assertRaises
+from common import *
 
 
 def _get_data(url, dirname):

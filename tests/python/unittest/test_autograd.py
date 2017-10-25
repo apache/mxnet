@@ -20,6 +20,7 @@ import mxnet.ndarray as nd
 from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
+from common import *
 
 
 def grad_and_loss(func, argnum=None):

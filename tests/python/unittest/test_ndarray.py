@@ -22,6 +22,7 @@ import pickle as pkl
 import unittest
 from nose.tools import raises
 from mxnet.test_utils import *
+from common import *
 from numpy.testing import assert_allclose
 import unittest
 
