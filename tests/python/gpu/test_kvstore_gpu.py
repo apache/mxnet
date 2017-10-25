@@ -16,6 +16,8 @@
 # under the License.
 
 # pylint: skip-file
+import sys
+import os
 import mxnet as mx
 import numpy as np
 import unittest

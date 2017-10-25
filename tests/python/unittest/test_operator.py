@@ -449,9 +449,12 @@ def test_relu():
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    eps = 1e-5
+    # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
+    xa[abs(xa) < eps] = 1.0
     ya = frelu(xa)
     ga = frelu_grad(xa)
-    check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    check_numeric_gradient(y, [xa], numeric_eps=eps)
     check_symbolic_forward(y, [xa], [ya])
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ga])
 
