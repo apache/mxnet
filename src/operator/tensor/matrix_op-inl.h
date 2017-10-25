@@ -473,7 +473,7 @@ void Slice(const nnvm::NodeAttrs& attrs,
   TShape begin(N), end(N);
   for (index_t i = 0; i < N; ++i) {
     int s = 0;
-    if (i < param.begin.ndim()) {
+    if (i < param.begin.ndim() && param.begin[i]) {
       s = *param.begin[i];
       if (s < 0) {
         s += inputs[0].size(i);
