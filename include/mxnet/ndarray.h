@@ -34,6 +34,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include "ps/ps.h"
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
@@ -916,7 +917,8 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual, const std::st
  * \param compress type of compression
  * \param priority Priority of the action.
  */
-void Dequantize(const NDArray &from, NDArray *to, const std::string& compress, int priority);
+void Dequantize(const NDArray &from, NDArray *to, int original_size,
+                const float neg_threshold, const float pos_threshold, const std::string& compress, int priority);
 
 /*!
  * \brief issue an copy operation from one NDArray to another

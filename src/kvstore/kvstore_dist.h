@@ -302,6 +302,7 @@ class KVStoreDist : public KVStoreLocal {
         auto &small_buf = compr_buf_[key];
         auto &res_buf = residual_[key];
         size_t original_size = comm_buf.shape().Size();
+        // returns push_pskv
         PSKV &pskv = EncodeCompressedKey(key, original_size, true);
         // Init the small buffer and residual_ buffer for quantize
         if (small_buf.is_none()) {
@@ -318,7 +319,13 @@ class KVStoreDist : public KVStoreLocal {
         }
 
         if (compress_ == "2bit") {
-          Compress(comm_buf, &small_buf, &res_buf, pskv, priority);
+          mu_.lock();
+          PSKV& pull_pskv = pull_ps_kv_[key];
+          mu_.unlock();
+
+//          Compress(comm_buf, &small_buf, &res_buf, pskv, priority);
+          QuantizeAll(comm_buf, &small_buf, &res_buf, pskv.lens, pull_pskv.lens,
+                      compress_, neg_threshold_, pos_threshold_, priority);
         } else {
           LOG(FATAL) << "Unsupported quantization";
         }
@@ -493,7 +500,7 @@ class KVStoreDist : public KVStoreLocal {
         // do push. false means no delete
         ps::SArray<real_t> vals(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPush(
-          pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
+          pskv.keys, vals, pskv.lens, kCompressedPushPull, [cb]() { cb(); });
       };
     // acquire locks on both comm_buf and small_buf so that pull (which uses comm_buf)
     // for the same key waits till push finishes
@@ -507,46 +514,94 @@ class KVStoreDist : public KVStoreLocal {
       PROFILER_MESSAGE("KVStoreDistCompressedPush"));
   }
 
-  /*
-   * \brief Compresses data by dividing original data into a part for each server, then
-   * quantizing each of these data blocks. The sizes of these parts come from pskv.
-   */
-  void Compress(const NDArray& comm_buf, NDArray* small_buf, NDArray* res_buf,
-                const PSKV& pskv, int priority) {
-    size_t orig_size = comm_buf.shape().Size();
-    // to allow indexing parts for each server
-    NDArray flattened_comm_buf = comm_buf.Reshape(TShape{(int64_t) orig_size});
+//  /*
+//   * \brief Compresses data by dividing original data into a part for each server, then
+//   * quantizing each of these data blocks. The sizes of these parts come from pskv.
+//   */
+//  void Compress(const NDArray& comm_buf, NDArray* small_buf, NDArray* res_buf,
+//                const PSKV& pskv, int priority) {
+//    size_t orig_size = comm_buf.shape().Size();
+//    // to allow indexing parts for each server
+//    NDArray flattened_comm_buf = comm_buf.Reshape(TShape{(int64_t) orig_size});
+//
+//    if (compress_ == "2bit") {
+//      // should be start of data in original commbuf
+//      size_t cur_from = 0;
+//      // should be start of meta in new small_buf
+//      size_t cur_to = 0;
+//      for (size_t i = 0; i < pskv.keys.size(); i++) {
+//        NDArray part_compr = small_buf->Slice(cur_to, cur_to + pskv.lens[i]);
+//
+//        // removing the 3 values from pskv length which are meta data
+//        // end_part_data represents end of original data for this part
+//        size_t end_part_data = cur_from + (pskv.lens[i] - 3) * 16;
+//        // don't exceed original size
+//        if (end_part_data > orig_size) {
+//          end_part_data = orig_size;
+//        }
+//        NDArray part_data = flattened_comm_buf.Slice(cur_from, end_part_data);
+//        NDArray part_res = res_buf->Slice(cur_from, end_part_data);
+//
+//        Quantize(part_data, &part_compr, &part_res, compress_,
+//                 neg_threshold_, pos_threshold_, priority);
+//
+//        cur_from = end_part_data;
+//        cur_to = cur_to + pskv.lens[i];
+//      }
+//      CHECK_EQ(cur_from, orig_size);
+//      CHECK_EQ(cur_to, small_buf->shape().Size());
+//    } else {
+//      LOG(FATAL) << "Unsupported compression type";
+//    }
+//  }
 
-    if (compress_ == "2bit") {
-      // should be start of data in original commbuf
-      size_t cur_from = 0;
-      // should be start of meta in new small_buf
-      size_t cur_to = 0;
-      for (size_t i = 0; i < pskv.keys.size(); i++) {
-        NDArray part_compr = small_buf->Slice(cur_to, cur_to + pskv.lens[i]);
-
-        // removing the 3 values from pskv length which are meta data
-        // end_part_data represents end of original data for this part
-        size_t end_part_data = cur_from + (pskv.lens[i] - 3) * 16;
-        // don't exceed original size
-        if (end_part_data > orig_size) {
-          end_part_data = orig_size;
-        }
-        NDArray part_data = flattened_comm_buf.Slice(cur_from, end_part_data);
-        NDArray part_res = res_buf->Slice(cur_from, end_part_data);
-
-        Quantize(part_data, &part_compr, &part_res, compress_,
-                 neg_threshold_, pos_threshold_, priority);
-
-        cur_from = end_part_data;
-        cur_to = cur_to + pskv.lens[i];
+  void QuantizeAll(const NDArray &from, NDArray *to, NDArray *residual,
+                   ps::SArray<int> push_pskv_lens, ps::SArray<int> pull_pskv_lens,
+                   const std::string& compress, const float neg_threshold, const float pos_threshold,
+                   int priority) {
+    CHECK(from.shape().ndim() != 0)
+      << "source operands have zero dimension shape";
+    // important: callback must always capture by value
+    int a = from.ctx().dev_mask();
+    int b = to->ctx().dev_mask();
+    if (a == cpu::kDevMask && b == cpu::kDevMask) {
+      if (compress == "2bit") {
+        Engine::Get()->PushSync([from, to, residual, push_pskv_lens, pull_pskv_lens, neg_threshold, pos_threshold](RunContext ctx) {
+                                  std::vector<TBlob> inputs = {from.data(), residual->data(), to->data()};
+                                  mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
+                                                                            push_pskv_lens, pull_pskv_lens,
+                                                                            neg_threshold, pos_threshold);
+                                }, from.ctx(), {from.var()}, {to->var(), residual->var()},
+                                FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
+      } else {
+        LOG(FATAL) << "Unsupported Quantization";
       }
-      CHECK_EQ(cur_from, orig_size);
-      CHECK_EQ(cur_to, small_buf->shape().Size());
     } else {
-      LOG(FATAL) << "Unsupported compression type";
+#if MXNET_USE_CUDA
+      if (a == gpu::kDevMask && b == gpu::kDevMask) {
+    if (compress == "2bit") {
+      Engine::Get()->PushSync([from, to, residual, pull_pskv_lens, push_pskv_lens, neg_threshold, pos_threshold](RunContext ctx) {
+          std::vector<TBlob> inputs = {from.data(), residual->data(), to->data()};
+          mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
+                                                    push_pskv_lens, pull_pskv_lens,
+                                                    neg_threshold, pos_threshold);
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+        }, from.ctx(), {from.var()}, {to->var(), residual->var()},
+        FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
+      } else {
+        LOG(FATAL) << "Unsupported Quantization";
+      }
+  } else {
+    LOG(FATAL) << "unknown device mask";
+  }
+#else
+      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
     }
   }
+
+
 
   PSKV& EncodeKey(int key, size_t size, bool is_push) {
     if (compress_ != "none") {
@@ -573,19 +628,8 @@ class KVStoreDist : public KVStoreLocal {
     }
 
     // represents size of data to be sent
-    size_t compr_size = 0;
-
-    // adds 3 values to both cases for meta info
-    if (original_size >= bigarray_bound_) {
-      // if size of data is not divisible by bits, then we need an extra float
-      // to store the last few values
-      compr_size = num_servers * ((original_size/num_servers) % bits == 0 ?
-                       (original_size/num_servers)/bits + 3 :
-                       (original_size/num_servers)/bits + 4);
-    } else {
-      compr_size = original_size % bits == 0 ?
-             original_size / bits + 3: original_size / bits + 4;
-    }
+    size_t compr_size = original_size % bits == 0 ?
+             original_size / bits: original_size / bits + 1;
 
     mu_.lock();
     PSKV& pskv = (is_push) ? push_ps_kv_[key] : pull_ps_kv_[key];
@@ -609,6 +653,10 @@ class KVStoreDist : public KVStoreLocal {
         int server = (key * 9973) % num_servers;
         ps::Key ps_key = krs[server].begin() + key;
         CHECK_LT(ps_key, krs[server].end());
+        // meta info
+        push_pskv.keys.push_back(krs[server].begin() + original_size);
+        push_pskv.lens.push_back(0);
+        // data
         push_pskv.keys.push_back(ps_key);
         pull_pskv.keys.push_back(ps_key);
         push_pskv.lens.push_back(compr_size);
@@ -619,32 +667,40 @@ class KVStoreDist : public KVStoreLocal {
         // partition it to all servers
         push_pskv.size = 0;
         pull_pskv.size = 0;
+
         for (int i = 0; i < num_servers; ++i) {
-          size_t part_orig =
-            static_cast<size_t> (round(static_cast<double>(original_size)/num_servers*(i+1))) -
-            static_cast<size_t> (round(static_cast<double>(original_size)/num_servers*(i)));
-          // if block was rounded up to beyond size of our data, set it to end of data
-          if (part_orig + pskv.size > original_size) {
-            part_orig = original_size - pskv.size;
+          size_t part_compr, part_orig;
+          if(i==num_servers-1){
+            part_compr = compr_size - push_pskv.size;
+            part_orig = original_size - pull_pskv.size;
+          } else {
+            part_compr = static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i+1))) -
+            static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i)));
+            part_orig = part_compr * bits;
           }
-
           // TODO(huilgolr) specific to 2bit compression. generalize
-          size_t compr_split = (part_orig % bits == 0)? part_orig/bits + 3 : part_orig/bits + 4;
 
+          // meta info
+          ps::Key ps_key_dummy = krs[i].begin() + part_orig;
+          CHECK_LT(ps_key_dummy, krs[i].end());
+          push_pskv.keys.push_back(ps_key_dummy);
+          push_pskv.lens.push_back(0);
+
+          // data
           ps::Key ps_key = krs[i].begin() + key;
           CHECK_LT(ps_key, krs[i].end());
           push_pskv.keys.push_back(ps_key);
           pull_pskv.keys.push_back(ps_key);
           // push_pskv stores lengths of compressed blocks
-          push_pskv.lens.push_back(compr_split);
+          push_pskv.lens.push_back(part_compr);
           // pull_pskv stores lengths of original data
           pull_pskv.lens.push_back(part_orig);
-          push_pskv.size += compr_split;
+          push_pskv.size += part_compr;
           pull_pskv.size += part_orig;
         }
         CHECK_EQ(static_cast<size_t>(push_pskv.size), compr_size);
         CHECK_EQ(static_cast<size_t>(pull_pskv.size), original_size);
-        CHECK_EQ(push_pskv.lens.size(), num_servers);
+        CHECK_EQ(push_pskv.lens.size(), num_servers+1);
         }
       }
     return pskv;

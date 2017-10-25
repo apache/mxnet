@@ -405,12 +405,12 @@ class KVStore {
   /**
    * \brief positive threshold for 2bit compression
    */
-  float pos_threshold_ = 0.1;
+  float pos_threshold_ = 0.5;
 
   /**
    * \brief negative threshold for 2bit compression
    */
-  float neg_threshold_ = -0.1;
+  float neg_threshold_ = -0.5;
 
   /**
    * \brief whether to do barrier when finalize

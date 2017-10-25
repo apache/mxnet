@@ -578,15 +578,16 @@ class CommDevice : public Comm {
         // this is done even if the data is on same context as copy_buf because
         // we don't want the training to be biased towards data on this GPU
         if (compress_ == "2bit") {
-          Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
-                   neg_threshold_, pos_threshold_, priority);
+//          Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
+//                   neg_threshold_, pos_threshold_, priority);
           if (buf.small_send_buf[i].ctx() != buf.small_recv_buf[i].ctx()) {
             CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
           } else {
             // avoid memory copy when they are on same context
             buf.small_recv_buf[i] = buf.small_send_buf[i];
           }
-          Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
+          // TODO (undo comment)
+//          Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
         } else {
           LOG(FATAL) << "Unsupported type of compression " << compress_;
         }

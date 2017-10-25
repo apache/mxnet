@@ -23,6 +23,7 @@
  */
 
 // this will be invoked by gcc and compile CPU version
+#include <ps/sarray.h>
 #include "./ndarray_function.h"
 #include "./ndarray_function-inl.h"
 #include "../common/utils.h"
@@ -188,8 +189,9 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
  * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
  */
 template<>
-void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs) {
-  mxnet::op::Dequantize2BitImpl<cpu>(s, inputs);
+void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs, int original_size,
+                            const float neg_threshold, const float pos_threshold) {
+  mxnet::op::Dequantize2BitImpl<cpu>(s, inputs, original_size, neg_threshold, pos_threshold);
 }
 
 /*
@@ -197,8 +199,9 @@ void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& i
  */
 template<>
 void Quantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs,
+                          ps::SArray<int> push_pskv_lens, ps::SArray<int> pull_pskv_lens,
                           const float neg_threshold, const float pos_threshold) {
-  mxnet::op::Quantize2BitImpl<cpu>(s, inputs, neg_threshold, pos_threshold);
+  mxnet::op::Quantize2BitImpl<cpu>(s, inputs, push_pskv_lens, pull_pskv_lens, neg_threshold, pos_threshold);
 }
 
 }  // namespace ndarray

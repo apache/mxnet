@@ -294,5 +294,5 @@ def test_sync_init():
     print('worker ' + str(my_rank) + ' is initialized')
 
 if __name__ == "__main__":
-    test_sync_init()
+    # test_sync_init()
     test_sync_push_pull()

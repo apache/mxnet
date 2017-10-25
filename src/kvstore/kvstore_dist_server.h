@@ -42,6 +42,7 @@ namespace kvstore {
 
 static const int kRowSparsePushPull = 1;
 static const int kDefaultPushPull = 0;
+static const int kCompressedPushPull = 3;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
 static const int kSetCompress = 2;
@@ -170,6 +171,8 @@ class KVStoreDistServer {
                     ps::KVServer<real_t>* server) {
     if (req_meta.cmd == kRowSparsePushPull) {
       DataHandleRowSparse(req_meta, req_data, server);
+    } else if (req_meta.cmd == kCompressedPushPull) {
+      DataHandleCompressed(req_meta, req_data, server);
     } else {
       DataHandleDefault(req_meta, req_data, server);
     }
@@ -362,6 +365,72 @@ class KVStoreDistServer {
     }
   }
 
+  void DataHandleCompressed(const ps::KVMeta& req_meta,
+                         const ps::KVPairs<real_t> &req_data,
+                         ps::KVServer<real_t>* server) {
+    CHECK_EQ(req_meta.cmd, kCompressedPushPull);
+    // do some check
+    if (req_meta.push) {
+      // there used several WaitToRead, this is because \a recved's memory
+      // could be deallocated when this function returns. so we need to make sure
+      // the operators with \a NDArray are actually finished
+      CHECK_EQ(req_data.lens.size(), (size_t)2);
+      CHECK_EQ(req_data.vals.size(), (size_t)req_data.lens[1]);
+
+      int original_size = DecodeKey(req_data.keys[0]);
+      int key = DecodeKey(req_data.keys[1]);
+      auto& stored = store_[key];
+
+      size_t ds[] = {(size_t)req_data.lens[1]};
+      TShape dshape(ds, ds + 1);
+      TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
+                      dshape, cpu::kDevMask);
+      NDArray recved = NDArray(recv_blob, 0);
+
+      NDArray decomp_buf = decomp_buf_[key];
+      dshape = TShape{(int64_t) original_size};
+
+      // TODO(huilgolr) check and merge with init of stored
+      if (decomp_buf.is_none()) {
+        decomp_buf = NDArray(dshape, Context());
+      }
+
+      if (stored.is_none()) {
+        // initialization
+        stored = NDArray(dshape, Context());
+        Dequantize(recved, &stored, original_size, neg_threshold, pos_threshold, compress_, 0);
+        server->Response(req_meta);
+        stored.WaitToRead();
+      } else if (sync_mode_) {
+        // synced push
+        auto& merged = merge_buf_[key];
+        if (merged.array.is_none()) {
+          merged.array = NDArray(dshape, Context());
+        }
+        if (merged.request.size() == 0) {
+          Dequantize(recved, &merged.array, original_size, neg_threshold, pos_threshold, compress_, 0);
+        } else {
+          Dequantize(recved, &decomp_buf, original_size, neg_threshold, pos_threshold, compress_, 0);
+          merged.array += decomp_buf;
+        }
+        merged.request.push_back(req_meta);
+        ApplyUpdates(key, &merged, &stored, server);
+      } else {
+        // async push
+        Dequantize(recved, &decomp_buf, original_size, neg_threshold, pos_threshold, compress_, 0);
+        exec_.Exec([this, key, &decomp_buf, &stored]() {
+          CHECK(updater_);
+          updater_(key, decomp_buf, &stored);
+        });
+        server->Response(req_meta);
+        stored.WaitToRead();
+      }
+    } else {       // pull
+      // never used
+      DataHandleDefault(req_meta, req_data, server);
+    }
+  }
+
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
@@ -385,29 +454,10 @@ class KVStoreDistServer {
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-      NDArray decomp_buf = decomp_buf_[key];
-      if (compress_ != "none") {
-        if (compress_ == "2bit") {
-          int64_t original_size  = (int64_t) (*(recv_blob.dptr<float>()+2));
-          // changing dshape to original size as value is stored in
-          // original size even when compressed data is received
-          dshape = TShape{original_size};
-        } else {
-          LOG(FATAL) << "Unsupported compression type";
-        }
-        // TODO(huilgolr) check and merge with init of stored
-        if (decomp_buf.is_none()) {
-          decomp_buf = NDArray(dshape, Context());
-        }
-      }
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
-        if (compress_ == "none") {
           CopyFromTo(recved, &stored, 0);
-        } else {
-          Dequantize(recved, &stored, compress_, 0);
-        }
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
@@ -417,35 +467,18 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          if (compress_ == "none") {
             CopyFromTo(recved, &merged.array, 0);
-          } else {
-            Dequantize(recved, &merged.array, compress_, 0);
-          }
         } else {
-          if (compress_ == "none") {
             merged.array += recved;
-          } else {
-            Dequantize(recved, &decomp_buf, compress_, 0);
-            merged.array += decomp_buf;
-          }
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-        if (compress_ == "none") {
           exec_.Exec([this, key, &recved, &stored]() {
               CHECK(updater_);
               updater_(key, recved, &stored);
           });
-        } else {
-          Dequantize(recved, &decomp_buf, compress_, 0);
-          exec_.Exec([this, key, &decomp_buf, &stored]() {
-              CHECK(updater_);
-              updater_(key, decomp_buf, &stored);
-          });
-        }
         server->Response(req_meta);
         stored.WaitToRead();
       }
@@ -466,6 +499,7 @@ class KVStoreDistServer {
     auto kr = ps::Postoffice::Get()->GetServerKeyRanges()[ps::MyRank()];
     return key - kr.begin();
   }
+
 
   /**
    * \brief user defined mode for push
@@ -504,6 +538,9 @@ class KVStoreDistServer {
    * by worker by sending a command to server
    */
   std::string compress_ = "none";
+
+  float pos_threshold = 0.5;
+  float neg_threshold = -0.5;
 };
 
 }  // namespace kvstore
