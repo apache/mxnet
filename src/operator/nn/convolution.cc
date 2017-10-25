@@ -400,17 +400,6 @@ There are other options to tune the performance.
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
-.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
-      const int dev_mask, DispatchMode* dispatch_mode,
-      std::vector<int> *in_attrs, std::vector<int> *out_attrs) {
-  const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
-  if (params.no_bias)
-    return ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
-        dispatch_mode, in_attrs, out_attrs);
-  else
-    return ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
-        dispatch_mode, in_attrs, out_attrs);
-})
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ConvolutionGrad{"_backward_Convolution"})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
