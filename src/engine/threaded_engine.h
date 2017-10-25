@@ -309,7 +309,7 @@ class ThreadedEngine : public Engine {
     // Otherwise, return the number of processors, not counting hyperthreading.
     // Test for set OMP_NUM_THREADS by checking against some nonsensical value
     const int max_threads = dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN ?
-                            omp_get_num_procs() : omp_get_num_threads();
+                            omp_get_num_procs() : omp_get_max_threads();
     return max_threads;
 #else
     return 1;
