@@ -385,7 +385,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
     inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(inputs[0].shape_.Size(), 1), s);
   Tensor<xpu, 2, real_t> in_grad =
     outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(outputs[0].shape_.Size(), 1), s);
-  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1.0f, 0.0f,
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0.0f,
     static_cast<real_t>(element_num), kWriteTo, batch_shift.dptr_);
   if (do_transpose) {
     Tensor<xpu, 1, real_t> indices = inputs[2].FlatTo1D<xpu, real_t>(s);
@@ -415,7 +415,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
     // TODO(sxjscience) We can use AddTakeGrad in the future.
     // However, the current implementation of AddTakeGrad is not so efficient.
     mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0.0f,
-      1.0f, kWriteTo, dummy_index.dptr<real_t>());
+      1.0f, kWriteTo, dummy_index.dptr_);
     mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
   } else if (kNullOp == req[0]) {
     return;
