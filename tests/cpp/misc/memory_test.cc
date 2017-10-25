@@ -30,8 +30,8 @@
 #include "../include/test_perf.h"
 
 using namespace mxnet;
-#ifdef _OPENMP
 
+#ifdef _OPENMP
 template<typename Container>
 static typename Container::value_type average(const Container& cont) {
   typename Container::value_type avg = 0;
