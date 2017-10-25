@@ -70,11 +70,8 @@ INFO:root:('accuracy', 0.80014792169887283)
 INFO:root:('accuracy', 0.80014792169887283)
 INFO:root:('accuracy', 0.80037548100048095)
 INFO:root:('accuracy', 0.80037548100048095)
+
 ```
-
-The left one is original picture . The right one below is a segment result.
-
-###### ![res1](D:\code-infosight\mxnet-0.10\example\segnet\ref\pic1.png) ![res1](D:\code-infosight\mxnet-0.10\example\segnet\ref\res1.png)
 
 ## Segment one pic
 
@@ -89,4 +86,4 @@ The program will output segment result and label in a package named "res_pic".
 
 The left one is a label picture with 11 classes. The right one below is a segment result.
 
-![label2](D:\code-infosight\mxnet-0.10\example\segnet\ref\label2.png) ![res2](D:\code-infosight\mxnet-0.10\example\segnet\ref\res2.png)
+![label2](ref\label2.png) ![res2](ref\res2.png)
