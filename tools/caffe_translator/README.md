@@ -7,7 +7,7 @@ CaffeTranslator is a source code translator that translates Caffe training/valid
 
 **To run the translated code:**
 1. Caffe with MXNet interface ([Why?](faq.md#why_caffe) [How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#install-caffe-with-mxnet-interface))
-2. MXNet with Caffe plugin (why? [How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#compile-with-caffe))
+2. MXNet with Caffe plugin ([How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#compile-with-caffe))
 
 # Build
 Step 1: Clone the code:
