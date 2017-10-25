@@ -414,8 +414,8 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   } else if (kAddTo == req[0]) {
     // TODO(sxjscience) We can use AddTakeGrad in the future.
     // However, the current implementation of AddTakeGrad is not so efficient.
-    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1.0f, 0.0f,
-      1.0f, kWriteTo, dummy_index.dptr_);
+    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0.0f,
+      1.0f, kWriteTo, dummy_index.dptr<real_t>());
     mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
   } else if (kNullOp == req[0]) {
     return;
