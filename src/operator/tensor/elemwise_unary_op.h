@@ -36,6 +36,21 @@ namespace op {
 
 class OpBase {
  protected:
+  /*!
+   * \brief Launch CPU-only kernel without OMP (temporary solution until OMP-tuned kernels arrive)
+   * \tparam OP Kernel operation type
+   * \tparam Args Argument types to be passed to kernel
+   * \param s CPU stream
+   * \param N Number of iterations
+   * \param args Arguments to be passed to kernel
+   */
+  template <typename OP, typename ...Args>
+  static inline void SerialLaunchCPU(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, args...);
+    }
+  }
+
   template<int req>
   struct SetToScalar {
     template<typename DType>
@@ -152,14 +167,14 @@ class OpBase {
   }
 
   /*! \brief Fill dense output block with a single scalar value */
-  template<typename xpu, typename DType>
-  static inline void FillDense(mshadow::Stream<xpu> *s,
+  template<typename DType>
+  static inline void FillDense(mshadow::Stream<cpu> *s,
                                const size_t size,
                                const DType val,
                                const OpReqType req,
                                DType *out) {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, out, val);
+      SerialLaunchCPU<SetToScalar<Req>>(s, size, out, val);
     });
   }
 };  // OpBase
