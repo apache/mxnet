@@ -103,44 +103,8 @@ class NDArray {
   NDArray(const NDArrayStorageType stype, const TShape &shape, Context ctx,
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
           std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
-          TShape storage_shape = TShape(mshadow::Shape1(0)))
-      : shape_(shape), dtype_(dtype), storage_type_(stype),
-        entry_({nullptr, 0, 0}) {
-      // Assign default aux types if not given
-      if (aux_types.size() == 0) {
-        if (stype == kRowSparseStorage) {
-          aux_types = {mshadow::kInt64};
-        } else if (stype == kCSRStorage) {
-          aux_types = {mshadow::kInt64, mshadow::kInt64};
-        } else {
-          LOG(FATAL) << "Unknown storage type " << stype;
-        }
-      }
-      // Assign default shapes if not given
-      // unknown shapes are intialized as {0} such that Size() would return 0
-      if (aux_shapes.size() == 0) {
-        if (stype == kRowSparseStorage) {
-          aux_shapes = {TShape(mshadow::Shape1(0))};
-        } else if (stype == kCSRStorage) {
-          // aux shapes for indptr and indices
-          aux_shapes = {TShape(mshadow::Shape1(0)), TShape(mshadow::Shape1(0))};
-        } else {
-          LOG(FATAL) << "Unknown storage type " << stype;
-        }
-      }
-      if (storage_shape.Size() == 0) {
-        if (stype == kRowSparseStorage) {
-          storage_shape = shape;
-          storage_shape[0] = aux_shapes[rowsparse::kIdx][0];
-        } else if (stype == kCSRStorage) {
-          storage_shape = aux_shapes[csr::kIdx];
-        } else {
-          LOG(FATAL) << "Unknown storage type " << stype;
-        }
-      }
-      ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
-                                     dtype, aux_types, aux_shapes);
-  }
+          TShape storage_shape = TShape(mshadow::Shape1(0)));
+
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
    *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
@@ -591,10 +555,6 @@ class NDArray {
   std::shared_ptr<const mkldnn::memory> GetMKLDNNData(
       const mkldnn::memory::primitive_desc &desc,
       std::vector<mkldnn::primitive> &net) const;
-  std::shared_ptr<mkldnn::memory> GetMKLDNNData();
-  std::shared_ptr<mkldnn::memory> GetMKLDNNData(
-      const mkldnn::memory::primitive_desc &desc,
-      std::vector<mkldnn::primitive> &net);
 
   std::shared_ptr<mkldnn::memory> CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
@@ -634,6 +594,12 @@ class NDArray {
                for csr, aux_handles[0] = indptr, aux_handles[1] = indices
     */
     std::vector<Storage::Handle> aux_handles;
+
+#if MXNET_USE_MKLDNN == 1
+    /*! This is created when data is stored in MKLDNN format.
+     */
+    std::shared_ptr<mkldnn::memory> Mkl_mem_;
+#endif
     /*! \brief variable from engine */
     Engine::VarHandle var;
     /*!
@@ -812,20 +778,14 @@ class NDArray {
     // storage shape is also updated
     // if data is already allocated, try reuse the storage. Otherwise, free the current one
     // and allocate new storage
-    inline void CheckAndAllocData(const TShape &shape, int dtype) {
-      CHECK_NE(aux_shapes.size(), 0) << "data is expected to be allocated after aux_data";
-      auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
-      if (shandle.size < dbytes) {
-        // free storage if necessary and alloc again
-        if (shandle.size > 0) Storage::Get()->Free(shandle);
-        // init storage
-        shandle = Storage::Get()->Alloc(dbytes, ctx);
-      }
-      // init shape
-      storage_shape = shape;
-      // delay_alloc is only set when data storage handle is present
-      delay_alloc = false;
-    }
+    void CheckAndAllocData(const TShape &shape, int dtype);
+
+#if MXNET_USE_MKLDNN == 1
+    // Have MKL memory reference to the data in the default storage
+    // or create memory for MKLDNN.
+    void SetMKLMem(const TShape &shape, int dtype);
+#endif
+
     // create storage handle for aux data based on shape
     // this function assumes ctx, aux shapes and aux types are set
     // aux shape is also updated
@@ -866,33 +826,8 @@ class NDArray {
     }
   };  // struct Chunk
 
-#if MXNET_USE_MKLDNN == 1
-  // Have MKL memory reference to the data in TBlob.
-  void SetMKLMem();
-#endif
+  void SetTBlob() const;
 
-  void SetTBlob() const {
-    CHECK(ptr_ != nullptr);
-    TShape shape = shape_;
-    char *dptr = static_cast<char*>(ptr_->shandle.dptr);
-    auto stype = storage_type();
-    if (stype == kDefaultStorage) {
-      dptr += byte_offset_;
-    } else if (stype == kCSRStorage || stype == kRowSparseStorage) {
-      CHECK_NE(byte_offset_, 0);
-      shape = storage_shape();
-    } else {
-      LOG(FATAL) << "unknown storage type " << stype;
-    }
-    tblob_.dptr_ = dptr;
-    tblob_.shape_ = shape;
-    tblob_.type_flag_ = dtype_;
-    tblob_.SetDLTensor(ptr_->shandle.ctx.dev_mask(), ptr_->shandle.ctx.dev_id);
-  }
-
-#if MXNET_USE_MKLDNN == 1
-  std::shared_ptr<mkldnn::memory> Mkl_mem_;
-#endif
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_{nullptr};
   /*! \brief shape of current NDArray */
