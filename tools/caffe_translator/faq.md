@@ -1,6 +1,6 @@
 # Frequently asked questions
 
-[**- Why is Caffe needed to run the translated code?**](why_caffe)
+[**- Why is Caffe needed to run the translated code?**](#why_caffe)
 
 There is a couple of reasons why Caffe is needed:
 
