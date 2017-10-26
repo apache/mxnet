@@ -382,18 +382,16 @@ class KVStoreDistServer {
       TBlob recv_blob((DType*)req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
-	  NDArray recved_tmp;
+      NDArray recved_tmp;
       if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
         recved.WaitToRead();
-        //recved_tmp = NDArray(dshape, Context::GPU(0), false, mshadow::DataType<DType>::kFlag);
         recved_tmp = NDArray(dshape, Context::CPU(0), false, mshadow::DataType<real_t>::kFlag);
         CopyFromTo(recved, &recved_tmp, 0);
         recved_tmp.WaitToRead();
       }
       if (stored.is_none()) {
         // initialization
-		if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
-          //stored = NDArray(dshape, Context::GPU(0), false, mshadow::DataType<DType>::kFlag);
+        if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
           stored = NDArray(dshape, Context::CPU(0), false, mshadow::DataType<real_t>::kFlag);
           CopyFromTo(recved_tmp, &stored, 0);
         } else {
@@ -407,8 +405,8 @@ class KVStoreDistServer {
         auto& merged = merge_buf_[key];
         if (merged.array.is_none()) {
           if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
-            //merged.array = NDArray(dshape, Context::GPU(0), false, mshadow::DataType<DType>::kFlag);
-            merged.array = NDArray(dshape, Context::CPU(0), false, mshadow::DataType<real_t>::kFlag);
+            merged.array = NDArray(dshape, Context::CPU(0),
+	                           false, mshadow::DataType<real_t>::kFlag);
           } else {
             merged.array = NDArray(dshape, Context());
           }
@@ -416,7 +414,6 @@ class KVStoreDistServer {
         if (merged.request.size() == 0) {
           CopyFromTo(recved, &merged.array, 0);
         } else {
-          //merged.array += recved;
           if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
             merged.array += recved_tmp;
           } else {
@@ -442,14 +439,15 @@ class KVStoreDistServer {
       response.keys = req_data.keys;
       response.lens = {len};
       // TODO(mli) try to remove this CopyFrom
-	  if (stored.dtype() != mshadow::DataType<DType>::kFlag || stored.ctx().dev_mask() != cpu::kDevMask) {
+      if (stored.dtype() != mshadow::DataType<DType>::kFlag || 
+      	  stored.ctx().dev_mask() != cpu::kDevMask) {
         stored.WaitToRead();
-        NDArray tmp = NDArray(stored.shape(), Context::CPU(0), false, mshadow::DataType<DType>::kFlag);
+        NDArray tmp = NDArray(stored.shape(), Context::CPU(0),
+	                      false, mshadow::DataType<DType>::kFlag);
         CopyFromTo(stored, &tmp, 0);
         tmp.WaitToRead();
         response.vals.CopyFrom(static_cast<const DType*>(tmp.data().dptr_), len);
       } else {
-		//response.vals = ps::SArray<float>(stored.data().dptr<float>(), len, false);
         response.vals.CopyFrom(static_cast<const DType*>(stored.data().dptr_), len);
       }
       server->Response(req_meta, response);
