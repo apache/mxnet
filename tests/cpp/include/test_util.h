@@ -40,8 +40,9 @@ namespace mxnet {
 namespace test {
 
 extern bool unitTestsWithCuda;
-extern bool debugOutput;
+extern bool debug_output;
 extern bool quick_test;
+extern bool performance_run;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
@@ -533,7 +534,7 @@ inline std::string demangle(const char *name) {
  *  3D: batch item -> channel -> col
  */
 template<typename DType, typename GetNextData>
-static inline void patternFill(TBlob *blob, GetNextData getNextData) {
+static inline void patternFill(const TBlob *blob, GetNextData getNextData) {
   const size_t dim = blob->ndim();
   CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
   const size_t num = blob->size(0);
