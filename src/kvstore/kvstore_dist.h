@@ -179,9 +179,9 @@ class KVStoreDist : public KVStoreLocal {
         recv_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
                            true, mshadow::DataType<DType>::kFlag);
       }
-	  auto& tmp = tmp_buf_[key];
+      auto& tmp = tmp_buf_[key];
       if (tmp.is_none()) {
-	    tmp = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,true, grouped_vals[i][0]->dtype());
+        tmp = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_, true, grouped_vals[i][0]->dtype());
       }
       auto pull_from_servers = [this, key, recv_buf](
           RunContext rctx, Engine::CallbackOnComplete cb) {
@@ -207,12 +207,10 @@ class KVStoreDist : public KVStoreLocal {
           FnProperty::kNormal,
           priority,
           PROFILER_MESSAGE("KVStoreDistDefaultPull"));
-	  if (grouped_vals[i][0]->dtype() != mshadow::DataType<DType>::kFlag) {
-        //NDArray tmp = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,true, grouped_vals[i][0]->dtype());
+      if (grouped_vals[i][0]->dtype() != mshadow::DataType<DType>::kFlag) {
         CopyFromTo(recv_buf, &tmp, 0);
         comm_->Broadcast(key, tmp, grouped_vals[i], priority);
-      }
-      else {
+      } else {
         comm_->Broadcast(key, recv_buf, grouped_vals[i], priority);
       }
     }
@@ -288,20 +286,22 @@ class KVStoreDist : public KVStoreLocal {
           if (storage_type == kDefaultStorage) {
             send_buf = NDArray(merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
           } else {
-            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
+            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_,
+	                       true, mshadow::DataType<DType>::kFlag);
           }
         }
-		if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
-		  send_buf = merged;
-		} else {
+        if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
+          send_buf = merged;
+        } else {
           CopyFromTo(merged, &send_buf);
-		}
+        }
       } else {
         if (send_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
             send_buf = NDArray(merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
           } else {
-            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
+            send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_,
+	                       true, mshadow::DataType<DType>::kFlag);
           }
         }
         if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
