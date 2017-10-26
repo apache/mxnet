@@ -19,7 +19,7 @@
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception, discard_stderr
 from common import *
 from mxnet.base import py_str, MXNetError
 
@@ -295,16 +295,18 @@ def test_invalid_pull():
     kvs = [int_kv, str_kv]
     single_keys = [3, 'a']
     list_keys = [keys, str_keys]
-    for i in range(2):
-        # pull with rsp outputs should be ignored with no values updated
-        check_ignored_pull_single(kvs[i], single_keys[i])
-        check_ignored_pull_list(kvs[i], list_keys[i])
-        # row_sparse_pull should be aborted when vals.stype != row_sparse
-        check_invalid_rsp_pull_single(kvs[i], single_keys[i])
-        check_invalid_rsp_pull_list(kvs[i], list_keys[i])
-        # kvstore should be restricted to only accept either int or str keys
-        check_invalid_key_types_single(kvs[i], single_keys[1 - i])
-        check_invalid_key_types_list(kvs[i], list_keys[1 - i])
+    # Keep this test from adding stack backtraces to the log file.
+    with discard_stderr():
+        for i in range(2):
+            # pull with rsp outputs should be ignored with no values updated
+            check_ignored_pull_single(kvs[i], single_keys[i])
+            check_ignored_pull_list(kvs[i], list_keys[i])
+            # row_sparse_pull should be aborted when vals.stype != row_sparse
+            check_invalid_rsp_pull_single(kvs[i], single_keys[i])
+            check_invalid_rsp_pull_list(kvs[i], list_keys[i])
+            # kvstore should be restricted to only accept either int or str keys
+            check_invalid_key_types_single(kvs[i], single_keys[1 - i])
+            check_invalid_key_types_list(kvs[i], list_keys[1 - i])
 
 if __name__ == '__main__':
     import nose

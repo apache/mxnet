@@ -744,16 +744,18 @@ def test_synthetic_dataset_generator():
 def test_sparse_nd_exception():
     """ test invalid sparse operator will throw a exception """
     a = mx.nd.ones((2,2))
-    assert_exception(mx.nd.sparse.retain, mx.base.MXNetError,
-                     a, invalid_arg="garbage_value")
-    assert_exception(mx.nd.sparse.csr_matrix, ValueError,
-                     a, shape=(3,2))
-    assert_exception(mx.nd.sparse.csr_matrix, ValueError,
-                     (2,2), shape=(3,2))
-    assert_exception(mx.nd.sparse.row_sparse_array, ValueError,
-                     (2,2), shape=(3,2))
-    assert_exception(mx.nd.sparse.zeros, ValueError,
-                     "invalid_stype", (2,2))
+    # Keep this test from adding stack backtraces to the log file.
+    with discard_stderr():
+        assert_exception(mx.nd.sparse.retain, mx.base.MXNetError,
+                         a, invalid_arg="garbage_value")
+        assert_exception(mx.nd.sparse.csr_matrix, ValueError,
+                         a, shape=(3,2))
+        assert_exception(mx.nd.sparse.csr_matrix, ValueError,
+                         (2,2), shape=(3,2))
+        assert_exception(mx.nd.sparse.row_sparse_array, ValueError,
+                         (2,2), shape=(3,2))
+        assert_exception(mx.nd.sparse.zeros, ValueError,
+                         "invalid_stype", (2,2))
 
 
 if __name__ == '__main__':
