@@ -2555,6 +2555,7 @@ def test_init():
                        (0, 10),
                        (5, 100, 4),
                        (50, -50, -2),
+                       (-100, 100, 1),
                        (1.3, 456.6, 1.3)]
         for dtype in dtype_list:
             for config in config_list:
