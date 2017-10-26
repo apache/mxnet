@@ -34,51 +34,16 @@ namespace mxnet {
 namespace test {
 
 /*!
- * \brief Generic operator random test data
- * \tparam DType Main data type
- * \tparam AccReal Secondary data type (if any)
- */
-template <typename DType, typename AccReal>
-class GenericOperatorData : public test::op::BasicOperatorData<DType, AccReal> {
- public:
-  typedef DType   DataType;
-  typedef AccReal AccRealType;
-
-  /*!
-   * \brief Constructor
-   * \param isGPU Is this to be used on GPU?
-   * \param inputShape Input shape to the operator
-   */
-  GenericOperatorData(const bool isGPU, const TShape& inputShape)
-    : test::op::BasicOperatorData<DType, AccReal>(isGPU, inputShape) {
-  }
-
-  /*!
-   * \brief Reset forward pass by filling everything with random values
-   */
-  void resetForward() override {
-    test::op::BasicOperatorData<DType, AccReal>::FillRandom();
-  }
-
-  /*!
-   * \brief Reset backward pass by filling everything with random values
-   */
-  void resetBackward() override {
-    test::op::BasicOperatorData<DType, AccReal>::FillRandom();
-  }
-};
-
-/*!
  * \brief Generic operator runner
  * \tparam OperatorProp property class for a given operator (i.e. FullyConnectedProp, BatchNormProp)
- * \tparam OperatorDataContainer Data container for forward and backward passes for some given
+ * \tparam OperatorExecutor Data container for forward and backward passes for some given
  *         data types
  */
-template<typename OperatorProp, typename OperatorDataContainer>
+template<typename OperatorProp, typename OperatorExecutor>
 class OperatorRunner {
  public:
-  typedef typename OperatorDataContainer::DataType    DType;
-  typedef typename OperatorDataContainer::AccRealType AccReal;
+  typedef typename OperatorExecutor::DataType    DType;
+  //typedef typename OperatorExecutor::AccRealType AccReal;
 
   /*!
    * \brief Test operator forward pass
@@ -89,7 +54,7 @@ class OperatorRunner {
    * \param count Number of times to run in each direction
    * \return OpInfo object for further opereator analysis
    */
-  test::op::OpInfo<OperatorProp, typename OperatorDataContainer::DataType, AccReal>
+  test::op::OpInfo<OperatorProp, OperatorExecutor>
   RunGenericOperatorForward(
     bool isGPU,
     const TShape &inputShape,
@@ -102,11 +67,10 @@ class OperatorRunner {
 #else
     isGPU = false;
 #endif
-    test::op::OpInfo<OperatorProp, DType, AccReal> info =
-      test::op::createOpAndInfoF<OperatorProp,
-        OperatorDataContainer, DType, AccReal>(isGPU, inputShape, kwargs);
-    info.data_->initForward(*info.prop_, &info.in_type_);
-    info.data_->forward(count);
+    test::op::OpInfo<OperatorProp, OperatorExecutor> info =
+      test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShape);
+    info.executor_->initForward(*info.prop_, &info.in_type_);
+    info.executor_->forward(count);
     return info;
   }
 
@@ -116,11 +80,11 @@ class OperatorRunner {
    * \param count
    * \return OpInfo object for further opereator analysis
    */
-  test::op::OpInfo<OperatorProp, DType, AccReal> RunGenericOperatorBackward(
-    test::op::OpInfo<OperatorProp, DType, AccReal> *info,
+  test::op::OpInfo<OperatorProp, OperatorExecutor> RunGenericOperatorBackward(
+    test::op::OpInfo<OperatorProp, OperatorExecutor> *info,
     const size_t count = 1) {
-    info->data_->initBackward(*info->prop_, &info->in_type_);
-    info->data_->backward(count);
+    info->executor_->initBackward(*info->prop_, &info->in_type_);
+    info->executor_->backward(count);
     return *info;
   }
 
@@ -133,12 +97,12 @@ class OperatorRunner {
    * \param count Number of times to run in each direction
    * \return
    */
-  test::op::OpInfo<OperatorProp, DType, AccReal> RunBidirectional(
+  test::op::OpInfo<OperatorProp, OperatorExecutor> RunBidirectional(
     bool isGPU,
     const TShape &inputShape,
     const std::vector<std::pair<std::string, std::string> > &kwargs,
     const size_t count = 1) {
-    test::op::OpInfo<OperatorProp, DType, AccReal> info =
+    test::op::OpInfo<OperatorProp, OperatorExecutor> info =
       RunGenericOperatorForward(isGPU, inputShape, kwargs, count);
     return RunGenericOperatorBackward(&info, count);
   }
@@ -204,7 +168,7 @@ class OperatorRunner {
 
       const size_t D = dim ? dim - 1U : test::rangedRand(0U, 2U);
 
-      test::op::OpInfo<OperatorProp, DType, AccReal> info;
+      test::op::OpInfo<OperatorProp, OperatorExecutor> info;
       switch (D) {
         case 0:
           info = RunGenericOperatorForward(isGPU,
@@ -239,9 +203,9 @@ class OperatorRunner {
         default:
           CHECK(false) << "Unsupported dimension count: " << (D + 1);
       }
-      if (info.data_.get()) {
+      if (info.executor_.get()) {
         RunGenericOperatorBackward(&info, count);
-        timing += info.data_->timing_;
+        timing += info.executor_->GetTiming();
       }
     } while (false);
 
