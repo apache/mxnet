@@ -6,6 +6,9 @@ import subprocess
 import traceback
 import argparse
 
+converted_file_name = "converted.py"
+train_log_name = "train.log"
+
 class Criteria:
     def __init__(self, metric_name, relation, value):
         self.metric_name = metric_name
@@ -144,66 +147,65 @@ def get_test_result(out_dir_path, criteria):
 
     return (result, result_str)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("test_dir", help="Test directory containing the test description file. Check https://goo.gl/KazsLj.")
-args = parser.parse_args()
-working_dir = args.test_dir
+def run_tests(working_dir):
 
-output_dir = working_dir + "/output"
-converted_file_name = "converted.py"
-train_log_name = "train.log"
-test_desc_path = working_dir + "/test_description.txt"
+    output_dir = working_dir + "/output"
+    test_desc_path = working_dir + "/test_description.txt"
 
-os.chdir(working_dir)
+    # Make working directory the current directory
+    os.chdir(working_dir)
 
-# Read tests description from the provided test description file
-tests = parse_test_description(test_desc_path)
+    # Read tests description from the provided test description file
+    tests = parse_test_description(test_desc_path)
 
-for test in tests:
-    print(test)
+    # Create the output directory if it doesn't already exist
+    create_dir(output_dir)
 
-# Create the output directory if it doesn't already exist
-create_dir(output_dir)
+    # Open the report file
+    report_path = output_dir + "/" + "test_report.txt"
+    test_report = open(report_path, 'w')
 
-# Open the report file
-report_path = output_dir + "/" + "test_report.txt"
-test_report = open(report_path, 'w')
+    out_dir_num = 0
 
-out_dir_num = 0
+    for test in tests:
 
-for test in tests:
+        # Create the output directory where the translated network and training logs will be saved
+        out_dir_path = output_dir + "/" + str(out_dir_num) + "/"
+        create_dir(out_dir_path)
+        out_dir_num += 1
 
-    # Create the output directory where the translated network and training logs will be saved
-    out_dir_path = output_dir + "/" + str(out_dir_num) + "/"
-    create_dir(out_dir_path)
-    out_dir_num += 1
-
-    # Translate the given network
-    train_prototxt_path = test.train_val_prototxt
-    solver_prototxt     = test.solver_prototxt
-    translate(train_prototxt_path, solver_prototxt, out_dir_path)
+        # Translate the given network
+        train_prototxt_path = test.train_val_prototxt
+        solver_prototxt     = test.solver_prototxt
+        translate(train_prototxt_path, solver_prototxt, out_dir_path)
     
-    # Train the translated network
-    train_network(out_dir_path)
+        # Train the translated network
+        train_network(out_dir_path)
 
-    all_tests_passed = True
+        all_tests_passed = True
 
-    # Observed metrics for this test (List of human readable string)
-    observed_metrics = ""
+        # Observed metrics for this test (List of human readable string)
+        observed_metrics = ""
     
-    for criteria in test.criterions:
-        # result is boolean denoting whether the observed metric satisfies the 
-        # requirement mentioned in the test.
-        # result_str is a descriptive human readable format of 'result'
-        result, result_str = get_test_result(out_dir_path, criteria)
-        observed_metrics += result_str + "\n"
+        for criteria in test.criterions:
+            # result is boolean denoting whether the observed metric satisfies the 
+            # requirement mentioned in the test.
+            # result_str is a descriptive human readable format of 'result'
+            result, result_str = get_test_result(out_dir_path, criteria)
+            observed_metrics += result_str + "\n"
 
-        if result == False:
-            all_tests_passed = False
+            if result == False:
+                all_tests_passed = False
 
-    test_report.write("Test details:\n")
-    test_report.write(str(test) + "\n")
-    test_report.write("Observed metrics:\n")
-    test_report.write(str(observed_metrics) + "\n")
-    test_report.write("Result: " + ("Passed" if all_tests_passed else "Failed") + "\n\n")
-    test_report.write("------------------------------------------------------------------\n\n")
+        test_report.write("Test details:\n")
+        test_report.write(str(test) + "\n")
+        test_report.write("Observed metrics:\n")
+        test_report.write(str(observed_metrics) + "\n")
+        test_report.write("Result: " + ("Passed" if all_tests_passed else "Failed") + "\n\n")
+        test_report.write("------------------------------------------------------------------\n\n")
+    
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("test_dir", help="Test directory containing the test description file. Check https://goo.gl/KazsLj.")
+    args = parser.parse_args()
+    run_tests(args.test_dir)
