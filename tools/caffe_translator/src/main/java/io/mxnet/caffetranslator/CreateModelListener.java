@@ -64,7 +64,8 @@ public class CreateModelListener extends CaffePrototxtBaseListener {
             Token token = stream.get(i);
             prototxt.append(token.getText());
         }
-        return prototxt.toString();
+        String strPrototxt = prototxt.toString();
+        return strPrototxt.replaceAll(" +num_examples:.*\\s", "");
     }
 
     @Override
