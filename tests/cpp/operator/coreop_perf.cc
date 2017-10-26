@@ -91,8 +91,6 @@ static void RunCoreOpTimingTest(const bool isGPU,
   }
 }
 
-const kwargs_t basic_args = { };
-
 /*!
  * \brief Generic bidirectional sanity test
  */
