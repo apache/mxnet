@@ -53,6 +53,7 @@ def parse_args():
                         help='number of classes')
     parser.add_argument('--optimizer', type=str, default='None',
                         help='the optimizer set to kvstore. None means no optimizer')
+    parser.add_argument('--compress', type=str, default='none')
     args = parser.parse_args()
     logging.info(args)
     return args
@@ -72,10 +73,11 @@ def error(gpu_res, cpu_res):
     return res
 
 def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
-        num_batches, test_results, **kwargs):
+        num_batches, test_results, compress, **kwargs):
     # create kvstore and optimizer
     devs = [mx.gpu(int(i)) for i in gpus.split(',')]
     kv = mx.kv.create(kv_store)
+    kv.set_compress({'compress':compress,'pos_threshold':0.5, 'neg_threshold':-0.5})
     if optimizer is None or optimizer == 'None':
         opt = None
     else:
@@ -89,6 +91,9 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
     data_shape = (32,) + tuple([int(s) for s in image_shape.split(',')])
     shapes = get_shapes(symbol, data_shape)
 
+
+    for s in shapes:
+         print(s)
     size = float(sum([reduce(lambda x,y : x*y, s, 1) for s in shapes])) * 4 / 1e6
     logging.info('num of arrays = %d, total size = %f MB' % (len(shapes), size))
 

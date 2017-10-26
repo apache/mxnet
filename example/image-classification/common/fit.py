@@ -103,6 +103,8 @@ def add_fit_args(parser):
                        help='1 means test reading speed without training')
     train.add_argument('--dtype', type=str, default='float32',
                        help='precision: float32 or float16')
+    train.add_argument('--compress', type=str, default='none')
+    train.add_argument('--threshold', type=float, default=0.5)
     return train
 
 def fit(args, network, data_loader, **kwargs):
@@ -114,7 +116,7 @@ def fit(args, network, data_loader, **kwargs):
     """
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
-    kv.set_compress({'compress':'2bit', 'pos_threshold':4.0, 'neg_threshold':-4.0})
+    kv.set_compress({'compress':args.compress, 'pos_threshold':args.threshold, 'neg_threshold':-1*args.threshold})
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
