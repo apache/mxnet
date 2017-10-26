@@ -318,6 +318,28 @@ else
 	endif
 endif
 
+ifeq ($(USE_PB_FORMAT_REC), 1)
+ifeq ($(USE_DIST_KVSTORE), 0)
+$(error "USE_DIST_KVSTORE must be setted to 1 when USE_PB_FORMAT_REC is 1")
+endif
+ifeq ($(USE_OPENMP), 1)
+$(error "USE_OPENMP must be setted to 0 when USE_PB_FORMAT_REC is 1")
+endif
+
+ifndef PROTOC
+PROTOC = ${DEPS_PATH}/bin/protoc
+endif
+
+CFLAGS += -DPB_FORMAT_REC
+OBJ += build/src/io/recordio.pb.o
+SRC_TARGET = src/io/recordio.pb.h
+
+include $(PS_PATH)/make/deps.mk
+src/%.pb.cc src/%.pb.h : src/%.proto $(PROTOBUF)
+	$(PROTOC) --cpp_out=./src/io/ --proto_path=./src/io/ $<
+	$(PROTOC) --python_out=./tools/ --proto_path=./src/io/ $<
+endif
+
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
@@ -345,7 +367,7 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc
+build/src/%.o: src/%.cc $(SRC_TARGET)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -512,6 +534,7 @@ ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+	find src -name "*.pb.[ch]*" -delete
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
@@ -522,6 +545,7 @@ else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+	find src -name "*.pb.[ch]*" -delete
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

@@ -116,15 +116,25 @@ def image_encode(args, i, item, q_out):
     fullpath = os.path.join(args.root, item[1])
 
     if len(item) > 3 and args.pack_label:
-        header = mx.recordio.IRHeader(0, item[2:], item[0], 0)
+        labels = item[2:]
     else:
-        header = mx.recordio.IRHeader(0, item[2], item[0], 0)
+        labels = item[2]
+    if not args.pb_format:
+        header = mx.recordio.IRHeader(0, labels, item[0], 0)
+    else:
+        import recordio_pb_pack as rec_pb
+        header = rec_pb.pack_head(id=item[0], reserve=0, version=1.0)
 
     if args.pass_through:
         try:
             with open(fullpath, 'rb') as fin:
                 img = fin.read()
-            s = mx.recordio.pack(header, img)
+            if not args.pb_format:
+                s = mx.recordio.pack(header, img)
+            else:
+                import recordio_pb_pack as rec_pb
+                data = rec_pb.pack_string_data(id=item[0], data=img)
+                s = rec_pb.pack(header, data, labels)
             q_out.put((i, s, item))
         except Exception as e:
             traceback.print_exc()
@@ -158,7 +168,14 @@ def image_encode(args, i, item, q_out):
         img = cv2.resize(img, newsize)
 
     try:
-        s = mx.recordio.pack_img(header, img, quality=args.quality, img_fmt=args.encoding)
+        if not args.pb_format:
+            s = mx.recordio.pack_img(header, img, quality=args.quality,
+                    img_fmt=args.encoding)
+        else:
+            import recordio_pb_pack as rec_pb
+            data = rec_pb.pack_img_data(id=item[0], img=img, quality=args.quality,
+                    img_fmt=args.encoding)
+            s = rec_pb.pack(header, data, labels)
         q_out.put((i, s, item))
     except Exception as e:
         traceback.print_exc()
@@ -253,6 +270,8 @@ def parse_args():
                         help='specify the encoding of the images.')
     rgroup.add_argument('--pack-label', type=bool, default=False,
         help='Whether to also pack multi dimensional label in the record file')
+    rgroup.add_argument('--pb-format', type=bool, default=False,
+        help='Whether to pack data in pb format')
     args = parser.parse_args()
     args.prefix = os.path.abspath(args.prefix)
     args.root = os.path.abspath(args.root)

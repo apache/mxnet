@@ -88,6 +88,8 @@ typedef void *RtcHandle;
 typedef void *CudaModuleHandle;
 /*! \brief handle to rtc cuda kernel*/
 typedef void *CudaKernelHandle;
+/*! \brief handle to RecordIter*/
+typedef void *RecordIterHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -1995,6 +1997,150 @@ MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** ar
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
 
+
+/*!
+ * \brief Get the number of data and label blobs. By Alan
+ * \param handle the handle pointer to the data iterator
+ * \param data_size the number of data blobs
+ * \param label_size the number of label blobs
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetDataAndLabelSize(DataIterHandle handle,
+                                            mx_uint *data_size,
+                                            mx_uint* label_size);
+
+/*!
+ * \brief Get the detailed information about record iterator.
+ * \param name The returned name of the record iter.
+ * \param description The returned description of the iter.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetIterInfo(const char **name,
+                                      const char **description,
+                                      mx_uint *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions);
+
+/*!
+ * \brief Init an iterator, init with parameters
+ * the array size of passed in arguments
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterCreate(mx_uint num_param,
+                                 const char **keys,
+                                 const char **vals,
+                                 RecordIterHandle *out);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the record iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterFree(RecordIterHandle handle);
+
+/*!
+ * \brief Call iterator.Reset
+ * \param handle the handle to iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterBeforeFirst(RecordIterHandle handle);
+
+/*!
+ * \brief Move iterator to next position
+ * \param handle the handle to iterator
+ * \param out return value of next
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterNext(RecordIterHandle handle, int *out);
+
+/*!
+ * \brief Get num of data
+ * \param handle the handle of the record iterator
+ * \param out number of data.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetDataNum(RecordIterHandle handle,
+                                     mx_uint *out);
+
+/*!
+ * \brief Get record data
+ * \param handle the handle of the record iterator
+ * \param index the item index in data
+ * \param out_id the id of item
+ * \param out_type item type
+ * \param out_ndarray NDArray value of item
+ * \param out_string_len len of string value
+ * \param out_string string value
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetData(RecordIterHandle handle,
+                                  mx_uint index,
+                                  uint64_t *out_id,
+                                  int *out_type,
+                                  NDArrayHandle *out_ndarray,
+                                  mx_uint *out_string_len,
+                                  const char **out_string);
+
+
+/*!
+ * \brief Get num of extra data
+ * \param handle the handle of the record iterator
+ * \param out number of extra data.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetExtraDataNum(RecordIterHandle handle,
+                                          mx_uint *out);
+
+/*!
+ * \brief Get record extra data
+ * \param handle the handle of the record iterator
+ * \param index the item index in extra
+ * \param out_key item key
+ * \param out_key_len len of item key
+ * \param out_type item type
+ * \param out_ndarray NDArray value of item
+ * \param out_string_len len of string value
+ * \param out_string string value
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetExtraData(RecordIterHandle handle,
+                                       mx_uint index,
+                                       const char **out_key,
+                                       mx_uint *out_key_len,
+                                       int *out_type,
+                                       NDArrayHandle *out_ndarray,
+                                       const char **out_string,
+                                       mx_uint *out_string_len);
+
+/*!
+ * \brief Get list of underlying label
+ * \param handle the handle of the record iterator
+ * \param out head of underlying label mx_float list
+ * \param out_size number of label list.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetLabel(RecordIterHandle handle,
+                                   mx_float **out,
+                                   mx_uint *out_size);
+
+/*!
+ * \brief Get the record head.
+ * \param handle the handle of the record iterator
+ * \param out_id the pointer to record index
+ * \param out_reserve the pointer to record reserve
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXRecordIterGetHead(RecordIterHandle handle,
+                                  uint64_t *out_id,
+                                  uint64_t *out_reserve);
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

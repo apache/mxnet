@@ -123,6 +123,7 @@ SymbolHandle = ctypes.c_void_p
 ExecutorHandle = ctypes.c_void_p
 DataIterCreatorHandle = ctypes.c_void_p
 DataIterHandle = ctypes.c_void_p
+RecordIterHandle = ctypes.c_void_p
 KVStoreHandle = ctypes.c_void_p
 RecordIOHandle = ctypes.c_void_p
 RtcHandle = ctypes.c_void_p

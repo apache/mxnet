@@ -87,6 +87,7 @@ inline const char* CublasGetErrorString(cublasStatus_t error) {
   return "Unknown cuBLAS status";
 }
 
+#if MXNET_USE_CUSOLVER == 1
 /*!
  * \brief Get string representation of cuSOLVER errors.
  * \param error The error.
@@ -115,6 +116,7 @@ inline const char* CusolverGetErrorString(cusolverStatus_t error) {
   }
   return "Unknown cuSOLVER status";
 }
+#endif
 
 /*!
  * \brief Get string representation of cuRAND errors.
