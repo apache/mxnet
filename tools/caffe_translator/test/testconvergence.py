@@ -149,11 +149,11 @@ def get_test_result(out_dir_path, criteria):
 
 def run_tests(working_dir):
 
-    output_dir = working_dir + "/output"
-    test_desc_path = working_dir + "/test_description.txt"
-
     # Make working directory the current directory
     os.chdir(working_dir)
+
+    output_dir = "output"
+    test_desc_path = "test_description.txt"
 
     # Read tests description from the provided test description file
     tests = parse_test_description(test_desc_path)
@@ -166,6 +166,9 @@ def run_tests(working_dir):
     test_report = open(report_path, 'w')
 
     out_dir_num = 0
+
+    num_tests_passed = 0
+    num_tests_failed = 0
 
     for test in tests:
 
@@ -182,7 +185,7 @@ def run_tests(working_dir):
         # Train the translated network
         train_network(out_dir_path)
 
-        all_tests_passed = True
+        all_criterions_passed = True
 
         # Observed metrics for this test (List of human readable string)
         observed_metrics = ""
@@ -195,14 +198,22 @@ def run_tests(working_dir):
             observed_metrics += result_str + "\n"
 
             if result == False:
-                all_tests_passed = False
+                all_criterions_passed = False
+
+        if all_criterions_passed:
+            num_tests_passed += 1
+        else:
+            num_tests_failed += 1 
 
         test_report.write("Test details:\n")
         test_report.write(str(test) + "\n")
         test_report.write("Observed metrics:\n")
         test_report.write(str(observed_metrics) + "\n")
-        test_report.write("Result: " + ("Passed" if all_tests_passed else "Failed") + "\n\n")
+        test_report.write("Result: " + ("Passed" if all_criterions_passed else "Failed") + "\n\n")
         test_report.write("------------------------------------------------------------------\n\n")
+
+    test_report.write("Test summary: Total tests: %d, passed: %d, failed: %d\n\n" % (len(tests), num_tests_passed, num_tests_failed))
+    test_report.write("------------------------------------------------------------------\n\n")
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

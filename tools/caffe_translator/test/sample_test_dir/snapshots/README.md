@@ -1,0 +1,2 @@
+Folder to store snapshots
+
