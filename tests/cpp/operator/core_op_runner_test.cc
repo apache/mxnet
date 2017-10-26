@@ -29,7 +29,6 @@
 #include <mxnet/tensor_blob.h>
 #include <mxnet/imperative.h>
 #include "../../src/imperative/imperative_utils.h"
-#include "../include/test_compute.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_core_op.h"
 
