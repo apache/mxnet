@@ -893,7 +893,8 @@ macro chain(layers)
             return esc(layer)
         else
             if @capture(layer, f_(x__))
-                return :($f($last_layer, $(x...)))
+                x′ = esc.(x)
+                return :($f($last_layer, $(x′...)))
             else
                 throw(AssertionError("$layer is not a valid function call and cannot be chained."))
             end
