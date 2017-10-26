@@ -51,6 +51,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   template <typename CallbackFunction>
   static inline void AccessAsCPU(const NDArray &src, const RunContext &run_ctx, CallbackFunction cb) {
+#if MXNET_USE_CUDA
     if(src.ctx().dev_type == Context::kCPU) {
       cb(src);
     } else {
@@ -65,6 +66,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       TBlob tmp2 = src.data();
       mxnet::ndarray::Copy<cpu, gpu>(on_cpu.data(), &tmp2, gpu_ctx, cpu_ctx, run_ctx);
     }
+#else
+    cb(src);
+#endif
   }
 
   /*!
@@ -165,6 +169,12 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     return res;
   }
 
+  /*!
+   * \brief Attach any temp or tandom resources required to perform the op's compute operation
+   * \param ctx Operator context object
+   * \param attrs NodeAttrs structure (node attributes)
+   * \param op Pointer to nnvm Operator object
+   */
   void AttachResources(OpContext &ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
     static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
     if (fresource.count(op) != 0) {
@@ -236,12 +246,18 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     ctx_.is_train = true;
     ctx_.run_ctx.ctx.dev_id = 0;
     ctx_.run_ctx.stream = nullptr;
+    ctx_.run_ctx.ctx.dev_type = Context::kCPU;
+#if MXNET_USE_CUDA
     if (isGPU) {
       ctx_.run_ctx.ctx.dev_type = Context::kGPU;
       allocGPUStream_.reset(new GPUStreamScope(&ctx_));
     } else {
       ctx_.run_ctx.ctx.dev_type = Context::kCPU;
     }
+#else
+    CHECK(!isGPU);
+    ctx_.run_ctx.ctx.dev_type = Context::kCPU;
+#endif
   }
 
   /*!
@@ -494,10 +510,14 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \brief This operator's context object
    */
   OpContext ctx_;
+
+  #if MXNET_USE_CUDA
   /*! \brief
    * Scoped GPU stream
    */
   std::unique_ptr<GPUStreamScope> allocGPUStream_;
+  #endif
+
   /*!
    * \brief Input data shape
    */
