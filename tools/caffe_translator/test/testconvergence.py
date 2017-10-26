@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import traceback
+import argparse
 
 class Criteria:
     def __init__(self, metric_name, relation, value):
@@ -143,11 +144,17 @@ def get_test_result(out_dir_path, criteria):
 
     return (result, result_str)
 
-input_dir = "CaffeModels"
-output_dir = "out"
+parser = argparse.ArgumentParser()
+parser.add_argument("test_dir", help="Test directory containing the test description file. Check https://goo.gl/KazsLj.")
+args = parser.parse_args()
+working_dir = args.test_dir
+
+output_dir = working_dir + "/output"
 converted_file_name = "converted.py"
 train_log_name = "train.log"
-test_desc_path = "test.txt"
+test_desc_path = working_dir + "/test_description.txt"
+
+os.chdir(working_dir)
 
 # Read tests description from the provided test description file
 tests = parse_test_description(test_desc_path)
