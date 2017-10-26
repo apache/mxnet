@@ -139,7 +139,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
         // add the final gradients
-        int num_threads = omp_get_num_threads();
+        int num_threads = omp_get_max_threads();
         dim_t segment_len = (num_rows + num_threads - 1) / num_threads;
         Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
                                                   ograd.dptr<DType>(), row_length,
