@@ -700,7 +700,7 @@ class KVStoreDist : public KVStoreLocal {
         }
         CHECK_EQ(static_cast<size_t>(push_pskv.size), compr_size);
         CHECK_EQ(static_cast<size_t>(pull_pskv.size), original_size);
-        CHECK_EQ(push_pskv.lens.size(), num_servers+1);
+        CHECK_EQ(push_pskv.lens.size(), num_servers*2);
         }
       }
     return pskv;
