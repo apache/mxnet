@@ -20,14 +20,16 @@
 #define TEST_CORE_OP_H_
 
 #include "./test_op.h"
+#include "../../../src/imperative/imperative_utils.h"
 
 namespace mxnet {
 namespace test {
 namespace op {
 
 // Tried making this a struct w/constexpr, but getting undefined reference on gcc 5.4.1
-#define COREOP_FWD_OP_NAME_KEY "fwd_op_name"
-#define COREOP_BWD_OP_NAME_KEY "bwd_op_name"
+#define COREOP_FWD_OP_NAME_KEY          "fwd_op_name"
+#define COREOP_BWD_OP_NAME_KEY          "bwd_op_name"
+#define COREOP_BWD_OP_NAME_VALUE_NONE   "<none>"
 
 /*!
  * Low-noise operator executor
@@ -357,22 +359,30 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       AttachResources(ctx_, attrs_, op_);
 
       if(!backward_for_op) {
+        bool no_backward = false;
         // Set up backward
         std::vector<std::pair<std::shared_ptr<CoreOpExecutor>, std::string>> bwd;
         if (!bwd_op_name.empty()) {
-          // Backward op was specified
-          std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
-            ctx().run_ctx.ctx.dev_type == Context::kGPU, this->outputs()[0].shape());
-          bwd.push_back({pOp, bwd_op_name});
+          if(bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
+            // Backward op was specified
+            std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
+              ctx().run_ctx.ctx.dev_type == Context::kGPU, this->outputs()[0].shape());
+            bwd.push_back({pOp, bwd_op_name});
+          } else {
+            no_backward = true;
+          }
         } else {
           // Try to figure out backward op
           bwd = GetBackward();
         }
-        CHECK_GE(bwd.size(), 1U);
-        for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
-          bw_item.first->set_verbose(verbose_);
-          backward_.push_back(bw_item.first);
-          bw_item.first->Init(ArgsWithOpName(args, bw_item.second), {}, {}, this);
+        if(!no_backward) {
+          CHECK_GE(bwd.size(), 1U)
+            << "Can't automatically determine backward op name. Please specify";
+          for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
+            bw_item.first->set_verbose(verbose_);
+            backward_.push_back(bw_item.first);
+            bw_item.first->Init(ArgsWithOpName(args, bw_item.second), {}, {}, this);
+          }
         }
       }
     }
@@ -396,6 +406,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
   inline void backward(const size_t count) {
+    CHECK(HasBackward());
     perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), Backward, "Backward", count);
     VTuneResume profile;
     for (size_t i = 0; i < count; ++i) {
@@ -421,12 +432,16 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     functionex_(attrs_, ctx_, inputs_, req_, outputs_);
   }
 
+  bool HasBackward() const {
+    return !backward_.empty();
+  }
+
   /*!
    * \brief Execute backward pass on operator
    */
   bool ExecuteBackward() {
     CHECK_EQ(initialized_, true);
-    CHECK(!backward_.empty());
+    CHECK(HasBackward());
     if (!backward_.empty()) {
       // Avoid locked ref count here
       for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
@@ -442,7 +457,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   bool ExecuteBackwardEx() {
     CHECK_EQ(initialized_, true);
-    CHECK(!backward_.empty());
+    CHECK(HasBackward());
     if (!backward_.empty()) {
       // Avoid locked ref count here
       for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
