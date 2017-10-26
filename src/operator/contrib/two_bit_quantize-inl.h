@@ -107,27 +107,27 @@ inline bool Create2BitArrayType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-struct init_threshold_2bit {
-  MSHADOW_XINLINE static void Map(int server_id,
-                                  float *out,
-                                  const float neg_threshold,
-                                  const float pos_threshold,
-                                  ps::SArray<int> compr_sizes,
-                                  ps::SArray<int> orig_sizes) {
-    // i for each server
-    size_t curr_pos = 0;
-    for (int i=0; i<server_id; i++) {
-      curr_pos += compr_sizes[i];
-    }
-
-    // The first two elements in output are thresholds
-    // The third element is the original size of the array
-    out[curr_pos] = neg_threshold;
-    out[curr_pos + 1] = pos_threshold;
-    // TODO(huilgolr) check potential problem here?
-    out[curr_pos+2] = static_cast<float>(orig_sizes[server_id]);
-  }
-};
+//struct init_threshold_2bit {
+//  MSHADOW_XINLINE static void Map(int server_id,
+//                                  float *out,
+//                                  const float neg_threshold,
+//                                  const float pos_threshold,
+//                                  ps::SArray<int> compr_sizes,
+//                                  ps::SArray<int> orig_sizes) {
+//    // i for each server
+//    size_t curr_pos = 0;
+//    for (int i=0; i<server_id; i++) {
+//      curr_pos += compr_sizes[i];
+//    }
+//
+//    // The first two elements in output are thresholds
+//    // The third element is the original size of the array
+//    out[curr_pos] = neg_threshold;
+//    out[curr_pos + 1] = pos_threshold;
+//    // TODO(huilgolr) check potential problem here?
+//    out[curr_pos+2] = static_cast<float>(orig_sizes[server_id]);
+//  }
+//};
 
 struct quantize_2bit {
   MSHADOW_XINLINE static void Map(int out_block_id,
@@ -270,11 +270,14 @@ struct dequantize_2bit {
     for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
       ch_ptr += !(i & 3);
       int col = i & 3;
-      if ( ((*ch_ptr) & posbits[col]) == posbits[col] ) {
+      uint8_t mask = posbits[col];
+      uint8_t negmask = negbits[col];
+      uint8_t masked = *ch_ptr & mask;
+      if ( masked == mask ) {
         *outval = pos_threshold;
       } // use posbits for mask as posbits are 11
         // compare with negbits
-      else if ( ((*ch_ptr) & posbits[col]) == negbits[col] ) {
+      else if ( masked == negmask ) {
         *outval = neg_threshold;
       } else {
         *outval = 0;
