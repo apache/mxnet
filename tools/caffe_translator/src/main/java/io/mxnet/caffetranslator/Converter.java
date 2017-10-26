@@ -136,8 +136,6 @@ public class Converter {
         String runner = generateRunner(loss);
         code.append(runner);
 
-        System.out.println(code);
-
         return code.toString();
     }
 
