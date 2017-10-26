@@ -629,7 +629,7 @@ void Dequantize(const NDArray &from, NDArray *to, int original_size,
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([from, ret, original_size, neg_threshold, pos_threshold](RunContext ctx) {
+        Engine::Get()->PushSync([from, to, original_size, neg_threshold, pos_threshold](RunContext ctx) {
           std::vector<TBlob> inputs = {from.data(), to->data()};
           mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs, original_size, neg_threshold, pos_threshold);
           // Wait GPU kernel to complete
