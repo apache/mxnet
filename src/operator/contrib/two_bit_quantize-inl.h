@@ -204,6 +204,41 @@ void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                           pos_threshold);              // positive threshold
 }
 
+template<typename xpu>
+void Quantize2BitImpl2(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+                      const float neg_threshold, const float pos_threshold) {
+  // Init threshold and original size
+//  mxnet_op::Kernel<init_threshold_2bit, xpu>::Launch(s, push_pskv_lens.size(),
+//                              inputs[2].dptr<float>(),   // compressed array (concat for all servers)
+//                              neg_threshold, pos_threshold,
+//                              push_pskv_lens, pull_pskv_lens);
+
+//  std::unordered_set<int> meta_pos;
+//  std::vector<int> cumulative_part_indices;
+//  int cur_pos = 0;
+//  int cum_index = 0;
+//  for(int i=0; i<push_pskv_lens.size(); i++) {
+//    meta_pos.insert(cur_pos);
+//    meta_pos.insert(cur_pos+1);
+//    meta_pos.insert(cur_pos+2);
+//    cur_pos += push_pskv_lens[i];
+//    cumulative_part_indices.push_back(cur_pos);
+//  }
+
+// Finally, compress the data and calculate new residual across all
+  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array
+                                               inputs[0].Size(),
+//                          meta_pos, cumulative_part_indices,
+//                          push_pskv_lens,            // compressed sizes
+//                          pull_pskv_lens,            // original sizes
+                                               inputs[2].dptr<float>(),   // compressed array
+                                               inputs[0].dptr<float>(),     // input array
+                                               inputs[1].dptr<float>(),     // residual array
+                                               neg_threshold,               // negative threshold
+                                               pos_threshold);              // positive threshold
+}
+
+
 // this function has been defined as quantize_2bit operator
 template<typename xpu>
 void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
@@ -213,7 +248,7 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-//  Quantize2BitImpl<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+  Quantize2BitImpl2<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -252,6 +287,39 @@ inline bool Quantize2BitType(const nnvm::NodeAttrs& attrs,
     << "`quantize_2bit_` only supports float32 input for now";
   return true;
 }
+
+struct dequantize_2bit_all {
+  // Decompress
+  MSHADOW_XINLINE static void Map(int compr_block_id,
+                                  int original_size,
+                                  float *out,
+                                  float *in,
+                                  const float neg_threshold,
+                                  const float pos_threshold) {
+
+    int out_start_id = compr_block_id<<4;
+    float* outval = out + out_start_id;
+    char* ch_ptr = reinterpret_cast<char*>(in + compr_block_id);
+    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
+    for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
+      ch_ptr += !(i & 3);
+      int col = i & 3;
+      uint8_t mask = posbits[col];
+      uint8_t negmask = negbits[col];
+      uint8_t masked = *ch_ptr & mask;
+      if ( masked == mask ) {
+        *outval = pos_threshold;
+      } // use posbits for mask as posbits are 11
+        // compare with negbits
+      else if ( masked == negmask ) {
+        *outval = neg_threshold;
+      } else {
+        *outval = 0;
+      }
+    }
+  }
+};
 
 struct dequantize_2bit {
   // Decompress
@@ -306,9 +374,10 @@ struct dequantize_2bit {
 };
 
 template<typename xpu>
-void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs, int original_size,
+void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                         const float neg_threshold, const float pos_threshold) {
   // Can only decompress the float32 data
+  int original_size = inputs[1].Size();
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, original_size/16,  // original size
                                                  original_size,
                                                  inputs[1].dptr<float>(),        // out array
@@ -324,7 +393,7 @@ void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-//  Dequantize2BitImpl<xpu>(s, inputs);
+  Dequantize2BitImpl<xpu>(s, inputs, 0.5, 0.5);
 }
 
 inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,

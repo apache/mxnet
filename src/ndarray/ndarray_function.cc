@@ -189,9 +189,9 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
  * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
  */
 template<>
-void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs, int original_size,
+void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs,
                             const float neg_threshold, const float pos_threshold) {
-  mxnet::op::Dequantize2BitImpl<cpu>(s, inputs, original_size, neg_threshold, pos_threshold);
+  mxnet::op::Dequantize2BitImpl<cpu>(s, inputs, neg_threshold, pos_threshold);
 }
 
 /*

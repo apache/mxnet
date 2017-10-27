@@ -168,7 +168,7 @@ void Copy(const TBlob &from, TBlob *to,
  * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
  */
 template<typename xpu>
-void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs, int original_size,
+void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs, 
                             const float neg_threshold, const float pos_threshold);
 
 /*

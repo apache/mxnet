@@ -609,7 +609,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
 //    }
 //  }
 
-void Dequantize(const NDArray &from, NDArray *to, int original_size,
+void Dequantize(const NDArray &from, NDArray *to,
                 const float neg_threshold, const float pos_threshold, const std::string& compress, int priority) {
   CHECK(from.shape().ndim() != 0)
     << "source operands have zero dimension shape";
@@ -617,9 +617,9 @@ void Dequantize(const NDArray &from, NDArray *to, int original_size,
   int b = to->ctx().dev_mask();
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([from, to, original_size, neg_threshold, pos_threshold](RunContext ctx) {
+      Engine::Get()->PushSync([from, to, neg_threshold, pos_threshold](RunContext ctx) {
         std::vector<TBlob> inputs = {from.data(), to->data()};
-        mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs, original_size, neg_threshold, pos_threshold);
+        mxnet::ndarray::Dequantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs, neg_threshold, pos_threshold);
       }, from.ctx(), {from.var()}, {to->var()},
       FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
@@ -629,9 +629,9 @@ void Dequantize(const NDArray &from, NDArray *to, int original_size,
 #if MXNET_USE_CUDA
     if (a == gpu::kDevMask && b == gpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([from, to, original_size, neg_threshold, pos_threshold](RunContext ctx) {
+        Engine::Get()->PushSync([from, to, neg_threshold, pos_threshold](RunContext ctx) {
           std::vector<TBlob> inputs = {from.data(), to->data()};
-          mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs, original_size, neg_threshold, pos_threshold);
+          mxnet::ndarray::Dequantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs, neg_threshold, pos_threshold);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
         }, from.ctx(), {from.var()}, {to->var()},

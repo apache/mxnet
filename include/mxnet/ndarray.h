@@ -917,7 +917,7 @@ void Quantize(const NDArray &from, NDArray *to, NDArray *residual, const std::st
  * \param compress type of compression
  * \param priority Priority of the action.
  */
-void Dequantize(const NDArray &from, NDArray *to, int original_size,
+void Dequantize(const NDArray &from, NDArray *to,
                 const float neg_threshold, const float pos_threshold, const std::string& compress, int priority);
 
 /*!

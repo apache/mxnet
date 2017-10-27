@@ -398,7 +398,7 @@ class KVStoreDistServer {
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
-        Dequantize(recved, &stored, original_size, neg_threshold, pos_threshold, compress_, 0);
+        Dequantize(recved, &stored, neg_threshold, pos_threshold, compress_, 0);
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
@@ -408,16 +408,16 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          Dequantize(recved, &merged.array, original_size, neg_threshold, pos_threshold, compress_, 0);
+          Dequantize(recved, &merged.array, neg_threshold, pos_threshold, compress_, 0);
         } else {
-          Dequantize(recved, &decomp_buf, original_size, neg_threshold, pos_threshold, compress_, 0);
+          Dequantize(recved, &decomp_buf, neg_threshold, pos_threshold, compress_, 0);
           merged.array += decomp_buf;
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-        Dequantize(recved, &decomp_buf, original_size, neg_threshold, pos_threshold, compress_, 0);
+        Dequantize(recved, &decomp_buf, neg_threshold, pos_threshold, compress_, 0);
         exec_.Exec([this, key, &decomp_buf, &stored]() {
           CHECK(updater_);
           updater_(key, decomp_buf, &stored);
