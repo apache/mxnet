@@ -168,6 +168,8 @@ invoking dequantize_2bit(out, array), the 'array' argument will become
 .add_argument("quantized_data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_argument("dequantized_data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`");
 
+
+
 NNVM_REGISTER_OP(_contrib_dequantize_mshadow_2bit)
 .describe(R"code(Dequantize an input tensor quantized by quantize_2bit.
 

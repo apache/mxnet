@@ -170,7 +170,7 @@ struct quantize_2bit {
 };
 
 template<typename xpu>
-void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+void Quantize2BitImplMShadowPskv(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                       ps::SArray<int> push_pskv_lens, ps::SArray<int> pull_pskv_lens,
                       const float neg_threshold, const float pos_threshold) {
   // Init threshold and original size
