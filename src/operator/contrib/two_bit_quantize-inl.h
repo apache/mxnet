@@ -241,7 +241,7 @@ void Quantize2BitImpl2(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs
 
 // this function has been defined as quantize_2bit operator
 template<typename xpu>
-void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
+void Quantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
                          const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
@@ -249,6 +249,49 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
   Quantize2BitImpl2<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+}
+
+template<typename xpu>
+void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
+  float neg_threshold = param.neg_threshold;
+  float pos_threshold = param.pos_threshold;
+  int original_size = inputs[0].Size();
+  float *out = inputs[2].dptr<float>();
+  float *grad = inputs[0].dptr<float>();
+  float *residual = inputs[1].dptr<float>();
+  for (int out_block_id=0; out_block_id<inputs[2].Size(); out_block_id++) {
+    float *compr_block = out + out_block_id;
+    // init to 0
+    *compr_block = 0;
+    // start and end are indices in original grad array
+    int start = out_block_id << 4;
+    int end = start + 16; // <= original_size) ? start + 16 : original_size;
+    char *block_ptr = reinterpret_cast < char * > (compr_block);
+    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
+
+    char *curr_byte = block_ptr;
+    for (int i = start; i < end && i < original_size; i++) {
+      // // adds 1 when i-start divisible by 4
+      curr_byte += ((i - start) & 3);
+      residual[i] += grad[i];
+      if (residual[i] >= pos_threshold) {
+        residual[i] -= pos_threshold;
+        // set data to 11
+        *curr_byte |= posbits[(i & 3)];
+      } else if (residual[i] <= neg_threshold) {
+        residual[i] -= neg_threshold;
+        // set data to 10
+        *curr_byte |= negbits[(i & 3)];
+      }
+    }
+  }
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -374,7 +417,7 @@ struct dequantize_2bit {
 };
 
 template<typename xpu>
-void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+void Dequantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                         const float neg_threshold, const float pos_threshold) {
   // Can only decompress the float32 data
   int original_size = inputs[1].Size();
@@ -384,10 +427,51 @@ void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& input
                                                  inputs[0].dptr<float>(),      // compressed array
                                                  neg_threshold,     // negative threshold
                                                  pos_threshold);  // positive threshold
+
+}
+  template<typename xpu>
+  void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+                                 const float neg_threshold, const float pos_threshold) {
+    int original_size = inputs[1].Size();
+    float* out = inputs[1].dptr<float>();
+    float* in = inputs[0].dptr<float>();
+    for (int compr_block_id=0; compr_block_id<original_size/16; compr_block_id++) {
+      int out_start_id = compr_block_id<<4;
+      float* outval = out + out_start_id;
+      char* ch_ptr = reinterpret_cast<char*>(in + compr_block_id);
+      const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+      const int negbits[] = {0x80, 0x20, 0x08, 0x02};
+      for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
+        ch_ptr += !(i & 3);
+        int col = i & 3;
+        uint8_t mask = posbits[col];
+        uint8_t negmask = negbits[col];
+        uint8_t masked = *ch_ptr & mask;
+        if ( masked == mask ) {
+          *outval = pos_threshold;
+        } // use posbits for mask as posbits are 11
+          // compare with negbits
+        else if ( masked == negmask ) {
+          *outval = neg_threshold;
+        } else {
+          *outval = 0;
+        }
+      }
+    }
 }
 
 template<typename xpu>
 void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Dequantize2BitImpl<xpu>(s, inputs, 0.5, 0.5);
+}
+
+template<typename xpu>
+void Dequantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
