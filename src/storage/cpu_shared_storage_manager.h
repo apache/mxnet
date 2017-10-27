@@ -25,11 +25,13 @@
 #endif  // MXNET_USE_CUDA
 #include <mxnet/base.h>
 
+#ifndef _WIN32
 #include <sys/mman.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#endif  // _WIN32
 
 #include <unordered_map>
 #include <vector>
@@ -109,6 +111,9 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   int fid = -1;
   bool is_new = false;
   size_t size = handle->size + alignment_;
+#ifdef _WIN32
+  LOG(FATAL) << "Shared memory is not supported on Windows yet.";
+#else
   if (handle->shared_id == -1 && handle->shared_pid == -1) {
     is_new = true;
     handle->shared_pid = getpid();
@@ -133,6 +138,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
+#endif  // _WIN32
 
   if (is_new) {
     new (ptr) std::atomic<int>(1);
@@ -144,6 +150,9 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
 void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
   int count = DecrementRefCount(handle);
   CHECK_GE(count, 0);
+#ifdef _WIN32
+  LOG(FATAL) << "Shared memory is not supported on Windows yet.";
+#else
   CHECK_EQ(munmap(static_cast<char*>(handle.dptr) - alignment_,
                   handle.size + alignment_), 0)
       << "Failed to unmap shared memory. munmap failed with error "
@@ -155,6 +164,7 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
         << "Failed to unlink shared memory. shm_unlink failed with error "
         << strerror(errno);
   }
+#endif  // _WIN32
 }
 
 }  // namespace storage
