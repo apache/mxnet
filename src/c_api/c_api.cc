@@ -1231,25 +1231,30 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
 }
 
 // RecordIter
-#if PB_FORMAT_REC
 int MXRecordIterGetIterInfo(const char **name,
                             const char **description,
                             mx_uint *num_args,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions) {
+#if PB_FORMAT_REC
   auto &vec = dmlc::Registry<io::RecordIteratorReg>::List();
   CHECK(vec.size() == 1) << "RecordIter register error";
   auto e = vec[0];
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
                                  NULL);
+#else
+  API_BEGIN();
+  API_END();
+#endif
 }
 
 int MXRecordIterCreate(mx_uint num_param,
                        const char **keys,
                        const char **vals,
                        RecordIterHandle *out) {
+#if PB_FORMAT_REC
   IIterator<io::RecordInst> *iter = nullptr;
   API_BEGIN();
   auto &vec = dmlc::Registry<io::RecordIteratorReg>::List();
@@ -1263,31 +1268,52 @@ int MXRecordIterCreate(mx_uint num_param,
   iter->Init(kwargs);
   *out = iter;
   API_END_HANDLE_ERROR(delete iter);
+#else
+  API_BEGIN();
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+  API_END();
+#endif
 }
 
 int MXRecordIterFree(RecordIterHandle handle) {
   API_BEGIN();
+#if PB_FORMAT_REC
   delete static_cast<IIterator<io::RecordInst> *>(handle);
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
 
 int MXRecordIterBeforeFirst(RecordIterHandle handle) {
   API_BEGIN();
+#if PB_FORMAT_REC
   static_cast<IIterator<io::RecordInst>* >(handle)->BeforeFirst();
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
 
 int MXRecordIterNext(RecordIterHandle handle, int *out) {
   API_BEGIN();
+#if PB_FORMAT_REC
   *out = static_cast<IIterator<io::RecordInst>* >(handle)->Next();
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
 
 int MXRecordIterGetDataNum(RecordIterHandle handle,
                            mx_uint *out) {
   API_BEGIN();
+#if PB_FORMAT_REC
   const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
   *out = static_cast<mx_uint>(record.data.size());
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
 
@@ -1300,6 +1326,7 @@ int MXRecordIterGetData(RecordIterHandle handle,
                         const char **out_string) {
   NDArray *ptr = nullptr;
   API_BEGIN();
+#if PB_FORMAT_REC
   const auto& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value().data;
   *out_id = record[index].id;
   *out_type = record[index].type;
@@ -1320,14 +1347,21 @@ int MXRecordIterGetData(RecordIterHandle handle,
   *out_ndarray = ptr;
   *out_string = tmp_str;
   *out_string_len = tmp_str_len;
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END_HANDLE_ERROR(delete ptr);
 }
 
 int MXRecordIterGetExtraDataNum(RecordIterHandle handle,
                            mx_uint *out) {
   API_BEGIN();
+#if PB_FORMAT_REC
   const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
   *out = static_cast<mx_uint>(record.extra.size());
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
 
@@ -1341,6 +1375,7 @@ int MXRecordIterGetExtraData(RecordIterHandle handle,
                              mx_uint *out_string_len) {
   NDArray *ptr = nullptr;
   API_BEGIN();
+#if PB_FORMAT_REC
   const auto& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value().extra;
   *out_key = record[index].key.c_str();
   *out_key_len = static_cast<mx_uint>(record[index].key.length());
@@ -1363,23 +1398,33 @@ int MXRecordIterGetExtraData(RecordIterHandle handle,
   *out_ndarray = ptr;
   *out_string = tmp_str;
   *out_string_len = tmp_str_len;
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END_HANDLE_ERROR(delete ptr);
 }
 
 int MXRecordIterGetLabel(RecordIterHandle handle, mx_float **out, mx_uint *out_size) {
   API_BEGIN();
+#if PB_FORMAT_REC
   const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
   *out_size = static_cast<mx_uint>(record.label.size());
   *out = const_cast<float*>(dmlc::BeginPtr(record.label));
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
 
 int MXRecordIterGetHead(RecordIterHandle handle, uint64_t *out_id, uint64_t *out_reserve) {
   API_BEGIN();
+#if PB_FORMAT_REC
   const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
   *out_id = record.head.id();
   *out_reserve = record.head.reserve();
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
   API_END();
 }
-#endif  // PB_FORMAT_REC
 

@@ -651,6 +651,8 @@ def _make_record_iterator():
             ctypes.byref(arg_names), \
             ctypes.byref(arg_types), \
             ctypes.byref(arg_descs)))
+    if name.value is None:
+        return None
     iter_name = py_str(name.value)
 
     narg = int(num_args.value)
@@ -708,6 +710,7 @@ def _make_record_iterator():
 def _init_record_module():
     module_obj = sys.modules[__name__]
     record_iter = _make_record_iterator()
-    setattr(module_obj, record_iter.__name__, record_iter)
+    if record_iter is not None:
+        setattr(module_obj, record_iter.__name__, record_iter)
 
 _init_record_module()

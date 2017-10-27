@@ -13,11 +13,15 @@
 #include <dmlc/memory_io.h>
 #include <dmlc/threadediter.h>
 #include <dmlc/input_split_shuffle.h>
+#include <utility>
+#include <vector>
+#include <string>
+#include <algorithm>
 #include "../common/utils.h"
-#include "./recordio.pb.h"
 #include "./iter_threaded_input_split.h"
 
 #if PB_FORMAT_REC
+#include "./recordio.pb.h"
 namespace mxnet {
 namespace io {
 
@@ -447,9 +451,9 @@ struct RecordIteratorReg
  * \brief Macro to register Iterators
  *
  * \code
- * // example of registering a mnist iterator
- * MXNET_REGISTER_RECORD_ITER(MNISTIter)
- * .describe("Mnist data iterator")
+ * // example of registering a record iterator
+ * MXNET_REGISTER_RECORD_ITER(RecordIter)
+ * .describe("record data iterator")
  * .set_body([]() {
  *     return new RecordIter();
  *   });
