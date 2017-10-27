@@ -153,7 +153,7 @@ def run_tests(working_dir):
     os.chdir(working_dir)
 
     output_dir = "output"
-    test_desc_path = "test_description.txt"
+    test_desc_path = "test.cfg"
 
     # Read tests description from the provided test description file
     tests = parse_test_description(test_desc_path)
