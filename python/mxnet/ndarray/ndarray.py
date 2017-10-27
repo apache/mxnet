@@ -97,10 +97,10 @@ _GRAD_REQ_MAP = {
 # pylint: enable= no-member
 
 # Return code for dispatching indexing function call
-_NDARRAY_INDEXING_UNSUPPORTED = -1
-_BASIC_INDEXING_STEP_EQUAL_ONE = 0
-_BASIC_INDEXING_STEP_NOT_ONE = 1
-_ADVANCED_INDEXING = 2
+_NDARRAY_UNSUPPORTED_INDEXING = -1
+_NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE = 0
+_NDARRAY_BASIC_INDEXING_STEP_NOT_ONE = 1
+_NDARRAY_ADVANCED_INDEXING = 2
 
 
 def _new_empty_handle():
@@ -404,69 +404,37 @@ fixed-size items.
             sliced_arr[:] = value
             return
         elif isinstance(key, py_slice):
-            if key.step is not None:
-                raise ValueError('NDArray only supports slicing with step size 1')
-            if key.start is not None or key.stop is not None:
-                sliced_arr = self._slice(key.start, key.stop)
-                sliced_arr[:] = value
-                return
-            if isinstance(value, NDArray):
-                if value.handle is not self.handle:
-                    value.copyto(self)
-            elif isinstance(value, numeric_types):
-                _internal._set_value(float(value), out=self)
-            elif isinstance(value, (np.ndarray, np.generic)):
-                self._sync_copyfrom(value)
-            else:
-                raise TypeError(
-                    'NDArray does not support assignment with %s of type %s'%(
-                        str(value), str(type(value))))
-        elif isinstance(key, tuple):
-            # multi-dimension indexing
-            my_shape = self.shape
-            assert len(key) <= len(my_shape), \
-                "Indexing dimensions exceed array dimensions, %d vs %d"%(
-                    len(key), len(my_shape))
-            begin = [0 for _ in my_shape]
-            end = [x for x in my_shape]
-            expand = []
-            for i, slice_i in enumerate(key):
-                if isinstance(slice_i, integer_types):
-                    assert slice_i < my_shape[i]
-                    begin[i] = slice_i
-                    end[i] = slice_i + 1
-                    expand.append(i)
-                elif isinstance(slice_i, py_slice):
-                    # only support continuous slicing
-                    assert slice_i.step is None, \
-                        "NDArray only supports slicing with step size 1."
-                    begin[i] = slice_i.start or 0
-                    end[i] = slice_i.stop or my_shape[i]
-                    assert begin[i] < end[i]
-                    assert end[i] <= my_shape[i]
+            if key.step is None or key.step == 1:
+                if key.start is not None or key.stop is not None:
+                    sliced_arr = self._slice(key.start, key.stop)
+                    sliced_arr[:] = value
+                    return
+                if isinstance(value, NDArray):
+                    if value.handle is not self.handle:
+                        value.copyto(self)
+                elif isinstance(value, numeric_types):
+                    _internal._set_value(float(value), out=self)
+                elif isinstance(value, (np.ndarray, np.generic)):
+                    self._sync_copyfrom(value)
                 else:
-                    raise ValueError(
-                        "NDArray does not support slicing with key %s of type %s."%(
-                            str(slice_i), str(type(slice_i))))
-
-            if isinstance(value, NDArray):
-                value = value.as_in_context(self.context)
-                self._slice_assign(value, begin, end, expand)
-            elif isinstance(value, numeric_types):
-                _internal._crop_assign_scalar(self, out=self,
-                                              begin=begin, end=end,
-                                              scalar=value)
-            elif isinstance(value, (np.ndarray, np.generic)):
-                value = array(value, ctx=self.context, dtype=self.dtype)
-                self._slice_assign(value, begin, end, expand)
+                    raise TypeError(
+                        'NDArray does not support assignment with %s of type %s'%(
+                            str(value), str(type(value))))
             else:
-                raise TypeError(
-                    'NDArray does not support assignment with %s of type %s'%(
-                        str(value), str(type(value))))
+                self._set_nd_basic_indexing(key, value)
+            return
+
+        # dealing with more complicated cases
+        indexing_dispatch_code = _get_indexing_dispatch_code(key)
+        if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE:
+            self._set_nd_basic_indexing_step_equal_one(key, value)
+        elif indexing_dispatch_code == _NDARRAY_BASIC_INDEXING_STEP_NOT_ONE:
+            self._set_nd_basic_indexing(key, value)
+        elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            self._set_nd_advanced_indexing(key, value)
         else:
-            raise ValueError(
-                "NDArray does not support slicing with key %s of type %s."%(
-                    str(key), str(type(key))))
+            raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
+                             % (str(key), str(type(key))))
         # pylint: enable=too-many-branches
 
     def _slice_assign(self, value, begin, end, expand):
@@ -560,21 +528,19 @@ fixed-size items.
         # if key is any type of NDArray, list, or np.ndarray make a tuple from it
         # Note: Only support integer list as index if key is a list.
         indexing_dispatch_code = _get_indexing_dispatch_code(key)
-        if indexing_dispatch_code == _BASIC_INDEXING_STEP_EQUAL_ONE:
-            return self._basic_indexing_step_equal_one(key)
-        elif indexing_dispatch_code == _BASIC_INDEXING_STEP_NOT_ONE:
-            return self._basic_indexing_step_not_one(key)
-        elif indexing_dispatch_code == _ADVANCED_INDEXING:
-            return self._advanced_indexing(key)
+        if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE:
+            return self._get_nd_basic_indexing_step_equal_one(key)
+        elif indexing_dispatch_code == _NDARRAY_BASIC_INDEXING_STEP_NOT_ONE:
+            return self._get_nd_basic_indexing_step_not_one(key)
+        elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            return self._get_nd_advanced_indexing(key)
         else:
             raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
 
-    def _advanced_indexing(self, key):
-        """Get item when key is a tuple of any objects of the following types:
-        NDArray, np.ndarray, list, tuple, slice, and integer. Note that if
-        all the objects in the tuple are of type slice with step=1, it should
-        invoke _basic_indexing_step_equal_one for better efficiency."""
+    def _get_index_nd_from_advanced_index(self, key):
+        """This function is called when key is an advanced index. Returns an index array
+        for use in scatter_nd and gather_nd."""
         def _is_advanced_index(index):
             """The definition of advanced index here includes integers as well, while
             integers are considered as basic index type when the key contains only
@@ -717,11 +683,92 @@ fixed-size items.
                         idx_rshape[j] = 1
 
             indices = broadcasted_indices
+        return op.stack(*indices)
 
-        indices = op.stack(*indices)
-        return op.gather_nd(self, indices)
+    def _set_nd_basic_indexing_step_equal_one(self, key, value):
+        """Set value to self if key is a tuple of slices and integers.
+        The slices must have step=None or 1."""
+        # multi-dimension indexing
+        my_shape = self.shape
+        assert len(key) <= len(my_shape), \
+            "Indexing dimensions exceed array dimensions, %d vs %d"%(
+                len(key), len(my_shape))
+        begin = [0 for _ in my_shape]
+        end = [x for x in my_shape]
+        expand = []
+        for i, slice_i in enumerate(key):
+            if isinstance(slice_i, integer_types):
+                assert slice_i < my_shape[i]
+                begin[i] = slice_i
+                end[i] = slice_i + 1
+                expand.append(i)
+            elif isinstance(slice_i, py_slice):
+                # only support continuous slicing
+                assert slice_i.step is None, \
+                    "NDArray only supports slicing with step size 1."
+                begin[i] = slice_i.start or 0
+                end[i] = slice_i.stop or my_shape[i]
+                assert begin[i] < end[i]
+                assert end[i] <= my_shape[i]
+            else:
+                raise ValueError(
+                    "NDArray does not support slicing with key %s of type %s."%(
+                        str(slice_i), str(type(slice_i))))
 
-    def _basic_indexing_step_equal_one(self, key):
+        if isinstance(value, NDArray):
+            value = value.as_in_context(self.context)
+            self._slice_assign(value, begin, end, expand)
+        elif isinstance(value, numeric_types):
+            _internal._crop_assign_scalar(self, out=self,
+                                          begin=begin, end=end,
+                                          scalar=value)
+        elif isinstance(value, (np.ndarray, np.generic)):
+            value = array(value, ctx=self.context, dtype=self.dtype)
+            self._slice_assign(value, begin, end, expand)
+        else:
+            raise TypeError(
+                'NDArray does not support assignment with %s of type %s'%(
+                    str(value), str(type(value))))
+
+    def _set_value_to_nd(self, value, vshape, indices):
+        """Set value to the current `NDArray` using indices `NDArray` as index.
+        This basically broadcast value to vshape and call op _scatter_set_nd."""
+        if isinstance(value, (np.ndarray, np.generic)):
+            value_nd = array(value, ctx=self.context, dtype=self.dtype)
+        elif isinstance(value, numeric_types):
+            value_nd = full(shape=vshape, val=value, ctx=self.context, dtype=self.dtype)
+        elif isinstance(value, NDArray):
+            value_nd = value.as_in_context(self.context)
+        else:
+            raise TypeError(
+                'NDArray does not support assignment with %s of type %s'%(
+                    str(value), str(type(value))))
+        if value_nd.shape != vshape:
+            value_nd = value_nd.broadcast_to(vshape)
+        _internal._scatter_set_nd(value_nd, indices, self.shape, self)
+
+    def _set_nd_basic_indexing(self, key, value):
+        """This function is called by __setitem__ when key is a basic index, i.e.
+        an integer, or a slice, or a tuple of integers and slices. No requirements
+        on the steps of slices. For key with all the steps of slices are either None
+        or 1, call _set_nd_basic_indexing_step_equal_one which is more efficient."""
+        indices, vshape = self._get_index_nd_from_basic_index(key)
+        self._set_value_to_nd(value, vshape, indices)
+
+    def _set_nd_advanced_indexing(self, key, value):
+        """This function is called by __setitem__ when key is an advanced index."""
+        indices = self._get_index_nd_from_advanced_index(key)
+        vshape = _get_oshape_of_gather_nd(self.shape, indices.shape)
+        self._set_value_to_nd(value, vshape, indices)
+
+    def _get_nd_advanced_indexing(self, key):
+        """Get item when key is a tuple of any objects of the following types:
+        NDArray, np.ndarray, list, tuple, slice, and integer. Note that if
+        all the objects in the tuple are of type slice with step=1, it should
+        invoke _get_nd_basic_indexing_step_equal_one for better efficiency."""
+        return op.gather_nd(self, self._get_index_nd_from_advanced_index(key))
+
+    def _get_nd_basic_indexing_step_equal_one(self, key):
         """This function is called when key is a tuple of slices or integers with
         all slices' steps being None or equal to 1."""
         if not isinstance(key, tuple):
@@ -740,25 +787,26 @@ fixed-size items.
                 # slice_i.step != 1 should not happen here
                 # it should have been routed to advanced indexing
                 if slice_i.step is not None and slice_i.step != 1:
-                    raise ValueError('_basic_indexing_step_equal_one does not support slice step=%d'
+                    raise ValueError('_get_nd_basic_indexing_step_equal_one does not support slice step=%d'
                                      % slice_i.step)
                 begin.append(0 if slice_i.start is None else slice_i.start)
                 end.append(shape[i] if slice_i.stop is None else slice_i.stop)
                 oshape.append(end[i] - begin[i])
             else:
-                raise ValueError('_basic_indexing_step_equal_one does not support slicing with '
+                raise ValueError('_get_nd_basic_indexing_step_equal_one does not support slicing with '
                                  'index=%s of type=%s.' % (str(slice_i), str(type(slice_i))))
         oshape.extend(shape[i+1:])
         if len(oshape) == 0:
             oshape.append(1)
         return op.slice(self, begin, end).reshape(oshape)
 
-    def _basic_indexing_step_not_one(self, key):
-        """Accept mix of slices and integers as index. No requirements on the value of slice's step.
-        For indices of integers or slices with step=1, use _basic_indexing_step_equal_one."""
-        if not isinstance(key, tuple):
-            raise TypeError('_basic_indexing_step_not_equal_one only supports'
-                            ' tuple as its index type')
+    def _get_index_nd_from_basic_index(self, key):
+        """This function is called when key an integer, a slice, or a tuple of integers and slices.
+        Returns an index array for use in op gather_nd and scatter_nd as well as a output shape."""
+        if isinstance(key, (integer_types, py_slice)):
+            key = (key,)
+        assert isinstance(key, tuple), "Basic index of NDArray must be an integer, a slice" \
+                                       " or a tuple of integers and slices."
         shape = self.shape
         oshape = []  # final output shape
         indices = []  # all indices generated by slices and integers, fed to gather_nd
@@ -793,8 +841,12 @@ fixed-size items.
             ones_list[i] = 1
             index = index.broadcast_to(tuple(bshape))
             tmp_indices.append(index)
+        return op.stack(*tmp_indices), tuple(oshape)
 
-        indices = op.stack(*tmp_indices)
+    def _get_nd_basic_indexing_step_not_one(self, key):
+        """Accept mix of slices and integers as index. No requirements on the value of slice's step.
+        For indices of integers or slices with step=1, use _get_nd_basic_indexing_step_equal_one."""
+        indices, oshape = self._get_index_nd_from_basic_index(key)
         return op.gather_nd(self, indices).reshape(oshape)
 
     def _sync_copyfrom(self, source_array):
@@ -1991,17 +2043,17 @@ fixed-size items.
 def _get_indexing_dispatch_code(key):
     """Returns a indexing function call dispatch code
     so that the right indexing function can be called for the key.
-    1. If key is a list, or NDArray, or np.ndarray, return _ADVANCED_INDEXING.
-    2. If key is an integer, return _BASIC_INDEXING_STEP_EQUAL_ONE.
+    1. If key is a list, or NDArray, or np.ndarray, return _NDARRAY_ADVANCED_INDEXING.
+    2. If key is an integer, return _NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE.
     3. If key is a tuple containing only slices and integers, and the slices' steps
-       are all either None or equal to 1, return `_BASIC_INDEXING_STEP_EQUAL_ONE`.
-    4. If key is a tuple containing only slices and integers, and at least of slices'
-       step is not equal to 1, return `_BASIC_INDEXING_STEP_NOT_ONE`.
+       are all either None or equal to 1, return `_NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE`.
+    4. If key is a tuple containing only slices and integers, and at least one of slices'
+       step is not equal to 1, return `_NDARRAY_BASIC_INDEXING_STEP_NOT_ONE`.
     5. If key is a tuple containing any advanced index type, that is, list, tuple,
-       np.ndarray, NDArray, return `_ADVANCED_INDEXING`.
+       np.ndarray, NDArray, return `_NDARRAY_ADVANCED_INDEXING`.
     """
     if isinstance(key, (NDArray, np.ndarray)):
-        return _ADVANCED_INDEXING
+        return _NDARRAY_ADVANCED_INDEXING
     elif isinstance(key, list):
         # TODO(junwu): Add support for nested lists besides integer list
         for i in key:
@@ -2009,14 +2061,14 @@ def _get_indexing_dispatch_code(key):
                 raise TypeError('Indexing NDArray only supports a list of integers as index'
                                 ' when key is of list type, received element=%s of type=%s'
                                 % (str(i), str(type(i))))
-        return _ADVANCED_INDEXING
+        return _NDARRAY_ADVANCED_INDEXING
     elif isinstance(key, integer_types):
-        return _BASIC_INDEXING_STEP_EQUAL_ONE
+        return _NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE
     elif isinstance(key, tuple):
         step_not_one = False
         for idx in key:
             if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
-                return _ADVANCED_INDEXING
+                return _NDARRAY_ADVANCED_INDEXING
             elif isinstance(idx, py_slice):
                 if idx.step is not None and idx.step != 1:
                     step_not_one = True
@@ -2024,10 +2076,10 @@ def _get_indexing_dispatch_code(key):
                 raise ValueError("NDArray does not support slicing with key %s of type %s."
                                  % (str(idx), str(type(idx))))
         if step_not_one:
-            return _BASIC_INDEXING_STEP_NOT_ONE
-        return _BASIC_INDEXING_STEP_EQUAL_ONE
+            return _NDARRAY_BASIC_INDEXING_STEP_NOT_ONE
+        return _NDARRAY_BASIC_INDEXING_STEP_EQUAL_ONE
     else:
-        return _NDARRAY_INDEXING_UNSUPPORTED
+        return _NDARRAY_UNSUPPORTED_INDEXING
 
 
 def _get_index_range(start, stop, length, step=1):
@@ -2071,6 +2123,16 @@ def _get_index_range(start, stop, length, step=1):
         raise IndexError('Slicing stop %d exceeds limit of %d' % (stop, length))
 
     return start, stop, step
+
+
+def _get_oshape_of_gather_nd(dshape, ishape):
+    """Given data and index shapes, get the output `NDArray` shape.
+    This basically implements the infer shape logic of op gather_nd."""
+    assert len(dshape) > 0 and len(ishape) > 0
+    oshape = list(ishape[1:])
+    if ishape[0] < len(dshape):
+        oshape.extend(dshape[ishape[0]:])
+    return tuple(oshape)
 
 
 def _get_broadcast_shape(shape1, shape2):

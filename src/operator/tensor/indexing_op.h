@@ -1208,10 +1208,10 @@ struct scatter_nd {
 
 template<typename xpu>
 void ScatterNDForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -1232,6 +1232,19 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
+}
+
+/*!
+ * This is for internal use only.
+ * DO NOT use call this function unless you have to.
+ */
+template<typename xpu>
+void _ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  ScatterNDForward<xpu>(attrs, ctx, inputs, {kWriteInplace}, outputs);
 }
 
 }  // namespace op
