@@ -19,6 +19,10 @@
 #ifndef TEST_CORE_OP_H_
 #define TEST_CORE_OP_H_
 
+#include <vector>
+#include <algorithm>
+#include <utility>
+#include <string>
 #include "./test_op.h"
 
 namespace mxnet {
@@ -50,9 +54,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param cb Callback Function to call with CPU-data NDArray
    */
   template <typename CallbackFunction>
-  static inline void AccessAsCPU(const NDArray &src, const RunContext &run_ctx, CallbackFunction cb) {
+  static inline void AccessAsCPU(const NDArray &src,
+                                 const RunContext &run_ctx,
+                                 CallbackFunction cb) {
 #if MXNET_USE_CUDA
-    if(src.ctx().dev_type == Context::kCPU) {
+    if (src.ctx().dev_type == Context::kCPU) {
       cb(src);
     } else {
       Context cpu_ctx, gpu_ctx = src.ctx();
@@ -82,7 +88,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     std::vector<const char *> keys, values;
     keys.reserve(count);
     values.reserve(count);
-    for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end(); i_iter != e_iter; ++i_iter) {
+    for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end();
+         i_iter != e_iter; ++i_iter) {
       keys.push_back(i_iter->first.c_str());
       values.push_back(i_iter->second.c_str());
     }
@@ -95,7 +102,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param dest Vector to store pointers to the NDArrays' data blobs
    * \return Reference to the supplied vector of TBlob results
    */
-  static inline std::vector<TBlob>& CollectBlobs(std::vector<NDArray>& src, std::vector<TBlob> *dest) {
+  static inline std::vector<TBlob>& CollectBlobs(std::vector<NDArray>& src,
+                                                 std::vector<TBlob> *dest) {
     dest->reserve(dest->size() + src.size());
     for (size_t i = 0, n = src.size(); i < n; ++i) {
       dest->push_back(src[i].data());
@@ -210,7 +218,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       }
     }
     new_args.push_back({ COREOP_FWD_OP_NAME_KEY, fwd_op_name});
-    if(!bwd_op_name.empty()) {
+    if (!bwd_op_name.empty()) {
       new_args.push_back({ COREOP_BWD_OP_NAME_KEY, bwd_op_name});
     }
     return new_args;
@@ -228,7 +236,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     for (const auto& a : args) {
       if (a.first == COREOP_FWD_OP_NAME_KEY) {
         *fwd_op_name_ptr = a.second;
-      } else if(a.first == COREOP_BWD_OP_NAME_KEY) {
+      } else if (a.first == COREOP_BWD_OP_NAME_KEY) {
         *bwd_op_name_ptr = a.second;
       } else {
         new_args.push_back(a);
@@ -280,7 +288,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       CHECK(!backward_for_op || bwd_op_name.empty())
         << "Backward op should not be supplied another backward operator";
 
-      if(verbose_ && backward_for_op) {
+      if (verbose_ && backward_for_op) {
         std::cout << "Backward op: " << op_name;
       }
 
@@ -298,7 +306,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       int inferred_num_outputs, num_visible_outputs;
 
-      imperative::SetNumOutputs(op_, attrs_, num_inputs, &inferred_num_outputs, &num_visible_outputs);
+      imperative::SetNumOutputs(op_, attrs_, num_inputs, &inferred_num_outputs,
+                                &num_visible_outputs);
 
       // Generic, all shapes the same. Probably this will need to be adjusted for more complex
       // operators such as dot
@@ -332,7 +341,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         outputs_p.push_back(&*outputs_.rbegin());
       }
 
-      if(!backward_for_op) {
+      if (!backward_for_op) {
         DispatchMode dispatch_mode = DispatchMode::kUndefined;
         imperative::SetShapeType(ctx_.run_ctx.ctx, attrs_, inputs_p, outputs_p, &dispatch_mode);
       } else {
@@ -356,7 +365,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       AttachResources(ctx_, attrs_, op_);
 
-      if(!backward_for_op) {
+      if (!backward_for_op) {
         // Set up backward
         std::vector<std::pair<std::shared_ptr<CoreOpExecutor>, std::string>> bwd;
         if (!bwd_op_name.empty()) {

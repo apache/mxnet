@@ -62,7 +62,8 @@ static constexpr int TIMING_DW = 28;
 template <typename DType, typename AccReal>
 class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccReal> {
  public:
-  BNOperatorExecutor(const bool isGPU, const TShape& inputShape, const bool hasWeightAndBias = false)
+  BNOperatorExecutor(const bool isGPU, const TShape& inputShape,
+                     const bool hasWeightAndBias = false)
     : test::op::LegacyOperatorExecutor<DType, AccReal>(isGPU, inputShape)
       , hasWeightAndBias_(hasWeightAndBias) {
   }
@@ -333,7 +334,6 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
   }
 
  public:
-
   template <typename ExecutorType>
   static inline bool compare(const ExecutorType& i1,
                              const ExecutorType& i2,
@@ -365,7 +365,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
 
   /*! \brief Check batch norm output */
   template<typename BNOperatorProp>
-  static void validateForward(BNOperatorProp& data) {
+  static void validateForward(const BNOperatorProp& data) {
     const TBlob& outputBlob = data.outputs()[mxnet::op::batchnorm::kData];
     switch (outputBlob.ndim()) {
       case 3:
@@ -465,7 +465,7 @@ static bool isUGS(const test::op::kwargs_t& kwargs) {
 #endif  // DISABLE_VALIDATION
 
 template<typename StreamType, typename OperatorExecutor>
-static StreamType& PRT(StreamType *os, OperatorExecutor& obj,
+static StreamType& PRT(StreamType *os, const OperatorExecutor& obj,
                        const typename OperatorExecutor::BlobVectorType bvt, const size_t idx) {
   *os << OperatorExecutor::bvt2String(bvt) << ": " << idx
       << ": ";

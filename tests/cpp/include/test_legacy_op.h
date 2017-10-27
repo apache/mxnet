@@ -38,6 +38,12 @@
 #ifndef TEST_LEGACY_OP_H_
 #define TEST_LEGACY_OP_H_
 
+#include <list>
+#include <string>
+#include <algorithm>
+#include <map>
+#include <vector>
+#include <list>
 #include "./test_op.h"
 #include "./test_op_runner.h"
 
@@ -374,18 +380,12 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     }
   }
 
-  std::vector<TBlob>& inputs() {
-    return c_.blob_input_vec_;
-  }
-  std::vector<TBlob>& outputs() {
-    return c_.blob_output_vec_;
-  }
-  std::vector<TBlob>& bwd_inputs() {
-    return c_.blob_out_grad_;
-  }
-  std::vector<TBlob>& bwd_outputs() {
-    return c_.blob_in_grad_;
-  }
+  std::vector<TBlob>& inputs() { return c_.blob_input_vec_; }
+  const std::vector<TBlob>& inputs() const { return c_.blob_input_vec_; }
+  std::vector<TBlob>& outputs() { return c_.blob_output_vec_; }
+  const std::vector<TBlob>& outputs() const { return c_.blob_output_vec_; }
+  std::vector<TBlob>& bwd_inputs() { return c_.blob_out_grad_; }
+  std::vector<TBlob>& bwd_outputs() { return c_.blob_in_grad_; }
 
   /*! \brief Input and output blobs */
   OpContext                 opContext_;
@@ -542,7 +542,8 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
 };
 
 template<typename OperatorProp, typename DType, typename AccReal>
-using LegacyOpRunner = mxnet::test::OperatorRunner<OperatorProp, LegacyOperatorExecutor<DType, AccReal>>;
+using LegacyOpRunner =
+  mxnet::test::OperatorRunner<OperatorProp, LegacyOperatorExecutor<DType, AccReal>>;
 
 }  // namespace op
 }  // namespace test

@@ -38,19 +38,16 @@ using kwargs_t = test::op::kwargs_t;
 
 static const kwargs_t basic_args = {};
 
-static const std::vector<std::pair<std::string, std::string>> test_unary_operators =
-  {
-    {"relu", "" },  // Code can figure out what the backward op is for some
-    {"sigmoid", "" },
-    { "sqrt", "" }
-  };
+static const std::vector<std::pair<std::string, std::string>> test_unary_operators = {
+  {"relu", "" },  // Code can figure out what the backward op is for some
+  {"sigmoid", "" },
+  { "sqrt", "" }
+};
 
-
-static const std::vector<std::pair<std::string, std::string>> test_binary_operators =
-  {
-    {"elemwise_add", "_backward_add"},
-    {"elemwise_mul", "_backward_mul"}
-  };
+static const std::vector<std::pair<std::string, std::string>> test_binary_operators = {
+  {"elemwise_add", "_backward_add"},
+  {"elemwise_mul", "_backward_mul"}
+};
 
 /*!
  * \brief Generic bidirectional sanity test for simple unary op

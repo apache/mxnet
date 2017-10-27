@@ -43,7 +43,6 @@ template<typename OperatorProp, typename OperatorExecutor>
 class OperatorRunner {
  public:
   typedef typename OperatorExecutor::DataType    DType;
-  //typedef typename OperatorExecutor::AccRealType AccReal;
 
   /*!
    * \brief Test operator forward pass

@@ -127,9 +127,6 @@ class OperatorDataInitializer {
 //template <typename DType, typename AccReal>
 class OperatorExecutorTiming {
  public:
-  //typedef DType   DataType;
-  //typedef AccReal AccRealType;
-
   inline test::perf::TimingInstrument& GetTiming() { return timing_; }
 
  private:
