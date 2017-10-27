@@ -104,7 +104,7 @@ class OperatorRunner {
     const size_t count = 1) {
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
       RunGenericOperatorForward(isGPU, inputShapes, kwargs, count);
-    if(info.executor_->HasBackward()) {
+    if (info.executor_->HasBackward()) {
       return RunGenericOperatorBackward(&info, count);
     }
     return info;
@@ -211,7 +211,7 @@ class OperatorRunner {
           CHECK(false) << "Unsupported dimension count: " << (D + 1);
       }
       if (info.executor_) {
-        if(info.executor_->HasBackward()) {
+        if (info.executor_->HasBackward()) {
           RunGenericOperatorBackward(&info, count);
         }
         timing += info.executor_->GetTiming();

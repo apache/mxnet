@@ -51,7 +51,9 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
 TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   kwargs_t kwargs = basic_fullyconn_args;
   test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -81,7 +83,9 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   test::OperatorRunner<mxnet::op::FullyConnectedProp,
     test::op::LegacyOperatorExecutor<float, float>>
     runner;
-  runner.RunBidirectional(true, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  runner.RunBidirectional(true,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {

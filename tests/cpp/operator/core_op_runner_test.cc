@@ -180,7 +180,8 @@ TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
   const kwargs_t kwargs = test::op::CoreOpExecutor<DType>::ArgsWithOpName(basic_args, op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, { TShape({10, 10, 10, 10}) },
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
@@ -215,7 +216,8 @@ TEST(CORE_OP_RUNNER, TimingCPUBinary) {
     basic_args, op_name, backward_op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, { TShape({10, 10, 10, 10}) },
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
@@ -249,7 +251,8 @@ TEST(CORE_OP_RUNNER, TimingGPUSimpleUnary) {
   const kwargs_t kwargs = test::op::CoreOpExecutor<DType>::ArgsWithOpName(basic_args, op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10},
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
@@ -282,7 +285,8 @@ TEST(CORE_OP_RUNNER, TimingGPUBinary) {
     basic_args, op_name, backward_op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(true, {10, 10, 10, 10},
+  runner.RunBidirectional(true,
+                          { TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 

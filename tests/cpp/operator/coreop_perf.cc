@@ -48,14 +48,13 @@ static void RunCoreOpBidirectional(const bool isGPU,
   PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
   op.Execute();
   PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
-  if(op.HasBackward()) {
+  if (op.HasBackward()) {
     PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_inputs());
     PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
     op.ExecuteBackward();
     PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
   }
 }
-
 
 template<typename DType = float>
 static void RunCoreOpTimingTest(const bool isGPU,

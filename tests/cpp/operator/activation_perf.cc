@@ -53,7 +53,9 @@ TEST(ACTIVATION_PERF, TimingCPU) {
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"act_type", "tanh"});
   test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -84,7 +86,9 @@ TEST(ACTIVATION_PERF, TimingGPU) {
   kwargs.push_back({"act_type", "tanh"});
   test::OperatorRunner<mxnet::op::ActivationProp,
     test::op::LegacyOperatorExecutor<float, float>> runner;
-  runner.RunBidirectional(true, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  runner.RunBidirectional(true,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes = {
       {1,  1, 28,  28},
       {1,  3, 28,  28},

@@ -332,6 +332,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       outputs_p.reserve(num_visible_outputs);
 
       for (int i = 0; i < num_inputs; ++i) {
+        CHECK_LT(i, static_cast<int>(shapes.size()));
         inputs_.push_back(i < inputs.size() ? inputs[i] : CreateRandArray(shapes[i],
                                                                           ctx_.run_ctx.ctx));
         inputs_p.push_back(&*inputs_.rbegin());
@@ -356,8 +357,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         for (int i = 0; i < num_visible_outputs; ++i) {
           CHECK_LT(static_cast<size_t>(i), shapes.size());
           // backward outputs should look like forward inputs
-          // TODO(cjolivier01): This check fails for dot product...  Need better inference of backward shapes
-          //CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
+          // TODO(cjolivier01): This check fails for dot product...
+          // Need better inference of backward shapes
+          // CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
         }
       }
 
@@ -372,12 +374,12 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       AttachResources(&ctx_, attrs_, op_);
 
-      if(!backward_for_op) {
+      if (!backward_for_op) {
         bool no_backward = false;
         // Set up backward
         std::vector<std::pair<std::shared_ptr<CoreOpExecutor>, std::string>> bwd;
         if (!bwd_op_name.empty()) {
-          if(bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
+          if (bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
             // Backward op was specified
             std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
               ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(this->outputs()));
@@ -389,7 +391,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           // Try to figure out backward op
           bwd = GetBackward();
         }
-        if(!no_backward) {
+        if (!no_backward) {
           CHECK_GE(bwd.size(), 1U)
             << "Can't automatically determine backward op name. Please specify";
           for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
