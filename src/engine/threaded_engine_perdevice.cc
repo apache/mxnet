@@ -50,6 +50,37 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   static auto constexpr kWorkerQueue = kFIFO;
 
   ThreadedEnginePerDevice() noexcept(false) {
+    this->Start();
+#ifndef _WIN32
+    pthread_atfork(
+      []() {
+        Engine::Get()->WaitForAll();
+        Engine::Get()->Stop();
+      },
+      []() {
+        Engine::Get()->Start();
+      },
+      []() {
+        Engine::Get()->Start();
+      });
+#endif
+  }
+  ~ThreadedEnginePerDevice() noexcept(false) {
+    gpu_normal_workers_.SignalForKill();
+    gpu_copy_workers_.SignalForKill();
+    cpu_normal_workers_.SignalForKill();
+    this->Stop();
+  }
+
+  void Stop() override {
+    SignalQueuesForKill();
+    gpu_normal_workers_.Clear();
+    gpu_copy_workers_.Clear();
+    cpu_normal_workers_.Clear();
+    cpu_priority_worker_.reset(nullptr);
+  }
+
+  void Start() override {
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     // create CPU task
@@ -60,13 +91,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           this->CPUWorker(Context(), cpu_priority_worker_.get());
         }));
     // GPU tasks will be created lazily
-  }
-  ~ThreadedEnginePerDevice() noexcept(false) {
-    SignalQueuesForKill();
-    gpu_normal_workers_.Clear();
-    gpu_copy_workers_.Clear();
-    cpu_normal_workers_.Clear();
-    cpu_priority_worker_.reset(nullptr);
   }
 
  protected:

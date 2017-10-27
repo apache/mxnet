@@ -151,6 +151,14 @@ class NDArray {
     Mkl_mem_ = std::make_shared<MKLMemHolder>();
 #endif
   }
+  /*! \brief create ndarray from shared memory */
+  NDArray(int shared_pid, int shared_id, const TShape& shape, int dtype)
+      : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
+        dtype_(dtype), storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+#if MKL_EXPERIMENTAL == 1
+    Mkl_mem_ = std::make_shared<MKLMemHolder>();
+#endif
+  }
 
   /*!
    * \brief constructing a static NDArray of non-default storage that shares data with TBlob
@@ -307,6 +315,13 @@ class NDArray {
       LOG(FATAL) << "Unknown storage type";
     }
     return true;
+  }
+  /*! \brief get storage handle */
+  inline Storage::Handle storage_handle() const {
+    CHECK(!is_none());
+    CHECK_EQ(storage_type(), kDefaultStorage);
+    CheckAndAlloc();
+    return ptr_->shandle;
   }
   /*!
    * \brief Block until all the pending write operations with respect
@@ -663,6 +678,18 @@ class NDArray {
       shandle.dptr = data.dptr_;
       shandle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
       storage_shape = data.shape_;
+    }
+
+    Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
+        : static_data(false), delay_alloc(false) {
+      var = Engine::Get()->NewVariable();
+      ctx = Context::CPUShared(0);
+      shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);;
+      shandle.ctx = ctx;
+      shandle.shared_pid = shared_pid;
+      shandle.shared_id = shared_id;
+      Storage::Get()->Alloc(&shandle);
+      storage_shape = shape;
     }
     // Constructor for a non-default storage chunk
     Chunk(NDArrayStorageType storage_type_, const TShape &storage_shape_, Context ctx_,

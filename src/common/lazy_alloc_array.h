@@ -139,7 +139,6 @@ inline std::shared_ptr<TElem> LazyAllocArray<TElem>::Get(int index, FCreate crea
 template<typename TElem>
 inline void LazyAllocArray<TElem>::Clear() {
   std::unique_lock<std::mutex> lock(create_mutex_);
-  exit_now_.store(true);
   // Currently, head_ and more_ never get smaller, so it's safe to
   // iterate them outside of the lock.  The loops should catch
   // any growth which might happen when create_mutex_ is unlocked
@@ -155,6 +154,7 @@ inline void LazyAllocArray<TElem>::Clear() {
     unique_unlock<std::mutex> unlocker(&lock);
     p = std::shared_ptr<TElem>(nullptr);
   }
+  more_.clear();
 }
 
 template<typename TElem>

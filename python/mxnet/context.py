@@ -62,8 +62,8 @@ class Context(object):
     """
     # static class variable
     default_ctx = None
-    devtype2str = {1: 'cpu', 2: 'gpu', 3: 'cpu_pinned'}
-    devstr2type = {'cpu': 1, 'gpu': 2, 'cpu_pinned': 3}
+    devtype2str = {1: 'cpu', 2: 'gpu', 3: 'cpu_pinned', 5: 'cpu_shared'}
+    devstr2type = {'cpu': 1, 'gpu': 2, 'cpu_pinned': 3, 'cpu_shared': 5}
     def __init__(self, device_type, device_id=0):
         if isinstance(device_type, Context):
             self.device_typeid = device_type.device_typeid

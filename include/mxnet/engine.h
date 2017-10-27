@@ -113,6 +113,18 @@ class MXNET_API Engine {
    */
   virtual void NotifyShutdown() = 0;
   /*!
+   *\brief Stop all workers in the engine
+   */
+  virtual void Stop() {
+    LOG(FATAL) << "Engine cannot be stopped";
+  }
+  /*!
+   * \brief Restart all workers in the engine
+   */
+  virtual void Start() {
+    LOG(FATAL) << "Engine cannot be restarted";
+  }
+  /*!
    * \brief Allocate a new variable, the variable can then
    *        be used to schedule the operation concurrently via dependency
    *        patterns.

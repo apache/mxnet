@@ -572,8 +572,8 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
     }
     CHECK_EQ(source[i].shape() , out->shape())
         << "operands shape mismatch";
-    if (out->ctx().dev_mask() == cpu::kDevMask) {
-      CHECK_EQ(source[i].ctx().dev_mask(),  cpu::kDevMask)
+    if (out->ctx().dev_mask() == Context::kCPU) {
+      CHECK_EQ(source[i].ctx().dev_mask(), Context::kCPU)
           << "operands context mismatch";
     } else {
       CHECK(source[i].ctx() == out->ctx())
@@ -1309,7 +1309,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     CHECK_EQ(ret->shape().ndim(), 4U);
     buff = ret->Slice(index, index+1);
   }
-  CHECK_EQ(buff.ctx().dev_mask(), cpu::kDevMask);
+  CHECK_EQ(buff.ctx().dev_mask(), Context::kCPU);
   CHECK_EQ(n_channels, buff.shape()[1]);
   CHECK_EQ(y1-y0, buff.shape()[2]);
   CHECK_EQ(x1-x0, buff.shape()[3]);
@@ -1329,7 +1329,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     })
   } else {
     CHECK_EQ(mean.dtype(), buff.dtype());
-    CHECK_EQ(mean.ctx().dev_mask(), cpu::kDevMask);
+    CHECK_EQ(mean.ctx().dev_mask(), Context::kCPU);
     CHECK_EQ(mean.shape()[0], buff.shape()[1]);
     CHECK_EQ(mean.shape()[1], buff.shape()[2]);
     CHECK_EQ(mean.shape()[2], buff.shape()[3]);
