@@ -87,8 +87,8 @@ inline bool Create2BitArrayShape(const nnvm::NodeAttrs& attrs,
   CHECK(!shape_is_none(in_attrs->at(0)));
   // output
   int shape = in_attrs->at(0).Size() % 16 == 0 ?
-                    in_attrs->at(0).Size() / 16 + 3:
-                    in_attrs->at(0).Size() / 16 + 4;
+                    in_attrs->at(0).Size() / 16 :
+                    in_attrs->at(0).Size() / 16 + 1;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape{shape});
   return true;
 }
@@ -205,7 +205,7 @@ void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
 }
 
 template<typename xpu>
-void Quantize2BitImpl2(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+void Quantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                       const float neg_threshold, const float pos_threshold) {
   // Init threshold and original size
 //  mxnet_op::Kernel<init_threshold_2bit, xpu>::Launch(s, push_pskv_lens.size(),
@@ -248,7 +248,7 @@ void Quantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Quantize2BitImpl2<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+  Quantize2BitImplMShadow<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
 }
 
 template<typename xpu>
@@ -306,8 +306,8 @@ inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->at(0).Size(),
            in_attrs->at(1).Size());
   int shape = in_attrs->at(0).Size() % 16 == 0 ?
-                    in_attrs->at(0).Size() / 16 + 3:
-                    in_attrs->at(0).Size() / 16 + 4;
+                    in_attrs->at(0).Size() / 16 :
+                    in_attrs->at(0).Size() / 16 + 1;
   CHECK_EQ(in_attrs->at(2).Size(), shape)
     << "The size of output array is not equal to "
     << "the size of compressed array";
@@ -467,7 +467,34 @@ void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  Dequantize2BitImpl<xpu>(s, inputs, 0.5, 0.5);
+//  Dequantize2BitImpl<xpu>(s, inputs, 0.5, 0.5);
+int original_size = inputs[1].Size();
+    float* out = inputs[1].dptr<float>();
+    float* in = inputs[0].dptr<float>();
+    for (int compr_block_id=0; compr_block_id<original_size/16; compr_block_id++) {
+      int out_start_id = compr_block_id<<4;
+      float* outval = out + out_start_id;
+      char* ch_ptr = reinterpret_cast<char*>(in + compr_block_id);
+      const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+      const int negbits[] = {0x80, 0x20, 0x08, 0x02};
+      for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
+        ch_ptr += !(i & 3);
+        int col = i & 3;
+        uint8_t mask = posbits[col];
+        uint8_t negmask = negbits[col];
+        uint8_t masked = *ch_ptr & mask;
+        if ( masked == mask ) {
+          *outval = 0.5;
+        } // use posbits for mask as posbits are 11
+          // compare with negbits
+        else if ( masked == negmask ) {
+          *outval = -0.5;
+        } else {
+          *outval = 0;
+        }
+      }
+    }
+
 }
 
 template<typename xpu>

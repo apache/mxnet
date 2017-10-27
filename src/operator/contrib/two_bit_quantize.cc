@@ -189,7 +189,7 @@ invoking dequantize_2bit(out, array), the 'array' argument will become
     .set_attr<nnvm::FInferShape>("FInferShape", Dequantize2BitShape)
     .set_attr<nnvm::FInferType>("FInferType", Dequantize2BitType)
     .set_attr<FCompute>("FCompute<cpu>", Dequantize2BitComputeMShadow<cpu>)
-    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_dequantize_2bit"})
+    .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_dequantize_mshadow_2bit"})
     .set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                    [](const nnvm::NodeAttrs& attrs) {
                                      return std::vector<uint32_t>{1};
