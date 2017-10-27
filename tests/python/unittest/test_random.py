@@ -119,7 +119,7 @@ def check_with_device(device, dtype):
         ret1 = ndop(**params).asnumpy()
         mx.random.seed(128)
         ret2 = ndop(**params).asnumpy()
-        assert device.device_type == 'gpu' or same(ret1, ret2), \
+        assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
 
         for check_name, check_func, tol in symbdic['checks']:
@@ -132,7 +132,7 @@ def check_with_device(device, dtype):
         ret1 = ndop(**params).asnumpy()
         mx.random.seed(128)
         ret2 = ndop(**params).asnumpy()
-        assert device.device_type == 'gpu' or same(ret1, ret2), \
+        assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
         for i in range(2):
             for j in range(2):
@@ -158,7 +158,7 @@ def check_with_device(device, dtype):
         mx.random.seed(128)
         yexec.forward()
         un2 = (yexec.outputs[0] - x).copyto(device)
-        assert device.device_type == 'gpu' or same(un1.asnumpy(), un2.asnumpy()), \
+        assert same(un1.asnumpy(), un2.asnumpy()), \
                 "symbolic test: `%s` should give the same result with the same seed" % name
 
         ret1 = un1.asnumpy()
