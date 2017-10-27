@@ -22,7 +22,6 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
            'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
            'Lambda', 'HybridLambda']
 import warnings
-import inspect
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
@@ -483,8 +482,7 @@ class Lambda(Block):
 
         2) a function that conforms to "def function(*args)". For example::
 
-            def leakyrelu01(x):
-                return nd.LeakyReLU(x, slope=0.1)
+            block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
 
     Inputs:
         - ** *args **: one or more input data. Their shapes depend on the function.
@@ -498,7 +496,7 @@ class Lambda(Block):
             assert hasattr(nd, function), \
                    "Function name %s is not found in ndarray." % function
             self._func_impl = getattr(nd, function)
-        elif inspect.isfunction(function):
+        elif callable(function):
             self._func_impl = function
         else:
             raise ValueError(
@@ -527,8 +525,7 @@ class HybridLambda(HybridBlock):
 
         2) a function that conforms to "def function(F, data, *args)". For example::
 
-            def leakyrelu01(F, x):
-                return F.LeakyReLU(x, slope=0.1)
+            block = HybridLambda(lambda F, x: F.LeakyReLU(x, slope=0.1))
 
     Inputs:
         - ** *args **: one or more input data. First argument must be symbol or ndarray.
@@ -545,7 +542,7 @@ class HybridLambda(HybridBlock):
             assert hasattr(nd, function) and hasattr(sym, function), \
                    "Function name %s is not found in symbol/ndarray." % function
             self._func_name = function
-        elif inspect.isfunction(function):
+        elif callable(function):
             self._func_impl = function
         else:
             raise ValueError(
