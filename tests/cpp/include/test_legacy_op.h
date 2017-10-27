@@ -235,6 +235,12 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     }
   }
 
+  /*!
+   * \brief Test if operator has a backward pass
+   * \return true if this operator has a backward pass
+   */
+  MSHADOW_CINLINE bool HasBackward() const { return true; }
+
   /*! \brief Getter functions for the operator */
   inline Operator *op() { return op_.get(); }
   inline const Operator *op() const { return op_.get(); }
