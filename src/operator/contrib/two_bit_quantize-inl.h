@@ -504,7 +504,7 @@ void Dequantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  Dequantize2BitImpl<xpu>(s, inputs, 0.5, 0.5);
+  Dequantize2BitImplMShadow<xpu>(s, inputs, 0.5, 0.5);
 }
 
 inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,
