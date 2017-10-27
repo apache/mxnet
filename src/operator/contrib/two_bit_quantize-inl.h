@@ -33,6 +33,7 @@
 #include <cmath>
 #include "ps/ps.h"
 
+#include <mxnet/c_api.h>
 namespace mxnet {
 namespace op {
 
@@ -207,7 +208,17 @@ void Quantize2BitImplMShadowPskv(mshadow::Stream<xpu>* s, const std::vector<TBlo
 
   std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
   auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
-  std::cout << "quant "<<dur<<std::endl;
+  std::cout << "quant for "<<inputs[0].Size()<<" took "<<dur<<std::endl;
+
+  if (dur>1000) {
+  NDArray* n = new NDArray(inputs[0], 0);
+  {
+    std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create("quant_data", "w"));
+    mxnet::NDArray::Save(fo.get(), {*n},{});
+  }
+
+  }
+
 
 }
 
@@ -443,7 +454,7 @@ std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution
                                                  pos_threshold);  // positive threshold
 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
-std::cout<<"deq "<<dur<<std::endl;
+std::cout<<"deq "<<original_size<< " took "<<dur<<std::endl;
 }
   template<typename xpu>
   void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
