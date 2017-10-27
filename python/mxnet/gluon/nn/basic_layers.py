@@ -536,29 +536,20 @@ class HybridLambda(HybridBlock):
     """
     def __init__(self, function):
         super(HybridLambda, self).__init__()
-        self._func_name = None
-        self._func_impl = None
         if isinstance(function, str):
             assert hasattr(nd, function) and hasattr(sym, function), \
                    "Function name %s is not found in symbol/ndarray." % function
-            self._func_name = function
+            self._func = lambda F, *args: getattr(F, function)(*args)
         elif callable(function):
-            self._func_impl = function
+            self._func = function
         else:
             raise ValueError(
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    def _func(self, F):
-        if self._func_impl:
-            return lambda *args: self._func_impl(F, *args)
-        else:
-            return getattr(F, self._func_name)
-
     def hybrid_forward(self, F, x, *args):
-        return self._func(F)(x, *args)
+        return self._func(F, x, *args)
 
     def __repr__(self):
         return '{name}({function})'.format(name=self.__class__.__name__,
-                                           function=self._func_impl.__name__ if self._func_impl
-                                           else self._func_name)
+                                           function=self._func_impl.__name__)
