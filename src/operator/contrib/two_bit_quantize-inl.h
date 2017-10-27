@@ -23,7 +23,7 @@
   */
 #ifndef MXNET_OPERATOR_CONTRIB_TWO_BIT_QUANTIZE_INL_H_
 #define MXNET_OPERATOR_CONTRIB_TWO_BIT_QUANTIZE_INL_H_
-
+#include <chrono>
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
@@ -248,7 +248,11 @@ void Quantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Quantize2BitImplMShadow<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();  
+Quantize2BitImplMShadow<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
+std::cout << "quant "<<dur<<std::endl;
 }
 
 template<typename xpu>
@@ -420,6 +424,9 @@ template<typename xpu>
 void Dequantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                         const float neg_threshold, const float pos_threshold) {
   // Can only decompress the float32 data
+
+std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
   int original_size = inputs[1].Size();
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, original_size/16,  // original size
                                                  original_size,
@@ -427,7 +434,9 @@ void Dequantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>
                                                  inputs[0].dptr<float>(),      // compressed array
                                                  neg_threshold,     // negative threshold
                                                  pos_threshold);  // positive threshold
-
+std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
+std::cout<<"deq "<<dur<<std::endl;
 }
   template<typename xpu>
   void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
