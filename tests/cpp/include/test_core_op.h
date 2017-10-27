@@ -356,6 +356,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         for (int i = 0; i < num_visible_outputs; ++i) {
           CHECK_LT(static_cast<size_t>(i), shapes.size());
           // backward outputs should look like forward inputs
+          // TODO(cjolivier01): This check fails for dot product...  Need better inference of backward shapes
           //CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
         }
       }
@@ -379,7 +380,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           if(bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
             // Backward op was specified
             std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
-              ctx().run_ctx.ctx.dev_type == Context::kGPU, this->outputs()[0].shape());
+              ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(this->outputs()));
             bwd.push_back({pOp, bwd_op_name});
           } else {
             no_backward = true;

@@ -57,7 +57,7 @@ inline std::vector<TT> AsVect(const TT& t) {
 /*!
  * \brief Generic bidirectional sanity test for simple unary op
  */
-TEST(CORE_OP_RUNNER, ExecuteBidirectionalSimpleUnary) {
+TEST(CORE_OP_RUNNER, ExecuteBidirectionalSimpleUnaryList) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_args;
 
@@ -85,7 +85,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalSimpleUnary) {
 /*!
  * \brief Generic bidirectional sanity test for binary op
  */
-TEST(CORE_OP_RUNNER, ExecuteBidirectional) {
+TEST(CORE_OP_RUNNER, ExecuteBidirectionalList) {
   for (const std::pair<std::string, std::string>& i : test_binary_operators) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
@@ -108,6 +108,28 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectional) {
     op.ExecuteBackward();
     PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
   }
+}
+
+TEST(CORE_OP_RUNNER, ExecuteBidirectionalDotProduct) {
+  const char *op_name = "dot";
+  const char *backward_op_name = "_backward_dot";
+
+  kwargs_t kwargs = basic_args;
+
+  test::op::CoreOpExecutor<float> op(false, { TShape({ 2, 3 }), TShape({ 3, 2 }) });
+
+  op.set_verbose(false);
+  op.Init(op.ArgsWithOpName(kwargs, op_name, backward_op_name));
+
+  PRINT_NDARRAYS(op.ctx().run_ctx, op.inputs());
+  PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
+  op.Execute();
+  PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
+
+  PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_inputs());
+  PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
+  op.ExecuteBackward();
+  PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
 }
 
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerSimpleUnary) {
@@ -134,7 +156,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunner) {
   }
 }
 
-TEST(CORE_OP_RUNNER, ExecuteDotproductBidirectionalRunner) {
+TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerDotProduct) {
   typedef float DType;
   const char *op_name = "dot";
   const char *backward_op_name = "_backward_dot";
