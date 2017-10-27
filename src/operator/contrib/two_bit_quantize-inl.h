@@ -41,7 +41,6 @@ template <typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
 }
 
-
 struct init_mem_2bit {
   // Initialize output array
   MSHADOW_XINLINE static void Map(int i, float* out) {
@@ -192,6 +191,9 @@ void Quantize2BitImplMShadowPskv(mshadow::Stream<xpu>* s, const std::vector<TBlo
 //  }
 
 // Finally, compress the data and calculate new residual across all
+
+  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
   mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array
                           inputs[0].Size(),
 //                          meta_pos, cumulative_part_indices,
@@ -202,6 +204,11 @@ void Quantize2BitImplMShadowPskv(mshadow::Stream<xpu>* s, const std::vector<TBlo
                           inputs[1].dptr<float>(),     // residual array
                           neg_threshold,               // negative threshold
                           pos_threshold);              // positive threshold
+
+  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+  auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
+  std::cout << "quant "<<dur<<std::endl;
+
 }
 
 template<typename xpu>
