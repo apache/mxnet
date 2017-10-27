@@ -39,7 +39,7 @@ namespace op {
  */
 template<typename DType>
 class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
-                       , public test::op::OperatorExecutorTiming {
+  , public test::op::OperatorExecutorTiming {
   /*! \brief Performance timing categories */
   enum TimingId {
     Forward,
@@ -102,7 +102,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param dest Vector to store pointers to the NDArrays' data blobs
    * \return Reference to the supplied vector of TBlob results
    */
-  static inline std::vector<TBlob>& CollectBlobs(std::vector<NDArray>& src,
+  static inline std::vector<TBlob>& CollectBlobs(const std::vector<NDArray>& src,
                                                  std::vector<TBlob> *dest) {
     dest->reserve(dest->size() + src.size());
     for (size_t i = 0, n = src.size(); i < n; ++i) {
@@ -170,7 +170,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           std::cout << node_entry.node->op()->name << std::endl;
         }
         std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
-          ctx().run_ctx.ctx.dev_type == Context::kGPU, outputs()[0].shape());
+          ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(outputs()));
         res.push_back({ pOp, node_entry.node->op()->name });
       }
     }
@@ -178,23 +178,23 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
   /*!
-   * \brief Attach any temp or tandom resources required to perform the op's compute operation
+   * \brief Attach any temp or random resources required to perform the op's compute operation
    * \param ctx Operator context object
    * \param attrs NodeAttrs structure (node attributes)
    * \param op Pointer to nnvm Operator object
    */
-  void AttachResources(OpContext &ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
+  void AttachResources(OpContext *ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
     static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
     if (fresource.count(op) != 0) {
-      std::vector<Resource>& requested = ctx.requested;
+      std::vector<Resource>& requested = ctx->requested;
       auto reqs = fresource[op](attrs);
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {
-          Resource r = ResourceManager::Get()->Request(ctx.run_ctx.ctx, req);
+          Resource r = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
           requested.push_back(r);
         } else if (req.type == ResourceRequest::kRandom) {
-          requested.push_back(ResourceManager::Get()->Request(ctx.run_ctx.ctx, req));
+          requested.push_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
         } else {
           LOG(FATAL) << "resource type not yet supported";
         }
@@ -247,9 +247,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
   /*!
    * \brief Constructor
+   * \param isGPU Is this going to be on the GPU?
+   * \param shapes Array of input shapes
    */
-  CoreOpExecutor(const bool isGPU, const TShape& shape)
-    : input_shape_(shape)
+  CoreOpExecutor(const bool isGPU, const std::vector<TShape>& shapes)
+    : input_shapes_(shapes)
       , op_(nullptr)  {
     ctx_.is_train = true;
     ctx_.run_ctx.ctx.dev_id = 0;
@@ -311,9 +313,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       // Generic, all shapes the same. Probably this will need to be adjusted for more complex
       // operators such as dot
-      std::vector<TShape> shapes(static_cast<size_t>(std::max(num_visible_outputs, num_inputs)),
-                                 input_shape_);
-
+      std::vector<TShape> shapes;
+      for (size_t i = 0, n = std::max(num_visible_outputs, num_inputs); i < n; ++i) {
+        shapes.push_back(i < input_shapes_.size() ? input_shapes_[i]
+                                                  : input_shapes_[input_shapes_.size() - 1]);
+      }
       std::vector<NDArray *> inputs_p, outputs_p;
 
       if (!outputs.empty()) {
@@ -363,7 +367,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       function_ = common::GetFCompute<FCompute>(op_, "FCompute", ctx_.run_ctx.ctx);
       functionex_ = common::GetFCompute<FComputeEx>(op_, "FComputeEx", ctx_.run_ctx.ctx);
 
-      AttachResources(ctx_, attrs_, op_);
+      AttachResources(&ctx_, attrs_, op_);
 
       if (!backward_for_op) {
         // Set up backward
@@ -371,8 +375,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         if (!bwd_op_name.empty()) {
           // Backward op was specified
           std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
-            ctx().run_ctx.ctx.dev_type == Context::kGPU, this->outputs()[0].shape());
-          bwd.push_back({pOp, bwd_op_name});
+            ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(this->outputs()));
+          bwd.push_back({ pOp, bwd_op_name });
         } else {
           // Try to figure out backward op
           bwd = GetBackward();
@@ -520,17 +524,17 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   OpContext ctx_;
 
-  #if MXNET_USE_CUDA
+#if MXNET_USE_CUDA
   /*! \brief
    * Scoped GPU stream
    */
   std::unique_ptr<GPUStreamScope> allocGPUStream_;
-  #endif
+#endif
 
   /*!
    * \brief Input data shape
    */
-  TShape input_shape_;
+  std::vector<TShape> input_shapes_;
   /*
    * \brief Pointer to the operator object
    */

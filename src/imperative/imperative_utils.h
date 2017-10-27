@@ -23,6 +23,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
 #include "../c_api/c_api_common.h"

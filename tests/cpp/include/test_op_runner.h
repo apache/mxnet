@@ -56,7 +56,7 @@ class OperatorRunner {
   test::op::OpInfo<OperatorProp, OperatorExecutor>
   RunGenericOperatorForward(
     bool isGPU,
-    const TShape &inputShape,
+    const std::vector<TShape>& inputShapes,
     const std::vector<std::pair<std::string, std::string> > &kwargs,
     const size_t count = 1) {
 #if MXNET_USE_CUDA
@@ -67,7 +67,7 @@ class OperatorRunner {
     isGPU = false;
 #endif
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
-      test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShape);
+      test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShapes);
     info.executor_->initForward(*info.prop_, &info.in_type_);
     info.executor_->forward(count);
     return info;
@@ -98,11 +98,11 @@ class OperatorRunner {
    */
   test::op::OpInfo<OperatorProp, OperatorExecutor> RunBidirectional(
     bool isGPU,
-    const TShape &inputShape,
+    const std::vector<TShape>& inputShapes,
     const std::vector<std::pair<std::string, std::string> > &kwargs,
     const size_t count = 1) {
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
-      RunGenericOperatorForward(isGPU, inputShape, kwargs, count);
+      RunGenericOperatorForward(isGPU, inputShapes, kwargs, count);
     return RunGenericOperatorBackward(&info, count);
   }
 
@@ -124,7 +124,7 @@ class OperatorRunner {
                   const test::op::kwargs_t& kwargs,
                   int dim = 0,
                   size_t count = 1,
-                  TShape timing_shape = TShape()) {
+                  const std::vector<TShape>& timing_shapes = {}) {
     std::cout << std::endl << std::flush;
 
 #ifdef NDEBUG
@@ -141,8 +141,9 @@ class OperatorRunner {
 
     std::stringstream ss;
     ss << "Timing: " << COUNT << " iterations of " << count << " calls";
-    if (timing_shape.ndim()) {
-      ss << ", shape = " << timing_shape << std::endl << std::flush;
+    if (timing_shapes[0].ndim()) {
+      // TODO(cjolivier01): Print all shapes (if they differ)
+      ss << ", shape = " << timing_shapes[0] << std::endl << std::flush;
     }
     std::cout << ss.str();
 
@@ -153,7 +154,7 @@ class OperatorRunner {
       index_t height = 1;
       index_t width = 1;
 
-      if (!timing_shape.ndim()) {
+      if (timing_shapes.empty()) {
         do {
           batchSize = stochastic ? test::rangedRand(1U, TES_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
           channels = stochastic ? test::rangedRand(1U, TEST_CHANNELS * 2U) : TIMING_CHANNELS;
@@ -162,7 +163,7 @@ class OperatorRunner {
           width = stochastic ? test::rangedRand(1U, TEST_DW * 2U) : TIMING_DW;
         } while (stochastic && (height * width) == 1U);
       } else {
-        dim = timing_shape.ndim() - 1;
+        dim = timing_shapes[0].ndim() - 1;
       }
 
       const size_t D = dim ? dim - 1U : test::rangedRand(0U, 2U);
@@ -171,31 +172,34 @@ class OperatorRunner {
       switch (D) {
         case 0:
           info = RunGenericOperatorForward(isGPU,
-                                           timing_shape.ndim() ? timing_shape
-                                                               : TShape({batchSize,
-                                                                         channels,
-                                                                         width}),
+                                           !timing_shapes.empty()
+                                           ? timing_shapes
+                                           : std::vector<TShape>({TShape({batchSize,
+                                                                          channels,
+                                                                          width})}),
                                            kwargs,
                                            count);
           break;
         case 1:
           info = RunGenericOperatorForward(isGPU,
-                                           timing_shape.ndim()? timing_shape
-                                                              : TShape({batchSize,
-                                                                        channels,
-                                                                        height,
-                                                                        width}),
+                                           !timing_shapes.empty()
+                                           ? timing_shapes
+                                           : std::vector<TShape>({ TShape({batchSize,
+                                                                           channels,
+                                                                           height,
+                                                                           width})}),
                                            kwargs,
                                            count);
           break;
         case 2:
           info = RunGenericOperatorForward(isGPU,
-                                           timing_shape.ndim() ? timing_shape
-                                                               : TShape({batchSize,
-                                                                         channels,
-                                                                         depth,
-                                                                         height,
-                                                                         width}),
+                                           !timing_shapes.empty()
+                                           ? timing_shapes
+                                           : std::vector<TShape>({ TShape({batchSize,
+                                                                           channels,
+                                                                           depth,
+                                                                           height,
+                                                                           width})}),
                                            kwargs,
                                            count);
           break;

@@ -124,7 +124,6 @@ class OperatorDataInitializer {
   std::unique_ptr<std::mt19937> generator_;
 };
 
-//template <typename DType, typename AccReal>
 class OperatorExecutorTiming {
  public:
   inline test::perf::TimingInstrument& GetTiming() { return timing_; }
@@ -266,6 +265,15 @@ static test::op::OpInfo<OperatorProp, OperatorExecutor> createOpAndInfoF(const k
   info.prop_->Init(kwargs);
   info.executor_->initForward(*info.prop_, &info.in_type_);
   return info;
+}
+
+inline std::vector<TShape> ShapesOf(const std::vector<NDArray>& arrays) {
+  std::vector<TShape> res;
+  res.reserve(arrays.size());
+  for (const NDArray& ar : arrays) {
+    res.push_back(ar.shape());
+  }
+  return std::move(res);
 }
 
 }  // namespace op

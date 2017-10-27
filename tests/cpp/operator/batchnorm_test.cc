@@ -35,7 +35,7 @@ using namespace mxnet;
 #define SIMPLE_DIMENSIONS  0
 #define MXNET_DUMP_C  0
 #define DISABLE_VALIDATION 0  // If performance profiling, may do things
-                              // that cause validation to fail
+// that cause validation to fail
 
 #if !SIMPLE_DIMENSIONS
 static constexpr int BATCH_SIZE = 5;
@@ -64,7 +64,7 @@ class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccRea
  public:
   BNOperatorExecutor(const bool isGPU, const TShape& inputShape,
                      const bool hasWeightAndBias = false)
-    : test::op::LegacyOperatorExecutor<DType, AccReal>(isGPU, inputShape)
+    : test::op::LegacyOperatorExecutor<DType, AccReal>(isGPU, { inputShape })
       , hasWeightAndBias_(hasWeightAndBias) {
   }
 
@@ -81,26 +81,26 @@ class BNOperatorExecutor : public test::op::LegacyOperatorExecutor<DType, AccRea
     MSHADOW_TYPE_SWITCH(
       this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma].type_flag_,
       DTypeX, {
-      const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma];
+        const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kGamma];
         test::fill(blob, DTypeX(1));
-      if (hasWeightAndBias_) {
-        if (blob.size(0) > 1) {
-          blob.dptr<DTypeX>()[1] = DTypeX(3);
+        if (hasWeightAndBias_) {
+          if (blob.size(0) > 1) {
+            blob.dptr<DTypeX>()[1] = DTypeX(3);
+          }
         }
-      }
       });
     MSHADOW_TYPE_SWITCH(
       this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta].type_flag_,
       DTypeX, {
         const TBlob& blob = this->c_.blob_input_vec_[mxnet::op::batchnorm::kBeta];
-      if (!hasWeightAndBias_) {
-        test::fill(blob, DTypeX(0));
-      } else {  // This will cause forward pass check to fail when calculating sum == 0
-        test::fill(blob, DTypeX(1));
-        if (blob.size(0) > 0) {
-          blob.dptr<DTypeX>()[0] = DTypeX(3);
+        if (!hasWeightAndBias_) {
+          test::fill(blob, DTypeX(0));
+        } else {  // This will cause forward pass check to fail when calculating sum == 0
+          test::fill(blob, DTypeX(1));
+          if (blob.size(0) > 0) {
+            blob.dptr<DTypeX>()[0] = DTypeX(3);
+          }
         }
-      }
       });
 
     // Init the moving data (all mean = 0, all var = 1)
@@ -455,7 +455,7 @@ static const test::op::kwargs_t nfs_ugs_kwargs_nocudnn = {
 #if !DISABLE_VALIDATION
 static bool isUGS(const test::op::kwargs_t& kwargs) {
   for (test::op::kwargs_t::const_iterator i = kwargs.begin(),
-        e = kwargs.end(); i != e; ++i) {
+         e = kwargs.end(); i != e; ++i) {
     if (!i->first.compare("use_global_stats")) {
       return i->second.compare("True") == 0;
     }
@@ -594,11 +594,11 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor> test
   const size_t cycleCount = CYCLE_COUNT) {
   test::op::OpInfo<OperatorProp1, OperatorExecutor> info_1 =
     TestBatchNormOperatorForward<OperatorProp1, OperatorExecutor>(isGPU1, inputShape,
-                                                                kwargs, count);
+                                                                  kwargs, count);
 
   test::op::OpInfo<OperatorProp2, OperatorExecutor> info_2 =
     TestBatchNormOperatorForward<OperatorProp2, OperatorExecutor>(isGPU2, inputShape,
-                                                                kwargs, count);
+                                                                  kwargs, count);
 
   size_t thisCount = 0;
 
@@ -645,7 +645,7 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor> test
   } while (++thisCount < cycleCount);
 
   if (dumpC) {
-      info_1.executor_->dumpC(&std::cerr, "BN_testForwardAndBackward");
+    info_1.executor_->dumpC(&std::cerr, "BN_testForwardAndBackward");
   }
 
   return  { info_1, info_2 };
@@ -672,9 +672,9 @@ testForwardAndBackward(const bool isGPU,
 template<typename OperatorExecutor>
 static test::op::OpInfoPair<op::BatchNormV1Prop, op::BatchNormProp, OperatorExecutor>
 testBNForwardAndBackward2D(const bool isGPU,
-                         const TShape &inputShape,
-                         const test::op::kwargs_t kwargs,
-                         const bool dumpC = false) {
+                           const TShape &inputShape,
+                           const test::op::kwargs_t kwargs,
+                           const bool dumpC = false) {
   CHECK_EQ(inputShape.ndim(), 4);  // V1 can only handle 2D
   return testForwardAndBackward<op::BatchNormV1Prop, op::BatchNormProp, OperatorExecutor>(
     isGPU,
@@ -853,48 +853,48 @@ TEST(BATCH_NORM, TestTiming_2D) {
   if (mxnet::test::quick_test) {
     THISCOUNT = 1;
   }
-  MSHADOW_REAL_TYPE_SWITCH_EX(
-    mshadow::kFloat32, DType, AccReal, {
-      timingTest<op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>>(
-        "BatchNormV1Prop<cpu> 2D",
-        false, false,
-        blank_kwargs,
-        2, THISCOUNT);
-  #if MXNET_USE_MKL2017 == 1
-      timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
-        "MKL BatchNormProp<cpu> 2D",
-        false, false,
-        blank_kwargs_nocudnn,
-        2, THISCOUNT);
-  #endif
-      test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
-      timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
-        "BatchNormProp<cpu> 2D",
-        false, false,
-        blank_kwargs_nocudnn,
-        2, THISCOUNT);
-  #if MXNET_USE_CUDA
-      if (test::unitTestsWithCuda) {
-        timingTest<op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>>(
-          "BatchNormV1Prop<gpu> 2D",
-          true, false,
-          blank_kwargs,
-          2, THISCOUNT);
-        timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
-          "BatchNormProp<gpu> 2D",
-          true, false,
-          blank_kwargs_nocudnn,
-          2, THISCOUNT);
-  #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-        timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
-          "CUDNN BatchNormProp<gpu> 2D",
-          true, false,
-          blank_kwargs,
-          2, THISCOUNT);
-  #endif
-      }
-  #endif
-  });
+MSHADOW_REAL_TYPE_SWITCH_EX(
+  mshadow::kFloat32, DType, AccReal, {
+  timingTest<op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>>(
+    "BatchNormV1Prop<cpu> 2D",
+    false, false,
+    blank_kwargs,
+    2, THISCOUNT);
+#if MXNET_USE_MKL2017 == 1
+  timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
+    "MKL BatchNormProp<cpu> 2D",
+    false, false,
+    blank_kwargs_nocudnn,
+    2, THISCOUNT);
+#endif
+  test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
+  timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
+    "BatchNormProp<cpu> 2D",
+    false, false,
+    blank_kwargs_nocudnn,
+    2, THISCOUNT);
+#if MXNET_USE_CUDA
+  if (test::unitTestsWithCuda) {
+    timingTest<op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>>(
+      "BatchNormV1Prop<gpu> 2D",
+      true, false,
+      blank_kwargs,
+      2, THISCOUNT);
+    timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
+      "BatchNormProp<gpu> 2D",
+      true, false,
+      blank_kwargs_nocudnn,
+      2, THISCOUNT);
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+    timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
+      "CUDNN BatchNormProp<gpu> 2D",
+      true, false,
+      blank_kwargs,
+      2, THISCOUNT);
+#endif
+  }
+#endif
+});
 }
 
 /**
@@ -984,7 +984,7 @@ static void test_V1_V2_2D(const test::op::kwargs_t &kwargs, const size_t count) 
 
       test::op::OpInfo<op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>> info_1 =
         test::op::createOpAndInfoF<
-        op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>>(
+          op::BatchNormV1Prop, BNOperatorExecutor<DType, AccReal>>(
           kwargs, gpu_V1, inputShape);
 
       test::op::OpInfo<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>> info_2 =
@@ -1168,29 +1168,29 @@ TEST(BATCH_NORM, TestBackward1D_Simple) {
       // Note: This data structure generated by dumpC()
       static const std::vector< std::vector< std::vector<DTypeX> > >
         ___BN_TestBackward1D_Simple_data_shape_1_1_2___ = {
-          { /* kInput */
-            { 1.0f, 2.0f },
-            { 1.0f },
-            { 0.0f }
-          },
-          { /* kOutput */
-            { -0.998006f, 0.998006f },
-            { 1.5f },
-            { 0.25f }
-          },
-          { /* kAux */
-            { 0.15f },
-            { 0.925f }
-          },
-          { /* kInGrad */
-            { -0.00397621f, 0.00397609f },
-            { 0.0f },
-            { 2.998f }
-          },
-          { /* kOutGrad */
-            { 0.999f, 1.999f }
-          }
-        };
+        { /* kInput */
+          { 1.0f, 2.0f },
+          { 1.0f },
+          { 0.0f }
+        },
+        { /* kOutput */
+          { -0.998006f, 0.998006f },
+          { 1.5f },
+          { 0.25f }
+        },
+        { /* kAux */
+          { 0.15f },
+          { 0.925f }
+        },
+        { /* kInGrad */
+          { -0.00397621f, 0.00397609f },
+          { 0.0f },
+          { 2.998f }
+        },
+        { /* kOutGrad */
+          { 0.999f, 1.999f }
+        }
+      };
       compare(false, info, ___BN_TestBackward1D_Simple_data_shape_1_1_2___);
     });
 }
@@ -1260,7 +1260,7 @@ class ChannelAxisTestData {
     std::vector<size_t> indexes(channel_count, 0);
     for (size_t outer = 0, outerCount = tensor3.OuterSize(); outer < outerCount; ++outer) {
       for (size_t channel = 0, channelCount = tensor3.ChannelCount();
-          channel < channelCount; ++channel) {
+           channel < channelCount; ++channel) {
         CHECK_LT(channel, channel_data_.size());
         for (size_t inner = 0, innerCount = tensor3.InnerSize(); inner < innerCount; ++inner) {
           CHECK_LT(indexes[channel], channel_data_[channel].size());
@@ -1318,7 +1318,7 @@ class ChannelAxisTestData {
   }
 
   void save(const TBlob& blob, const int channel_axis) {
-      loadOrSave(blob, channel_axis, SAVE);
+    loadOrSave(blob, channel_axis, SAVE);
   }
 
   void load(const TBlob& blob, const int channel_axis) {
@@ -1496,8 +1496,8 @@ static void runChannelAxisTest(
   kwargs.push_back({"axis", std::to_string(channelAxis1)});
   test::op::OpInfo<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>> info_c1 =
     test::op::createOpAndInfoF<
-    op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
-    kwargs, isGPU1, shape_c1);
+      op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
+      kwargs, isGPU1, shape_c1);
 
   // Create operator 2 with ChannelAxis2 (normally the control one)
   kwargs.pop_back();
@@ -1590,8 +1590,11 @@ TEST(BATCH_NORM, TestChannelAxis) {
 
   test::op::kwargs_t kwargs;
   const std::vector<std::vector<index_t>> shapes =
-    { {1, 2}, {1, 2, 1}, {1, 2, 3}, {1, 2, 3, 4} };
-  const char *tof[2] = { "False", "True" };
+    {{1, 2},
+     {1, 2, 1},
+     {1, 2, 3},
+     {1, 2, 3, 4}};
+  const char *tof[2] = {"False", "True"};
 
   for (size_t x1 = 0; x1 < 2U; ++x1) {
     kwargs.push_back({"fix_gamma", tof[x1]});

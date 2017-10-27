@@ -49,6 +49,11 @@ static const std::vector<std::pair<std::string, std::string>> test_binary_operat
   {"elemwise_mul", "_backward_mul"}
 };
 
+template<typename TT>
+inline std::vector<TT> AsVect(const TT& t) {
+  return std::move(std::vector<TT>({ t }));
+}
+
 /*!
  * \brief Generic bidirectional sanity test for simple unary op
  */
@@ -60,7 +65,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalSimpleUnary) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
 
-    test::op::CoreOpExecutor<float> op(false, shape);
+    test::op::CoreOpExecutor<float> op(false, AsVect(shape));
     op.set_verbose(false);
 
     op.Init(op.ArgsWithOpName(kwargs, op_name, backward_op_name));
@@ -88,7 +93,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectional) {
     TShape shape({5, 5});
     kwargs_t kwargs = basic_args;
 
-    test::op::CoreOpExecutor<float> op(false, shape);
+    test::op::CoreOpExecutor<float> op(false, AsVect(shape));
 
     op.set_verbose(false);
     op.Init(op.ArgsWithOpName(kwargs, op_name, backward_op_name));
@@ -112,7 +117,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunnerSimpleUnary) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
     test::op::CoreOperatorRunner<DType> runner;
-    runner.RunBidirectional(false, shape, test::op::CoreOpExecutor<DType>::ArgsWithOpName(
+    runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<DType>::ArgsWithOpName(
       basic_args, op_name, backward_op_name), 1);
   }
 }
@@ -124,7 +129,7 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunner) {
     const char *op_name = i.first.c_str();
     const char *backward_op_name = i.second.c_str();
     test::op::CoreOperatorRunner<DType> runner;
-    runner.RunBidirectional(false, shape, test::op::CoreOpExecutor<DType>::ArgsWithOpName(
+    runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<DType>::ArgsWithOpName(
       basic_args, op_name, backward_op_name), 1);
   }
 }
@@ -140,7 +145,7 @@ TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
   const kwargs_t kwargs = test::op::CoreOpExecutor<DType>::ArgsWithOpName(basic_args, op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10},
+  runner.RunBidirectional(false, { TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
@@ -160,7 +165,8 @@ TEST(CORE_OP_RUNNER, TimingCPUSimpleUnary) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest(std::string(op_name) + "Operator CPU", false, false, kwargs, 2, 10, shape);
+    runner.TimingTest(std::string(op_name) + "Operator CPU",
+                      false, false, kwargs, 2, 10, { shape });
   }
 }
 
@@ -174,7 +180,7 @@ TEST(CORE_OP_RUNNER, TimingCPUBinary) {
     basic_args, op_name, backward_op_name);
 
   test::op::CoreOperatorRunner<DType> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10},
+  runner.RunBidirectional(false, { TShape({10, 10, 10, 10}) },
                           kwargs,
                           1);  // prime code and cache
 
@@ -194,7 +200,8 @@ TEST(CORE_OP_RUNNER, TimingCPUBinary) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest(std::string(op_name) + "Operator CPU", false, false, kwargs, 2, 10, shape);
+    runner.TimingTest(std::string(op_name) + "Operator CPU", false,
+                      false, kwargs, 2, 10, { shape });
   }
 }
 

@@ -25,9 +25,9 @@
 
 #include <gtest/gtest.h>
 #include <mxnet/tensor_blob.h>
-#include "../../src/operator/activation-inl.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_legacy_op.h"
+#include "../../src/operator/activation-inl.h"
 
 using namespace mxnet;
 
@@ -42,7 +42,7 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"act_type", "tanh"});
   test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
-  runner.RunBidirectional(false, shape, kwargs, 1);
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
 /*!
@@ -70,7 +70,7 @@ TEST(ACTIVATION_PERF, TimingCPU) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest("Activation Operator CPU", false, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Activation Operator CPU", false, false, kwargs, 2, 10, { shape });
   }
 }
 
@@ -93,7 +93,7 @@ TEST(ACTIVATION_PERF, TimingGPU) {
       {20, 3, 128, 128}
     };
   for (const TShape &shape : shapes) {
-    runner.TimingTest("Activation Operator GPU", true, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Activation Operator GPU", true, false, kwargs, 2, 10, { shape });
   }
 }
 #endif  // MXNET_USE_CUDA == 1

@@ -42,7 +42,7 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_fullyconn_args;
   test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
-  runner.RunBidirectional(false, shape, kwargs, 1);
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
 /*!
@@ -68,7 +68,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
     };
   }
   for (const TShape& shape : shapes) {
-    runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10, { shape });
   }
 }
 
