@@ -175,7 +175,6 @@ def test_cifar10():
     console = logging.StreamHandler()
     console.setLevel(logging.DEBUG)
     logging.getLogger('').addHandler(console)
-
     kv = mx.kvstore.create("local")
     # test float32 input
     (train, val) = get_iterator_float32(kv)
