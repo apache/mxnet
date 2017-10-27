@@ -27,7 +27,7 @@ from multiprocessing.reduction import ForkingPickler
 import pickle
 
 from . import sampler as _sampler
-from ... import nd
+from ... import nd, context
 
 
 def rebuild_ndarray(*args):
@@ -82,10 +82,25 @@ def default_batchify_fn(data):
         return nd.stack(*data)
     elif isinstance(data[0], tuple):
         data = zip(*data)
-        return [_batchify(i) for i in data]
+        return [default_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
         return nd.array(data, dtype=data.dtype)
+
+
+def default_mp_batchify_fn(data):
+    """Collate data into batch. Use shared memory for stacking."""
+    if isinstance(data[0], nd.NDArray):
+        out = nd.empty((len(data),) + data[0].shape, dtype=data[0].dtype,
+                       ctx=context.Context('cpu_shared', 0))
+        return nd.stack(*data, out=out)
+    elif isinstance(data[0], tuple):
+        data = zip(*data)
+        return [default_mp_batchify_fn(i) for i in data]
+    else:
+        data = np.asarray(data)
+        return nd.array(data, dtype=data.dtype,
+                        ctx=context.Context('cpu_shared', 0))
 
 
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
@@ -123,7 +138,7 @@ class DataLoader(object):
         shuffle, sampler, and last_batch if batch_sampler is specified.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
-                 last_batch=None, batch_sampler=None, batchify_fn=default_batchify_fn,
+                 last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0):
         self._dataset = dataset
 
@@ -147,8 +162,14 @@ class DataLoader(object):
                              "not be specified if batch_sampler is specified.")
 
         self._batch_sampler = batch_sampler
-        self._batchify_fn = default_batchify_fn
         self._num_workers = num_workers
+        if batchify_fn is None:
+            if num_workers > 0:
+                self._batchify_fn = default_mp_batchify_fn
+            else:
+                self._batchify_fn = default_batchify_fn
+        else:
+            self._batchify_fn = batchify_fn
 
     def __iter__(self):
         if self._num_workers == 0:

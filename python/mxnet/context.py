@@ -128,14 +128,13 @@ def cpu(device_id=0):
 
     Examples
     ----------
-    >>> with mx.Context('cpu', 1):
+    >>> with mx.cpu():
     ...     cpu_array = mx.nd.ones((2, 3))
     >>> cpu_array.context
-    cpu(1)
-    >>> with mx.cpu(1):
-    ...    cpu_array = mx.nd.ones((2, 3))
+    cpu(0)
+    >>> cpu_array = mx.nd.ones((2, 3), ctx=mx.cpu())
     >>> cpu_array.context
-    cpu(1)
+    cpu(0)
 
     Parameters
     ----------
@@ -151,6 +150,36 @@ def cpu(device_id=0):
     return Context('cpu', device_id)
 
 
+def cpu_pinned(device_id=0):
+    """Returns a CPU pinned memory context. Copying from CPU pinned memory to GPU
+    is faster than from normal CPU memory.
+
+    This function is a short cut for ``Context('cpu_pinned', device_id)``.
+
+    Examples
+    ----------
+    >>> with mx.cpu_pinned():
+    ...     cpu_array = mx.nd.ones((2, 3))
+    >>> cpu_array.context
+    cpu_pinned(0)
+    >>> cpu_array = mx.nd.ones((2, 3), ctx=mx.cpu_pinned())
+    >>> cpu_array.context
+    cpu_pinned(0)
+
+    Parameters
+    ----------
+    device_id : int, optional
+        The device id of the device. `device_id` is not needed for CPU.
+        This is included to make interface compatible with GPU.
+
+    Returns
+    -------
+    context : Context
+        The corresponding CPU pinned memory context.
+    """
+    return Context('cpu_pinned', device_id)
+
+
 def gpu(device_id=0):
     """Returns a GPU context.
 
@@ -159,12 +188,14 @@ def gpu(device_id=0):
 
     Examples
     ----------
-    >>> with mx.Context('gpu', 1):
+    >>> cpu_array = mx.nd.ones((2, 3))
+    >>> cpu_array.context
+    cpu(0)
+    >>> with mx.gpu(1):
     ...     gpu_array = mx.nd.ones((2, 3))
     >>> gpu_array.context
     gpu(1)
-    >>> with mx.gpu(1):
-    ...    gpu_array = mx.nd.ones((2, 3))
+    >>> gpu_array = mx.nd.ones((2, 3), ctx=mx.gpu(1))
     >>> gpu_array.context
     gpu(1)
 
