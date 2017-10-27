@@ -30,7 +30,6 @@ from functools import reduce
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-mx.profiler.profiler_set_config(mode='all',filename='profiler.json')
 
 def parse_args():
     parser = argparse.ArgumentParser(description="command for benchmark kv-store")
@@ -111,7 +110,6 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
 
     Results = namedtuple('Results', ['iter', 'time', 'bandwidth', 'error'])
     res = []
-    mx.profiler.profiler_set_state('run')
     for b in range(0, num_batches+1):
         tic = time.time()
         for i,g in enumerate(grads):
@@ -143,7 +141,6 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
                     r.iter, r.time, r.bandwidth, r.error))
                 res.append(r)
             toc = 0
-    mx.profiler.profiler_set_state('stop')
     return res
 
 if __name__ == "__main__":

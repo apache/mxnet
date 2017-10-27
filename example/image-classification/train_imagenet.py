@@ -22,7 +22,6 @@ logging.basicConfig(level=logging.DEBUG)
 from common import find_mxnet, data, fit
 from common.util import download_file
 import mxnet as mx
-
 if __name__ == '__main__':
     # parse args
     parser = argparse.ArgumentParser(description="train imagenet-1k",
@@ -53,6 +52,5 @@ if __name__ == '__main__':
     from importlib import import_module
     net = import_module('symbols.'+args.network)
     sym = net.get_symbol(**vars(args))
-
     # train
     fit.fit(args, sym, data.get_rec_iter)
