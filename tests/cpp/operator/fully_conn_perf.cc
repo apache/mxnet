@@ -98,7 +98,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
     };
   }
   for (const TShape& shape : shapes) {
-    runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10, { shape });
   }
 }
 #endif  // MXNET_USE_CUDA == 1

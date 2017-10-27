@@ -38,9 +38,7 @@
 #ifndef TEST_OP_H_
 #define TEST_OP_H_
 
-#include "test_perf.h"
-#include "test_util.h"
-
+#include <mxnet/op_attr_types.h>
 #include <ndarray/ndarray_function.h>
 #include <mshadow/base.h>
 #include <mshadow/stream_gpu-inl.h>
@@ -51,6 +49,8 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include "./test_perf.h"
+#include "./test_util.h"
 
 namespace mxnet {
 namespace test {

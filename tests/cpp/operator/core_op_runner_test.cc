@@ -39,14 +39,14 @@ using kwargs_t = test::op::kwargs_t;
 static const kwargs_t basic_args = {};
 
 static const std::vector<std::pair<std::string, std::string>> test_unary_operators = {
-  {"relu", "" },  // Code can figure out what the backward op is for some
-  {"sigmoid", "" },
-  { "sqrt", "" }
+  { "relu",    "" },  // Code can figure out what the backward op is for some
+  { "sigmoid", "" },
+  { "sqrt",    "" }
 };
 
 static const std::vector<std::pair<std::string, std::string>> test_binary_operators = {
-  {"elemwise_add", "_backward_add"},
-  {"elemwise_mul", "_backward_mul"}
+  { "elemwise_add", "_backward_add" },
+  { "elemwise_mul", "_backward_mul" }
 };
 
 template<typename TT>
@@ -132,6 +132,19 @@ TEST(CORE_OP_RUNNER, ExecuteBidirectionalRunner) {
     runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<DType>::ArgsWithOpName(
       basic_args, op_name, backward_op_name), 1);
   }
+}
+
+TEST(CORE_OP_RUNNER, ExecuteDotproductBidirectionalRunner) {
+  typedef float DType;
+  const char *op_name = "dot";
+  const char *backward_op_name = "_backward_dot";
+  test::op::CoreOperatorRunner<DType> runner;
+  runner.RunBidirectional(false,
+                          { TShape({ 2, 3 }), TShape({ 3, 2 }) },
+                          test::op::CoreOpExecutor<DType>::ArgsWithOpName(basic_args,
+                                                                          op_name,
+                                                                          backward_op_name),
+                          1);
 }
 
 /*!
@@ -234,7 +247,7 @@ TEST(CORE_OP_RUNNER, TimingGPUSimpleUnary) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest(std::string(op_name) + "Operator GPU", true, false, kwargs, 2, 10, shape);
+    runner.TimingTest(std::string(op_name) + "Operator GPU", true, false, kwargs, 2, 10, { shape });
   }}
 
 TEST(CORE_OP_RUNNER, TimingGPUBinary) {
@@ -267,7 +280,7 @@ TEST(CORE_OP_RUNNER, TimingGPUBinary) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest(std::string(op_name) + "Operator GPU", true, false, kwargs, 2, 10, shape);
+    runner.TimingTest(std::string(op_name) + "Operator GPU", true, false, kwargs, 2, 10, { shape });
   }
 }
 
