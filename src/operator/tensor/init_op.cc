@@ -28,6 +28,7 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
+DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
 DMLC_REGISTER_PARAMETER(RangeParam);
 
 
@@ -52,6 +53,16 @@ NNVM_REGISTER_OP(_ones)
 .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
 .add_arguments(InitOpParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_full)
+  .describe("fill target with a scalar value")
+  .set_num_inputs(0)
+  .set_num_outputs(1)
+  .set_attr_parser(ParamParser<InitOpWithScalarParam>)
+  .set_attr<nnvm::FInferShape>("FInferShape", InitShape<InitOpWithScalarParam>)
+  .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpWithScalarParam>)
+  .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
+.add_arguments(InitOpWithScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_arange)
 .describe("Return evenly spaced values within a given interval. Similar to Numpy")
