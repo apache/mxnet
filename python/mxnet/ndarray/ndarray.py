@@ -731,6 +731,8 @@ fixed-size items.
                     str(value), str(type(value))))
 
     def _prepare_value_nd(self, value, vshape):
+        """Given value and vshape, create an `NDArray` from value with the same
+        context and dtype as the current one and broadcast it to vshape."""
         if isinstance(value, (np.ndarray, np.generic)):
             value_nd = array(value, ctx=self.context, dtype=self.dtype)
         elif isinstance(value, numeric_types):
