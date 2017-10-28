@@ -123,6 +123,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         Kernel<set_zero, cpu>::Launch(s, num_rows, row_flg);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
         // calculate inclusive prefix sum
+        // TODO(haibin) ideally this is should be done in parallel
         prefix_sum[0] = row_flg[0];
         for (dim_t i = 1; i < num_rows; i++) {
           prefix_sum[i] = prefix_sum[i - 1] + row_flg[i];
