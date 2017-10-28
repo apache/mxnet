@@ -23,6 +23,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
 #include "../c_api/c_api_common.h"
@@ -80,10 +81,10 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
 
 // Set the shape, dtype, storage type and dispatch mode via the attribute inference functions
 inline void SetShapeType(const Context& ctx,
-                  const nnvm::NodeAttrs& attrs,
-                  const std::vector<NDArray*>& inputs,
-                  const std::vector<NDArray*>& outputs,
-                  DispatchMode* dispatch_mode) {
+                         const nnvm::NodeAttrs& attrs,
+                         const std::vector<NDArray*>& inputs,
+                         const std::vector<NDArray*>& outputs,
+                         DispatchMode* dispatch_mode) {
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
@@ -230,8 +231,8 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
 }
 
 inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
-                               const std::vector<NDArray*>& outputs,
-                               std::vector<OpReqType> *req) {
+                        const std::vector<NDArray*>& outputs,
+                        std::vector<OpReqType> *req) {
   std::unordered_set<engine::VarHandle> in_vars;
   in_vars.reserve(inputs.size());
   for (auto &i : inputs) {
@@ -244,6 +245,73 @@ inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
     if (in_vars.find(outputs[i]->var()) != in_vars.end()) {
       req->at(i) = kWriteInplace;
     }
+  }
+}
+
+/*!
+ * \brief Parse parameter attributes into a nnvm::NodeAttrs structure
+ * \param op Pointer to the nnvm Operator object
+ * \param num_inputs Number of operator inputs
+ * \param num_params Number of parameters
+ * \param param_keys Array of string pointers representing the parameter keys
+ * \param param_vals Array of string pointers representing the associated values
+ * \return nnvm::NodeAttrs structure representing the parsed attributes
+ */
+inline nnvm::NodeAttrs ParseAttrs(const nnvm::Op *op,
+                                  const int num_inputs,
+                                  const int num_params,
+                                  const char **param_keys,
+                                  const char **param_vals) {
+  static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
+
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  attrs.dict.reserve(num_params+1);
+  for (int i = 0; i < num_params; ++i) {
+    attrs.dict.emplace(param_keys[i], param_vals[i]);
+  }
+  if (num_args.count(op)) {
+    attrs.dict.emplace(num_args[op], std::to_string(num_inputs));
+  }
+  if (op->attr_parser != nullptr) {
+    op->attr_parser(&attrs);
+  }
+
+  return attrs;
+}
+
+/*!
+ * \brief Determine number of outputs for the given operator
+ * \param op Pointer to the nnvm Operator object
+ * \param attrs  nnvm::NodeAttrs structure representing the operator's attributes
+ * \param num_inputs Number of inputs tot he operator
+ * \param infered_num_outputs The inferred number of outputs
+ * \param num_visible_outputs The actual number of visible outputs
+ */
+inline void SetNumOutputs(const nnvm::Op *op,
+                          const nnvm::NodeAttrs& attrs,
+                          const int& num_inputs,
+                          int* infered_num_outputs,
+                          int* num_visible_outputs) {
+  static auto& visible_out = nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
+  int infered_num_inputs;
+  if (op->get_num_inputs != nullptr) {
+    infered_num_inputs = op->get_num_inputs(attrs);
+  } else {
+    infered_num_inputs = op->num_inputs;
+  }
+  CHECK_EQ(num_inputs, infered_num_inputs)
+    << "Operator " << op->name << " expects " << infered_num_inputs
+    << " inputs, but got " << num_inputs << " instead.";
+  if (op->get_num_outputs != nullptr) {
+    *infered_num_outputs = op->get_num_outputs(attrs);
+  } else {
+    *infered_num_outputs = op->num_outputs;
+  }
+  *num_visible_outputs = *infered_num_outputs;
+  if (visible_out.count(op)) {
+    *num_visible_outputs = visible_out[op](attrs);
+    CHECK_LE(*num_visible_outputs, *infered_num_outputs);
   }
 }
 

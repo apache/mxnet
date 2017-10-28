@@ -28,22 +28,21 @@
 #include <mxnet/tensor_blob.h>
 #include "../../src/operator/fully_connected-inl.h"
 #include "../include/test_op_runner.h"
+#include "../include/test_legacy_op.h"
 
 using namespace mxnet;
 
 typedef std::vector<std::pair<std::string, std::string> > kwargs_t;
 
 const kwargs_t basic_fullyconn_args = { {"num_hidden", "250"} };
-
 /*!
  * \brief Generic bidirectional sanity test
  */
 TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_fullyconn_args;
-  test::OperatorRunner<mxnet::op::FullyConnectedProp,
-    test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(false, shape, kwargs, 1);
+  test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
 /*!
@@ -51,9 +50,10 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
  */
 TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   kwargs_t kwargs = basic_fullyconn_args;
-  test::OperatorRunner<mxnet::op::FullyConnectedProp, test::GenericOperatorData<float, float>>
-    runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -70,7 +70,7 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
     };
   }
   for (const TShape& shape : shapes) {
-    runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10, { shape });
   }
 }
 
@@ -80,16 +80,29 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
  */
 TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   kwargs_t kwargs = basic_fullyconn_args;
-  test::op::OpInfo<mxnet::op::FullyConnectedProp, float, float> info;
   test::OperatorRunner<mxnet::op::FullyConnectedProp,
-    test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(true, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
-  const std::vector<TShape> shapes = {
-    {1, 1, 28, 28}, {1, 3, 28, 28},
-    {50, 1, 18, 32}, {50, 3, 18, 32}
-  };
+    test::op::LegacyOperatorExecutor<float, float>>
+    runner;
+  runner.RunBidirectional(true,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
+  std::vector <TShape> shapes;
+  if (test::performance_run) {
+    shapes = {
+      {1,  1, 28,  28},
+      {1,  3, 28,  28},
+      {50, 1, 18,  32},
+      {50, 3, 18,  32},
+      {20, 3, 128, 128}
+    };
+  } else {
+    shapes = {
+      {1,  1, 28,  28},
+      {50, 3, 18,  32},
+    };
+  }
   for (const TShape& shape : shapes) {
-    runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10, { shape });
   }
 }
 #endif  // MXNET_USE_CUDA == 1
