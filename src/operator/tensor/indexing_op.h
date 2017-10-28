@@ -854,7 +854,6 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& inputs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -868,14 +867,11 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   mshadow::Shape<10> strides;
   for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    if (req[0] == kWriteTo) {
-      Kernel<fill, xpu>::Launch(s, oshape.Size(), outputs[0].dptr<DType>(),
-                                static_cast<DType>(0));
-    }
+    Fill<true>(s, outputs[0], req[0], 0);
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
-      Kernel<scatter_nd, xpu>::Launch(
-          s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
+      mxnet_op::Kernel<scatter_nd, xpu>::Launch(
+        s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
+        inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
 }
