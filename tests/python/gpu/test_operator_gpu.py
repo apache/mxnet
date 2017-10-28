@@ -83,18 +83,18 @@ def check_countsketch(in_dim,out_dim,n):
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
 
 def test_countsketch():
-    np.random.seed(0)
-    nrepeat = 2
-    minindim = 40
-    maxindim = 100
-    minoutdim = 5
-    maxoutdim = 30
-    maxn = 200
-    for repeat in range(nrepeat):
-        in_dim = np.random.randint(minindim, maxindim)
-        out_dim = np.random.randint(minoutdim, maxoutdim)
-        n = np.random.randint(1,maxn)
-        check_countsketch(in_dim, out_dim, n)
+    with np_random_seed(0):
+        nrepeat = 2
+        minindim = 40
+        maxindim = 100
+        minoutdim = 5
+        maxoutdim = 30
+        maxn = 200
+        for repeat in range(nrepeat):
+            in_dim = np.random.randint(minindim, maxindim)
+            out_dim = np.random.randint(minoutdim, maxoutdim)
+            n = np.random.randint(1,maxn)
+            check_countsketch(in_dim, out_dim, n)
 
 def check_ifft(shape):
     shape_old = shape
@@ -169,13 +169,13 @@ def check_ifft(shape):
 
 
 def test_ifft():
-    np.random.seed(0)
-    nrepeat = 2
-    maxdim = 10
-    for repeat in range(nrepeat):
-        for order in [2,4]:
-            shape = tuple(np.random.randint(1, maxdim, size=order))
-            check_ifft(shape)
+    with np_random_seed(0):
+        nrepeat = 2
+        maxdim = 10
+        for repeat in range(nrepeat):
+            for order in [2,4]:
+                shape = tuple(np.random.randint(1, maxdim, size=order))
+                check_ifft(shape)
 
 def check_fft(shape):
     sym = mx.sym.contrib.fft(name='fft', compute_size = 128)
@@ -256,13 +256,13 @@ def check_fft(shape):
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
 
 def test_fft():
-    np.random.seed(0)
-    nrepeat = 2
-    maxdim = 10
-    for repeat in range(nrepeat):
-        for order in [2,4]:
-            shape = tuple(np.random.randint(1, maxdim, size=order))
-            check_fft(shape)
+    with np_random_seed(0):
+        nrepeat = 2
+        maxdim = 10
+        for repeat in range(nrepeat):
+            for order in [2,4]:
+                shape = tuple(np.random.randint(1, maxdim, size=order))
+                check_fft(shape)
 
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
@@ -411,38 +411,38 @@ def test_batchnorm_versions():
 
 
 def test_convolution_with_type():
-    np.random.seed(1234)
-    sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
+    with np_random_seed(1234):
+        sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
 
-    data = mx.sym.Variable('conv_data')
-    w = mx.sym.Variable('conv_weight')
-    b = mx.sym.Variable('conv_bias')
-    w = mx.sym.transpose(w, axes=(0,2,3,1))
-    sym2 = mx.sym.transpose(data, axes=(0,2,3,1))
-    sym2 = mx.sym.Convolution(sym2, w, b, layout='NHWC', num_filter=3, kernel=(3,3))
-    sym2 = mx.sym.transpose(sym2, axes=(0,3,1,2), name='conv')
+        data = mx.sym.Variable('conv_data')
+        w = mx.sym.Variable('conv_weight')
+        b = mx.sym.Variable('conv_bias')
+        w = mx.sym.transpose(w, axes=(0,2,3,1))
+        sym2 = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym2 = mx.sym.Convolution(sym2, w, b, layout='NHWC', num_filter=3, kernel=(3,3))
+        sym2 = mx.sym.transpose(sym2, axes=(0,3,1,2), name='conv')
 
-    sym = [sym1, sym1, sym1, sym1, sym1, sym2, sym2]
-    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},
-                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
-                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},
-                # NHWC
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'conv_weight': (3, 2, 3, 3),
-                 'type_dict': {'conv_data': np.float32, 'conv_weight': np.float32}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'conv_weight': (3, 2, 3, 3),
-                 'type_dict': {'conv_data': np.float16, 'conv_weight': np.float16}}
-                ]
-    # wider tolerance needed for true-fp16 NCHW test above
-    tol = {np.dtype(np.float16): 0.5,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
-    # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, tol=tol)
+        sym = [sym1, sym1, sym1, sym1, sym1, sym2, sym2]
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
+                    {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float16}},
+                    {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float64}},
+                    {'ctx': mx.cpu(0), 'conv_data': (2, 2, 10, 10), 'type_dict': {'conv_data': np.float32}},
+                    # NHWC
+                    {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'conv_weight': (3, 2, 3, 3),
+                     'type_dict': {'conv_data': np.float32, 'conv_weight': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (2, 2, 10, 10), 'conv_weight': (3, 2, 3, 3),
+                     'type_dict': {'conv_data': np.float16, 'conv_weight': np.float16}}
+                    ]
+        # wider tolerance needed for true-fp16 NCHW test above
+        tol = {np.dtype(np.float16): 0.5,
+                   np.dtype(np.float32): 1e-3,
+                   np.dtype(np.float64): 1e-5,
+                   np.dtype(np.uint8): 0,
+                   np.dtype(np.int32): 0}
+        check_consistency(sym, ctx_list, tol=tol)
+        # test ability to turn off training on bias
+        check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, tol=tol)
 
 # Apply N symbols against each of M contexts, checking that all NxM combinations match.
 def check_consistency_NxM(sym_list, ctx_list):
@@ -626,22 +626,22 @@ def test_deconvolution_options():
 #    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 def test_bilinear_sampler_with_type():
-    np.random.seed(1234)
-    data = mx.sym.Variable('data')
-    grid = mx.sym.Variable('grid')
-    sym = mx.sym.BilinearSampler(data=data, grid=grid)
-    ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
-                 'type_dict': {'data': np.float64}},
-                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
-                 'type_dict': {'data': np.float32}},
-                {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
-                 'type_dict': {'data': np.float16}},
-                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
-                 'type_dict': {'data': np.float64}},
-                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
-                 'type_dict': {'data': np.float32}}]
-    check_consistency(sym, ctx_list)
-    check_consistency(sym, ctx_list, grad_req="add")
+    with np_random_seed(1234):
+        data = mx.sym.Variable('data')
+        grid = mx.sym.Variable('grid')
+        sym = mx.sym.BilinearSampler(data=data, grid=grid)
+        ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                     'type_dict': {'data': np.float64}},
+                    {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                     'type_dict': {'data': np.float32}},
+                    {'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                     'type_dict': {'data': np.float16}},
+                    {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                     'type_dict': {'data': np.float64}},
+                    {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'grid': (1, 2, 10, 10),
+                     'type_dict': {'data': np.float32}}]
+        check_consistency(sym, ctx_list)
+        check_consistency(sym, ctx_list, grad_req="add")
 
 def test_grid_generator_with_type():
     data = mx.sym.Variable('data')
@@ -658,42 +658,42 @@ def test_grid_generator_with_type():
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7645")
 def test_spatial_transformer_with_type():
-    np.random.seed(1234)
-    data = mx.sym.Variable('data')
-    loc = mx.sym.Flatten(data)
-    loc = mx.sym.FullyConnected(data=loc, num_hidden=10)
-    loc = mx.sym.Activation(data=loc, act_type='relu')
-    loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
-    sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
-                                    transform_type="affine", sampler_type="bilinear")
-    ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}},
-                {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}}]
-    check_consistency(sym, ctx_list)
-    check_consistency(sym, ctx_list, grad_req="add")
+    with np_random_seed(1234):
+        data = mx.sym.Variable('data')
+        loc = mx.sym.Flatten(data)
+        loc = mx.sym.FullyConnected(data=loc, num_hidden=10)
+        loc = mx.sym.Activation(data=loc, act_type='relu')
+        loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
+        sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
+                                        transform_type="affine", sampler_type="bilinear")
+        ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}},
+                    {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}}]
+        check_consistency(sym, ctx_list)
+        check_consistency(sym, ctx_list, grad_req="add")
 
 # Checking max pooling consistency over the data sets of different float types is problematic
 # as one max value in a float32 data set may not be the max value in a float16 data set.
 # This function will not be called.
 def test_pooling_with_type():
-    np.random.seed(1234)
-    ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
-                {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
-                {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
-                {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
-                {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
+    with np_random_seed(1234):
+        ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
+                    {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
+                    {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
+                    {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        check_consistency(sym, ctx_list)
 
-    # this is unstable
-    # sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
-    # check_consistency(sym, ctx_list)
+        # this is unstable
+        # sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        # check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
+        check_consistency(sym, ctx_list)
 
 
 def test_pooling_versions():
@@ -1153,91 +1153,92 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 def test_psroipooling_with_type():
-    np.random.seed(1234)
-    arg_params = {
-        'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
+    with np_random_seed(1234):
+        arg_params = {
+            'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
-    # plain psroipooling
-    sym = mx.sym.contrib.PSROIPooling(spatial_scale=0.0625, output_dim=2, pooled_size=3, name='psroipool')
-    ctx_list = [{'ctx': mx.gpu(0),
-                 'psroipool_data': (1, 18, 14, 14),
-                 'psroipool_rois': (2, 5),
-                 'type_dict': {'psroipool_data': np.float64, 'psroipool_rois': np.float64}},
-                {'ctx': mx.gpu(0),
-                 'psroipool_data': (1, 18, 14, 14),
-                 'psroipool_rois': (2, 5),
-                 'type_dict': {'psroipool_data': np.float32, 'psroipool_rois': np.float32}},
-                {'ctx': mx.gpu(0),
-                 'psroipool_data': (1, 18, 14, 14),
-                 'psroipool_rois': (2, 5),
-                 'type_dict': {'psroipool_data': np.float16, 'psroipool_rois': np.float16}},
-                ]
+        # plain psroipooling
+        sym = mx.sym.contrib.PSROIPooling(spatial_scale=0.0625, output_dim=2, pooled_size=3, name='psroipool')
+        ctx_list = [{'ctx': mx.gpu(0),
+                     'psroipool_data': (1, 18, 14, 14),
+                     'psroipool_rois': (2, 5),
+                     'type_dict': {'psroipool_data': np.float64, 'psroipool_rois': np.float64}},
+                    {'ctx': mx.gpu(0),
+                     'psroipool_data': (1, 18, 14, 14),
+                     'psroipool_rois': (2, 5),
+                     'type_dict': {'psroipool_data': np.float32, 'psroipool_rois': np.float32}},
+                    {'ctx': mx.gpu(0),
+                     'psroipool_data': (1, 18, 14, 14),
+                     'psroipool_rois': (2, 5),
+                     'type_dict': {'psroipool_data': np.float16, 'psroipool_rois': np.float16}},
+                    ]
 
-    check_consistency(sym, ctx_list, grad_req={'psroipool_data': 'write',
-                                               'psroipool_rois': 'null'}, arg_params=arg_params)
+        check_consistency(sym, ctx_list, grad_req={'psroipool_data': 'write',
+                                                   'psroipool_rois': 'null'}, arg_params=arg_params)
 
 def test_deformable_psroipooling_with_type():
-    np.random.seed(1234)
-    arg_params = {
-        'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
+    with np_random_seed(1234):
+        arg_params = {
+            'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
-    # deformable psroipooling
-    sym = mx.sym.contrib.DeformablePSROIPooling(spatial_scale=0.0625, sample_per_part=4, group_size=3, pooled_size=3,
-                                                output_dim=2, trans_std=0.1, no_trans=False, name='deformable_psroipool')
+        # deformable psroipooling
+        sym = mx.sym.contrib.DeformablePSROIPooling(spatial_scale=0.0625, sample_per_part=4, group_size=3, pooled_size=3,
+                                                    output_dim=2, trans_std=0.1, no_trans=False, name='deformable_psroipool')
 
-    ctx_list = [{'ctx': mx.gpu(0),
-                 'deformable_psroipool_data': (1, 18, 14, 14),
-                 'deformable_psroipool_rois': (2, 5),
-                 'deformable_psroipool_trans': (2, 4, 3, 3),
-                 'type_dict': {'deformable_psroipool_data': np.float64, 'deformable_psroipool_rois': np.float64,
-                               'deformable_psroipool_trans': np.float64}},
-                {'ctx': mx.gpu(0),
-                 'deformable_psroipool_data': (1, 18, 14, 14),
-                 'deformable_psroipool_rois': (2, 5),
-                 'deformable_psroipool_trans': (2, 4, 3, 3),
-                 'type_dict': {'deformable_psroipool_data': np.float32, 'deformable_psroipool_rois': np.float32,
-                               'deformable_psroipool_trans': np.float32}},
-                {'ctx': mx.gpu(0),
-                 'deformable_psroipool_data': (1, 18, 14, 14),
-                 'deformable_psroipool_rois': (2, 5),
-                 'deformable_psroipool_trans': (2, 4, 3, 3),
-                 'type_dict': {'deformable_psroipool_data': np.float16, 'deformable_psroipool_rois': np.float16,
-                               'deformable_psroipool_trans': np.float16}},
-                ]
+        ctx_list = [{'ctx': mx.gpu(0),
+                     'deformable_psroipool_data': (1, 18, 14, 14),
+                     'deformable_psroipool_rois': (2, 5),
+                     'deformable_psroipool_trans': (2, 4, 3, 3),
+                     'type_dict': {'deformable_psroipool_data': np.float64, 'deformable_psroipool_rois': np.float64,
+                                   'deformable_psroipool_trans': np.float64}},
+                    {'ctx': mx.gpu(0),
+                     'deformable_psroipool_data': (1, 18, 14, 14),
+                     'deformable_psroipool_rois': (2, 5),
+                     'deformable_psroipool_trans': (2, 4, 3, 3),
+                     'type_dict': {'deformable_psroipool_data': np.float32, 'deformable_psroipool_rois': np.float32,
+                                   'deformable_psroipool_trans': np.float32}},
+                    {'ctx': mx.gpu(0),
+                     'deformable_psroipool_data': (1, 18, 14, 14),
+                     'deformable_psroipool_rois': (2, 5),
+                     'deformable_psroipool_trans': (2, 4, 3, 3),
+                     'type_dict': {'deformable_psroipool_data': np.float16, 'deformable_psroipool_rois': np.float16,
+                                   'deformable_psroipool_trans': np.float16}},
+                    ]
 
-    check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
-                                               'deformable_psroipool_rois': 'null',
-                                               'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
+        check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
+                                                   'deformable_psroipool_rois': 'null',
+                                                   'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
 
 def test_deformable_convolution_with_type():
-    np.random.seed(1234)
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
-    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
-    ctx_list = [{'ctx': mx.gpu(0),
-                 'deformable_conv_data': (2, 2, 10, 10),
-                 'deformable_conv_offset': (2, 18, 8, 8),
-                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
-                {'ctx': mx.gpu(0),
-                 'deformable_conv_data': (2, 2, 10, 10),
-                 'deformable_conv_offset': (2, 18, 8, 8),
-                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 10, 10),
-                #  'deformable_conv_offset': (2, 18, 8, 8),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
-                ]
-    # wider tolerance needed for true-fp16 NCHW test above
-    tol = {np.dtype(np.float16): 0.5,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
-    # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'deformable_conv_data': 'write',
-                                               'deformable_conv_offset': 'write',
-                                               'deformable_conv_weight': 'write',
-                                               'deformable_conv_bias': 'null'}, tol=tol)
+    with np_random_seed(1234):
+        sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
+        # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
+        ctx_list = [{'ctx': mx.gpu(0),
+                     'deformable_conv_data': (2, 2, 10, 10),
+                     'deformable_conv_offset': (2, 18, 8, 8),
+                     'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                    {'ctx': mx.gpu(0),
+                     'deformable_conv_data': (2, 2, 10, 10),
+                     'deformable_conv_offset': (2, 18, 8, 8),
+                     'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                    # {'ctx': mx.gpu(0),
+                    #  'deformable_conv_data': (2, 2, 10, 10),
+                    #  'deformable_conv_offset': (2, 18, 8, 8),
+                    #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
+                    ]
+        # wider tolerance needed for true-fp16 NCHW test above
+        tol = {np.dtype(np.float16): 0.5,
+                   np.dtype(np.float32): 1e-3,
+                   np.dtype(np.float64): 1e-5,
+                   np.dtype(np.uint8): 0,
+                   np.dtype(np.int32): 0}
+        check_consistency(sym, ctx_list, tol=tol)
+        # test ability to turn off training on bias
+        check_consistency(sym, ctx_list, grad_req={'deformable_conv_data': 'write',
+                                                   'deformable_conv_offset': 'write',
+                                                   'deformable_conv_weight': 'write',
+                                                   'deformable_conv_bias': 'null'}, tol=tol)
+
 def test_deformable_convolution_options():
     # 2D convolution
 

@@ -25,6 +25,8 @@ from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import unittest
 
+set_np_random_seed()
+
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
     if isinstance(arg_shapes, int):
@@ -112,21 +114,21 @@ def test_ndarray_setitem():
 
 
 def test_ndarray_elementwise():
-    np.random.seed(0)
-    nrepeat = 10
-    maxdim = 4
-    all_type = [np.float32, np.float64, np.float16, np.uint8, np.int32]
-    real_type = [np.float32, np.float64, np.float16]
-    for repeat in range(nrepeat):
-        for dim in range(1, maxdim):
-            check_with_uniform(lambda x, y: x + y, 2, dim, type_list=all_type)
-            check_with_uniform(lambda x, y: x - y, 2, dim, type_list=all_type)
-            check_with_uniform(lambda x, y: x * y, 2, dim, type_list=all_type)
-            check_with_uniform(lambda x, y: x / y, 2, dim, type_list=real_type)
-            check_with_uniform(lambda x, y: x / y, 2, dim, rmin=1, type_list=all_type)
-            check_with_uniform(mx.nd.sqrt, 1, dim, np.sqrt, rmin=0)
-            check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
-            check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
+    with np_random_seed(0):
+        nrepeat = 10
+        maxdim = 4
+        all_type = [np.float32, np.float64, np.float16, np.uint8, np.int32]
+        real_type = [np.float32, np.float64, np.float16]
+        for repeat in range(nrepeat):
+            for dim in range(1, maxdim):
+                check_with_uniform(lambda x, y: x + y, 2, dim, type_list=all_type)
+                check_with_uniform(lambda x, y: x - y, 2, dim, type_list=all_type)
+                check_with_uniform(lambda x, y: x * y, 2, dim, type_list=all_type)
+                check_with_uniform(lambda x, y: x / y, 2, dim, type_list=real_type)
+                check_with_uniform(lambda x, y: x / y, 2, dim, rmin=1, type_list=all_type)
+                check_with_uniform(mx.nd.sqrt, 1, dim, np.sqrt, rmin=0)
+                check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
+                check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
 def test_ndarray_elementwisesum():
     ones = mx.nd.ones((10,), dtype=np.int32)
@@ -220,52 +222,52 @@ def test_ndarray_scalar():
     assert(np.sum(d.asnumpy()) < 1e-5)
 
 def test_ndarray_pickle():
-    np.random.seed(0)
-    maxdim = 5
-    nrepeat = 10
-    for repeat in range(nrepeat):
-        for dim in range(1, maxdim):
-            a = random_ndarray(dim)
-            b = mx.nd.empty(a.shape)
-            a[:] = np.random.uniform(-10, 10, a.shape)
-            b[:] = np.random.uniform(-10, 10, a.shape)
-            a = a + b
-            data = pkl.dumps(a)
-            a2 = pkl.loads(data)
-            assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
+    with np_random_seed(0):
+        maxdim = 5
+        nrepeat = 10
+        for repeat in range(nrepeat):
+            for dim in range(1, maxdim):
+                a = random_ndarray(dim)
+                b = mx.nd.empty(a.shape)
+                a[:] = np.random.uniform(-10, 10, a.shape)
+                b[:] = np.random.uniform(-10, 10, a.shape)
+                a = a + b
+                data = pkl.dumps(a)
+                a2 = pkl.loads(data)
+                assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
 def test_ndarray_saveload():
-    np.random.seed(0)
-    nrepeat = 10
-    fname = 'tmp_list.bin'
-    for repeat in range(nrepeat):
-        data = []
-        # test save/load as list
-        for i in range(10):
-            data.append(random_ndarray(np.random.randint(1, 5)))
-        mx.nd.save(fname, data)
-        data2 = mx.nd.load(fname)
-        assert len(data) == len(data2)
-        for x, y in zip(data, data2):
-            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
-        # test save/load as dict
-        dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
-        mx.nd.save(fname, dmap)
-        dmap2 = mx.nd.load(fname)
-        assert len(dmap2) == len(dmap)
-        for k, x in dmap.items():
-            y = dmap2[k]
-            assert np.sum(x.asnumpy() != y.asnumpy()) == 0
-        # test save/load as ndarray
-        # we expect the single ndarray to be converted into a list containing the ndarray
-        single_ndarray = data[0]
-        mx.nd.save(fname, single_ndarray)
-        single_ndarray_loaded = mx.nd.load(fname)
-        assert len(single_ndarray_loaded) == 1
-        single_ndarray_loaded = single_ndarray_loaded[0]
-        assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
-    os.remove(fname)
+    with np_random_seed(0):
+        nrepeat = 10
+        fname = 'tmp_list.bin'
+        for repeat in range(nrepeat):
+            data = []
+            # test save/load as list
+            for i in range(10):
+                data.append(random_ndarray(np.random.randint(1, 5)))
+            mx.nd.save(fname, data)
+            data2 = mx.nd.load(fname)
+            assert len(data) == len(data2)
+            for x, y in zip(data, data2):
+                assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+            # test save/load as dict
+            dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
+            mx.nd.save(fname, dmap)
+            dmap2 = mx.nd.load(fname)
+            assert len(dmap2) == len(dmap)
+            for k, x in dmap.items():
+                y = dmap2[k]
+                assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+            # test save/load as ndarray
+            # we expect the single ndarray to be converted into a list containing the ndarray
+            single_ndarray = data[0]
+            mx.nd.save(fname, single_ndarray)
+            single_ndarray_loaded = mx.nd.load(fname)
+            assert len(single_ndarray_loaded) == 1
+            single_ndarray_loaded = single_ndarray_loaded[0]
+            assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
+        os.remove(fname)
 
 def test_ndarray_legacy_load():
     data = []
@@ -345,6 +347,7 @@ def test_clip():
         assert B1[i] <= 2
 
 def test_dot():
+    atol = 1e-5
     # Test normal dot
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (4, 5))
@@ -352,7 +355,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (3, 5))
@@ -360,7 +363,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (3, 4))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -368,7 +371,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
     # Test dot with transpose kargs
     a = np.random.uniform(-3, 3, (4, 3))
     b = np.random.uniform(-3, 3, (5, 4))
@@ -376,7 +379,7 @@ def test_dot():
     A = mx.nd.array(a)
     B = mx.nd.array(b)
     C = mx.nd.dot(A, B, transpose_a=True, transpose_b=True)
-    assert_almost_equal(c, C.asnumpy())
+    assert_almost_equal(c, C.asnumpy(), atol=atol)
 
 
 
