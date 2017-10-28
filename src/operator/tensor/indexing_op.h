@@ -277,7 +277,8 @@ void AddTakeGradLargeBatchCaller(const OpContext& ctx, mshadow::Tensor<xpu, 2, D
   Tensor<xpu, 1, char> temp_storage(&workspace[pos], Shape1(temp_storage_size), s);
   Kernel<tcast_clip, xpu>::Launch(s, index.shape_.Size(), sorted_data.dptr_, index.dptr_,
     static_cast<int>(dst.shape_[0]));
-  original_index = range<int>(0, index.shape_.Size());
+  Kernel<range_fwd, xpu>::Launch(s, index.shape_.Size(),
+    1, 0, 1, kWriteTo, original_index.dptr_);
   int num_bits = ilog2((dst.shape_[0] - 1));
   mxnet::op::SortByKey(sorted_data, original_index, true, &temp_storage, 0, num_bits);
   mxnet::op::AddTakeGradLargeBatch(dst, sorted_data, original_index, src, &temp_storage);
