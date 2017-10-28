@@ -199,9 +199,8 @@ void Dequantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& i
  */
 template<>
 void Quantize2BitDispatch(mshadow::Stream<cpu>* s, const std::vector<TBlob>& inputs,
-                          ps::SArray<int> push_pskv_lens, ps::SArray<int> pull_pskv_lens,
                           const float neg_threshold, const float pos_threshold) {
-  mxnet::op::Quantize2BitImplMShadowPskv<cpu>(s, inputs, push_pskv_lens, pull_pskv_lens, neg_threshold, pos_threshold);
+  mxnet::op::Quantize2BitImplMShadow<cpu>(s, inputs, neg_threshold, pos_threshold);
 }
 
 }  // namespace ndarray

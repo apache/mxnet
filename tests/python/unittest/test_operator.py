@@ -4311,7 +4311,7 @@ def test_scatter_gather_nd():
 def test_two_bit_quantization():
     neg_threshold = -0.5
     pos_threshold = 0.5
-    orig_shape = [(25,),(16,),(1121),(14400)]
+    orig_shape = [(25,),(16,),(1121),(14400),(144000),(144000)]
     num_repeat = 1
     from struct import pack,unpack
 

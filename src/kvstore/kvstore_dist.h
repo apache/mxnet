@@ -315,12 +315,7 @@ class KVStoreDist : public KVStoreLocal {
         }
 
         if (compress_ == "2bit") {
-          mu_.lock();
-          PSKV& pull_pskv = pull_ps_kv_[key];
-          mu_.unlock();
-
-//          Compress(comm_buf, &small_buf, &res_buf, pskv, priority);
-          QuantizeAll(comm_buf, &small_buf, &res_buf, pskv.lens, pull_pskv.lens,
+          QuantizeAll(comm_buf, &small_buf, &res_buf,
                       compress_, neg_threshold_, pos_threshold_, priority);
         } else {
           LOG(FATAL) << "Unsupported quantization";
@@ -509,49 +504,7 @@ class KVStoreDist : public KVStoreLocal {
       PROFILER_MESSAGE("KVStoreDistCompressedPush"));
   }
 
-//  /*
-//   * \brief Compresses data by dividing original data into a part for each server, then
-//   * quantizing each of these data blocks. The sizes of these parts come from pskv.
-//   */
-//  void Compress(const NDArray& comm_buf, NDArray* small_buf, NDArray* res_buf,
-//                const PSKV& pskv, int priority) {
-//    size_t orig_size = comm_buf.shape().Size();
-//    // to allow indexing parts for each server
-//    NDArray flattened_comm_buf = comm_buf.Reshape(TShape{(int64_t) orig_size});
-//
-//    if (compress_ == "2bit") {
-//      // should be start of data in original commbuf
-//      size_t cur_from = 0;
-//      // should be start of meta in new small_buf
-//      size_t cur_to = 0;
-//      for (size_t i = 0; i < pskv.keys.size(); i++) {
-//        NDArray part_compr = small_buf->Slice(cur_to, cur_to + pskv.lens[i]);
-//
-//        // removing the 3 values from pskv length which are meta data
-//        // end_part_data represents end of original data for this part
-//        size_t end_part_data = cur_from + (pskv.lens[i] - 3) * 16;
-//        // don't exceed original size
-//        if (end_part_data > orig_size) {
-//          end_part_data = orig_size;
-//        }
-//        NDArray part_data = flattened_comm_buf.Slice(cur_from, end_part_data);
-//        NDArray part_res = res_buf->Slice(cur_from, end_part_data);
-//
-//        Quantize(part_data, &part_compr, &part_res, compress_,
-//                 neg_threshold_, pos_threshold_, priority);
-//
-//        cur_from = end_part_data;
-//        cur_to = cur_to + pskv.lens[i];
-//      }
-//      CHECK_EQ(cur_from, orig_size);
-//      CHECK_EQ(cur_to, small_buf->shape().Size());
-//    } else {
-//      LOG(FATAL) << "Unsupported compression type";
-//    }
-//  }
-
   void QuantizeAll(const NDArray &from, NDArray *to, NDArray *residual,
-                   ps::SArray<int> push_pskv_lens, ps::SArray<int> pull_pskv_lens,
                    const std::string& compress, const float neg_threshold, const float pos_threshold,
                    int priority) {
     CHECK(from.shape().ndim() != 0)
@@ -561,10 +514,9 @@ class KVStoreDist : public KVStoreLocal {
     int b = to->ctx().dev_mask();
     if (a == cpu::kDevMask && b == cpu::kDevMask) {
       if (compress == "2bit") {
-        Engine::Get()->PushSync([from, to, residual, push_pskv_lens, pull_pskv_lens, neg_threshold, pos_threshold](RunContext ctx) {
+        Engine::Get()->PushSync([from, to, residual, neg_threshold, pos_threshold](RunContext ctx) {
                                   std::vector<TBlob> inputs = {from.data(), residual->data(), to->data()};
                                   mxnet::ndarray::Quantize2BitDispatch<cpu>(ctx.get_stream<cpu>(), inputs,
-                                                                            push_pskv_lens, pull_pskv_lens,
                                                                             neg_threshold, pos_threshold);
                                 }, from.ctx(), {from.var()}, {to->var(), residual->var()},
                                 FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
@@ -575,10 +527,9 @@ class KVStoreDist : public KVStoreLocal {
 #if MXNET_USE_CUDA
       if (a == gpu::kDevMask && b == gpu::kDevMask) {
     if (compress == "2bit") {
-      Engine::Get()->PushSync([from, to, residual, pull_pskv_lens, push_pskv_lens, neg_threshold, pos_threshold](RunContext ctx) {
+      Engine::Get()->PushSync([from, to, residual, neg_threshold, pos_threshold](RunContext ctx) {
           std::vector<TBlob> inputs = {from.data(), residual->data(), to->data()};
           mxnet::ndarray::Quantize2BitDispatch<gpu>(ctx.get_stream<gpu>(), inputs,
-                                                    push_pskv_lens, pull_pskv_lens,
                                                     neg_threshold, pos_threshold);
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
@@ -595,8 +546,6 @@ class KVStoreDist : public KVStoreLocal {
 #endif
     }
   }
-
-
 
   PSKV& EncodeKey(int key, size_t size, bool is_push) {
     if (compress_ != "none") {

@@ -176,7 +176,6 @@ void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& i
  */
 template<typename xpu>
 void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
-                          ps::SArray<int> push_pskv_lens, ps::SArray<int> pull_pskv_lens,
                           const float neg_threshold, const float pos_threshold);
 
 template<typename Device>

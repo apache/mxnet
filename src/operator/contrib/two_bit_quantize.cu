@@ -33,6 +33,12 @@ NNVM_REGISTER_OP(_contrib_quantize_2bit)
 NNVM_REGISTER_OP(_contrib_dequantize_2bit)
 .set_attr<FCompute>("FCompute<gpu>", Dequantize2BitCompute<gpu>);
 
+NNVM_REGISTER_OP(_contrib_quantize_mshadow_2bit)
+.set_attr<FCompute>("FCompute<gpu>", Quantize2BitComputeMShadow<gpu>);
+
+NNVM_REGISTER_OP(_contrib_dequantize_mshadow_2bit)
+.set_attr<FCompute>("FCompute<gpu>", Dequantize2BitComputeMShadow<gpu>);
+
 NNVM_REGISTER_OP(_contrib_create_2bit)
 .set_attr<FCompute>("FCompute<gpu>", Create2BitArrayCompute<gpu>);
 
