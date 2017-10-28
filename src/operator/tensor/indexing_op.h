@@ -268,27 +268,6 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
   });
 }
 
-struct CheckBoundKernel {
-  /*!
-   * \brief             check if all data belongs to range [min, max]
-   * \param i           global thread id
-   * \param is_valid    whether all data is valid
-   * \param data        data to inspect
-   * \param max         max value for data
-   * \param min         min value for data
-   */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
-                                  bool* is_valid,
-                                  const DType* data,
-                                  const DType min,
-                                  const DType max) {
-    DType val = data[i];
-    if (val > max || val < min) *is_valid = false;
-  }
-};
-
-
 // Embedding forward implementation with row_sparse weight
 template<typename xpu>
 void SparseEmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
@@ -313,8 +292,12 @@ void SparseEmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     DType min = 0;
     DType max = static_cast<DType>(weight.shape()[0] - 1);
+    // check with single thread is faster since data is small
+    DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
-    Kernel<CheckBoundKernel, xpu>::Launch(s, data_size, &is_valid, data.dptr<DType>(), min, max);
+    for (size_t i = 0; i < data_size; i++) {
+      if (data_ptr[i] > max || data_ptr[i] < min) is_valid = false;
+    }
   })
   CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   // the weight is actually dense
