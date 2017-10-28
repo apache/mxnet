@@ -685,7 +685,7 @@ NDArray ReshapeOrCreate(const std::string& name,
                         const NDArrayStorageType dest_arg_stype,
                         const Context& ctx,
                         std::unordered_map<std::string, NDArray>* shared_buffer) {
-  if (dest_arg_dtype != kDefaultStorage) {
+  if (dest_arg_stype != kDefaultStorage) {
     return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
   }
   auto it = shared_buffer->find(name);

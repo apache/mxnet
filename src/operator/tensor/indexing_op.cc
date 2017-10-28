@@ -113,6 +113,10 @@ If the input_dim is ip0 and output_dim is op0, then shape of the embedding weigh
 The storage type of weight must be `row_sparse`, and the gradient of the weight will be of
 `row_sparse` storage type, too.
 
+.. Note::
+
+    The `row_sparse` weight cannot be used for BucketingModule.
+
 Examples::
 
   input_dim = 4
