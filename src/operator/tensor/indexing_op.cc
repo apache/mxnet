@@ -117,6 +117,7 @@ The storage type of weight must be `row_sparse`, and the gradient of the weight 
 
     `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
     The `row_sparse` weight cannot be used in a `BucketingModule`.
+    The operator is only available on CPU.
 
 Examples::
 
