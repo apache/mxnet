@@ -1,0 +1,226 @@
+[08:43:47] src/nnvm/legacy_json_util.cc:190: Loading symbol saved by previous version v0.9.5. Attempting to upgrade...
+[08:43:47] src/nnvm/legacy_json_util.cc:198: Symbol successfully upgraded!
+[08:43:48] src/io/iter_image_recordio_2.cc:153: ImageRecordIOParser2: ../../data/mx-512-qua-99-ratio-0.95_train.rec, use 8 threads for decoding..
+[08:43:49] src/io/iter_image_recordio_2.cc:153: ImageRecordIOParser2: ../../data/mx-512-qua-99-ratio-0.95_val.rec, use 8 threads for decoding..
+[08:43:55] src/operator/././cudnn_algoreg-inl.h:112: Running performance tests to find the best convolution algorithm, this can take a while... (setting env variable MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)
+[08:44:20] src/kvstore/././comm.h:327: only 4 out of 12 GPU pairs are enabled direct access. It may affect the performance. You can set MXNET_ENABLE_GPU_P2P=0 to turn it off
+[08:44:20] src/kvstore/././comm.h:336: .v..
+[08:44:20] src/kvstore/././comm.h:336: v...
+[08:44:20] src/kvstore/././comm.h:336: ...v
+[08:44:20] src/kvstore/././comm.h:336: ..v.
+2017-10-28 08:45:29,624 Epoch[0] Batch [100]	Speed: 55.15 samples/sec	accuracy=0.009351
+2017-10-28 08:46:35,604 Epoch[0] Batch [200]	Speed: 54.56 samples/sec	accuracy=0.008611
+2017-10-28 08:47:21,538 Epoch[0] Train-accuracy=0.012077
+2017-10-28 08:47:21,538 Epoch[0] Time cost=183.841
+2017-10-28 08:47:23,702 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0001.params"
+2017-10-28 08:47:26,481 Epoch[0] Validation-accuracy=0.007937
+2017-10-28 08:48:34,973 Epoch[1] Batch [100]	Speed: 52.74 samples/sec	accuracy=0.013751
+2017-10-28 08:49:44,629 Epoch[1] Batch [200]	Speed: 51.68 samples/sec	accuracy=0.011667
+2017-10-28 08:50:32,134 Epoch[1] Train-accuracy=0.015298
+2017-10-28 08:50:32,134 Epoch[1] Time cost=185.653
+2017-10-28 08:50:34,225 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0002.params"
+2017-10-28 08:50:36,985 Epoch[1] Validation-accuracy=0.015873
+2017-10-28 08:51:45,861 Epoch[2] Batch [100]	Speed: 52.44 samples/sec	accuracy=0.015677
+2017-10-28 08:52:54,894 Epoch[2] Batch [200]	Speed: 52.15 samples/sec	accuracy=0.014167
+2017-10-28 08:53:42,311 Epoch[2] Train-accuracy=0.019324
+2017-10-28 08:53:42,311 Epoch[2] Time cost=185.326
+2017-10-28 08:53:44,326 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0003.params"
+2017-10-28 08:53:47,036 Epoch[2] Validation-accuracy=0.021825
+2017-10-28 08:54:56,087 Epoch[3] Batch [100]	Speed: 52.31 samples/sec	accuracy=0.015402
+2017-10-28 08:56:04,714 Epoch[3] Batch [200]	Speed: 52.46 samples/sec	accuracy=0.013611
+2017-10-28 08:56:51,411 Epoch[3] Train-accuracy=0.020016
+2017-10-28 08:56:51,411 Epoch[3] Time cost=184.374
+2017-10-28 08:56:53,506 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0004.params"
+2017-10-28 08:56:56,461 Epoch[3] Validation-accuracy=0.022222
+2017-10-28 08:58:05,214 Epoch[4] Batch [100]	Speed: 52.55 samples/sec	accuracy=0.019527
+2017-10-28 08:59:13,989 Epoch[4] Batch [200]	Speed: 52.34 samples/sec	accuracy=0.020556
+2017-10-28 09:00:01,520 Epoch[4] Train-accuracy=0.024960
+2017-10-28 09:00:01,520 Epoch[4] Time cost=185.058
+2017-10-28 09:00:03,677 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0005.params"
+2017-10-28 09:00:06,415 Epoch[4] Validation-accuracy=0.027778
+2017-10-28 09:01:14,977 Epoch[5] Batch [100]	Speed: 52.68 samples/sec	accuracy=0.029153
+2017-10-28 09:02:23,373 Epoch[5] Batch [200]	Speed: 52.64 samples/sec	accuracy=0.025000
+2017-10-28 09:03:10,705 Epoch[5] Train-accuracy=0.028986
+2017-10-28 09:03:10,705 Epoch[5] Time cost=184.289
+2017-10-28 09:03:12,815 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0006.params"
+2017-10-28 09:03:15,550 Epoch[5] Validation-accuracy=0.033730
+2017-10-28 09:04:23,911 Epoch[6] Batch [100]	Speed: 52.85 samples/sec	accuracy=0.038229
+2017-10-28 09:05:32,231 Epoch[6] Batch [200]	Speed: 52.69 samples/sec	accuracy=0.042778
+2017-10-28 09:06:19,362 Epoch[6] Train-accuracy=0.044686
+2017-10-28 09:06:19,362 Epoch[6] Time cost=183.812
+2017-10-28 09:06:21,442 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0007.params"
+2017-10-28 09:06:24,199 Epoch[6] Validation-accuracy=0.063492
+2017-10-28 09:07:32,672 Epoch[7] Batch [100]	Speed: 52.75 samples/sec	accuracy=0.048130
+2017-10-28 09:08:41,253 Epoch[7] Batch [200]	Speed: 52.49 samples/sec	accuracy=0.053333
+2017-10-28 09:09:27,896 Epoch[7] Train-accuracy=0.053513
+2017-10-28 09:09:27,896 Epoch[7] Time cost=183.697
+2017-10-28 09:09:29,931 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0008.params"
+2017-10-28 09:09:32,684 Epoch[7] Validation-accuracy=0.053571
+2017-10-28 09:10:41,723 Epoch[8] Batch [100]	Speed: 52.31 samples/sec	accuracy=0.052805
+2017-10-28 09:11:50,262 Epoch[8] Batch [200]	Speed: 52.53 samples/sec	accuracy=0.062778
+2017-10-28 09:12:37,592 Epoch[8] Train-accuracy=0.070451
+2017-10-28 09:12:37,592 Epoch[8] Time cost=184.908
+2017-10-28 09:12:39,659 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0009.params"
+2017-10-28 09:12:42,741 Epoch[8] Validation-accuracy=0.075926
+2017-10-28 09:13:51,630 Epoch[9] Batch [100]	Speed: 52.43 samples/sec	accuracy=0.065457
+2017-10-28 09:15:00,419 Epoch[9] Batch [200]	Speed: 52.33 samples/sec	accuracy=0.071389
+2017-10-28 09:15:47,873 Epoch[9] Train-accuracy=0.070451
+2017-10-28 09:15:47,873 Epoch[9] Time cost=185.131
+2017-10-28 09:15:49,954 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0010.params"
+2017-10-28 09:15:52,718 Epoch[9] Validation-accuracy=0.073413
+2017-10-28 09:17:01,686 Epoch[10] Batch [100]	Speed: 52.38 samples/sec	accuracy=0.075358
+2017-10-28 09:18:10,546 Epoch[10] Batch [200]	Speed: 52.28 samples/sec	accuracy=0.079722
+2017-10-28 09:18:57,398 Epoch[10] Train-accuracy=0.083742
+2017-10-28 09:18:57,398 Epoch[10] Time cost=184.680
+2017-10-28 09:18:59,509 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0011.params"
+2017-10-28 09:19:02,268 Epoch[10] Validation-accuracy=0.095238
+2017-10-28 09:20:10,916 Epoch[11] Batch [100]	Speed: 52.61 samples/sec	accuracy=0.093784
+2017-10-28 09:21:19,385 Epoch[11] Batch [200]	Speed: 52.58 samples/sec	accuracy=0.103333
+2017-10-28 09:22:06,756 Epoch[11] Train-accuracy=0.099034
+2017-10-28 09:22:06,756 Epoch[11] Time cost=184.488
+2017-10-28 09:22:08,813 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0012.params"
+2017-10-28 09:22:11,586 Epoch[11] Validation-accuracy=0.091270
+2017-10-28 09:23:20,147 Epoch[12] Batch [100]	Speed: 52.69 samples/sec	accuracy=0.102860
+2017-10-28 09:24:28,555 Epoch[12] Batch [200]	Speed: 52.63 samples/sec	accuracy=0.102778
+2017-10-28 09:25:15,645 Epoch[12] Train-accuracy=0.112319
+2017-10-28 09:25:15,645 Epoch[12] Time cost=184.058
+2017-10-28 09:25:17,839 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0013.params"
+2017-10-28 09:25:20,800 Epoch[12] Validation-accuracy=0.090741
+2017-10-28 09:26:29,326 Epoch[13] Batch [100]	Speed: 52.73 samples/sec	accuracy=0.121287
+2017-10-28 09:27:37,627 Epoch[13] Batch [200]	Speed: 52.71 samples/sec	accuracy=0.125833
+2017-10-28 09:28:25,122 Epoch[13] Train-accuracy=0.129630
+2017-10-28 09:28:25,122 Epoch[13] Time cost=184.322
+2017-10-28 09:28:27,199 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0014.params"
+2017-10-28 09:28:29,907 Epoch[13] Validation-accuracy=0.093254
+2017-10-28 09:29:38,459 Epoch[14] Batch [100]	Speed: 52.69 samples/sec	accuracy=0.150990
+2017-10-28 09:30:47,136 Epoch[14] Batch [200]	Speed: 52.42 samples/sec	accuracy=0.142500
+2017-10-28 09:31:33,714 Epoch[14] Train-accuracy=0.152778
+2017-10-28 09:31:33,714 Epoch[14] Time cost=183.807
+2017-10-28 09:31:35,784 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0015.params"
+2017-10-28 09:31:38,530 Epoch[14] Validation-accuracy=0.154762
+2017-10-28 09:32:47,383 Epoch[15] Batch [100]	Speed: 52.46 samples/sec	accuracy=0.162816
+2017-10-28 09:33:56,006 Epoch[15] Batch [200]	Speed: 52.46 samples/sec	accuracy=0.160278
+2017-10-28 09:34:43,250 Epoch[15] Train-accuracy=0.176731
+2017-10-28 09:34:43,250 Epoch[15] Time cost=184.720
+2017-10-28 09:34:45,360 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0016.params"
+2017-10-28 09:34:48,134 Epoch[15] Validation-accuracy=0.164683
+2017-10-28 09:35:57,503 Epoch[16] Batch [100]	Speed: 52.07 samples/sec	accuracy=0.189494
+2017-10-28 09:37:06,129 Epoch[16] Batch [200]	Speed: 52.46 samples/sec	accuracy=0.190000
+2017-10-28 09:37:53,602 Epoch[16] Train-accuracy=0.208535
+2017-10-28 09:37:53,602 Epoch[16] Time cost=185.468
+2017-10-28 09:37:54,873 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0017.params"
+2017-10-28 09:37:57,605 Epoch[16] Validation-accuracy=0.172619
+2017-10-28 09:39:06,254 Epoch[17] Batch [100]	Speed: 52.61 samples/sec	accuracy=0.212596
+2017-10-28 09:40:14,326 Epoch[17] Batch [200]	Speed: 52.89 samples/sec	accuracy=0.223611
+2017-10-28 09:41:00,820 Epoch[17] Train-accuracy=0.227124
+2017-10-28 09:41:00,820 Epoch[17] Time cost=183.215
+2017-10-28 09:41:02,079 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0018.params"
+2017-10-28 09:41:05,157 Epoch[17] Validation-accuracy=0.194444
+2017-10-28 09:42:13,763 Epoch[18] Batch [100]	Speed: 52.74 samples/sec	accuracy=0.244224
+2017-10-28 09:43:22,202 Epoch[18] Batch [200]	Speed: 52.60 samples/sec	accuracy=0.254167
+2017-10-28 09:44:09,176 Epoch[18] Train-accuracy=0.270129
+2017-10-28 09:44:09,176 Epoch[18] Time cost=184.018
+2017-10-28 09:44:10,434 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0019.params"
+2017-10-28 09:44:13,194 Epoch[18] Validation-accuracy=0.226190
+2017-10-28 09:45:21,319 Epoch[19] Batch [100]	Speed: 53.03 samples/sec	accuracy=0.276128
+2017-10-28 09:46:29,349 Epoch[19] Batch [200]	Speed: 52.92 samples/sec	accuracy=0.288611
+2017-10-28 09:47:16,431 Epoch[19] Train-accuracy=0.315620
+2017-10-28 09:47:16,431 Epoch[19] Time cost=183.237
+2017-10-28 09:47:17,683 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0020.params"
+2017-10-28 09:47:20,416 Epoch[19] Validation-accuracy=0.251984
+2017-10-28 09:48:28,792 Epoch[20] Batch [100]	Speed: 52.82 samples/sec	accuracy=0.309131
+2017-10-28 09:49:37,144 Epoch[20] Batch [200]	Speed: 52.67 samples/sec	accuracy=0.336111
+2017-10-28 09:50:24,399 Epoch[20] Train-accuracy=0.347424
+2017-10-28 09:50:24,400 Epoch[20] Time cost=183.984
+2017-10-28 09:50:25,630 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0021.params"
+2017-10-28 09:50:28,409 Epoch[20] Validation-accuracy=0.345238
+2017-10-28 09:51:36,806 Epoch[21] Batch [100]	Speed: 52.81 samples/sec	accuracy=0.353685
+2017-10-28 09:52:45,076 Epoch[21] Batch [200]	Speed: 52.73 samples/sec	accuracy=0.362222
+2017-10-28 09:53:31,635 Epoch[21] Train-accuracy=0.383987
+2017-10-28 09:53:31,635 Epoch[21] Time cost=183.226
+2017-10-28 09:53:32,897 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0022.params"
+2017-10-28 09:53:35,807 Epoch[21] Validation-accuracy=0.305556
+2017-10-28 09:54:44,494 Epoch[22] Batch [100]	Speed: 52.59 samples/sec	accuracy=0.395215
+2017-10-28 09:55:53,147 Epoch[22] Batch [200]	Speed: 52.44 samples/sec	accuracy=0.395833
+2017-10-28 09:56:40,409 Epoch[22] Train-accuracy=0.423913
+2017-10-28 09:56:40,409 Epoch[22] Time cost=184.602
+2017-10-28 09:56:41,660 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0023.params"
+2017-10-28 09:56:44,426 Epoch[22] Validation-accuracy=0.359127
+2017-10-28 09:57:53,119 Epoch[23] Batch [100]	Speed: 52.59 samples/sec	accuracy=0.429593
+2017-10-28 09:59:01,537 Epoch[23] Batch [200]	Speed: 52.62 samples/sec	accuracy=0.428611
+2017-10-28 09:59:48,751 Epoch[23] Train-accuracy=0.440419
+2017-10-28 09:59:48,752 Epoch[23] Time cost=184.325
+2017-10-28 09:59:50,110 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0024.params"
+2017-10-28 09:59:52,859 Epoch[23] Validation-accuracy=0.402778
+2017-10-28 10:01:01,607 Epoch[24] Batch [100]	Speed: 52.54 samples/sec	accuracy=0.460396
+2017-10-28 10:02:09,755 Epoch[24] Batch [200]	Speed: 52.83 samples/sec	accuracy=0.472222
+2017-10-28 10:02:56,561 Epoch[24] Train-accuracy=0.479469
+2017-10-28 10:02:56,561 Epoch[24] Time cost=183.702
+2017-10-28 10:02:57,800 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0025.params"
+2017-10-28 10:03:00,499 Epoch[24] Validation-accuracy=0.380952
+2017-10-28 10:04:09,349 Epoch[25] Batch [100]	Speed: 52.46 samples/sec	accuracy=0.493949
+2017-10-28 10:05:17,432 Epoch[25] Batch [200]	Speed: 52.88 samples/sec	accuracy=0.503333
+2017-10-28 10:06:03,692 Epoch[25] Train-accuracy=0.515931
+2017-10-28 10:06:03,692 Epoch[25] Time cost=183.193
+2017-10-28 10:06:04,966 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0026.params"
+2017-10-28 10:06:07,675 Epoch[25] Validation-accuracy=0.373016
+2017-10-28 10:07:15,870 Epoch[26] Batch [100]	Speed: 52.97 samples/sec	accuracy=0.525028
+2017-10-28 10:08:24,253 Epoch[26] Batch [200]	Speed: 52.64 samples/sec	accuracy=0.538333
+2017-10-28 10:09:11,097 Epoch[26] Train-accuracy=0.547504
+2017-10-28 10:09:11,097 Epoch[26] Time cost=183.422
+2017-10-28 10:09:12,348 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0027.params"
+2017-10-28 10:09:15,443 Epoch[26] Validation-accuracy=0.431481
+2017-10-28 10:10:24,100 Epoch[27] Batch [100]	Speed: 52.62 samples/sec	accuracy=0.550055
+2017-10-28 10:11:32,556 Epoch[27] Batch [200]	Speed: 52.59 samples/sec	accuracy=0.584167
+2017-10-28 10:12:19,646 Epoch[27] Train-accuracy=0.569646
+2017-10-28 10:12:19,647 Epoch[27] Time cost=184.204
+2017-10-28 10:12:20,976 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0028.params"
+2017-10-28 10:12:23,686 Epoch[27] Validation-accuracy=0.452381
+2017-10-28 10:13:32,565 Epoch[28] Batch [100]	Speed: 52.45 samples/sec	accuracy=0.580583
+2017-10-28 10:14:41,103 Epoch[28] Batch [200]	Speed: 52.53 samples/sec	accuracy=0.595833
+2017-10-28 10:15:27,850 Epoch[28] Train-accuracy=0.609069
+2017-10-28 10:15:27,850 Epoch[28] Time cost=184.163
+2017-10-28 10:15:29,083 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0029.params"
+2017-10-28 10:15:31,845 Epoch[28] Validation-accuracy=0.450397
+2017-10-28 10:16:40,666 Epoch[29] Batch [100]	Speed: 52.48 samples/sec	accuracy=0.604235
+2017-10-28 10:17:49,000 Epoch[29] Batch [200]	Speed: 52.68 samples/sec	accuracy=0.632778
+2017-10-28 10:18:36,235 Epoch[29] Train-accuracy=0.633655
+2017-10-28 10:18:36,235 Epoch[29] Time cost=184.389
+2017-10-28 10:18:37,524 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0030.params"
+2017-10-28 10:18:40,301 Epoch[29] Validation-accuracy=0.474206
+2017-10-28 10:19:48,790 Epoch[30] Batch [100]	Speed: 52.75 samples/sec	accuracy=0.643014
+2017-10-28 10:20:56,945 Epoch[30] Batch [200]	Speed: 52.82 samples/sec	accuracy=0.649167
+2017-10-28 10:21:43,895 Epoch[30] Train-accuracy=0.650564
+2017-10-28 10:21:43,896 Epoch[30] Time cost=183.594
+2017-10-28 10:21:45,140 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0031.params"
+2017-10-28 10:21:48,100 Epoch[30] Validation-accuracy=0.429630
+2017-10-28 10:22:56,422 Epoch[31] Batch [100]	Speed: 52.87 samples/sec	accuracy=0.672717
+2017-10-28 10:24:04,524 Epoch[31] Batch [200]	Speed: 52.86 samples/sec	accuracy=0.676944
+2017-10-28 10:24:51,484 Epoch[31] Train-accuracy=0.691224
+2017-10-28 10:24:51,484 Epoch[31] Time cost=183.384
+2017-10-28 10:24:52,801 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0032.params"
+2017-10-28 10:24:55,544 Epoch[31] Validation-accuracy=0.446429
+2017-10-28 10:26:03,994 Epoch[32] Batch [100]	Speed: 52.78 samples/sec	accuracy=0.682343
+2017-10-28 10:27:12,067 Epoch[32] Batch [200]	Speed: 52.88 samples/sec	accuracy=0.706667
+2017-10-28 10:27:58,207 Epoch[32] Train-accuracy=0.695670
+2017-10-28 10:27:58,207 Epoch[32] Time cost=182.662
+2017-10-28 10:27:59,547 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0033.params"
+2017-10-28 10:28:02,288 Epoch[32] Validation-accuracy=0.418651
+2017-10-28 10:29:10,903 Epoch[33] Batch [100]	Speed: 52.65 samples/sec	accuracy=0.709021
+2017-10-28 10:30:19,394 Epoch[33] Batch [200]	Speed: 52.56 samples/sec	accuracy=0.734444
+2017-10-28 10:31:06,298 Epoch[33] Train-accuracy=0.726651
+2017-10-28 10:31:06,298 Epoch[33] Time cost=184.010
+2017-10-28 10:31:07,584 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0034.params"
+2017-10-28 10:31:10,303 Epoch[33] Validation-accuracy=0.460317
+2017-10-28 10:32:19,196 Epoch[34] Batch [100]	Speed: 52.44 samples/sec	accuracy=0.729098
+2017-10-28 10:33:27,709 Epoch[34] Batch [200]	Speed: 52.54 samples/sec	accuracy=0.760000
+2017-10-28 10:34:15,117 Epoch[34] Train-accuracy=0.758052
+2017-10-28 10:34:15,118 Epoch[34] Time cost=184.814
+2017-10-28 10:34:16,353 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0035.params"
+2017-10-28 10:34:19,112 Epoch[34] Validation-accuracy=0.442460
+2017-10-28 10:35:27,866 Epoch[35] Batch [100]	Speed: 52.53 samples/sec	accuracy=0.739549
+2017-10-28 10:36:36,239 Epoch[35] Batch [200]	Speed: 52.65 samples/sec	accuracy=0.784722
+2017-10-28 10:37:22,796 Epoch[35] Train-accuracy=0.768791
+2017-10-28 10:37:22,796 Epoch[35] Time cost=183.684
+2017-10-28 10:37:24,129 Saved checkpoint to "./models/kaggle-inception-resnet-v2-50-standford-512-lr-0.01/kaggle-inception-resnet-v2-50-standford-512-lr-0.01-0036.params"
+2017-10-28 10:37:27,162 Epoch[35] Validation-accuracy=0.494444

@@ -98,6 +98,8 @@ def run():
         line = log_handle.readline()
         while line:
             line_idx += 1
+            if debug: 
+                if line_idx == 105: exit(-1)
             # check valid line
             valid_flag_list = filter(lambda ptn: ptn in line, valid_line_pattern_list)
             if debug: print "valid_flag_list:", valid_flag_list
@@ -106,7 +108,7 @@ def run():
                 line = log_handle.readline()
                 continue
 
-            if debug: print "line:"+line
+            if debug: print "line " + str(line_idx) + "\t" + line
             train_acc_res = findall(train_acc_pattern, line)
             train_topk_acc_res = findall(train_topk_acc_pattern, line)
             val_acc_res = findall(val_acc_pattern, line)
@@ -158,15 +160,30 @@ def run():
                 val_topk_acc = val_topk_acc_res[0]
                
             # Saved line (checkpoint line)
-            if "Validation-accuracy=" in line:
-                # summarize
-                max_speed = max(speed_list)
-                min_speed = min(speed_list)
-                ave_speed = sum(map(float, speed_list))/float(len(speed_list))
+            if len(batch_train_topk_acc_list) > 0:
+                epoch_end_pattern = "Validation-top_k_accuracy"
+            else:
+                epoch_end_pattern = "Validation-accuracy"
 
-                max_batch_train_acc = max(batch_train_acc_list)
-                min_batch_train_acc = min(batch_train_acc_list)
-                ave_batch_train_acc = sum(map(float, batch_train_acc_list))/float(len(batch_train_acc_list))
+            if epoch_end_pattern in line:
+                # summarize
+                if len(speed_list) != 0:
+                    max_speed = max(speed_list)
+                    min_speed = min(speed_list)
+                    ave_speed = sum(map(float, speed_list))/float(len(speed_list))
+                else:
+                    max_speed = "---"
+                    min_speed = "---"
+                    ave_speed = "---"
+
+                if len(batch_train_acc_list) != 0:
+                    max_batch_train_acc = max(batch_train_acc_list)
+                    min_batch_train_acc = min(batch_train_acc_list)
+                    ave_batch_train_acc = sum(map(float, batch_train_acc_list))/float(len(batch_train_acc_list))
+                else:
+                    max_batch_train_acc = "---"
+                    min_batch_train_acc = "---"
+                    ave_batch_train_acc = "---"
 
                 if len(batch_train_topk_acc_list) < 1:
                     max_batch_train_topk_acc = "---"
@@ -176,6 +193,7 @@ def run():
                     max_batch_train_topk_acc = max(batch_train_topk_acc_list)
                     min_batch_train_topk_acc = min(batch_train_topk_acc_list)
                     ave_batch_train_topk_acc = sum(map(float, batch_train_topk_acc_list)) / float(len(batch_train_topk_acc_list))
+                if debug: print(val_topk_acc_res, line)
                 print("{epoch}\t{batch}\t{ave_batch_train_acc}\t{max_batch_train_acc}\t{min_batch_train_acc}\t{ave_batch_train_topk_acc}\t{max_batch_train_topk_acc}\t{min_batch_train_topk_acc}\t{train_acc}\t{train_topk_acc}\t{val_acc}\t{val_topk_acc}\t{ave_speed}\t{max_speed}\t{min_speed}\t{consume_time}\t{checkpoint}".\
                       format(epoch=epoch,\
                              batch=batch,\
