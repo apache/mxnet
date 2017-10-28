@@ -20,6 +20,7 @@ import copy
 import json
 import ast
 
+
 def load_model(args):
   devs = mx.cpu() if args.gpus == None else [mx.gpu(int(i)) for i in args.gpus.split(',')]
   return mx.model.FeedForward.load(args.model, args.load_epoch, ctx=devs)
