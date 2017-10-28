@@ -335,7 +335,7 @@ OBJ += build/src/io/recordio.pb.o
 SRC_TARGET = src/io/recordio.pb.h
 
 include $(PS_PATH)/make/deps.mk
-src/io/recordio.pb.h : src/io/recordio.proto $(PROTOBUF)
+src/io/recordio.pb.cc src/io/recordio.pb.h : src/io/recordio.proto $(PROTOBUF)
 	$(PROTOC) --cpp_out=./src/io/ --proto_path=./src/io/ $<
 	$(PROTOC) --python_out=./tools/ --proto_path=./src/io/ $<
 endif
