@@ -199,21 +199,25 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   return stride;
 }
 
-
-struct fill {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType val) {
-    out[i] = val;
-  }
-};
-
-
-struct set_zero {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out) {
-    out[i] = static_cast<DType>(0);
-  }
-};
+/*!
+ * \brief Simple copy data from one blob to another
+ * \param to Destination blob
+ * \param from Source blob
+ */
+template <typename xpu>
+MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob& from) {
+  CHECK_EQ(from.Size(), to.Size());
+  CHECK_EQ(from.dev_mask(), to.dev_mask());
+  MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
+    if (to.type_flag_ == from.type_flag_) {
+      mshadow::Copy(to.FlatTo1D<xpu, DType>(), from.FlatTo1D<xpu, DType>(), s);
+    } else {
+      MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+        to.FlatTo1D<xpu, DType>(s) = mshadow::expr::tcast<DType>(from.FlatTo1D<xpu, SrcDType>(s));
+      })
+    }
+  })
+}
 
 /*! \brief Binary op backward gradient OP wrapper */
 template<typename GRAD_OP>
@@ -234,21 +238,74 @@ struct backward_grad {
  */
 template<typename OP, int req>
 struct op_with_req {
+  typedef OP Operation;
+
+  /*! \brief input is one tensor */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
   }
 
+  /*! \brief inputs are two tensors */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs, const DType *rhs) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
+  /*! \brief input is tensor and a scalar value */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
+
+  /*! \brief No inputs (ie fill to constant value) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out) {
+    KERNEL_ASSIGN(out[i], req, OP::Map());
+  }
+
+  /*! \brief input is single scalar value */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(value));
+  }
+
+  /*! \brief inputs are two tensors and a scalar value */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *input_1, const DType *input_2, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], value));
+  }
+
+  /*! \brief inputs are three tensors (ie backward grad with binary grad function) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out,
+                                  const DType *input_1,
+                                  const DType *input_2,
+                                  const DType *input_3) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], input_3[i]));
+  }
 };
+
+/*!
+ * \brief Set to immediate scalar value kernel
+ * \tparam val Scalar immediate
+ */
+template<int val>
+struct set_to_int {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*! \brief Special-case kernel shortcut for setting to zero */
+using set_zero = set_to_int<0>;
 
 template<typename OP, typename xpu>
 struct Kernel;
