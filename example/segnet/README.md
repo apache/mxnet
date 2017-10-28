@@ -6,12 +6,29 @@ This mxnet version reference a caffe version https://github.com/alexgkendall/Seg
 
 The segnet_basic and segnet networks were included in this mxnet version.
 
+## Requirement
+
+Need python package Pillow.
+```
+pip install Pillow
+```
+Build MXNet with new pooling and upsampling operators.
+```
+# copy new operators to src/operator/
+cp segnet/op/* incubator-mxnet/src/operator/
+# rebuild MXNet from source
+cd incubator-mxnet/
+make
+cd python/
+python setup.py install
+```
+
 ## Dataset
 
 The model can be trained for road scene understanding using the [CamVid dataset](http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/). The Cambridge-driving Labeled Video Database (CamVid) is the first collection of videos with object class semantic labels, complete with metadata. The database provides ground truth labels that associate each pixel with one of [32 semantic classes](http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/#ClassLabels).
 
 This dataset is small, consisting of 367 training and 233 testing RGB images (day and dusk scenes) at
-360480 resolution. The challenge is to segment 11 classes such
+360*480 resolution. The challenge is to segment 11 classes such
 as road, building, cars, pedestrians, signs, poles, side-walk etc.
 
 ## Train
