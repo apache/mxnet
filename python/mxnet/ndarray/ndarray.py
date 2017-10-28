@@ -730,22 +730,22 @@ fixed-size items.
                 'NDArray does not support assignment with %s of type %s'%(
                     str(value), str(type(value))))
 
-    def _set_value_to_nd(self, value, vshape, indices):
-        """Set value to the current `NDArray` using indices `NDArray` as index.
-        This basically broadcast value to vshape and call op _scatter_set_nd."""
+    def _prepare_value_nd(self, value, vshape):
         if isinstance(value, (np.ndarray, np.generic)):
             value_nd = array(value, ctx=self.context, dtype=self.dtype)
         elif isinstance(value, numeric_types):
             value_nd = full(shape=vshape, val=value, ctx=self.context, dtype=self.dtype)
         elif isinstance(value, NDArray):
             value_nd = value.as_in_context(self.context)
+            if value_nd.dtype != self.dtype:
+                value_nd = value_nd.astype(self.dtype)
         else:
             raise TypeError(
                 'NDArray does not support assignment with %s of type %s'%(
                     str(value), str(type(value))))
         if value_nd.shape != vshape:
             value_nd = value_nd.broadcast_to(vshape)
-        _internal._scatter_set_nd(value_nd, indices, self.shape, self)
+        return value_nd
 
     def _set_nd_basic_indexing(self, key, value):
         """This function is called by __setitem__ when key is a basic index, i.e.
@@ -753,13 +753,17 @@ fixed-size items.
         on the steps of slices. For key with all the steps of slices are either None
         or 1, call _set_nd_basic_indexing_step_equal_one which is more efficient."""
         indices, vshape = self._get_index_nd_from_basic_index(key)
-        self._set_value_to_nd(value, vshape, indices)
+        value_nd = self._prepare_value_nd(value, vshape)
+        vshape = _get_oshape_of_gather_nd(self.shape, indices.shape)
+        value_nd = value_nd.reshape(vshape)
+        _internal._scatter_set_nd(data=value_nd, indices=indices, shape=self.shape, out=self)
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
         indices = self._get_index_nd_from_advanced_index(key)
         vshape = _get_oshape_of_gather_nd(self.shape, indices.shape)
-        self._set_value_to_nd(value, vshape, indices)
+        value_nd = self._prepare_value_nd(value, vshape)
+        _internal._scatter_set_nd(data=value_nd, indices=indices, shape=self.shape, out=self)
 
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
@@ -2138,6 +2142,9 @@ def _get_oshape_of_gather_nd(dshape, ishape):
 def _get_broadcast_shape(shape1, shape2):
     """Given two shapes that are not identical, find the shape
     that both input shapes can broadcast to."""
+    if shape1 == shape2:
+        return shape1
+
     length1 = len(shape1)
     length2 = len(shape2)
     if length1 > length2:

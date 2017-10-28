@@ -1236,14 +1236,14 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
 
 /*!
  * This is for internal use only.
- * DO NOT use call this function unless you have to.
+ * DO NOT call this function unless you have to.
  */
 template<typename xpu>
-void _ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const std::vector<TBlob>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
+void ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
   ScatterNDForward<xpu>(attrs, ctx, inputs, {kWriteInplace}, outputs);
 }
 

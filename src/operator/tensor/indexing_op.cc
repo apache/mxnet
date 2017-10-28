@@ -463,8 +463,7 @@ Examples::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
-.set_attr<FCompute>("FCompute<cpu>", _ScatterSetNDForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<FCompute>("FCompute<cpu>", ScatterSetNDForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "data")
 .add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());

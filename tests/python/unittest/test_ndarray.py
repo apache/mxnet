@@ -806,7 +806,7 @@ def test_bool():
 
 
 def test_ndarray_indexing():
-    def check_indexing(np_array, index, is_scalar=False):
+    def test_getitem(np_array, index, is_scalar=False):
         """`is_scalar` indicates whether we should expect a scalar for the result.
         If so, the indexed array of NDArray should call asscalar to compare
         with numpy's indexed array."""
@@ -831,8 +831,35 @@ def test_ndarray_indexing():
             mx_indexed_array = mx_indexed_array.asnumpy()
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
 
+    def test_setitem(np_array, index, is_scalar):
+        np_index = index
+        if isinstance(index, mx.nd.NDArray):
+            np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = []
+            for idx in index:
+                if isinstance(idx, mx.nd.NDArray):
+                    np_index.append(idx.asnumpy())
+                else:
+                    np_index.append(idx)
+            np_index = tuple(np_index)
+
+        mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
+        np_array = mx_array.asnumpy()
+        if is_scalar:
+            np_indexed_array = np.random.randint(low=-10000, high=0)
+            np_array[np_index] = np_indexed_array
+            mx_array[index] = np_indexed_array
+            assert same(np_array, mx_array.asnumpy())
+        else:
+            indexed_array_shape = np_array[np_index].shape
+            np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
+            np_array[np_index] = np_indexed_array
+            mx_array[index] = np_indexed_array
+            assert same(np_array, mx_array.asnumpy())
+
     shape = (8, 16, 9, 9)
-    np_array = np.arange(np.prod(shape)).reshape(shape)
+    np_array = np.arange(np.prod(shape), dtype='int32').reshape(shape)
     # index_list is a list of tuples. The tuple's first element is the index, the second one is a boolean value
     # indicating whether we should expect the result as a scalar compared to numpy.
     index_list = [(0, False), (5, False), (-1, False),
@@ -870,9 +897,9 @@ def test_ndarray_indexing():
                   (([[[[1]]]], [[2], [2]], slice(0, 3), slice(None)), False),
                   (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
                   (([1, 2], slice(3, 5), (2, 3), [3, 4]), False)]
-
     for index in index_list:
-        check_indexing(np_array, index[0], index[1])
+        test_getitem(np_array, index[0], index[1])
+        test_setitem(np_array, index[0], index[1])
 
 
 if __name__ == '__main__':
