@@ -473,9 +473,14 @@ void Slice(const nnvm::NodeAttrs& attrs,
   TShape begin(N), end(N);
   for (index_t i = 0; i < N; ++i) {
     int s = 0;
-    if (param.begin[i]) {
+    if (i < param.begin.ndim() && param.begin[i]) {
       s = *param.begin[i];
-      if (s < 0) s += inputs[0].size(i);
+      if (s < 0) {
+        s += inputs[0].size(i);
+        CHECK(s >= 0)
+            << "Invalid slicing begin " << param.begin << " and end "
+            << param.end << " for data of shape " << inputs[0].shape_;
+      }
     }
     begin[i] = s;
     end[i] = s + outputs[0].size(i);

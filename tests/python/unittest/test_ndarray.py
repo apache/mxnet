@@ -593,6 +593,10 @@ def test_order(ctx=default_context()):
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
     gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
+    
+    # test topk with a big shape
+    a = mx.nd.arange(0, 54686454, step=1, repeat=1)
+    assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
 
 def test_ndarray_equal():
     x = mx.nd.zeros((2, 3))

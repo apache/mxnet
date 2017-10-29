@@ -4134,9 +4134,11 @@ def _syevd_backward(grad_u, grad_l, u, l):
     return np.dot(temp3, u)
 
 def test_laop_3():
-    # Operators implemented for CPU only currently
+    # Currently disabled on GPU as syevd needs cuda8
+    # and MxNet builds use cuda 7.5
     if not (default_context() == mx.cpu()):
         return
+
     np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-6
@@ -4148,7 +4150,6 @@ def test_laop_3():
     grad_check = 1
 
     data1 = mx.symbol.Variable('data1')
-
     check_fw = lambda sym, location, expected :\
         check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
                                atol=atol_fw, dtype=dtype)
@@ -4200,13 +4201,12 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
-# Note: Currently, linalg.syevd is activated for float64 only, due to the issues
-# demonstrated by this unit test. For this reason, the second part of this test
-# (float32) is deactivated for now.
 def test_laop_4():
-    # Operators implemented for CPU only currently
-    if not(default_context() == mx.cpu()):
+    # Currently disabled on GPU as syevd needs cuda8
+    # and MxNet builds use cuda 7.5
+    if not (default_context() == mx.cpu()):
         return
+
     np.random.seed(1896893923)
     rtol_fw = 1e-6
     atol_fw = 1e-6
@@ -4226,7 +4226,7 @@ def test_laop_4():
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float64)
     # float32
     #print('float32')
-    #check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
+    check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
 
 def test_stack():
