@@ -571,10 +571,6 @@ mode). In this case, *U* has *n* dimensions like *A*, and *L* has *n-1* dimensio
 
 .. note:: The operator supports float32 and float64 data types only.
 
-.. note:: For the time being, this operator supports the float64 data type only. If the
-          rest of your expression uses float32, please apply the Cast operator to inputs
-          and outputs.
-
 .. note:: Derivatives for this operator are defined only if *A* is such that all its
           eigenvalues are distinct, and the eigengaps are not too small. If you need
           gradients, do not apply this operator to matrices with multiple eigenvalues.

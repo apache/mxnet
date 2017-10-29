@@ -103,7 +103,7 @@ class ElemwiseBinaryOp : public OpBase {
       #pragma omp parallel for
       for (int i = iter_out; i < index_out_min; ++i) {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          SerialLaunchCPU<SetToScalar<Req>>(s, size, (*out)[i].dptr_, zero_input_val);
+          SerialLaunchCPU<OpBase::set_to_scalar<Req>>(s, size, (*out)[i].dptr_, zero_input_val);
         });
       }
     }

@@ -24,10 +24,10 @@
  */
 
 #include <gtest/gtest.h>
-#include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
-#include "../../src/operator/activation-inl.h"
 #include "../include/test_op_runner.h"
+#include "../include/test_legacy_op.h"
+#include "../../src/operator/activation-inl.h"
 
 using namespace mxnet;
 
@@ -41,9 +41,8 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"act_type", "tanh"});
-  test::OperatorRunner<mxnet::op::ActivationProp,
-    test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(false, shape, kwargs, 1);
+  test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
+  runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
 /*!
@@ -53,8 +52,10 @@ TEST(ACTIVATION_PERF, TimingCPU) {
   kwargs_t kwargs = basic_activation_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"act_type", "tanh"});
-  test::OperatorRunner<mxnet::op::ActivationProp, test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
+  runner.RunBidirectional(false,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -71,7 +72,7 @@ TEST(ACTIVATION_PERF, TimingCPU) {
     };
   }
   for (const TShape &shape : shapes) {
-    runner.TimingTest("Activation Operator CPU", false, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Activation Operator CPU", false, false, kwargs, 2, 10, { shape });
   }
 }
 
@@ -83,8 +84,11 @@ TEST(ACTIVATION_PERF, TimingGPU) {
   kwargs_t kwargs = basic_activation_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"act_type", "tanh"});
-  test::OperatorRunner<mxnet::op::ActivationProp, test::GenericOperatorData<float, float>> runner;
-  runner.RunBidirectional(true, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
+  test::OperatorRunner<mxnet::op::ActivationProp,
+    test::op::LegacyOperatorExecutor<float, float>> runner;
+  runner.RunBidirectional(true,
+                          { TShape({10, 10, 10, 10}) },
+                          kwargs, 1);  // prime code and cache
   std::vector <TShape> shapes = {
       {1,  1, 28,  28},
       {1,  3, 28,  28},
@@ -93,7 +97,8 @@ TEST(ACTIVATION_PERF, TimingGPU) {
       {20, 3, 128, 128}
     };
   for (const TShape &shape : shapes) {
-    runner.TimingTest("Activation Operator GPU", true, false, kwargs, 2, 10, shape);
+    runner.TimingTest("Activation Operator GPU", true, false, kwargs, 2, 10, { shape });
   }
 }
 #endif  // MXNET_USE_CUDA == 1
+
