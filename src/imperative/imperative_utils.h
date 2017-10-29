@@ -639,8 +639,15 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
       auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
       CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
       vctx[i] = vctx[idx[fwd_nid].inputs[0].node_id];
-    } else if (idx[i].inputs.size() && vctx[i].dev_type == -1) {
-      vctx[i] = vctx[idx[i].inputs[0].node_id];
+    } else if (idx[i].control_deps.size() &&
+               vctx[idx[i].control_deps[0]].dev_type != -1) {
+      vctx[i] = vctx[idx[i].control_deps[0]];
+    } else {
+      for (const auto& in : idx[i].inputs) {
+        if (vctx[in.node_id].dev_type == -1) continue;
+        vctx[i] = vctx[in.node_id];
+        break;
+      }
     }
   }
   // backward pass
