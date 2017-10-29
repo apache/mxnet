@@ -2044,8 +2044,11 @@ def correlation_backward(out_grad,tmp1,tmp2,data1,data2,pad_size,kernel_size,str
 
 def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply):
 
-    img1 = np.random.random(data_shape)
-    img2 = np.random.random(data_shape)
+    # The python 'correlation_backwards' routine sets the 'sgn' variable to +1 or -1 based
+    # on a comparison of float values from the 'tmp1' and 'tmp2' arrays.  For this to match
+    # the mxnet routine, python must duplicate mxnet's default float32 precision.
+    img1 = np.float32(np.random.random(data_shape))
+    img2 = np.float32(np.random.random(data_shape))
 
     net1 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply)
     net2 = get_correlation(img1,img2,kernel_size,max_displacement,stride1,stride2,pad_size,is_multiply )

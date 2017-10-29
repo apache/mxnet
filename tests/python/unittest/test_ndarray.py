@@ -528,7 +528,8 @@ def test_arange():
     assert_almost_equal(pred, gt)
 
 @with_seed()
-def test_order(ctx=default_context()):
+def test_order():
+    ctx = default_context()
     dat_size = 5
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
