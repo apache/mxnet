@@ -590,7 +590,7 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
   });
 }
 
-//slice a CSRNDArray for two dimensions
+// slice a CSRNDArray for two dimensions
 struct SliceDimTwoCsrAssign {
   template<typename IType, typename RType, typename DType>
   MSHADOW_XINLINE static void Map(int i, IType* out_idx, DType* out_data,
@@ -655,7 +655,8 @@ void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext&
 
         Stream<xpu> *s = ctx.get_stream<xpu>();
         Kernel<SliceDimTwoCsrAssign, xpu>::Launch(s, indptr_len - 1, out_idx, out_data,
-                                                  out_indptr, in_idx, in_data, in_indptr + begin_row,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
                                                   begin_col, end_col);
       });
     });
@@ -670,7 +671,7 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   if (req == kNullOp) return;
   CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
-  
+
   const TShape ishape = in.shape();
   const TShape oshape = out.shape();
 
@@ -686,19 +687,18 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
     end[i] = s + oshape[i];
   }
   switch (N) {
-   case 1: {
-    SliceDimOneCsrImpl<xpu>(begin, end, ctx, in, out);
-    break;
-   }
-   case 2: {
-    SliceDimTwoCsrImpl<xpu>(begin, end, ctx, in, out);
-    break;
-   }
-   default:
-    LOG(FATAL) << "CSR is only for 2-D shape";
-    break;
+    case 1: {
+      SliceDimOneCsrImpl<xpu>(begin, end, ctx, in, out);
+      break;
+    }
+    case 2: {
+      SliceDimTwoCsrImpl<xpu>(begin, end, ctx, in, out);
+      break;
+    }
+    default:
+      LOG(FATAL) << "CSR is only for 2-D shape";
+      break;
   }
-  
 }
 
 template<typename xpu>
