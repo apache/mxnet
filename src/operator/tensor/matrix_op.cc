@@ -264,7 +264,7 @@ The resulting array's *k*-th dimension contains elements
 from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
 
 For an input array of non-default storage type(e.g. `csr` or `row_sparse`), it only supports
-slicing on the first dimension.
+slicing on the two dimensions for `csr`.
 
 Example::
 
@@ -336,16 +336,10 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 .add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
-MXNET_ADD_SPARSE_OP_ALIAS(slice_axis)
 .describe(R"code(Slices along a given axis.
 
 Returns an array slice along a given `axis` starting from the `begin` index
 to the `end` index.
-
-The storage type of ``slice_axis`` output depends on storage types of inputs
-
-- slice_axis(csr, axis, begin, end) = csr
-- otherwise, ``slice_axis`` generates output with default storage
 
 Examples::
 
@@ -369,8 +363,6 @@ Examples::
 .set_attr_parser(ParamParser<SliceAxisParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SliceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", SliceAxisForwardInferStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SliceAxisEx<cpu>)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxis<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
 .add_argument("data", "NDArray-or-Symbol", "Source input")
