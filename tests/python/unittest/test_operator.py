@@ -450,7 +450,7 @@ def test_relu():
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
     xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
-    eps = 1e-5
+    eps = 1e-4
     # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
     xa[abs(xa) < eps] = 1.0
     ya = frelu(xa)
