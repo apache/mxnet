@@ -223,11 +223,12 @@ def check_regression(symbol, forward, backward):
     exec1.forward(is_train=True)
     out1 = exec1.outputs[0].asnumpy()
     npout = forward(arr_data.asnumpy())
-    assert_almost_equal(npout, out1)
+    atol = 1e-5
+    assert_almost_equal(npout, out1, atol=atol)
 
     exec1.backward()
     npout = backward(npout,  arr_label.asnumpy().reshape(npout.shape))
-    assert_almost_equal(npout, arr_grad.asnumpy())
+    assert_almost_equal(npout, arr_grad.asnumpy(), atol=atol)
 
 
 @with_seed()
@@ -3784,7 +3785,7 @@ def test_deformable_convolution():
                                                    grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-@with_seed()
+@with_seed(1234)
 def test_deformable_psroipooling():
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
