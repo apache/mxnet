@@ -83,7 +83,8 @@ struct rsp_idx_check {
   MSHADOW_XINLINE static void Map(int i, DType* out, const IType* in,
                                   const nnvm::dim_t nrows) {
     if ((in[i+1] <= in[i]) ||
-        (in[i] >= static_cast<DType>(nrows)))
+        (in[i+1] >= static_cast<IType>(nrows)) ||
+        (i == 0 && in[i] >= static_cast<IType>(nrows)))
       *out = kRSPIdxErr;
   }
 };
@@ -171,7 +172,7 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
                                   rctx.get_ctx(), false, err_cpu.type_flag_);
         TBlob val_xpu = ret_xpu.data();
         Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
-        Kernel<rsp_idx_check, xpu>::Launch(s, input.aux_shape(rowsparse::kIdx)[0],
+        Kernel<rsp_idx_check, xpu>::Launch(s, input.aux_shape(rowsparse::kIdx)[0]-1,
           val_xpu.dptr<DType>(), input.aux_data(rowsparse::kIdx).dptr<IType>(),
           input.shape()[0]);
         mshadow::Copy(err_cpu.get<cpu, 1, DType>(),

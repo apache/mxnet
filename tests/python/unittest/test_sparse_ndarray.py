@@ -729,14 +729,14 @@ def test_sparse_nd_check_format():
         a.check_format()
         assert(False)
     except mx.base.MXNetError:
-        return
+        pass
     try:
-       shape = (6, 2)
-       data_list = [[1, 2], [3, 4]]
-       indices_list = [1, 8]
-       a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
-       a.check_format()
-       assert(False)
+        shape = (6, 2)
+        data_list = [[1, 2], [3, 4]]
+        indices_list = [1, 8]
+        a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+        a.check_format()
+        assert(False)
     except mx.base.MXNetError:
         return
 
