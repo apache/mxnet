@@ -118,8 +118,8 @@ def test_sparse_nd_slice():
     ind = rnd.randint(-shape[0], shape[0] - 1)
     assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
         
-    start_col = rnd.randint(0, shape[0] - 1)
-    end_col = rnd.randint(start_col + 1, shape[0])
+    start_col = rnd.randint(0, shape[1] - 1)
+    end_col = rnd.randint(start_col + 1, shape[1])
     result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
     result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
     assert same(result_dense.asnumpy(), result.asnumpy())
