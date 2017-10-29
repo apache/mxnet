@@ -743,18 +743,18 @@ fixed-size items.
     def _prepare_value_nd(self, value, vshape):
         """Given value and vshape, create an `NDArray` from value with the same
         context and dtype as the current one and broadcast it to vshape."""
-        if isinstance(value, (np.ndarray, np.generic)):
-            value_nd = array(value, ctx=self.context, dtype=self.dtype)
-        elif isinstance(value, numeric_types):
+        if isinstance(value, numeric_types):
             value_nd = full(shape=vshape, val=value, ctx=self.context, dtype=self.dtype)
         elif isinstance(value, NDArray):
             value_nd = value.as_in_context(self.context)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
         else:
-            raise TypeError(
-                'NDArray does not support assignment with %s of type %s'%(
-                    str(value), str(type(value))))
+            try:
+                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+            except:
+                raise TypeError('NDArray does not support assignment with non-array-like'
+                                ' object %s of type %s' % (str(value), str(type(value))))
         if value_nd.shape != vshape:
             value_nd = value_nd.broadcast_to(vshape)
         return value_nd
