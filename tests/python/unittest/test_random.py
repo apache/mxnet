@@ -200,8 +200,9 @@ def test_sample_multinomial():
     x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
     dx = mx.nd.ones_like(x)
     mx.contrib.autograd.mark_variables([x], [dx])
+    samples = 5000
     with mx.autograd.record():
-        y, prob = mx.nd.random.multinomial(x, shape=1000, get_prob=True)
+        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
         r = prob * 5
         r.backward()
 
@@ -209,15 +210,15 @@ def test_sample_multinomial():
     x = x.asnumpy()
     for i in range(x.shape[0]):
 
-        freq = np.bincount(y[i], minlength=5)/1000.0*x[i].sum()
-        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.25)
+        freq = np.bincount(y[i], minlength=5)/np.float32(samples)*x[i].sum()
+        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
         rprob = x[i][y[i]]/x[i].sum()
         mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
 
         real_dx = np.zeros((5,))
-        for j in range(1000):
+        for j in range(samples):
             real_dx[y[i][j]] += 5.0 / rprob[j]
-        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i])
+        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i], rtol=1e-4)
 
 
 if __name__ == '__main__':
