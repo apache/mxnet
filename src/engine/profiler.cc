@@ -175,7 +175,7 @@ void Profiler::DumpProfile() {
 
     for (uint32_t j = 0; j < opr_num; ++j) {
       const OprExecStat* opr_stat = d.opr_exec_stats[j];
-
+      if(opr_stat->WellFormed == false) continue;
       uint32_t pid = i;
       uint32_t tid = opr_stat->thread_id;
 
@@ -227,6 +227,7 @@ void SetOprEnd(OprExecStat* opr_stat) {
     LOG(WARNING) << "SetOpEnd: nullptr";
     return;
   }
+  opr_stat->WellFormed = true;
   opr_stat->opr_end_rel_micros   = NowInUsec() - Profiler::Get()->GetInitTime();
 }
 

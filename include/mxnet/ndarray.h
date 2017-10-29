@@ -37,6 +37,7 @@
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
+#include "../../ps-lite/include/dmlc/DIME.h" 
 #if MKL_EXPERIMENTAL == 1
 #include <mkl_memory.h>
 #endif
@@ -73,6 +74,15 @@ class NDArray {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = MKLMemHolder::create();
 #endif
+  }
+
+  std::string Summarize(int firstN=10)
+  {
+      //auto tblob = data();
+      auto ptr = (float*)tblob.dptr_;
+      auto sz = shape().Size();
+      //auto sigptr = (int*)tblob.dptr_;
+      return SummarizeContinousBuffer(ptr,sz,firstN);
   }
   /*!
    * \brief constructs a new dynamic NDArray

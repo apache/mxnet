@@ -94,13 +94,58 @@ def _create_kvstore(kvstore, num_device, arg_params):
     return (kv, update_on_kvstore)
 
 def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
-    """Initialize kvstore"""
+  """ Initialize kvstore"""
+    """ Infiniband Servers, tell them to setup appropriate key sizes """
+    #aggKey = 2147483647
+    #rg = range(len(param_arrays))
+    #print arg_params[param_names[0]].size()
+    #imm = [int(arg_params[param_names[idx]].size) for idx in rg]
+    #for num in imm:
+    #    print num
+    #ndarray = nd.array(imm,None,np.int32)
+    #print "showing..."
+    #for num in ndarray:
+    #    print num,"new123"
+    #print "Showing key aggregation"
+    #kvstore.initPHUB(aggKey,ndarray)
+    #setup optimizer's PHUB specifics
+    translation = opt.PHUBVK2PK
+    bound = os.environ.get('MXNET_KVSTORE_BIGARRAY_BOUND')
+    numServer = os.environ.get('DMLC_NUM_SERVER')
+    vanType = os.environ.get('PSLITE_VAN_TYPE')
+    totalSize = 0
+    if bound == None:
+        bound = 512 * 1024
+    if bound != None: #and int(numServer) == 1:
+        #we need setup key chunking if necessary.
+        ssize = int(bound)
+        for idx, param_on_devs in enumerate(param_arrays):
+            chunk = int(math.ceil(1.0 * param_on_devs[0].size / ssize))
+            for i in range(0,chunk):
+                translation[len(translation)] = idx
+    flattened = [item for sublist in param_arrays for item in sublist]
+    kvstore.initPHUB(-1, flattened)
+    if vanType == None or vanType == 'zmq':
+        translation.clear() #zmq does not have our key chunking.
     for idx, param_on_devs in enumerate(param_arrays):
-        name = param_names[idx]
-        kvstore.init(name, arg_params[name])
-
+    #    print "initializing ",idx
+        kvstore.init(idx, arg_params[param_names[idx]])
+        #print arg_params[param_names[idx]].size
+        #raise "die"
         if update_on_kvstore:
-            kvstore.pull(name, param_on_devs, priority=-idx)
+            kvstore.pull(idx, param_on_devs, priority=-idx)
+            totalSize += param_on_devs[0].size * 4
+            # print "param_names = %s, idx = %s, size = %s" % (param_names[idx], idx, param_on_devs[0].size * 4)
+            #for param in param_on_devs:
+            #    assert(len(param_on_devs) == 1)
+            #    param.wait_to_read()
+            #wait to read, probably just one key there.
+    #time.sleep(5)        
+    #for now, comm_buf is used as send buffer, and we need to communicate address of pull buffers
+    #we also communicate the size implicitly
+    #-2 signals onkeypopulated.
+    print "[info] total model size per worker  = %s. total number of params = %s" % (str(totalSize), len(arg_params))
+    kvstore.initPHUB(-2, flattened)
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""

@@ -668,6 +668,16 @@ int MXDataIterCreateIter(DataIterCreator creator,
   API_END_HANDLE_ERROR(delete iter);
 }
 
+int MXInitPHUBOptimizerParam(mx_uint num_params, float* vals) 
+{ 
+  API_BEGIN(); 
+  if (ps::Postoffice::Get()->van()->VanType() == "pshub") 
+  { 
+      ps::Postoffice::Get()->van()->InitializeVanOptimizerValues(num_params, vals); 
+  } 
+  API_END(); 
+} 
+
 int MXDataIterFree(DataIterHandle handle) {
   API_BEGIN();
   delete static_cast<IIterator<DataBatch> *>(handle);
@@ -885,6 +895,18 @@ void MXKVStoreSetUpdaterImpl(KVStoreHandle handle,
   static_cast<KVStore*>(handle)->set_updater(updt);
 }
 
+int MXDumpProfile() { 
+    API_BEGIN(); 
+#if MXNET_USE_PROFILER 
+    engine::Profiler *profiler = engine::Profiler::Get(); 
+    CHECK(profiler->IsEnableOutput()) 
+    << "Profiler haven't been run. Config and start profiler first"; 
+    engine::Profiler::Get()->DUMP(); 
+#else 
+    LOG(FATAL) << "Need to compile with USE_PROFILER=1 for MXNet Profiler"; 
+#endif 
+    API_END(); 
+} 
 int MXKVStoreSetUpdater(KVStoreHandle handle,
                         MXKVStoreUpdater updater,
                         void* updater_handle) {
