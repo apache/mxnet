@@ -415,6 +415,9 @@ fixed-size items.
                 elif isinstance(value, numeric_types):
                     _internal._set_value(float(value), out=self)
                 elif isinstance(value, (np.ndarray, np.generic)):
+                    bshape = self.shape
+                    if isinstance(value, np.generic) or value.shape != bshape:
+                        value = np.broadcast_to(value, bshape)
                     self._sync_copyfrom(value)
                 else:
                     raise TypeError(
@@ -695,7 +698,9 @@ fixed-size items.
                 len(key), len(my_shape))
         begin = [0 for _ in my_shape]
         end = [x for x in my_shape]
+        vshape = []
         expand = []
+        i = -1
         for i, slice_i in enumerate(key):
             if isinstance(slice_i, integer_types):
                 assert slice_i < my_shape[i]
@@ -710,21 +715,26 @@ fixed-size items.
                 end[i] = slice_i.stop or my_shape[i]
                 assert begin[i] < end[i]
                 assert end[i] <= my_shape[i]
+                vshape.append(end[i] - begin[i])
             else:
                 raise ValueError(
                     "NDArray does not support slicing with key %s of type %s."%(
                         str(slice_i), str(type(slice_i))))
+        vshape.extend(my_shape[i+1:])
+        if len(vshape) == 0:
+            vshape.append(1)
 
         if isinstance(value, NDArray):
-            value = value.as_in_context(self.context)
-            self._slice_assign(value, begin, end, expand)
+            value_nd = self._prepare_value_nd(value, vshape)
+            self._slice_assign(value_nd, begin, end, expand)
         elif isinstance(value, numeric_types):
             _internal._crop_assign_scalar(self, out=self,
                                           begin=begin, end=end,
                                           scalar=value)
         elif isinstance(value, (np.ndarray, np.generic)):
-            value = array(value, ctx=self.context, dtype=self.dtype)
-            self._slice_assign(value, begin, end, expand)
+            value_nd = array(value, ctx=self.context, dtype=self.dtype)
+            value_nd = self._prepare_value_nd(value_nd, vshape)
+            self._slice_assign(value_nd, begin, end, expand)
         else:
             raise TypeError(
                 'NDArray does not support assignment with %s of type %s'%(

@@ -88,14 +88,6 @@ def test_ndarray_setitem():
     x_np[1] = 1
     assert same(x.asnumpy(), x_np)
 
-    # all-dim indexing
-    x = mx.nd.zeros(shape)
-    val = mx.nd.ones((3, 2, 1))
-    x[:, 1:3, 1] = val
-    x_np = np.zeros(shape, dtype=x.dtype)
-    x_np[:, 1:3, 1:2] = val.asnumpy()
-    assert same(x.asnumpy(), x_np)
-
     # short all-dim indexing
     x = mx.nd.zeros(shape)
     val = mx.nd.ones((3, 2))
@@ -832,6 +824,11 @@ def test_ndarray_indexing():
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
 
     def test_setitem(np_array, index, is_scalar):
+        def assert_same(np_array, np_index, mx_array, mx_index, value):
+            np_array[np_index] = value
+            mx_array[mx_index] = value
+            assert same(np_array, mx_array.asnumpy())
+
         np_index = index
         if isinstance(index, mx.nd.NDArray):
             np_index = index.asnumpy()
@@ -847,16 +844,15 @@ def test_ndarray_indexing():
         mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
         np_array = mx_array.asnumpy()
         if is_scalar:
-            np_indexed_array = np.random.randint(low=-10000, high=0)
-            np_array[np_index] = np_indexed_array
-            mx_array[index] = np_indexed_array
-            assert same(np_array, mx_array.asnumpy())
+            assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
         else:
             indexed_array_shape = np_array[np_index].shape
             np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
-            np_array[np_index] = np_indexed_array
-            mx_array[index] = np_indexed_array
-            assert same(np_array, mx_array.asnumpy())
+            assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+            assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
+            if len(indexed_array_shape) > 1:
+                assert_same(np_array, np_index, mx_array, index,
+                            np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
 
     shape = (8, 16, 9, 9)
     np_array = np.arange(np.prod(shape), dtype='int32').reshape(shape)
