@@ -47,147 +47,61 @@ using std::isnan;
 using std::enable_if;
 using std::is_unsigned;
 
-#define MXNET_UNARY_MATH_OP(name) \
+#define MXNET_UNARY_MATH_OP(name, expr) \
 struct name { \
   template<typename DType> \
   MSHADOW_XINLINE static DType Map(DType a) { \
-    return math::name(a); \
+    return DType(expr); \
   } \
 }
 
-#define MXNET_BINARY_MATH_OP(name) \
+#define MXNET_BINARY_MATH_OP(name, expr) \
 struct name { \
   template<typename DType> \
   MSHADOW_XINLINE static DType Map(DType a, DType b) { \
-    return math::name(a, b); \
+    return DType(expr); \
   } \
 }
 
-/*! \brief identity Operation */
-struct identity {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return a;
-  }
-};
+#define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
-struct identity_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f);
-  }
-};
+#define MXNET_SIMPLE_BINARY_MATH_OP(name) MXNET_BINARY_MATH_OP(name, math::name(a, b))
 
-struct left {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a;
-  }
-};
 
-struct right {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return b;
-  }
-};
+MXNET_UNARY_MATH_OP(identity, a);
 
-struct negation {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-a);
-  }
-};
+MXNET_UNARY_MATH_OP(identity_grad, 1);
 
-struct reciprocal {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f/a);
-  }
-};
+MXNET_BINARY_MATH_OP(left, a);
 
-struct reciprocal_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(-(DType(1.0f) / (a * a)));
-  }
-};
+MXNET_BINARY_MATH_OP(right, b);
 
-/*! \brief sigmoid unit */
-struct sigmoid {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(1.0f / (1.0f + math::exp(-af)));
-  }
-};
+MXNET_UNARY_MATH_OP(negation, -a);
 
-template<>
-MSHADOW_XINLINE double sigmoid::Map<double>(double a) {
-  return 1.0 / (1.0 + math::exp(-a));
-}
+MXNET_UNARY_MATH_OP(reciprocal, DType(1.0f)/a);
 
-struct sigmoid_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a * (DType(1.0f) - a));
-  }
-};
+MXNET_UNARY_MATH_OP(reciprocal_grad, -(DType(1.0f)/(a*a)));
 
-/*! \brief Rectified Linear Operation */
-struct relu {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return a > DType(0.0f) ? a : DType(0.0f);
-  }
-};
+MXNET_UNARY_MATH_OP(sigmoid, 1.0f/(1.0f+math::exp(-a)));
 
-struct relu_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return a > DType(0.0f) ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_UNARY_MATH_OP(sigmoid_grad, a*(DType(1.0f)-a));
 
-/*! \brief Leaky ReLU Operation */
-struct xelu {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > DType(0.0f) ? a : a * b);
-  }
-};
+MXNET_UNARY_MATH_OP(relu, a > DType(0.0f) ? a : DType(0.0f));
 
-struct xelu_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a > DType(0.0f) ? DType(1.0f) : b);
-  }
-};
+MXNET_UNARY_MATH_OP(relu_grad, a > DType(0.0f) ? DType(1.0f) : DType(0.0f));
+
+MXNET_BINARY_MATH_OP(xelu, a > DType(0.0f) ? a : a * b);
+
+MXNET_BINARY_MATH_OP(xelu_grad, a > DType(0.0f) ? DType(1.0f) : b);
 
 /*! \brief Exponential Linear Unit */
-struct elu {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    float af(static_cast<float>(a));
-    return x > DType(0.0f) ? x : DType(af * math::expm1f(x));
-  }
-};
+MXNET_BINARY_MATH_OP(elu, a > DType(0.0f) ? a : DType(b * math::expm1(a)));
 
-struct elu_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType x, DType a) {
-    return x > DType(0.0f) ? DType(1.0f) : DType(a + x);
-  }
-};
+MXNET_BINARY_MATH_OP(elu_grad, a > DType(0.0f) ? DType(1.0f) : DType(b + a));
 
-MXNET_UNARY_MATH_OP(tanh);
+MXNET_SIMPLE_UNARY_MATH_OP(tanh);
 
-struct tanh_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) - a * a);
-  }
-};
+MXNET_UNARY_MATH_OP(tanh_grad, DType(1.0f) - a * a);
 
 /*! \brief SoftReLU, also known as softplus activation */
 struct softrelu {
@@ -199,19 +113,10 @@ struct softrelu {
     if (a > DType(20.0f)) {
       return a;
     } else {
-      return DType(math::log1p(math::expf(a)));
+      return DType(math::log1p(math::exp(a)));
     }
   }
 };
-
-template<>
-MSHADOW_XINLINE double softrelu::Map<double>(double a) {
-  if (a > 20.0) {
-    return a;
-  } else {
-    return math::log1p(math::exp(a));
-  }
-}
 
 struct softrelu_grad {
   template<typename DType>
@@ -220,20 +125,15 @@ struct softrelu_grad {
   }
 };
 
-MXNET_UNARY_MATH_OP(exp);
+MXNET_SIMPLE_UNARY_MATH_OP(exp);
 
-MXNET_UNARY_MATH_OP(expm1);
+MXNET_SIMPLE_UNARY_MATH_OP(expm1);
 
-MXNET_UNARY_MATH_OP(log);
+MXNET_SIMPLE_UNARY_MATH_OP(log);
 
-struct log_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / a);
-  }
-};
+MXNET_UNARY_MATH_OP(log_grad, DType(1.0f) / a);
 
-MXNET_UNARY_MATH_OP(log10);
+MXNET_SIMPLE_UNARY_MATH_OP(log10);
 
 // Constant is 1 / log(10)
 struct log10_grad {
@@ -248,7 +148,7 @@ MSHADOW_XINLINE double log10_grad::Map<double>(double a) {
   return 0.43429448190325182765 / a;
 }
 
-MXNET_UNARY_MATH_OP(log2);
+MXNET_SIMPLE_UNARY_MATH_OP(log2);
 
 // Constant is 1 / log(2)
 struct log2_grad {
@@ -263,253 +163,77 @@ MSHADOW_XINLINE double log2_grad::Map<double>(double a) {
   return 1.44269504088896340737 / a;
 }
 
-MXNET_UNARY_MATH_OP(sin);
+MXNET_SIMPLE_UNARY_MATH_OP(sin);
 
-struct sin_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::cos(a);
-  }
-};
+MXNET_UNARY_MATH_OP(sin_grad, math::cos(a));
 
-MXNET_UNARY_MATH_OP(log1p);
+MXNET_SIMPLE_UNARY_MATH_OP(log1p);
 
-struct log1p_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / (DType(1.0f) + a));
-  }
-};
+MXNET_UNARY_MATH_OP(log1p_grad, DType(1.0f) / (DType(1.0f) + a));
 
-MXNET_UNARY_MATH_OP(cos);
+MXNET_SIMPLE_UNARY_MATH_OP(cos);
 
-struct cos_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return -math::sin(a);
-  }
-};
+MXNET_UNARY_MATH_OP(cos_grad, -math::sin(a));
 
-MXNET_UNARY_MATH_OP(tan);
+MXNET_SIMPLE_UNARY_MATH_OP(tan);
 
-struct tan_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a * a + DType(1.0f));
-  }
-};
+MXNET_UNARY_MATH_OP(tan_grad, a * a + DType(1.0f));
 
-struct arcsin {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::asin(a);
-  }
-};
+MXNET_UNARY_MATH_OP(arcsin, math::asin(a));
 
-struct arcsin_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(1.0f / math::sqrt(1.0f - af * af));
-  }
-};
+MXNET_UNARY_MATH_OP(arcsin_grad, 1.0f / math::sqrt(1.0f - a * a));
 
-template<>
-MSHADOW_XINLINE double arcsin_grad::Map<double>(double a) {
-  return 1.0 / math::sqrt(1.0 - a * a);
-}
+MXNET_UNARY_MATH_OP(arccos, math::acos(a));
 
-struct arccos {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::acos(a);
-  }
-};
+MXNET_UNARY_MATH_OP(arccos_grad, -1.0f / math::sqrt(1.0f - a * a));
 
-struct arccos_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(-1.0f / math::sqrt(1.0f - af * af));
-  }
-};
+MXNET_UNARY_MATH_OP(arctan, math::atan(a));
 
-template<>
-MSHADOW_XINLINE double arccos_grad::Map<double>(double a) {
-  return -1.0 / math::sqrt(1.0 - a * a);
-}
+MXNET_UNARY_MATH_OP(arctan_grad, DType(1.0f) / (a * a + DType(1.0f)));
 
-struct arctan {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::atan(a);
-  }
-};
+MXNET_SIMPLE_BINARY_MATH_OP(hypot);
 
-struct arctan_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / (a * a + DType(1.0f)));
-  }
-};
+MXNET_BINARY_MATH_OP(hypot_grad_left, a / math::hypot(a, b));
 
-MXNET_BINARY_MATH_OP(hypot);
+MXNET_BINARY_MATH_OP(hypot_grad_right, b / math::hypot(a, b));
 
-struct hypot_grad_left {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    float af(static_cast<float>(a));
-    return DType(af / math::hypotf(a, b));
-  }
-};
+MXNET_UNARY_MATH_OP(degrees, 180.f / PI * a);
 
-template<>
-MSHADOW_XINLINE double hypot_grad_left::Map<double>(double a, double b) {
-  return a / math::hypot(a, b);
-}
+MXNET_UNARY_MATH_OP(degrees_grad, 180.f / PI);
 
-struct hypot_grad_right {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    float bf(static_cast<float>(b));
-    return DType(bf / math::hypotf(a, b));
-  }
-};
+MXNET_UNARY_MATH_OP(radians, PI /180.f * a);
 
-template<>
-MSHADOW_XINLINE double hypot_grad_right::Map<double>(double a, double b) {
-  return b / math::hypot(a, b);
-}
+MXNET_UNARY_MATH_OP(radians_grad, PI / 180.f);
 
-struct degrees {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(180. / PI * a);
-  }
-};
+MXNET_SIMPLE_UNARY_MATH_OP(sinh);
 
-struct degrees_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(180. / PI);
-  }
-};
+MXNET_UNARY_MATH_OP(sinh_grad, math::cosh(a));
 
-struct radians {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(PI /180. * a);
-  }
-};
+MXNET_SIMPLE_UNARY_MATH_OP(cosh);
 
-struct radians_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(PI / 180.);
-  }
-};
+MXNET_UNARY_MATH_OP(cosh_grad, math::sinh(a));
 
-MXNET_UNARY_MATH_OP(sinh);
+MXNET_UNARY_MATH_OP(arcsinh, math::asinh(a));
 
-struct sinh_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::cosh(a);
-  }
-};
+MXNET_UNARY_MATH_OP(arcsinh_grad, 1.0f / math::sqrt(1.0f + a * a));
 
-MXNET_UNARY_MATH_OP(cosh);
+MXNET_UNARY_MATH_OP(arccosh, math::acosh(a));
 
-struct cosh_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::sinh(a);
-  }
-};
+MXNET_UNARY_MATH_OP(arccosh_grad, 1.0f / math::sqrt(a * a - 1.0f));
 
-struct arcsinh {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::asinh(a);
-  }
-};
+MXNET_UNARY_MATH_OP(arctanh, math::atanh(a));
 
-struct arcsinh_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(1.0f / math::sqrt(1.0f + af * af));
-  }
-};
+MXNET_UNARY_MATH_OP(arctanh_grad, DType(1.0f) / (DType(1.0f) - a * a));
 
-template<>
-MSHADOW_XINLINE double arcsinh_grad::Map<double>(double a) {
-  return 1.0 / math::sqrt(1.0 + a * a);
-}
+MXNET_UNARY_MATH_OP(square, a * a);
 
-struct arccosh {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::acosh(a);
-  }
-};
-
-struct arccosh_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(1.0f / math::sqrt(af * af - 1.0f));
-  }
-};
-
-template<>
-MSHADOW_XINLINE double arccosh_grad::Map<double>(double a) {
-  return 1.0 / math::sqrt(a * a - 1.0);
-}
-
-struct arctanh {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::atanh(a);
-  }
-};
-
-struct arctanh_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / (DType(1.0f) - a * a));
-  }
-};
-
-struct square {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(a * a);
-  }
-};
-
-struct square_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(2.0f) * a);
-  }
-};
+MXNET_UNARY_MATH_OP(square_grad, DType(2.0f) * a);
 
 /*! \brief used for generate Bernoulli mask */
-struct threshold {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a < b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(threshold, a < b ? DType(1.0f) : DType(0.0f));
 
 /*! \brief used for generate element of abs */
-struct abs {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::fabs(a);  // NOLINT(*)
-  }
-};
+MXNET_UNARY_MATH_OP(abs, math::fabs(a));  // NOLINT(*)
 
 /*! \brief used for generate element of sign */
 struct sign {
@@ -528,223 +252,75 @@ struct sign {
   }
 };
 
-struct sign_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(0.0f);
-  }
-};
+MXNET_UNARY_MATH_OP(sign_grad, 0.0f);
 
 /*! \brief used for generate element of power */
-struct power {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return math::pow(a, b);
-  }
-};
+MXNET_BINARY_MATH_OP(power, math::pow(a, b));
 
-struct power_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    float bf(static_cast<float>(b));
-    return DType(math::pow(static_cast<float>(a), bf - 1.0f) * bf);
-  }
-};
+MXNET_BINARY_MATH_OP(power_grad, math::pow(a, b - DType(1.0f)) * b);
 
-template<>
-MSHADOW_XINLINE double power_grad::Map<double>(double a, double b) {
-  return math::pow(a, b - 1.0) * b;
-}
+MXNET_BINARY_MATH_OP(power_rgrad, math::pow(a, b) * math::log(a));
 
-struct power_rgrad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(math::powf(a, b) * math::logf(a));
-  }
-};
+MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
-template<>
-MSHADOW_XINLINE double power_rgrad::Map<double>(double a, double b) {
-  return math::pow(a, b) * math::log(a);
-}
-
-struct rpower {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return math::pow(b, a);
-  }
-};
-
-struct rpower_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(static_cast<float>(a) * math::logf(b));
-  }
-};
-
-template<>
-MSHADOW_XINLINE double rpower_grad::Map<double>(double a, double b) {
-  return a * math::log(b);
-}
+MXNET_BINARY_MATH_OP(rpower_grad, a * math::log(b));
 
 /*! \brief used for generate element of maximum */
-struct maximum {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a > b ? a : b;
-  }
-};
+MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
 
 /*! \brief used for generate element of minimum */
-struct minimum {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a < b ? a : b;
-  }
-};
+MXNET_BINARY_MATH_OP(minimum, a < b ? a : b);
 
-struct ge {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a >= b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(ge, a >= b ? DType(1.0f) : DType(0.0f));
 
-struct gt {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a > b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(gt, a > b ? DType(1.0f) : DType(0.0f));
 
-struct lt {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a < b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(lt, a < b ? DType(1.0f) : DType(0.0f));
 
-struct le {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a <= b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(le, a <= b ? DType(1.0f) : DType(0.0f));
 
-struct eq {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a == b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(eq, a == b ? DType(1.0f) : DType(0.0f));
 
-struct ne {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return a != b ? DType(1.0f) : DType(0.0f);
-  }
-};
+MXNET_BINARY_MATH_OP(ne, a != b ? DType(1.0f) : DType(0.0f));
 
 /*!\ \brief used for generate element sqrt */
-struct square_root {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::sqrt(a);
-  }
-};
+MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
-struct square_root_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(0.5f) / a);
-  }
-};
+MXNET_UNARY_MATH_OP(square_root_grad, DType(0.5f) / a);
 
 /*!\ \brief used for generate element rsqrt */
-struct reciprocal_square_root {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f / math::sqrtf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(reciprocal_square_root, 1.0f / math::sqrt(a));
 
-template<>
-MSHADOW_XINLINE double reciprocal_square_root::Map<double>(double a) {
-  return 1.0 / math::sqrt(a);
-}
-
-struct reciprocal_square_root_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(-0.5f / (af * math::sqrt(af)));
-  }
-};
-
-template<>
-MSHADOW_XINLINE double reciprocal_square_root_grad::Map<double>(double a) {
-  return -0.5 / (a * math::sqrt(a));
-}
+MXNET_UNARY_MATH_OP(reciprocal_square_root_grad, -0.5f / (a * math::sqrt(a)));
 
 /*!\ \brief used for generate element cbrt */
-struct cube_root {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::cbrt(a);
-  }
-};
+MXNET_UNARY_MATH_OP(cube_root, math::cbrt(a));
 
-struct cube_root_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(DType(1.0f) / (DType(3.0f) * a * a));
-  }
-};
+MXNET_UNARY_MATH_OP(cube_root_grad, DType(1.0f) / (DType(3.0f) * a * a));
 
 /*!\ \brief used for generate element rcbrt */
-struct reciprocal_cube_root {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return DType(1.0f / math::cbrtf(a));
-  }
-};
+MXNET_UNARY_MATH_OP(reciprocal_cube_root, 1.0f / math::cbrt(a));
 
-template<>
-MSHADOW_XINLINE double reciprocal_cube_root::Map<double>(double a) {
-  return 1.0 / math::cbrt(a);
-}
-
-struct reciprocal_cube_root_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    float af(static_cast<float>(a));
-    return DType(-1.0f / (3.0f * af * math::cbrt(af)));
-  }
-};
-
-template<>
-MSHADOW_XINLINE double reciprocal_cube_root_grad::Map<double>(double a) {
-  return -1.0 / (3.0 * a * math::cbrt(a));
-}
+MXNET_UNARY_MATH_OP(reciprocal_cube_root_grad, -1.0f / (3.0f * a * math::cbrt(a)));
 
 /*! \brief used for generate element of round */
-MXNET_UNARY_MATH_OP(round);
+MXNET_SIMPLE_UNARY_MATH_OP(round);
 
 /*! \brief used for generate element of ceil */
-MXNET_UNARY_MATH_OP(ceil);
+MXNET_SIMPLE_UNARY_MATH_OP(ceil);
 
 /*! \brief used for generate element of floor */
-MXNET_UNARY_MATH_OP(floor);
+MXNET_SIMPLE_UNARY_MATH_OP(floor);
 
 /*! \brief used to round towards zero */
-MXNET_UNARY_MATH_OP(trunc);
+MXNET_SIMPLE_UNARY_MATH_OP(trunc);
 
 /*! \brief used to round number to nearest integer */
 struct rint {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    float floor = math::floorf(a);
-    float ceil = math::ceilf(a);
+    auto floor = math::floor(a);
+    auto ceil = math::ceil(a);
     return DType((a - floor) <= (ceil - a) ? floor : ceil);
   }
 };
@@ -753,54 +329,24 @@ struct rint {
 struct fix {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a) {
-    float floor = math::floorf(a);
-    float ceil = math::ceilf(a);
+    auto floor = math::floor(a);
+    auto ceil = math::ceil(a);
     return DType((floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil);
   }
 };
 
 /*! \brief used for generate gradient of MAE loss*/
-struct minus_sign {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(a-b > DType(0.0f) ? DType(1.0f) : -DType(1.0f));
-  }
-};
+MXNET_BINARY_MATH_OP(minus_sign, a-b > DType(0.0f) ? DType(1.0f) : -DType(1.0f));
 
-struct rminus {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(b - a);
-  }
-};
+MXNET_BINARY_MATH_OP(rminus, b - a);
 
-struct div_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(DType(1.0f) / b);
-  }
-};
+MXNET_BINARY_MATH_OP(div_grad, DType(1.0f) / b);
 
-struct div_rgrad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(-a / (b * b));
-  }
-};
+MXNET_BINARY_MATH_OP(div_rgrad, -a / (b * b));
 
-struct rdiv {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(b / a);
-  }
-};
+MXNET_BINARY_MATH_OP(rdiv, b / a);
 
-struct rdiv_grad {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return DType(-b / (a * a));
-  }
-};
+MXNET_BINARY_MATH_OP(rdiv_grad, -b / (a * a));
 
 struct mod {
   template<typename DType>
@@ -836,14 +382,13 @@ struct mod {
     }
   }
 };
-#ifdef __CUDACC__
+
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
                                                (mshadow::half::half2_t a,
                                                 mshadow::half::half2_t b) {
   return a%b;
 }
-#endif
 
 struct mod_grad {
   template<typename DType>
@@ -859,7 +404,7 @@ template<>
 MSHADOW_XINLINE float mod_grad::Map<float>(float a, float b) {
   return 1.0f;
 }
-#ifdef __CUDACC__
+
 template<>
 MSHADOW_XINLINE mshadow::half::half_t mod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
@@ -871,7 +416,7 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
                                                     (mshadow::half::half2_t a,
                                                      mshadow::half::half2_t b) {
   mshadow::half::half2_t result = mshadow::half::half2_t();
-#if MSHADOW_CUDA_HALF2
+#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
   result.half2_ = ::__float2half2_rn(1.0f);
 #else
   result.half_t2[0] = mshadow::half::half_t(0.0f);
@@ -879,7 +424,6 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
 #endif
   return result;
 }
-#endif
 
 struct mod_rgrad {
   template<typename DType>
@@ -895,7 +439,6 @@ template<>
 MSHADOW_XINLINE float mod_rgrad::Map<float>(float a, float b) {
   return -::floorf(a/b);
 }
-#ifdef __CUDACC__
 template<>
 MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
@@ -906,7 +449,7 @@ template<>
 MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
                                                      (mshadow::half::half2_t a,
                                                       mshadow::half::half2_t b) {
-#if MSHADOW_CUDA_HALF2
+#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
   return mshadow::half::half2_t(__hneg2(::h2floor((a/b).half2_)));
 #else
   return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
@@ -915,7 +458,6 @@ MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
                                   static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
 #endif
 }
-#endif
 
 struct rmod {
   template<typename DType>
@@ -951,14 +493,12 @@ struct rmod {
     }
   }
 };
-#ifdef __CUDACC__
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
                                                 (mshadow::half::half2_t a,
                                                  mshadow::half::half2_t b) {
   return b%a;
 }
-#endif
 
 struct rmod_grad {
   template<typename DType>
@@ -974,7 +514,6 @@ template<>
 MSHADOW_XINLINE float rmod_grad::Map<float>(float a, float b) {
   return -::floorf(b/a);
 }
-#ifdef __CUDACC__
 template<>
 MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
@@ -985,7 +524,7 @@ template<>
 MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
                                                      (mshadow::half::half2_t a,
                                                       mshadow::half::half2_t b) {
-#if MSHADOW_CUDA_HALF2
+#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
   return mshadow::half::half2_t(::__hneg2(::h2floor((b/a).half2_)));
 #else
   return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
@@ -994,7 +533,6 @@ MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
                                   static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
 #endif
 }
-#endif
 
 struct clip {
   template<typename DType>
@@ -1011,12 +549,7 @@ struct clip {
 
 /***** gamma ******/
 
-struct gamma {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::tgamma(a);
-  }
-};
+MXNET_UNARY_MATH_OP(gamma, math::tgamma(a));
 
 struct gamma_grad {
   template<typename DType>
@@ -1034,12 +567,7 @@ MSHADOW_XINLINE double gamma_grad::Map<double>(double a) {
 
 /***** gammaln ******/
 
-struct gammaln {
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a) {
-    return math::lgamma(a);
-  }
-};
+MXNET_UNARY_MATH_OP(gammaln, math::lgamma(a));
 
 struct gammaln_grad {
   template<typename DType>

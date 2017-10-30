@@ -44,38 +44,22 @@ namespace math {
 
 #define MXNET_UNARY_MATH_FUNC(name) \
 template<typename DType> MSHADOW_XINLINE \
-DType name(DType a) { \
-  return DType(::name##f(static_cast<float>(a))); \
+float name(DType a) { \
+  return ::name##f(static_cast<float>(a)); \
 } \
-template<> MSHADOW_XINLINE \
-float name(float a) { \
-  return ::name##f(a); \
-} \
-template<> MSHADOW_XINLINE \
+MSHADOW_XINLINE \
 double name(double a) { \
   return ::name(a); \
-} \
-template<typename DType> MSHADOW_XINLINE \
-float name##f(DType a) { \
-  return ::name##f(static_cast<float>(a)); \
 }
 
 #define MXNET_BINARY_MATH_FUNC(name) \
 template<typename DType> MSHADOW_XINLINE \
-DType name(DType a, DType b) { \
-  return DType(::name##f(static_cast<float>(a), static_cast<float>(b))); \
+float name(DType a, DType b) { \
+  return ::name##f(static_cast<float>(a), static_cast<float>(b)); \
 } \
-template<> MSHADOW_XINLINE \
+MSHADOW_XINLINE \
 double name(double a, double b) { \
   return ::name(a, b); \
-} \
-template<> MSHADOW_XINLINE \
-float name(float a, float b) { \
-  return ::name##f(a, b); \
-} \
-template<typename DType> MSHADOW_XINLINE \
-float name##f(DType a, DType b) { \
-  return ::name##f(static_cast<float>(a), static_cast<float>(b)); \
 }
 
 MXNET_UNARY_MATH_FUNC(exp)
