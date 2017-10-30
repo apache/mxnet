@@ -202,7 +202,7 @@ class PySGD(mx.optimizer.Optimizer):
     def update_multi_precision(self, index, weight, grad, state):
         self.update(index, weight, grad, state)
 
-@with_seed(0)
+@with_seed()
 def test_sgd():
     opt1 = PySGD
     opt2 = mx.optimizer.SGD
@@ -310,7 +310,7 @@ class PySparseSGD(mx.optimizer.Optimizer):
                   mom[row] = self.momentum*mom[row] - lr*wd*weight[row] - lr*self.rescale_grad*grad[row]
                   weight[row] += mom[row]
 
-@with_seed(0)
+@with_seed()
 def test_sparse_sgd():
     opt1 = PySparseSGD
     opt2 = mx.optimizer.SGD
@@ -408,7 +408,7 @@ class PyAdam(mx.optimizer.Optimizer):
             weight[row] -= lr*mean[row]/(mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
-@with_seed(0)
+@with_seed()
 def test_adam():
     opt1 = PyAdam
     opt2 = mx.optimizer.Adam
@@ -628,7 +628,7 @@ class PyFtrl(mx.optimizer.Optimizer):
             weight[row] = (mx.nd.sign(dn[row]) * self.lamda1 - dn[row]) / \
                           ((self.beta + mx.nd.sqrt(n[row])) / lr + wd) * (mx.nd.abs(dn[row]) > self.lamda1)
 
-@with_seed(0)
+@with_seed()
 def test_ftrl():
     opt1 = PyFtrl
     opt2 = mx.optimizer.Ftrl

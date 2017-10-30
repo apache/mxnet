@@ -123,7 +123,7 @@ def test_sparse_nd_slice():
         assert same(A[:end].asnumpy(), A2[:end])
         ind = rnd.randint(-shape[0], shape[0] - 1)
         assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
-    
+
     def check_slice_nd_csr_fallback(shape):
         stype = 'csr'
         A, _ = rand_sparse_ndarray(shape, stype)
