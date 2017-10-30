@@ -513,6 +513,20 @@ def _init_data(data, allow_empty, default_name):
 
     return list(data.items())
 
+def _has_instance(data, dtype):
+    """return True if data has instance of dtype"""
+    if isinstance(data, dtype):
+        return True
+    if isinstance(data, list):
+        for v in data:
+            if isinstance(v, dtype):
+                return True
+    if isinstance(data, dict):
+        for v in data.values():
+            if isinstance(v, dtype):
+                return True
+    return False
+
 class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
     or ``mx.nd.sparse.CSRNDArray``.
@@ -615,13 +629,13 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
+        if ((_has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray)) and
+                (shuffle or last_batch_handle != 'discard')):
+            raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
+                                      " with `shuffle` set to `False`" \
+                                      " and `last_batch_handle` set to `discard`.")
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
-        if isinstance(data, CSRNDArray) or isinstance(label, CSRNDArray):
-            assert(shuffle is False), \
-                  "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
-            assert(last_batch_handle == 'discard'), "`NDArrayIter` only supports ``CSRNDArray``" \
-                                                    " with `last_batch_handle` set to `discard`."
 
         self.idx = np.arange(self.data[0][1].shape[0])
         # shuffle data

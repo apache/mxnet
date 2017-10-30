@@ -161,6 +161,13 @@ def test_NDArrayIter_csr():
     shape = (num_rows, num_cols)
     csr, _ = rand_sparse_ndarray(shape, 'csr')
     dns = csr.asnumpy()
+    #test CSRNDArray with shuffle=True will throw NotImplementedError 
+    try:
+        csr_iter = mx.io.NDArrayIter({'data': csr}, dns, batch_size, shuffle=True,
+                                     last_batch_handle='discard')
+        assert(False)
+    except NotImplementedError:
+        pass
 
     # make iterators
     csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))
