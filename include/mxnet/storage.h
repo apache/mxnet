@@ -69,9 +69,15 @@ class Storage {
     this->Alloc(&hd);
     return hd;
   }
-
+  /*!
+   * \brief Allocate a new contiguous memory for a given size.
+   * \param handle handle initialized with size and ctx
+   */
   virtual void Alloc(Handle* handle) = 0;
-
+  /*!
+   * \brief Increase ref counter on shared memory.
+   * \param handle handle to shared memory.
+   */
   virtual void SharedIncrementRefCount(Handle handle) = 0;
   /*!
    * \brief Free storage.
