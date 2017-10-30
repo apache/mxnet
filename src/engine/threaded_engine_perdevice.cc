@@ -72,7 +72,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
  protected:
   void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
     const Context& ctx = opr_block->ctx;
-    if (opr_block->opr->prop == FnProperty::kAsync && pusher_thread) {
+    if ((opr_block->opr->prop == FnProperty::kAsync ||
+         opr_block->opr->prop == FnProperty::kDeleteVar) && pusher_thread) {
       if (ctx.dev_mask() == gpu::kDevMask) {
         #if MXNET_USE_CUDA
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
@@ -95,7 +96,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
               return blk;
             });
           if (ptr) {
-            ptr->task_queue.Push(opr_block, opr_block->priority);
+            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+              ptr->task_queue.PushFront(opr_block, opr_block->priority);
+            } else {
+              ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
           }
         }
       } else {
@@ -108,7 +113,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         if (is_copy) {
           auto ptr =
           gpu_copy_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-              auto blk = new ThreadWorkerBlock<kCopyQueue>();
+            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
+            Engine::Get()->set_num_omp_threads_per_worker(1);
+            auto blk = new ThreadWorkerBlock<kCopyQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
                 [this, ctx, is_copy, blk]
@@ -118,10 +125,16 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
               return blk;
             });
           if (ptr) {
-            ptr->task_queue.Push(opr_block, opr_block->priority);
+            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+              ptr->task_queue.PushFront(opr_block, opr_block->priority);
+            } else {
+              ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
           }
         } else {
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
+            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
+            Engine::Get()->set_num_omp_threads_per_worker(1);
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -132,7 +145,11 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
               return blk;
             });
           if (ptr) {
-            ptr->task_queue.Push(opr_block, opr_block->priority);
+            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+              ptr->task_queue.PushFront(opr_block, opr_block->priority);
+            } else {
+              ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
           }
         }
       }
@@ -217,7 +234,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     }
   }
 
-/*! \brief Signal a single queue for shutdown */
+  /*! \brief Signal a single queue for shutdown */
   template<typename Object>
   static inline void SignalQueueForKill(common::LazyAllocArray<Object> *array) {
     array->ForEach([](size_t i, Object *block) {

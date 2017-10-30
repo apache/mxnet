@@ -8,6 +8,7 @@ RUN apt-get install -y python python2.7 python3.4 python3.5 python3.6
 
 # install other dependencies
 RUN apt-get install -y wget git unzip gcc
+RUN apt-get install libgfortran3
 
 # install virtualenv
 RUN wget https://bootstrap.pypa.io/get-pip.py && python get-pip.py && pip install virtualenv && rm -rf get-pip.py

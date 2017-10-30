@@ -16,7 +16,7 @@ This document lists the routines of the *n*-dimensional sparse array package:
 ```
 
 The `CSRNDArray` and `RowSparseNDArray` API, defined in the `ndarray.sparse` package, provides
-imperative sparse tensor operations on CPU.
+imperative sparse tensor operations on **CPU**.
 
 An `CSRNDArray` inherits from `NDArray`, and represents a two-dimensional, fixed-size array in compressed sparse row format.
 
@@ -37,6 +37,10 @@ array([0, 1, 1, 3])
 'csr'
 ```
 
+A detailed tutorial is available at
+[CSRNDArray - NDArray in Compressed Sparse Row Storage Format](https:https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
+<br>
+
 An `RowSparseNDArray` inherits from `NDArray`, and represents a multi-dimensional, fixed-size array in row sparse format.
 
 ```python
@@ -53,16 +57,27 @@ array([0, 2])
 'row_sparse'
 ```
 
+A detailed tutorial is available at
+[RowSparseNDArray - NDArray for Sparse Gradient Updates](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/row_sparse.html).
+<br><br>
+
+
 ```eval_rst
 
 .. note:: ``mxnet.ndarray.sparse`` is similar to ``mxnet.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
    - Only a subset of operators in ``mxnet.ndarray`` have specialized implementations in ``mxnet.ndarray.sparse``.
-     Operators such as reduction and broadcasting do not have sparse implementations yet.
+     Operators such as Convolution and broadcasting do not have sparse implementations yet.
    - The storage types (``stype``) of sparse operators' outputs depend on the storage types of inputs.
      By default the operators not available in ``mxnet.ndarray.sparse`` infer "default" (dense) storage type for outputs.
-     Please refer to the API reference section for further details on specific operators.
-   - GPU support for ``mxnet.ndarray.sparse`` is experimental.
+     Please refer to the [API Reference](#api-reference) section for further details on specific operators.
+   - GPU support for ``mxnet.ndarray.sparse`` is experimental. Only a few sparse operators are supported on GPU such as ``sparse.dot``.
+
+.. note:: ``mxnet.ndarray.sparse.CSRNDArray`` is similar to ``scipy.sparse.csr_matrix`` in some aspects. But they differ in a few aspects:
+
+   - In MXNet the column indices (``CSRNDArray.indices``) for a given row are expected to be **sorted in ascending order**.
+     Duplicate column entries for the same row are not allowed.
+   - ``CSRNDArray.data``, ``CSRNDArray.indices`` and ``CSRNDArray.indptr`` always create deep copies, while it's not the case in ``scipy.sparse.csr_matrix``.
 
 ```
 
@@ -91,7 +106,6 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     CSRNDArray.shape
-    CSRNDArray.size
     CSRNDArray.context
     CSRNDArray.dtype
     CSRNDArray.stype
@@ -153,7 +167,6 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.shape
-    RowSparseNDArray.size
     RowSparseNDArray.context
     RowSparseNDArray.dtype
     RowSparseNDArray.stype
@@ -183,6 +196,20 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.zeros_like
+```
+
+### Array rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.round
+    RowSparseNDArray.rint
+    RowSparseNDArray.fix
+    RowSparseNDArray.floor
+    RowSparseNDArray.ceil
+    RowSparseNDArray.trunc
 ```
 
 ### Indexing
@@ -216,6 +243,8 @@ We summarize the interface for each class in the following sections.
     zeros_like
     csr_matrix
     row_sparse_array
+    mxnet.ndarray.load
+    mxnet.ndarray.save
 ```
 
 ## Array manipulation routines
@@ -248,8 +277,91 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     elemwise_add
+    elemwise_sub
+    elemwise_mul
+    negative
     dot
     add_n
+```
+
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sin
+    tan
+    arcsin
+    arctan
+    degrees
+    radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sinh
+    tanh
+    arcsinh
+    arctanh
+```
+
+### Rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    round
+    rint
+    fix
+    floor
+    ceil
+    trunc
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    expm1
+    log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sqrt
+    square
+```
+
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    abs
+    sign
+```
+
+### More
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    make_loss
+    stop_gradient
 ```
 
 ## API Reference
@@ -259,10 +371,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members: shape, size, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __getitem__, __setitem__
+    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __getitem__, __setitem__
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members: shape, size, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, __getitem__, __setitem__
+    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, __getitem__, __setitem__
 
 .. automodule:: mxnet.ndarray.sparse
     :members:
@@ -271,6 +383,9 @@ We summarize the interface for each class in the following sections.
 
 .. automodule:: mxnet.ndarray.sparse
     :members: array, zeros, empty
+
+.. automodule:: mxnet.ndarray
+    :members: load, save
 
 ```
 

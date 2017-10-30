@@ -29,7 +29,7 @@ use Scalar::Util qw/blessed/;
 
 # Convert data into canonical form.
 method init_data(
-    AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Undef $data,
+    Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered] $data,
     Undef|Int :$allow_empty=,
     Str :$default_name
 )
@@ -37,8 +37,7 @@ method init_data(
     Carp::confess("data must be defined or allow_empty set to true value")
         if(not defined $data and not $allow_empty);
     $data //= [];
-
-    if(ref($data) and ref($data) ne 'ARRAY' and ref($data) ne 'HASH')
+    if(blessed $data and not $data->isa('Hash::Ordered'))
     {
         $data = [$data];
     }
@@ -59,11 +58,22 @@ method init_data(
             @ret = map { $i++; ["_${i}_$default_name", $_] } @{ $data };
         }
     }
-    if(ref($data) eq 'HASH')
+    elsif(ref($data) eq 'HASH')
     {
+        AI::MXNet::Logging->warning(
+            "Use of a raw perl hash as input is obsolete and the behaviour of the iterator is undefined.\n".
+            "Please use Hash::Ordered object instead."
+        );
         while(my ($k, $v) = each %{ $data })
         {
             push @ret, [$k, $v];
+        }
+    }
+    elsif(blessed $data and $data->isa('Hash::Ordered'))
+    {
+        for my $k ($data->keys)
+        {
+            push @ret, [$k, $data->get($k)];
         }
     }
     for my $d (@ret)
@@ -216,9 +226,11 @@ method reset(){}
 method list()
 {
     my @ret;
-    while(<$self>)
+    while(my $data = <$self>)
     {
-        push @ret, $_;
+        $data->label([map { $_->copy } @{ $data->label }]);
+        $data->data([map { $_->copy } @{ $data->data }]);
+        push @ret, $data;
     }
     return \@ret;
 }
@@ -396,7 +408,7 @@ method getpad()
 package AI::MXNet::NDArrayIter;
 use Mouse;
 use AI::MXNet::Base;
-use List::Util qw(shuffle);
+use List::Util;
 extends 'AI::MXNet::DataIter';
 
 =head1 NAME
@@ -428,27 +440,19 @@ extends 'AI::MXNet::DataIter';
     for training and can cause problems if used for prediction.
 =cut
 
-has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
+has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered]');
 has 'data_list'           => (is => 'rw', isa => 'ArrayRef[AI::MXNet::NDArray]');
-has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
+has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered]');
 has 'batch_size'          => (is => 'rw', isa => 'Int', default => 1);
-has '_shuffle'            => (is => 'rw', init_arg => 'shuffle', isa => 'Bool', default => 0);
+has 'shuffle'             => (is => 'rw', isa => 'Bool', default => 0);
 has 'last_batch_handle'   => (is => 'rw', isa => 'Str', default => 'pad');
 has 'label_name'          => (is => 'rw', isa => 'Str', default => 'softmax_label');
 has 'num_source'          => (is => 'rw', isa => 'Int');
 has 'cursor'              => (is => 'rw', isa => 'Int');
 has 'num_data'            => (is => 'rw', isa => 'Int');
 
-around BUILDARGS => sub {
-    my $orig  = shift;
-    my $class = shift;
-    if(@_%2)
-    {
-        my $data  = shift;
-        return $class->$orig(data => $data, @_);
-    }
-    return $class->$orig(@_);
-};
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
+method python_constructor_arguments() { ['data', 'label'] };
 
 sub BUILD
 {
@@ -458,9 +462,9 @@ sub BUILD
     my $num_data  = $data->[0][1]->shape->[0];
     confess("size of data dimension 0 $num_data < batch_size ${\ $self->batch_size }")
         unless($num_data >= $self->batch_size);
-    if($self->_shuffle)
+    if($self->shuffle)
     {
-        my @idx = shuffle(0..$num_data-1);
+        my @idx = List::Util::shuffle(0..$num_data-1);
         $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$data;
         $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$label;
     }
@@ -596,7 +600,6 @@ method getpad()
         return 0;
     }
 }
-
 package AI::MXNet::MXDataIter;
 use Mouse;
 use AI::MXNet::Base;
@@ -667,6 +670,7 @@ method reset()
     $self->first_batch(undef);
     check_call(AI::MXNetCAPI::DataIterBeforeFirst($self->handle));
 }
+
 
 method next()
 {

@@ -28,6 +28,7 @@ import sys
 import os
 import errno
 import logging
+import bz2
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -134,21 +135,31 @@ def _get_uniform_dataset_csr(num_rows, num_cols, density=0.1, dtype=None,
     """Returns CSRNDArray with uniform distribution
     This generates a csr matrix with totalnnz unique randomly chosen numbers
     from num_rows*num_cols and arranges them in the 2d array in the
-    following way: row_index = (random_number_generated / num_rows)
+    following way:
+    row_index = (random_number_generated / num_rows)
     col_index = random_number_generated - row_index * num_cols
     """
     _validate_csr_generation_inputs(num_rows, num_cols, density,
                                     distribution="uniform")
-    from scipy import sparse as spsp
-    csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
-    if data_init is not None:
-        csr.data.fill(data_init)
-    if shuffle_csr_indices is True:
-        shuffle_csr_column_indices(csr)
-    result = mx.nd.sparse.csr_matrix(csr.data, csr.indptr, csr.indices,
-                                     (num_rows, num_cols), dtype=dtype)
+    try:
+        from scipy import sparse as spsp
+        csr = spsp.rand(num_rows, num_cols, density, dtype=dtype, format="csr")
+        if data_init is not None:
+            csr.data.fill(data_init)
+        if shuffle_csr_indices is True:
+            shuffle_csr_column_indices(csr)
+        result = mx.nd.sparse.csr_matrix((csr.data, csr.indices, csr.indptr),
+                                         shape=(num_rows, num_cols), dtype=dtype)
+    except ImportError:
+        assert(data_init is None), \
+               "data_init option is not supported when scipy is absent"
+        assert(not shuffle_csr_indices), \
+               "shuffle_csr_indices option is not supported when scipy is absent"
+        # scipy not available. try to generate one from a dense array
+        dns = mx.nd.random.uniform(shape=(num_rows, num_cols), dtype=dtype)
+        masked_dns = dns * (dns < density)
+        result = masked_dns.tostype('csr')
     return result
-
 
 def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     """Returns CSRNDArray with powerlaw distribution
@@ -240,11 +251,11 @@ def assign_each2(input1, input2, function):
     else:
         return np.array(input1)
 
-# TODO(haibin) also include types in arguments
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
+
     Parameters
     ----------
     shape: list or tuple
@@ -252,9 +263,11 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     density, optional: float, should be between 0 and 1
     distribution, optional: str, valid values: "uniform" or "powerlaw"
     dtype, optional: numpy.dtype, default value is None
+
     Returns
     -------
     Result of type CSRNDArray or RowSparseNDArray
+
     Examples
     --------
     Below is an example of the powerlaw distribution with csr as the stype.
@@ -264,7 +277,18 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     else, remaining unused_nnzs will be used in n+1th row
     If number of cols is too small and we have already reached column size it will fill up
     all following columns in all followings rows until we reach the required density.
-    density = rnd.rand() if density is None else density
+
+    >>> csr_arr, _ = rand_sparse_ndarray(shape=(5, 16), stype="csr",
+                                         density=0.50, distribution="powerlaw")
+    >>> indptr = csr_arr.indptr.asnumpy()
+    >>> indices = csr_arr.indices.asnumpy()
+    >>> data = csr_arr.data.asnumpy()
+    >>> row2nnz = len(data[indptr[1]:indptr[2]])
+    >>> row3nnz = len(data[indptr[2]:indptr[3]])
+    >>> assert(row3nnz == 2*row2nnz)
+    >>> row4nnz = len(data[indptr[3]:indptr[4]])
+    >>> assert(row4nnz == 2*row3nnz)
+
     """
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
@@ -281,7 +305,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
             result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
-            return result, (np.array([], dtype=dtype), np.array([], dtype='int64'))
+            return result, (np.array([], dtype=dtype), np.array([]))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
 
@@ -291,7 +315,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         if modifier_func is not None:
             val = assign_each(val, modifier_func)
 
-        arr = mx.nd.sparse.row_sparse_array(val, indices, shape, indices_type=np.int64, dtype=dtype)
+        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2
@@ -515,6 +539,13 @@ def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b'))
 
     assert_almost_equal(a, b, rtol, atol, names)
 
+def assert_exception(f, exception_type, *args, **kwargs):
+    """Test that function f will throw an exception of type given by `exception_type`"""
+    try:
+        f(*args, **kwargs)
+        assert(False)
+    except exception_type:
+        return
 
 def retry(n):
     """Retry n times before failing for stochastic test cases."""
@@ -584,7 +615,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Returns
@@ -607,7 +638,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -641,7 +672,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         *In either case, all aux states of `sym` must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Returns
@@ -666,7 +697,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -703,7 +734,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     References
@@ -713,7 +744,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     def as_stype(var, stype, dtype):
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
@@ -788,14 +819,14 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Check the gradient computation on the specified device.
     grad_stype_dict : dict of str->str, optional
         Storage type dictionary for gradient ndarrays.
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     References
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -835,7 +866,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
     out = sym * proj
-    out = mx.sym.MakeLoss(out)
+    out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
@@ -920,7 +951,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     equal_nan: Boolean
@@ -937,7 +968,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -1003,7 +1034,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         dictionary of mapping argument name to stype for the gradient
     equal_nan: Boolean
         if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
-    dtype: np.float32 or np.float64
+    dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
     Example
@@ -1022,7 +1053,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype == np.float32 or dtype == np.float64
+    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
     if ctx is None:
         ctx = default_context()
 
@@ -1171,7 +1202,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None):
+                      raise_on_err=True, ground_truth=None, equal_nan=False):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1271,7 +1302,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             gtarr = gt[name].astype(dtypes[i]).asnumpy()
             arr = arr.asnumpy()
             try:
-                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                    equal_nan=equal_nan)
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
@@ -1297,7 +1329,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 gtarr = gt[name].astype(dtypes[i]).asnumpy()
                 arr = arr.asnumpy()
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]])
+                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
+                                        equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
@@ -1406,6 +1439,41 @@ def get_mnist():
         path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
+
+def get_bz2_data(data_dir, data_name, url, data_origin_name):
+    """Download and extract bz2 data.
+
+    Parameters
+    ----------
+
+    data_dir : str
+        Absolute or relative path of the directory name to store bz2 files
+    data_name : str
+        Name of the output file in which bz2 contents will be extracted
+    url : str
+        URL to download data from
+    data_origin_name : str
+        Name of the downloaded b2 file
+
+    Examples
+    --------
+    >>> get_bz2_data("data_dir", "kdda.t",
+                     "https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary/kdda.t.bz2",
+                     "kdda.t.bz2")
+    """
+
+    data_name = os.path.join(data_dir, data_name)
+    data_origin_name = os.path.join(data_dir, data_origin_name)
+    if not os.path.exists(data_name):
+        download(url, dirname=data_dir, overwrite=False)
+        bz_file = bz2.BZ2File(data_origin_name, 'rb')
+        with open(data_name, 'wb') as fout:
+            try:
+                content = bz_file.read()
+                fout.write(content)
+            finally:
+                bz_file.close()
+        os.remove(data_origin_name)
 
 def set_env_var(key, val, default_val=""):
     """Set environment variable

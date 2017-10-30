@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from imdb import Imdb
+from dataset.imdb import Imdb
 import random
 
 class ConcatDB(Imdb):
@@ -64,7 +64,7 @@ class ConcatDB(Imdb):
         self.num_images = 0
         for db in self.imdbs:
             self.num_images += db.num_images
-        indices = range(self.num_images)
+        indices = list(range(self.num_images))
         if shuffle:
             random.shuffle(indices)
         return indices

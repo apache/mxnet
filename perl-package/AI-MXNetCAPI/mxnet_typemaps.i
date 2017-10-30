@@ -4,19 +4,18 @@
     I32 len;
     int i;
     SV  **tv;
-    STRLEN len2;
     if (!SvROK($input))
         croak("Argument $argnum is not a reference.");
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    len = av_top_index(tempav) + 1;
+    len = av_len(tempav) + 1;
     if(len!=0) 
     {
         $1 = (char **) safemalloc((len)*sizeof(char *));
         for (i = 0; i < len; i++) {
             tv = av_fetch(tempav, i, 0);
-            $1[i] = (char *) SvPV(*tv,len2);
+            $1[i] = (char *) SvPV_nolen(*tv);
         }
     }
     else
@@ -34,7 +33,6 @@
     char *key;
     SV *val;
     I32 len;
-    STRLEN len2;
     int hash_len;
     int i = 0;
     if (!SvROK($input))
@@ -50,7 +48,7 @@
         while ((val = hv_iternextsv(temphv, &key, &len)))
         {
             $1[i] = key;
-            $2[i] = SvPV(val, len2);
+            $2[i] = SvPV_nolen(val);
             ++i;
         }
     }
@@ -82,13 +80,29 @@
     }
 }
 
-%typemap(in,numinputs=0) (int *out) (int temp)
+%typemap(in) (void **out_pdata) (void *temp)
+{
+    temp = NULL;
+    $1 = &temp;
+}
+
+%typemap(argout) (void **out_pdata)
+{
+    if(!result)
+    {
+        $result = newSVpvn((char*)(*$1), SvIV(ST(1)));
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp)
 {
     temp = 0;
     $1 = &temp;
 }
 
-%typemap(argout) (int *out)
+%typemap(argout) (int *out), (bool *out)
 {
     if(!result)
     {
@@ -172,14 +186,12 @@
 
 %typemap(in) (const void *in), (void *in)
 {
-    STRLEN len;
-    $1 = (void *)SvPV($input, len);
+    $1 = (void *)SvPV_nolen($input);
 }
 
 %typemap(in) (const char *in)
 {
-    STRLEN len;
-    $1 = SvPV($input, len);
+    $1 = SvPV_nolen($input);
 }
 
 %typemap(in) (const mx_uint *in), (mx_uint *in)
@@ -187,18 +199,18 @@
     AV *tempav;
     int i;
     SV  **tv;
-    int av_len; 
+    int av_len;
     if (!SvROK($input))
         croak("Argument $argnum is not a reference.");
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     if(av_len)
     {
         $1 = (mx_uint *)safemalloc(av_len*sizeof(mx_uint));
         for (i = 0; i < av_len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             $1[i] = (mx_uint)SvIV(*tv);
         }
     }
@@ -223,12 +235,12 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     if(av_len)
     {
         $1 = (int *)safemalloc(av_len*sizeof(int));
         for (i = 0; i < av_len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             $1[i] = (int)SvIV(*tv);
         }
     }
@@ -255,12 +267,12 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     if(av_len)
     {
         $1 = ($1_type)safemalloc(av_len*sizeof($*1_type));
         for (i = 0; i < av_len; i++) {
-            tv = av_fetch(tempav, i, 0);    
+            tv = av_fetch(tempav, i, 0);
             res = SWIG_ConvertPtr(*tv,SWIG_as_voidptrptr(&$1[i]), $*1_descriptor, 0);
             if (!SWIG_IsOK(res)) {
                 SWIG_exception_fail(SWIG_ArgError(res), "in method '" "$symname" "', argument " "$argnum"" of type '" "$*1_type""'"); 
@@ -276,6 +288,39 @@
     Safefree($1);
 }
 
+%typemap(in) (void** cuda_kernel_args)
+{
+    AV *tempav;
+    int i;
+    SV  **tv;
+    int res;
+    int av_len;
+    if (!SvROK($input))
+        croak("Argument $argnum is not a reference.");
+        if (SvTYPE(SvRV($input)) != SVt_PVAV)
+        croak("Argument $argnum is not an array.");
+        tempav = (AV*)SvRV($input);
+    av_len = av_len(tempav) + 1;
+    if(av_len)
+    {
+        $1 = ($1_type)safemalloc(av_len*sizeof($*1_type));
+        for (i = 0; i < av_len; i++) {
+            tv = av_fetch(tempav, i, 0);
+            res = SWIG_ConvertPtr(*tv,SWIG_as_voidptrptr(&$1[i]), SWIGTYPE_p_MXNDArray, 0);
+            if (!SWIG_IsOK(res)) {
+                $1[i] = (void*)SvPV_nolen(*tv);
+            }
+        }
+    }
+    else
+    {
+       $1 = NULL;
+    }
+}
+%typemap(freearg) (void** cuda_kernel_args) {
+    Safefree($1);
+}
+
 %typemap(in) (mx_float *in)
 {
     AV *tempav;
@@ -286,7 +331,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    len = av_top_index(tempav) + 1;
+    len = av_len(tempav) + 1;
     if(len)
     {
         $1 = (mx_float *)safemalloc(len*sizeof(mx_float));
@@ -306,19 +351,23 @@
 }
 
 %typemap(in,numinputs=0) (NDArrayHandle *out) (NDArrayHandle temp),
-                         (FunctionHandle* out) (FunctionHandle temp), 
+                         (FunctionHandle* out) (FunctionHandle temp),
                          (SymbolHandle *out) (SymbolHandle temp),
                          (ExecutorHandle *out) (ExecutorHandle temp),
                          (DataIterHandle *out) (ExecutorHandle temp),
                          (KVStoreHandle *out) (KVStoreHandle temp),
                          (RecordIOHandle *out) (RecordIOHandle temp),
                          (RtcHandle *out) (RtcHandle temp),
-                         (CachedOpHandle *out) (CachedOpHandle temp)
+                         (CachedOpHandle *out) (CachedOpHandle temp),
+                         (CudaModuleHandle *out) (CudaModuleHandle temp),
+                         (CudaKernelHandle *out) (CudaKernelHandle temp)
 {
     $1 = &temp;
 }
 %typemap(argout) (NDArrayHandle *out), (FunctionHandle* out), (SymbolHandle *out), (ExecutorHandle *out), (DataIterHandle *out),
-                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp)
+                 (KVStoreHandle *out), (RecordIOHandle *out), (RtcHandle *out) (RtcHandle temp), (CachedOpHandle *out) (CachedOpHandle temp),
+                 (CudaModuleHandle *out) (CudaModuleHandle temp), (CudaKernelHandle *out) (CudaKernelHandle temp)
+
 {
     if(!result)
     {
@@ -522,6 +571,72 @@
     }
 }
 
+%typemap(in,numinputs=0) (NDArrayHandle **out_grad) (NDArrayHandle* temp)
+{
+    int vars = SvIV(ST(3));
+    if(vars)
+    {
+        $1 = &temp;
+    }
+    else
+    {
+        $1 = NULL;
+    }
+}
+
+%typemap(argout) (NDArrayHandle** out_grad)
+{
+    if(!result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        int len = SvIV(ST(3));
+        svs = (SV **)safemalloc(len*sizeof(SV *));
+        for (i = 0; i < len ; i++) {
+            svs[i] = SWIG_NewPointerObj(SWIG_as_voidptr((*$1)[i]), SWIGTYPE_p_MXNDArray, 0);
+        }
+        myav = av_make(len,svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (int **out_stype) (int *temp)
+{
+    int vars = SvIV(ST(3));
+    if(vars)
+    {
+        $1 = &temp;
+    }
+    else
+    {
+        $1 = NULL;
+    }
+}
+
+%typemap(argout) (int** out_stype)
+{
+    if(!result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        int len = SvIV(ST(3));
+        svs = (SV **)safemalloc(len*sizeof(SV *));
+        for (i = 0; i < len ; i++) {
+            svs[i] = newSViv((*$1)[i]);
+        }
+        myav = av_make(len,svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
 %typemap(in) (int *out_size, NDArrayHandle** out_array) (int temp, NDArrayHandle* temp_array)
 {
     AV *tempav;
@@ -534,7 +649,7 @@
         if (SvTYPE(SvRV($input)) != SVt_PVAV)
         croak("Argument $argnum is not an array.");
         tempav = (AV*)SvRV($input);
-    av_len = av_top_index(tempav) + 1;
+    av_len = av_len(tempav) + 1;
     temp_array = NULL;
     if(av_len)
     {
@@ -553,7 +668,7 @@
 }
 
 %typemap(freearg) (int *out_size, NDArrayHandle** out_array) {
-    if(av_top_index((AV*)SvRV(ST(3))) > -1)
+    if(av_len((AV*)SvRV(ST(3))) > -1)
     {
         Safefree(*$2);
     }
@@ -563,7 +678,7 @@
 {
     SV **svs;
     int i = 0;
-    if(av_top_index((AV*)SvRV(ST(3))) == -1)
+    if(av_len((AV*)SvRV(ST(3))) == -1)
     {
         if(!result)
         {

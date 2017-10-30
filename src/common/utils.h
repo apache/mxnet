@@ -26,6 +26,7 @@
 
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
+#include <nnvm/graph.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -48,114 +49,57 @@ namespace common {
 template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
-/*
- * \brief setup default-storage tblobs from source NDArrays. If any source NDArray has non-default
- *        storage, it creates a temp NDArray with default storage and uses the temp tblob. The
- *        function also records the indices of non-default source NDArrays and the indices of
- *        their corresponding temporary NDArrays in the temp array.
- * \param src list of source NDArray
- * \param blobs list of tblobs to return
- * \param temp_src list of source NDArrays which requires temporary default storage representation
- * \param temp_dst list of temporary destination NDArrays for default storage representation
- * \param idx_map mapping from indices in source NDArrays to indices in temp_dst. When not set,
-          indices are not recorded
- * \return true if any source NDArray need to cast storage
+/*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.
+ *         false is returned for empty inputs.
  */
-inline bool SetupDefaultBlobs(const std::vector<NDArray>& src,
-                              std::vector<TBlob> *blobs,
-                              std::vector<NDArray> *temp_src,
-                              std::vector<NDArray> *temp_dst,
-                              std::unordered_map<uint32_t, uint32_t> *idx_map = nullptr) {
-  bool require_cast = false;
-  for (size_t i = 0; i < src.size(); i++) {
-    auto& nd = src[i];
-    if (nd.storage_type() != kDefaultStorage) {
-      if (idx_map != nullptr) {
-        (*idx_map)[i] = temp_dst->size();
+inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
+                                const NDArrayStorageType stype) {
+  if (!vstorage.empty()) {
+    for (const auto& i : vstorage) {
+      if (i != stype) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+/*! \brief returns true if all storage types in `vstorage` are the same as target `stype1`
+ *         or `stype2'. Sets boolean if both found.
+ *         false is returned for empty inputs.
+ */
+inline bool ContainsOnlyStorage(const StorageTypeVector& vstorage,
+                                const NDArrayStorageType stype1,
+                                const NDArrayStorageType stype2,
+                                bool *has_both) {
+  if (has_both) {
+    *has_both = false;
+  }
+  if (!vstorage.empty()) {
+    uint8_t has = 0;
+    for (const auto i : vstorage) {
+      if (i == stype1) {
+        has |= 1;
+      } else if (i == stype2) {
+        has |= 2;
+      } else {
+        return false;
       }
-      NDArray temp(nd.shape(), nd.ctx(), false, nd.dtype());
-      temp_src->emplace_back(nd);
-      temp_dst->emplace_back(temp);
-      blobs->emplace_back(temp.data());
-      require_cast = true;
-    } else {
-      blobs->push_back(nd.data());
     }
+    if (has_both) {
+      *has_both = has == 3;
+    }
+    return true;
   }
-  return require_cast;
+  return false;
 }
 
-/*
- * \brief cast the NDArrays in `src` and store the result in NDArrays in `dst`.
- *        This is only used for storage fallback in executor.
- *        When storage_fallback is false, and `MXNET_EXEC_STORAGE_FALLBACK` == 0,
- *        storage fallback is disallowed.
- * \param src list of source NDArray to cast
- * \param dst list of destionation NDArray which hold the result of cast_storage operation
- * \param ctx operator context for cast_storage operation
- * \param storage_fallback whether storage_fallback is allowed. When set to false,
- *        its value depends on `MXNET_EXEC_STORAGE_FALLBACK`.
+/*! \brief returns true if the storage types of arrays in `ndarrays`
+ *         are the same as target `stype`. false is returned for empty inputs.
  */
-template <typename xpu>
-inline void CastNonDefaultStorage(const std::vector<NDArray>& src,
-                                  const std::vector<NDArray>& dst,
-                                  const OpContext& ctx,
-                                  bool storage_fallback = false) {
-  CHECK_GE(dst.size(), src.size());
-  if (src.size() == 0) return;
-  if (storage_fallback == false) {
-    storage_fallback = dmlc::GetEnv("MXNET_EXEC_STORAGE_FALLBACK", true);
-  }
-  if (storage_fallback == false) {
-    LOG(FATAL) << "Storage type conversion detected during execution. "
-               << "You are probably executing an operator which "
-               << "doesn't support NDArray inputs with non-default storage.";
-  }
-  for (size_t i = 0; i < src.size(); i++) {
-    CastStorageDispatch<xpu>(ctx, src[i], dst[i]);
-  }
-}
-
-// Check if any storage type is not default storage
-inline bool ContainsNonDefaultStorage(const StorageTypeVector& vstorage) {
-  for (const auto& i : vstorage) {
-    if (i != kUndefinedStorage && i != kDefaultStorage) return true;
-  }
-  return false;
-}
-
-// Check if any NDArray in the list has default storage
-inline bool ContainsDefaultStorage(const std::vector<NDArray>& ndarrays) {
-  for (const auto &nd : ndarrays) {
-    if (nd.storage_type() == kDefaultStorage) {
-      return true;
-    }
-  }
-  return false;
-}
-
-inline bool ContainsNonDefaultStorage(const std::vector<NDArray>& ndarrays) {
-  for (const auto &nd : ndarrays) {
-    if (nd.storage_type() != kUndefinedStorage && nd.storage_type() != kDefaultStorage) {
-      return true;
-    }
-  }
-  return false;
-}
-
-inline bool ContainsStorage(const std::vector<NDArray>& ndarrays, const NDArrayStorageType stype) {
-  for (const auto &nd : ndarrays) {
-    if (nd.storage_type() == stype) {
-      return true;
-    }
-  }
-  return false;
-}
-
 inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
                                 const NDArrayStorageType stype) {
   if (!ndarrays.empty()) {
-    for (const auto &nd : ndarrays) {
+    for (const auto& nd : ndarrays) {
       if (nd.storage_type() != stype) {
         return false;
       }
@@ -164,6 +108,54 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   }
   return false;
 }
+
+/*! \brief returns true if the storage types of arrays in `ndarrays`
+ *         are the same as targets `stype1` or `stype2`. false is returned for empty inputs.
+ */
+inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
+                                const NDArrayStorageType stype1,
+                                const NDArrayStorageType stype2,
+                                bool *has_both) {
+  if (has_both) {
+    *has_both = false;
+  }
+  if (!ndarrays.empty()) {
+    uint8_t has = 0;
+    for (const auto& nd : ndarrays) {
+      const NDArrayStorageType stype = nd.storage_type();
+      if (stype == stype1) {
+        has |= 1;
+      } else if (stype == stype2) {
+        has |= 2;
+      } else {
+        return false;
+      }
+    }
+    if (has_both) {
+      *has_both = has == 3;
+    }
+    return true;
+  }
+  return false;
+}
+
+/*! \brief get string representation of dispatch_mode */
+inline std::string dispatch_mode_string(const DispatchMode x) {
+  switch (x) {
+    case DispatchMode::kFCompute:
+      return "fcompute";
+    case DispatchMode::kFComputeEx:
+      return "fcompute_ex";
+    case DispatchMode::kFComputeFallback:
+      return "fcompute_fallback";
+    case DispatchMode::kVariable:
+      return "variable";
+    case DispatchMode::kUndefined:
+      return "undefined";
+  }
+  return "unknown";
+}
+
 
 /*! \brief get string representation of storage_type */
 inline std::string stype_string(const int x) {
