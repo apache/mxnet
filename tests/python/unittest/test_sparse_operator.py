@@ -1237,7 +1237,7 @@ def test_sparse_dot():
 
 
 def test_sparse_dot_twice():
-    """Test for nnr_out = 0. Before the fix, gpu sparse dot would crash."""
+    """Test for nnr_out = 0. Before the fix, the test would fail."""
     np.random.seed(1412448615)
     test_sparse_dot()
     test_sparse_dot()
