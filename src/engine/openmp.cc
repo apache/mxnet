@@ -35,7 +35,7 @@ OpenMP *OpenMP::Get() {
 }
 
 OpenMP::OpenMP()
-: omp_num_threads_set_in_environment(dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN) {
+  : omp_num_threads_set_in_environment(dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN) {
 #ifdef _OPENMP
   if (!omp_num_threads_set_in_environment) {
     omp_set_nested(true);
@@ -53,8 +53,8 @@ OpenMP::OpenMP()
 #else
   enabled_ = false;
   omp_thread_max_ = 1;
-}
 #endif
+}
 
 int OpenMP::GetRecommendedOMPThreadCount() const {
 #ifdef _OPENMP
