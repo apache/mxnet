@@ -587,13 +587,16 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
   CHECK_EQ(req, kWriteTo);
-  if (!lhs.storage_initialized()) return;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  if (!lhs.storage_initialized()) {
+    FillZerosRspImpl(s, *ret);
+    return;
+  }
 
   using mshadow::Shape1;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
-  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -648,6 +651,10 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           dim_t nnr_out = 0;
           CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
                                cudaMemcpyDeviceToHost));
+          if (0 == nnr_out) {
+            FillZerosRspImpl(s, *ret);
+            return;
+          }
 
           // Allocate output matrix space
           ret->CheckAndAlloc({Shape1(nnr_out)});
@@ -702,14 +709,17 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
-  if (!lhs.storage_initialized() || !rhs.storage_initialized()) return;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
+    FillZerosRspImpl(s, *ret);
+    return;
+  }
   CHECK_EQ(req, kWriteTo);
 
   using mshadow::Shape1;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
-  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
@@ -767,6 +777,10 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
             dim_t nnr_out = 0;
             CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg_out[num_cols_l-1], sizeof(dim_t),
                                  cudaMemcpyDeviceToHost));
+            if (0 == nnr_out) {
+              FillZerosRspImpl(s, *ret);
+              return;
+            }
 
             // Allocate output matrix space
             ret->CheckAndAlloc({mshadow::Shape1(nnr_out)});

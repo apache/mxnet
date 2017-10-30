@@ -1195,6 +1195,7 @@ def test_cast_storage_ex():
             check_cast_storage((dim0, rnd.randint(512, 1024)), d, 'default', 'row_sparse',
                                check_numeric_grad=False)
 
+
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density, shuffle_csr_indices=False)
@@ -1233,6 +1234,13 @@ def test_sparse_dot():
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
+
+
+def test_sparse_dot_twice():
+    """Test for nnr_out = 0. Before the fix, gpu sparse dot would crash."""
+    np.random.seed(1412448615)
+    test_sparse_dot()
+    test_sparse_dot()
 
 
 def test_sparse_slice():
