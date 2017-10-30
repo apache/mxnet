@@ -633,9 +633,10 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 in_data, sum.dptr_, residual.dptr_, num_rows, num_cols,
                 seg_len);
             if (normalize) {
-              mshadow::Tensor<xpu, 1, DType> out_data =
-                  output->data().FlatTo1D<xpu, DType>(s);
-              out_data /= scalar<DType>(num_rows);
+              mxnet_op::Kernel<
+                  mxnet_op::op_with_req<mshadow::op::div, req_type>,
+                  xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
+                               output->data().dptr<DType>(), DType(num_rows));
             }
           });
         });
@@ -653,9 +654,10 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 s, out_data_size, output->data().dptr<DType>(), in_indptr,
                 in_data);
             if (normalize) {
-              mshadow::Tensor<xpu, 1, DType> out_data =
-                  output->data().FlatTo1D<xpu, DType>(s);
-              out_data /= scalar<DType>(num_cols);
+              mxnet_op::Kernel<
+                  mxnet_op::op_with_req<mshadow::op::div, req_type>,
+                  xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
+                               output->data().dptr<DType>(), DType(num_cols));
             }
           });
         });
