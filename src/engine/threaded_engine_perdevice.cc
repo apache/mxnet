@@ -69,9 +69,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #endif
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
-    gpu_normal_workers_.SignalForKill();
-    gpu_copy_workers_.SignalForKill();
-    cpu_normal_workers_.SignalForKill();
     this->Stop();
   }
 
