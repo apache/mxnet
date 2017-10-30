@@ -78,7 +78,7 @@ class NDArray {
 
   std::string Summarize(int firstN=10)
   {
-      //auto tblob = data();
+      auto tblob = data();
       auto ptr = (float*)tblob.dptr_;
       auto sz = shape().Size();
       //auto sigptr = (int*)tblob.dptr_;

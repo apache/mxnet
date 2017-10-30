@@ -154,7 +154,7 @@ class Profiler {
   unsigned int gpu_num_;
   /*! \brief the profiler init time */
   uint64_t init_time_;
-
+};
 /*! \return current clock time, time unit is microsecond (10^-6 s) */
 inline uint64_t NowInUsec();
 /*! \brief set operation execution start timestamp */
