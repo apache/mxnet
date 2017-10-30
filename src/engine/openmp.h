@@ -22,7 +22,12 @@
 namespace mxnet {
 namespace engine {
 
-/*! \brief OpenMP wrapper and management class */
+/*! \brief OpenMP wrapper and management class
+ *         This class manages a layer on top of the OMP implementation and does not
+ *         interact bidirectionally with the OMP implementation for all behaviors
+ *         (i.e. it's meant to be use explicitly for explicit arguments to omp pragmas
+ *         without affecting the behavior when no arguments are given)
+ */
 class OpenMP {
  public:
   OpenMP();
@@ -41,8 +46,19 @@ class OpenMP {
 
   static OpenMP *Get();
  private:
+  /*!
+   * \brief Whether OpenMP layer is enabled (use more then one thread).  Independent of OMP library
+   *        behavior
+   */
   volatile bool enabled_ = true;
+  /*!
+   * \brief Maximum number of threads for any OMP region
+   */
   volatile int omp_thread_max_ = 0;
+  /*!
+   * \brief Whether OMP_NUM_THREADS was set in the environment.  If it is, we fall back to
+   *        the OMP's implementation's handling of that environment variable
+   */
   const bool omp_num_threads_set_in_environment;
 };
 
