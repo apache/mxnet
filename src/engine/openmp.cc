@@ -25,8 +25,6 @@
 namespace mxnet {
 namespace engine {
 
-#ifdef _OPENMP
-
 #if defined(__i386__) || defined(_M_X86) || defined(_M_X64) || defined(__x86_64__)
 #define ARCH_IS_INTEL_X86
 #endif
@@ -38,41 +36,48 @@ OpenMP *OpenMP::Get() {
 
 OpenMP::OpenMP()
 : omp_num_threads_set_in_environment(dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN) {
-  if(!omp_num_threads_set_in_environment) {
+#ifdef _OPENMP
+  if (!omp_num_threads_set_in_environment) {
     omp_set_nested(true);
     omp_set_max_active_levels(2);
     omp_set_dynamic(false);
   }
   const int max = dmlc::GetEnv("MXNET_OMP_MAX_THREADS", INT_MIN);
-  if(max != INT_MIN) {
+  if (max != INT_MIN) {
     omp_thread_max_ = max;
   } else {
 #ifdef ARCH_IS_INTEL_X86
     omp_thread_max_ = omp_get_num_procs() >> 1;
 #endif
   }
+#else
+  enabled_ = false;
+  omp_thread_max_ = 1;
 }
+#endif
 
 int OpenMP::GetRecommendedOMPThreadCount() const {
-  if(omp_num_threads_set_in_environment) {
+#ifdef _OPENMP
+  if (omp_num_threads_set_in_environment) {
     return omp_get_max_threads();
   }
-  if(enabled_) {
+  if (enabled_) {
 #ifdef ARCH_IS_INTEL_X86
     // x86 does hyperthreading, but do to cache issues, it's faster to only use # true CPUs
     const int thread_count = omp_get_max_threads() >> 1;
 #else
     const int thread_count = omp_get_max_threads();
 #endif
-    if(!omp_thread_max_ || thread_count < omp_thread_max_) {
+    if (!omp_thread_max_ || thread_count < omp_thread_max_) {
       return thread_count;
     }
     return omp_thread_max_;
   }
   return 1;
+#else
+  return 1;
+#endif
 }
-
-#endif // _OPENMP
 
 }  // engine
 }  // namepace mxnet

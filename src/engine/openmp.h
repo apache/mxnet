@@ -22,8 +22,6 @@
 namespace mxnet {
 namespace engine {
 
-#ifdef _OPENMP
-
 /*! \brief OpenMP wrapper and management class */
 class OpenMP {
  public:
@@ -47,8 +45,6 @@ class OpenMP {
   volatile int omp_thread_max_ = 0;
   const bool omp_num_threads_set_in_environment;
 };
-
-#endif  // _OPENMP
 
 }  // engine
 }  // namespace mxnet
