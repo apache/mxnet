@@ -472,6 +472,8 @@ def test_block_attr_regular():
 @with_seed()
 def test_sequential_warning():
     with warnings.catch_warnings(record=True) as w:
+        # The following line permits the test to pass if run multiple times
+        warnings.simplefilter('always')
         b = gluon.nn.Sequential()
         b.add(gluon.nn.Dense(20))
         b.hybridize()
