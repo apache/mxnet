@@ -20,11 +20,13 @@
 """Dataset generator."""
 __all__ = ['DataLoader']
 
-import numpy as np
 import multiprocessing
 import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
 import pickle
+import io
+import sys
+import numpy as np
 
 from . import sampler as _sampler
 from ... import nd, context
@@ -32,6 +34,7 @@ from ... import nd, context
 
 def rebuild_ndarray(*args):
     """Rebuild ndarray from pickled shared memory"""
+    # pylint: disable=no-value-for-parameter
     return nd.NDArray(nd.ndarray._new_from_shared_mem(*args))
 
 
@@ -65,15 +68,18 @@ class ConnectionWrapper(object):
         return getattr(self.conn, name)
 
 
-class SimpleQueue(multiprocessing.queues.SimpleQueue):
+class Queue(multiprocessing.queues.Queue):
+    """Wrapper for multiprocessing queue that dumps NDArray with shared memory."""
     def __init__(self, *args, **kwargs):
-        super(SimpleQueue, self).__init__(*args, ctx=multiprocessing.get_context(), **kwargs)
-
-    def _make_methods(self):
-        if not isinstance(self._reader, ConnectionWrapper):
-            self._reader = ConnectionWrapper(self._reader)
-            self._writer = ConnectionWrapper(self._writer)
-        super(SimpleQueue, self)._make_methods()
+        if sys.version_info[0] <= 2:
+            super(Queue, self).__init__(*args, **kwargs)
+        else:
+            super(Queue, self).__init__(*args, ctx=multiprocessing.get_context(),
+                                        **kwargs)
+        self._reader = ConnectionWrapper(self._reader)
+        self._writer = ConnectionWrapper(self._writer)
+        self._send = self._writer.send
+        self._recv = self._reader.recv
 
 
 def default_batchify_fn(data):
@@ -177,8 +183,8 @@ class DataLoader(object):
                 yield self._batchify_fn([self._dataset[idx] for idx in batch])
             return
 
-        key_queue = SimpleQueue()
-        data_queue = SimpleQueue()
+        key_queue = Queue()
+        data_queue = Queue(2*self._num_workers)
 
         workers = []
         for _ in range(self._num_workers):
@@ -192,9 +198,6 @@ class DataLoader(object):
         for idx, batch in enumerate(self._batch_sampler):
             key_queue.put((idx, batch))
 
-        for i in range(self._num_workers):
-            key_queue.put((None, None))
-
         data_buffer = {}
         curr_idx = 0
         for _ in range(len(self._batch_sampler)):
@@ -203,6 +206,9 @@ class DataLoader(object):
             while curr_idx in data_buffer:
                 yield data_buffer.pop(curr_idx)
                 curr_idx += 1
+
+        for _ in range(self._num_workers):
+            key_queue.put((None, None))
 
         for worker in workers:
             worker.join()

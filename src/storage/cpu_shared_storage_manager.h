@@ -111,6 +111,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   int fid = -1;
   bool is_new = false;
   size_t size = handle->size + alignment_;
+  void* ptr = nullptr;
 #ifdef _WIN32
   LOG(FATAL) << "Shared memory is not supported on Windows yet.";
 #else
@@ -135,7 +136,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
 
   if (is_new) ftruncate(fid, size);
 
-  void* ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
+  ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
 #endif  // _WIN32
