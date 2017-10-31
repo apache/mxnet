@@ -60,7 +60,7 @@ class OHEMSampler(Sampler):
 
         """
         F = nd
-        num_positive = F.sum(x >= 0, axis=1)
+        num_positive = F.sum(x > -1, axis=1)
         num_negative = self._ratio * num_positive
         num_total = x.shape[1]  # scalar
         num_negative = F.minimum(F.maximum(self._min_samples, num_negative),
@@ -84,4 +84,4 @@ class OHEMSampler(Sampler):
         for i, num_neg in zip(range(x.shape[0]), num_negative.asnumpy().astype(np.int32)):
             indices = argmaxs[i, :num_neg]
             y[i, indices.astype(np.int32)] = -1  # assign negative samples
-        return F.array(y)
+        return F.array(y, ctx=x.context)

@@ -53,7 +53,7 @@ class Cast(object):
         self._type = typ
 
     def __call__(self, src, label):
-        return src.astype(self._type), label
+        return src.astype(self._type), label.astype(self._type)
 
 
 class ToAbsoluteCoords(object):
@@ -181,6 +181,7 @@ class RandomSampleCrop(object):
                 # check min and max iou constraint TODO(zhreshold): this is disabled?
                 if overlap.min() < min_iou and max_iou < overlap.max():
                     print("Possible?????")
+                    raise RuntimeError("ATTENTION.")
                     continue
 
                 # crop
@@ -256,7 +257,9 @@ class SSDAugmentation(object):
             # Expand(mean_pixel),
             # RandomSampleCrop(),
             # ToPercentCoords(),
-            # image.det.DetHorizontalFlipAug(0.5),
+            image.det.DetRandomCropAug(0.3, (0.5, 2), (0.3, 1.0)),
+            image.det.DetRandomPadAug((0.5, 2), (1.0, 3.0)),
+            image.det.DetHorizontalFlipAug(0.5),
             ForceResize(data_shape),
             image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
             Transpose(),

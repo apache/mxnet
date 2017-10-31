@@ -22,7 +22,7 @@ from trainer.debugger import super_print, find_abnormal
 logging.basicConfig(level=logging.DEBUG)
 random.seed(123)
 logger = logging.getLogger()
-fh = logging.FileHandler('train.log')
+fh = logging.FileHandler('train_ssd.log')
 logger.addHandler(fh)
 
 
@@ -57,7 +57,7 @@ net = ssd_512_resnet18_v1(classes=num_class, pretrained=(1, 0))
 lr = 0.01
 wd = 0.00005
 momentum = 0.9
-log_interval = 1
+log_interval = 50
 dtype = 'float32'
 box_weight = 5.0
 
@@ -108,7 +108,7 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     cls_loss = SoftmaxCrossEntropyLoss()
     # box_loss = gluon.loss.L1Loss()
     box_loss = SmoothL1Loss(weight=4)
-    cls_metric = Accuracy(axis=-1, ignore_label=0)
+    cls_metric = Accuracy(axis=-1, ignore_label=-1)
     box_metric = SmoothL1()
     cls_metric1 = LossRecorder('CrossEntropy')
     box_metric1 = LossRecorder('SmoothL1Loss')
@@ -137,10 +137,14 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                     z = net(x)
                     with ag.pause():
                         cls_targets, box_targets, box_masks = target_generator(z, y)
+                        valid_cls = nd.sum(cls_targets >= 0, axis=0, exclude=True)
+                        valid_box = nd.sum(box_masks > 0, axis=0, exclude=True)
                     # super_print(y, cls_targets, box_targets)
                     # raise
                     loss1 = cls_loss(z[0], cls_targets)
+                    loss1 = loss1 * cls_targets.shape[1] / nd.maximum(valid_cls, nd.ones_like(valid_cls))
                     loss2 = box_loss((z[1] - box_targets) * box_masks, nd.zeros_like(box_targets))
+                    loss2 = loss2 * box_masks.shape[1] / nd.maximum(valid_box, nd.ones_like(valid_box))
                     L = loss1 + loss2
                     # L = loss1
                     Ls.append(L)
@@ -177,7 +181,7 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
 
 try:
     _ = nd.array([1], ctx=mx.gpu(0))
-    ctx = [mx.gpu(i) for i in range(8)]
+    ctx = [mx.gpu(i) for i in range(1)]
 except:
     ctx = mx.cpu()
 train(net, train_data, val_data, 100, ctx=ctx)
