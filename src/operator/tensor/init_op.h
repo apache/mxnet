@@ -378,9 +378,17 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<range_fwd, xpu>::Launch(s, outputs[0].Size(),
-        static_cast<int>(param.repeat), static_cast<DType>(param.start),
-        static_cast<DType>(param.step), req[0], outputs[0].dptr<DType>());
+      // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
+      // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
+      auto step = std::is_signed<DType>() ? param.step : static_cast<int>(param.step);
+      auto start = std::is_signed<DType>() ? param.start : static_cast<int>(param.start);
+      Kernel<range_fwd, xpu>::Launch(s,
+                                     outputs[0].Size(),
+                                     static_cast<int>(param.repeat),
+                                     static_cast<DType>(start),
+                                     static_cast<DType>(step),
+                                     req[0],
+                                     outputs[0].dptr<DType>());
   });
 }
 
