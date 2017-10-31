@@ -26,11 +26,7 @@
 
 #include "./convolution-inl.h"
 #include "../elemwise_op_common.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "../mkl/mkl_memory-inl.h"
-#include "../mkl/mkl_convolution-inl.h"
-#endif  // MXNET_USE_MKL2017
+#include "./mkldnn/mkldnn_ops-inl.h"
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_convolution-inl.h"
 #endif  // MXNET_USE_NNPACK
@@ -51,6 +47,46 @@ static inline std::vector<std::string> ListArguments(const ConvolutionParam& par
   }
 }
 
+static void ConvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx, const std::vector<NDArray>& inputs,
+    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+#if MXNET_USE_MKLDNN == 1
+  switch (inputs[0].dtype()) {
+    case mshadow::kFloat32:
+      MKLDNNConvolution_Forward(attrs, ctx, inputs, req, outputs);
+      return;
+  }
+#endif
+  // TODO I need to convert format.
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++)
+    in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
+  ConvolutionCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+}
+
+static void ConvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx, const std::vector<NDArray>& inputs,
+    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+#if MXNET_USE_MKLDNN == 1
+  switch (inputs[0].dtype()) {
+    case mshadow::kFloat32:
+      MKLDNNConvolution_Backward(attrs, ctx, inputs, req, outputs);
+      return;
+  }
+#endif
+  // TODO I need to convert format.
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++)
+    in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
+  ConvolutionGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+}
+
 static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_shape,
                              std::vector<TShape> *out_shape) {
@@ -67,50 +103,50 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
   if (dshp.ndim() ==  0) return false;
 
   if (param_.kernel.ndim() == 1) {
-  // 1d conv
-  CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
-  Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
-  Shape<3> wshape = Shape3(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
-      param_.kernel[0]);
-  wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
-  wshape[0] *= param_.num_group;
-  SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
-  if (!param_.no_bias) {
-    SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
-  }
+    // 1d conv
+    CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
+    Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
+    Shape<3> wshape = Shape3(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
+        param_.kernel[0]);
+    wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
+    wshape[0] *= param_.num_group;
+    SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
+    if (!param_.no_bias) {
+      SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
+    }
 
-  const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
-  CHECK_EQ(dshape[1] % param_.num_group, 0U) \
-    << "input num_filter must divide group size";
-  CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
-    << "output num_filter must divide group size";
-  CHECK_GT(param_.kernel.Size(), 0U) \
-    << "incorrect kernel size: " << param_.kernel;
-  CHECK_GT(param_.stride.Size(), 0U) \
-    << "incorrect stride size: " << param_.stride;
-  CHECK_GT(param_.dilate.Size(), 0U) \
-    << "incorrect dilate size: " << param_.dilate;
-  Shape<3> oshape;
-  oshape[0] = dshape[0];
-  oshape[1] = param_.num_filter;
-  oshape[2] = dshape[2] ?
-    (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1 : 0;
-  SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
-  // Perform incomplete shape inference. Fill in the missing values in data shape.
-  // 1) We can always fill in the batch_size.
-  // 2) We can back-calculate the input height/width if the corresponding stride is 1.
-  oshape = ConvertLayout((*out_shape)[0].get<3>(), param_.layout.value(), kNCW);
-  dshape[0] = oshape[0];
-  if (oshape[2] && param_.stride[0] == 1) {
-    dshape[2] = oshape[2] + dilated_ksize_x - 1 - 2 * param_.pad[0];
-  }
-  SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
-      ConvertLayout(dshape, kNCW, param_.layout.value()));
-  // Check whether the kernel sizes are valid
-  if (dshape[2] != 0) {
-    CHECK_LE(dilated_ksize_x, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
-  }
-  return true;
+    const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
+    CHECK_EQ(dshape[1] % param_.num_group, 0U) \
+      << "input num_filter must divide group size";
+    CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
+      << "output num_filter must divide group size";
+    CHECK_GT(param_.kernel.Size(), 0U) \
+      << "incorrect kernel size: " << param_.kernel;
+    CHECK_GT(param_.stride.Size(), 0U) \
+      << "incorrect stride size: " << param_.stride;
+    CHECK_GT(param_.dilate.Size(), 0U) \
+      << "incorrect dilate size: " << param_.dilate;
+    Shape<3> oshape;
+    oshape[0] = dshape[0];
+    oshape[1] = param_.num_filter;
+    oshape[2] = dshape[2] ?
+      (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1 : 0;
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
+    // Perform incomplete shape inference. Fill in the missing values in data shape.
+    // 1) We can always fill in the batch_size.
+    // 2) We can back-calculate the input height/width if the corresponding stride is 1.
+    oshape = ConvertLayout((*out_shape)[0].get<3>(), param_.layout.value(), kNCW);
+    dshape[0] = oshape[0];
+    if (oshape[2] && param_.stride[0] == 1) {
+      dshape[2] = oshape[2] + dilated_ksize_x - 1 - 2 * param_.pad[0];
+    }
+    SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
+        ConvertLayout(dshape, kNCW, param_.layout.value()));
+    // Check whether the kernel sizes are valid
+    if (dshape[2] != 0) {
+      CHECK_LE(dilated_ksize_x, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+    }
+    return true;
   } else if (param_.kernel.ndim() == 2) {
     // 2d conv
     CHECK_EQ(dshp.ndim(), 4U) \
@@ -259,6 +295,53 @@ static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
+                                 const int dev_mask,
+                                 DispatchMode* dispatch_mode,
+                                 std::vector<int> *in_attrs,
+                                 std::vector<int> *out_attrs) {
+  const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
+  uint32_t in_expected = param.no_bias ? 2 : 3;
+  CHECK_EQ(in_attrs->size(), in_expected);
+  CHECK_EQ(out_attrs->size(), 1);
+
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    (*out_attrs)[0] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  (*out_attrs)[0] = kDefaultStorage;
+  return true;
+}
+
+inline static bool backward_ConvStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
+  const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
+  uint32_t in_expected = param.no_bias ? 3 : 4;
+  uint32_t out_expected = param.no_bias ? 2 : 3;
+  CHECK_EQ(in_attrs->size(), in_expected);
+  CHECK_EQ(out_attrs->size(), out_expected);
+
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    for (size_t i = 0; i < out_attrs->size(); i++)
+      (*out_attrs)[i] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
+  return true;
+}
+
 static void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
   using namespace mshadow;
   ConvolutionParam param_;
@@ -400,7 +483,9 @@ There are other options to tune the performance.
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
+.set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionCompute_CPU)
 .set_attr<nnvm::FGradient>("FGradient", ConvolutionGrad{"_backward_Convolution"})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -416,11 +501,13 @@ NNVM_REGISTER_OP(_backward_Convolution)
   return params.no_bias ? 2 : 3;
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", backward_ConvStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(ConvolutionParamParser)
-.set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionGradCompute_CPU);
 
 }  // namespace op
 }  // namespace mxnet
