@@ -78,6 +78,6 @@ int OpenMP::GetRecommendedOMPThreadCount() const {
 #endif
 }
 
-}  // engine
-}  // namepace mxnet
+}  // namespace engine
+}  // namespace mxnet
 

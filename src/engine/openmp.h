@@ -16,8 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_ENGINE_OMP_H_
-#define MXNET_ENGINE_OMP_H_
+#ifndef MXNET_ENGINE_OPENMP_H_
+#define MXNET_ENGINE_OPENMP_H_
 
 namespace mxnet {
 namespace engine {
@@ -61,6 +61,7 @@ class OpenMP {
    * \return
    */
   static OpenMP *Get();
+
  private:
   /*!
    * \brief Whether OpenMP layer is enabled (use more then one thread).  Independent of OMP library
@@ -78,7 +79,7 @@ class OpenMP {
   const bool omp_num_threads_set_in_environment;
 };
 
-}  // engine
+}  // namespace engine
 }  // namespace mxnet
 
-#endif  // MXNET_ENGINE_OMP_H_
+#endif  // MXNET_ENGINE_OPENMP_H_

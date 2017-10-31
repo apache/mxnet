@@ -196,7 +196,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #if MXNET_USE_CUDA
     mshadow::Stream<gpu> *stream;
     do {
-      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(ready_event);
+      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(&ready_event);
       // allocate stream
       mshadow::SetDevice<gpu>(ctx.dev_id);
       if (is_copy_worker) {
