@@ -4350,6 +4350,16 @@ def finite_diff_unary_op(
         name=op_name)
     check_grad(op_ex, [data_np])
 
+def np_smooth_l1(x, sigma):
+    issq = 1. / sigma / sigma
+    absx = np.abs(x)
+    temp = x * sigma
+    return np.where(absx < issq, 0.5 * (temp ** 2), absx - 0.5 * issq)
+
+def np_smooth_l1_grad(x, sigma):
+    ssq = sigma * sigma
+    return np.where(np.abs(x) < 1. / ssq, x * ssq, np.sign(x))
+
 # Tests for unary operators (basic mathematical functions):
 # - Forward: Comparison to NumPy (several dtype)
 # - Backward: Comparison to NumPy (several dtype)
@@ -4471,7 +4481,15 @@ def test_unary_math_operators():
         'tanh': [lambda x: mx.sym.tanh(x),
                  lambda x: np.tanh(x),
                  lambda x: 1. - np.tanh(x) ** 2,
-                 -4.0, 4.0]
+                 -4.0, 4.0],
+        'smooth_l1_sig1': [lambda x: mx.sym.smooth_l1(x, scalar=1.),
+                           lambda x: np_smooth_l1(x, 1.),
+                           lambda x: np_smooth_l1_grad(x, 1.),
+                           -2.0, 2.0],
+        'smooth_l1_sig2': [lambda x: mx.sym.smooth_l1(x, scalar=2.),
+                           lambda x: np_smooth_l1(x, 2.),
+                           lambda x: np_smooth_l1_grad(x, 2.),
+                           -1.0, 1.0]
     }
     if have_scipy:
         unary_ops['gamma'] = [lambda x: mx.sym.gamma(x),
