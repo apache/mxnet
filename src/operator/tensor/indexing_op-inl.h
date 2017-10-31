@@ -48,9 +48,9 @@ enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
 struct AddTakeGradRspKernel {
-  // each thread i is responsible for gradient rows in [segment_start, segment_end)
   /*!
-   * \brief
+   * \brief Each thread i is responsible for row slices in [segment_start, segment_end)
+            of the result gradient
    * \param tid             global thread id
    * \param grad            the gradient to calculate
    * \param prefix_sum      the inclusive prefix sum of row ids of the gradient
@@ -59,7 +59,7 @@ struct AddTakeGradRspKernel {
    * \param data_val        the values of input data
    * \param data_size       number of values of input data
    * \param segment_length  the length of row segment to process for each thread
-   * \param num_rows        total number of rows (i.e. grad.shape[0])
+   * \param nnr             total number of non-zero rows of result gradient
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int tid,
@@ -70,17 +70,18 @@ struct AddTakeGradRspKernel {
                                   const IType* data_val,
                                   const nnvm::dim_t data_size,
                                   const nnvm::dim_t segment_length,
-                                  const nnvm::dim_t num_rows) {
+                                  const nnvm::dim_t nnr) {
     using nnvm::dim_t;
     dim_t segment_start = tid * segment_length;
-    dim_t segment_end = std::min(num_rows, segment_start + segment_length);
+    dim_t segment_end = std::min(nnr, segment_start + segment_length);
     // scan all data
     for (dim_t data_i = 0; data_i < data_size; data_i++) {
       dim_t data = static_cast<dim_t>(data_val[data_i]);
-      if (data < segment_start || data >= segment_end) continue;
+      dim_t grad_row_id = prefix_sum[data] - 1;
+      if (grad_row_id < segment_start || grad_row_id >= segment_end) continue;
       // no projection is performed
       dim_t ograd_i = data_i * row_length;
-      dim_t grad_i = (prefix_sum[data] - 1) * row_length;
+      dim_t grad_i = grad_row_id * row_length;
       for (dim_t offset = 0; offset < row_length; offset++) {
         grad[grad_i + offset] += ograd[ograd_i + offset];
       }
@@ -141,7 +142,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
         // add the final gradients
         int num_threads = omp_get_max_threads();
-        dim_t segment_len = (num_rows + num_threads - 1) / num_threads;
+        dim_t segment_len = (nnr + num_threads - 1) / num_threads;
         Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
                                                   ograd.dptr<DType>(), row_length,
                                                   data.dptr<IType>(), data_size, segment_len,
