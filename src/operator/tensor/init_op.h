@@ -120,6 +120,7 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
   });
 }
 
+// fill indptr array of eye in CSR format
 struct eye_csr_indptr_fill {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t nnz,
@@ -129,6 +130,7 @@ struct eye_csr_indptr_fill {
   }
 };
 
+// fill indices array of eye in CSR format
 struct eye_csr_idx_fill {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t init_col) {
@@ -136,12 +138,6 @@ struct eye_csr_idx_fill {
   }
 };
 
-struct eye_csr_data_fill {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data) {
-    out_data[i] = static_cast<DType>(1);
-  }
-};
 
 template<typename xpu>
 void EyeFillCsrImpl(mshadow::Stream<xpu> *s, const NDArray& out,
@@ -165,7 +161,7 @@ void EyeFillCsrImpl(mshadow::Stream<xpu> *s, const NDArray& out,
         Kernel<eye_csr_idx_fill, xpu>::Launch(
           s, nnz, out.aux_data(csr::kIdx).dptr<IType>(),
           std::max(std::min(k, num_cols-1), (nnvm::dim_t)0));
-        Kernel<eye_csr_data_fill, xpu>::Launch(
+        Kernel<set_to_int<1>, xpu>::Launch(
           s, nnz, out.data().dptr<DType>());
       });
     });
