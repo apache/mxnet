@@ -667,6 +667,11 @@ void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext&
             }
           }
         }
+        // returns zeros in csr format if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, mshadow::Shape1(0));
+          return;
+        }
         out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
         out.CheckAndAllocData(Shape1(nnz));
         IType *out_idx = out.aux_data(kIdx).dptr<IType>();
