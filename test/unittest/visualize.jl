@@ -12,7 +12,7 @@ function test_basic()
   info("Visualize::basic")
 
   mlp = mlp2()
-  
+
   # Order of elements or default color values can change, but length of the output should be more or less stable
   @test length(mx.to_graphviz(mlp)) == length(
 """

@@ -51,10 +51,11 @@ function to_graphviz(network :: SymbolicNode; title="Network Visualization", inp
     attr  = deepcopy(node_attr)
     label = op
 
-    # Up to 0.8 version of mxnet additional info was stored in
-    # node["param"]. Staring from pre0.9 `param` was changed to `attr`.
-    if haskey(node, "param")
-      node_info = node["param"]
+    # Up to 0.11.0 version of mxnet additional info was stored in
+    # node["attr"]. Staring from 0.12 `attr` was changed to `attrs`.
+    # See: https://github.com/dmlc/nnvm/pull/152
+    if haskey(node, "attrs")
+      node_info = node["attrs"]
     elseif haskey(node, "attr")
       node_info = node["attr"]
     end
