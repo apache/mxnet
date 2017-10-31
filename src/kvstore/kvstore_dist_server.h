@@ -487,7 +487,7 @@ class KVStoreDistServer {
   bool sync_mode_;
   KVStore::Controller controller_;
   KVStore::Updater updater_;
-
+  bool SuppressAggregator;
   std::unordered_map<int, NDArray> store_;
   std::unordered_map<int, MergeBuf> merge_buf_;
 

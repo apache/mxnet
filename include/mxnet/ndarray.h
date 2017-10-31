@@ -549,6 +549,16 @@ class NDArray {
     ptr_->CheckAndAlloc();
   }
 
+  /*
+   * Internally reshape NDArray.
+   */
+  inline void ReshapeInternalExact(const TShape &shape)
+  {
+      CHECK_EQ(shape.Size(), shape_.Size());
+      shape_ = shape;
+  }
+
+
   /*!
    * \brief Allocate the space if the allocation has been delayed
    * or the requested size is bigger than the available one.

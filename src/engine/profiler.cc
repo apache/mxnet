@@ -31,6 +31,8 @@
 #include <iostream>
 #include <fstream>
 #include "./profiler.h"
+#include <cstdlib> 
+//#include "ps/ps.h"
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #include <Windows.h>
@@ -151,6 +153,13 @@ void Profiler::EmitEvent(std::ostream *os, const std::string& name,
 
 void Profiler::DumpProfile() {
   SetState(kNotRunning);
+  
+  
+
+  std::stringstream fName;
+  fName << "PERFDIAG-" << getenv("DMLC_TRACKER_TOTAL_ID") << ".json";
+
+  filename_ = fName.str();//c_str();
 
   std::lock_guard<std::mutex> lock{this->m_};
   std::ofstream file;

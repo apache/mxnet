@@ -93,8 +93,8 @@ def _create_kvstore(kvstore, num_device, arg_params):
 
     return (kv, update_on_kvstore)
 
-def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore):
-  """ Initialize kvstore"""
+def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_on_kvstore, opt = None):
+    """ Initialize kvstore"""
     """ Infiniband Servers, tell them to setup appropriate key sizes """
     #aggKey = 2147483647
     #rg = range(len(param_arrays))
@@ -144,7 +144,7 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     #for now, comm_buf is used as send buffer, and we need to communicate address of pull buffers
     #we also communicate the size implicitly
     #-2 signals onkeypopulated.
-    print "[info] total model size per worker  = %s. total number of params = %s" % (str(totalSize), len(arg_params))
+    # print "[info] total model size per worker  = %s. total number of params = %s" % (str(totalSize), len(arg_params))
     kvstore.initPHUB(-2, flattened)
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
@@ -283,7 +283,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                             param_arrays=executor_manager.param_arrays,
                             arg_params=arg_params,
                             param_names=executor_manager.param_names,
-                            update_on_kvstore=update_on_kvstore)
+                            update_on_kvstore=update_on_kvstore, opt=optimizer)
 
     if update_on_kvstore:
         kvstore.set_optimizer(optimizer)

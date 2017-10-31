@@ -31,6 +31,8 @@
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
+#include "../../ps-lite/src/infiniband_van.h"
+#include "../../ps-lite/src/PHubAllocator.h"
 #if MKL_EXPERIMENTAL == 1
 #include <mkl_memory.h>
 #include "../operator/mkl/mkl_memory-inl.h"
@@ -67,7 +69,7 @@ class KVStoreDist : public KVStoreLocal {
     Engine::Get()->WaitForAll();
     if (IsWorkerNode()) {
       if (barrier_before_exit_) {
-        Barrier();
+        Barrier("KVStore Finalizer");
         if (get_rank() == 0) {
           // stop the executor at servers
           SendCommandToServers(kStopServer, "");
@@ -87,7 +89,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void Barrier(std::string name) override {
+  void Barrier(std::string name) {
     ps::Postoffice::Get()->Barrier(ps::kWorkerGroup);
   }
 
@@ -283,7 +285,7 @@ class KVStoreDist : public KVStoreLocal {
 	    for (size_t i = 0; i < keys.size(); ++i) {
 		//if extended profiler is turned on, we need to assign profiler names.
 		//const char* opr_name 
-		comm_->Init(keys[i], values[i].shape());
+		comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
 		//first chunk the key if value is too large.
 		//int chunks = (int)ceil(1.0  * values[i].shape().Size() / bigarray_bound_);
 		//previously we registered the buffer, but we havent resize those yet.
@@ -324,7 +326,7 @@ class KVStoreDist : public KVStoreLocal {
 		// do nothing
 	    }
 	    if (!ps::Postoffice::Get()->is_recovery()) {
-		Barrier();
+		Barrier("rank 0 initialization " + std::to_string(keys[0]));
 	    }
 	    //printf("rank %d finished key %d\n", get_rank(), keys[0]);
 	}
@@ -662,7 +664,7 @@ class KVStoreDist : public KVStoreLocal {
 	  auto push_to_servers =
 	      [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
 	      // convert to ps keys
-	      size_t size = send_buf.shape().Size();
+	      //size_t size = send_buf.shape().Size();
 	      PSKV& pskv = EncodeKey(key, size);
 	      
 #if MKL_EXPERIMENTAL == 1
