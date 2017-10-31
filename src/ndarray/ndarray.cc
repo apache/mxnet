@@ -1237,14 +1237,15 @@ void NDArray::CheckFormat(const bool full_check) const {
   }
   CHECK_NE(err, kCSRShapeErr) << "Shape mismatch of this CSRNDArray";
   CHECK_NE(err, kCSRIndPtrErr)
-           << "IndPtr of CSRNDArray should be in non-decreasing order, start with 0, "
-           << "and end with value greater or equal than size of indices.";
+           << "IndPtr of CSRNDArray should be non-negative, in non-decreasing order, "
+           << "start with 0, and end with value equal with size of indices.";
   CHECK_NE(err, kCSRIdxErr)
-           << "Indices of CSRNDArray should be less than the number of columns.";
+           << "Indices of CSRNDArray should be non-negative, in ascending order per row "
+           << " and less than the number of columns.";
   CHECK_NE(err, kRSPShapeErr) << "Shape mismatch of this RSPNDArray";
   CHECK_NE(err, kRSPIdxErr)
-          << "Indices of RSPNDArray should be less than the size of first dimension"
-          << " and in ascending order";
+          << "Indices of RSPNDArray should be non-negative, "
+          << "less than the size of first dimension and in ascending order";
   CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
 }
 

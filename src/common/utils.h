@@ -50,41 +50,48 @@ namespace common {
 
 
 /*!
- * \brief IndPtr should be in non-decreasing order, start with 0
- *           and end with value greater or equal than size of indices.
+ * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
+ *           and end with value equal with size of indices.
  */
 struct csr_indptr_check {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* in,
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indptr,
                                   const nnvm::dim_t end, const nnvm::dim_t idx_size) {
-    if ((in[i+1] < in[i]) || (i == 0 && in[i] != static_cast<IType>(0)) ||
-        (i == end && in[i] < static_cast<IType>(idx_size)))
+    if (indptr[i+1] < 0 || indptr[i+1] < indptr[i] ||
+        (i == 0 && indptr[i] != 0) ||
+        (i == end && indptr[i] != idx_size))
       *out = kCSRIndPtrErr;
   }
 };
 
 /*!
- *  \brief Indices should be less than the number of columns.
+ *  \brief Indices should be non-negative, less than the number of columns
+ *           and in ascending order per row.
  */
 struct csr_idx_check {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out,
-                                  const IType* in, const nnvm::dim_t ncols) {
-    if (in[i] >= static_cast<IType>(ncols)) *out = kCSRIdxErr;
+  template<typename DType, typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
+                                  const RType* indptr, const nnvm::dim_t ncols) {
+    for (RType j = indptr[i]; j < indptr[i+1]; j++) {
+      if (idx[j] >= ncols || idx[j] < 0 ||
+          (j < indptr[i+1] - 1 && idx[j] >= idx[j+1])) {
+        *out = kCSRIdxErr;
+        break;
+      }
+    }
   }
 };
 
 /*!
- *  \brief Indices of RSPNDArray should be less than the size of first dimension"
- *           and in ascending order
+ *  \brief Indices of RSPNDArray should be non-negative,
+ *           less than the size of first dimension and in ascending order
  */
 struct rsp_idx_check {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* in,
+  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
                                   const nnvm::dim_t nrows) {
-    if ((in[i+1] <= in[i]) ||
-        (in[i+1] >= static_cast<IType>(nrows)) ||
-        (i == 0 && in[i] >= static_cast<IType>(nrows)))
+    if (idx[i+1] <= idx[i] || idx[i+1] < 0 || idx[i+1] >= nrows ||
+        (i == 0 && (idx[i] >= nrows || idx[i] < 0)))
       *out = kRSPIdxErr;
   }
 };
@@ -130,11 +137,12 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
                                     rctx.get_ctx(), false, err_cpu.type_flag_);
           TBlob val_xpu = ret_xpu.data();
           Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
-          Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0]-1, val_xpu.dptr<DType>(),
+          Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
             input.aux_data(csr::kIndPtr).dptr<RType>(),
-            indptr_shape[0]-1, idx_shape[0]);
-          Kernel<csr_idx_check, xpu>::Launch(s, idx_shape[0], val_xpu.dptr<DType>(),
-            input.aux_data(csr::kIdx).dptr<IType>(), shape[1]);
+            indptr_shape[0] - 1, idx_shape[0]);
+          Kernel<csr_idx_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
+            input.aux_data(csr::kIdx).dptr<IType>(),
+            input.aux_data(csr::kIndPtr).dptr<RType>(), shape[1]);
           mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
                         val_xpu.get<xpu, 1, DType>(s), s);
         });
@@ -172,7 +180,7 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
                                   rctx.get_ctx(), false, err_cpu.type_flag_);
         TBlob val_xpu = ret_xpu.data();
         Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
-        Kernel<rsp_idx_check, xpu>::Launch(s, input.aux_shape(rowsparse::kIdx)[0]-1,
+        Kernel<rsp_idx_check, xpu>::Launch(s, input.aux_shape(rowsparse::kIdx)[0] - 1,
           val_xpu.dptr<DType>(), input.aux_data(rowsparse::kIdx).dptr<IType>(),
           input.shape()[0]);
         mshadow::Copy(err_cpu.get<cpu, 1, DType>(),

@@ -716,30 +716,52 @@ def test_sparse_nd_exception():
 
 def test_sparse_nd_check_format():
     """ test check_format for sparse ndarray """
-    a = mx.nd.ones((2,2))
+    def check_csr_format_exception(data_list, indices_list, indptr_list, shape):
+        try:
+            a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+            a.check_format()
+            assert(False)
+        except mx.base.MXNetError:
+            pass
+    def check_rsp_format_exception(data_list, indices_list, shape):
+        try:
+            a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+            a.check_format()
+            assert(False)
+        except mx.base.MXNetError:
+            pass
+
+    shape = (3, 4)
+    a = mx.nd.zeros(shape)
     stypes = ["csr", "row_sparse"]
     for stype in stypes:
         a.tostype(stype).check_format()
-    try:
-        shape = (3, 4)
-        data_list = [7, 8, 9]
-        indices_list = [0, 2, 1]
-        indptr_list = [0, 5, 2, 3]
-        a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape)
-        a.check_format()
-        assert(False)
-    except mx.base.MXNetError:
-        pass
-    try:
-        shape = (6, 2)
-        data_list = [[1, 2], [3, 4]]
-        indices_list = [1, 8]
-        a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
-        a.check_format()
-        assert(False)
-    except mx.base.MXNetError:
-        return
-
+    # CSR format index pointer array should be less than the number of rows
+    shape = (3, 4)
+    data_list = [7, 8, 9]
+    indices_list = [0, 2, 1]
+    indptr_list = [0, 5, 2, 3]
+    check_csr_format_exception(data_list, indices_list, indptr_list, shape)
+    # CSR format indices should be in ascending order per row
+    indices_list = [2, 1, 1]
+    indptr_list = [0, 2, 2, 3]
+    check_csr_format_exception(data_list, indices_list, indptr_list, shape)
+    # CSR format indices should not be negative
+    indices_list = [0, 2, 1]
+    indptr_list = [0, -2, 2, 3]
+    check_csr_format_exception(data_list, indices_list, indptr_list, shape)
+    # Row Sparse format indices should be less than the number of rows
+    shape = (3, 2)
+    data_list = [[1, 2], [3, 4]]
+    indices_list = [1, 4]
+    check_rsp_format_exception(data_list, indices_list, shape)
+    # Row Sparse format indices should be in ascending order
+    indices_list = [1, 0]
+    check_rsp_format_exception(data_list, indices_list, shape)
+    # Row Sparse format indices should not be negative
+    indices_list = [1, -2]
+    check_rsp_format_exception(data_list, indices_list, shape)
+     
 
 if __name__ == '__main__':
     import nose
