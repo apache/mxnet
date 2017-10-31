@@ -287,7 +287,7 @@ class KVStoreDist : public KVStoreLocal {
             send_buf = NDArray(merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
           } else {
             send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_,
-	                       true, mshadow::DataType<DType>::kFlag);
+                               true, mshadow::DataType<DType>::kFlag);
           }
         }
         if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
@@ -301,7 +301,7 @@ class KVStoreDist : public KVStoreLocal {
             send_buf = NDArray(merged.shape(), pinned_ctx_, true, mshadow::DataType<DType>::kFlag);
           } else {
             send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_,
-	                       true, mshadow::DataType<DType>::kFlag);
+                               true, mshadow::DataType<DType>::kFlag);
           }
         }
         if (merged.dtype() == mshadow::DataType<DType>::kFlag) {
