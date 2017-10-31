@@ -347,7 +347,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
 
   int axis = param.axis;
   if (axis < 0) {
-    axis += indim;
+    axis += indim + 1;
   }
   CHECK(axis >= 0 && axis <= indim)
       << "axis must be in the range [" << -indim << ", " << indim << "] ("
