@@ -38,6 +38,7 @@ from .optimizer import get_updater
 from .executor_manager import DataParallelExecutorManager, _check_arguments, _load_data
 from .io import DataDesc
 from .base import mx_real_t
+import os,math
 
 BASE_ESTIMATOR = object
 
@@ -155,9 +156,13 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
             continue
         name = param_names[index]
         # push gradient, priority is negative index
-        kvstore.push(name, grad_list, priority=-index)
+        #kvstore.push(name, grad_list, priority=-index)
+        #please, use integer keys
+        kvstore.push(index, grad_list, priority=-index)
         # pull back the weights
-        kvstore.pull(name, arg_list, priority=-index)
+        #kvstore.pull(name, arg_list, priority=-index)
+        kvstore.pull(index, arg_list, priority=-index)
+
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
@@ -275,6 +280,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     executor_manager.set_params(arg_params, aux_params)
 
+    print('Your optimizer is ' + str(optimizer))
     if not update_on_kvstore:
         updater = get_updater(optimizer)
 

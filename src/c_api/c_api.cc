@@ -751,6 +751,24 @@ int MXKVStoreInit(KVStoreHandle handle,
   API_END();
 }
 
+MXNET_DLL int MXKVStoreInitPHUB(KVStoreHandle handle,
+                                const int key,
+                                NDArrayHandle* vals,
+                                mx_uint num)
+{
+    API_BEGIN();
+    std::vector<int> v_keys;
+    v_keys.push_back(key);
+    std::vector<NDArray> v_vals(num);
+    for(mx_uint i = 0; i < num; i++)
+    {
+        v_vals[i] = *static_cast<NDArray*>(vals[i]);
+    }
+    static_cast<KVStore*>(handle)->Init(v_keys, v_vals);
+    API_END();
+}
+
+
 int MXKVStoreInitEx(KVStoreHandle handle,
                   mx_uint num,
                   const char** keys,

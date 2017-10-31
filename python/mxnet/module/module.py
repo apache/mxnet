@@ -526,7 +526,7 @@ class Module(BaseModule):
                                 param_arrays=self._exec_group.param_arrays,
                                 arg_params=self._arg_params,
                                 param_names=self._param_names,
-                                update_on_kvstore=update_on_kvstore)
+                                update_on_kvstore=update_on_kvstore, opt=optimizer)
         if update_on_kvstore:
             kvstore.set_optimizer(self._optimizer)
         else:
