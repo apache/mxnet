@@ -39,7 +39,11 @@ static void RunCoreOpBidirectional(const bool isGPU,
                                    const char *op_name,
                                    const char *backward_op_name = "") {
   const TShape shape({5, 5});
+<<<<<<< HEAD
   test::op::CoreOpExecutor<DType> op(isGPU, shape);
+=======
+  test::op::CoreOpExecutor<DType> op(isGPU, { shape });
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   op.set_verbose(false);
 
   op.Init(op.ArgsWithOpName(op_kwargs, op_name, backward_op_name));
@@ -48,7 +52,11 @@ static void RunCoreOpBidirectional(const bool isGPU,
   PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
   op.Execute();
   PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
+<<<<<<< HEAD
   if(op.HasBackward()) {
+=======
+  if (op.HasBackward()) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
     PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_inputs());
     PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
     op.ExecuteBackward();
@@ -56,7 +64,10 @@ static void RunCoreOpBidirectional(const bool isGPU,
   }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
 template<typename DType = float>
 static void RunCoreOpTimingTest(const bool isGPU,
                                 const kwargs_t& op_kwargs,
@@ -67,7 +78,11 @@ static void RunCoreOpTimingTest(const bool isGPU,
 
   // prime code and cache before the performance runs
   test::op::CoreOperatorRunner<DType> runner;
+<<<<<<< HEAD
   runner.RunBidirectional(false, {20, 3, 128, 128}, kwargs, 1);
+=======
+  runner.RunBidirectional(false, { {20, 3, 128, 128} }, kwargs, 1);
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
 
   // Do the performance runs
   std::vector <TShape> shapes;
@@ -87,7 +102,12 @@ static void RunCoreOpTimingTest(const bool isGPU,
   }
   const char *pu = isGPU ? "GPU" : "CPU";
   for (const TShape &shape : shapes) {
+<<<<<<< HEAD
     runner.TimingTest(std::string(op_name) + " Operator " + pu, isGPU, false, kwargs, 2, 10, shape);
+=======
+    runner.TimingTest(std::string(op_name) + " Operator " + pu, isGPU, false, kwargs,
+                      2, 10, { shape });
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   }
 }
 

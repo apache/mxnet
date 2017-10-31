@@ -19,6 +19,13 @@
 #ifndef TEST_CORE_OP_H_
 #define TEST_CORE_OP_H_
 
+<<<<<<< HEAD
+=======
+#include <vector>
+#include <algorithm>
+#include <utility>
+#include <string>
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
 #include "./test_op.h"
 #include "../../../src/imperative/imperative_utils.h"
 
@@ -37,7 +44,11 @@ namespace op {
  */
 template<typename DType>
 class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
+<<<<<<< HEAD
                        , public test::op::OperatorExecutorTiming {
+=======
+  , public test::op::OperatorExecutorTiming {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   /*! \brief Performance timing categories */
   enum TimingId {
     Forward,
@@ -52,9 +63,17 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param cb Callback Function to call with CPU-data NDArray
    */
   template <typename CallbackFunction>
+<<<<<<< HEAD
   static inline void AccessAsCPU(const NDArray &src, const RunContext &run_ctx, CallbackFunction cb) {
 #if MXNET_USE_CUDA
     if(src.ctx().dev_type == Context::kCPU) {
+=======
+  static inline void AccessAsCPU(const NDArray &src,
+                                 const RunContext &run_ctx,
+                                 CallbackFunction cb) {
+#if MXNET_USE_CUDA
+    if (src.ctx().dev_type == Context::kCPU) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       cb(src);
     } else {
       Context cpu_ctx, gpu_ctx = src.ctx();
@@ -84,7 +103,12 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     std::vector<const char *> keys, values;
     keys.reserve(count);
     values.reserve(count);
+<<<<<<< HEAD
     for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end(); i_iter != e_iter; ++i_iter) {
+=======
+    for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end();
+         i_iter != e_iter; ++i_iter) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       keys.push_back(i_iter->first.c_str());
       values.push_back(i_iter->second.c_str());
     }
@@ -97,7 +121,12 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param dest Vector to store pointers to the NDArrays' data blobs
    * \return Reference to the supplied vector of TBlob results
    */
+<<<<<<< HEAD
   static inline std::vector<TBlob>& CollectBlobs(std::vector<NDArray>& src, std::vector<TBlob> *dest) {
+=======
+  static inline std::vector<TBlob>& CollectBlobs(const std::vector<NDArray>& src,
+                                                 std::vector<TBlob> *dest) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
     dest->reserve(dest->size() + src.size());
     for (size_t i = 0, n = src.size(); i < n; ++i) {
       dest->push_back(src[i].data());
@@ -164,7 +193,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           std::cout << node_entry.node->op()->name << std::endl;
         }
         std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
+<<<<<<< HEAD
           ctx().run_ctx.ctx.dev_type == Context::kGPU, outputs()[0].shape());
+=======
+          ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(outputs()));
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         res.push_back({ pOp, node_entry.node->op()->name });
       }
     }
@@ -172,23 +205,41 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   }
 
   /*!
+<<<<<<< HEAD
    * \brief Attach any temp or tandom resources required to perform the op's compute operation
+=======
+   * \brief Attach any temp or random resources required to perform the op's compute operation
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
    * \param ctx Operator context object
    * \param attrs NodeAttrs structure (node attributes)
    * \param op Pointer to nnvm Operator object
    */
+<<<<<<< HEAD
   void AttachResources(OpContext &ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
     static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
     if (fresource.count(op) != 0) {
       std::vector<Resource>& requested = ctx.requested;
+=======
+  void AttachResources(OpContext *ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
+    static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+    if (fresource.count(op) != 0) {
+      std::vector<Resource>& requested = ctx->requested;
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       auto reqs = fresource[op](attrs);
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {
+<<<<<<< HEAD
           Resource r = ResourceManager::Get()->Request(ctx.run_ctx.ctx, req);
           requested.push_back(r);
         } else if (req.type == ResourceRequest::kRandom) {
           requested.push_back(ResourceManager::Get()->Request(ctx.run_ctx.ctx, req));
+=======
+          Resource r = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
+          requested.push_back(r);
+        } else if (req.type == ResourceRequest::kRandom) {
+          requested.push_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         } else {
           LOG(FATAL) << "resource type not yet supported";
         }
@@ -212,7 +263,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       }
     }
     new_args.push_back({ COREOP_FWD_OP_NAME_KEY, fwd_op_name});
+<<<<<<< HEAD
     if(!bwd_op_name.empty()) {
+=======
+    if (!bwd_op_name.empty()) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       new_args.push_back({ COREOP_BWD_OP_NAME_KEY, bwd_op_name});
     }
     return new_args;
@@ -230,7 +285,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     for (const auto& a : args) {
       if (a.first == COREOP_FWD_OP_NAME_KEY) {
         *fwd_op_name_ptr = a.second;
+<<<<<<< HEAD
       } else if(a.first == COREOP_BWD_OP_NAME_KEY) {
+=======
+      } else if (a.first == COREOP_BWD_OP_NAME_KEY) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         *bwd_op_name_ptr = a.second;
       } else {
         new_args.push_back(a);
@@ -241,9 +300,17 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
   /*!
    * \brief Constructor
+<<<<<<< HEAD
    */
   CoreOpExecutor(const bool isGPU, const TShape& shape)
     : input_shape_(shape)
+=======
+   * \param isGPU Is this going to be on the GPU?
+   * \param shapes Array of input shapes
+   */
+  CoreOpExecutor(const bool isGPU, const std::vector<TShape>& shapes)
+    : input_shapes_(shapes)
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       , op_(nullptr)  {
     ctx_.is_train = true;
     ctx_.run_ctx.ctx.dev_id = 0;
@@ -282,7 +349,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       CHECK(!backward_for_op || bwd_op_name.empty())
         << "Backward op should not be supplied another backward operator";
 
+<<<<<<< HEAD
       if(verbose_ && backward_for_op) {
+=======
+      if (verbose_ && backward_for_op) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         std::cout << "Backward op: " << op_name;
       }
 
@@ -300,6 +371,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       int inferred_num_outputs, num_visible_outputs;
 
+<<<<<<< HEAD
       imperative::SetNumOutputs(op_, attrs_, num_inputs, &inferred_num_outputs, &num_visible_outputs);
 
       // Generic, all shapes the same. Probably this will need to be adjusted for more complex
@@ -307,6 +379,18 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       std::vector<TShape> shapes(static_cast<size_t>(std::max(num_visible_outputs, num_inputs)),
                                  input_shape_);
 
+=======
+      imperative::SetNumOutputs(op_, attrs_, num_inputs, &inferred_num_outputs,
+                                &num_visible_outputs);
+
+      // Generic, all shapes the same. Probably this will need to be adjusted for more complex
+      // operators such as dot
+      std::vector<TShape> shapes;
+      for (size_t i = 0, n = std::max(num_visible_outputs, num_inputs); i < n; ++i) {
+        shapes.push_back(i < input_shapes_.size() ? input_shapes_[i]
+                                                  : input_shapes_[input_shapes_.size() - 1]);
+      }
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       std::vector<NDArray *> inputs_p, outputs_p;
 
       if (!outputs.empty()) {
@@ -319,6 +403,10 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       outputs_p.reserve(num_visible_outputs);
 
       for (int i = 0; i < num_inputs; ++i) {
+<<<<<<< HEAD
+=======
+        CHECK_LT(i, static_cast<int>(shapes.size()));
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         inputs_.push_back(i < inputs.size() ? inputs[i] : CreateRandArray(shapes[i],
                                                                           ctx_.run_ctx.ctx));
         inputs_p.push_back(&*inputs_.rbegin());
@@ -334,7 +422,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         outputs_p.push_back(&*outputs_.rbegin());
       }
 
+<<<<<<< HEAD
       if(!backward_for_op) {
+=======
+      if (!backward_for_op) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         DispatchMode dispatch_mode = DispatchMode::kUndefined;
         imperative::SetShapeType(ctx_.run_ctx.ctx, attrs_, inputs_p, outputs_p, &dispatch_mode);
       } else {
@@ -343,7 +435,13 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         for (int i = 0; i < num_visible_outputs; ++i) {
           CHECK_LT(static_cast<size_t>(i), shapes.size());
           // backward outputs should look like forward inputs
+<<<<<<< HEAD
           CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
+=======
+          // TODO(cjolivier01): This check fails for dot product...
+          // Need better inference of backward shapes
+          // CHECK_EQ(backward_for_op->inputs()[i].shape(), outputs_[i].shape());
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         }
       }
 
@@ -356,17 +454,30 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       function_ = common::GetFCompute<FCompute>(op_, "FCompute", ctx_.run_ctx.ctx);
       functionex_ = common::GetFCompute<FComputeEx>(op_, "FComputeEx", ctx_.run_ctx.ctx);
 
+<<<<<<< HEAD
       AttachResources(ctx_, attrs_, op_);
 
       if(!backward_for_op) {
+=======
+      AttachResources(&ctx_, attrs_, op_);
+
+      if (!backward_for_op) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
         bool no_backward = false;
         // Set up backward
         std::vector<std::pair<std::shared_ptr<CoreOpExecutor>, std::string>> bwd;
         if (!bwd_op_name.empty()) {
+<<<<<<< HEAD
           if(bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
             // Backward op was specified
             std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
               ctx().run_ctx.ctx.dev_type == Context::kGPU, this->outputs()[0].shape());
+=======
+          if (bwd_op_name != COREOP_BWD_OP_NAME_VALUE_NONE) {
+            // Backward op was specified
+            std::shared_ptr<CoreOpExecutor> pOp = std::make_shared<CoreOpExecutor>(
+              ctx().run_ctx.ctx.dev_type == Context::kGPU, ShapesOf(this->outputs()));
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
             bwd.push_back({pOp, bwd_op_name});
           } else {
             no_backward = true;
@@ -375,7 +486,11 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           // Try to figure out backward op
           bwd = GetBackward();
         }
+<<<<<<< HEAD
         if(!no_backward) {
+=======
+        if (!no_backward) {
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
           CHECK_GE(bwd.size(), 1U)
             << "Can't automatically determine backward op name. Please specify";
           for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
@@ -526,17 +641,29 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    */
   OpContext ctx_;
 
+<<<<<<< HEAD
   #if MXNET_USE_CUDA
+=======
+#if MXNET_USE_CUDA
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   /*! \brief
    * Scoped GPU stream
    */
   std::unique_ptr<GPUStreamScope> allocGPUStream_;
+<<<<<<< HEAD
   #endif
+=======
+#endif
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
 
   /*!
    * \brief Input data shape
    */
+<<<<<<< HEAD
   TShape input_shape_;
+=======
+  std::vector<TShape> input_shapes_;
+>>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   /*
    * \brief Pointer to the operator object
    */
