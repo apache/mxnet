@@ -35,7 +35,7 @@ namespace cpp {
 
 class KVStore {
  public:
-  static void SetType(const std::string& type);
+  static void SetType(const std::string& type, const std::string& data_type = "float32");
   static void RunServer();
   static void Init(int key, const NDArray& val);
   static void Init(const std::vector<int>& keys, const std::vector<NDArray>& vals);
