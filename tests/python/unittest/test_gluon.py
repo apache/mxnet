@@ -531,6 +531,31 @@ def test_hybrid_stale_cache():
     net.initialize()
     assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
 
+
+def test_lambda():
+    net1 = mx.gluon.nn.HybridSequential()
+    net1.add(nn.Activation('tanh'),
+             nn.LeakyReLU(0.1))
+
+    net2 = mx.gluon.nn.HybridSequential()
+    op3 = lambda F, x, *args: F.LeakyReLU(x, *args, slope=0.1)
+    net2.add(nn.HybridLambda('tanh'),
+             nn.HybridLambda(op3))
+
+    op4 = lambda x: mx.nd.LeakyReLU(x, slope=0.1)
+    net3 = mx.gluon.nn.Sequential()
+    net3.add(nn.Lambda('tanh'),
+             nn.Lambda(op4))
+
+    input_data = mx.nd.random.uniform(shape=(2, 3, 5, 7))
+    out1, out2, out3 = net1(input_data), net2(input_data), net3(input_data)
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+
+
+
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

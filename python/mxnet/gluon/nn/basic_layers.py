@@ -19,11 +19,13 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten']
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
+           'Lambda', 'HybridLambda']
 import warnings
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
+from ... import nd, sym
 
 
 class Sequential(Block):
@@ -464,3 +466,90 @@ class Flatten(HybridBlock):
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class Lambda(Block):
+    r"""Wraps an operator or an expression as a Block object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in ndarray. For example::
+
+            block = Lambda('tanh')
+
+        2) a function that conforms to "def function(*args)". For example::
+
+            block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
+
+    Inputs:
+        - ** *args **: one or more input data. Their shapes depend on the function.
+
+    Output:
+        - ** *outputs **: one or more output data. Their shapes depend on the function.
+    """
+    def __init__(self, function):
+        super(Lambda, self).__init__()
+        if isinstance(function, str):
+            assert hasattr(nd, function), \
+                   "Function name %s is not found in ndarray." % function
+            self._func_impl = getattr(nd, function)
+        elif callable(function):
+            self._func_impl = function
+        else:
+            raise ValueError(
+                "Unrecognized function in lambda: {} of type {}"
+                .format(function, type(function)))
+
+    def forward(self, *args):
+        return self._func_impl(*args)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_impl.__name__)
+
+
+class HybridLambda(HybridBlock):
+    r"""Wraps an operator or an expression as a HybridBlock object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in both symbol and ndarray. For example::
+
+            block = HybridLambda('tanh')
+
+        2) a function that conforms to "def function(F, data, *args)". For example::
+
+            block = HybridLambda(lambda F, x: F.LeakyReLU(x, slope=0.1))
+
+    Inputs:
+        - ** *args **: one or more input data. First argument must be symbol or ndarray.
+        Their shapes depend on the function.
+
+    Output:
+        - ** *outputs **: one or more output data. Their shapes depend on the function.
+    """
+    def __init__(self, function):
+        super(HybridLambda, self).__init__()
+        if isinstance(function, str):
+            assert hasattr(nd, function) and hasattr(sym, function), \
+                   "Function name %s is not found in symbol/ndarray." % function
+            self._func = lambda F, *args: getattr(F, function)(*args)
+        elif callable(function):
+            self._func = function
+        else:
+            raise ValueError(
+                "Unrecognized function in lambda: {} of type {}"
+                .format(function, type(function)))
+
+    def hybrid_forward(self, F, x, *args):
+        return self._func(F, x, *args)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_impl.__name__)

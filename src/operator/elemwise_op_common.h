@@ -227,8 +227,9 @@ struct CloneGradient {
     std::vector<nnvm::NodeEntry> ret;
     const size_t input_count = n->inputs.size();
     ret.reserve(input_count);
-    for (size_t i = 0; i < input_count; ++i)
+    for (size_t i = 0; i < input_count; ++i) {
       ret.emplace_back(ograds[0]);
+    }
     return ret;
   }
 };
