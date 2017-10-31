@@ -35,7 +35,8 @@ def dmlc_opts(opts):
             '--num-servers', str(opts.num_servers),
             '--cluster', opts.launcher,
             '--host-file', opts.hostfile,
-            '--sync-dst-dir', opts.sync_dst_dir]
+            '--sync-dst-dir', opts.sync_dst_dir,
+            '--pass-env', opts.pass_env]
     args += opts.command;
     try:
         from dmlc_tracker import opts
