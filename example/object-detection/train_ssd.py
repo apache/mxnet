@@ -57,7 +57,7 @@ net = ssd_512_resnet18_v1(classes=num_class, pretrained=(1, 0))
 lr = 0.01
 wd = 0.00005
 momentum = 0.9
-log_interval = 50
+log_interval = 1
 dtype = 'float32'
 box_weight = 5.0
 
@@ -110,7 +110,7 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
     box_loss = SmoothL1Loss(weight=4)
     cls_metric = Accuracy(axis=-1, ignore_label=0)
     box_metric = SmoothL1()
-    cls_metric1 = LossRecorder('FocalLoss')
+    cls_metric1 = LossRecorder('CrossEntropy')
     box_metric1 = LossRecorder('SmoothL1Loss')
 
     for epoch in range(epochs):
@@ -132,10 +132,11 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
             Ls = []
             with ag.record():
                 for x, y in zip(data, label):
-                    x = nd.cast(x, dtype)
-                    y = nd.cast(y, dtype)
+                    # x = nd.cast(x, dtype)
+                    # y = nd.cast(y, dtype)
                     z = net(x)
-                    cls_targets, box_targets, box_masks = target_generator(z, y)
+                    with ag.pause():
+                        cls_targets, box_targets, box_masks = target_generator(z, y)
                     # super_print(y, cls_targets, box_targets)
                     # raise
                     loss1 = cls_loss(z[0], cls_targets)
@@ -149,9 +150,7 @@ def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
                     box_labels.append(box_targets)
                     losses1.append(loss1)
                     losses2.append(loss2)
-                for L in Ls:
-                    pass
-                    L.backward()
+                ag.backward(Ls)
             batch_size = batch[0].shape[0]
             trainer.step(batch_size, ignore_stale_grad=True)
             cls_metric.update(labels, outputs)
