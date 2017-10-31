@@ -568,8 +568,8 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
   MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
     MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
       MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-        auto in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-        auto out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         SliceCsrIndPtrImpl<cpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
 
         // retrieve nnz (CPU implementation)
@@ -577,10 +577,10 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
         // copy indices and values
         out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
         out.CheckAndAllocData(Shape1(nnz));
-        auto in_idx = in.aux_data(kIdx).dptr<IType>();
-        auto out_idx = out.aux_data(kIdx).dptr<IType>();
-        auto in_data = in.data().dptr<DType>();
-        auto out_data = out.data().dptr<DType>();
+        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType* in_data = in.data().dptr<DType>();
+        DType* out_data = out.data().dptr<DType>();
         int offset = in_indptr[begin_row];
         // this is also a CPU-only implementation
         memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
@@ -590,19 +590,36 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
   });
 }
 
-// slice a CSRNDArray for two dimensions
+/*!
+ * \brief slice a CSRNDArray for two dimensions
+ */
 struct SliceDimTwoCsrAssign {
+  /*!
+   * \brief This function slices a CSRNDArray on axis one between begin_col and end_col
+   * \param i           loop index
+   * \param out_idx     output csr ndarray column indices    
+   * \param out_data    output csr ndarray data
+   * \param out_indptr  output csr ndarray row index pointer
+   * \param in_idx      input csr ndarray column indices
+   * \param in_data     input csr ndarray data
+   * \param in_indptr   input csr ndarray row index pointer
+   * \param begin_col   begin column indice
+   * \param end_col     end column indice
+   */
   template<typename IType, typename RType, typename DType>
-  MSHADOW_XINLINE static void Map(int i, IType* out_idx, DType* out_data,
-                                  const RType* out_indptr, const IType* in_idx,
-                                  const DType* in_data, const RType* in_indptr,
-                                  const int begin, const int end) {
+  MSHADOW_XINLINE static void Map(int i,
+                                  IType* out_idx, DType* out_data,
+                                  const RType* out_indptr,
+                                  const IType* in_idx, const DType* in_data,
+                                  const RType* in_indptr,
+                                  const int begin_col, const int end_col) {
     RType ind = out_indptr[i];
     for (RType j = in_indptr[i]; j < in_indptr[i+1]; j++) {
-      if (in_idx[j] >= end) {
+      // indices of CSRNDArray are in ascending order per row
+      if (in_idx[j] >= end_col) {
         break;
-      } else if (in_idx[j] >= begin) {
-        out_idx[ind] = in_idx[j] - begin;
+      } else if (in_idx[j] >= begin_col) {
+        out_idx[ind] = in_idx[j] - begin_col;
         out_data[ind] = in_data[j];
         ind++;
       }
@@ -636,10 +653,12 @@ void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext&
         RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         int nnz = 0;
         out_indptr[0] = 0;
+        // loop through indptr array and corresponding indices to count for nnz
         for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
           out_indptr[i+1] = out_indptr[i];
           for (RType j = in_indptr[i + begin_row];
                j < in_indptr[i + begin_row + 1]; j++) {
+            // indices of CSRNDArray are in ascending order per row
             if (in_idx[j] >= end_col) {
               break;
             } else if (in_idx[j] >= begin_col) {

@@ -123,6 +123,12 @@ def test_sparse_nd_slice():
     result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
     result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
     assert same(result_dense.asnumpy(), result.asnumpy())
+    
+    A = mx.nd.sparse.zeros('csr', shape)
+    A2 = A.asnumpy()
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
 
 
 def test_sparse_nd_equal():
