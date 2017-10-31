@@ -427,13 +427,13 @@ class KVStore(object):
                 if not isinstance(compress_params['pos_threshold'], numeric_types):
                     raise TypeError('pos_threshold must be a numeric type')
             else:
-                compress_params['pos_threshold'] = 0.1
+                compress_params['pos_threshold'] = 0.5
 
             if 'neg_threshold' in compress_params:
                 if not isinstance(compress_params['neg_threshold'], numeric_types):
                     raise TypeError('neg_threshold must be a numeric type')
             else:
-                compress_params['neg_threshold'] = -0.1
+                compress_params['neg_threshold'] = -0.5
 
             if compress_params['pos_threshold'] <= 0 or compress_params['neg_threshold'] >= 0:
                 raise ValueError('pos_threshold needs to be greater than 0, \

@@ -561,8 +561,8 @@ class CommDevice : public Comm {
           if (compress_ == "2bit") {
             int bits = 16;
             int64_t small_size = buf.merged.shape().Size() % bits == 0 ?
-                                  buf.merged.shape().Size() / bits + 3 :
-                                  buf.merged.shape().Size() / bits + 4;
+                                  buf.merged.shape().Size() / bits :
+                                  buf.merged.shape().Size() / bits + 1;
             buf.small_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
                                             false, buf.merged.dtype());
             buf.small_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
@@ -578,8 +578,8 @@ class CommDevice : public Comm {
         // this is done even if the data is on same context as copy_buf because
         // we don't want the training to be biased towards data on this GPU
         if (compress_ == "2bit") {
-//          Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
-//                   neg_threshold_, pos_threshold_, priority);
+          Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
+                   neg_threshold_, pos_threshold_, priority);
           if (buf.small_send_buf[i].ctx() != buf.small_recv_buf[i].ctx()) {
             CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
           } else {
@@ -587,7 +587,8 @@ class CommDevice : public Comm {
             buf.small_recv_buf[i] = buf.small_send_buf[i];
           }
           // TODO (undo comment)
-//          Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), compress_, priority);
+          Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]),
+                     neg_threshold_, pos_threshold_, compress_, priority);
         } else {
           LOG(FATAL) << "Unsupported type of compression " << compress_;
         }

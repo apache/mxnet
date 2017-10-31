@@ -48,11 +48,11 @@ struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
   float pos_threshold, neg_threshold;
   DMLC_DECLARE_PARAMETER(TwoBitParam) {
     DMLC_DECLARE_FIELD(neg_threshold)
-      .set_default(-0.1)
+      .set_default(-0.5)
       .describe("Threshold to quantize negative values. "
                   "Has to be less than 0");
     DMLC_DECLARE_FIELD(pos_threshold)
-      .set_default(0.1)
+      .set_default(0.5)
       .describe("Threshold to quantize positive values. "
                   "Has to be greater than 0");
   }
@@ -118,33 +118,30 @@ struct quantize_2bit {
     int start = out_block_id << 4;
     int end = start + 16; // <= original_size) ? start + 16 : original_size;
     char* block_ptr = reinterpret_cast < char* > (compr_block);
-    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
-    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
+    const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
 
-    char* curr_byte = block_ptr;
     for (int i = start; i < end && i < original_size; i++) {
       // // adds 1 when i-start divisible by 4
-      curr_byte += ((i - start) & 3);
+      block_ptr += !(i & 3);
       residual[i] += grad[i];
       if (residual[i] >= pos_threshold) {
         residual[i] -= pos_threshold;
         // set data to 11
-        *curr_byte |= posbits[(i & 3)];
+        *block_ptr|= posbits[(i & 3)];
       } else if (residual[i] <= neg_threshold) {
         residual[i] -= neg_threshold;
         // set data to 10
-        *curr_byte |= negbits[(i & 3)];
+        *block_ptr |= negbits[(i & 3)];
       }
     }
   }
 };
 
 template<typename xpu>
-void Quantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                       const float neg_threshold, const float pos_threshold) {
 
-  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-// compress the data and calculate new residual across all
   mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array
                                                inputs[0].Size(),
                                                inputs[2].dptr<float>(),   // compressed array
@@ -152,29 +149,9 @@ void Quantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>& 
                                                inputs[1].dptr<float>(),     // residual array
                                                neg_threshold,               // negative threshold
                                                pos_threshold);              // positive threshold
-  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-  auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-  std::cout << "quantizing " << inputs[0].Size() << " took " << dur << " ms" << std::endl;
-
-  if (dur > 1000) {
-    NDArray *n = new NDArray(inputs[0], 0);
-    std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create("quant_data", "w"));
-    mxnet::NDArray::Save(fo.get(), {*n}, {});
-  }
 }
 
 // this function has been defined as quantize_2bit operator
-template<typename xpu>
-void Quantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Quantize2BitImplMShadow<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
-}
-
 template<typename xpu>
 void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
@@ -183,39 +160,7 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  float neg_threshold = param.neg_threshold;
-  float pos_threshold = param.pos_threshold;
-  int original_size = inputs[0].Size();
-  float *out = inputs[2].dptr<float>();
-  float *grad = inputs[0].dptr<float>();
-  float *residual = inputs[1].dptr<float>();
-  for (int out_block_id=0; out_block_id<inputs[2].Size(); out_block_id++) {
-    float *compr_block = out + out_block_id;
-    // init to 0
-    *compr_block = 0;
-    // start and end are indices in original grad array
-    int start = out_block_id << 4;
-    int end = start + 16; // <= original_size) ? start + 16 : original_size;
-    char *block_ptr = reinterpret_cast < char * > (compr_block);
-    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
-    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
-
-    char *curr_byte = block_ptr;
-    for (int i = start; i < end && i < original_size; i++) {
-      // // adds 1 when i-start divisible by 4
-      curr_byte += ((i - start) & 3);
-      residual[i] += grad[i];
-      if (residual[i] >= pos_threshold) {
-        residual[i] -= pos_threshold;
-        // set data to 11
-        *curr_byte |= posbits[(i & 3)];
-      } else if (residual[i] <= neg_threshold) {
-        residual[i] -= neg_threshold;
-        // set data to 10
-        *curr_byte |= negbits[(i & 3)];
-      }
-    }
-  }
+  Quantize2BitImpl<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -267,8 +212,8 @@ struct dequantize_2bit {
     int out_start_id = compr_block_id<<4;
     float* outval = out + out_start_id;
     char* ch_ptr = reinterpret_cast<char*>(in + compr_block_id);
-    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
-    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
+    const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
+    const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
     for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
       ch_ptr += !(i & 3);
       int col = i & 3;
@@ -289,21 +234,15 @@ struct dequantize_2bit {
 };
 
 template<typename xpu>
-void Dequantize2BitImplMShadow(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                         const float neg_threshold, const float pos_threshold) {
-  // Can only decompress the float32 data
-
-  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
   int original_size = inputs[1].Size();
-  mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, original_size/16,  // original size
+  mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, original_size>>4,  // original size
                                                  original_size,
                                                  inputs[1].dptr<float>(),        // out array
                                                  inputs[0].dptr<float>(),      // compressed array
                                                  neg_threshold,     // negative threshold
                                                  pos_threshold);  // positive threshold
-  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-  auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count();
-  std::cout<<"dequantizing "<<original_size<< " took "<<dur<<" ms"<<std::endl;
 }
 
 template<typename xpu>
@@ -313,42 +252,8 @@ void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  int original_size = inputs[1].Size();
-  float* out = inputs[1].dptr<float>();
-  float* in = inputs[0].dptr<float>();
-  for (int compr_block_id=0; compr_block_id<original_size/16; compr_block_id++) {
-    int out_start_id = compr_block_id<<4;
-    float* outval = out + out_start_id;
-    char* ch_ptr = reinterpret_cast<char*>(in + compr_block_id);
-    const int posbits[] = {0xc0, 0x30, 0x0c, 0x03};
-    const int negbits[] = {0x80, 0x20, 0x08, 0x02};
-    for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
-      ch_ptr += !(i & 3);
-      int col = i & 3;
-      uint8_t mask = posbits[col];
-      uint8_t negmask = negbits[col];
-      uint8_t masked = *ch_ptr & mask;
-      if ( masked == mask ) {
-        *outval = 0.5;
-      } // use posbits for mask as posbits are 11
-        // compare with negbits
-      else if ( masked == negmask ) {
-        *outval = -0.5;
-      } else {
-        *outval = 0;
-      }
-    }
-  }
-}
-
-template<typename xpu>
-void Dequantize2BitComputeMShadow(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<TBlob>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<TBlob>& outputs) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  Dequantize2BitImplMShadow<xpu>(s, inputs, 0.5, 0.5);
+  const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
+  Dequantize2BitImpl<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
 }
 
 inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,
