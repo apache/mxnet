@@ -59,7 +59,7 @@ struct csr_indptr_check {
                                   const nnvm::dim_t end, const nnvm::dim_t idx_size) {
     if (indptr[i+1] < 0 || indptr[i+1] < indptr[i] ||
         (i == 0 && indptr[i] != 0) ||
-        (i == end && indptr[i] != idx_size))
+        (i == end - 1 && indptr[end] != idx_size))
       *out = kCSRIndPtrErr;
   }
 };

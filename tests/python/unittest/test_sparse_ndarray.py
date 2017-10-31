@@ -732,7 +732,7 @@ def test_sparse_nd_check_format():
             pass
 
     shape = (3, 4)
-    a = mx.nd.zeros(shape)
+    a = mx.nd.ones(shape)
     stypes = ["csr", "row_sparse"]
     for stype in stypes:
         a.tostype(stype).check_format()
