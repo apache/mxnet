@@ -497,6 +497,8 @@ def test_create_csr():
             assert_almost_equal(sp_csr.data, sp.data)
             assert_almost_equal(sp_csr.indptr, sp.indptr)
             assert_almost_equal(sp_csr.indices, sp.indices)
+            assert(sp.dtype == sp_csr.dtype), (sp.dtype, sp_csr.dtype)
+
         try:
             import scipy.sparse as spsp
             # random canonical csr
@@ -507,8 +509,8 @@ def test_create_csr():
             indptr = np.array([0, 2, 3, 7])
             indices = np.array([0, 2, 2, 0, 1, 2, 1])
             data = np.array([1, 2, 3, 4, 5, 6, 1])
-            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3))
-            canonical_csr_nd = f(non_canonical_csr)
+            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3), dtype=csr_nd.dtype)
+            canonical_csr_nd = f(non_canonical_csr, dtype=csr_nd.dtype)
             canonical_csr_sp = non_canonical_csr.copy()
             canonical_csr_sp.sum_duplicates()
             canonical_csr_sp.sort_indices()
