@@ -740,10 +740,10 @@ def test_output():
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
     arange_out = mx.nd.arange(0, 20, dtype='int64')
     assert_almost_equal(arange_out.asnumpy(), np.arange(0, 20))
-    N_array = np.random.randint(1, high=5, size=10)
-    M_array = np.random.randint(1, high=5, size=10)
-    k_array = np.random.randint(-10, high=10, size=10)
-    for i in range(10):
+    N_array = np.random.randint(1, high=3, size=3)
+    M_array = np.random.randint(1, high=3, size=3)
+    k_array = np.random.randint(-5, high=5, size=3)
+    for i in range(3):
         N = N_array[i]
         M = M_array[i]
         k = k_array[i]

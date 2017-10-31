@@ -672,10 +672,10 @@ def test_create_sparse_nd_empty():
 def test_sparse_eye():
     stypes = ['csr', 'row_sparse', 'default']
     for stype in stypes:
-        N_array = np.random.randint(1, high=5, size=10)
-        M_array = np.random.randint(1, high=5, size=10)
-        k_array = np.random.randint(-10, high=10, size=10)
-        for i in range(10):
+        N_array = np.random.randint(1, high=3, size=3)
+        M_array = np.random.randint(1, high=3, size=3)
+        k_array = np.random.randint(-5, high=5, size=3)
+        for i in range(3):
             N = N_array[i]
             M = M_array[i]
             k = k_array[i]
