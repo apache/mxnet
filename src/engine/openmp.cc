@@ -39,7 +39,6 @@ OpenMP::OpenMP()
 #ifdef _OPENMP
   if (!omp_num_threads_set_in_environment) {
     omp_set_nested(true);
-    omp_set_max_active_levels(2);
     omp_set_dynamic(false);
   }
   const int max = dmlc::GetEnv("MXNET_OMP_MAX_THREADS", INT_MIN);

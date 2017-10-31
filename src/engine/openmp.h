@@ -38,12 +38,28 @@ class OpenMP {
    */
   int GetRecommendedOMPThreadCount() const;
 
+  /*!
+   * \brief Set whether clients of this class receive pro-OMP behavior guidance
+   * \param enabled Set to 'true' if this class should provide OMP behavior
+   */
   void set_enabled(bool enabled) { enabled_ = enabled; }
   bool enabled() const { return enabled_; }
 
-  int thread_max() const { return omp_thread_max_; }
+  /*!
+   * \brief Set maximum number of threads to be used in an OMP region
+   * \param thread_max Maximum number of threads to be used in an OMP region
+   */
   void set_thread_max(int thread_max) { omp_thread_max_ = thread_max; }
+  /*!
+   * \brief Maximum number of threads to be used in an OMP region
+   * \return Maximum number of threads
+   */
+  int thread_max() const { return omp_thread_max_; }
 
+  /*!
+   * \brief Get the OpenMP object's singleton pointer
+   * \return
+   */
   static OpenMP *Get();
  private:
   /*!
