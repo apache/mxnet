@@ -60,6 +60,25 @@ inline uint64_t getMicroTickCount() {
 #endif
 }
 
+/*! \brief current timestamp: millionths of a second */
+inline uint64_t getNannoTickCount() {
+#ifndef _WIN32
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return (uint64_t(tv.tv_sec) * 1000000 + tv.tv_usec) * 1000;
+#else
+  LARGE_INTEGER CurrentTime;
+  LARGE_INTEGER Frequency;
+
+  QueryPerformanceFrequency(&Frequency);
+  QueryPerformanceCounter(&CurrentTime);
+
+  CurrentTime.QuadPart *= 1000000000;
+  CurrentTime.QuadPart /= Frequency.QuadPart;
+  return CurrentTime.QuadPart;
+#endif
+}
+
 /*! \brief millisecond tick count */
 inline uint64_t getTickCount() {
   return getMicroTickCount() / 1000;

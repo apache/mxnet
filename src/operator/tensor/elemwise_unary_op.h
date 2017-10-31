@@ -27,24 +27,36 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <utility>
+#include <algorithm>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
+#include "../../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace op {
 
 class OpBase {
  protected:
-  template<int req>
-  struct SetToScalar {
-    template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType *out, const DType value) {
-      KERNEL_ASSIGN(out[i], req, value);
+  /*!
+   * \brief Launch CPU-only kernel without OMP (temporary solution until OMP-tuned kernels arrive)
+   * \tparam OP Kernel operation type
+   * \tparam Args Argument types to be passed to kernel
+   * \param s CPU stream
+   * \param N Number of iterations
+   * \param args Arguments to be passed to kernel
+   */
+  template <typename OP, typename ...Args>
+  static inline void SerialLaunchCPU(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, args...);
     }
-  };
+  }
 
- protected:
+  /*! \brief simple kernel to set to a scalar value of arbitrary type */
+  template<int req>
+  using set_to_scalar = mxnet_op::op_with_req<mshadow_op::identity, req>;
+
   /*! \brief Copy blob data */
   template<typename xpu>
   static void inline CopyBlob(mshadow::Stream<xpu> *s,
@@ -152,14 +164,14 @@ class OpBase {
   }
 
   /*! \brief Fill dense output block with a single scalar value */
-  template<typename xpu, typename DType>
-  static inline void FillDense(mshadow::Stream<xpu> *s,
+  template<typename DType>
+  static inline void FillDense(mshadow::Stream<cpu> *s,
                                const size_t size,
                                const DType val,
                                const OpReqType req,
                                DType *out) {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, out, val);
+      SerialLaunchCPU<OpBase::set_to_scalar<Req>>(s, size, out, val);
     });
   }
 };  // OpBase
@@ -318,23 +330,31 @@ class UnaryOp : public OpBase {
 
   template<typename xpu>
   static void IdentityCompute(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    if (req[0] == kNullOp) return;
-    if (req[0] == kWriteInplace) {
-      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_); return;
+    switch (req[0]) {
+      case kWriteTo:
+        CHECK_EQ(outputs[0].dev_mask(), inputs[0].dev_mask());
+        mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
+        break;
+      case kAddTo: {
+          Stream<xpu> *s = ctx.get_stream<xpu>();
+          MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
+              s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+          });
+        }
+        break;
+      case kWriteInplace:
+        CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+        break;
+      case kNullOp:
+        break;
     }
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
-          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-      });
-    });
   }
 
   template<typename xpu>

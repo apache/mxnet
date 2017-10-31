@@ -66,7 +66,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t dense_block_count = next_input_row - output_row;
         if (dense_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            mxnet_op::Kernel<OpBase::SetToScalar<Req>, cpu>::Launch(
+            mxnet_op::Kernel<OpBase::set_to_scalar<Req>, cpu>::Launch(
               stream,
               items_per_row * dense_block_count,
               output_data.dptr_ + items_per_row * output_row,
@@ -141,8 +141,8 @@ class BinaryScalarOp : public UnaryOp {
     const size_t item_count = column_indexes.Size();
 
     // Pre-fill dense with 0-input/output value
-    FillDense<cpu, DType>(stream, output.shape().Size(), dense_fill_val,
-                          req, output.data().dptr<DType>());
+    FillDense<DType>(stream, output.shape().Size(), dense_fill_val,
+                     req, output.data().dptr<DType>());
 
     mshadow::Tensor<cpu, 2, DType> out = AsRowise2D<DType>(stream, output.data());
     if (item_count) {

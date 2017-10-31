@@ -1854,8 +1854,10 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    out = empty(shape, ctx, dtype) if out is None else out
-    out[:] = val
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    out = _internal._full(shape=shape, ctx=ctx, dtype=dtype, value=val, out=out)
     return out
 
 
