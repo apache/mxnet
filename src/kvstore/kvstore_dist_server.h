@@ -406,7 +406,7 @@ class KVStoreDistServer {
         if (merged.array.is_none()) {
           if (recved.dtype() != mshadow::DataType<real_t>::kFlag) {
             merged.array = NDArray(dshape, Context::CPU(0),
-	                           false, mshadow::DataType<real_t>::kFlag);
+                                   false, mshadow::DataType<real_t>::kFlag);
           } else {
             merged.array = NDArray(dshape, Context());
           }
@@ -439,11 +439,11 @@ class KVStoreDistServer {
       response.keys = req_data.keys;
       response.lens = {len};
       // TODO(mli) try to remove this CopyFrom
-      if (stored.dtype() != mshadow::DataType<DType>::kFlag || 
-      	  stored.ctx().dev_mask() != cpu::kDevMask) {
+      if (stored.dtype() != mshadow::DataType<DType>::kFlag ||
+          stored.ctx().dev_mask() != cpu::kDevMask) {
         stored.WaitToRead();
         NDArray tmp = NDArray(stored.shape(), Context::CPU(0),
-	                      false, mshadow::DataType<DType>::kFlag);
+                              false, mshadow::DataType<DType>::kFlag);
         CopyFromTo(stored, &tmp, 0);
         tmp.WaitToRead();
         response.vals.CopyFrom(static_cast<const DType*>(tmp.data().dptr_), len);
