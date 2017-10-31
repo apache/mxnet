@@ -33,7 +33,7 @@
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
 #include <mxnet/kvstore.h>
-#include <mxnet/mxrtc.h>
+#include <mxnet/rtc.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -133,6 +133,12 @@ int MXSetProfilerState(int state) {
 int MXSetNumOMPThreads(int thread_num) {
   API_BEGIN();
   omp_set_num_threads(thread_num);
+  API_END();
+}
+
+int MXGetVersion(int *out) {
+  API_BEGIN();
+  *out = static_cast<int>(MXNET_VERSION);
   API_END();
 }
 
@@ -349,7 +355,7 @@ int MXNDArraySlice(NDArrayHandle handle,
                    NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  *ptr = static_cast<NDArray*>(handle)->Slice(
+  *ptr = static_cast<NDArray*>(handle)->SliceWithRecord(
       slice_begin, slice_end);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
@@ -360,7 +366,7 @@ int MXNDArrayAt(NDArrayHandle handle,
                 NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
-  *ptr = static_cast<NDArray*>(handle)->At(idx);
+  *ptr = static_cast<NDArray*>(handle)->AtWithRecord(idx);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }
@@ -396,7 +402,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   if (pos >= 0) {
     new_shape[pos] = arr->shape().Size() / size;
   }
-  *ptr = arr->Reshape(new_shape);
+  *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
 }
@@ -1097,26 +1103,20 @@ int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos) {
   API_END();
 }
 
+int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos) {
+  API_BEGIN();
+  MXRecordIOContext *context =
+    reinterpret_cast<MXRecordIOContext*>(handle);
+  *pos = context->reader->Tell();
+  API_END();
+}
+
 int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
                 char** input_names, char** output_names,
                 NDArrayHandle* inputs, NDArrayHandle* outputs,
                 char* kernel, RtcHandle *out) {
   API_BEGIN();
-#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
-  std::vector<std::pair<std::string, NDArray> > input, output;
-  for (mx_uint i = 0; i < num_input; ++i) {
-    input.push_back(std::pair<std::string, NDArray>(input_names[i],
-                                                    *reinterpret_cast<NDArray*>(inputs[i])));
-  }
-  for (mx_uint i = 0; i < num_output; ++i) {
-    output.push_back(std::pair<std::string, NDArray>(output_names[i],
-                                                     *reinterpret_cast<NDArray*>(outputs[i])));
-  }
-  MXRtc *rtc = new MXRtc(name, input, output, kernel);
-  *out = reinterpret_cast<RtcHandle>(rtc);
-#else
-  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
-#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+  LOG(FATAL) << "Old rtc API is deprecated. Please use CudaModule";
   API_END();
 }
 
@@ -1129,39 +1129,102 @@ int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
               mx_uint blockDimY,
               mx_uint blockDimZ) {
   API_BEGIN();
-#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
-  std::vector<NDArray> input, output;
-  for (mx_uint i = 0; i < num_input; ++i) {
-    input.push_back(*reinterpret_cast<NDArray*>(inputs[i]));
-  }
-  for (mx_uint i = 0; i < num_output; ++i) {
-    output.push_back(*reinterpret_cast<NDArray*>(outputs[i]));
-  }
-  reinterpret_cast<MXRtc*>(handle)->push(input, output,
-                                         gridDimX,
-                                         gridDimY,
-                                         gridDimZ,
-                                         blockDimX,
-                                         blockDimY,
-                                         blockDimZ);
-#else
-  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
-#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+  LOG(FATAL) << "Old rtc API is deprecated. Please use CudaModule";
   API_END();
 }
 
 int MXRtcFree(RtcHandle handle) {
   API_BEGIN();
-#if ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
-  delete reinterpret_cast<MXRtc*>(handle);
-#else
-  LOG(FATAL) << "Need to compile with USE_CUDA=1 and USE_NVRTC=1 for MXRtc.";
-#endif  // ((MXNET_USE_CUDA) && (MXNET_USE_NVRTC))
+  LOG(FATAL) << "Old rtc API is deprecated. Please use CudaModule";
   API_END();
 }
 
 int MXCustomOpRegister(const char* op_type, CustomOpPropCreator creator) {
   API_BEGIN();
   mxnet::op::custom::Registry::Get()->Register(op_type, creator);
+  API_END();
+}
+
+
+int MXRtcCudaModuleCreate(const char* source, int num_options,
+                          const char** options, int num_exports,
+                          const char** exports, CudaModuleHandle *out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  std::vector<std::string> str_opts;
+  for (int i = 0; i < num_options; ++i) str_opts.emplace_back(options[i]);
+  std::vector<std::string> str_exports;
+  for (int i = 0; i < num_exports; ++i) str_exports.emplace_back(exports[i]);
+  *out = new rtc::CudaModule(source, str_opts, str_exports);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to use GPU.";
+#endif
+  API_END();
+}
+
+int MXRtcCudaModuleFree(CudaModuleHandle handle) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  delete reinterpret_cast<rtc::CudaModule*>(handle);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to use GPU.";
+#endif
+  API_END();
+}
+
+int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_args,
+                          int* is_ndarray, int* is_const, int* arg_types,
+                          CudaKernelHandle *out) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  auto module = reinterpret_cast<rtc::CudaModule*>(handle);
+  std::vector<rtc::CudaModule::ArgType> signature;
+  for (int i = 0; i < num_args; ++i) {
+    signature.push_back(rtc::CudaModule::ArgType{
+        static_cast<bool>(is_ndarray[i]), static_cast<bool>(is_const[i]),
+        static_cast<mshadow::TypeFlag>(arg_types[i])});
+  }
+  auto kernel = module->GetKernel(name, signature);
+  *out = new std::shared_ptr<rtc::CudaModule::Kernel>(kernel);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to use GPU.";
+#endif
+  API_END();
+}
+
+int MXRtcCudaKernelFree(CudaKernelHandle handle) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  delete reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to use GPU.";
+#endif
+  API_END();
+}
+
+int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
+                        mx_uint grid_dim_x, mx_uint grid_dim_y,
+                        mx_uint grid_dim_z, mx_uint block_dim_x,
+                        mx_uint block_dim_y, mx_uint block_dim_z,
+                        mx_uint shared_mem) {
+  API_BEGIN();
+#if MXNET_USE_CUDA
+  auto kernel = reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
+  const auto& signature = (*kernel)->signature();
+  std::vector<dmlc::any> any_args;
+  for (size_t i = 0; i < signature.size(); ++i) {
+    if (signature[i].is_ndarray) {
+      any_args.emplace_back(*static_cast<NDArray*>(args[i]));
+    } else {
+      MSHADOW_TYPE_SWITCH(signature[i].dtype, DType, {
+        any_args.emplace_back(*static_cast<DType*>(args[i]));
+      });
+    }
+  }
+  (*kernel)->Launch(Context::GPU(dev_id), any_args, grid_dim_x, grid_dim_y,
+                    grid_dim_z, block_dim_x, block_dim_y, block_dim_z, shared_mem);
+#else
+  LOG(FATAL) << "Compile with USE_CUDA=1 to use GPU.";
+#endif
   API_END();
 }

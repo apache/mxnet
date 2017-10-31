@@ -69,12 +69,13 @@ A list of supporting augmenters
     :nosignatures:
 
     image.Augmenter
+    image.SequentialAug
+    image.RandomOrderAug
     image.ResizeAug
     image.ForceResizeAug
     image.RandomCropAug
     image.RandomSizedCropAug
     image.CenterCropAug
-    image.RandomOrderAug
     image.BrightnessJitterAug
     image.ContrastJitterAug
     image.SaturationJitterAug

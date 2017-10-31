@@ -115,7 +115,7 @@ void ElementwiseSumRspImpl(mshadow::Stream<gpu>* s,
     }
   }
   if (init == 0) {
-    FillZerosRspImpl<gpu>(s, out);
+    FillZerosRspImpl(s, *out);
     return;
   }
   const dim_t num_rows = out->shape()[0];

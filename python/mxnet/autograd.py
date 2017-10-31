@@ -26,7 +26,7 @@ import ctypes
 from ctypes import c_int, c_void_p, CFUNCTYPE, POINTER, cast
 from .base import _LIB, check_call, string_types
 from .base import mx_uint, NDArrayHandle, c_array, MXCallbackList, SymbolHandle
-from .ndarray import NDArray
+from .ndarray import NDArray, _ndarray_cls
 from .ndarray import _GRAD_REQ_MAP
 from .symbol import Symbol
 
@@ -224,6 +224,26 @@ def mark_variables(variables, gradients, grad_reqs='write'):
         c_array(NDArrayHandle, gradient_handles)))
 
 
+def _parse_head(heads, head_grads):
+    """parse head gradient for backward and grad."""
+    if isinstance(heads, NDArray):
+        heads = [heads]
+    if isinstance(head_grads, NDArray):
+        head_grads = [head_grads]
+
+    head_handles = c_array(NDArrayHandle, [i.handle for i in heads])
+
+    if head_grads is None:
+        hgrad_handles = ctypes.c_void_p(0)
+    else:
+        assert len(heads) == len(head_grads), \
+            "heads and head_grads must be lists of the same length"
+        hgrad_handles = c_array(NDArrayHandle,
+                                [i.handle if i is not None else NDArrayHandle(0)
+                                 for i in head_grads])
+    return head_handles, hgrad_handles
+
+
 def backward(heads, head_grads=None, retain_graph=False, train_mode=True): #pylint: disable=redefined-outer-name
     """Compute the gradients of heads w.r.t previously marked variables.
 
@@ -236,39 +256,96 @@ def backward(heads, head_grads=None, retain_graph=False, train_mode=True): #pyli
     train_mode: bool, optional
         Whether to do backward for training or predicting.
     """
-    if isinstance(heads, NDArray):
-        assert head_grads is None or isinstance(head_grads, NDArray)
-        heads = [heads]
-        head_grads = [head_grads] if head_grads is not None else None
-
-    output_handles = []
-    for arr in heads:
-        output_handles.append(arr.handle)
-
-    if head_grads is None:
-        check_call(_LIB.MXAutogradBackwardEx(
-            len(output_handles),
-            c_array(NDArrayHandle, output_handles),
-            ctypes.c_void_p(0),
-            ctypes.c_int(retain_graph),
-            ctypes.c_int(train_mode)))
-        return
-
-    ograd_handles = []
-    for arr in head_grads:
-        if arr is not None:
-            ograd_handles.append(arr.handle)
-        else:
-            ograd_handles.append(NDArrayHandle(0))
-    assert len(ograd_handles) == len(output_handles), \
-        "heads and head_grads must have the same length"
+    head_handles, hgrad_handles = _parse_head(heads, head_grads)
 
     check_call(_LIB.MXAutogradBackwardEx(
-        len(output_handles),
-        c_array(NDArrayHandle, output_handles),
-        c_array(NDArrayHandle, ograd_handles),
+        len(head_handles),
+        head_handles,
+        hgrad_handles,
+        0,
+        ctypes.c_void_p(0),
         ctypes.c_int(retain_graph),
-        ctypes.c_int(train_mode)))
+        ctypes.c_int(0),
+        ctypes.c_int(train_mode),
+        ctypes.c_void_p(0),
+        ctypes.c_void_p(0)))
+
+
+def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=False,
+         train_mode=True):  #pylint: disable=redefined-outer-name
+    """Compute the gradients of heads w.r.t variables. Gradients will be
+    returned as new NDArrays instead of stored into `variable.grad`.
+    Supports recording gradient graph for computing higher order gradients.
+
+    .. Note: Currently only a very limited set of operators support higher order
+    gradients.
+
+    Parameters
+    ----------
+    heads: NDArray or list of NDArray
+        Output NDArray(s)
+    variables: NDArray or list of NDArray
+        Input variables to compute gradients for.
+    head_grads: NDArray or list of NDArray or None
+        Gradients with respect to heads.
+    retain_graph: bool
+        Whether to keep computation graph to differentiate again, instead
+        of clearing history and release memory. Defaults to the same value
+        as create_graph.
+    create_graph: bool
+        Whether to record gradient graph for computing higher order
+    train_mode: bool, optional
+        Whether to do backward for training or prediction.
+
+    Returns
+    -------
+    NDArray or list of NDArray:
+        Gradients with respect to variables.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((1,))
+    >>> x.attach_grad()
+    >>> with mx.autograd.record():
+    ...     z = mx.nd.elemwise_add(mx.nd.exp(x), x)
+    >>> dx = mx.autograd.grad(z, [x], create_graph=True)
+    >>> dx.backward()
+    >>> print(dx.grad)
+    [
+    [ 3.71828175]
+    <NDArray 1 @cpu(0)>]
+    """
+    head_handles, hgrad_handles = _parse_head(heads, head_grads)
+
+    if isinstance(variables, NDArray):
+        var_handles = [variables.handle]
+    else:
+        assert len(variables), "variables cannot be an empty list."
+        var_handles = [i.handle for i in variables]
+    var_handles = c_array(NDArrayHandle, var_handles)
+
+    retain_graph = retain_graph if retain_graph is not None else create_graph
+    grad_vars = ctypes.POINTER(NDArrayHandle)()
+    grad_stypes = ctypes.POINTER(ctypes.c_int)()
+
+    check_call(_LIB.MXAutogradBackwardEx(
+        len(head_handles),
+        head_handles,
+        hgrad_handles,
+        len(var_handles),
+        var_handles,
+        ctypes.c_int(retain_graph),
+        ctypes.c_int(create_graph),
+        ctypes.c_int(train_mode),
+        ctypes.byref(grad_vars),
+        ctypes.byref(grad_stypes)))
+
+    ret = [_ndarray_cls(ctypes.cast(grad_vars[i], NDArrayHandle),
+                        stype=grad_stypes[i])
+           for i in range(len(var_handles))]
+    if isinstance(variables, NDArray):
+        return ret[0]
+    return ret
 
 
 def get_symbol(x):

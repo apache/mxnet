@@ -53,6 +53,7 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   bool preserve_shape;
   int normalization;
   bool out_grad;
+  float smooth_alpha;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scales the gradient by a float factor.");
@@ -78,6 +79,13 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
     DMLC_DECLARE_FIELD(out_grad)
     .set_default(false)
     .describe("Multiplies gradient with output gradient element-wise.");
+    DMLC_DECLARE_FIELD(smooth_alpha)
+    .set_default(0.0f)
+    .set_range(0.0f, 1.0f)
+    .describe("Constant for computing a label smoothed version of cross-entropy"
+              "for the backwards pass.  This constant gets subtracted from the"
+              "one-hot encoding of the gold label and distributed uniformly to"
+              "all other labels.");
   };
 };
 
@@ -215,9 +223,18 @@ class SoftmaxOutputOp : public Operator {
           in_grad[softmaxout_enum::kData].get_with_shape<xpu, 2, DType>(data_shape, s);
       index_t valid_cnt = label.shape_.Size();
       if (param_.use_ignore) {
-        SoftmaxGrad(grad, out, label, static_cast<DType>(param_.ignore_label));
+        if (param_.smooth_alpha == 0.0f) {
+          SoftmaxGrad(grad, out, label, static_cast<DType>(param_.ignore_label));
+        } else {
+          SmoothSoftmaxGrad(grad, out, label, static_cast<DType>(param_.ignore_label),
+                            param_.smooth_alpha);
+        }
       } else {
-        SoftmaxGrad(grad, out, label);
+        if (param_.smooth_alpha == 0.0f) {
+          SoftmaxGrad(grad, out, label);
+        } else {
+          SmoothSoftmaxGrad(grad, out, label, param_.smooth_alpha);
+        }
       }
       if (param_.normalization == softmaxout_enum::kBatch) {
         valid_cnt = label.size(0);

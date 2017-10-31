@@ -165,7 +165,60 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+# gperftools malloc library (tcmalloc)
+ifeq ($(USE_GPERFTOOLS), 1)
+#	FIND_LIBNAME=tcmalloc_and_profiler
+	FIND_LIBNAME=tcmalloc
+	FIND_LIBFILEEXT=so
+	FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+	ifeq (,$(FIND_LIBFILE))
+		FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+		ifeq (,$(FIND_LIBFILE))
+			FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+			ifeq (,$(FIND_LIBFILE))
+				USE_GPERFTOOLS=0
+			endif
+		endif
+	endif
+	ifeq ($(USE_GPERFTOOLS), 1)
+		CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+		LDFLAGS += $(FIND_LIBFILE)
+	endif
+endif
 
+# jemalloc malloc library (if not using gperftools)
+ifneq ($(USE_GPERFTOOLS), 1)
+	ifeq ($(USE_JEMALLOC), 1)
+		FIND_LIBNAME=jemalloc
+		FIND_LIBFILEEXT=so
+		FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+		ifeq (,$(FIND_LIBFILE))
+			FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+			ifeq (,$(FIND_LIBFILE))
+				FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+				ifeq (,$(FIND_LIBFILE))
+					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+					ifeq (,$(FIND_LIBFILE))
+						USE_JEMALLOC=0
+					endif
+				endif
+			endif
+		endif
+		ifeq ($(USE_JEMALLOC), 1)
+			CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
+			-fno-builtin-free -DUSE_JEMALLOC
+			LDFLAGS += $(FIND_LIBFILE)
+		endif
+	endif
+endif
+
+# If not using tcmalloc or jemalloc, print a warning (user should consider installing)
+ifneq ($(USE_GPERFTOOLS), 1)
+	ifneq ($(USE_JEMALLOC), 1)
+$(warning WARNING: Significant performance increases can be achieved by installing and \
+enabling gperftools or jemalloc development packages)
+	endif
+endif
 
 ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
@@ -272,21 +325,25 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcuda -lcufft
+	LDFLAGS += -lcuda -lcufft -lnvrtc
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
+ifeq ($(USE_LIBJPEG_TURBO), 1)
+	ifneq ($(USE_LIBJPEG_TURBO_PATH), NONE)
+		CFLAGS += -I$(USE_LIBJPEG_TURBO_PATH)/include
+		LDFLAGS += -L$(USE_LIBJPEG_TURBO_PATH)/lib
+	endif
+	LDFLAGS += -lturbojpeg
+	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=1
+else
+	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
+endif
+
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
-
-ifeq ($(USE_NVRTC), 1)
-	LDFLAGS += -lnvrtc
-	CFLAGS += -DMXNET_USE_NVRTC=1
-else
-	CFLAGS += -DMXNET_USE_NVRTC=0
-endif
 
 build/src/%.o: src/%.cc
 	@mkdir -p $(@D)

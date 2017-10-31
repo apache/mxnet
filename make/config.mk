@@ -57,13 +57,15 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
-# whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVRTC = 0
-
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+
+#whether use libjpeg-turbo for image decode without OpenCV wrapper
+USE_LIBJPEG_TURBO = 0
+#add the path to libjpeg-turbo library
+USE_LIBJPEG_TURBO_PATH = NONE
 
 # use openmp for parallelization
 USE_OPENMP = 1
@@ -144,6 +146,12 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # libcurl4-openssl-dev is required, it can be installed on Ubuntu by
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
+
+# Use gperftools if found
+USE_GPERFTOOLS = 1
+
+# Use JEMalloc if found, and not using gperftools
+USE_JEMALLOC = 1
 
 #----------------------------
 # additional operators

@@ -247,7 +247,7 @@ method begin_state(CodeRef :$func=AI::MXNet::Symbol->can('zeros'), @kwargs)
             }
         }
         my %kwargs = (@kwargs, %info);
-        my $state = &{$func}(
+        my $state = $func->(
             'AI::MXNet::Symbol',
             @name,
             %kwargs
@@ -425,7 +425,7 @@ method unroll(
     for my $i (0..$length-1)
     {
         my $output;
-        ($output, $states) = &{$self}(
+        ($output, $states) = $self->(
             $inputs[$i],
             $states
         );
@@ -447,7 +447,7 @@ method _get_activation($inputs, $activation, @kwargs)
     }
     else
     {
-        return &{$activation}($inputs, @kwargs);
+        return $activation->($inputs, @kwargs);
     }
 }
 
@@ -1190,7 +1190,7 @@ method call($inputs, $states)
         my $n = scalar(@{ $cell->state_info });
         my $state = [@{ $states }[$p..$p+$n-1]];
         $p += $n;
-        ($inputs, $state) = &{$cell}($inputs, $state);
+        ($inputs, $state) = $cell->($inputs, $state);
         push @next_states, $state;
     }
     return ($inputs, [map { @$_} @next_states]);
@@ -1412,15 +1412,15 @@ method unroll(
         $r_outputs = [reverse(@{ $r_outputs })];
     }
     my $outputs = [];
-    zip(sub {
-        my ($i, $l_o, $r_o) = @_;
+    for(zip([0..@{ $l_outputs }-1], [@{ $l_outputs }], [@{ $r_outputs }])) {
+        my ($i, $l_o, $r_o) = @$_;
         push @$outputs, AI::MXNet::Symbol->Concat(
             $l_o, $r_o, dim=>(1+($merge_outputs?1:0)),
             name => $merge_outputs
                         ? sprintf('%sout', $self->_output_prefix)
                         : sprintf('%st%d', $self->_output_prefix, $i)
         );
-    }, [0..@{ $l_outputs }-1], [@{ $l_outputs }], [@{ $r_outputs }]);
+    }
     if($merge_outputs)
     {
         $outputs = @{ $outputs }[0];
@@ -1828,7 +1828,7 @@ has [qw/dropout_outputs dropout_states/] => (is => 'ro', isa => 'Num', default =
 
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
-    my ($output, $states) = &{$self->base_cell}($inputs, $states);
+    my ($output, $states) = $self->base_cell->($inputs, $states);
     if($self->dropout_outputs > 0)
     {
         $output = AI::MXNet::Symbol->Dropout(data => $output, p => $self->dropout_outputs);
@@ -1886,7 +1886,7 @@ method reset()
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
     my ($cell, $p_outputs, $p_states) = ($self->base_cell, $self->zoneout_outputs, $self->zoneout_states);
-    my ($next_output, $next_states) = &{$cell}($inputs, $states);
+    my ($next_output, $next_states) = $cell->($inputs, $states);
     my $mask = sub {
         my ($p, $like) = @_;
         AI::MXNet::Symbol->Dropout(
@@ -1899,7 +1899,7 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     my $prev_output = $self->prev_output // AI::MXNet::Symbol->zeros(shape => [0, 0]);
     my $output = $p_outputs != 0
         ? AI::MXNet::Symbol->where(
-            &{$mask}($p_outputs, $next_output),
+            $mask->($p_outputs, $next_output),
             $next_output,
             $prev_output
         )
@@ -1907,14 +1907,14 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     my @states;
     if($p_states != 0)
     {
-        zip(sub {
-            my ($new_s, $old_s) = @_;
+        for(zip($next_states, $states)) {
+            my ($new_s, $old_s) = @$_;
             push @states, AI::MXNet::Symbol->where(
-                &{$mask}($p_states, $new_s),
+                $mask->($p_states, $new_s),
                 $new_s,
                 $old_s
             );
-        }, $next_states, $states);
+        }
     }
     $self->prev_output($output);
     return ($output, @states ? \@states : $next_states);
@@ -1940,7 +1940,7 @@ extends 'AI::MXNet::RNN::ModifierCell';
 method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
 {
     my $output;
-    ($output, $states) = &{$self->base_cell}($inputs, $states);
+    ($output, $states) = $self->base_cell->($inputs, $states);
     $output = AI::MXNet::Symbol->elemwise_add($output, $inputs, name => $output->name.'_plus_residual');
     return ($output, $states)
 }
@@ -1968,11 +1968,11 @@ method unroll(
     else
     {
         my @temp;
-        zip(sub {
-            my ($output_sym, $input_sym) = @_;
+        for(zip([@{ $outputs }], [@{ $inputs }])) {
+            my ($output_sym, $input_sym) = @$_;
             push @temp, AI::MXNet::Symbol->elemwise_add($output_sym, $input_sym,
                             name=>$output_sym->name."_plus_residual");
-        }, [@{ $outputs }], [@{ $inputs }]);
+        }
         $outputs = \@temp;
     }
     return ($outputs, $states);

@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
+__all__ = ['Dataset', 'ArrayDataset', 'RecordFileDataset']
+
 import os
 
 from ... import recordio, ndarray
@@ -79,7 +81,7 @@ class RecordFileDataset(Dataset):
         self._record = recordio.MXIndexedRecordIO(idx_file, filename, 'r')
 
     def __getitem__(self, idx):
-        return self._record.read_idx(idx)
+        return self._record.read_idx(self._record.keys[idx])
 
     def __len__(self):
         return len(self._record.keys)

@@ -83,6 +83,12 @@ NNVM_REGISTER_OP(_linalg_gelqf)
 NNVM_REGISTER_OP(_backward_linalg_gelqf)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 4, 1, gelqf_backward>);
 
+NNVM_REGISTER_OP(_linalg_syevd)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForwSyevd<gpu, syevd>);
+
+NNVM_REGISTER_OP(_backward_linalg_syevd)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackwSyevd<gpu, syevd_backward>);
+
 #endif
 
 }  // namespace op

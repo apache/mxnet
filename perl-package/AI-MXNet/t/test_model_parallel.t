@@ -65,10 +65,10 @@ sub test_chain
     $out_grad .= 1;
     $exec1->backward([$out_grad]);
     $exec2->backward([$out_grad->copyto($ctx1)]);
-    zip(sub {
-        my ($a, $b) = @_;
+    for(zip($arr_grad, $arr_grad2)) {
+        my ($a, $b) = @$_;
         ok(reldiff($a->aspdl, $b->aspdl) < 1e-6);
-    }, $arr_grad, $arr_grad2);
+    }
 }
 
 test_chain();
