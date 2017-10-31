@@ -508,7 +508,7 @@ class CSRNDArray(BaseSparseNDArray):
         data = self.data.asnumpy()
         indices = self.indices.asnumpy()
         indptr = self.indptr.asnumpy()
-        return spsp.csr_matrix((data, indices, indptr), shape=self.shape)
+        return spsp.csr_matrix((data, indices, indptr), shape=self.shape, dtype=self.dtype)
 
 # pylint: disable=abstract-method
 class RowSparseNDArray(BaseSparseNDArray):
@@ -811,10 +811,23 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
         ``col[i]`` is the column index of the element \
         and ``data[i]`` is the data corresponding to the element. All the missing \
         elements in the input are taken to be zeroes.
+            - **data** (*array_like*) - An object exposing the array interface, which \
+            holds all the non-zero entries of the matrix in COO format.
+            - **row** (*array_like*) - An object exposing the array interface, which \
+            stores the row index for each non zero element in ``data``.
+            - **col** (*array_like*) - An object exposing the array interface, which \
+            stores the col index for each non zero element in ``data``.
+            - **shape** (*tuple of int, optional*) - The shape of the array. The default \
+            shape is inferred from the ``row`` and ``col`` arrays.
+            - **ctx** (*Context, optional*) - Device context \
+            (default is the current default context).
+            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+            The default dtype is float32.
 
     Parameters
     ----------
-    arg1: tuple of int, tuple of array_like, array_like, CSRNDArray or scipy.sparse.csr_matrix
+    arg1: tuple of int, tuple of array_like, array_like, CSRNDArray, scipy.sparse.csr_matrix \
+        or scipy.sparse.coo_matrix
         The argument to help instantiate the csr matrix. See above for further details.
     shape : tuple of int
         The shape of the csr matrix.
@@ -857,8 +870,7 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
                 if isinstance(col, NDArray):
                     col = col.asnumpy()
                 coo = spsp.coo_matrix((data, (row, col)), shape=shape)
-                if shape:
-                    _check_shape(coo.shape, shape)
+                _check_shape(coo.shape, shape)
                 csr = coo.tocsr()
                 return array(csr, ctx=ctx, dtype=dtype)
             else:
