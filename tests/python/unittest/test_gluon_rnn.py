@@ -25,6 +25,7 @@ from mxnet.test_utils import almost_equal
 
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
+    print(cell)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -37,6 +38,7 @@ def test_rnn():
 
 def test_lstm():
     cell = gluon.rnn.LSTMCell(100, prefix='rnn_')
+    print(cell)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -52,6 +54,7 @@ def test_lstm_forget_bias():
     stack = gluon.rnn.SequentialRNNCell()
     stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l0_'))
     stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l1_'))
+    print(stack)
 
     dshape = (32, 1, 200)
     data = mx.sym.Variable('data')
@@ -70,6 +73,7 @@ def test_lstm_forget_bias():
 
 def test_gru():
     cell = gluon.rnn.GRUCell(100, prefix='rnn_')
+    print(cell)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -278,7 +282,7 @@ def test_cell_fill_shape():
     cell = gluon.rnn.LSTMCell(10)
     cell.hybridize()
     check_rnn_forward(cell, mx.nd.ones((2, 3, 7)))
-    assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
+    assert cell.i2h.weight.shape[1] == 7, cell.i2h.weight.shape[1]
 
 def test_layer_fill_shape():
     layer = gluon.rnn.LSTM(10)

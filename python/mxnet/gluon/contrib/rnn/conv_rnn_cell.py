@@ -26,6 +26,8 @@ __all__ = ['Conv1DRNNCell', 'Conv2DRNNCell', 'Conv3DRNNCell',
 from math import floor
 
 from ....base import numeric_types
+from .... import symbol
+from ...nn import HybridLambda
 from ...rnn import HybridRecurrentCell
 
 
@@ -50,6 +52,8 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         self._input_shape = input_shape
         self._conv_layout = conv_layout
         self._activation = activation
+        with self.name_scope():
+            self.activation = HybridLambda(activation, prefix='')
 
         # Convolution setting
         assert all(isinstance(spec, int) or len(spec) == dims
@@ -210,8 +214,10 @@ class _ConvRNNCell(_BaseConvRNNCell):
         i2h, h2h = self._conv_forward(F, inputs, states,
                                       i2h_weight, h2h_weight, i2h_bias, h2h_bias,
                                       prefix)
-        output = self._get_activation(F, i2h + h2h, self._activation,
-                                      name=prefix+'out')
+        if F is symbol:
+            output = self.activation(i2h + h2h, prefix+'out')
+        else:
+            output = self.activation(i2h + h2h)
         return output, [output]
 
 
@@ -455,17 +461,17 @@ class _ConvLSTMCell(_BaseConvRNNCell):
         i2h, h2h = self._conv_forward(F, inputs, states,
                                       i2h_weight, h2h_weight, i2h_bias, h2h_bias,
                                       prefix)
-        gates = i2h + h2h
-        slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice',
-                                     axis=self._channel_axis)
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
-        in_transform = self._get_activation(F, slice_gates[2], self._activation, name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
-        next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
-                                   name=prefix+'state')
-        next_h = F._internal._mul(out_gate, self._get_activation(F, next_c, self._activation),
-                                  name=prefix+'out')
+        i, f, c, o = (i2h + h2h).split(4, axis=self._channel_axis)
+        i = i.sigmoid(name=prefix+'i')
+        f = f.sigmoid(name=prefix+'f')
+        o = o.sigmoid(name=prefix+'o')
+        if F is symbol:
+            c = self.activation(c, prefix+'c')
+        else:
+            c = self.activation(c)
+
+        next_c = F._internal._plus(f * states[1], i * c, name=prefix+'state')
+        next_h = F._internal._mul(o, self.activation(next_c), name=prefix+'out')
 
         return next_h, [next_h, next_c]
 
@@ -738,20 +744,22 @@ class _ConvGRUCell(_BaseConvRNNCell):
                                       i2h_weight, h2h_weight, i2h_bias, h2h_bias,
                                       prefix)
 
-        i2h_r, i2h_z, i2h = F.SliceChannel(i2h, num_outputs=3,
-                                           name=prefix+'i2h_slice',
-                                           axis=self._channel_axis)
-        h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3,
-                                           name=prefix+'h2h_slice',
-                                           axis=self._channel_axis)
+        i2h_r, i2h_z, i2h = i2h.split(num_outputs=3,
+                                      name=prefix+'i2h_slice',
+                                      axis=self._channel_axis)
+        h2h_r, h2h_z, h2h = h2h.split(num_outputs=3,
+                                      name=prefix+'h2h_slice',
+                                      axis=self._channel_axis)
 
         reset_gate = F.Activation(i2h_r + h2h_r, act_type="sigmoid",
                                   name=prefix+'r_act')
         update_gate = F.Activation(i2h_z + h2h_z, act_type="sigmoid",
                                    name=prefix+'z_act')
 
-        next_h_tmp = self._get_activation(F, i2h + reset_gate * h2h, self._activation,
-                                          name=prefix+'h_act')
+        if F is symbol:
+            next_h_tmp = self.activation(i2h + reset_gate * h2h, prefix+'h_act')
+        else:
+            next_h_tmp = self.activation(i2h + reset_gate * h2h)
 
         next_h = F._internal._plus((1. - update_gate) * next_h_tmp, update_gate * states[0],
                                    name=prefix+'out')
