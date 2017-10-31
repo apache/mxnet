@@ -64,6 +64,9 @@ def main():
     parser.add_argument('--launcher', type=str, default='ssh',
                         choices = ['local', 'ssh', 'mpi', 'sge', 'yarn'],
                         help = 'the launcher to use')
+    parser.add_argument('--pass-env', type=str, default='',
+                        help = 'given a comma separated list of environment \
+                        variables, passes their values while launching job')
     parser.add_argument('command', nargs='+',
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
