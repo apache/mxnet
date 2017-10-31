@@ -4351,7 +4351,7 @@ def test_two_bit_quantization():
         if len(str_quant)%16 != 0:
             str_quant += '0'*(16 - len(str_quant)%16)
 
-        compr = [neg, pos, len(arr)]
+        compr = []
         # converts the string generated into integers 32chars at a time
         i = 0
         while i<len(str_quant):
@@ -4365,7 +4365,7 @@ def test_two_bit_quantization():
         compr = mx.contrib.nd.create_2bit(grad)
         mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
         decompr = mx.nd.zeros(grad.shape)
-        mx.contrib.ndarray.dequantize_2bit(compr, decompr)
+        mx.contrib.ndarray.dequantize_2bit(compr, decompr, neg_threshold, pos_threshold)
         assert np.array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
         assert np.array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
         # use almost equal for residual as this involves addition operation
