@@ -574,6 +574,11 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
 
         // retrieve nnz (CPU implementation)
         int nnz = out_indptr[indptr_len - 1];
+        // return csr zeros if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
         // copy indices and values
         out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
         out.CheckAndAllocData(Shape1(nnz));
@@ -669,7 +674,7 @@ void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext&
         }
         // returns zeros in csr format if nnz = 0
         if (nnz == 0) {
-          out.set_aux_shape(kIdx, mshadow::Shape1(0));
+          out.set_aux_shape(kIdx, Shape1(0));
           return;
         }
         out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
