@@ -668,6 +668,7 @@ def test_create_sparse_nd_empty():
     check_rsp_empty(shape, dtype, ctx)
     check_rsp_empty(shape_3d, dtype, ctx)
 
+    
 def test_sparse_eye():
     stypes = ['csr', 'row_sparse', 'default']
     for stype in stypes:
