@@ -646,13 +646,14 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreIsWorkerNode
 }
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxKVStoreCreate
-  (JNIEnv *env, jobject obj, jstring name, jobject kvStoreHandle) {
+  (JNIEnv *env, jobject obj, jstring name, jstring data_type_name, jobject kvStoreHandle) {
   jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
   jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
 
   KVStoreHandle out;
   const char *type = env->GetStringUTFChars(name, 0);
-  int ret = MXKVStoreCreate(type, &out);
+  const char *data_type = env->GetStringUTFChars(data_type_name, 0);
+  int ret = MXKVStoreCreate(type, data_type, &out);
   env->ReleaseStringUTFChars(name, type);
 
   env->SetLongField(kvStoreHandle, refLongFid, reinterpret_cast<jlong>(out));
