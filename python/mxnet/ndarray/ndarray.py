@@ -286,6 +286,10 @@ fixed-size items.
         """x.__eq__(y) <=> x==y <=> mx.nd.equal(x, y) """
         return equal(self, other)
 
+    def __hash__(self):
+        """Default hash function."""
+        return id(self)//16
+
     def __ne__(self, other):
         """x.__ne__(y) <=> x!=y <=> mx.nd.not_equal(x, y) """
         return not_equal(self, other)
