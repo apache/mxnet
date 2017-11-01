@@ -33,6 +33,7 @@
 #include <cmath>
 #include <mxnet/c_api.h>
 #include "ps/ps.h"
+#include <bitset>
 
 namespace mxnet {
 namespace op {
@@ -123,16 +124,16 @@ struct quantize_2bit {
 
     for (int i = start; i < end && i < original_size; i++) {
       // // adds 1 when i-start divisible by 4
-      block_ptr += !(i & 3);
+      char* curr_byte = block_ptr + ((i-start)>>2);
       residual[i] += grad[i];
       if (residual[i] >= pos_threshold) {
         residual[i] -= pos_threshold;
         // set data to 11
-        *block_ptr|= posbits[(i & 3)];
+        *curr_byte |= posbits[(i & 3)];
       } else if (residual[i] <= neg_threshold) {
         residual[i] -= neg_threshold;
         // set data to 10
-        *block_ptr |= negbits[(i & 3)];
+        *curr_byte |= negbits[(i & 3)];
       }
     }
   }
@@ -215,11 +216,11 @@ struct dequantize_2bit {
     const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
     const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
     for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
-      ch_ptr += !(i & 3);
+      char* curr_byte = ch_ptr + ((i-out_start_id)>>2);
       int col = i & 3;
       uint8_t mask = posbits[col];
       uint8_t negmask = negbits[col];
-      uint8_t masked = *ch_ptr & mask;
+      uint8_t masked = *curr_byte & mask;
       if ( masked == mask ) {
         *outval = pos_threshold;
       } // use posbits for mask as posbits are 11
