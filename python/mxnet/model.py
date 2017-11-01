@@ -98,9 +98,15 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
         kvstore.init(name, arg_params[name])
-
+        fla = 0
+        if arg_params[name].sum()[0] != 0:
+            fla=1
+            print(name, arg_params[name])
         if update_on_kvstore:
             kvstore.pull(name, param_on_devs, priority=-idx)
+            nd.waitall()
+            if fla==1:
+                print('pulled ',param_on_devs.sum(), param_on_devs)
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
