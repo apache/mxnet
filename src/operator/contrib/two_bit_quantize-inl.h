@@ -130,10 +130,14 @@ struct quantize_2bit {
         residual[i] -= pos_threshold;
         // set data to 11
         *curr_byte |= posbits[(i & 3)];
+//        std::cout<<"pos "<< std::to_string(i&3) << " " << std::bitset<8>(*curr_byte)<<std::endl;
       } else if (residual[i] <= neg_threshold) {
         residual[i] -= neg_threshold;
         // set data to 10
         *curr_byte |= negbits[(i & 3)];
+//        std::cout<<"neg "<< std::to_string(i&3) << " " << std::bitset<8>(*curr_byte)<<std::endl;
+      } else {
+//        std::cout<<"0 "<< std::to_string(i&3) << " " << std::bitset<8>(*curr_byte)<<std::endl;
       }
     }
   }
@@ -203,33 +207,34 @@ inline bool Quantize2BitType(const nnvm::NodeAttrs& attrs,
 
 struct dequantize_2bit {
   // Decompress
-  MSHADOW_XINLINE static void Map(int compr_block_id,
-                                  int original_size,
+  MSHADOW_XINLINE static void Map(int i,
                                   float *out,
                                   float *in,
                                   const float neg_threshold,
                                   const float pos_threshold) {
 
-    int out_start_id = compr_block_id<<4;
-    float* outval = out + out_start_id;
-    char* ch_ptr = reinterpret_cast<char*>(in + compr_block_id);
+    float* outval = out + i;
+    char* ch_ptr = reinterpret_cast<char*>(in + (i>>4));
+
+//    std::cout<<std::bitset<8>(*ch_ptr)<<" " <<std::bitset<8>(*(ch_ptr+1))<<" "<<std::bitset<8>(*(ch_ptr+2))<<" "<<std::bitset<8>(*(ch_ptr+3))<<std::endl;
+    ch_ptr += ((i & 15) >> 2 );
     const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
     const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
-    for (int i = out_start_id; (i < out_start_id + 16) && (i < original_size); ++i, ++outval ) {
-      char* curr_byte = ch_ptr + ((i-out_start_id)>>2);
-      int col = i & 3;
-      uint8_t mask = posbits[col];
-      uint8_t negmask = negbits[col];
-      uint8_t masked = *curr_byte & mask;
-      if ( masked == mask ) {
-        *outval = pos_threshold;
-      } // use posbits for mask as posbits are 11
-        // compare with negbits
-      else if ( masked == negmask ) {
-        *outval = neg_threshold;
-      } else {
-        *outval = 0;
-      }
+    int col = i & 3;
+    uint8_t mask = posbits[col];
+    uint8_t negmask = negbits[col];
+    uint8_t masked = *ch_ptr & mask;
+    if ( masked == mask ) {
+      *outval = pos_threshold;
+//      std::cout<<std::bitset<8>(*ch_ptr)<< " "<<std::bitset<8>(masked)<< " "<<pos_threshold<<std::endl;
+    } // use posbits for mask as posbits are 11
+      // compare with negbits
+    else if ( masked == negmask ) {
+//      std::cout<<std::bitset<8>(*ch_ptr)<< " "<<std::bitset<8>(masked)<< " "<<neg_threshold<<std::endl;
+      *outval = neg_threshold;
+    } else {
+//      std::cout<<std::bitset<8>(*ch_ptr)<< " "<<std::bitset<8>(masked)<< " 0"<<std::endl;
+      *outval = 0;
     }
  }
 };
@@ -237,9 +242,7 @@ struct dequantize_2bit {
 template<typename xpu>
 void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                         const float neg_threshold, const float pos_threshold) {
-  int original_size = inputs[1].Size();
-  mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, original_size>>4,  // original size
-                                                 original_size,
+  mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
                                                  inputs[1].dptr<float>(),        // out array
                                                  inputs[0].dptr<float>(),      // compressed array
                                                  neg_threshold,     // negative threshold

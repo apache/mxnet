@@ -381,6 +381,12 @@ class KVStoreDistServer {
       int key = DecodeKey(req_data.keys[1]);
       auto& stored = store_[key];
 
+      if (count_save.count(key)==0) {
+        count_save[key] = 0;
+      } else {
+        count_save[key]++;
+      }
+
       size_t ds[] = {(size_t)req_data.lens[1]};
       TShape dshape(ds, ds + 1);
       TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
@@ -398,9 +404,25 @@ class KVStoreDistServer {
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
+        {
+          std::unique_ptr<dmlc::Stream> fo(
+            dmlc::Stream::Create((compress_ + "server_recved_count" + std::to_string(count_save[key]) + "_" + std::to_string(key)).c_str(), "w"));
+          recved.WaitToRead();
+          mxnet::NDArray::Save(fo.get(), {recved}, {});
+        }
+
         Dequantize(recved, &stored, neg_threshold, pos_threshold, compress_, 0);
+
         server->Response(req_meta);
         stored.WaitToRead();
+
+
+        {
+          std::unique_ptr<dmlc::Stream> fo(
+            dmlc::Stream::Create((compress_ + "server_stored_count" + std::to_string(count_save[key]) + "_" + std::to_string(key)).c_str(), "w"));
+          stored.WaitToRead();
+          mxnet::NDArray::Save(fo.get(), {stored}, {});
+        }
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
@@ -541,6 +563,7 @@ class KVStoreDistServer {
 
   float pos_threshold = 0.5;
   float neg_threshold = -0.5;
+  std::unordered_map<int, int> count_save;
 };
 
 }  // namespace kvstore
