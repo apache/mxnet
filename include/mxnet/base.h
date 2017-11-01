@@ -232,9 +232,9 @@ struct Context {
    */
   inline static Context CPUPinned(int32_t dev_id = -1);
   /*!
-   * Create a pinned CPU context.
-   * \param dev_id the device id for corresponding GPU.
-   * \return Pinned CPU context. -1 for current GPU.
+   * Create a CPU shared memory context.
+   * \param dev_id dummy device id.
+   * \return CPU shared memory context.
    */
   inline static Context CPUShared(int32_t dev_id = 0);
   /*!
