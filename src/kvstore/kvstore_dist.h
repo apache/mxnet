@@ -664,11 +664,11 @@ class KVStoreDist : public KVStoreLocal {
         //CopyFromTo(merged, &send_buf);
       }
       CopyFromTo(merged, &send_buf);
-      if(key == 0)
-      {
-	  printf("worker side. vals[0] = %s, vals_cnt = %d\n", vals[0].Summarize().c_str(), vals.size());
-	  printf("worker side. send_buf = %s\n", send_buf.Summarize().c_str());
-      }
+      //if(key == 0)
+      //{
+//	  printf("worker side. vals[0] = %s, vals_cnt = %d\n", vals[0].Summarize().c_str(), vals.size());
+//	  printf("worker side. send_buf = %s\n", send_buf.Summarize().c_str());
+      //    }
       //now, each key has only one corresponding merge buffer.
       // push to servers
       size_t size = send_buf.shape().Size();
