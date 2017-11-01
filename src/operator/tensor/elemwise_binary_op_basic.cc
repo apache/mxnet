@@ -98,7 +98,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
 
    - elemwise_mul(default, default) = default
    - elemwise_mul(row_sparse, row_sparse) = row_sparse
-   - elemwise_mul(default, row_sparse) = row_sparse
+   - elemwise_mul(default, row_sparse) = default
    - elemwise_mul(row_sparse, default) = default
    - otherwise, ``elemwise_mul`` generates output with default storage
 
