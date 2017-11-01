@@ -452,9 +452,9 @@ method _send_command_to_servers(Int $head, Str $body)
         The created AI::MXNet::KVStore
 =cut
 
-method create(Str $name='local')
+method create(Str $name='local', Str $data_type='float32')
 {
-    my $handle = check_call(AI::MXNetCAPI::KVStoreCreate($name));
+    my $handle = check_call(AI::MXNetCAPI::KVStoreCreate($name, $data_type));
     return __PACKAGE__->new(handle => $handle);
 }
 
