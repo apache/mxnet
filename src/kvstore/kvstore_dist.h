@@ -272,12 +272,47 @@ class KVStoreDist : public KVStoreLocal {
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
+      if(count_save.count(key)==0) {
+        count_save[key] = 0;
+      } else {
+        count_save[key]++;
+      }
+
       const auto& vals = grouped_vals[i];
+      if(count_save[key]<3 && get_rank()==0){
+        {std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create((compress_ + "grad_vals0_count" + std::to_string(count_save[key]) + "_key" + std::to_string(key)).c_str(), "w"));
+        vals[0].WaitToRead();
+        mxnet::NDArray::Save(fo.get(), {vals[0]},{});
+        }
+        if(vals.size()>=2) {
+          std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create((compress_ + "grad_vals1_count" + std::to_string(count_save[key]) + "_key" + std::to_string(key)).c_str(), "w"));
+          vals[1].WaitToRead();
+          mxnet::NDArray::Save(fo.get(), {vals[1]},{});
+        }
+
+        if(vals.size()>=3) {
+          std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create((compress_ + "grad_vals2_count" + std::to_string(count_save[key]) + "_key" + std::to_string(key)).c_str(), "w"));
+          vals[2].WaitToRead();
+          mxnet::NDArray::Save(fo.get(), {vals[2]},{});
+        }
+        if(vals.size()>=4) {std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create((compress_ + "grad_vals3_count" + std::to_string(count_save[key]) + "_key" + std::to_string(key)).c_str(), "w"));
+          vals[3].WaitToRead();
+          mxnet::NDArray::Save(fo.get(), {vals[3]},{});
+        }
+      }
+
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
 
       const auto storage_type = merged.storage_type();
       auto &comm_buf = comm_buf_[key];
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
+
+        if(count_save[key]<3  && get_rank()==0) {
+          std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create((compress_ + "grad_merged_count" + std::to_string(count_save[key]) + "_key" + std::to_string(key)).c_str(), "w"));
+          merged.WaitToRead();
+          mxnet::NDArray::Save(fo.get(), {merged},{});
+        }
+
         // Start of a push doesn't guarantee that the previous pushes are completed.
         // This shouldn't affect training of networks though because training involves
         // a sequence of push, pull, then push. This imposes ordering that the
@@ -292,6 +327,12 @@ class KVStoreDist : public KVStoreLocal {
           }
         }
         CopyFromTo(merged, &comm_buf);
+      }
+      
+      if(count_save[key]<3  && get_rank()==0) {
+        std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create((compress_ + "grad_data_count" + std::to_string(count_save[key]) + "_key" + std::to_string(key)).c_str(), "w"));
+        comm_buf.WaitToRead();
+        mxnet::NDArray::Save(fo.get(), {comm_buf},{});
       }
 
       if (compress_ != "none") {
@@ -314,9 +355,9 @@ class KVStoreDist : public KVStoreLocal {
           }
         }
 
-        if (compress_ == "2bit") {
-          Quantize(comm_buf, &small_buf, &res_buf,
-                      compress_, neg_threshold_, pos_threshold_, priority);
+        if (compress_ == "2bit") { 
+         Quantize(comm_buf, &small_buf, &res_buf,
+                      compress_, neg_threshold_, pos_threshold_, priority);//neg_threshold_, pos_threshold_, priority);
         } else {
           LOG(FATAL) << "Unsupported quantization";
         }
@@ -746,6 +787,8 @@ class KVStoreDist : public KVStoreLocal {
   std::unordered_map<int, NDArray> residual_;
 
   bool log_verbose_;
+
+ std::unordered_map<int, int> count_save;
 };
 
 }  // namespace kvstore
