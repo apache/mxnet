@@ -47,6 +47,8 @@ def parse_args():
                         help='Save training log to file')
     parser.add_argument('--seed', dest='seed', type=int, default=123,
                         help="Random seed.")
+    parser.add_argument('--dev', type=int, default=0,
+                        help="Turn on develop mode with verbose informations.")
     args = parser.parse_args()
     return args
 

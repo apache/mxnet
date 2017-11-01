@@ -18,6 +18,10 @@ from block.coder import MultiClassDecoder, NormalizedBoxCenterDecoder
 from trainer.metric import Accuracy, SmoothL1, LossRecorder
 from trainer.debugger import super_print, find_abnormal
 
+
+def train_net(model, ):
+    """Wrapper function for entire training phase."""
+
 # experimental stuff
 logging.basicConfig(level=logging.DEBUG)
 random.seed(123)
@@ -185,6 +189,3 @@ try:
 except:
     ctx = mx.cpu()
 train(net, train_data, val_data, 100, ctx=ctx)
-
-def train_net(model, ):
-    """Wrapper function for entire training phase."""
