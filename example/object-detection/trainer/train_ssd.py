@@ -185,3 +185,6 @@ try:
 except:
     ctx = mx.cpu()
 train(net, train_data, val_data, 100, ctx=ctx)
+
+def train_net(model, ):
+    """Wrapper function for entire training phase."""

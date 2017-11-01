@@ -95,12 +95,11 @@ def get_ssd(name, base_size, classes,
                  num_classes=classes, pretrained=pretrained[0], ctx=ctx, **kwargs)
     if pretrained[1]:
         # load trained ssd model
-        pass
+        raise NotImplementedError("Loading pretrained model for detection is not finished.")
     return net
 
 def ssd_512_resnet18_v1(pretrained=(True, False), classes=20, ctx=mx.cpu(), **kwargs):
     """SSD architecture with ResNet v1 18 layers.
-
 
     """
     return get_ssd('resnet18_v1', 512, classes, pretrained, ctx, **kwargs)
