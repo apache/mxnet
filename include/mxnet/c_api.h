@@ -232,6 +232,13 @@ MXNET_DLL int MXDumpProfile();
 /*! \brief Set the number of OMP threads to use */
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 
+/*!
+ * \brief get the MXNet library version as an integer
+ * \param pointer to the integer holding the version number
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetVersion(int *out);
+
 //-------------------------------------
 // Part 1: NDArray creation and deletion
 //-------------------------------------
@@ -1884,6 +1891,14 @@ MXNET_DLL int MXRecordIOReaderReadRecord(RecordIOHandle handle,
  * \return 0 when success, -1 when failure happens
 */
 MXNET_DLL int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
+
+/**
+ * \brief Get the current writer pointer position
+ * \param handle handle to RecordIO object
+ * \param pos handle to output position
+ * \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos);
 
 /**
  * \brief Create a MXRtc object

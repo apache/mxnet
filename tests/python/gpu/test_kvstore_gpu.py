@@ -18,6 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import assert_almost_equal, default_context
 
 shape = (4, 4)
@@ -35,6 +36,7 @@ def init_kv_with_str(stype='default'):
     return kv
 
 
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8262")
 def test_row_sparse_pull():
     kv = init_kv_with_str('row_sparse')
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))

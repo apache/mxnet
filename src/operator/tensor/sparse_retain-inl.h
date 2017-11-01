@@ -267,7 +267,7 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
   if (!input_nd.storage_initialized()
       || idx_data.Size() == 0U
       || input_nd.shape()[0] == 0) {
-    FillZerosRspImpl(s, output_nd);
+    FillZerosRspImpl(s, *output_nd);
     return;
   }
 
@@ -386,8 +386,7 @@ void SparseRetainOpBackwardEx(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob idx_data = inputs[sr::kIdx].data();
   if (idx_data.Size() == 0U) {
-    NDArray output = outputs[sr::kArr];
-    FillZerosRspImpl<xpu>(s, &output);
+    FillZerosRspImpl(s, outputs[sr::kArr]);
     return;
   }
 

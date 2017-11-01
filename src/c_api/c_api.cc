@@ -136,6 +136,12 @@ int MXSetNumOMPThreads(int thread_num) {
   API_END();
 }
 
+int MXGetVersion(int *out) {
+  API_BEGIN();
+  *out = static_cast<int>(MXNET_VERSION);
+  API_END();
+}
+
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray();
@@ -1094,6 +1100,14 @@ int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos) {
   MXRecordIOContext *context =
     reinterpret_cast<MXRecordIOContext*>(handle);
   context->reader->Seek(pos);
+  API_END();
+}
+
+int MXRecordIOReaderTell(RecordIOHandle handle, size_t *pos) {
+  API_BEGIN();
+  MXRecordIOContext *context =
+    reinterpret_cast<MXRecordIOContext*>(handle);
+  *pos = context->reader->Tell();
   API_END();
 }
 

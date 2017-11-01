@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file elementwise_unary_op-inl.h
+ * \file elementwise_unary_op.h
  * \brief Function definition of elementwise unary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_
@@ -27,59 +27,36 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <utility>
+#include <algorithm>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
+#include "../../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace op {
 
-// infer storage function for _identity_with_attr_like_rhs op
-inline bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
-                                           const int dev_mask,
-                                           DispatchMode* dispatch_mode,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  auto& lhs_stype = in_attrs->at(0);
-  const auto& rhs_stype = in_attrs->at(1);
-  auto& out_stype = out_attrs->at(0);
-  bool dispatched = false;
-
-  CHECK_NE(rhs_stype, kUndefinedStorage);
-  type_assign(&out_stype, rhs_stype);
-  type_assign(&lhs_stype, rhs_stype);
-  if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage &&
-      out_stype == kDefaultStorage) {
-    // dns, dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  }
-  if (!dispatched && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-      (lhs_stype == out_stype)) {
-    // rsp, _ -> rsp, or csr, _ -> csr
-    dispatched = storage_type_assign(&out_stype, static_cast<NDArrayStorageType>(out_stype),
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
-  if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
-}
-
 class OpBase {
  protected:
-  template<int req>
-  struct SetToScalar {
-    template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType *out, const DType value) {
-      KERNEL_ASSIGN(out[i], req, value);
+  /*!
+   * \brief Launch CPU-only kernel without OMP (temporary solution until OMP-tuned kernels arrive)
+   * \tparam OP Kernel operation type
+   * \tparam Args Argument types to be passed to kernel
+   * \param s CPU stream
+   * \param N Number of iterations
+   * \param args Arguments to be passed to kernel
+   */
+  template <typename OP, typename ...Args>
+  static inline void SerialLaunchCPU(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, args...);
     }
-  };
+  }
 
- protected:
+  /*! \brief simple kernel to set to a scalar value of arbitrary type */
+  template<int req>
+  using set_to_scalar = mxnet_op::op_with_req<mshadow_op::identity, req>;
+
   /*! \brief Copy blob data */
   template<typename xpu>
   static void inline CopyBlob(mshadow::Stream<xpu> *s,
@@ -105,15 +82,11 @@ class OpBase {
                                const NDArray* clone_from = nullptr) {
     if (req != kNullOp) {
       if (clone_from) {
-        const TShape ishape = clone_from->storage_shape();
-        TShape sshape = dest->storage_shape();
-        CHECK(shape_assign(&sshape, ishape));
-        dest->CheckAndAllocData(sshape);
+        const TShape& ishape = clone_from->storage_shape();
+        dest->CheckAndAllocData(ishape);
         CHECK_EQ(dest->storage_type(), clone_from->storage_type());
         for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
-          TShape ashape = dest->aux_shape(i);
-          CHECK(shape_assign(&ashape, clone_from->aux_shape(i)));
-          dest->CheckAndAllocAuxData(i, ashape);
+          dest->CheckAndAllocAuxData(i, clone_from->aux_shape(i));
         }
         DCHECK_EQ(dest->aux_shapes().size(), clone_from->aux_shapes().size());
       } else {
@@ -148,7 +121,6 @@ class OpBase {
                                  const NDArray *dest,
                                  const OpReqType reqi,
                                  const NDArray& src) {
-    DCHECK_NE(dest->storage_type(), kDefaultStorage);
     DCHECK_EQ(dest->storage_type(), src.storage_type());
     AllocateGeometry(dest, reqi, &src);
     CopyGeometryBlobs(s, dest, reqi, src);
@@ -192,14 +164,14 @@ class OpBase {
   }
 
   /*! \brief Fill dense output block with a single scalar value */
-  template<typename xpu, typename DType>
-  static inline void FillDense(mshadow::Stream<xpu> *s,
+  template<typename DType>
+  static inline void FillDense(mshadow::Stream<cpu> *s,
                                const size_t size,
                                const DType val,
                                const OpReqType req,
                                DType *out) {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, out, val);
+      SerialLaunchCPU<OpBase::set_to_scalar<Req>>(s, size, out, val);
     });
   }
 };  // OpBase
@@ -249,7 +221,7 @@ class UnaryOp : public OpBase {
     return false;
   }
 
- protected:
+ public:
   /*! \brief Map NDArray vectors to TBlob vectors and pass to compute function */
   template<typename xpu, typename FComputer>
   static inline void MapToFCompute(const nnvm::NodeAttrs &attrs,
@@ -270,7 +242,6 @@ class UnaryOp : public OpBase {
     }
   }
 
- public:
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
@@ -348,7 +319,7 @@ class UnaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1U);
     const auto in_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if (in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) {
+    if (in_stype == out_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
       if (inputs[0].storage_shape().Size()) {
         MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, KernelCompute<xpu, OP>);
       }
@@ -359,23 +330,31 @@ class UnaryOp : public OpBase {
 
   template<typename xpu>
   static void IdentityCompute(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    if (req[0] == kNullOp) return;
-    if (req[0] == kWriteInplace) {
-      CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_); return;
+    switch (req[0]) {
+      case kWriteTo:
+        CHECK_EQ(outputs[0].dev_mask(), inputs[0].dev_mask());
+        mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
+        break;
+      case kAddTo: {
+          Stream<xpu> *s = ctx.get_stream<xpu>();
+          MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
+              s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+          });
+        }
+        break;
+      case kWriteInplace:
+        CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+        break;
+      case kNullOp:
+        break;
     }
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
-          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-      });
-    });
   }
 
   template<typename xpu>
@@ -388,8 +367,7 @@ class UnaryOp : public OpBase {
     CHECK_EQ(outputs.size(), 1U);
     const auto in_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if ((in_stype == kCSRStorage && out_stype == kCSRStorage) ||
-        (in_stype == kRowSparseStorage && out_stype == kRowSparseStorage)) {
+    if (in_stype == out_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
       MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, IdentityCompute<xpu>);
     } else {
       LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
@@ -407,10 +385,8 @@ class UnaryOp : public OpBase {
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
     const auto lhs_stype = inputs[0].storage_type();
-    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if ((lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage) &&
-        (lhs_stype == out_stype)) {
+    if (lhs_stype == out_stype && (lhs_stype == kRowSparseStorage || lhs_stype == kCSRStorage)) {
       // csr, _ -> csr, or rsp, _ -> rsp
       OpBase::CopyNDArray(ctx.get_stream<xpu>(), &outputs[0], req[0], inputs[0]);
     } else {
@@ -475,13 +451,13 @@ struct sigmoid {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out,
                                   const DType *in) {
-    out[i] = DType(DType(1.0f) / (DType(1.0f) + expf(-in[i])));
+    out[i] = mshadow_op::sigmoid::Map<DType>(in[i]);
   }
 };
 struct sigmoid_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType out_grad, DType in) {
-    return out_grad * DType(in * (DType(1.0f) - in));
+    return out_grad * mshadow_op::sigmoid_grad::Map<DType>(in);
   }
 };
 /*! \brief Rectified Linear Operation */
@@ -489,14 +465,13 @@ struct relu {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out,
                                   const DType *in) {
-    DType x = in[i];
-    out[i] = x > DType(0.0f) ? x : DType(0.0f);
+    out[i] = mshadow_op::relu::Map<DType>(in[i]);
   }
 };
 struct relu_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType out_grad, DType in) {
-    return out_grad * DType(in > DType(0.0f) ? DType(1.0f) : DType(0.0f));
+    return out_grad * mshadow_op::relu_grad::Map<DType>(in);
   }
 };
 }  // namespace kernel_launch_op

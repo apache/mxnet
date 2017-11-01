@@ -23,6 +23,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
 #include "../c_api/c_api_common.h"
@@ -80,10 +81,10 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
 
 // Set the shape, dtype, storage type and dispatch mode via the attribute inference functions
 inline void SetShapeType(const Context& ctx,
-                  const nnvm::NodeAttrs& attrs,
-                  const std::vector<NDArray*>& inputs,
-                  const std::vector<NDArray*>& outputs,
-                  DispatchMode* dispatch_mode) {
+                         const nnvm::NodeAttrs& attrs,
+                         const std::vector<NDArray*>& inputs,
+                         const std::vector<NDArray*>& outputs,
+                         DispatchMode* dispatch_mode) {
   static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
@@ -230,8 +231,8 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
 }
 
 inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
-                               const std::vector<NDArray*>& outputs,
-                               std::vector<OpReqType> *req) {
+                        const std::vector<NDArray*>& outputs,
+                        std::vector<OpReqType> *req) {
   std::unordered_set<engine::VarHandle> in_vars;
   in_vars.reserve(inputs.size());
   for (auto &i : inputs) {
@@ -244,6 +245,73 @@ inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
     if (in_vars.find(outputs[i]->var()) != in_vars.end()) {
       req->at(i) = kWriteInplace;
     }
+  }
+}
+
+/*!
+ * \brief Parse parameter attributes into a nnvm::NodeAttrs structure
+ * \param op Pointer to the nnvm Operator object
+ * \param num_inputs Number of operator inputs
+ * \param num_params Number of parameters
+ * \param param_keys Array of string pointers representing the parameter keys
+ * \param param_vals Array of string pointers representing the associated values
+ * \return nnvm::NodeAttrs structure representing the parsed attributes
+ */
+inline nnvm::NodeAttrs ParseAttrs(const nnvm::Op *op,
+                                  const int num_inputs,
+                                  const int num_params,
+                                  const char **param_keys,
+                                  const char **param_vals) {
+  static auto& num_args = nnvm::Op::GetAttr<std::string>("key_var_num_args");
+
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  attrs.dict.reserve(num_params+1);
+  for (int i = 0; i < num_params; ++i) {
+    attrs.dict.emplace(param_keys[i], param_vals[i]);
+  }
+  if (num_args.count(op)) {
+    attrs.dict.emplace(num_args[op], std::to_string(num_inputs));
+  }
+  if (op->attr_parser != nullptr) {
+    op->attr_parser(&attrs);
+  }
+
+  return attrs;
+}
+
+/*!
+ * \brief Determine number of outputs for the given operator
+ * \param op Pointer to the nnvm Operator object
+ * \param attrs  nnvm::NodeAttrs structure representing the operator's attributes
+ * \param num_inputs Number of inputs tot he operator
+ * \param infered_num_outputs The inferred number of outputs
+ * \param num_visible_outputs The actual number of visible outputs
+ */
+inline void SetNumOutputs(const nnvm::Op *op,
+                          const nnvm::NodeAttrs& attrs,
+                          const int& num_inputs,
+                          int* infered_num_outputs,
+                          int* num_visible_outputs) {
+  static auto& visible_out = nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
+  int infered_num_inputs;
+  if (op->get_num_inputs != nullptr) {
+    infered_num_inputs = op->get_num_inputs(attrs);
+  } else {
+    infered_num_inputs = op->num_inputs;
+  }
+  CHECK_EQ(num_inputs, infered_num_inputs)
+    << "Operator " << op->name << " expects " << infered_num_inputs
+    << " inputs, but got " << num_inputs << " instead.";
+  if (op->get_num_outputs != nullptr) {
+    *infered_num_outputs = op->get_num_outputs(attrs);
+  } else {
+    *infered_num_outputs = op->num_outputs;
+  }
+  *num_visible_outputs = *infered_num_outputs;
+  if (visible_out.count(op)) {
+    *num_visible_outputs = visible_out[op](attrs);
+    CHECK_LE(*num_visible_outputs, *infered_num_outputs);
   }
 }
 
@@ -311,23 +379,33 @@ inline void PushFComputeEx(const FComputeEx& fn,
                     const std::vector<NDArray*>& p_inputs,
                     const std::vector<NDArray*>& p_outputs,
                     const std::vector<OpReqType>& req) {
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
+
   bool is_train = Imperative::Get()->is_training();
+  ExecType exec_type = ExecType::kSync;
+  if (fexec_type.count(op)) {
+    exec_type = fexec_type[op](attrs);
+  }
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushAsync([ctx, is_train, attrs, fn, inputs, outputs, requested, req](
+  const auto& run = [ctx, exec_type, is_train, attrs, fn, inputs, outputs, requested, req](
         RunContext rctx,
         engine::CallbackOnComplete on_complete) {
-      std::vector<TBlob> input_blobs, output_blobs;
-      OpContext opctx{is_train, rctx,
-                      engine::CallbackOnComplete(),
-                      requested};
+      OpContext opctx{is_train, rctx, on_complete, requested};
       fn(attrs, opctx, inputs, req, outputs);
-      if (ctx.dev_mask() == gpu::kDevMask) {
-        rctx.get_stream<gpu>()->Wait();
+      if (exec_type == ExecType::kSync) {
+        if (rctx.get_ctx().dev_mask() == gpu::kDevMask) {
+          rctx.get_stream<gpu>()->Wait();
+        }
+        on_complete();
       }
-      on_complete();
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, PROFILER_MESSAGE(op->name.c_str()));
+    };
+  if (exec_type == ExecType::kLocal) {
+    run(RunContext{ctx, nullptr}, engine::CallbackOnComplete());
+  } else {
+    Engine::Get()->PushAsync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
+      0, PROFILER_MESSAGE(op->name.c_str()));
+  }
 }
 
 inline void PushOperator(const OpStatePtr& state,
@@ -500,20 +578,16 @@ inline bool CheckAndInferType(nnvm::Graph* p_g, nnvm::DTypeVector&& dtypes,
   return false;
 }
 
-inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const int dev_mask,
+inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev_mask,
                                      StorageTypeVector&& storage_types, bool use_inputs,
                                      std::pair<uint32_t, uint32_t> node_range = {0, 0},
                                      std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
-  bool dev_match = false;
-  if (g.attrs.count("dev_mask")) {
-    const auto& prev_vdev = g.GetAttr<exec::DevMaskVector>("dev_mask");
-    if (prev_vdev.size() && prev_vdev[0] == dev_mask) dev_match = true;
-  }
+  bool dev_match = g.attrs.count("dev_mask") &&
+                   g.GetAttr<exec::DevMaskVector>("dev_mask") == dev_mask;
   if (!dev_match) {
-    exec::DevMaskVector vdev(g.indexed_graph().num_nodes(), dev_mask);
-    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(vdev));
+    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(dev_mask));
   }
 
   if (dev_match && use_inputs) {
@@ -546,39 +620,61 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, const int dev_mask,
     g = exec::InferStorageType(std::move(g));
   }
 
-  const auto &idx = g.indexed_graph();
-  const auto& vstorage_type = g.GetAttr<StorageTypeVector>("storage_type");
-  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  uint32_t node_start = 0, node_end = idx.num_nodes();
-  if (node_range.second > node_range.first) {
-    node_end = node_range.second;
-    node_start = node_range.first;
-  }
-  bool log_verbose = dmlc::GetEnv("MXNET_INFER_STORAGE_TYPE_VERBOSE_LOGGING", false);
-  if (log_verbose) {
-    for (uint32_t nid = node_start; nid < node_end; ++nid) {
-      const auto& inode = idx[nid];
-      if (inode.source->is_variable()) {
-        LOG(INFO) << "node " << nid << " var";
-      } else {
-        LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name
-                  << ": " << common::dispatch_mode_string(dispatch_modes[nid]);
-        for (const auto& e : inode.inputs) {
-          auto eid = idx.entry_id(e);
-          LOG(INFO) << "\t\tinput " << eid << ": "
-                    << common::stype_string(vstorage_type[eid]);
-        }
-        for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-          uint32_t eid = idx.entry_id(nid, index);
-          LOG(INFO) << "\t\toutput " << eid << ": "
-                    << common::stype_string(vstorage_type[eid]);
-        }
-      }
-    }
-  }
   CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
   return false;
 }
+
+
+inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
+  static const auto& _copyto = Op::Get("_copyto");
+
+  std::vector<Context> vctx(
+      idx.num_nodes(), Context::Create(static_cast<Context::DeviceType>(-1), 0));
+  // forward pass
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    if (!idx[i].source->info.empty()) {
+      vctx[i] = dmlc::get<Imperative::AGInfo>(idx[i].source->info).ctx;
+    } else if (idx[i].source->op() == _copyto) {
+      CHECK_GT(idx[i].source->control_deps.size(), 0);
+      auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
+      CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
+      vctx[i] = vctx[idx[fwd_nid].inputs[0].node_id];
+    } else if (idx[i].control_deps.size() &&
+               vctx[idx[i].control_deps[0]].dev_type != -1) {
+      vctx[i] = vctx[idx[i].control_deps[0]];
+    } else {
+      for (const auto& in : idx[i].inputs) {
+        if (vctx[in.node_id].dev_type == -1) continue;
+        vctx[i] = vctx[in.node_id];
+        break;
+      }
+    }
+  }
+  // backward pass
+  for (int i = idx.num_nodes() - 1; i >= 0; --i) {
+    if (vctx[i].dev_type == -1) continue;
+    if (idx[i].source->op() == _copyto) {
+      auto in_nid = idx[i].inputs[0].node_id;
+      if (vctx[in_nid].dev_type != -1) continue;
+      CHECK_GT(idx[i].source->control_deps.size(), 0);
+      auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
+      CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
+      vctx[in_nid] = vctx[fwd_nid];
+      continue;
+    }
+    for (const auto& j : idx[i].inputs) {
+      if (vctx[j.node_id].dev_type != -1) continue;
+      vctx[j.node_id] = vctx[i];
+    }
+  }
+  for (size_t i = 0; i < idx.num_nodes(); ++i) {
+    CHECK_NE(vctx[i].dev_type, -1)
+        << "Cannot decide context for node " << idx[i].source->attrs.name;
+  }
+
+  return vctx;
+}
+
 
 inline MemoryPlanVector PlanMemory(
     nnvm::Graph* p_g, nnvm::StorageVector&& storage,

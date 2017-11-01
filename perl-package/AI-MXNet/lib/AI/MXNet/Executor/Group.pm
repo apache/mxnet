@@ -57,18 +57,18 @@ func _split_input_slice($batch_size, $work_load_list)
 # Load a array ref of arrays into a array ref of arrays specified by slices
 func _load_general($data, $targets, $major_axis)
 {
-    zip(sub {
-        my ($d_src, $d_targets, $axis) = @_;
+    for(zip($data, $targets, $major_axis)) {
+        my ($d_src, $d_targets, $axis) = @$_;
         if(blessed($d_targets) and $d_targets->isa('AI::MXNet::NDarray'))
         {
             $d_src->copyto($d_targets);
         }
         elsif(ref $d_targets eq 'ARRAY' and blessed $d_targets->[0])
         {
-            zip(sub {
-                my ($src, $dst) = @_;
+            for(zip($d_src, $d_targets)) {
+                my ($src, $dst) = @$_;
                 $src->copyto($dst);
-            }, $d_src, $d_targets);
+            }
         }
         else
         {
@@ -124,7 +124,7 @@ func _load_general($data, $targets, $major_axis)
                 }
             }
         }
-    }, $data, $targets, $major_axis);
+    }
 }
 
 # Load data into sliced arrays
@@ -144,8 +144,8 @@ func _load_label($batch, $targets, $major_axis)
 func _merge_multi_context($outputs, $major_axis)
 {
     my @rets;
-    zip(sub {
-        my ($tensors, $axis) = @_;
+    for(zip($outputs, $major_axis)) {
+        my ($tensors, $axis) = @$_;
         if($axis >= 0)
         {
             if(@$tensors == 1)
@@ -165,7 +165,7 @@ func _merge_multi_context($outputs, $major_axis)
             # first one, without checking they are actually the same
             push @rets, $tensors->[0];
         }
-    }, $outputs, $major_axis);
+    }
     return \@rets;
 }
 
@@ -353,9 +353,9 @@ method decide_slices(ArrayRef[AI::MXNet::DataDesc] $data_shapes)
 {
     confess("empty data_shapes array") unless @{ $data_shapes } > 0;
     my $major_axis = [map { AI::MXNet::DataDesc->get_batch_axis($_->layout) } @{ $data_shapes }];
-    zip(sub {
-        my ($desc, $axis) = @_;
-        return if($axis == -1);
+    for(zip($data_shapes, $major_axis)) {
+        my ($desc, $axis) = @$_;
+        next if($axis == -1);
         my $batch_size = $desc->shape->[$axis];
         if(defined $self->_p->batch_size)
         {
@@ -370,7 +370,7 @@ method decide_slices(ArrayRef[AI::MXNet::DataDesc] $data_shapes)
             $self->_p->batch_size($batch_size);
             $self->_p->slices(AI::MXNet::Executor::Group::_split_input_slice($self->_p->batch_size, $self->workload));
         }
-    }, $data_shapes, $major_axis);
+    }
     return $major_axis;
 }
 
@@ -590,16 +590,16 @@ method set_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::ND
 method get_params(HashRef[AI::MXNet::NDArray] $arg_params, HashRef[AI::MXNet::NDArray] $aux_params)
 {
     my $weight = 0;
-    zip(sub {
-        my ($name, $block) = @_;
+    for(zip($self->param_names, $self->_p->param_arrays)) {
+        my ($name, $block) = @$_;
             my $weight = sum(map { $_->copyto(AI::MXNet::Context->cpu) } @{ $block }) / @{ $block };
             $weight->astype($arg_params->{$name}->dtype)->copyto($arg_params->{$name});
-    }, $self->param_names, $self->_p->param_arrays);
-    zip(sub {
-        my ($name, $block) = @_;
+    }
+    for(zip($self->_p->aux_names, $self->_p->aux_arrays)) {
+        my ($name, $block) = @$_;
             my $weight = sum(map { $_->copyto(AI::MXNet::Context->cpu) } @{ $block }) / @{ $block };
             $weight->astype($aux_params->{$name}->dtype)->copyto($aux_params->{$name});
-    }, $self->_p->aux_names, $self->_p->aux_arrays);
+    }
 }
 
 
@@ -668,15 +668,15 @@ method get_output_shapes()
 {
     my @shapes = map { $_->shape } @{ $self->execs->[0]->outputs };
     my @concat_shapes;
-    zip(sub {
-        my ($key, $shape, $axis) = @_;
+    for(zip($self->symbol->list_outputs, \@shapes, $self->_p->output_layouts)) {
+        my ($key, $shape, $axis) = @$_;
         my @the_shape = @{ $shape };
         if($axis >= 0)
         {
             $the_shape[$axis] = $self->_p->batch_size;
         }
         push @concat_shapes, AI::MXNet::DataDesc->new(name => $key, shape => \@the_shape);
-    }, $self->symbol->list_outputs, \@shapes, $self->_p->output_layouts);
+    }
     return \@concat_shapes;
 }
 
@@ -765,11 +765,11 @@ method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out_grad
 {
     confess('re-bind with for_training=1 to run backward') unless $self->for_training;
     $out_grads //= [];
-    zip(sub {
-        my ($i, $exec, $islice) = @_;
+    for(zip([0..@{ $self->_p->execs }-1], $self->_p->execs, $self->_p->slices)) {
+        my ($i, $exec, $islice) = @$_;
         my @out_grads_slice;
-        zip(sub{
-            my ($grad, $axis) = @_;
+        for(zip($out_grads, $self->_p->output_layouts)) {
+            my ($grad, $axis) = @$_;
             if($axis >= 0)
             {
                 my $og_my_slice = $grad->slice_axis({
@@ -783,9 +783,9 @@ method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out_grad
             {
                 push @out_grads_slice, $grad->copyto($self->contexts->[$i]);
             }
-        }, $out_grads, $self->_p->output_layouts);
+        }
         $exec->backward(\@out_grads_slice);
-    }, [0..@{ $self->_p->execs }-1], $self->_p->execs, $self->_p->slices);
+    }
 }
 
 =head2 update_metric
@@ -802,11 +802,11 @@ method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]] $out_grad
 
 method update_metric(AI::MXNet::EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDArray] $labels)
 {
-    zip(sub {
-        my ($texec, $islice) = @_;
+    for(zip($self->_p->execs, $self->_p->slices)) {
+        my ($texec, $islice) = @$_;
         my @labels_slice;
-        zip(sub {
-            my ($label, $axis) = @_;
+        for(zip($labels, $self->_p->label_layouts)) {
+            my ($label, $axis) = @$_;
             if($axis == 0)
             {
                 # slicing NDArray along axis 0 can avoid copying
@@ -825,9 +825,9 @@ method update_metric(AI::MXNet::EvalMetric $eval_metric, ArrayRef[AI::MXNet::NDA
             {
                 push @labels_slice, $label;
             }
-        }, $labels, $self->_p->label_layouts);
+        }
         $eval_metric->update(\@labels_slice, $texec->outputs);
-    }, $self->_p->execs, $self->_p->slices);
+    }
 }
 
 method _bind_ith_exec(
@@ -841,11 +841,12 @@ method _bind_ith_exec(
     my $context = $self->contexts->[$i];
     my $shared_data_arrays = $self->_p->shared_data_arrays->[$i];
     my %input_shapes = map { $_->name => $_->shape } @{ $data_shapes };
+    my %input_types  = map { $_->name => $_->dtype } @{ $data_shapes };
     if(defined $label_shapes)
     {
         %input_shapes = (%input_shapes, map { $_->name => $_->shape } @{ $label_shapes });
+        %input_types  = (%input_types,  map { $_->name => $_->dtype } @{ $label_shapes });
     }
-    my %input_types = map { $_->name => $_->dtype } @{ $data_shapes };
     my $executor = $self->symbol->simple_bind(
         ctx              => $context,
         grad_req         => $self->grad_req,
@@ -873,8 +874,8 @@ method _bind_ith_exec(
 method _sliced_shape(ArrayRef[AI::MXNet::DataDesc] $shapes, Int $i, ArrayRef[Int] $major_axis)
 {
     my @sliced_shapes;
-    zip(sub {
-        my ($desc, $axis) = @_;
+    for(zip($shapes, $major_axis)) {
+        my ($desc, $axis) = @$_;
         my @shape = @{ $desc->shape };
         if($axis >= 0)
         {
@@ -886,7 +887,7 @@ method _sliced_shape(ArrayRef[AI::MXNet::DataDesc] $shapes, Int $i, ArrayRef[Int
             dtype   => $desc->dtype,
             layout  => $desc->layout
         );
-    }, $shapes, $major_axis);
+    }
     return \@sliced_shapes;
 }
 
