@@ -37,6 +37,7 @@
 #include "./base.h"
 #include "./storage.h"
 #include "./engine.h"
+#include "../../ps-lite/include/dmlc/DIME.h" 
 #if MKL_EXPERIMENTAL == 1
 #include <mkl_memory.h>
 #endif
@@ -73,6 +74,16 @@ class NDArray {
 #if MKL_EXPERIMENTAL == 1
     Mkl_mem_ = MKLMemHolder::create();
 #endif
+  }
+
+  std::string Summarize(int firstN=10)
+  {
+      if(is_none()) return "";
+      auto tblob = data();
+      auto ptr = (float*)tblob.dptr_;
+      auto sz = shape().Size();
+      //auto sigptr = (int*)tblob.dptr_;
+      return SummarizeContinousBuffer(ptr,sz,firstN);
   }
   /*!
    * \brief constructs a new dynamic NDArray
@@ -538,6 +549,16 @@ class NDArray {
     CHECK_EQ(storage_type(), kDefaultStorage);
     ptr_->CheckAndAlloc();
   }
+
+  /*
+   * Internally reshape NDArray.
+   */
+  inline void ReshapeInternalExact(const TShape &shape)
+  {
+      CHECK_EQ(shape.Size(), shape_.Size());
+      shape_ = shape;
+  }
+
 
   /*!
    * \brief Allocate the space if the allocation has been delayed

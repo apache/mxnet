@@ -31,7 +31,7 @@ DEV = 0
 DEBUG = 0
 
 # whether compile with profiler
-USE_PROFILER =
+USE_PROFILER = 1
 
 # whether to turn on signal handler (e.g. segfault logger)
 USE_SIGNAL_HANDLER =
@@ -47,15 +47,15 @@ ADD_CFLAGS =
 #---------------------------------------------
 
 # whether use CUDA during compile
-USE_CUDA = 0
+USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
-# USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = NONE
+USE_CUDA_PATH = /usr/local/cuda
+#USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
-USE_CUDNN = 0
+USE_CUDNN = 1
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -95,7 +95,7 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S), Darwin)
 USE_BLAS = apple
 else
-USE_BLAS = atlas
+USE_BLAS = openblas
 endif
 
 # whether use lapack during compilation
@@ -133,7 +133,7 @@ endif
 #----------------------------
 
 # whether or not to enable multi-machine supporting
-USE_DIST_KVSTORE = 0
+USE_DIST_KVSTORE = 1
 
 # whether or not allow to read and write HDFS directly. If yes, then hadoop is
 # required

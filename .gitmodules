@@ -3,10 +3,10 @@
 	url = https://github.com/dmlc/mshadow.git
 [submodule "dmlc-core"]
 	path = dmlc-core
-	url = https://github.com/dmlc/dmlc-core.git
+	url = https://github.com/Luo-Liang/dmlc-core.git
 [submodule "ps-lite"]
 	path = ps-lite
-	url = https://github.com/dmlc/ps-lite
+	url = https://github.com/Luo-Liang/ps-lite.git
 [submodule "nnvm"]
 	path = nnvm
 	url = https://github.com/dmlc/nnvm

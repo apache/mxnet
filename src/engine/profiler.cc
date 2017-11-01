@@ -31,6 +31,8 @@
 #include <iostream>
 #include <fstream>
 #include "./profiler.h"
+#include <cstdlib> 
+//#include "ps/ps.h"
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #include <Windows.h>
@@ -151,6 +153,13 @@ void Profiler::EmitEvent(std::ostream *os, const std::string& name,
 
 void Profiler::DumpProfile() {
   SetState(kNotRunning);
+  
+  
+
+  std::stringstream fName;
+  fName << "PERFDIAG-" << getenv("DMLC_TRACKER_TOTAL_ID") << ".json";
+
+  filename_ = fName.str();//c_str();
 
   std::lock_guard<std::mutex> lock{this->m_};
   std::ofstream file;
@@ -175,7 +184,7 @@ void Profiler::DumpProfile() {
 
     for (uint32_t j = 0; j < opr_num; ++j) {
       const OprExecStat* opr_stat = d.opr_exec_stats[j];
-
+      if(opr_stat->WellFormed == false) continue;
       uint32_t pid = i;
       uint32_t tid = opr_stat->thread_id;
 
@@ -227,6 +236,7 @@ void SetOprEnd(OprExecStat* opr_stat) {
     LOG(WARNING) << "SetOpEnd: nullptr";
     return;
   }
+  opr_stat->WellFormed = true;
   opr_stat->opr_end_rel_micros   = NowInUsec() - Profiler::Get()->GetInitTime();
 }
 

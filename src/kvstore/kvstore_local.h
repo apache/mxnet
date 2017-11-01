@@ -143,6 +143,10 @@ class KVStoreLocal : public KVStore {
           << "duplicate init of key " << keys[i];
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
+      if(keys[0] == 0)
+      {
+	  printf("init = %s\n", ((NDArray*)&values[0])->Summarize().c_str());
+      }
     }
   }
 
@@ -155,6 +159,11 @@ class KVStoreLocal : public KVStore {
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
+      if(keys[0] == 0)
+      {
+	  printf("grouped_vals[i][0] = %s\n", grouped_vals[i][0].Summarize().c_str());
+      }
+      
       NDArray& local = local_[key];
       if (updater_ != nullptr) {
         CHECK(!local.is_none()) << "key " << key << " has not been inited";

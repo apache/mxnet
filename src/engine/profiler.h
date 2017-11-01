@@ -57,6 +57,7 @@ struct OprExecStat {
   uint32_t dev_type;
   /*! \brief device id */
   uint32_t dev_id;
+    bool WellFormed = false;
 };
 
 /*!
@@ -113,6 +114,14 @@ class Profiler {
   OprExecStat* AddOprStat(int dev_type, uint32_t dev_id);
   /*! \return Profiler singleton */
   static Profiler* Get();
+  void DUMP(std::string fileName = "")
+  {
+      if(fileName != "")
+      { 
+	  filename_ = fileName; //override 
+      } 
+      DumpProfile();
+  };
 
  protected:
   /*! \brief make constructor protected. */
@@ -146,7 +155,6 @@ class Profiler {
   /*! \brief the profiler init time */
   uint64_t init_time_;
 };
-
 /*! \return current clock time, time unit is microsecond (10^-6 s) */
 inline uint64_t NowInUsec();
 /*! \brief set operation execution start timestamp */

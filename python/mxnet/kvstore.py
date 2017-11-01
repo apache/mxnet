@@ -63,6 +63,29 @@ def _ctype_key_value(keys, vals):
                  else c_array(ctypes.c_int, [keys] * len(vals))
         return (c_keys, c_array(NDArrayHandle, [value.handle for value in vals]), use_str_keys)
 
+def _ctype_key_value_PHUB(keys, vals):
+    """
+    Return ctype arrays for the key-value args, for internal use
+    """
+    assert(isinstance(keys,int));
+    if isinstance(vals, NDArray):
+        return (c_array(ctypes.c_int, [keys]),
+                c_array(NDArrayHandle, [vals.handle]))
+    else:
+        for value in vals:
+            #if not isinstance(value, NDArray):
+            #    print type(value), keys
+            assert(isinstance(value, NDArray))
+        #_ctypes.cast(<unsigned long long>self.chandle, _ctypes.c_void_p)
+        #ret = [ctypes.c_uint64(value.handle) for value in vals]
+        #ret = c_array(
+        #ret = np.array(ret)
+        #ret = ret.astype(np.float64);
+        #arr = nd.array(ret,None,np.uint64)
+
+        return (c_array(ctypes.c_int, [keys]),  c_array(NDArrayHandle, [value.handle for value in vals]))
+
+
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
     def updater_handle(key, lhs_handle, rhs_handle, _):
@@ -135,6 +158,12 @@ class KVStore(object):
             check_call(_LIB.MXKVStoreInitEx(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
         else:
             check_call(_LIB.MXKVStoreInit(self.handle, mx_uint(len(ckeys)), ckeys, cvals))
+    
+    #PHuB initialization routine
+    def initPHUB(self, key, value):
+        ckeys, cvals = _ctype_key_value_PHUB(key,value)
+        check_call(_LIB.MXKVStoreInitPHUB(
+            self.handle, mx_uint(key), cvals, mx_uint(len(cvals))))
 
     def push(self, key, value, priority=0):
         """ Pushes a single or a sequence of key-value pairs into the store.

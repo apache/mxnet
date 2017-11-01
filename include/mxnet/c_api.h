@@ -1530,6 +1530,13 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Initialize PHUB training parameters
+ */
+MXNET_DLL int MXInitPHUBOptimizerParam(mx_uint num, float* vals); 
+
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
@@ -1548,6 +1555,12 @@ MXNET_DLL int MXKVStoreInit(KVStoreHandle handle,
                             mx_uint num,
                             const int* keys,
                             NDArrayHandle* vals);
+
+MXNET_DLL int MXKVStoreInitPHUB(KVStoreHandle handle,
+				const int key,
+				NDArrayHandle* vals,
+				mx_uint num);
+
 
 /*!
  * \brief Init a list of (key,value) pairs in kvstore, where each key is a string

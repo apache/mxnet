@@ -34,6 +34,27 @@ from .random import normal
 
 
 class Optimizer(object):
+    def UpdateVanOptimizers(self):
+        #print "phubvk2pk:", str(self.PHUBVK2PK),"lr_mult:",str(self.lr_mult)
+        #assert len(self.PHUBVK2PK) > 0
+        #zmq may not have this.
+        if len(self.PHUBVK2PK) != 0:
+            keySize = len(self.PHUBVK2PK)
+            objCount = 2 * keySize + 2;
+            #individual learning rate and individual wd and momentum and gradscaling
+            #lr_mult
+            #wd_mult
+            vals = (ctypes.c_float * objCount)()
+            for i in range(0, keySize):
+                vals[i] = self._get_lr(self.PHUBVK2PK[i])
+                for i in range(0, keySize):
+                    vals[i + keySize] = self._get_wd(self.PHUBVK2PK[i])
+                    vals[2 * keySize] = self.momentum
+                    vals[2 * keySize + 1] = self.rescale_grad
+                    ptr = ctypes.cast(vals, ctypes.POINTER(ctypes.c_float))
+                    #print str(ptr)
+                    #raise
+                    _LIB.MXInitPHUBOptimizerParam(objCount, ptr)
     """The base class inherited by all optimizers.
 
     Parameters
@@ -102,6 +123,7 @@ class Optimizer(object):
             'param_idx2name should be a dict of param indexes to names.'
         self.idx2name = param_idx2name.copy()
         self.sym = sym
+        self.PHUBVK2PK = {}
         self.param_dict = param_dict if param_dict else {}
 
         self.set_lr_mult({})
@@ -598,6 +620,11 @@ class NAG(SGD):
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
+        #return # for sanity checks
+        #print "warning error note info phubvk2pk= ", str(self.PHUBVK2PK)
+        if index in self.PHUBVK2PK:
+            index = self.PHUBVK2PK[index]
+
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)

@@ -35,6 +35,8 @@
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
+#include "../../ps-lite/include/dmlc/DIME.h"
+
 
 namespace mxnet {
 namespace kvstore {
@@ -117,6 +119,12 @@ class KVStoreDistServer {
         std::bind(&KVStoreDistServer::DataHandleEx, this, _1, _2, _3));
     sync_mode_ = false;
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
+    auto suppress = dmlc::GetEnv("PHUB_SUPPRESS_AGGREGATOR", 0);
+    if (suppress == 1)
+    {
+	SuppressAggregator = true;
+    }
+    LOG(INFO)<<"PHUB SUPPRESS AGGREGATOR toggled?" << suppress;
   }
 
   ~KVStoreDistServer() {
@@ -129,8 +137,15 @@ class KVStoreDistServer {
   }
 
   void set_updater(const KVStore::Updater& updater)  {
-    CHECK(updater);
-    updater_ = updater;
+      auto suppress = dmlc::GetEnv("PHUB_SUPPRESS_OPTIMIZER", 0);
+      LOG(INFO) << "PHUB SUPPRESS OPTIMIZER toggled?" << suppress;
+      if (suppress == 1)
+      {
+	  updater_ = NULL;
+	  return; //dont optimize
+      }
+      CHECK(updater);
+      updater_ = updater;
   }
 
   /**
@@ -139,7 +154,21 @@ class KVStoreDistServer {
   void Run() {
     exec_.Start();
   }
+  void set_synch_mode(bool async)
+  {
+      auto asyncMode = dmlc::GetEnv("PHUB_ASYNC_MODE", 0);
+      if (asyncMode == 1)
+      {
+	  sync_mode_ = false;
+      }
+      else
+      {
+	  sync_mode_ = !async;
+      }
+      printf("PHUB ASYNC MODE toggled = %d\n", (sync_mode_ == false));
+      sync_mode_ = !async;
 
+  }
  private:
   struct MergeBuf {
     std::vector<ps::KVMeta> request;
@@ -150,7 +179,9 @@ class KVStoreDistServer {
     if (recved.head == kStopServer) {
       exec_.Stop();
     } else if (recved.head == kSyncMode) {
-      sync_mode_ = true;
+	sync_mode_ = true;
+	set_synch_mode(false);
+	
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -174,27 +205,36 @@ class KVStoreDistServer {
 
   inline void ApplyUpdates(const int key, MergeBuf *merged, NDArray *stored,
                            ps::KVServer<real_t>* server) {
-    if (merged->request.size() == (size_t) ps::NumWorkers()) {
-      // let the main thread to execute updater_, which is necessary for python
-      if (updater_) {
-        exec_.Exec([this, key, merged, stored](){
-            CHECK(updater_);
-            updater_(key, merged->array, stored);
-          });
-      } else {
-        // if no updater, just copy
-        CopyFromTo(merged->array, stored);
-      }
-      if (log_verbose_)  {
-        LOG(INFO) << "sync response to " << merged->request.size() << " workers";
-      }
-      for (const auto& req : merged->request) {
-        server->Response(req);
-      }
-      merged->request.clear();
-      stored->WaitToRead();
-    } else {
-      merged->array.WaitToRead();
+    if (merged->request.size() == (size_t) ps::NumWorkers())
+    {
+	// let the main thread to execute updater_, which is necessary for python
+	if (updater_) 
+	{
+	    exec_.Exec([this, key, merged, stored](){
+		    CHECK(updater_);
+		    updater_(key, merged->array, stored);
+		});
+	} 
+	else 
+	{
+	    // if no updater, just copy
+	    CopyFromTo(merged->array, stored);
+	}
+	if (log_verbose_)
+	{
+	    LOG(INFO) << "sync response to " << merged->request.size() << " workers";
+	}
+	for (const auto& req : merged->request)
+	{
+	    req.additionalPayload - key;
+	    server->Response(req);
+	}
+	merged->request.clear();
+	stored->WaitToRead();
+    } 
+    else 
+    {
+	merged->array.WaitToRead();
     }
   }
 
@@ -371,54 +411,81 @@ class KVStoreDistServer {
 
     int key = DecodeKey(req_data.keys[0]);
     auto& stored = store_[key];
-
+    
+    //if(key == 0)
+    //{
+    //printf("key 0 before is %s\n", stored.Summarize().c_str());
+    //}
     // there used several WaitToRead, this is because \a recved's memory
     // could be deallocated when this function returns. so we need to make sure
     // the operators with \a NDArray are actually finished
-    if (req_meta.push) {
-      size_t ds[] = {(size_t)req_data.lens[0]};
-      TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
-                      dshape, cpu::kDevMask);
-      NDArray recved = NDArray(recv_blob, 0);
-      if (stored.is_none()) {
-        // initialization
-        stored = NDArray(dshape, Context());
-        CopyFromTo(recved, &stored, 0);
-        server->Response(req_meta);
-        stored.WaitToRead();
-      } else if (sync_mode_) {
-        // synced push
-        auto& merged = merge_buf_[key];
-        if (merged.array.is_none()) {
-          merged.array = NDArray(dshape, Context());
-        }
-        if (merged.request.size() == 0) {
-          CopyFromTo(recved, &merged.array, 0);
-        } else {
-          merged.array += recved;
-        }
-        merged.request.push_back(req_meta);
-        ApplyUpdates(key, &merged, &stored, server);
-      } else {
-        // async push
-        exec_.Exec([this, key, &recved, &stored](){
-            CHECK(updater_);
-            updater_(key, recved, &stored);
-          });
-        server->Response(req_meta);
-        stored.WaitToRead();
+    if (req_meta.push) 
+    {
+	size_t ds[] = {(size_t)req_data.lens[0]};
+	TShape dshape(ds, ds + 1);
+	TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
+			dshape, cpu::kDevMask);
+	NDArray recved = NDArray(recv_blob, 0);
+	//if(key == 0)
+	//{
+	//    printf("update vector is %s\n", recved.Summarize().c_str());
+	//}
+	if (stored.is_none())
+	{
+	    // initialization
+	  stored = NDArray(dshape, Context());
+	  CopyFromTo(recved, &stored, 0);
+	  server->Response(req_meta);
+	  stored.WaitToRead();
+	} 
+	else if (sync_mode_) 
+	{
+	    // synced push
+	    auto& merged = merge_buf_[key];
+	    if (merged.array.is_none()) 
+	    {
+		merged.array = NDArray(dshape, Context());
+	    }
+	    if(SuppressAggregator == false)
+	    {
+		if (merged.request.size() == 0) 
+		{
+		    CopyFromTo(recved, &merged.array, 0);
+		} else
+		{
+		    merged.array += recved;
+		}
+	    }
+	    merged.request.push_back(req_meta);
+	    ApplyUpdates(key, &merged, &stored, server);
+	    // if(key == 0)
+	    //{
+//		printf("end of update merge %s\n", merged.array.Summarize().c_str());
+//		printf("end of update stored %s\n", stored.Summarize().c_str());
+//	    }
+	} 
+	else
+	{
+	    // async push
+	    exec_.Exec([this, key, &recved, &stored](){
+		    CHECK(updater_);
+		    updater_(key, recved, &stored);
+		});
+	    server->Response(req_meta);
+	    stored.WaitToRead();
       }
-    } else {
-      // pull
-      ps::KVPairs<real_t> response;
-      CHECK(!stored.is_none()) << "init " << key << " first";
-      auto len = stored.shape().Size();
-      response.keys = req_data.keys;
-      response.lens = {len};
-      // TODO(mli) try to remove this CopyFrom
-      response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
-      server->Response(req_meta, response);
+    } 
+    else
+    {
+	// pull
+	ps::KVPairs<real_t> response;
+	CHECK(!stored.is_none()) << "init " << key << " first";
+	auto len = stored.shape().Size();
+	response.keys = req_data.keys;
+	response.lens = {len};
+	// TODO(mli) try to remove this CopyFrom
+	response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
+	server->Response(req_meta, response);
     }
   }
 
@@ -433,7 +500,7 @@ class KVStoreDistServer {
   bool sync_mode_;
   KVStore::Controller controller_;
   KVStore::Updater updater_;
-
+  bool SuppressAggregator;
   std::unordered_map<int, NDArray> store_;
   std::unordered_map<int, MergeBuf> merge_buf_;
 
