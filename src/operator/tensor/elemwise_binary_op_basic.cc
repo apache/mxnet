@@ -105,7 +105,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
 )code")
 .set_attr<FInferStorageType>("FInferStorageType",
                              ElemwiseBinaryOp::AllowLRDenseInputWithSparseOutputStorageType<
-                               true, false>)  // 0 * nan -> nan, so rsp * dns -> dns
+                               false, false>)  // 0 * nan or nan * 0 -> nan, so rsp * dns -> dns
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
                       ElemwiseBinaryOp::ComputeDnsLRValueEx<cpu, mshadow::op::mul, true, true>)
