@@ -1622,6 +1622,7 @@ def test_expand_dims():
             assert_allclose(x1, y1.asnumpy())
             assert_allclose(x1.shape, y1.shape)
 
+
 def test_crop():
     for ndim in range(1, 6):
         for t in range(5):
