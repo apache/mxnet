@@ -627,6 +627,12 @@ class Module(BaseModule):
             _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
                                       self._kvstore, self._exec_group.param_names)
+            #_initialize_kvstore(kvstore=kvstore,
+            #                    param_arrays=self._exec_group.param_arrays,
+            #                    arg_params=self._arg_params,
+            #                    param_names=self._param_names,
+            #                    update_on_kvstore=update_on_kvstore, opt=optimizer)
+
         else:
             _update_params(self._exec_group.param_arrays,
                            self._exec_group.grad_arrays,

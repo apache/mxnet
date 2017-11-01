@@ -78,6 +78,7 @@ class NDArray {
 
   std::string Summarize(int firstN=10)
   {
+      if(is_none()) return "";
       auto tblob = data();
       auto ptr = (float*)tblob.dptr_;
       auto sz = shape().Size();

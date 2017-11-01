@@ -61,6 +61,7 @@ class KVStoreDist : public KVStoreLocal {
     }
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 512 * 1024);
     CHECK(bigarray_bound_ % 1024 == 0);
+    pinned_ctx_ = Context::CPU();
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
     printf("[note]Keys with element larger than %d will be splitted\n", bigarray_bound_);
   }
@@ -259,6 +260,7 @@ class KVStoreDist : public KVStoreLocal {
 	    comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
 	}
 	if (get_rank() == 0) {
+	    printf("Worker 0 is pushing key %d\n", keys[0]);
 	    Push_(keys, values, 0, false);
 	    // wait until the push is finished
 	    for (const auto& v : values) {
@@ -268,6 +270,7 @@ class KVStoreDist : public KVStoreLocal {
 	    for (const int key : keys) {
 		comm_buf_[key].WaitToWrite();
 	    }
+	    printf("Worker 0 has finished pushing key %d\n", keys[0]);	    
 	} else {
 	    // do nothing
 	}
@@ -320,7 +323,7 @@ class KVStoreDist : public KVStoreLocal {
 
 		//in fact, should wait on 
 		//printf("rank 0 init %d ready\n", keys[0]);
-		//LOG(INFO)<<"worker 0 setting up "<<keys.size()<<" keys";
+		LOG(INFO)<<"worker 0 setting up "<<keys.size()<<" keys";
 	    }
 	    else {
 		// do nothing
@@ -626,6 +629,11 @@ class KVStoreDist : public KVStoreLocal {
       int key = uniq_keys[i];
       auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
+      /*if(keys[0] == 0)
+      {
+	  printf("worker side. value = %s\n", ((NDArray*)&values[0])->Summarize().c_str());
+	  printf("worker side. vals[0] = %s\n", vals[0].Summarize().c_str());
+	  }*/
 
       auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
@@ -639,7 +647,7 @@ class KVStoreDist : public KVStoreLocal {
 	  {
 	      send_buf = NDArray(merged.shape(), pinned_ctx_, true, merged.dtype());
 	  }
-	  CopyFromTo(merged, &send_buf);
+	  //CopyFromTo(merged, &send_buf);
 	  // Start of a push doesn't guarantee that the previous pushes are completed.
 	  // This shouldn't affect training of networks though because training involves
 	  // a sequence of push, pull, then push. This imposes ordering that the
@@ -653,14 +661,24 @@ class KVStoreDist : public KVStoreLocal {
             send_buf = NDArray(storage_type, merged.shape(), pinned_ctx_, true, merged.dtype());
           }
         }
-        CopyFromTo(merged, &send_buf);
+        //CopyFromTo(merged, &send_buf);
+      }
+      CopyFromTo(merged, &send_buf);
+      if(key == 0)
+      {
+	  printf("worker side. vals[0] = %s, vals_cnt = %d\n", vals[0].Summarize().c_str(), vals.size());
+	  printf("worker side. send_buf = %s\n", send_buf.Summarize().c_str());
       }
       //now, each key has only one corresponding merge buffer.
       // push to servers
       size_t size = send_buf.shape().Size();
       real_t* data = static_cast<real_t*>(send_buf.data().dptr_);
+      //printf("worker ZPushing determining storage type %d\n", kDefaultStorage);
+	      
       if (storage_type == kDefaultStorage) 
       {
+	  //printf("worker ZPushing Key %d\n", key);
+
 	  auto push_to_servers =
 	      [this, key, data, size](RunContext rctx, Engine::CallbackOnComplete cb) {
 	      // convert to ps keys
@@ -694,6 +712,18 @@ class KVStoreDist : public KVStoreLocal {
 	      //queue another broadcast. this won't happen until push is done, and by which time 
 	      //with pull request elision enabled vans send_buf will be populated.
 	      comm_->Broadcast(key, send_buf, PhysicalKeyPullAddress.at(key), priority);
+	  }
+	  else
+	  {
+	      Engine::Get()->PushAsync(
+		  push_to_servers,
+		  pinned_ctx_,
+		  { send_buf.var() },
+		  {},
+		  FnProperty::kNormal,
+		  priority,
+		  PROFILER_MESSAGE("KVStoreDistDefaultPush"));
+	      //PUll elision disabled means it can be shared for read.
 	  }
       }
       else if (storage_type == kRowSparseStorage) 

@@ -63,7 +63,7 @@ endif
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0
 else
-	CFLAGS += -O3 -DNDEBUG=1
+	CFLAGS += -O3 -DNDEBUG=1 -g
 endif
 CFLAGS += -I$(ROOTDIR)/mshadow/ -I$(ROOTDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread -libverbs -lnuma -lboost_filesystem -lboost_system $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
