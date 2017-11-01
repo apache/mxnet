@@ -4313,7 +4313,7 @@ def test_two_bit_quantization():
     neg_threshold = -0.5
     pos_threshold = 0.5
     orig_shape = [(25,),(16,),(1121),(14400),(144000),(144000)]
-    num_repeat = 1
+    num_repeat = 10
     from struct import pack,unpack
 
     def bits2int(bits):
@@ -4336,11 +4336,11 @@ def test_two_bit_quantization():
         for i, a in np.ndenumerate(arr_npy):
             a += curr_res_npy[i]
             if a >= pos:
-                str_quant += '10'
+                str_quant += '11'
                 new_residual.append(a - pos)
                 decompr.append(pos)
             elif a <= neg:
-                str_quant += '01'
+                str_quant += '10'
                 new_residual.append(a - neg)
                 decompr.append(neg)
             else:
@@ -4366,8 +4366,8 @@ def test_two_bit_quantization():
         mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
         decompr = mx.nd.zeros(grad.shape)
         mx.contrib.ndarray.dequantize_2bit(compr, decompr, neg_threshold, pos_threshold)
-        assert np.array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
-        assert np.array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
+        np.testing.assert_array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
+        np.testing.assert_array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
         # use almost equal for residual as this involves addition operation
         assert_almost_equal(residual.asnumpy(), np.array(exp_residual)) , (residual, exp_residual)
 
