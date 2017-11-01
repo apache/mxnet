@@ -480,9 +480,13 @@ rpkg:
 rpkgtest:
 	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
 
+scalaclean:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn clean -P$(SCALA_PKG_PROFILE))
+
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn clean package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
+		mvn package -P$(SCALA_PKG_PROFILE) -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
