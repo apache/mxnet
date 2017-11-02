@@ -81,7 +81,7 @@ _factory = {
         ['stage3_activation1', 'stage4_activation1'], [512, 512, 256, 256],
         [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5),
     'resnet50_v1_512': SSDConfig(
-        ['stage3_activation1', 'stage4_activation1'], [512, 512, 256, 256],
+        ['stage3_activation5', 'stage4_activation2'], [512, 512, 256, 256],
         [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5),
 }
 
