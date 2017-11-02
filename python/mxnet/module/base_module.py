@@ -469,8 +469,7 @@ class BaseModule(object):
             validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
-        ndarray.waitall()
-        return       
+
         ################################################################################
         # training loop
         ################################################################################
