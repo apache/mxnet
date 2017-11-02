@@ -180,19 +180,19 @@ if __name__ == "__main__":
                         help='the init type of fcn-xs model, e.g. vgg16, fcnxs')
     parser.add_argument('--retrain', action='store_true', default=False,
                         help='true means continue training.')
-    parser.add_argument('--num_epochs', type=int, default=100,
+    parser.add_argument('--num_epochs', type=int, default=250,
                         help='number of epochs to train')
-    parser.add_argument('--lr', type=float, default=0.02,
+    parser.add_argument('--lr', type=float, default=0.005,
                         help='initial learning rate')
     parser.add_argument('--lr_factor', type=float, default=0.1,
                         help='the ratio to reduce lr on each step')
-    parser.add_argument('--lr_steps', type=str, default='2000, 3000',
+    parser.add_argument('--lr_steps', type=str, default='5000, 7000',
                         help='the epochs to reduce the lr, e.g. 30,60')
     parser.add_argument('--save_frequency', type=int, default=5,
                         help='the frequency to save model')
     parser.add_argument('--mom', type=float, default=0.9,
                         help='momentum for sgd')
-    parser.add_argument('--wd', type=float, default=0.001,
+    parser.add_argument('--wd', type=float, default=0.0005,
                         help='weight decay for sgd')
     parser.add_argument('--optimizer', type=str, default='sgd',
                         help='the optimizer type')
