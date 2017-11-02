@@ -55,6 +55,14 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
     const std::vector<NDArray>& outputs);
 
+/* For deconvolution */
+void MKLDNNDeconvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+    const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
+    const std::vector<NDArray> &out_data);
+void MKLDNNDeconvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+    const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+    const std::vector<NDArray>& outputs);
+
 }
 }
 #endif  // MXNET_USE_MKLDNN == 1
