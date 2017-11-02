@@ -10,7 +10,7 @@ def get_detection_model(name, **kwargs):
     ----------
     name : str
         Name of the model.
-    pretrained : bool
+    pretrained : int
         Whether to load the pretrained weights for model.
     classes : int
         Number of classes for the output layer.
@@ -20,7 +20,7 @@ def get_detection_model(name, **kwargs):
     Block
         The model.
     """
-    models = {'ssd_resnet18_v1': resnet18_v1,
+    models = {'ssd_512_resnet18_v1': ssd_512_resnet18_v1,
              }
     name = name.lower()
     if name not in models:

@@ -340,7 +340,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
   int width_elem = in_shape[indim - 1];
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 3, DType> data = inputs[box_nms_enum::kData]
      .get_with_shape<xpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
     Tensor<xpu, 3, DType> out = outputs[box_nms_enum::kOut]
@@ -444,7 +444,7 @@ void BoxNMSBackward(const nnvm::NodeAttrs& attrs,
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
   int width_elem = in_shape[indim - 1];
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 3, DType> out_grad = inputs[box_nms_enum::kOut]
      .get_with_shape<xpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
     Tensor<xpu, 3, DType> in_grad = outputs[box_nms_enum::kData]
@@ -545,7 +545,7 @@ void BoxOverlapForward(const nnvm::NodeAttrs& attrs,
   TShape rshape = inputs[1].shape_;
   int lsize = lshape.ProdShape(0, lshape.ndim() - 1);
   int rsize = rshape.ProdShape(0, rshape.ndim() - 1);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> lhs = inputs[0]
      .get_with_shape<xpu, 1, DType>(Shape1(lsize * 4), s);
     Tensor<xpu, 1, DType> rhs = inputs[1]
@@ -570,7 +570,7 @@ void BoxOverlapBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 2U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> in_grad_lhs = outputs[0].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> in_grad_rhs = outputs[1].FlatTo2D<xpu, DType>(s);
     // TODO(Joshua Zhang): allow backprop?
@@ -669,7 +669,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   int row = dshape[dshape.ndim() - 2];
   int col = dshape[dshape.ndim() - 1];
   int batch_size = dshape.Size() / row / col;
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> scores = inputs[0]
      .get_with_shape<xpu, 1, DType>(Shape1(dshape.Size()), s);
     Tensor<xpu, 2, DType> row_marker = outputs[0]
@@ -717,7 +717,7 @@ void BipartiteMatchingBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> in_grad = outputs[0].FlatTo2D<xpu, DType>(s);
     // TODO(Joshua Zhang): allow backprop?
     in_grad = 0;

@@ -82,9 +82,14 @@ _factory = {
         [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5),
 }
 
-def get_ssd(name, base_size, classes,
-            pretrained=(True, False), ctx=mx.cpu(), **kwargs):
-    """
+def get_ssd(name, base_size, classes, pretrained=0, ctx=mx.cpu(), **kwargs):
+    """Get SSD models.
+
+    Parameters
+    ----------
+    name : str
+        Model name
+    base_size : int
 
     """
     key = '{}_{}'.format(name, base_size)
@@ -92,13 +97,13 @@ def get_ssd(name, base_size, classes,
         raise NotImplementedError("{} not defined in model_zoo".format(key))
     c = _factory[key]
     net = SSDNet(name, c.features, c.num_filters, c.scale, c.ratios, base_size,
-                 num_classes=classes, pretrained=pretrained[0], ctx=ctx, **kwargs)
-    if pretrained[1]:
+                 num_classes=classes, pretrained=pretrained > 0, ctx=ctx, **kwargs)
+    if pretrained > 1:
         # load trained ssd model
         raise NotImplementedError("Loading pretrained model for detection is not finished.")
     return net
 
-def ssd_512_resnet18_v1(pretrained=(True, False), classes=20, ctx=mx.cpu(), **kwargs):
+def ssd_512_resnet18_v1(pretrained=0, classes=20, ctx=mx.cpu(), **kwargs):
     """SSD architecture with ResNet v1 18 layers.
 
     """

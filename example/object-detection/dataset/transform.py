@@ -261,7 +261,7 @@ class SSDAugmentation(object):
             image.det.DetRandomPadAug((0.5, 2), (1.0, 3.0)),
             image.det.DetHorizontalFlipAug(0.5),
             ForceResize(data_shape),
-            image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
+            # image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
             Transpose(),
         ])
 
@@ -271,8 +271,10 @@ class SSDAugmentation(object):
 
 class SSDAugmentation2(object):
     def __init__(self, data_shape):
-        ag_list = image.det.CreateDetAugmenter(data_shape, rand_crop=1, rand_pad=0.8,
-            rand_mirror=True)
+        ag_list = image.det.CreateDetAugmenter([3] + data_shape, rand_crop=1, rand_pad=0.8,
+            rand_mirror=True, mean=True)
+        ag_list.append(Transpose())
+        ag_list.append(Cast())
         self._augments = Compose(ag_list)
 
     def __call__(self, src, label):
