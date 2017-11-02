@@ -159,13 +159,14 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                         with ag.pause():
                             cls_targets, box_targets, box_masks = target_generator(z, y)
                             valid_cls = nd.sum(cls_targets >= 0, axis=0, exclude=True)
-                            valid_box = nd.sum(box_masks > 0, axis=0, exclude=True)
+                            valid_cls = nd.maximum(valid_cls, nd.ones_like(valid_cls))
+                            # valid_box = nd.sum(box_masks > 0, axis=0, exclude=True)
                         # super_print(y, cls_targets, box_targets)
                         # raise
                         loss1 = cls_loss(z[0], cls_targets)
-                        loss1 = loss1 * cls_targets.shape[1] / nd.maximum(valid_cls, nd.ones_like(valid_cls))
+                        loss1 = loss1 * cls_targets.shape[1] / valid_cls
                         loss2 = box_loss((z[1] - box_targets) * box_masks, nd.zeros_like(box_targets))
-                        loss2 = loss2 * box_masks.shape[1] / nd.maximum(valid_box, nd.ones_like(valid_box))
+                        loss2 = loss2 * box_masks.shape[1] / valid_cls
                         L = loss1 + loss2
                         # L = loss1
                         Ls.append(L)
