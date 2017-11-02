@@ -11,7 +11,7 @@ def parse_args():
                         help='which network to use')
     parser.add_argument('--data-shape', dest='data_shape', type=str, default='512',
                         help='image data shape, can be int or tuple')
-    parser.add_argument('--model', dest='model', type=str, default='resnet18_v1',
+    parser.add_argument('--model', dest='model', type=str, default='resnet50_v1',
                         help='base network to use, choices are models from gluon model_zoo')
     parser.add_argument('--dataset', dest='dataset', type=str, default='voc',
                         help='which dataset to use')

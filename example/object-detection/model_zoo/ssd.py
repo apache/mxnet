@@ -80,6 +80,9 @@ _factory = {
     'resnet18_v1_512': SSDConfig(
         ['stage3_activation1', 'stage4_activation1'], [512, 512, 256, 256],
         [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5),
+    'resnet50_v1_512': SSDConfig(
+        ['stage3_activation1', 'stage4_activation1'], [512, 512, 256, 256],
+        [0.1, 0.95], [[1, 2, 0.5]] + [[1, 2, 0.5, 3, 1.0/3]] * 5),
 }
 
 def get_ssd(name, base_size, classes, pretrained=0, ctx=mx.cpu(), **kwargs):
@@ -108,3 +111,9 @@ def ssd_512_resnet18_v1(pretrained=0, classes=20, ctx=mx.cpu(), **kwargs):
 
     """
     return get_ssd('resnet18_v1', 512, classes, pretrained, ctx, **kwargs)
+
+def ssd_512_resnet50_v1(pretrained=0, classes=20, ctx=mx.cpu(), **kwargs):
+    """SSD architecture with ResNet v1 50 layers.
+
+    """
+    return get_ssd('resnet50_v1', 512, classes, pretrained, ctx, **kwargs)
