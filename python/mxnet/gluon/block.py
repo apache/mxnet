@@ -414,17 +414,25 @@ class HybridBlock(Block):
         self._active = active
         super(HybridBlock, self).hybridize(active)
 
-    def infer_shape(self, *args):
-        """Infers shape of Parameters from inputs."""
+    def _infer_attrs(self, infer_fn, attr, *args):
+        """Generic infer attributes."""
         inputs, out = self._get_graph(*args)
         args, _ = _flatten(args)
-        arg_shapes, _, aux_shapes = out.infer_shape(
-            **{i.name: j.shape for i, j in zip(inputs, args)})
-        sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
-        sdict.update({name : shape for name, shape in \
-                      zip(out.list_auxiliary_states(), aux_shapes)})
+        arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
+            **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
+        sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
+        sdict.update({name : attr for name, attr in \
+                      zip(out.list_auxiliary_states(), aux_attrs)})
         for i in self.collect_params().values():
-            i.shape = sdict[i.name]
+            setattr(i, attr, sdict[i.name])
+
+    def infer_shape(self, *args):
+        """Infers shape of Parameters from inputs."""
+        self._infer_attrs('infer_shape', 'shape', *args)
+
+    def infer_type(self, *args):
+        """Infers data type of Parameters from inputs."""
+        self._infer_attrs('infer_type', 'dtype', *args)
 
     def export(self, path):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
@@ -468,6 +476,7 @@ class HybridBlock(Block):
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 except DeferredInitializationError:
                     self.infer_shape(x, *args)
+                    self.infer_type(x, *args)
                     for i in self.collect_params().values():
                         i._finish_deferred_init()
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
