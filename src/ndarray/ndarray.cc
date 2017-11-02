@@ -331,13 +331,29 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData() const {
     return nullptr;
 }
 
+void NDArray::CopyFrom(const mkldnn::memory &mem,
+    std::vector<mkldnn::primitive> &net) {
+  if (ptr_ == nullptr) {
+    LOG(FATAL) << "The NDArray hasn't been initialized";
+    return;
+  }
+  ptr_->SetMKLMem(shape_, dtype_);
+  net.push_back(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
+}
+
 std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) {
+  if (storage_type() != kMKLDNNStorage)
+    return nullptr;
+
+  if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
+    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
+    return nullptr;
+  }
+
   if (ptr_->Mkl_mem_ && ptr_->Mkl_mem_->get_primitive_desc() == desc)
     return ptr_->Mkl_mem_;
 
-  // TODO the shape should also match.
-  CHECK_EQ(storage_type(), kMKLDNNStorage);
   // TODO we should manage the memory allocation here.
   ptr_->Mkl_mem_.reset(new mkldnn::memory(desc));
   return ptr_->Mkl_mem_;
