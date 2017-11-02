@@ -191,9 +191,10 @@ class Block(object):
                 for i, c in enumerate(self._children):
                     if c is existing:
                         self._children[i] = value
-        else:
-            if isinstance(value, Block):
+            elif isinstance(value, Block):
                 self.register_child(value)
+        elif isinstance(value, Block):
+            self.register_child(value)
 
         super(Block, self).__setattr__(name, value)
 
@@ -332,6 +333,8 @@ class HybridBlock(Block):
     def __setattr__(self, name, value):
         """Registers parameters."""
         super(HybridBlock, self).__setattr__(name, value)
+        if isinstance(value, HybridBlock):
+            self._clear_cached_op()
         if isinstance(value, Parameter):
             assert name not in self._reg_params or \
                 not isinstance(self._reg_params[name], Parameter), \
@@ -340,23 +343,13 @@ class HybridBlock(Block):
                 "Block construction instead."
             self._reg_params[name] = value
 
-    def register_child(self, block):
-        if not isinstance(block, HybridBlock):
-            raise ValueError(
-                "Children of HybridBlock must also be HybridBlock, " \
-                "but %s has type %s. If you are using Sequential, " \
-                "please try HybridSequential instead"%(
-                    str(block), str(type(block))))
-        super(HybridBlock, self).register_child(block)
-
-    def hybridize(self, active=True):
-        self._active = active
-        super(HybridBlock, self).hybridize(active)
-
     def _get_graph(self, *args):
         if not self._cached_graph:
             args, self._in_format = _flatten(args)
-            inputs = [symbol.var('input_%d'%i) for i in range(len(args))]
+            if len(args) > 1:
+                inputs = [symbol.var('data%d'%i) for i in range(len(args))]
+            else:
+                inputs = [symbol.var('data')]
             grouped_inputs = _regroup(inputs, self._in_format)[0]
 
             params = {i: j.var() for i, j in self._reg_params.items()}
@@ -367,18 +360,6 @@ class HybridBlock(Block):
             self._cached_graph = inputs, symbol.Group(out)
 
         return self._cached_graph
-
-    def infer_shape(self, *args):
-        """Infers shape of Parameters from inputs."""
-        inputs, out = self._get_graph(*args)
-        args, _ = _flatten(args)
-        arg_shapes, _, aux_shapes = out.infer_shape(
-            **{i.name: j.shape for i, j in zip(inputs, args)})
-        sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
-        sdict.update({name : shape for name, shape in \
-                      zip(out.list_auxiliary_states(), aux_shapes)})
-        for i in self.collect_params().values():
-            i.shape = sdict[i.name]
 
     def _build_cache(self, *args):
         inputs, out = self._get_graph(*args)
@@ -414,6 +395,67 @@ class HybridBlock(Block):
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)[0]
+
+    def _clear_cached_op(self):
+        self._cached_graph = ()
+        self._cached_op = None
+
+    def register_child(self, block):
+        if not isinstance(block, HybridBlock):
+            raise ValueError(
+                "Children of HybridBlock must also be HybridBlock, " \
+                "but %s has type %s. If you are using Sequential, " \
+                "please try HybridSequential instead"%(
+                    str(block), str(type(block))))
+        super(HybridBlock, self).register_child(block)
+        self._clear_cached_op()
+
+    def hybridize(self, active=True):
+        self._active = active
+        super(HybridBlock, self).hybridize(active)
+
+    def infer_shape(self, *args):
+        """Infers shape of Parameters from inputs."""
+        inputs, out = self._get_graph(*args)
+        args, _ = _flatten(args)
+        arg_shapes, _, aux_shapes = out.infer_shape(
+            **{i.name: j.shape for i, j in zip(inputs, args)})
+        sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
+        sdict.update({name : shape for name, shape in \
+                      zip(out.list_auxiliary_states(), aux_shapes)})
+        for i in self.collect_params().values():
+            i.shape = sdict[i.name]
+
+    def export(self, path):
+        """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
+        or the C++ interface.
+
+        .. note:: When there are only one input, it will have name `data`. When there
+                  Are more than one inputs, they will be named as `data0`, `data1`, etc.
+
+        Parameters
+        ----------
+        path : str
+            Path to save model. Two files `path-symbol.json` and `path-0000.params`
+            will be created.
+        """
+        if not self._cached_graph:
+            raise RuntimeError(
+                "Please first call block.hybridize() and then run forward with "
+                "this block at least once before calling export.")
+        sym = self._cached_graph[1]
+        sym.save('%s-symbol.json'%path)
+
+        arg_names = set(sym.list_arguments())
+        aux_names = set(sym.list_auxiliary_states())
+        arg_dict = {}
+        for name, param in self.collect_params().items():
+            if name in arg_names:
+                arg_dict['arg:%s'%name] = param._reduce()
+            else:
+                assert name in aux_names
+                arg_dict['aux:%s'%name] = param._reduce()
+        ndarray.save('%s-0000.params'%path, arg_dict)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either

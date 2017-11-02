@@ -140,10 +140,3 @@ class Solver(object):
                 if self.iter_end_callback(i):
                     return
             exe.outputs[0].wait_to_read()
-
-
-
-
-
-
-

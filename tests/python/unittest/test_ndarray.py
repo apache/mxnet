@@ -19,7 +19,8 @@ import os
 import mxnet as mx
 import numpy as np
 import pickle as pkl
-import unittest 
+import unittest
+from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import unittest
@@ -496,6 +497,10 @@ def test_arange():
         gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
         pred = mx.nd.arange(start=start, stop=stop, step=step, repeat=repeat).asnumpy()
         assert_almost_equal(pred, gt)
+    gt = np.arange(start=0, stop=10000**2, step=10001, dtype=np.int32)
+    pred = mx.nd.arange(start=0, stop=10000**2, step=10001,
+                        dtype="int32").asnumpy()
+    assert_almost_equal(pred, gt)
 
 def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
@@ -588,6 +593,10 @@ def test_order(ctx=default_context()):
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
     gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
+    
+    # test topk with a big shape
+    a = mx.nd.arange(0, 54686454, step=1, repeat=1)
+    assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
 
 def test_ndarray_equal():
     x = mx.nd.zeros((2, 3))
@@ -729,6 +738,8 @@ def test_output():
     assert_almost_equal(out.asnumpy(), zeros.asnumpy())
     mx.nd.full(shape, 2, out=out)
     assert_almost_equal(out.asnumpy(), ones.asnumpy() * 2)
+    arange_out = mx.nd.arange(0, 20, dtype='int64')
+    assert_almost_equal(arange_out.asnumpy(), np.arange(0, 20))
 
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
@@ -737,7 +748,9 @@ def test_ndarray_fluent():
                     'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
                     'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
-                    'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square'])
+                    'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square',
+                    'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax',
+                    'reciprocal'])
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.nd.random_uniform(shape=shape, ctx=default_context())
@@ -751,11 +764,12 @@ def test_ndarray_fluent():
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
                  'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
-                 'exp', 'expm1', 'square']:
+                 'exp', 'expm1', 'square', 'reciprocal', 'argmax_channel']:
         check_fluent_regular(func, {})
 
     for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
-                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt']:
+                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
+                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax']:
         check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
@@ -773,6 +787,7 @@ def test_ndarray_fluent():
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
+    check_fluent_regular('reshape_like', {'rhs': mx.nd.ones((30, 17))}, shape=(5, 17, 2, 3))
 
     for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
         check_fluent_regular(func, {'axis': (1, 2)})
@@ -780,6 +795,14 @@ def test_ndarray_fluent():
     check_fluent_regular('reshape', {'shape': (17, 1, 5)})
     check_fluent_regular('broadcast_to', {'shape': (5, 17, 47)})
 
+@raises(ValueError)
+def test_bool_ambiguous():
+    bool(mx.nd.ones((2,3,4)))
+
+def test_bool():
+    assert not bool(mx.nd.array([]))
+    assert not bool(mx.nd.zeros((1,)))
+    assert bool(mx.nd.ones((1,)))
 
 if __name__ == '__main__':
     import nose

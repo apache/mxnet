@@ -21,6 +21,7 @@ import time
 import unittest
 import mxnet as mx
 import numpy as np
+import unittest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from numpy.testing import assert_allclose
 
@@ -33,7 +34,9 @@ from test_gluon import *
 from test_loss import *
 #from test_rnn import *
 from test_gluon_rnn import *
-from test_sparse_ndarray import test_create_csr, test_create_row_sparse
+from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
+from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse
+from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -1358,7 +1361,7 @@ def test_rnn_layer():
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
-
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8211")
 def test_autograd_save_memory():
     x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
     x.attach_grad()
@@ -1418,6 +1421,32 @@ def test_cuda_rtc():
     saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
     assert (y.asnumpy() == 12).all()
 
+
+def test_cross_device_autograd():
+    x = mx.nd.random.uniform(shape=(10,))
+    x.attach_grad()
+
+    with mx.autograd.record():
+        y = mx.nd.tanh(x)
+        y = y.copyto(mx.gpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.cpu(0))
+        y = mx.nd.tanh(y)
+        y = y.copyto(mx.gpu(0))
+        y = y.copyto(mx.gpu(0))
+
+        y.backward()
+
+    dx = x.grad.asnumpy()
+    x.grad[:] = 0
+
+    with mx.autograd.record():
+        y = x
+        for i in range(3):
+            y = mx.nd.tanh(y)
+        y.backward()
+
+    assert_almost_equal(dx, x.grad.asnumpy())
 
 if __name__ == '__main__':
     import nose

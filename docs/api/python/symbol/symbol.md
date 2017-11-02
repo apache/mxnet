@@ -143,7 +143,21 @@ Composite multiple symbols into a new one by an operator.
 
     Symbol.sqrt
     Symbol.rsqrt
+    Symbol.cbrt
+    Symbol.rcbrt
     Symbol.square
+```
+
+## Basic neural network functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    Symbol.relu
+    Symbol.sigmoid
+    Symbol.softmax
+    Symbol.log_softmax
 ```
 
 #### Comparison operators
@@ -178,6 +192,7 @@ Composite multiple symbols into a new one by an operator.
 
     Symbol.astype
     Symbol.reshape
+    Symbol.reshape_like
     Symbol.flatten
     Symbol.expand_dims
 ```
@@ -246,6 +261,7 @@ Composite multiple symbols into a new one by an operator.
     Symbol.topk
     Symbol.argmax
     Symbol.argmin
+    Symbol.argmax_channel
 ```
 
 ### Query information
@@ -355,6 +371,7 @@ Composite multiple symbols into a new one by an operator.
 
     cast
     reshape
+    reshape_like
     flatten
     expand_dims
 ```
@@ -391,6 +408,7 @@ Composite multiple symbols into a new one by an operator.
 
     concat
     split
+    stack
 ```
 
 ### Indexing routines
@@ -424,7 +442,6 @@ Composite multiple symbols into a new one by an operator.
     broadcast_div
     broadcast_mod
     negative
-    reciprocal
     dot
     batch_dot
     add_n
@@ -492,7 +509,6 @@ Composite multiple symbols into a new one by an operator.
     trunc
 ```
 
-
 ### Exponents and logarithms
 
 ```eval_rst
@@ -519,9 +535,10 @@ Composite multiple symbols into a new one by an operator.
     cbrt
     rcbrt
     square
+    reciprocal
 ```
 
-### Logic functions
+### Comparison
 
 ```eval_rst
 .. autosummary::
@@ -534,6 +551,7 @@ Composite multiple symbols into a new one by an operator.
     broadcast_lesser
     broadcast_lesser_equal
 ```
+
 ### Random sampling
 
 ```eval_rst
@@ -561,6 +579,18 @@ Composite multiple symbols into a new one by an operator.
     argsort
     argmax
     argmin
+    argmax_channel
+```
+
+### Sequence operation
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    SequenceLast
+    SequenceMask
+    SequenceReverse
 ```
 
 ### Miscellaneous
@@ -596,6 +626,8 @@ Composite multiple symbols into a new one by an operator.
     SoftmaxOutput
     softmax
     log_softmax
+    relu
+    sigmoid
 ```
 
 ### More

@@ -129,7 +129,7 @@ class CommCPU : public Comm {
       if (buf.copy_buf.empty()) {
         buf.copy_buf.resize(src.size()-1);
         for (size_t j = 0; j < src.size() - 1; ++j) {
-          // allocate NDArray basd on storage type
+          // allocate NDArray based on storage type
           buf.copy_buf[j] = NDArray(
             src[0].shape(), pinned_ctx_, false, src[0].dtype());
         }
@@ -264,7 +264,7 @@ class CommCPU : public Comm {
     CHECK_EQ(indices.dtype(), dst->aux_type(rowsparse::kIdx))
       << "CopyRetainedRowsToGPU only supports same data type for idx array and dst aux_data(0)";
     if (!src.storage_initialized() || indices.data().Size() == 0U) {
-      op::FillZerosRspImpl(gpu_stream, dst);
+      op::FillZerosRspImpl(gpu_stream, *dst);
       return;
     }
     using namespace mshadow;

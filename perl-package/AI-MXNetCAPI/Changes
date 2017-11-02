@@ -1,6 +1,9 @@
 Revision history for Perl extension AI::MXNetCAPI
 
-1.0102 Sun Aug  6 16:55:08 PDT 2017
+1.1     Sun Oct  1 10:19:08 PDT 2017
+        - support for perl 5.14, Gluon, cuda kernels
+
+1.0102  Sun Aug  6 16:55:08 PDT 2017
         - updated autograd calls.
 
 1.0101  Sun Jul  2 17:16:01 PDT 2017

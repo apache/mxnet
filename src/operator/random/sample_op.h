@@ -28,9 +28,11 @@
 #include <mshadow/base.h>
 #include <string>
 #include <vector>
+#include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../tensor/init_op.h"
+#include "./sampler.h"
 
 namespace mxnet {
 namespace op {
@@ -55,9 +57,9 @@ struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -84,9 +86,9 @@ struct SampleNormalParam : public dmlc::Parameter<SampleNormalParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -113,9 +115,9 @@ struct SampleGammaParam : public dmlc::Parameter<SampleGammaParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -139,9 +141,9 @@ struct SampleExponentialParam : public dmlc::Parameter<SampleExponentialParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -165,9 +167,9 @@ struct SamplePoissonParam : public dmlc::Parameter<SamplePoissonParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -194,9 +196,9 @@ struct SampleNegBinomialParam : public dmlc::Parameter<SampleNegBinomialParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -223,9 +225,9 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", kFloat32)
+    .add_enum("float64", kFloat64)
+    .add_enum("float16", kFloat16)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to float32 if not defined (dtype=None).");
@@ -237,13 +239,194 @@ using FSampleCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                            const OpReqType& req,
                                            TBlob* outputs)>;
 
+using mxnet::TBlob;
+
+// Convenience class that transfers a host based scalar into an
+// array on either the host or the device. Needed as
+// the core samplers expect parameters to be tensors located on the
+// appropriate device.
 template<typename xpu>
+Context AllocContext();
+template<>
+MSHADOW_FORCE_INLINE Context AllocContext<cpu>() { return Context::CPU(); }
+template<>
+MSHADOW_FORCE_INLINE Context AllocContext<gpu>() { return Context::GPU(); }
+
+template<typename xpu, typename DType>
+struct Scalar2Array {
+  Storage::Handle array;
+  Scalar2Array(DType scalar, const OpContext& ctx) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    array = Storage::Get()->Alloc(sizeof(DType), AllocContext<xpu>());
+    Tensor<xpu, 1, DType> src(Ref(), Shape1(1), s);
+    Copy(src, Tensor<cpu, 1, DType>(&scalar, Shape1(1)), s);
+  }
+  ~Scalar2Array() {
+    Storage::Get()->Free(array);
+  }
+  DType *Ref() { return static_cast<DType*>(array.dptr); }
+  Tensor<xpu, 1, DType> GetTensor() { return Tensor<xpu, 1, DType>(Ref(), Shape1(1)); }
+};
+
+// Convienience function to generate the required number of seeds for sampling
+template<typename xpu>
+MSHADOW_FORCE_INLINE Tensor<xpu, 1, unsigned int> GetSeeds(index_t N, const OpContext& ctx) {
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const index_t nSeeds(OptSampleSeedNum<xpu>(N));
+  Tensor<xpu, 1, unsigned int> seeds
+    = ctx.requested[1].get_space_typed<xpu, 1, unsigned int>(Shape1(nSeeds), ctx.get_stream<xpu>());
+  ctx.requested[0].get_random<xpu, float>(s)->GetRandInt(seeds);
+  return seeds;
+}
+
+template<typename xpu, typename Sampler>
+struct SampleMaster;
+
+template<typename xpu>
+struct SampleMaster<xpu, UniformSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
+    CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
+    Scalar2Array<xpu, float> low(param.low, ctx), high(param.high, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    UniformSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(low.GetTensor(), high.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu>
+struct SampleMaster<xpu, NormalSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleNormalParam& param = nnvm::get<SampleNormalParam>(attrs.parsed);
+    CHECK_GT(param.scale, 0) << "scale parameter in gaussian has to be positive";
+    Scalar2Array<xpu, float> loc(param.loc, ctx), scale(param.scale, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    NormalSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(loc.GetTensor(), scale.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu>
+struct SampleMaster<xpu, GammaSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleGammaParam& param = nnvm::get<SampleGammaParam>(attrs.parsed);
+    CHECK_GT(param.alpha, 0) << "alpha parameter in gamma distribution has to be positive";
+    CHECK_GT(param.beta, 0) << "beta parameter in gamma distribution has to be positive";
+    Scalar2Array<xpu, float> alpha(param.alpha, ctx), beta(param.beta, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    GammaSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(alpha.GetTensor(), beta.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu>
+struct SampleMaster<xpu, ExponentialSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleExponentialParam& param = nnvm::get<SampleExponentialParam>(attrs.parsed);
+    CHECK_GT(param.lam, 0) << "lambda parameter in exponential distribution has to be positive";
+    Scalar2Array<xpu, float> lam(param.lam, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    ExponentialSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(lam.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu>
+struct SampleMaster<xpu, PoissonSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SamplePoissonParam& param = nnvm::get<SamplePoissonParam>(attrs.parsed);
+    CHECK_GE(param.lam, 0) << "lambda parameter in poisson distribution has to be non-negative";
+    Scalar2Array<xpu, float> lam(param.lam, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    PoissonSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(lam.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu>
+struct SampleMaster<xpu, NegativeBinomialSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleNegBinomialParam& param = nnvm::get<SampleNegBinomialParam>(attrs.parsed);
+    CHECK_GE(param.k, 0) << "k parameter in negative binomial distribution has to be non-negative";
+    CHECK_GE(param.p, 0) << "p parameter in negative binomial distribution has to be non-negative";
+    Scalar2Array<xpu, float> k(param.k, ctx), p(param.p, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    NegativeBinomialSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(k.GetTensor(), p.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu>
+struct SampleMaster<xpu, GeneralizedNegativeBinomialSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleGenNegBinomialParam& param = nnvm::get<SampleGenNegBinomialParam>(attrs.parsed);
+    CHECK_GE(param.mu, 0)
+      << "mu parameter in generalized negative binomial distribution has to be non-negative";
+    CHECK_GE(param.alpha, 0)
+      << "alpha parameter in generalized negative binomial distribution has to be non-negative";
+    Scalar2Array<xpu, float> mu(param.mu, ctx), alpha(param.alpha, ctx);
+    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
+    GeneralizedNegativeBinomialSampler<xpu> sampler;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(mu.GetTensor(), alpha.GetTensor(), out, seeds, s);
+    });
+  }
+};
+
+template<typename xpu, typename Sampler>
 void SampleComputeEx_(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<NDArray>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs,
-                      FSampleCompute fcomp) {
+                      SampleMaster<xpu, Sampler> sample_master) {
   NDArray output = outputs[0];
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (output.storage_type() == kRowSparseStorage) {
@@ -253,196 +436,31 @@ void SampleComputeEx_(const nnvm::NodeAttrs& attrs,
     PopulateFullIdxRspImpl(s, &output);
     // data
     TBlob out_blob = output.data();
-    fcomp(attrs, ctx, req[0], &out_blob);
+    sample_master.op(attrs, ctx, req[0], &out_blob);
   } else {
     LOG(FATAL) << "Unexpected storage type for SampleComputeEx_: "
                << output.storage_type();
   }
 }
 
-template<typename xpu>
-void SampleUniformDnsImpl(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx,
-                          const OpReqType& req,
-                          TBlob* output) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
-  MSHADOW_REAL_TYPE_SWITCH(output->type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = output->FlatTo2D<xpu, DType>(s);
-    prnd->SampleUniform(&out, param.low, param.high);
-  });
-}
-
-template<typename xpu>
-void SampleUniform_(const nnvm::NodeAttrs& attrs,
-                    const OpContext& ctx,
-                    const std::vector<TBlob>& inputs,
-                    const std::vector<OpReqType>& req,
-                    const std::vector<TBlob>& outputs) {
+template<typename xpu, typename Sampler>
+void Sample_(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<TBlob>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<TBlob>& outputs) {
   TBlob out = outputs[0];
-  SampleUniformDnsImpl<xpu>(attrs, ctx, req[0], &out);
+  SampleMaster<xpu, Sampler>::op(attrs, ctx, req[0], &out);
 }
 
-
-template<typename xpu>
-void SampleUniformEx_(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<NDArray>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<NDArray>& outputs) {
-  SampleComputeEx_<xpu>(attrs, ctx, inputs, req, outputs, SampleUniformDnsImpl<xpu>);
-}
-
-template<typename xpu>
-void SampleNormalDnsImpl(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const OpReqType& req,
-                         TBlob* outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleNormalParam& param = nnvm::get<SampleNormalParam>(attrs.parsed);
-  CHECK_GT(param.scale, 0) << "scale parameter in gaussian has to be positive";
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleGaussian(&out, param.loc, param.scale);  // NOLINT(*)
-  });
-}
-
-template<typename xpu>
-void SampleNormal_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  TBlob out = outputs[0];
-  SampleNormalDnsImpl<xpu>(attrs, ctx, req[0], &out);
-}
-
-template<typename xpu>
-void SampleNormalEx_(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<NDArray>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<NDArray>& outputs) {
-  SampleComputeEx_<xpu>(attrs, ctx, inputs, req, outputs, SampleNormalDnsImpl<xpu>);
-}
-
-template<typename xpu>
-void SampleGammaDnsImpl(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const OpReqType& req,
-                        TBlob* outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleGammaParam& param = nnvm::get<SampleGammaParam>(attrs.parsed);
-  CHECK_GT(param.alpha, 0) << "alpha parameter in gamma distribution has to be positive";
-  CHECK_GT(param.beta, 0) << "beta parameter in gamma distribution has to be positive";
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleGamma(&out, param.alpha, param.beta);  // NOLINT(*)
-  });
-}
-
-template<typename xpu>
-void SampleGamma_(const nnvm::NodeAttrs& attrs,
-                  const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
-  TBlob out = outputs[0];
-  SampleGammaDnsImpl<xpu>(attrs, ctx, req[0], &out);
-}
-
-template<typename xpu>
-void SampleGammaEx_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<NDArray>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<NDArray>& outputs) {
-  SampleComputeEx_<xpu>(attrs, ctx, inputs, req, outputs, SampleGammaDnsImpl<xpu>);
-}
-
-template<typename xpu>
-void SampleExponential_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleExponentialParam& param = nnvm::get<SampleExponentialParam>(attrs.parsed);
-  CHECK_GT(param.lam, 0) << "lambda parameter in exponential distribution has to be positive";
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleExponential(&out, param.lam);  // NOLINT(*)
-  });
-}
-
-template<typename xpu>
-void SamplePoisson_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SamplePoissonParam& param = nnvm::get<SamplePoissonParam>(attrs.parsed);
-  CHECK_GE(param.lam, 0) << "lambda parameter in poisson distribution has to be non-negative";
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SamplePoisson(&out, param.lam);  // NOLINT(*)
-  });
-}
-
-template<typename xpu>
-void SampleNegBinomial_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleNegBinomialParam& param = nnvm::get<SampleNegBinomialParam>(attrs.parsed);
-  CHECK_GE(param.k, 0) << "k parameter in negative binomial distribution has to be non-negative";
-  CHECK_GE(param.p, 0) << "p parameter in negative binomial distribution has to be non-negative";
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleNegativeBinomial(&out, param.k, param.p);  // NOLINT(*)
-  });
-}
-
-template<typename xpu>
-void SampleGenNegBinomial_(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mxnet::op;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const SampleGenNegBinomialParam& param = nnvm::get<SampleGenNegBinomialParam>(attrs.parsed);
-  CHECK_GE(param.mu, 0)
-    << "mu parameter in generalized negative binomial distribution has to be non-negative";
-  CHECK_GE(param.alpha, 0)
-    << "alpha parameter in generalized negative binomial distribution has to be non-negative";
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Random<xpu, DType> *prnd = ctx.requested[0].get_random<xpu, DType>(s);
-    mshadow::Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    prnd->SampleGeneralizedNegativeBinomial(&out, param.mu, param.alpha);  // NOLINT(*)
-  });
+template<typename xpu, typename Sampler>
+void SampleEx_(const nnvm::NodeAttrs& attrs,
+               const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs) {
+  SampleMaster<xpu, Sampler> sample_master;
+  SampleComputeEx_<xpu, Sampler>(attrs, ctx, inputs, req, outputs, sample_master);
 }
 
 template<typename ParamType>
@@ -469,14 +487,14 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
       dtype = param.dtype;
     } else {
       // Use default
-      dtype = mshadow::kFloat32;
+      dtype = kFloat32;
     }
   }
-  bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||
-  (dtype == mshadow::kFloat64);
+  bool dtype_ok = (dtype == kFloat16) || (dtype == kFloat32) ||
+  (dtype == kFloat64);
   CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, or float64: dtype is "
-  << dtype_out << " vs " << mshadow::kFloat16 << " or " << mshadow::kFloat32 << " or "
-  << mshadow::kFloat64;
+  << dtype_out << " vs " << kFloat16 << " or " << kFloat32 << " or "
+  << kFloat64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 }

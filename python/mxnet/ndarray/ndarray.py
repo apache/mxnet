@@ -30,6 +30,7 @@ except ImportError:
 import ctypes
 import warnings
 import operator
+from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_array, mx_real_t
@@ -38,7 +39,7 @@ from ..base import ctypes2buffer
 from ..context import Context
 from . import _internal
 from . import op
-from .op import NDArrayBase
+from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "divide", "equal", "full", "greater", "greater_equal",
@@ -285,6 +286,10 @@ fixed-size items.
         """x.__eq__(y) <=> x==y <=> mx.nd.equal(x, y) """
         return equal(self, other)
 
+    def __hash__(self):
+        """Default hash function."""
+        return id(self)//16
+
     def __ne__(self, other):
         """x.__ne__(y) <=> x!=y <=> mx.nd.not_equal(x, y) """
         return not_equal(self, other)
@@ -306,8 +311,14 @@ fixed-size items.
         return lesser_equal(self, other)
 
     def __bool__(self):
-        raise ValueError("The truth value of an NDArray is ambiguous. " \
-                         "Please convert to number with asscalar() first.")
+        num_elements = reduce(operator.mul, self.shape, 1)
+        if num_elements == 0:
+            return False
+        elif num_elements == 1:
+            return bool(self.asscalar())
+        else:
+            raise ValueError("The truth value of an NDArray with multiple elements " \
+                             "is ambiguous.")
 
     __nonzero__ = __bool__
 
@@ -729,6 +740,14 @@ fixed-size items.
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
+    def reshape_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reshape_like`.
+
+        The arguments are the same as for :py:func:`reshape_like`, with
+        this array as data.
+        """
+        return op.reshape_like(self, *args, **kwargs)
+
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
 
@@ -856,6 +875,14 @@ fixed-size items.
         this array as data.
         """
         return op.argmax(self, *args, **kwargs)
+
+    def argmax_channel(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`argmax_channel`.
+
+        The arguments are the same as for :py:func:`argmax_channel`, with
+        this array as data.
+        """
+        return op.argmax_channel(self, *args, **kwargs)
 
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
@@ -1217,6 +1244,22 @@ fixed-size items.
         """
         return op.rsqrt(self, *args, **kwargs)
 
+    def cbrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`cbrt`.
+
+        The arguments are the same as for :py:func:`cbrt`, with
+        this array as data.
+        """
+        return op.cbrt(self, *args, **kwargs)
+
+    def rcbrt(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`rcbrt`.
+
+        The arguments are the same as for :py:func:`rcbrt`, with
+        this array as data.
+        """
+        return op.rcbrt(self, *args, **kwargs)
+
     def square(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`square`.
 
@@ -1224,6 +1267,46 @@ fixed-size items.
         this array as data.
         """
         return op.square(self, *args, **kwargs)
+
+    def reciprocal(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`reciprocal`.
+
+        The arguments are the same as for :py:func:`reciprocal`, with
+        this array as data.
+        """
+        return op.reciprocal(self, *args, **kwargs)
+
+    def relu(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`relu`.
+
+        The arguments are the same as for :py:func:`relu`, with
+        this array as data.
+        """
+        return op.relu(self, *args, **kwargs)
+
+    def sigmoid(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`sigmoid`.
+
+        The arguments are the same as for :py:func:`sigmoid`, with
+        this array as data.
+        """
+        return op.sigmoid(self, *args, **kwargs)
+
+    def softmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmax`.
+
+        The arguments are the same as for :py:func:`softmax`, with
+        this array as data.
+        """
+        return op.softmax(self, *args, **kwargs)
+
+    def log_softmax(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`log_softmax`.
+
+        The arguments are the same as for :py:func:`log_softmax`, with
+        this array as data.
+        """
+        return op.log_softmax(self, *args, **kwargs)
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
@@ -1775,8 +1858,10 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    out = empty(shape, ctx, dtype) if out is None else out
-    out[:] = val
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    out = _internal._full(shape=shape, ctx=ctx, dtype=dtype, value=val, out=out)
     return out
 
 
@@ -1862,11 +1947,11 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
 
     Parameters
     ----------
-    start : float, optional
+    start : number, optional
         Start of interval. The default start value is 0.
-    stop : float
+    stop : number
         End of interval.
-    step : float, optional
+    step : number, optional
         Spacing between values. The default step size is 1.
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.
