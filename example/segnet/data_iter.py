@@ -23,7 +23,6 @@ import numpy as np
 import random
 import sys, os
 from mxnet.io import DataIter
-from PIL import Image
 
 class FileIter(DataIter):
     """FileIter object in fcn-xs example. Taking a file list file to get dataiter.
@@ -94,11 +93,10 @@ class FileIter(DataIter):
         return list(data.items()), list(label.items())
 
     def _read_img(self, img_name, label_name):
-        img = Image.open(os.path.join(self.root_dir, img_name))
-        label = Image.open(os.path.join(self.root_dir, label_name))
-        assert img.size == label.size
-        img = np.array(img, dtype=np.float32)  # (h, w, c)
-        label = np.array(label)  # (h, w)
+        img = mx.image.imread(os.path.join(self.root_dir, img_name))
+        label = mx.image.imread(os.path.join(self.root_dir, label_name), flag=0)
+        img = img.astype('float32')
+        label = label.astype('float32')
         if self.cut_off_size is not None:
             max_hw = max(img.shape[0], img.shape[1])
             min_hw = min(img.shape[0], img.shape[1])
@@ -119,13 +117,11 @@ class FileIter(DataIter):
                 else :
                     img = img[:, rand_start : rand_start + min_hw]
                     label = label[:, rand_start : rand_start + min_hw]
-        reshaped_mean = self.mean.reshape(1, 1, 3)
+        reshaped_mean = self.mean.reshape((1, 1, 3))
         img = img - reshaped_mean
-        img = np.swapaxes(img, 0, 2)
-        img = np.swapaxes(img, 1, 2)  # (c, h, w)
-        img = np.expand_dims(img, axis=0)  # (1, c, h, w)
-        label = np.array(label)  # (h, w)
-        label = np.expand_dims(label, axis=0)  # (1, h, w)
+        img = mx.nd.moveaxis(img, 2, 0)
+        img = mx.nd.expand_dims(img, axis=0)
+        label = mx.nd.moveaxis(label, 2, 0)
         return (img, label)
 
     @property

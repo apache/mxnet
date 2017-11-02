@@ -48,22 +48,22 @@ def read_img(args):
     """
     read picture to numpy.array
     """
-    img = Image.open(os.path.join(args.image_path, args.image_name))
-    img = np.array(img, dtype=np.float32)
-    mean = np.array([float(i) for i in args.rgb_mean.split(',')])
-    reshaped_mean = mean.reshape(1, 1, 3)
+    img = mx.image.imread(os.path.join(args.image_path, args.image_name))
+    img = img.astype('float32')
+    mean = mx.nd.array([float(i) for i in args.rgb_mean.split(',')])
+    reshaped_mean = mean.reshape((1, 1, 3))
     img = img - reshaped_mean
-    img = np.swapaxes(img, 0, 2)
-    img = np.swapaxes(img, 1, 2)  # (c, h, w)
-    img = np.expand_dims(img, axis=0)
+    img = mx.nd.moveaxis(img, 2, 0)
+    img = mx.nd.expand_dims(img, axis=0)
     return img
 
 def read_label(args):
     """
     read label to numpy.array
     """
-    label = Image.open(os.path.join(args.label_path, args.label_name))
-    label = np.array(label)
+    label = mx.image.imread(os.path.join(args.label_path, args.label_name), flag=0)
+    label = label.astype('float32')
+    label = mx.nd.moveaxis(label, 2, 0)
     return label
 
 def score(args):
@@ -79,7 +79,6 @@ def score(args):
     # create data iterator
     img = read_img(args)
     label = read_label(args)
-    label_nd = mx.ndarray.array(label).reshape((1, 360, 480))
     data_shape = tuple([int(i) for i in args.image_shape.split(',')])
     batch_data = mx.ndarray.array(img[0])
     batch_data = batch_data.reshape((tuple([1]) + data_shape))
@@ -100,9 +99,9 @@ def score(args):
     mod.forward(data, is_train=False)
     out_img = np.uint8(np.squeeze(mod.get_outputs()[0].asnumpy().argmax(axis=1)))
     metric.reset()
-    metric.update([label_nd], [mod.get_outputs()[0]])
+    metric.update([label], [mod.get_outputs()[0]])
     logging.info(metric.get())
-    out_img = Image.fromarray(out_img)
+    out_img = Image.fromarray(np.uint8(label[0].asnumpy()))
     out_img.putpalette(pallete)
     out_img.save('res_pic/' + args.image_name)
     out_label = Image.fromarray(label)

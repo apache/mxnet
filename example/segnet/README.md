@@ -103,4 +103,4 @@ The program will output segment result and label in a package named "res_pic".
 
 The left one is a label picture with 11 classes. The right one below is a segment result.
 
-![label2](ref/label2.png) ![res2](ref/res2.png)
+![label2](https://user-images.githubusercontent.com/13029886/32312590-9120270e-bfd9-11e7-9fdb-de29aece2422.png) ![res2](https://user-images.githubusercontent.com/13029886/32312591-9159ea7a-bfd9-11e7-8658-e3fa1ce90bf2.png)
