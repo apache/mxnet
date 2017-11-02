@@ -271,7 +271,7 @@ class SSDAugmentation(object):
 
 class SSDAugmentation2(object):
     def __init__(self, data_shape):
-        ag_list = image.det.CreateDetAugmenter([3] + data_shape, rand_crop=1, rand_pad=0.8,
+        ag_list = image.det.CreateDetAugmenter([3] + data_shape, rand_crop=0.8, rand_pad=0.8,
             rand_mirror=True, mean=True, std=True)
         ag_list.append(Transpose())
         ag_list.append(Cast())

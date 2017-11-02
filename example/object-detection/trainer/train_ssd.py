@@ -56,7 +56,8 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
     val_data = DataLoader(val_dataset, batch_size, False, last_batch='keep')
 
     net = model_zoo.get_detection_model(model, pretrained=pretrained, classes=num_class, ctx=ctx)
-
+    if dev:
+        print(net)
 
     def ctx_as_list(ctx):
         if isinstance(ctx, mx.Context):
