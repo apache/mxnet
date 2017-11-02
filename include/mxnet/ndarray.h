@@ -556,6 +556,7 @@ class NDArray {
       const mkldnn::memory::primitive_desc &desc,
       std::vector<mkldnn::primitive> &net) const;
 
+  void CopyFrom(const mkldnn::memory &mem, std::vector<mkldnn::primitive> &net);
   std::shared_ptr<mkldnn::memory> CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
 #endif
