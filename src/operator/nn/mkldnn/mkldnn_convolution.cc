@@ -218,15 +218,24 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
   std::vector<mkldnn::primitive> net;
+  std::shared_ptr<mkldnn::memory> in_grad_mem, in_grad_weight;
   if (req[conv::kData]) {
     mkldnn::convolution_backward_data::primitive_desc bwdData_pd
       = GetConvBwdData(param, data_desc, weight_desc, out_grad_desc, cpu_engine, fwd_pd);
     CHECK(bwdData_pd.diff_dst_primitive_desc() == out_grad_mem->get_primitive_desc());
     CHECK(bwdData_pd.weights_primitive_desc() == weight_mem->get_primitive_desc());
-    auto in_grad_mem = const_cast<NDArray &>(in_grad[conv::kData]).CreateMKLDNNData(
+
+    in_grad_mem = const_cast<NDArray &>(in_grad[conv::kData]).CreateMKLDNNData(
         bwdData_pd.diff_src_primitive_desc());
+    bool copy_back = false;
+    if (in_grad_mem == nullptr) {
+      in_grad_mem = CreateMKLDNNMem(bwdData_pd.diff_src_primitive_desc());
+      copy_back = true;
+    }
     net.push_back(mkldnn::convolution_backward_data(bwdData_pd, *out_grad_mem,
           *weight_mem, *in_grad_mem));
+    if (copy_back)
+      const_cast<NDArray &>(in_grad[conv::kData]).CopyFrom(*in_grad_mem, net);
   }
   if (req[conv::kWeight]) {
     mkldnn::convolution_backward_weights::primitive_desc bwdWeights_pd
@@ -234,14 +243,22 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
           cpu_engine, fwd_pd, in_grad_bias);
     CHECK(bwdWeights_pd.diff_dst_primitive_desc() == out_grad_mem->get_primitive_desc());
     CHECK(bwdWeights_pd.src_primitive_desc() == data_mem->get_primitive_desc());
-    auto in_grad_weight = const_cast<NDArray &>(in_grad[conv::kWeight]).CreateMKLDNNData(
+    in_grad_weight = const_cast<NDArray &>(in_grad[conv::kWeight]).CreateMKLDNNData(
         bwdWeights_pd.diff_weights_primitive_desc());
+    bool copy_back = false;
+    if (in_grad_weight == nullptr) {
+      in_grad_weight = CreateMKLDNNMem(bwdWeights_pd.diff_weights_primitive_desc());
+      copy_back = true;
+    }
     if (param.no_bias) {
       net.push_back(mkldnn::convolution_backward_weights(bwdWeights_pd,
             *data_mem, *out_grad_mem, *in_grad_weight));
     } else {
       net.push_back(mkldnn::convolution_backward_weights(bwdWeights_pd,
             *data_mem, *out_grad_mem, *in_grad_weight, *in_grad_bias));
+    }
+    if (copy_back) {
+      const_cast<NDArray &>(in_grad[conv::kWeight]).CopyFrom(*in_grad_weight, net);
     }
   }
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
