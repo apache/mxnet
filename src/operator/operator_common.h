@@ -412,8 +412,8 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 
 // check whether all output grads are zero.
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
-  const auto zero_op = nnvm::Op::Get("_zeros");
-  const auto zero_like_op = nnvm::Op::Get("zeros_like");
+  static const auto zero_op = nnvm::Op::Get("_zeros");
+  static const auto zero_like_op = nnvm::Op::Get("zeros_like");
   if (!ograds.size()) return false;
   for (const auto& grad : ograds) {
     if (!grad.node) return false;
