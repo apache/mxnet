@@ -120,6 +120,12 @@ inline static std::shared_ptr<const mkldnn::memory> GetWeights(const NDArray &ar
   }
 }
 
+inline static std::shared_ptr<mkldnn::memory> CreateMKLDNNMem(
+    const mkldnn::memory::primitive_desc &desc) {
+  // TODO allocate memory more efficiently.
+  return std::shared_ptr<mkldnn::memory>(new mkldnn::memory(desc));
+}
+
 }  // namespace mxnet
 #endif
 #endif  // MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
