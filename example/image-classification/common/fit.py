@@ -179,12 +179,12 @@ def fit(args, network, data_loader, **kwargs):
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 
-    if args.network == 'alexnet':
+   # if args.network == 'alexnet':
         # AlexNet will not converge using Xavier
-        initializer = mx.init.Normal()
-    else:
-        initializer = mx.init.Xavier(
-            rnd_type='gaussian', factor_type="in", magnitude=2)
+    initializer = mx.init.Normal(0.75)
+#    else:
+ #       initializer = mx.init.Xavier(
+  #          rnd_type='gaussian', factor_type="in", magnitude=2)
     # initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34),
 
     # evaluation metrices
