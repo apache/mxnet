@@ -81,8 +81,9 @@ class Accuracy(mx.metric.EvalMetric):
             mx.metric.check_label_shapes(label, pred_label)
 
             self.sum_metric += (pred_label.flat == label.flat).sum()
-            self.num_inst -= len(label[label == self.ignore_label])
             self.num_inst += len(pred_label.flat)
+            self.sum_metric -= len(pred_label[pred_label == self.ignore_label])
+            self.num_inst -= len(label[label == self.ignore_label])
 
 class CrossEntropy(mx.metric.EvalMetric):
     """Computes Cross Entropy loss.
