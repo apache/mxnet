@@ -14,7 +14,7 @@ import model_zoo
 from block.loss import *
 from block.target import *
 from block.coder import MultiClassDecoder, NormalizedBoxCenterDecoder
-from trainer.metric import Accuracy, SmoothL1, LossRecorder
+from trainer.metric import Accuracy, SmoothL1, LossRecorder, MultiBoxMetric
 from trainer.debugger import super_print, find_abnormal
 
 def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, wd, log_interval=50,
@@ -35,7 +35,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
         fh = logging.FileHandler(log_file)
         logger.addHandler(fh)
 
-    if isinstance(seed, int):
+    if isinstance(seed, int) and seed > 0:
         random.seed(seed)
 
     data_shape = [int(x) for x in data_shape.split(',')]
@@ -119,20 +119,21 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
     def train(net, train_data, val_data, epochs, ctx=mx.cpu()):
         ctx = ctx_as_list(ctx)
         target_generator = SSDTargetGenerator()
-        box_weight = 5.0
+        box_weight = None
         net.initialize(mx.init.Uniform(), ctx=ctx)
         net.collect_params().reset_ctx(ctx)
         net.hybridize()
         trainer = gluon.Trainer(net.collect_params(), 'sgd',
             {'learning_rate': lr, 'wd': wd, 'momentum':momentum})
         # cls_loss = FocalLoss(num_class=(num_class+1), weight=1.0)
-        cls_loss = SoftmaxCrossEntropyLoss()
+        cls_loss = SoftmaxCrossEntropyLoss(size_average=False)
         # box_loss = gluon.loss.L1Loss()
-        box_loss = SmoothL1Loss(weight=box_weight)
+        box_loss = SmoothL1Loss(weight=box_weight, size_average=False)
         cls_metric = Accuracy(axis=-1, ignore_label=-1)
         box_metric = SmoothL1()
         cls_metric1 = LossRecorder('CrossEntropy')
         box_metric1 = LossRecorder('SmoothL1Loss')
+        # debug_metric = MultiBoxMetric()
 
         for epoch in range(epochs):
             tic = time.time()
@@ -164,9 +165,13 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                         # super_print(y, cls_targets, box_targets)
                         # raise
                         loss1 = cls_loss(z[0], cls_targets)
-                        loss1 = loss1 * cls_targets.shape[1] / valid_cls
-                        loss2 = box_loss((z[1] - box_targets) * box_masks, nd.zeros_like(box_targets))
-                        loss2 = loss2 * box_masks.shape[1] / valid_cls
+                        valid_cls1 = nd.sum(valid_cls).asscalar()
+                        # print(valid_cls1)
+                        # loss1 = loss1 * cls_targets.shape[1] / valid_cls
+                        loss1 = loss1 / valid_cls1
+                        loss2 = box_loss(z[1] * box_masks, box_targets)
+                        # loss2 = loss2 * box_masks.shape[1] / valid_cls
+                        loss2 = loss2 / valid_cls1
                         L = loss1 + loss2
                         # L = loss1
                         Ls.append(L)
@@ -183,6 +188,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                 # box_metric.update(box_labels, box_preds)
                 cls_metric1.update(losses1)
                 box_metric1.update(losses2)
+                # debug_metric.update(cls_targets, [nd.softmax(z[0]).transpose((0, 2, 1)), nd.smooth_l1((z[1] - box_targets) * box_masks, scalar=1.0), cls_targets])
                 if log_interval and not (i + 1) % log_interval:
                     # print(checker.grad())
                     name, acc = cls_metric.get()
@@ -190,6 +196,8 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                     name2, focalloss = cls_metric1.get()
                     name3, smoothl1loss = box_metric1.get()
                     logging.info("Epoch [%d] Batch [%d], Speed: %f samples/sec, %s=%f, %s=%f, %s=%f"%(epoch, i, batch_size/(time.time()-btic), name, acc, name2, focalloss, name3, smoothl1loss))
+                    # names, values = debug_metric.get()
+                    # logging.info("%s=%f, %s=%f"%(names[0], values[0], names[1], values[1]))
                 btic = time.time()
 
             name, acc = cls_metric.get()

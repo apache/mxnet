@@ -39,15 +39,9 @@ def parse_args():
     parser.add_argument('--log', dest='log_file', type=str, default="train.log",
                         help='Save training log to file')
     parser.add_argument('--seed', dest='seed', type=int, default=123,
-                        help="Random seed.")
+                        help="Random seed, -1 to disable fixed seed.")
     parser.add_argument('--dev', type=int, default=0,
                         help="Turn on develop mode with verbose informations.")
-    # parser.add_argument('--mean-r', dest='mean_r', type=float, default=123,
-    #                     help='red mean value')
-    # parser.add_argument('--mean-g', dest='mean_g', type=float, default=117,
-    #                     help='green mean value')
-    # parser.add_argument('--mean-b', dest='mean_b', type=float, default=104,
-    #                     help='blue mean value')
     # parser.add_argument('--lr-steps', dest='lr_refactor_step', type=str, default='80, 160',
     #                     help='refactor learning rate at specified epochs')
     # parser.add_argument('--lr-factor', dest='lr_refactor_ratio', type=str, default=0.1,

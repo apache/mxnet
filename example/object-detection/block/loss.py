@@ -16,15 +16,19 @@ class SmoothL1Loss(loss.Loss):
     SmoothL1 is introduced in
 
     """
-    def __init__(self, sigma=1., weight=None, batch_axis=0, **kwargs):
+    def __init__(self, sigma=1., weight=None, batch_axis=0, size_average=True, **kwargs):
         super(SmoothL1Loss, self).__init__(weight, batch_axis, **kwargs)
         self._sigma = sigma
+        self._size_average = size_average
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
         loss = F.smooth_l1(pred - label, scalar=self._sigma)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        if self._size_average:
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
+        else:
+            return F.sum(loss, axis=self._batch_axis, exclude=True)
 
 
 class SoftmaxCrossEntropyLoss(loss.Loss):
@@ -91,12 +95,13 @@ class SoftmaxCrossEntropyLoss(loss.Loss):
           batch_axis are averaged out.
     """
     def __init__(self, axis=-1, sparse_label=True, from_logits=False, weight=None,
-                 batch_axis=0, ignore_label=-1, **kwargs):
+                 batch_axis=0, ignore_label=-1, size_average=True, **kwargs):
         super(SoftmaxCrossEntropyLoss, self).__init__(weight, batch_axis, **kwargs)
         self._axis = axis
         self._sparse_label = sparse_label
         self._from_logits = from_logits
         self._ignore_label = ignore_label
+        self._size_average = size_average
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         if not self._from_logits:
@@ -109,7 +114,11 @@ class SoftmaxCrossEntropyLoss(loss.Loss):
             label = _reshape_like(F, label, pred)
             loss = -F.sum(pred*label, axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        if self._size_average:
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
+        else:
+            return F.sum(loss, axis=self._batch_axis, exclude=True)
+
 
 
 class FocalLoss(loss.Loss):
@@ -122,7 +131,7 @@ class FocalLoss(loss.Loss):
     """
     def __init__(self, axis=-1, alpha=0.25, gamma=2, sparse_label=True,
                  from_logits=False, batch_axis=0, weight=None, num_class=None,
-                 eps=1e-12, **kwargs):
+                 eps=1e-12, size_average=True, **kwargs):
         super(FocalLoss, self).__init__(weight, batch_axis, **kwargs)
         self._axis = axis
         self._alpha = alpha
@@ -133,6 +142,7 @@ class FocalLoss(loss.Loss):
         self._num_class = num_class
         self._from_logits = from_logits
         self._eps = eps
+        self._size_average = size_average
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
         # find_inf(output, 'output')
@@ -178,4 +188,7 @@ class FocalLoss(loss.Loss):
         # print(F.sum(loss,axis=self._batch_axis, exclude=True))
         # raise
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        if self._size_average:
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
+        else:
+            return F.sum(loss, axis=self._batch_axis, exclude=True)

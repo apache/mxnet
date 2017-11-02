@@ -52,6 +52,9 @@ class SSDTargetGenerator(Block):
         # ref = nd.contrib.MultiBoxTarget(*[predictions[2], labels, predictions[0].transpose(axes=(0, 2, 1))], negative_mining_ratio=3)
         # loc_target, loc_mask, ref_cls_target = ref
         # print('diff', np.sum(np.abs(ref_cls_target.asnumpy().flatten() - cls_targets.asnumpy().flatten())))
+        # print('diff2', np.sum(np.abs(loc_target.asnumpy().flatten() - box_targets.asnumpy().flatten())))
+        # print('diff3', np.sum(np.abs(loc_mask.asnumpy().flatten() - box_masks.asnumpy().flatten())))
+        # raise
         # super_print(np.array([ref_cls_target[0].asnumpy(), cls_targets[0].asnumpy()]).transpose((1, 0)))
         # print('where', np.where(ref_cls_target[0].asnumpy() == 0))
         # print('where2', np.where(cls_targets[0].asnumpy() == 0))
