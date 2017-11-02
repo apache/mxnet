@@ -18,7 +18,7 @@ class LossRecorder(mx.metric.EvalMetric):
             if isinstance(loss, mx.nd.NDArray):
                 loss = loss.asnumpy()
             self.sum_metric += loss.sum()
-            self.num_inst += loss.size
+            self.num_inst += 1
 
 class Accuracy(mx.metric.EvalMetric):
     """

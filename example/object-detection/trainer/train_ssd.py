@@ -101,7 +101,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                 # print('anchors', anchors)
                 boxes = box_decoder(box_preds, anchors)
                 boxes = nd.clip(boxes, 0.0, 1.0)
-                cls_ids, scores = cls_decoder(nd.sigmoid(cls_preds))
+                cls_ids, scores = cls_decoder(nd.softmax(cls_preds))
                 result = nd.concat(cls_ids.reshape((0, 0, 1)), scores.reshape((0, 0, 1)), boxes, dim=2)
                 # print(boxes)
                 # print(cls_ids)
