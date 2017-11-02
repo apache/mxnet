@@ -681,6 +681,7 @@ def test_sparse_eye():
             k = k_array[i]
             same(mx.nd.sparse.eye(stype, N, M, k).asnumpy(), np.eye(N, M, k))
 
+
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):
         """Test power law distribution
