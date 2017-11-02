@@ -134,7 +134,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
                << strerror(errno);
   }
 
-  if (is_new) ftruncate(fid, size);
+  if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
 
   ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
