@@ -509,7 +509,8 @@ class CSRNDArray(BaseSparseNDArray):
         indices = self.indices.asnumpy()
         indptr = self.indptr.asnumpy()
         if not spsp:
-            raise ImportError("scipy is not available. Please check if the scipy python bindings are installed.")
+            raise ImportError("scipy is not available. \
+                               Please check if the scipy python bindings are installed.")
         return spsp.csr_matrix((data, indices, indptr), shape=self.shape, dtype=self.dtype)
 
 # pylint: disable=abstract-method
