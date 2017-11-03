@@ -943,7 +943,7 @@ class CommNCCL : public Comm {
   template <typename T>
   size_t FindRootId(const std::vector<T>& vec, int root) {
     size_t root_id = -1;
-    for (size_t i = 0; i < dst.size(); ++i) {
+    for (size_t i = 0; i < vec.size(); ++i) {
       if (ptr(vec[i])->ctx().dev_id == root) {
         root_id = i;
         break;
