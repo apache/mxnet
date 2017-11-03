@@ -104,7 +104,7 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
     int num_groups = 1) {
-  if (arr.shape().ndim() == 4 && num_groups == 1) {
+  if (num_groups == 1) {
     return GetMemDesc(arr);
   }
   else {
