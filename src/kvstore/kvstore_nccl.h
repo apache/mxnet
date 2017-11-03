@@ -81,7 +81,7 @@ class KVStoreNCCL : public KVStoreLocal {
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority - i);
+      const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority - i);
       if (grouped_vals[i].size() > 1) {
         // We issued NCCL kernels, need to synchronize
         nccl_called = true;
