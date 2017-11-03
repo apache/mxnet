@@ -73,7 +73,6 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   auto data_mem = in_data[fullc::kData].GetMKLDNNData();
   auto data_desc = data_mem->get_primitive_desc().desc();
   auto cpu_engine = data_mem->get_primitive_desc().get_engine();
-  CHECK_EQ(in_data[fullc::kWeight + 1].shape().ndim(), 2);
   auto weight_mem = GetWeights(in_data[fullc::kWeight], cpu_engine);
   auto weight_desc = weight_mem->get_primitive_desc().desc();
   auto out_mem = const_cast<NDArray &>(out_data[fullc::kOut]).GetMKLDNNData();
@@ -112,7 +111,6 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   auto data_mem = inputs[fullc::kData + 1].GetMKLDNNData();
   auto data_desc = data_mem->get_primitive_desc().desc();
   auto cpu_engine = data_mem->get_primitive_desc().get_engine();
-  CHECK_EQ(inputs[fullc::kWeight + 1].shape().ndim(), 2);
   auto weight_mem = GetWeights(inputs[fullc::kWeight + 1], cpu_engine);
   auto weight_desc = weight_mem->get_primitive_desc().desc();
   std::shared_ptr<const mkldnn::memory> in_grad_bias;
@@ -123,6 +121,7 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   std::vector<mkldnn::primitive> net;
+  mkldnn_mem_ptr in_grad_mem, in_grad_weight;
   if (req[fullc::kData]) {
     mkldnn::inner_product_backward_data::desc ipBwdData_desc(data_desc, weight_desc,
         out_grad_desc);
@@ -130,18 +129,30 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
         cpu_engine, ipFwd_pd);
     CHECK(ipBwdData_pd.diff_dst_primitive_desc() == out_grad_mem->get_primitive_desc());
     CHECK(ipBwdData_pd.weights_primitive_desc() == weight_mem->get_primitive_desc());
-    auto in_grad_mem = const_cast<NDArray &>(in_grad[fullc::kData]).CreateMKLDNNData(
+    in_grad_mem = const_cast<NDArray &>(in_grad[fullc::kData]).CreateMKLDNNData(
         ipBwdData_pd.diff_src_primitive_desc());
+    bool copy_back = false;
+    if (in_grad_mem == nullptr) {
+      in_grad_mem = CreateMKLDNNMem(ipBwdData_pd.diff_src_primitive_desc());
+      copy_back = true;
+    }
     net.push_back(mkldnn::inner_product_backward_data(ipBwdData_pd, *out_grad_mem,
           *weight_mem, *in_grad_mem));
+    if (copy_back)
+      const_cast<NDArray &>(in_grad[fullc::kData]).CopyFrom(*in_grad_mem, net);
   }
   if (req[fullc::kWeight]) {
     mkldnn::inner_product_backward_weights::primitive_desc ipBwdWeights_pd = GetIPBwd(
         data_desc, weight_desc, out_grad_desc, cpu_engine, ipFwd_pd, in_grad_bias);
     CHECK(ipBwdWeights_pd.diff_dst_primitive_desc() == out_grad_mem->get_primitive_desc());
     CHECK(ipBwdWeights_pd.src_primitive_desc() == data_mem->get_primitive_desc());
-    auto in_grad_weight = const_cast<NDArray &>(in_grad[fullc::kWeight]).CreateMKLDNNData(
+    in_grad_weight = const_cast<NDArray &>(in_grad[fullc::kWeight]).CreateMKLDNNData(
         ipBwdWeights_pd.diff_weights_primitive_desc());
+    bool copy_back_weight = false;
+    if (in_grad_weight == nullptr) {
+      in_grad_weight = CreateMKLDNNMem(ipBwdWeights_pd.diff_weights_primitive_desc());
+      copy_back_weight = true;
+    }
     if (param.no_bias) {
       net.push_back(mkldnn::inner_product_backward_weights(ipBwdWeights_pd,
             *data_mem, *out_grad_mem, *in_grad_weight));
@@ -149,6 +160,8 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       net.push_back(mkldnn::inner_product_backward_weights(ipBwdWeights_pd,
             *data_mem, *out_grad_mem, *in_grad_weight, *in_grad_bias));
     }
+    if (copy_back_weight)
+      const_cast<NDArray &>(in_grad[fullc::kWeight]).CopyFrom(*in_grad_weight, net);
   }
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
 }
