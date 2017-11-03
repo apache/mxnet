@@ -46,9 +46,10 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
         # dataset
         num_class = 20
         t = transform.SSDAugmentation2(data_shape)
+        t2 = transform.SSDAugmentation(data_shape)
         train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'trainval'), (2012, 'trainval')], transform=t)
         # train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'train')], transform=transform)
-        val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=t)
+        val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=t2)
     else:
         raise NotImplementedError("Dataset {} not supported.".format(dataset))
 
