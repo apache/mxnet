@@ -39,10 +39,10 @@ NNVM_REGISTER_OP(expand_dims)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(slice)
-.set_attr<FCompute>("FCompute<gpu>", Slice<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_slice)
-.set_attr<FCompute>("FCompute<gpu>", SliceBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_slice_assign)
 .set_attr<FCompute>("FCompute<gpu>", SliceAssign<gpu>);

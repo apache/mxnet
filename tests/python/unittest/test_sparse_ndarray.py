@@ -131,6 +131,21 @@ def test_sparse_nd_slice():
     result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
     assert same(result_dense.asnumpy(), result.asnumpy())
 
+    def check_slice_nd_csr_fallback(shape):
+        stype = 'csr'
+        A, _ = rand_sparse_ndarray(shape, stype)
+        A2 = A.asnumpy()
+        start = rnd.randint(0, shape[0] - 1)
+        end = rnd.randint(start + 1, shape[0])
+
+        # non-trivial step should fallback to dense slice op
+        result = mx.nd.sparse.slice(A, begin=(start,), end=(end + 1,), step=(2,))
+        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start,), end=(end + 1,), step=(2,))
+        assert same(result_dense.asnumpy(), result.asnumpy())
+
+    shape = (rnd.randint(2, 10), rnd.randint(1, 10))
+    check_slice_nd_csr_fallback(shape)
+
 
 def test_sparse_nd_equal():
     for stype in ['row_sparse', 'csr']:
