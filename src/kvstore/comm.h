@@ -677,7 +677,7 @@ class CommNCCL : public Comm {
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
     if (stype == kDefaultStorage) {
-      sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
+      key_attrs_.push_back(std::make_tuple(key, shape, dtype));
     } else {
       LOG(FATAL) << "NCCL KVStore does not support sparse storage type";
     }
@@ -920,20 +920,18 @@ class CommNCCL : public Comm {
   using KeyAttrs = std::tuple<int, TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
-    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
-      int key  = std::get<0>(sorted_key_attrs_[i]);
-      TShape s = std::get<1>(sorted_key_attrs_[i]);
-      int type = std::get<2>(sorted_key_attrs_[i]);
+    for (size_t i = 0; i < key_attrs_.size(); ++i) {
+      int key  = std::get<0>(key_attrs_[i]);
+      TShape s = std::get<1>(key_attrs_[i]);
+      int type = std::get<2>(key_attrs_[i]);
       auto& buf = merge_buf_[key];
-      Context ctx;
       // use devs[0] as root
-      ctx = devs[0];
-      buf.merged = NDArray(s, ctx, false, type);
+      buf.merged = NDArray(s, devs[0], false, type);
     }
     inited_ = true;
   }
 
-  std::vector<KeyAttrs> sorted_key_attrs_;
+  std::vector<KeyAttrs> key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the merged value
