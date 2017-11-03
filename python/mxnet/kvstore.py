@@ -528,6 +528,8 @@ class KVStore(object):
         body : str
             the body of the command.
         """
+        if isinstance(body, bytes):
+            body = body.decode()
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
