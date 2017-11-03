@@ -75,7 +75,7 @@ class KVStoreNCCL : public KVStoreLocal {
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPushHelper(keys, values, &uniq_keys, &grouped_vals);
 
-    std::vector<NDArray*> merged_ptrs;
+    std::vector<const NDArray*> merged_ptrs;
     std::vector<NDArray*> local_ptrs;
     bool nccl_called = false;
 
