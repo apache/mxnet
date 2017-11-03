@@ -81,8 +81,11 @@ class Comm {
       int key, const NDArray& src,
       const std::vector<NDArray*> dst, int priority) = 0;
 
+#if MXNET_USE_NCCL
+  // Functions that wait for NCCL collective to complete
   virtual void CommSync(const std::vector<const NDArray*>& dst, int priority) { }
   virtual void CommSync(const std::vector<NDArray>& dst, int priority) { }
+#endif  // MXNET_USE_NCCL
 
   /**
    * \brief broadcast src to dst[i] with target row_ids for every i
@@ -700,6 +703,7 @@ class CommNCCL : public Comm {
       InitMergeBuffer(devs);
     }
 
+    // Check whether we got the same set of devices
     std::vector<int> dev_ids;
     for (auto e : src) {
       dev_ids.push_back(e.ctx().dev_id);
@@ -709,13 +713,7 @@ class CommNCCL : public Comm {
 
     auto& buf = merge_buf_[key];
     int root = buf.merged.ctx().dev_id;
-    size_t root_id = -1;
-    for (size_t i = 0; i < src.size(); ++i) {
-      if (src[i].ctx().dev_id == root) {
-        root_id = i;
-        break;
-      }
-    }
+    size_t root_id = FindRootId(src, root);
 
     auto& reduce = buf.merged;
 
@@ -825,13 +823,9 @@ class CommNCCL : public Comm {
       auto& buf = merge_buf_[key];
       int root = src.ctx().dev_id;
       assert(root == buf.ctx().dev_id);
-      size_t root_id = -1;
-      for (size_t i = 0; i < dst.size(); ++i) {
-        if (dst[i]->ctx().dev_id == root) {
-          root_id = i;
-          break;
-        }
-      }
+      size_t root_id = FindRootId(dst, root);
+
+      // Check whether we got the same set of devices
       std::vector<int> dev_ids;
       for (size_t i = 0; i < dst.size(); ++i) {
         auto& bcast = (i == root_id) ? src : *(dst[i]);
@@ -839,14 +833,20 @@ class CommNCCL : public Comm {
       }
       std::sort(dev_ids.begin(), dev_ids.end());
       CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
+
+      // On root perform simple copy to the output
       CopyFromTo(src, dst[root_id], priority);
       if (dst.size() == 1) return;
+
+      // Broadcast to other devices
       std::vector<Engine::VarHandle> mutable_vars;
       for (size_t i = 0; i < dst.size(); ++i) {
         if ( i != root_id) {
           mutable_vars.push_back(dst[i]->var());
         }
       }
+      // We need to capture NDArrays by value
+      // in order to push to the engine
       std::vector<NDArray> broadcast(dst.size());
       for(size_t i = 0; i < dst.size(); ++i) {
         broadcast[i] = *(dst[i]);
@@ -918,17 +918,38 @@ class CommNCCL : public Comm {
   }
 
   using KeyAttrs = std::tuple<int, TShape, int>;
-  // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
     for (size_t i = 0; i < key_attrs_.size(); ++i) {
       int key  = std::get<0>(key_attrs_[i]);
       TShape s = std::get<1>(key_attrs_[i]);
       int type = std::get<2>(key_attrs_[i]);
       auto& buf = merge_buf_[key];
-      // use devs[0] as root
+      // always use devs[0] as root
       buf.merged = NDArray(s, devs[0], false, type);
     }
     inited_ = true;
+  }
+
+  // Functions that enable templates to work on both references
+  // and pointers
+  template<typename T>
+  T * ptr(T & obj) { return &obj; }
+
+  template<typename T>
+  T * ptr(T * obj) { return obj; }
+
+  // Find which element of the vector
+  // corresponds to root dev_id
+  template <typename T>
+  size_t FindRootId(const std::vector<T>& vec, int root) {
+    size_t root_id = -1;
+    for (size_t i = 0; i < dst.size(); ++i) {
+      if (ptr(vec[i])->ctx().dev_id == root) {
+        root_id = i;
+        break;
+      }
+    }
+    return root_id;
   }
 
   std::vector<KeyAttrs> key_attrs_;
