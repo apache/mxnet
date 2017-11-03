@@ -422,7 +422,7 @@ def convert_pooling(net, node, module, builder):
 
 
 def convert_batchnorm(net, node, module, builder):
-    """Convert a transpose layer from mxnet to coreml.
+    """Convert a batchnorm layer from mxnet to coreml.
 
     Parameters
     ----------
