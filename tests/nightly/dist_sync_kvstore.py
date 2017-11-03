@@ -59,14 +59,13 @@ def init_kv():
     return kv, my_rank, nworker
 
 def init_kv_compressed(kv):
-    pos_threshold = 0.5
-    neg_threshold = -0.5
-    kv.set_compress({'compress': '2bit', 'pos_threshold': pos_threshold, 'neg_threshold': neg_threshold})
+    threshold = 0.5
+    kv.set_gradient_compression({'compression': '2bit', 'threshold':threshold})
     # init kv compression keys
     kv.init('11221', mx.nd.zeros(big_shape))
     kv.init('112221', mx.nd.zeros(irregular_shape))
     kv.init('1121', mx.nd.zeros(shape))
-    return kv, pos_threshold, neg_threshold
+    return kv, threshold
 
 def test_sync_push_pull():
     kv, my_rank, nworker = init_kv()
@@ -184,7 +183,7 @@ def test_sync_push_pull():
                 expected[row] = updated_val[row]
             check_diff_to_scalar(val, expected, rank=my_rank)
 
-    def check_compr_residual(kv, pos_threshold, nworker):
+    def check_compr_residual(kv, threshold, nworker):
         for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             # doesn't meet threshold
             kv.push(k, mx.nd.ones(s)*0.4)
@@ -193,10 +192,10 @@ def test_sync_push_pull():
             check_diff_to_scalar(val, 0)
 
             # just meets threshold with residual
-            kv.push(k, mx.nd.ones(s)*(pos_threshold - 0.4))
+            kv.push(k, mx.nd.ones(s)*(threshold - 0.4))
             val2 = mx.nd.zeros(s)
             kv.pull(k,val2)
-            curval = pos_threshold * rate * nworker
+            curval = threshold * rate * nworker
             check_diff_to_scalar(val2, curval)
 
             # doesn't meet threshold
@@ -206,22 +205,22 @@ def test_sync_push_pull():
             check_diff_to_scalar(val3, curval)
 
             # exceeds again
-            kv.push(k, mx.nd.ones(s)*(pos_threshold-0.2))
+            kv.push(k, mx.nd.ones(s)*(threshold-0.2))
             val4 = mx.nd.zeros(s)
             kv.pull(k,val4)
-            curval += pos_threshold*rate*nworker
+            curval += threshold*rate*nworker
             check_diff_to_scalar(val4, curval)
             # residual is 0 now
 
-    def check_compr_ones(kv, pos, nworker):
+    def check_compr_ones(kv, threshold, nworker):
         for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             val = mx.nd.zeros(s)
             kv.pull(k, val)
             curval = val[0][0].asnumpy()[0]
-            kv.push(k,mx.nd.ones(s)*pos)
+            kv.push(k,mx.nd.ones(s)*threshold)
             val2 = mx.nd.zeros(s)
             kv.pull(k, val2)
-            newval = curval + rate*nworker*pos
+            newval = curval + rate*nworker*threshold
             check_diff_to_scalar(val2, newval)
             # residual = 0  again
 
@@ -239,7 +238,7 @@ def test_sync_push_pull():
             kv.pull(k, val)
             check_diff_to_scalar(val, 0)
 
-    def check_compr_random(kv, pos, neg, nworker):
+    def check_compr_random(kv, threshold, nworker):
         # set a seed so all workers generate same data. knowing this helps
         # calculate expected value after pull
         mx.random.seed(123)
@@ -258,9 +257,9 @@ def test_sync_push_pull():
             diff = val - orig_val
             # compute expected by directly using operators
             compr = mx.contrib.nd.create_2bit(grad_cpy)
-            mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, neg, pos)
+            mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, threshold)
             decompr = mx.nd.zeros(grad.shape)
-            mx.contrib.ndarray.dequantize_2bit(compr, decompr)
+            mx.contrib.ndarray.dequantize_2bit(compr, decompr, threshold)
 
             decompr *= nworker * rate
             assert_almost_equal(diff.asnumpy(), decompr.asnumpy())
@@ -273,12 +272,12 @@ def test_sync_push_pull():
     print('worker ' + str(my_rank) + ' is done with non compression tests')
 
     # don't run non compressed keys after this as kvstore now is set to compressed
-    kv, pos, neg = init_kv_compressed(kv)
+    kv, threshold = init_kv_compressed(kv)
     check_compr_pull_before_push(kv)
     check_compr_zero(kv)
-    check_compr_residual(kv, pos, nworker)
-    check_compr_ones(kv, pos, nworker)
-    check_compr_random(kv, pos, neg, nworker)
+    check_compr_residual(kv, threshold, nworker)
+    check_compr_ones(kv, threshold, nworker)
+    check_compr_random(kv, threshold, nworker)
     print('worker ' + str(my_rank) + ' is done with compression tests')
 
 def test_sync_init():

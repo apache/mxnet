@@ -30,6 +30,7 @@
 #include <string>
 #include <functional>
 #include <atomic>
+#include <kvstore/gc.h>
 #include "./ndarray.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "ps/ps.h"
@@ -66,12 +67,11 @@ class KVStore {
 
   /**
    * \brief Set parameters to use low-bit compressed gradients
-   * \param compress type of compression
-   * \param neg_threshold set the negative threshold for 2bit compression
-   * \param pos_threshold set the positive threshold for 2bit compression
+   * \param compression_type type of compression
+   * \param threshold set the threshold for 2bit compression
    */
-  virtual void SetCompress(const std::string& compress, const float neg_threshold,
-                           const float pos_threshold) = 0;
+  virtual void SetGradientCompression(const std::string& compression_type,
+                                      const float threshold) = 0;
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -396,21 +396,12 @@ class KVStore {
    */
   std::string type_;
 
-  /**
-   * \brief Specifies whether or not to use compressed gradients
-   * Can be `none` or `2bit` for now
+  /** \brief gradient compression
+   * starts with none, used after SetGradientCompression sets the type
+   * currently there is no support for unsetting gradient compression
    */
-  std::string compress_ = "none";
+  Gc* gc_;
 
-  /**
-   * \brief positive threshold for 2bit compression
-   */
-  float pos_threshold_ = 0.5;
-
-  /**
-   * \brief negative threshold for 2bit compression
-   */
-  float neg_threshold_ = -0.5;
 
   /**
    * \brief whether to do barrier when finalize

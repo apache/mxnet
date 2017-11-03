@@ -53,7 +53,8 @@ def parse_args():
                         help='number of classes')
     parser.add_argument('--optimizer', type=str, default='None',
                         help='the optimizer set to kvstore. None means no optimizer')
-    parser.add_argument('--compress', type=str, default='none')
+    parser.add_argument('--gc-type', type=str, default='none',
+                        help='type of gradient compression')
     args = parser.parse_args()
     logging.info(args)
     return args
@@ -73,11 +74,11 @@ def error(gpu_res, cpu_res):
     return res
 
 def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
-        num_batches, test_results, compress, **kwargs):
+        num_batches, test_results, gc_type, **kwargs):
     # create kvstore and optimizer
     devs = [mx.gpu(int(i)) for i in gpus.split(',')]
     kv = mx.kv.create(kv_store)
-    kv.set_compress({'compress':compress,'pos_threshold':0.5, 'neg_threshold':-0.5})
+    kv.set_gradient_compression({'compression': gc_type})
     if optimizer is None or optimizer == 'None':
         opt = None
     else:

@@ -95,7 +95,7 @@ static void RunCoreOpTimingTest(const bool isGPU,
  * \brief ActivationOp timing test for CPU
  */
 TEST(OMP_TUNING, TimingCPU) {
-  RunCoreOpTimingTest(false, {}, "quantize_2bt", COREOP_BWD_OP_NAME_VALUE_NONE);
+  RunCoreOpTimingTest(false, {}, "quantize_2bit", COREOP_BWD_OP_NAME_VALUE_NONE);
 }
 
 #if MXNET_USE_CUDA == 1

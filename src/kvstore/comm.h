@@ -83,31 +83,15 @@ class Comm {
    * \brief Sets gradient compression parameters to be able to
    * perform reduce with compressed gradients
    */
-  inline void SetCompress(const std::string& compress,
-                          const float neg_threshold,
-                          const float pos_threshold) {
-    compress_ = compress;
-    pos_threshold_ = pos_threshold;
-    neg_threshold_ = neg_threshold;
+  void SetGradientCompression(Gc* gc) {
+    gc_ = gc;
   }
 
  protected:
   Context pinned_ctx_;
 
-  /*
-   * \brief Sets type of gradient compression
-   */
-  std::string compress_ = "none";
+  Gc* gc_;
 
-  /*
-   * \brief sets positive threshold for 2bit gradient compression
-   */
-  float pos_threshold_;
-
-  /*
-   * \brief sets negative threshold for 2bit gradient compression
-   */
-  float neg_threshold_;
 };
 
 /**
@@ -505,9 +489,14 @@ class CommDevice : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
+
+    if (gc_->get_active_type() != GC_NONE) {
+      return ReduceCompressed(key, src, priority);
+    }
+
     // avoid extra copy for single device, but it may bring problems for
     // abnormal usage of kvstore
-    if (src.size() == 1 && compress_ == "none") {
+    if (src.size() == 1) {
       return src[0];
     }
 
@@ -524,80 +513,78 @@ class CommDevice : public Comm {
 
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
-
-    if (compress_ == "none") {
-      CopyFromTo(src[0], &(buf.merged), priority);
-      reduce[0] = buf.merged;
-
-      if (buf.copy_buf.empty()) {
-        // TODO(mli) this results in large device memory usage for huge ndarray,
-        // such as the largest fullc in VGG. consider to do segment reduce with
-        // NDArray.Slice or gpu direct memory access. for the latter, we need to
-        // remove some ctx check, and also it reduces 20% perf
-        buf.copy_buf.resize(src.size()-1);
-        for (size_t i = 0; i < src.size()-1; ++i) {
-          buf.copy_buf[i] = NDArray(
-            buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
-        }
-      }
+    CopyFromTo(src[0], &(buf.merged), priority);
+    reduce[0] = buf.merged;
+    if (buf.copy_buf.empty()) {
+      // TODO(mli) this results in large device memory usage for huge ndarray,
+      // such as the largest fullc in VGG. consider to do segment reduce with
+      // NDArray.Slice or gpu direct memory access. for the latter, we need to
+      // remove some ctx check, and also it reduces 20% perf
+      buf.copy_buf.resize(src.size()-1);
       for (size_t i = 0; i < src.size()-1; ++i) {
-        CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
-        reduce[i+1] = buf.copy_buf[i];
+        buf.copy_buf[i] = NDArray(
+          buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
       }
-    } else {
-      if (buf.copy_buf.empty()) {
-        // one buf for each context
-        buf.copy_buf.resize(src.size());
-        buf.small_recv_buf.resize(src.size());
-        buf.small_send_buf.resize(src.size());
-        buf.residual.resize(src.size());
+    }
+    for (size_t i = 0; i < src.size()-1; ++i) {
+      CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
+      reduce[i+1] = buf.copy_buf[i];
+    }
+    ElementwiseSum(reduce, &buf.merged);
+    return buf.merged;
+  }
 
-        for (size_t i = 0; i < src.size(); ++i) {
-          buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
-                                    false, buf.merged.dtype());
-          buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
-                                    false, buf.merged.dtype());
-          buf.residual[i] = 0;
-          if (compress_ == "2bit") {
-            int bits = 16;
-            int64_t small_size = buf.merged.shape().Size() % bits == 0 ?
-                                  buf.merged.shape().Size() / bits :
-                                  buf.merged.shape().Size() / bits + 1;
-            buf.small_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
-                                            false, buf.merged.dtype());
-            buf.small_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
-                                            false, buf.merged.dtype());
-          } else {
-            LOG(FATAL) << "Unsupported type of compression " << compress_;
-          }
-        }
+  const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src,
+                        int priority) {
+    if (!inited_) {
+      std::vector<Context> devs;
+      for (const auto& a : src) {
+        devs.push_back(a.ctx());
       }
-
-      for (size_t i = 0; i < src.size(); ++i) {
-        // compress before copy
-        // this is done even if the data is on same context as copy_buf because
-        // we don't want the training to be biased towards data on this GPU
-        if (compress_ == "2bit") {
-          Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), compress_,
-                   neg_threshold_, pos_threshold_, priority);
-          if (buf.small_send_buf[i].ctx() != buf.small_recv_buf[i].ctx()) {
-            CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
-          } else {
-            // avoid memory copy when they are on same context
-            buf.small_recv_buf[i] = buf.small_send_buf[i];
-          }
-          // TODO (undo comment)
-          Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]),
-                     neg_threshold_, pos_threshold_, compress_, priority);
-        } else {
-          LOG(FATAL) << "Unsupported type of compression " << compress_;
-        }
-        reduce[i] = buf.copy_buf[i];
+      InitMergeBuffer(devs);
+      if (dmlc::GetEnv("MXNET_ENABLE_GPU_P2P", 1)) {
+        EnableP2P(devs);
       }
     }
 
-    ElementwiseSum(reduce, &buf.merged);
+    auto& buf = merge_buf_[key];
+    std::vector<NDArray> reduce(src.size());
+    if (buf.copy_buf.empty()) {
+      // one buf for each context
+      buf.copy_buf.resize(src.size());
+      buf.small_recv_buf.resize(src.size());
+      buf.small_send_buf.resize(src.size());
+      buf.residual.resize(src.size());
 
+      for (size_t i = 0; i < src.size(); ++i) {
+        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
+                                  false, buf.merged.dtype());
+        buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
+                                  false, buf.merged.dtype());
+        buf.residual[i] = 0;
+        int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
+        buf.small_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
+                                        false, buf.merged.dtype());
+        buf.small_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
+                                        false, buf.merged.dtype());
+      }
+    }
+
+    for (size_t i = 0; i < src.size(); ++i) {
+      // compress before copy
+      // this is done even if the data is on same context as copy_buf because
+      // we don't want the training to be biased towards data on this GPU
+      gc_->Quantize(src[i], &(buf.small_send_buf[i]), &(buf.residual[i]), priority);
+      if (buf.small_send_buf[i].ctx() != buf.small_recv_buf[i].ctx()) {
+        CopyFromTo(buf.small_send_buf[i], &(buf.small_recv_buf[i]), priority);
+      } else {
+        // avoid memory copy when they are on same context
+        buf.small_recv_buf[i] = buf.small_send_buf[i];
+      }
+      gc_->Dequantize(buf.small_recv_buf[i], &(buf.copy_buf[i]), priority);
+      reduce[i] = buf.copy_buf[i];
+    }
+    ElementwiseSum(reduce, &buf.merged);
     return buf.merged;
   }
 

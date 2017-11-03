@@ -894,33 +894,6 @@ size_t num_aux_data(NDArrayStorageType stype);
 void CopyFromTo(const NDArray &from, NDArray *to, int priority = 0);
 
 /*!
- * \brief Issue quantize operation to be scheduled by the engine
- * Compresses `from` into `to` and accumulates the quantization error
- * into 'residual'
- * \param from the ndarray containing original data to be compressed
- * \param to the target ndarray which contains compressed data
- * \param residual the ndarray which accumulates quantization error
- * \param compress type of compression
- * \param neg_threshold negative threshold for 2bit quantization
- * \param pos_threshold positive threshold for 2bit quantization
- * \param priority Priority of the action.
- */
-void Quantize(const NDArray &from, NDArray *to, NDArray *residual, const std::string& compress,
-              const float neg_threshold, const float pos_threshold,
-              int priority);
-
-/*!
- * \brief Issue dequantize operation to be scheduled by the engine
- * Dequantizes data in `from` into `to`
- * \param from the ndarray containing compressed data
- * \param to the target ndarray which contains original data
- * \param compress type of compression
- * \param priority Priority of the action.
- */
-void Dequantize(const NDArray &from, NDArray *to,
-                const float neg_threshold, const float pos_threshold, const std::string& compress, int priority);
-
-/*!
  * \brief issue an copy operation from one NDArray to another
  *  the two ndarray can sit on different devices
  *  this operation will be scheduled by the engine

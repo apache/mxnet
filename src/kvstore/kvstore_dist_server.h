@@ -45,7 +45,7 @@ static const int kDefaultPushPull = 0;
 static const int kCompressedPushPull = 3;
 static const int kStopServer = -1;
 static const int kSyncMode = -2;
-static const int kSetCompress = 2;
+static const int kSetGradientCompression = 2;
 
 /**
  * \brief executor runs a function using the thread called \ref Start
@@ -119,11 +119,13 @@ class KVStoreDistServer {
     ps_server_->set_request_handle(
         std::bind(&KVStoreDistServer::DataHandleEx, this, _1, _2, _3));
     sync_mode_ = false;
+    gc_ = new Gc();
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
   }
 
   ~KVStoreDistServer() {
     delete ps_server_;
+    delete gc_;
   }
 
   void set_controller(const KVStore::Controller& controller) {
@@ -154,8 +156,8 @@ class KVStoreDistServer {
       exec_.Stop();
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
-    } else if (recved.head == kSetCompress) {
-      compress_ = recved.body;
+    } else if (recved.head == kSetGradientCompression) {
+      gc_->DecodeParams(recved.body);
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -365,15 +367,31 @@ class KVStoreDistServer {
     }
   }
 
+  void DefaultStorageResponse(int key, NDArray& stored,
+                              const ps::KVMeta& req_meta,
+                              const ps::KVPairs<real_t> &req_data,
+                              ps::KVServer<real_t>* server) {
+    ps::KVPairs<real_t> response;
+    CHECK(!stored.is_none()) << "init " << key << " first";
+    auto len = stored.shape().Size();
+    response.keys = req_data.keys;
+    response.lens = {len};
+    // TODO(mli) try to remove this CopyFrom
+    response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
+    server->Response(req_meta, response);
+  }
+
   void DataHandleCompressed(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
     CHECK_EQ(req_meta.cmd, kCompressedPushPull);
-    // do some check
     if (req_meta.push) {
       // there used several WaitToRead, this is because \a recved's memory
       // could be deallocated when this function returns. so we need to make sure
       // the operators with \a NDArray are actually finished
+
+      // first for dummy key which represents original size of array, whose len is 0
+      CHECK_EQ(req_data.keys.size(), (size_t)2);
       CHECK_EQ(req_data.lens.size(), (size_t)2);
       CHECK_EQ(req_data.vals.size(), (size_t)req_data.lens[1]);
 
@@ -381,47 +399,24 @@ class KVStoreDistServer {
       int key = DecodeKey(req_data.keys[1]);
       auto& stored = store_[key];
 
-//      if (count_save.count(key)==0) {
-//        count_save[key] = 0;
-//      } else {
-//        count_save[key]++;
-//      }
-
       size_t ds[] = {(size_t)req_data.lens[1]};
       TShape dshape(ds, ds + 1);
-      TBlob recv_blob((real_t*)req_data.vals.data(), // NOLINT(*)
+      TBlob recv_blob((real_t*) req_data.vals.data(), // NOLINT(*)
                       dshape, cpu::kDevMask);
       NDArray recved = NDArray(recv_blob, 0);
 
       NDArray decomp_buf = decomp_buf_[key];
       dshape = TShape{(int64_t) original_size};
 
-      // TODO(huilgolr) check and merge with init of stored
       if (decomp_buf.is_none()) {
         decomp_buf = NDArray(dshape, Context());
       }
 
       if (stored.is_none()) {
-        // initialization
         stored = NDArray(dshape, Context());
-//        {
-//          std::unique_ptr<dmlc::Stream> fo(
-//            dmlc::Stream::Create((compress_ + "server_recved_count" + std::to_string(count_save[key]) + "_" + std::to_string(key)).c_str(), "w"));
-//          recved.WaitToRead();
-//          mxnet::NDArray::Save(fo.get(), {recved}, {});
-//        }
-
-        Dequantize(recved, &stored, neg_threshold, pos_threshold, compress_, 0);
-
+        gc_->Dequantize(recved, &stored, 0);
         server->Response(req_meta);
         stored.WaitToRead();
-
-//        {
-//          std::unique_ptr<dmlc::Stream> fo(
-//            dmlc::Stream::Create((compress_ + "server_stored_count" + std::to_string(count_save[key]) + "_" + std::to_string(key)).c_str(), "w"));
-//          stored.WaitToRead();
-//          mxnet::NDArray::Save(fo.get(), {stored}, {});
-//        }
       } else if (sync_mode_) {
         // synced push
         auto& merged = merge_buf_[key];
@@ -429,16 +424,16 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          Dequantize(recved, &merged.array, neg_threshold, pos_threshold, compress_, 0);
+          gc_->Dequantize(recved, &merged.array, 0);
         } else {
-          Dequantize(recved, &decomp_buf, neg_threshold, pos_threshold, compress_, 0);
+          gc_->Dequantize(recved, &decomp_buf, 0);
           merged.array += decomp_buf;
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-        Dequantize(recved, &decomp_buf, neg_threshold, pos_threshold, compress_, 0);
+        gc_->Dequantize(recved, &decomp_buf, 0);
         exec_.Exec([this, key, &decomp_buf, &stored]() {
           CHECK(updater_);
           updater_(key, decomp_buf, &stored);
@@ -447,8 +442,10 @@ class KVStoreDistServer {
         stored.WaitToRead();
       }
     } else {       // pull
-      // never used
-      DataHandleDefault(req_meta, req_data, server);
+      CHECK_EQ(req_data.keys.size(), (size_t)1);
+      CHECK_EQ(req_data.lens.size(), (size_t)0);
+      int key = DecodeKey(req_data.keys[0]);
+      DefaultStorageResponse(key, store_[key], req_meta, req_data, server);
     }
   }
 
@@ -504,15 +501,7 @@ class KVStoreDistServer {
         stored.WaitToRead();
       }
     } else {
-      // pull
-      ps::KVPairs<real_t> response;
-      CHECK(!stored.is_none()) << "init " << key << " first";
-      auto len = stored.shape().Size();
-      response.keys = req_data.keys;
-      response.lens = {len};
-      // TODO(mli) try to remove this CopyFrom
-      response.vals.CopyFrom(static_cast<const float*>(stored.data().dptr_), len);
-      server->Response(req_meta, response);
+      DefaultStorageResponse(key, stored, req_meta, req_data, server);
     }
   }
 
@@ -554,15 +543,11 @@ class KVStoreDistServer {
   bool log_verbose_;
 
   /**
-   * \brief compress_ refers to whether values sent to kvstore server are
-   * in quantized form. It can be 'none' or '2bit' for now. This is set
-   * by worker by sending a command to server
+   * \brief gradient compression object.
+   * starts with none, used after SetGradientCompression sets the type
+   * currently there is no support for unsetting gradient compression
    */
-  std::string compress_ = "none";
-
-  float pos_threshold = 0.5;
-  float neg_threshold = -0.5;
-//  std::unordered_map<int, int> count_save;
+  Gc* gc_;
 };
 
 }  // namespace kvstore

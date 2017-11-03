@@ -4310,10 +4310,9 @@ def test_scatter_gather_nd():
     assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
 def test_two_bit_quantization():
-    neg_threshold = -0.5
-    pos_threshold = 0.5
-    orig_shape = [(25,),(16,),(1121),(14400),(144000),(144000)]
-    num_repeat = 10
+    threshold = 0.5
+    orig_shape = [(16,), (25,),(1121),(144000),(1440000)]
+    num_repeat = 2
     from struct import pack,unpack
 
     def bits2int(bits):
@@ -4326,7 +4325,7 @@ def test_two_bit_quantization():
     def as_float32(s):
         return unpack("f",pack("I", bits2int(s)))[0]
 
-    def compute_expected(arr, neg, pos, curr_residual):
+    def compute_expected(arr, curr_residual, threshold):
         # str_quant stores the quantized representation as a sequence of bits
         str_quant = ''
         new_residual = []
@@ -4335,14 +4334,14 @@ def test_two_bit_quantization():
         curr_res_npy = curr_residual.asnumpy()
         for i, a in np.ndenumerate(arr_npy):
             a += curr_res_npy[i]
-            if a >= pos:
+            if a >= threshold:
                 str_quant += '11'
-                new_residual.append(a - pos)
-                decompr.append(pos)
-            elif a <= neg:
+                new_residual.append(a - threshold)
+                decompr.append(threshold)
+            elif a <= (-1*threshold):
                 str_quant += '10'
-                new_residual.append(a - neg)
-                decompr.append(neg)
+                new_residual.append(a + threshold)
+                decompr.append(-1*threshold)
             else:
                 str_quant += '00'
                 new_residual.append(a)
@@ -4361,11 +4360,11 @@ def test_two_bit_quantization():
         return compr, new_residual, decompr
 
     def check(grad, residual):
-        exp_compr, exp_residual, exp_decompr = compute_expected(grad, neg_threshold, pos_threshold, residual)
+        exp_compr, exp_residual, exp_decompr = compute_expected(grad, residual, threshold)
         compr = mx.contrib.nd.create_2bit(grad)
-        mx.contrib.ndarray.quantize_2bit(grad, residual, compr, neg_threshold, pos_threshold)
+        mx.contrib.ndarray.quantize_2bit(grad, residual, compr, threshold)
         decompr = mx.nd.zeros(grad.shape)
-        mx.contrib.ndarray.dequantize_2bit(compr, decompr, neg_threshold, pos_threshold)
+        mx.contrib.ndarray.dequantize_2bit(compr, decompr, threshold)
         np.testing.assert_array_equal(compr.asnumpy(), np.array(exp_compr)) , (compr, exp_compr)
         np.testing.assert_array_equal(decompr.asnumpy(), np.array(exp_decompr)) , (decompr, exp_decompr)
         # use almost equal for residual as this involves addition operation

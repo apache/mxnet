@@ -17,23 +17,23 @@
  * under the License.
  */
 
- /*!
-  * \file two_bit_quantize-inl.h
-  * \brief implementation of quantize_2bit operation
-  */
+/*!
+ * \file two_bit_quantize-inl.h
+ * \brief implementation of quantize_2bit operation
+ * \author Chao Ma, Rahul Huilgol
+ */
+
 #ifndef MXNET_OPERATOR_CONTRIB_TWO_BIT_QUANTIZE_INL_H_
 #define MXNET_OPERATOR_CONTRIB_TWO_BIT_QUANTIZE_INL_H_
 #include <chrono>
-#include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
-#include "../elemwise_op_common.h"
-#include "../mshadow_op.h"
-#include "../mxnet_op.h"
 #include <cmath>
+#include <mxnet/operator_util.h>
 #include <mxnet/c_api.h>
-#include "ps/ps.h"
-#include <bitset>
+#include <ps/ps.h>
+#include <operator/operator_common.h>
+#include <operator/mxnet_op.h>
 
 namespace mxnet {
 namespace op {
@@ -46,16 +46,12 @@ struct init_mem_2bit {
 };
 
 struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
-  float pos_threshold, neg_threshold;
+  float threshold;
   DMLC_DECLARE_PARAMETER(TwoBitParam) {
-    DMLC_DECLARE_FIELD(neg_threshold)
-      .set_default(-0.5)
-      .describe("Threshold to quantize negative values. "
-                  "Has to be less than 0");
-    DMLC_DECLARE_FIELD(pos_threshold)
+    DMLC_DECLARE_FIELD(threshold)
       .set_default(0.5)
-      .describe("Threshold to quantize positive values. "
-                  "Has to be greater than 0");
+      .describe("Threshold to quantize values. "
+                  "Must be greater than 0");
   }
 };
 
@@ -145,15 +141,14 @@ struct quantize_2bit {
 
 template<typename xpu>
 void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
-                      const float neg_threshold, const float pos_threshold) {
-
-  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array
-                                               inputs[0].Size(),
+                      const float threshold) {
+  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array size
+                                               inputs[0].Size(),    // original size
                                                inputs[2].dptr<float>(),   // compressed array
-                                               inputs[0].dptr<float>(),     // input array
+                                               inputs[0].dptr<float>(),     // original array
                                                inputs[1].dptr<float>(),     // residual array
-                                               neg_threshold,               // negative threshold
-                                               pos_threshold);              // positive threshold
+                                               -1 * threshold,            // negative threshold
+                                               threshold);              // positive threshold
 }
 
 // this function has been defined as quantize_2bit operator
@@ -165,7 +160,7 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Quantize2BitImpl<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+  Quantize2BitImpl<xpu>(s, inputs, param.threshold);
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -216,7 +211,6 @@ struct dequantize_2bit {
     float* outval = out + i;
     char* ch_ptr = reinterpret_cast<char*>(in + (i>>4));
 
-//    std::cout<<std::bitset<8>(*ch_ptr)<<" " <<std::bitset<8>(*(ch_ptr+1))<<" "<<std::bitset<8>(*(ch_ptr+2))<<" "<<std::bitset<8>(*(ch_ptr+3))<<std::endl;
     ch_ptr += ((i & 15) >> 2 );
     const uint8_t posbits[] = {0xc0, 0x30, 0x0c, 0x03};
     const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
@@ -226,14 +220,11 @@ struct dequantize_2bit {
     uint8_t masked = *ch_ptr & mask;
     if ( masked == mask ) {
       *outval = pos_threshold;
-//      std::cout<<std::bitset<8>(*ch_ptr)<< " "<<std::bitset<8>(masked)<< " "<<pos_threshold<<std::endl;
     } // use posbits for mask as posbits are 11
       // compare with negbits
     else if ( masked == negmask ) {
-//      std::cout<<std::bitset<8>(*ch_ptr)<< " "<<std::bitset<8>(masked)<< " "<<neg_threshold<<std::endl;
       *outval = neg_threshold;
     } else {
-//      std::cout<<std::bitset<8>(*ch_ptr)<< " "<<std::bitset<8>(masked)<< " 0"<<std::endl;
       *outval = 0;
     }
  }
@@ -241,12 +232,12 @@ struct dequantize_2bit {
 
 template<typename xpu>
 void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
-                        const float neg_threshold, const float pos_threshold) {
+                        const float threshold) {
   mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
                                                  inputs[1].dptr<float>(),        // out array
                                                  inputs[0].dptr<float>(),      // compressed array
-                                                 neg_threshold,     // negative threshold
-                                                 pos_threshold);  // positive threshold
+                                                 -1*threshold,     // negative threshold
+                                                 threshold);       // positive threshold
 }
 
 template<typename xpu>
@@ -257,7 +248,7 @@ void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
                            const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Dequantize2BitImpl<xpu>(s, inputs, param.neg_threshold, param.pos_threshold);
+  Dequantize2BitImpl<xpu>(s, inputs, param.threshold);
 }
 
 inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,

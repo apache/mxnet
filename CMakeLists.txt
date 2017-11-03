@@ -435,7 +435,7 @@ else()
     target_link_libraries(mxnet PRIVATE "-Wl,--whole-archive $<TARGET_FILE:mxnet_static> -Wl,--no-whole-archive")
     target_link_libraries(mxnet PRIVATE mxnet_static) # Let cmake understand the dependency
   else()
-    add_library(mxnet SHARED ${SOURCE})
+    add_library(mxnet SHARED ${SOURCE} src/kvstore/gc.cpp src/kvstore/gc.h)
   endif()
 endif()
 

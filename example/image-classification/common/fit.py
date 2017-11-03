@@ -119,7 +119,7 @@ def fit(args, network, data_loader, **kwargs):
     """
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
-    kv.set_compress({'compress':args.gc_type, 'pos_threshold':args.gc_threshold, 'neg_threshold':-1*args.gc_threshold})
+    kv.set_gradient_compression({'compress':args.gc_type, 'threshold':args.gc_threshold})
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
@@ -179,13 +179,12 @@ def fit(args, network, data_loader, **kwargs):
 
     monitor = mx.mon.Monitor(args.monitor, pattern=".*") if args.monitor > 0 else None
 
-   # if args.network == 'alexnet':
+    if args.network == 'alexnet':
         # AlexNet will not converge using Xavier
-    initializer = mx.init.Normal(0.75)
-#    else:
- #       initializer = mx.init.Xavier(
-  #          rnd_type='gaussian', factor_type="in", magnitude=2)
-    # initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        initializer = mx.init.Normal(0.5)
+    else:
+        initializer = mx.init.Xavier(rnd_type='gaussian',
+                                     factor_type="in", magnitude=2)
 
     # evaluation metrices
     eval_metrics = ['accuracy']

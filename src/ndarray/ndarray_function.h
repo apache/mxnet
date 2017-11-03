@@ -23,13 +23,12 @@
  */
 #ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_H_
 #define MXNET_NDARRAY_NDARRAY_FUNCTION_H_
-
+#include <vector>
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
 #include <mxnet/ndarray.h>
-#include <vector>
 #include "../operator/mshadow_op.h"
 
 namespace mxnet {
@@ -163,20 +162,6 @@ template<typename DeviceFrom, typename DeviceTo>
 void Copy(const TBlob &from, TBlob *to,
           Context from_ctx, Context to_ctx,
           RunContext ctx);
-
-/*
- * \brief Enables use of function defined under Dequantize2Bit operator for an ndarray
- */
-template<typename xpu>
-void Dequantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs, 
-                            const float neg_threshold, const float pos_threshold);
-
-/*
- * \brief Enables use of function defined under Quantize2Bit operator for an ndarray
- */
-template<typename xpu>
-void Quantize2BitDispatch(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
-                          const float neg_threshold, const float pos_threshold);
 
 template<typename Device>
 void ElementwiseSum(const std::vector<TBlob> source,

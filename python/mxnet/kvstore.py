@@ -349,24 +349,24 @@ class KVStore(object):
             check_call(_LIB.MXKVStorePullRowSparse(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 
-    def set_compress(self, compress_params=None):
+    def set_gradient_compression(self, compression_params=None):
         """ Specifies type of low-bit quantization for gradient compression if any,
          and additional arguments depending on the type of compression being used.
 
         Parameters
         ----------
-        compress_params : dict
-            `compress_params` is a dictionary specifying the type and parameters
-            for gradient compression. The key `compress` in this dictionary is a required argument
+        compression_params : dict
+            `compression_params` is a dictionary specifying the type and parameters
+            for gradient compression. The key `compression` in this dictionary is a required argument
             and specifies the type of gradient compression. Other keys in this
             dictionary are optional and specific to the type of gradient compression.
 
-            2bit Gradient Compression
-            ---------
-            2bit gradient compression takes two thresholds, one for positive values and
-            other for negative thresholds. This works by limiting positive values in the
-            gradient to the positive threshold, and limiting negative values to the
-            negative threshold. Values which don't meet the thresholds are set to 0.
+            2bit Gradient Compression:
+
+            2bit gradient compression takes a threshold. This needs to be a positive float.
+            The technique works by limiting values such that the absolute values of the gradient
+            communicated is less than the threshold. Values which don't meet the threshold
+            are set to 0.
             By doing so, each value in the gradient is in one of three states. 2bits are
             used to represent these states, and every 16 float values in the original
             gradient can be represented using one float. This compressed representation
@@ -390,59 +390,48 @@ class KVStore(object):
             not compressed. Server to worker communication (in the case of pull) is also not
             compressed.
 
-            To use 2bit compression, we need to specify `compress` as `2bit`.
-            Only specifying `compress` would use default values
-            for the other arguments of thresholds.
+            To use 2bit compression, we need to specify `compression` as `2bit`.
+            Only specifying `compression` would use default value for the threshold.
             To completely specify the arguments for 2bit compression, we would need to pass
-            a dictionary which includes `positive_threshold` and `negative_threshold` like:
-            {'compress':'2bit', 'positive_threshold':0.5, 'negative_threshold':-0.5}
-            compress: str
+            a dictionary which includes `threshold` like:
+            {'compression':'2bit', 'threshold':0.5}
+
+            compression: str
                 type of low-bit quantization to be used for gradient compression
                 Can only be '2bit' for now.
                 2bit gradient compression uses 2bit quantization with residual to compress
                 gradients. It works by converts each value in the original gradient to use
                 2 bits, causing size of gradient to be 1/16th of the original gradient
-                (and 3 floats of meta information).
-            pos_threshold: float
-                positive threshold used for 2bit quantization of gradients
-                Positive values in gradient above positive threshold will be set to
-                positive threshold. Positive values lesser than positive threshold will
-                be set to 0.
-            neg_threshold: float
-                negative threshold used for 2bit quantization of gradients
-                Negative values in gradient less than negative threshold will be set to
-                negative threshold. Negative values greater than negative threshold will
-                be set to 0.
+            threshold: float
+                must be greater than 0
+                threshold used for 2bit quantization of gradients
+                Positive values in gradient above threshold will be set to
+                threshold. Negative values whose absolute values are higher than threshold,
+                will be set to the negative of threshold. Values whose absolute values are
+                less than threshold will be set to 0.
         """
-        compress_params = compress_params if compress_params else {'compress':'none'}
-        if 'compress' not in compress_params:
-            raise ValueError('compress_params requires compress to be set')
-        elif not isinstance(compress_params['compress'], string_types):
-            raise TypeError('compress must be a string')
-        elif compress_params['compress'] not in ['none', '2bit']:
-            raise ValueError('Unsupported type of compression')
+        if compression_params:
+            if not isinstance(compression_params, dict):
+                raise ValueError("compression_params needs to be a dictionary")
+            if 'compression' not in compression_params:
+                raise ValueError('compression_params requires `compression` to be set')
+            elif not isinstance(compression_params['compression'], string_types):
+                raise TypeError('compression must be a string')
+            elif compression_params['compression'] not in ['2bit']:
+                raise ValueError('Unsupported type of compression')
 
-        if compress_params['compress'] == '2bit':
-            if 'pos_threshold' in compress_params:
-                if not isinstance(compress_params['pos_threshold'], numeric_types):
-                    raise TypeError('pos_threshold must be a numeric type')
-            else:
-                compress_params['pos_threshold'] = 0.5
+            if compression_params['compression'] == '2bit':
+                if 'threshold' in compression_params:
+                    if not isinstance(compression_params['threshold'], numeric_types):
+                        raise TypeError('threshold must be a numeric type')
+                    if compression_params['threshold'] <= 0:
+                        raise ValueError('threshold must be greater than 0')
+                else:
+                    compression_params['threshold'] = 0.5
 
-            if 'neg_threshold' in compress_params:
-                if not isinstance(compress_params['neg_threshold'], numeric_types):
-                    raise TypeError('neg_threshold must be a numeric type')
-            else:
-                compress_params['neg_threshold'] = -0.5
-
-            if compress_params['pos_threshold'] <= 0 or compress_params['neg_threshold'] >= 0:
-                raise ValueError('pos_threshold needs to be greater than 0, \
-                                 and neg_threshold needs to be less than 0')
-
-            check_call(_LIB.MXKVStoreSetCompress(self.handle,
-                                                 c_str(compress_params['compress']),
-                                                 mx_float(compress_params['neg_threshold']),
-                                                 mx_float(compress_params['pos_threshold'])))
+                check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
+                                                     c_str(compression_params['compression']),
+                                                     mx_float(compression_params['threshold'])))
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
