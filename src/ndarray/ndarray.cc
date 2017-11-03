@@ -257,9 +257,20 @@ void NDArray::set_fresh_out_grad(bool state) const {
 }
 
 #if MXNET_USE_MKLDNN == 1
+static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims) {
+  if (shape.ndim() != ndims)
+    return false;
+  for (int i = 0; i < ndims; i++)
+    if (shape[i] != dims[i])
+      return false;
+  return true;
+}
+
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
-  if (Mkl_mem_)
+  if (Mkl_mem_ && same_shape(shape, Mkl_mem_->get_primitive_desc().desc().data.dims,
+        Mkl_mem_->get_primitive_desc().desc().data.ndims)) {
     return;
+  }
 
   mkldnn::memory::dims dims(shape.ndim());
   for (size_t i = 0; i < dims.size(); i++)
@@ -299,8 +310,10 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
   }
-  if (ptr_->Mkl_mem_)
+  if (ptr_->Mkl_mem_) {
+    CHECK(ptr_->Mkl_mem_->get_primitive_desc() == desc);
     return ptr_->Mkl_mem_;
+  }
   return std::shared_ptr<const mkldnn::memory>(new mkldnn::memory(desc,
         ptr_->shandle.dptr));
 }
