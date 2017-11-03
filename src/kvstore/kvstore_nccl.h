@@ -75,13 +75,13 @@ class KVStoreNCCL : public KVStoreLocal {
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPushHelper(keys, values, &uniq_keys, &grouped_vals);
 
-    std::vector<const NDArray*> merged_ptrs;
+    std::vector<NDArray*> merged_ptrs;
     std::vector<NDArray*> local_ptrs;
     bool nccl_called = false;
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority - i);
+      NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority - i);
       if (grouped_vals[i].size() > 1) {
         // We issued NCCL kernels, need to synchronize
         nccl_called = true;
