@@ -25,7 +25,7 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
 3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
 4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory```.
+5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (```c:\utils\opencv\build``` for example).
 6. If you have Intel Math Kernel Library (MKL) installed, set ```MKL_ROOT``` to point to ```MKL``` directory that contains the ```include``` and ```lib```. Typically, you can find the directory in
 ```C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2018\windows\mkl```.
 7. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
@@ -44,7 +44,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 ```
     mkdir build
     cd build
-    cmake -G "Visual Studio 14 Win64" -DUSE_CPP_PACKAGE=ON ..
+    cmake -G "Visual Studio 14 Win64" ..
 ```
 4. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
