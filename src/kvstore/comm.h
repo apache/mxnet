@@ -81,7 +81,7 @@ class Comm {
       int key, const NDArray& src,
       const std::vector<NDArray*> dst, int priority) = 0;
 
-  virtual void CommSync(const std::vector<NDArray*>& dst, int priority) { }
+  virtual void CommSync(const std::vector<const NDArray*>& dst, int priority) { }
   virtual void CommSync(const std::vector<NDArray>& dst, int priority) { }
 
   /**
@@ -765,7 +765,7 @@ class CommNCCL : public Comm {
     return buf.merged;
   }
 
-  void CommSync(const std::vector<NDArray*>& dst,
+  void CommSync(const std::vector<const NDArray*>& dst,
                 int priority) override {
     std::vector<Engine::VarHandle> const_vars;
     std::vector<Engine::VarHandle> mutate_vars;

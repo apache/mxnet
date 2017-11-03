@@ -146,7 +146,8 @@ class KVStoreNCCL : public KVStoreLocal {
 
     // Sync after all broadcasts in a group
     if (nccl_called) {
-      comm_->CommSync(values, priority);
+      const std::vector<const NDArray*> values_copy(values.begin(), values.end());
+      comm_->CommSync(values_copy, priority);
     }
   }
 
