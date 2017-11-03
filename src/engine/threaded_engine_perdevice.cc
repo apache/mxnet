@@ -64,6 +64,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         // Make children single threaded since they are typically workers
         dmlc::SetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
         dmlc::SetEnv("OMP_NUM_THREADS", 1);
+        Engine::Get()->set_num_omp_threads_per_worker(1);
         Engine::Get()->Start();
       });
 #endif
