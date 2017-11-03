@@ -162,12 +162,15 @@ class Block(object):
             dense0 = nn.Dense(20)
             dense1 = nn.Dense(20, params=dense0.collect_params())
     """
-    def __init__(self, prefix=None, params=None):
+    def __init__(self, prefix=None, params=None, **kwargs):
         self._empty_prefix = prefix == ''
         self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
         self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
         self._children = []
+
+        # Cooperative design for multiple inheritance
+        super(Block, self).__init__(**kwargs)
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -320,8 +323,9 @@ class HybridBlock(Block):
     Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
     the end-to-end usage.
     """
-    def __init__(self, prefix=None, params=None):
-        super(HybridBlock, self).__init__(prefix=prefix, params=params)
+    def __init__(self, prefix=None, params=None, **kwargs):
+        # Cooperative design for multiple inheritance
+        super(HybridBlock, self).__init__(prefix=prefix, params=params, **kwargs)
         self._reg_params = {}
         self._cached_graph = ()
         self._cached_op = None
