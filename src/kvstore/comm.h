@@ -39,6 +39,9 @@
 #if MXNET_USE_NCCL
 #include "../common/cuda_utils.h"
 
+//NCCL v2 introduces NCCL_MAJOR macro for versioning,
+//so if there is no such macro defined in nccl.h
+//then it is NCCL v1
 #ifndef NCCL_MAJOR
 #define NCCL_MAJOR 1
 #endif
@@ -848,7 +851,7 @@ class CommNCCL : public Comm {
           mutable_vars.push_back(dst[i]->var());
       }
       std::vector<NDArray> broadcast(dst.size());
-      for(size_t i = 0; i < dst.size(); ++dst) {
+      for(size_t i = 0; i < dst.size(); ++i) {
         broadcast[i] = *(dst[i]);
       }
       Engine::Get()->PushSync([src, broadcast, root_id, this](RunContext rctx) {
