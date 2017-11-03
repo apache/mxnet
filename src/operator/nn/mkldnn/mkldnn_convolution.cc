@@ -179,9 +179,6 @@ void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ct
       ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
       param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
   std::vector<mkldnn::primitive> net;
-  printf("src layout: %d\n", fwd_pd.src_primitive_desc().desc().data.format);
-  printf("weight layout: %d\n", fwd_pd.weights_primitive_desc().desc().data.format);
-  printf("out layout: %d\n", fwd_pd.dst_primitive_desc().desc().data.format);
   auto data_mem = in_data[conv::kData].GetMKLDNNData(fwd_pd.src_primitive_desc(), net);
   auto engine = CpuEngine::Instance().get_engine();
   auto weight_data = GetWeights(in_data[conv::kWeight],
