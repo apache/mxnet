@@ -21,7 +21,6 @@ import mxnet as mx
 import numpy as np
 import logging
 from data_iter import FileIter
-from symbols import segnet, segnet_bn
 from common import contrib_metrics
 
 def _load_model(args, rank=0):
