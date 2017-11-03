@@ -391,6 +391,8 @@ class KVStore(object):
                 optim_str = pickle.dumps(optimizer, 0)
             except:
                 raise
+            if isinstance(optim_str, bytes):
+                optim_str = py_str(optim_str)
             self._send_command_to_servers(0, optim_str)
         else:
             self._set_updater(opt.get_updater(optimizer))
@@ -528,8 +530,6 @@ class KVStore(object):
         body : str
             the body of the command.
         """
-        if isinstance(body, bytes):
-            body = body.decode()
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
 
