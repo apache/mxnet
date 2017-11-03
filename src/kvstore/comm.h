@@ -724,87 +724,83 @@ class CommNCCL : public Comm {
       const_vars.push_back(src[i].var());
     }
     Engine::Get()->PushSync([src, reduce, root_id, this](RunContext rctx) {
-          {
-            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
-            int root = nccl_data_[src[root_id].ctx().dev_id].rank;
-            ncclGroupStart();
-            for (size_t i = 0; i < src.size(); ++i) {
-              NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
-              if (i == root_id) {
-              MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
-              ncclReduce(src[i].data().dptr<DType>(),
-                                reduce.data().dptr<DType>(),
-                                src[i].shape().Size(),
-                                GetNCCLType(src[i].dtype()),
-                                ncclSum,
-                                root,
-                                cur.comm,
-                                cur.stream););
-              } else {
-              MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
-              ncclReduce(src[i].data().dptr<DType>(),
-                                NULL,
-                                src[i].shape().Size(),
-                                GetNCCLType(src[i].dtype()),
-                                ncclSum,
-                                root,
-                                cur.comm,
-                                cur.stream););
-              }
-            }
-            ncclGroupEnd();
+        std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+        int root = nccl_data_[src[root_id].ctx().dev_id].rank;
+        ncclGroupStart();
+        for (size_t i = 0; i < src.size(); ++i) {
+          NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
+          if (i == root_id) {
+          MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+          ncclReduce(src[i].data().dptr<DType>(),
+                            reduce.data().dptr<DType>(),
+                            src[i].shape().Size(),
+                            GetNCCLType(src[i].dtype()),
+                            ncclSum,
+                            root,
+                            cur.comm,
+                            cur.stream););
+          } else {
+          MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+          ncclReduce(src[i].data().dptr<DType>(),
+                            NULL,
+                            src[i].shape().Size(),
+                            GetNCCLType(src[i].dtype()),
+                            ncclSum,
+                            root,
+                            cur.comm,
+                            cur.stream););
           }
-        },
-        Context::CPU(),
-        const_vars,
-        {reduce.var()},
-        FnProperty::kCPUPrioritized,
-        priority,
-        PROFILER_MESSAGE("KVStoreReduce"));
+        }
+        ncclGroupEnd();
+      },
+      Context::CPU(),
+      const_vars,
+      {reduce.var()},
+      FnProperty::kCPUPrioritized,
+      priority,
+      PROFILER_MESSAGE("KVStoreReduce"));
 
     return buf.merged;
   }
 
   void CommSync(const std::vector<const NDArray*>& dst,
                 int priority) override {
-    std::vector<Engine::VarHandle> const_vars;
     std::vector<Engine::VarHandle> mutate_vars;
     for (size_t i = 0; i < dst.size(); ++i) {
         mutate_vars.push_back(dst[i]->var());
     }
     Engine::Get()->PushSync([this](RunContext rctx) {
-          for (auto cur : nccl_data_) {
-            CUDA_CALL(cudaSetDevice(cur.second.dev_id));
-            CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
-          }
-        },
-        Context::CPU(),
-        const_vars,
-        mutate_vars,
-        FnProperty::kCPUPrioritized,
-        priority,
-        PROFILER_MESSAGE("KVStoreStreamSync"));
+        for (auto cur : nccl_data_) {
+          CUDA_CALL(cudaSetDevice(cur.second.dev_id));
+          CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
+        }
+      },
+      Context::CPU(),
+      {},
+      mutate_vars,
+      FnProperty::kCPUPrioritized,
+      priority,
+      PROFILER_MESSAGE("KVStoreStreamSync"));
   }
 
   void CommSync(const std::vector<NDArray>& dst,
                 int priority) override {
-    std::vector<Engine::VarHandle> const_vars;
     std::vector<Engine::VarHandle> mutate_vars;
     for (size_t i = 0; i < dst.size(); ++i) {
         mutate_vars.push_back(dst[i].var());
     }
     Engine::Get()->PushSync([this](RunContext rctx) {
-          for (auto cur : nccl_data_) {
-            CUDA_CALL(cudaSetDevice(cur.second.dev_id));
-            CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
-          }
-        },
-        Context::CPU(),
-        const_vars,
-        mutate_vars,
-        FnProperty::kCPUPrioritized,
-        priority,
-        PROFILER_MESSAGE("KVStoreStreamSync"));
+        for (auto cur : nccl_data_) {
+          CUDA_CALL(cudaSetDevice(cur.second.dev_id));
+          CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
+        }
+      },
+      Context::CPU(),
+      {},
+      mutate_vars,
+      FnProperty::kCPUPrioritized,
+      priority,
+      PROFILER_MESSAGE("KVStoreStreamSync"));
   }
 
   void BroadcastRowSparse(int key, const NDArray& src,
@@ -847,38 +843,37 @@ class CommNCCL : public Comm {
       if (dst.size() == 1) return;
       std::vector<Engine::VarHandle> mutable_vars;
       for (size_t i = 0; i < dst.size(); ++i) {
-        if ( i != root_id)
+        if ( i != root_id) {
           mutable_vars.push_back(dst[i]->var());
+        }
       }
       std::vector<NDArray> broadcast(dst.size());
       for(size_t i = 0; i < dst.size(); ++i) {
         broadcast[i] = *(dst[i]);
       }
       Engine::Get()->PushSync([src, broadcast, root_id, this](RunContext rctx) {
-          {
-            std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
-            int root = nccl_data_[src.ctx().dev_id].rank;
-            ncclGroupStart();
-            for (size_t i = 0; i < broadcast.size(); ++i) {
-              auto& bcast = (i == root_id) ? src : broadcast[i];
-              NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
-              MSHADOW_TYPE_SWITCH(bcast.dtype(), DType,
-                  ncclBcast(bcast.data().dptr<DType>(),
-                    bcast.shape().Size(),
-                    GetNCCLType(bcast.dtype()),
-                    root,
-                    cur.comm,
-                    cur.stream););
-            }
-            ncclGroupEnd();
+          std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+          int root = nccl_data_[src.ctx().dev_id].rank;
+          ncclGroupStart();
+          for (size_t i = 0; i < broadcast.size(); ++i) {
+            auto& bcast = (i == root_id) ? src : broadcast[i];
+            NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
+            MSHADOW_TYPE_SWITCH(bcast.dtype(), DType,
+                ncclBcast(bcast.data().dptr<DType>(),
+                  bcast.shape().Size(),
+                  GetNCCLType(bcast.dtype()),
+                  root,
+                  cur.comm,
+                  cur.stream););
           }
-      },
-      Context::CPU(),
-      {src.var()},
-      mutable_vars,
-      FnProperty::kCPUPrioritized,
-      priority,
-      PROFILER_MESSAGE("KVStoreBCast"));
+          ncclGroupEnd();
+        },
+        Context::CPU(),
+        {src.var()},
+        mutable_vars,
+        FnProperty::kCPUPrioritized,
+        priority,
+        PROFILER_MESSAGE("KVStoreBCast"));
     }
   }
 

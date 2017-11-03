@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+import unittest
 
 shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
