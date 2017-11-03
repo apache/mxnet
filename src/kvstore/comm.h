@@ -81,7 +81,7 @@ class Comm {
       int key, const NDArray& src,
       const std::vector<NDArray*> dst, int priority) = 0;
 
-  virtual void CommSync(const std::vector<const NDArray*>& dst, int priority) { }
+  virtual void CommSync(const std::vector<NDArray*>& dst, int priority) { }
   virtual void CommSync(const std::vector<NDArray>& dst, int priority) { }
 
   /**
