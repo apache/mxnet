@@ -73,7 +73,7 @@ class KVStoreNCCL : public KVStoreLocal {
                 int priority) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals);
+    GroupKVPairsPushHelper(keys, values, &uniq_keys, &grouped_vals);
 
     std::vector<const NDArray*> merged_ptrs;
     std::vector<NDArray*> local_ptrs;
@@ -126,11 +126,11 @@ class KVStoreNCCL : public KVStoreLocal {
   }
 
   void PullImpl(const std::vector<int>& keys,
-                const std::vector<NDArray>& values,
+                const std::vector<NDArray*>& values,
                 int priority) override {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals);
+    std::vector<std::vector<NDArray*> > grouped_vals;
+    GroupKVPairsPullHelper(keys, values, &uniq_keys, &grouped_vals);
     bool nccl_called = false;
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
@@ -160,13 +160,29 @@ class KVStoreNCCL : public KVStoreLocal {
   /**
    * \brief group values on keys
    */
-  virtual void GroupKVPairsHelper(const std::vector<int>& keys,
-                                  const std::vector<NDArray>& values,
-                                  std::vector<int> *uniq_keys,
-                                  std::vector<std::vector<NDArray>> *grouped_vals) {
+  virtual void GroupKVPairsPushHelper(const std::vector<int>& keys,
+                                      const std::vector<NDArray>& values,
+                                      std::vector<int> *uniq_keys,
+                                      std::vector<std::vector<NDArray>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const NDArray& nd) -> bool {
       auto stype = nd.storage_type();
+      // valid NDArray
+      if (stype == kDefaultStorage) return true;
+      // invalid NDArray, abort
+      LOG(FATAL) << "NCCL kvstore does not support sparse storage type";
+      return false;
+    };
+    GroupKVPairs(keys, values, uniq_keys, grouped_vals, validator);
+  }
+
+  virtual void GroupKVPairsPullHelper(const std::vector<int>& keys,
+                                      const std::vector<NDArray*>& values,
+                                      std::vector<int> *uniq_keys,
+                                      std::vector<std::vector<NDArray*>> *grouped_vals) {
+    // check if the storage type of a value is valid
+    auto validator = [this](const int key, const NDArray* nd) -> bool {
+      auto stype = nd->storage_type();
       // valid NDArray
       if (stype == kDefaultStorage) return true;
       // invalid NDArray, abort

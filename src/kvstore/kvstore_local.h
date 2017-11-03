@@ -96,7 +96,7 @@ class KVStoreLocal : public KVStore {
   }
 
   void Pull(const std::vector<int>& keys,
-            const std::vector<NDArray>& values,
+            const std::vector<NDArray*>& values,
             int priority) override {
     SetKeyType(kIntKey);
     PullImpl(keys, values, priority);
@@ -119,7 +119,7 @@ class KVStoreLocal : public KVStore {
   }
 
   void Pull(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray>& values,
+            const std::vector<NDArray*>& values,
             int priority) override {
     SetKeyType(kStringKey);
     std::vector<int> keys(str_keys.size());
@@ -187,10 +187,10 @@ class KVStoreLocal : public KVStore {
   }
 
   virtual void PullImpl(const std::vector<int>& keys,
-                        const std::vector<NDArray>& values,
+                        const std::vector<NDArray*>& values,
                         int priority) {
     std::vector<int> uniq_keys;
-    std::vector<std::vector<NDArray> > grouped_vals;
+    std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
@@ -259,13 +259,13 @@ class KVStoreLocal : public KVStore {
    * \brief group values on keys for pull
    */
   virtual void GroupKVPairsPull(const std::vector<int>& keys,
-                                const std::vector<NDArray>& values,
+                                const std::vector<NDArray*>& values,
                                 std::vector<int> *uniq_keys,
-                                std::vector<std::vector<NDArray>> *grouped_vals) {
+                                std::vector<std::vector<NDArray*>> *grouped_vals) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const NDArray& nd) -> bool {
+    auto validator = [this](const int key, const NDArray* nd) -> bool {
       // valid
-      if (nd.storage_type() == kDefaultStorage) return true;
+      if (nd->storage_type() == kDefaultStorage) return true;
       // invalid, print warning messages once
       if (this->warnings_printed_.find(key) == this->warnings_printed_.end()) {
         LOG(INFO) << "Warning: non-default weights detected during kvstore pull. "

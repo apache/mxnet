@@ -64,8 +64,8 @@ class Comm {
   /**
    * \brief init key with the data shape and storage shape
    */
-  virtual void Init(int key, const NDArrayStorageType stype, const TShape& shape,
-      int dtype = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) = 0;
+  virtual void Init(int key, const NDArrayStorageType stype,
+                    const TShape& shape, int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -76,7 +76,7 @@ class Comm {
    */
   virtual void Broadcast(
       int key, const NDArray& src,
-      const std::vector<NDArray> dst, int priority) = 0;
+      const std::vector<NDArray*> dst, int priority) = 0;
 
   virtual void CommSync(const std::vector<const NDArray*>& dst, int priority) { }
   virtual void CommSync(const std::vector<NDArray>& dst, int priority) { }
@@ -119,7 +119,7 @@ class CommCPU : public Comm {
   virtual ~CommCPU() { }
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
-            int type = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) override {
+            int type = mshadow::kFloat32) override {
     if (stype == kDefaultStorage) {
       merge_buf_[key].merged = NDArray(shape, pinned_ctx_, false, type);
     } else {
@@ -199,7 +199,7 @@ class CommCPU : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray> dst, int priority) override {
+                 const std::vector<NDArray*> dst, int priority) override {
     int mask = src.ctx().dev_mask();
     if (mask == Context::kCPU) {
       for (auto d : dst) CopyFromTo(src, d, priority);
@@ -489,7 +489,7 @@ class CommDevice : public Comm {
   virtual ~CommDevice() { }
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
-            int dtype = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) override {
+            int dtype = mshadow::kFloat32) override {
     if (stype == kDefaultStorage) {
       sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
     } else {
@@ -543,14 +543,14 @@ class CommDevice : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray> dst, int priority) override {
+                 const std::vector<NDArray*> dst, int priority) override {
     if (!inited_) {
       // copy to a random device first
       int dev_id = key % dst.size();
       CopyFromTo(src, dst[dev_id], priority);
       for (size_t i = 0; i < dst.size(); ++i) {
         if (i != static_cast<size_t>(dev_id)) {
-          CopyFromTo(dst[dev_id], dst[i], priority);
+          CopyFromTo(*dst[dev_id], dst[i], priority);
         }
       }
     } else {
@@ -672,7 +672,7 @@ class CommNCCL : public Comm {
   }
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
-            int dtype = mshadow::kFloat32, Context pinned_ctx = Context::CPUPinned(0)) override {
+            int dtype = mshadow::kFloat32) override {
     if (stype == kDefaultStorage) {
       sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
     } else {
@@ -812,14 +812,14 @@ class CommNCCL : public Comm {
   }
 
   void Broadcast(int key, const NDArray& src,
-                 const std::vector<NDArray> dst, int priority) override {
+                 const std::vector<NDArray*> dst, int priority) override {
     if (!inited_) {
       // copy to a random device first
       int dev_id = key % dst.size();
       CopyFromTo(src, dst[dev_id], priority);
       for (size_t i = 0; i < dst.size(); ++i) {
         if (i != static_cast<size_t>(dev_id)) {
-          CopyFromTo(dst[dev_id], dst[i], priority);
+          CopyFromTo(*(dst[dev_id]), dst[i], priority);
         }
       }
     } else {
@@ -828,14 +828,14 @@ class CommNCCL : public Comm {
       assert(root == buf.ctx().dev_id);
       size_t root_id = -1;
       for (size_t i = 0; i < dst.size(); ++i) {
-        if (dst[i].ctx().dev_id == root) {
+        if (dst[i]->ctx().dev_id == root) {
           root_id = i;
           break;
         }
       }
       std::vector<int> dev_ids;
       for (size_t i = 0; i < dst.size(); ++i) {
-        auto& bcast = (i == root_id) ? src : dst[i];
+        auto& bcast = (i == root_id) ? src : *(dst[i]);
         dev_ids.push_back(bcast.ctx().dev_id);
       }
       std::sort(dev_ids.begin(), dev_ids.end());
@@ -845,15 +845,19 @@ class CommNCCL : public Comm {
       std::vector<Engine::VarHandle> mutable_vars;
       for (size_t i = 0; i < dst.size(); ++i) {
         if ( i != root_id)
-          mutable_vars.push_back(dst[i].var());
+          mutable_vars.push_back(dst[i]->var());
       }
-      Engine::Get()->PushSync([src, dst, root_id, this](RunContext rctx) {
+      std::vector<NDArray> broadcast(dst.size());
+      for(size_t i = 0; i < dst.size(); ++dst) {
+        broadcast[i] = *(dst[i]);
+      }
+      Engine::Get()->PushSync([src, broadcast, root_id, this](RunContext rctx) {
           {
             std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
             int root = nccl_data_[src.ctx().dev_id].rank;
             ncclGroupStart();
-            for (size_t i = 0; i < dst.size(); ++i) {
-              auto& bcast = (i == root_id) ? src : dst[i];
+            for (size_t i = 0; i < broadcast.size(); ++i) {
+              auto& bcast = (i == root_id) ? src : broadcast[i];
               NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
               MSHADOW_TYPE_SWITCH(bcast.dtype(), DType,
                   ncclBcast(bcast.data().dptr<DType>(),
@@ -888,6 +892,8 @@ class CommNCCL : public Comm {
         return ncclChar;
       case mshadow::kInt32:
         return ncclInt;
+      case mshadow::kInt64:
+        return ncclInt64;
       default:
         LOG(FATAL) << "Unknown type passed to NCCL KVStore";
     }
