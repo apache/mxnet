@@ -76,7 +76,7 @@ def random_seed(seed=None):
     """
 
     try:
-        next_seed = np.random.randint(0, np.iinfo(np.uint32).max)
+        next_seed = np.random.randint(0, np.iinfo(np.int32).max)
         logger = default_logger()
         logger.info('Setting np and mx random seeds = %s', seed)
         np.random.seed(seed)
@@ -135,7 +135,7 @@ def with_seed(seed=None):
                     this_test_seed = int(env_seed_str)
                     print_seed = True
                 else:
-                    this_test_seed = np.random.randint(0, np.iinfo(np.uint32).max)
+                    this_test_seed = np.random.randint(0, np.iinfo(np.int32).max)
                     print_seed = False
                 post_test_state = np.random.get_state()
                 np.random.seed(this_test_seed)
@@ -207,7 +207,7 @@ def setup_module():
     module_seed_str = os.getenv('MXNET_MODULE_SEED')
     logger = default_logger()
     if module_seed_str is None:
-        seed = np.random.randint(0, np.iinfo(np.uint32).max)
+        seed = np.random.randint(0, np.iinfo(np.int32).max)
     else:
         seed = int(module_seed_str)
         logger.warn('*** module-level seed is set: all tests running deterministically ***')
