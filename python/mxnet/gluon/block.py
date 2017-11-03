@@ -325,7 +325,7 @@ class HybridBlock(Block):
         self._reg_params = {}
         self._cached_graph = ()
         self._cached_op = None
-        self._cached_params = None
+        self._cached_call_params = ()
         self._out_format = None
         self._in_format = None
         self._active = False
@@ -363,34 +363,34 @@ class HybridBlock(Block):
 
     def _build_cache(self, *args):
         inputs, out = self._get_graph(*args)
+        name2pos = {var.name: i for i, var in enumerate(inputs)}
         self._cached_op = ndarray.CachedOp(out)
 
-        params = dict(self.collect_params().items())
-        self._cached_params = [params.get(name, None) for name in out.list_inputs()]
-        assert len(params) + len(self._cached_graph[0]) == len(out.list_inputs()), \
+        if args and not isinstance(args[0], Symbol):
+            self._finish_deferred_init(*args)
+
+        params = dict(self.collect_params()._params)
+        assert len(params) + len(inputs) == len(out.list_inputs()), \
             "Wrong number of inputs."
 
-        name2pos = {var.name: i for i, var in enumerate(inputs)}
-        self._in_idx = [(i, name2pos[name]) for i, name in enumerate(out.list_inputs())
-                        if name not in params]
+        self._cached_call_params = tuple((False, params[name].data) if name in params
+                                         else (True, name2pos[name])
+                                         for name in out.list_inputs())
+
+    def _finish_deferred_init(self, *args):
+        self.infer_shape(*args)
+        for i in self.collect_params().values():
+            i._finish_deferred_init()
 
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
 
-        try:
-            cargs = [i.data() if i else None for i in self._cached_params]
-        except DeferredInitializationError:
-            self.infer_shape(*args)
-            for i in self._cached_params:
-                if i is not None:
-                    i._finish_deferred_init()
-            cargs = [i.data() if i else None for i in self._cached_params]
-
         args, fmt = _flatten(args)
         assert fmt == self._in_format, "Invalid input format"
-        for i, j in self._in_idx:
-            cargs[i] = args[j]
+
+        cargs = (args[p] if is_arg else p()
+                 for is_arg, p in self._cached_call_params)
         out = self._cached_op(*cargs)
         if isinstance(out, NDArray):
             out = [out]
@@ -399,6 +399,7 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
+        self._cached_call_params = ()
 
     def register_child(self, block):
         if not isinstance(block, HybridBlock):
@@ -462,14 +463,12 @@ class HybridBlock(Block):
         :py:class:`NDArray` or :py:class:`Symbol`."""
         if isinstance(x, NDArray):
             with x.context as ctx:
-                if self._active:
-                    return self._call_cached_op(x, *args)
                 try:
+                    if self._active:
+                        return self._call_cached_op(x, *args)
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 except DeferredInitializationError:
-                    self.infer_shape(x, *args)
-                    for i in self.collect_params().values():
-                        i._finish_deferred_init()
+                    self._finish_deferred_init(x, *args)
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 return self.hybrid_forward(ndarray, x, *args, **params)
 
@@ -559,7 +558,11 @@ class SymbolBlock(HybridBlock):
     def forward(self, x, *args):
         if isinstance(x, NDArray):
             with x.context:
-                return self._call_cached_op(x, *args)
+                try:
+                    return self._call_cached_op(x, *args)
+                except DeferredInitializationError:
+                    self._finish_deferred_init(x, *args)
+                    return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \
             "HybridBlock requires the first argument to forward be either " \
