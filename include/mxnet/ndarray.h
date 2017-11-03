@@ -551,7 +551,21 @@ class NDArray {
   }
 
 #if MXNET_USE_MKLDNN == 1
+  /*
+   * This function returns mkldnn::memory with the default primitive_desc.
+   */
   std::shared_ptr<const mkldnn::memory> GetMKLDNNData() const;
+  /*
+   * This function returns mkldnn::memory with the given primitive_desc
+   * as long as the array size meets the required size in the given primitive_desc.
+   */
+  std::shared_ptr<const mkldnn::memory> GetMKLDNNData(
+      const mkldnn::memory::primitive_desc &desc) const;
+  /*
+   * This function returns mkldnn::memory with the given primitive_desc.
+   * The returned mkldnn::memory will have the same physical layout as
+   * the given primitive_desc.
+   */
   std::shared_ptr<const mkldnn::memory> GetMKLDNNData(
       const mkldnn::memory::primitive_desc &desc,
       std::vector<mkldnn::primitive> &net) const;

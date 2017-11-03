@@ -257,15 +257,6 @@ void NDArray::set_fresh_out_grad(bool state) const {
 }
 
 #if MXNET_USE_MKLDNN == 1
-static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
-  switch(dtype) {
-    case mshadow::kFloat32:
-      return mkldnn::memory::data_type::f32;
-    default:
-      return mkldnn::memory::data_type::data_undef;
-  }
-}
-
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   if (Mkl_mem_)
     return;
@@ -280,7 +271,7 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
     case 4: layout = mkldnn::memory::format::nchw; break;
     default: LOG(FATAL) << "Unsupported number of dimensions for MKLDNN";
   }
-  mkldnn::memory::desc data_md({dims}, get_mkldnn_type(dtype), layout);
+  mkldnn::memory::desc data_md{dims, get_mkldnn_type(dtype), layout};
   auto cpu_engine = CpuEngine::Instance().get_engine();
   // If the storage type is the default type, we can just simply
   // reference to the memory for the default storage.
@@ -303,6 +294,18 @@ static int GetTypeSize(int dtype) {
 }
 
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
+    const mkldnn::memory::primitive_desc &desc) const {
+  if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
+    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
+    return nullptr;
+  }
+  if (ptr_->Mkl_mem_)
+    return ptr_->Mkl_mem_;
+  return std::shared_ptr<const mkldnn::memory>(new mkldnn::memory(desc,
+        ptr_->shandle.dptr));
+}
+
+std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc,
     std::vector<mkldnn::primitive> &net) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
@@ -310,7 +313,7 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     return nullptr;
   }
   if (ptr_->storage_type == kDefaultStorage) {
-    ptr_->Mkl_mem_.reset(new mkldnn::memory(desc, ptr_->shandle.dptr));
+    ptr_->SetMKLMem(shape_, dtype_);
   }
   if (ptr_->Mkl_mem_->get_primitive_desc() == desc)
     return ptr_->Mkl_mem_;
