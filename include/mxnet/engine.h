@@ -272,11 +272,6 @@ class MXNET_API Engine {
    * \return Number of OMP threads that should be used per worker
    */
   virtual int num_omp_threads_per_worker() const = 0;
-
-  /*! \brief Set the number of OMP threads that should be used per worker
-   * \param num_threads_per_worker Number of OMP threads to be used per worker
-   */
-  virtual void set_num_omp_threads_per_worker(int num_omp_threads_per_worker) = 0;
 };  // class Engine
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet

@@ -30,8 +30,10 @@ class ParsedOpProp {
   std::vector<std::string> outputs;
   // initializer
   void Init(const NodeAttrs& attrs) {
-    std::vector<std::pair<std::string, std::string> > kwargs(
-        attrs.dict.begin(), attrs.dict.end());
+    // For performance, do a reserve first and then copy attrs.dict
+    std::vector<std::pair<std::string, std::string> > kwargs;
+    kwargs.reserve(attrs.dict.size());
+    kwargs.insert(kwargs.end(), attrs.dict.begin(), attrs.dict.end());
     try {
       ptr->Init(kwargs);
     } catch (const dmlc::ParamError& e) {
