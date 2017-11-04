@@ -246,7 +246,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
-def test_sparse_nd_binary_rop():
+def test_sparse_nd_binary_scalar_op():
     N = 3
     def check(fn, stype):
         for _ in range(N):
@@ -269,6 +269,7 @@ def test_sparse_nd_binary_rop():
         check(lambda x: 0.5 >= x, stype)
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
+        check(lambda x: x / 2, stype)
 
 def test_sparse_nd_binary_iop():
     N = 3
