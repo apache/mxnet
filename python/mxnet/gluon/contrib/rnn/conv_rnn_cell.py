@@ -131,8 +131,9 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         s += ', {_conv_layout}'
         s += ')'
         attrs = self.__dict__
-        mapping = ('{_in_channels} -> {_hidden_channels}'.format(**attrs) if self._in_channels
-                   else self._hidden_channels)
+        shape = self.i2h_weight.shape
+        in_channels = shape[1 if self._channel_axis == 1 else -1]
+        mapping = ('{0} -> {1}'.format(in_channels if in_channels else None, shape[0]))
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **attrs)

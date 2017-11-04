@@ -111,17 +111,6 @@ class RecurrentCell(Block):
         self._modified = False
         self.reset()
 
-    def __repr__(self):
-        s = '{name}({mapping}'
-        if hasattr(self, '_activation'):
-            s += ', {_activation}'
-        s += ')'
-        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
-                   else self._hidden_size)
-        return s.format(name=self.__class__.__name__,
-                        mapping=mapping,
-                        **self.__dict__)
-
     def reset(self):
         """Reset before re-using the cell for another graph."""
         self._init_counter = -1
@@ -355,6 +344,17 @@ class RNNCell(HybridRecurrentCell):
     def _alias(self):
         return 'rnn'
 
+    def __repr__(self):
+        s = '{name}({mapping}'
+        if hasattr(self, '_activation'):
+            s += ', {_activation}'
+        s += ')'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
+
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
         prefix = 't%d_'%self._counter
@@ -453,6 +453,14 @@ class LSTMCell(HybridRecurrentCell):
     def _alias(self):
         return 'lstm'
 
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
+
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
         prefix = 't%d_'%self._counter
@@ -550,6 +558,14 @@ class GRUCell(HybridRecurrentCell):
 
     def _alias(self):
         return 'gru'
+
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):

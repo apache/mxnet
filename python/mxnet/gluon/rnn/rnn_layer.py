@@ -89,8 +89,8 @@ class _RNNLayer(Block):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
-                   else self._hidden_size)
+        shape = self.i2h_weight[0].shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)

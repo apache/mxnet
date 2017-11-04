@@ -38,6 +38,7 @@
 #include <thread>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "./openmp.h"
 #include "../common/object_pool.h"
 
 namespace mxnet {
@@ -287,7 +288,6 @@ class ThreadedEngine : public Engine {
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
     /*! \brief Set default OMP threads per kernel worker to default */
-    set_num_omp_threads_per_worker(DefaultOMPThreadsPerWorker());
   }
   ~ThreadedEngine() {
     {
@@ -387,15 +387,7 @@ class ThreadedEngine : public Engine {
    * \return Number of OMP threads that should be used per worker
    */
   int num_omp_threads_per_worker() const override {
-    return num_omp_threads_per_worker_;
-  }
-
-  /*! \brief Set the number of OMP threads that should be used per worker
-   * \param num_threads_per_worker Number of OMP threads to be used per worker
-   * TODO(cjolivier01) Dynamically adjust based upon number of concurrent CPU jobs
-   */
-  void set_num_omp_threads_per_worker(int num_omp_threads_per_worker) override {
-    num_omp_threads_per_worker_ = num_omp_threads_per_worker;
+    return OpenMP::Get()->GetRecommendedOMPThreadCount();
   }
 
  private:
@@ -443,9 +435,6 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
-
-  /*! \brief Number of OMP threads to be used per worker */
-  int num_omp_threads_per_worker_{1};
 
   /*!
    * \brief Disallow copy construction and assignment.
