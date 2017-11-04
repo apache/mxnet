@@ -15,10 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import sys
 import os
 import numpy as np
 import mxnet as mx
 from mxnet.test_utils import *
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import *
 
 def _get_model():
     if not os.path.exists('model/Inception-7-symbol.json'):
@@ -44,6 +48,7 @@ def _get_data(shape):
     download("http://data.mxnet.io/data/test_images_%d_%d.npy" % (shape), dirname='data')
     download("http://data.mxnet.io/data/inception-v3-dump.npz", dirname="data")
 
+@with_seed()
 def test_consistency(dump=False):
     shape = (299, 299)
     _get_model()

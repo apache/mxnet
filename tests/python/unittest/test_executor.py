@@ -17,6 +17,7 @@
 
 import numpy as np
 import mxnet as mx
+from common import *
 
 
 def reldiff(a, b):
@@ -77,12 +78,12 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     assert reldiff(rhs_grad.asnumpy(), rhs_grad2) < 1e-6
 
 
+@with_seed(0)
 def test_bind(disable_bulk_exec=False):
     if disable_bulk_exec:
         prev_bulk_inf_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", "0", "1")
         prev_bulk_train_val = mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", "0", "1")
 
-    np.random.seed(0)
     nrepeat = 10
     maxdim = 4
     for repeat in range(nrepeat):
@@ -112,8 +113,8 @@ def test_bind(disable_bulk_exec=False):
        mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_INFERENCE", prev_bulk_inf_val)
        mx.test_utils.set_env_var("MXNET_EXEC_BULK_EXEC_TRAIN", prev_bulk_train_val)
 
+@with_seed(0)
 def test_dot():
-    np.random.seed(0)
     nrepeat = 10
     maxdim = 4
     for repeat in range(nrepeat):
@@ -133,7 +134,7 @@ def test_dot():
                                 rshape=(s[0],),
                                 sf = mx.symbol.dot)
 
-
+@with_seed()
 def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)

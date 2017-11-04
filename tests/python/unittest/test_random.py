@@ -18,6 +18,7 @@
 import os
 import mxnet as mx
 import numpy as np
+from common import *
 
 def same(a, b):
     return np.sum(a != b) == 0
@@ -118,7 +119,7 @@ def check_with_device(device, dtype):
         ret1 = ndop(**params).asnumpy()
         mx.random.seed(128)
         ret2 = ndop(**params).asnumpy()
-        assert device.device_type == 'gpu' or same(ret1, ret2), \
+        assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
 
         for check_name, check_func, tol in symbdic['checks']:
@@ -131,7 +132,7 @@ def check_with_device(device, dtype):
         ret1 = ndop(**params).asnumpy()
         mx.random.seed(128)
         ret2 = ndop(**params).asnumpy()
-        assert device.device_type == 'gpu' or same(ret1, ret2), \
+        assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
         for i in range(2):
             for j in range(2):
@@ -157,7 +158,7 @@ def check_with_device(device, dtype):
         mx.random.seed(128)
         yexec.forward()
         un2 = (yexec.outputs[0] - x).copyto(device)
-        assert device.device_type == 'gpu' or same(un1.asnumpy(), un2.asnumpy()), \
+        assert same(un1.asnumpy(), un2.asnumpy()), \
                 "symbolic test: `%s` should give the same result with the same seed" % name
 
         ret1 = un1.asnumpy()
@@ -187,18 +188,21 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
+@with_seed()
 def test_random():
     check_with_device(mx.context.current_context(), 'float16')
     check_with_device(mx.context.current_context(), 'float32')
     check_with_device(mx.context.current_context(), 'float64')
 
 
+@with_seed()
 def test_sample_multinomial():
     x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
     dx = mx.nd.ones_like(x)
     mx.contrib.autograd.mark_variables([x], [dx])
+    samples = 5000
     with mx.autograd.record():
-        y, prob = mx.nd.random.multinomial(x, shape=1000, get_prob=True)
+        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
         r = prob * 5
         r.backward()
 
@@ -206,15 +210,15 @@ def test_sample_multinomial():
     x = x.asnumpy()
     for i in range(x.shape[0]):
 
-        freq = np.bincount(y[i], minlength=5)/1000.0*x[i].sum()
-        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.25)
+        freq = np.bincount(y[i], minlength=5)/np.float32(samples)*x[i].sum()
+        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
         rprob = x[i][y[i]]/x[i].sum()
         mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
 
         real_dx = np.zeros((5,))
-        for j in range(1000):
+        for j in range(samples):
             real_dx[y[i][j]] += 5.0 / rprob[j]
-        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i])
+        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i], rtol=1e-4)
 
 
 if __name__ == '__main__':

@@ -18,6 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 from mxnet.test_utils import *
+from common import *
 import numpy as np
 import os, gzip
 import pickle as pickle

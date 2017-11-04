@@ -20,11 +20,13 @@ import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo.custom_layers import HybridConcurrent, Identity
 from mxnet.gluon.model_zoo.vision import get_model
+from common import *
 import sys
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+@with_seed()
 def test_concurrent():
     model = HybridConcurrent(concat_dim=1)
     model.add(nn.Dense(128, activation='tanh', in_units=10))
@@ -43,6 +45,7 @@ def test_concurrent():
     x.wait_to_read()
 
 
+@with_seed()
 def test_identity():
     model = Identity()
     x = mx.nd.random.uniform(shape=(128, 33, 64))
@@ -50,6 +53,7 @@ def test_identity():
                                       x.asnumpy())
 
 
+@with_seed()
 def test_models():
     all_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
                   'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
