@@ -105,10 +105,10 @@ def test_bucket_module_ctx_group():
             data = mx.symbol.Variable('data')
             weight = mx.symbol.Variable('dev1_weight')
             bias = mx.symbol.Variable('dev1_bias')
+            fc = data
             for i in range(seq_len):
-                fc  = mx.symbol.FullyConnected(data=data, weight=weight, bias=bias,
+                fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
                                                name='dev1_fc_%d' % i, num_hidden=num_hidden)
- 
         with mx.AttrScope(ctx_group='dev2'):
             label = mx.symbol.Variable('label')
             weight = mx.symbol.Variable('dev2_weight')
@@ -116,7 +116,7 @@ def test_bucket_module_ctx_group():
             for i in range(seq_len):
                 fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
                                                name='dev2_fc_%d' % i, num_hidden=num_hidden)
-            sym = mx.sym.SoftmaxOutput(fc, label, name='softmax')
+            sym = mx.symbol.SoftmaxOutput(fc, label, name='softmax')
         
         return sym, ('data',), ('label',)
 
