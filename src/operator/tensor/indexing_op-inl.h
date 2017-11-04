@@ -62,7 +62,7 @@ struct AddTakeGradRspKernel {
    * \param nnr             total number of non-zero rows of result gradient
    */
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int tid,
+  MSHADOW_CINLINE static void Map(int tid,
                                   DType* grad,
                                   const nnvm::dim_t* prefix_sum,
                                   const DType* ograd,
