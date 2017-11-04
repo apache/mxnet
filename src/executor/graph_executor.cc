@@ -694,6 +694,7 @@ NDArray ReshapeOrCreate(const std::string& name,
   }
   auto it = shared_buffer->find(name);
   if (it != shared_buffer->end()) {
+    // check if size is large enough for sharing
     bool size_shareable = it->second.shape().Size() >= dest_arg_shape.Size();
     if (size_shareable && stype_shareable) {  // memory can be reused
       CHECK_EQ(it->second.dtype(), dest_arg_dtype)
@@ -706,13 +707,14 @@ NDArray ReshapeOrCreate(const std::string& name,
                    << ", which is larger than already allocated shape " << it->second.shape()
                    << ". Need to re-allocate. Consider putting default bucket key to be "
                    << "the bucket taking the largest input for better memory sharing.";
+      // size is not large enough, creating a larger one for sharing
       // the NDArrays in shared_buffer are guaranteed to be of shareable storages
       it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
       return it->second;
     } else {
       // not shareable storage
       return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
-    }  // arg_array.shape().Size() >= arg_shape.Size()
+    }
   } else {
     auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
     if (stype_shareable) {
@@ -833,9 +835,10 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         }
       } else {  // !shared_arg_names.count(arg_name)
         // model parameter, row_sparse ndarray sharing enabled
+        bool enable_row_sparse_sharing = true;
         in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
                                                  inferred_stype, in_arg_ctxes[arg_top],
-                                                 shared_buffer, true));
+                                                 shared_buffer, enable_row_sparse_sharing));
         // gradient for model parameter, row_sparse ndarray sharing disabled
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();
@@ -843,10 +846,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           auto grad_oid = grad_store_.size() + num_forward_outputs_;
           auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
           auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
+          bool enable_row_sparse_sharing = false;
           arg_grad_vec->emplace_back(ReshapeOrCreate("grad of " + arg_name, inferred_shape,
                                                      inferred_dtype, grad_stype,
                                                      arg_grad_ctxes[arg_top], shared_buffer,
-                                                     false));
+                                                     enable_row_sparse_sharing));
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }  // if (kNullOp == grad_req_types[arg_top])
       }  // if (shared_arg_names.count(arg_name))

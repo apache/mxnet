@@ -121,7 +121,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(output.aux_type(kIdx), RType, {
         // mark row flags
-        Kernel<set_zero, cpu>::Launch(s, num_rows, row_flg);
+        Fill<false>(s, TBlob(row_flg, mshadow::Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
         // calculate inclusive prefix sum
         // TODO(haibin) ideally this is should be done in parallel
@@ -141,7 +141,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
         // add the final gradients
-        int num_threads = omp_get_max_threads();
+        int num_threads = Engine::Get()->num_omp_threads_per_worker();
         dim_t segment_len = (nnr + num_threads - 1) / num_threads;
         Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
                                                   ograd.dptr<DType>(), row_length,
@@ -197,6 +197,9 @@ struct TakeRspKernel {
     const dim_t idx_offset = first - weight_idx;
     const dim_t out_offset = i * row_length;
     const dim_t weight_offset = idx_offset * row_length;
+    // target idx might be missing in weight.idx. For example,
+    // weight.idx = [5,10] and data = [3,7], so binary search fails to
+    // find any matching indices in weight_idx.
     if (idx_offset >= nnr || *(weight_idx + idx_offset) > val) {
       // val not found, fill zeros
       for (int j = 0; j < row_length; j++) {
