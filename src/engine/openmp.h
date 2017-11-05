@@ -36,7 +36,7 @@ class OpenMP {
    * \brief Get the recommended number of OMP threads to use given the current context
    * \return Recommended number of OMP threads to use in a parallel operation
    */
-  int GetRecommendedOMPThreadCount() const;
+  int GetRecommendedOMPThreadCount(bool exclude_reserved = true) const;
 
   /*!
    * \brief Set whether clients of this class receive pro-OMP behavior guidance
@@ -57,8 +57,19 @@ class OpenMP {
   int thread_max() const { return omp_thread_max_; }
 
   /*!
+   * \brief Reserve cores to be excluded from OMP regions
+   * \param cores Number of cores to be excluded from OMP region usage
+   */
+  void set_reserve_cores(int cores);
+  /*!
+   * \brief Get number of cores to be excluded from OMP regions
+   * \return Number of cores to be excluded from OMP regions
+   */
+  int reserve_cores() const { return reserve_cores_; }
+
+  /*!
    * \brief Get the OpenMP object's singleton pointer
-   * \return
+   * \return Singleton OpenMP object pointer
    */
   static OpenMP *Get();
 
@@ -72,6 +83,10 @@ class OpenMP {
    * \brief Maximum number of threads for any OMP region
    */
   volatile int omp_thread_max_ = 0;
+  /*!
+   * \brief Number of cores to reserve for non-OMP regions
+   */
+  volatile int reserve_cores_ = 0;
   /*!
    * \brief Whether OMP_NUM_THREADS was set in the environment.  If it is, we fall back to
    *        the OMP's implementation's handling of that environment variable
