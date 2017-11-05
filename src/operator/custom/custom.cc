@@ -212,8 +212,17 @@ std::vector<nnvm::NodeEntry> Gradient(
   }
 
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < g->num_outputs(); ++i) {
+  for (index_t i = 0; i < params.num_args; ++i) {
     ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+  }
+
+  if (params.num_auxs) {
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = nnvm::Op::Get("_NoGradient");
+    ng->attrs.name = "NoGradient";
+    for (index_t i = 0; i < params.num_auxs; ++i) {
+      ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
+    }
   }
 
   return ret;
