@@ -91,7 +91,6 @@ def test_image_folder_dataset():
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
 
-
 def test_multi_worker():
     class Dataset(gluon.data.Dataset):
         def __len__(self):
