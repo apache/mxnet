@@ -20,6 +20,7 @@ import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo.custom_layers import HybridConcurrent, Identity
 from mxnet.gluon.model_zoo.vision import get_model
+from nose.plugins.attrib import attr
 import sys
 
 def eprint(*args, **kwargs):
@@ -50,6 +51,7 @@ def test_identity():
                                       x.asnumpy())
 
 
+@attr('nightly')
 def test_models():
     all_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
                   'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',

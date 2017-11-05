@@ -18,6 +18,7 @@
 import os
 import mxnet as mx
 import numpy as np
+from nose.plugins.attrib import attr
 
 def same(a, b):
     return np.sum(a != b) == 0
@@ -187,6 +188,8 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
+
+@attr('nightly')
 def test_random():
     check_with_device(mx.context.current_context(), 'float16')
     check_with_device(mx.context.current_context(), 'float32')

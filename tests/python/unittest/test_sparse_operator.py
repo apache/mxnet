@@ -18,9 +18,12 @@
 from mxnet.test_utils import *
 import random
 import warnings
+from nose.plugins.attrib import attr
+
 
 def is_scalar(var):
     return False if hasattr(var, "__len__") else True
+
 
 def get_result_type(call, dflt_stype):
     """Try to infer result storage type for a sparse matrix and a given unary operation"""
@@ -127,10 +130,12 @@ def get_fw_bw_result_types_2(forward_numpy_call,  fwd_res_dflt,
     return (get_result_type(forward_numpy_call,  fwd_res_dflt),
             get_result_type_2(backward_numpy_call, bwd_res_dflt))
 
+
 def get_fw_bw_result_types_with_scalar(forward_numpy_call,  fwd_res_dflt,
                                        backward_numpy_call, bwd_res_dflt):
     return (get_result_type_with_scalar(forward_numpy_call,  fwd_res_dflt),
             get_result_type_with_scalar(backward_numpy_call, bwd_res_dflt))
+
 
 def gen_rsp_random_indices(shape, density=.5, force_indices=None):
     assert density >= 0 and density <= 1
@@ -151,6 +156,9 @@ def gen_rsp_random_indices(shape, density=.5, force_indices=None):
 def all_zero(var):
     return 0
 
+
+# This test takes over a minute to run, moving to nightly builds.
+@attr('nightly')
 def test_elemwise_binary_ops():
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
@@ -684,6 +692,8 @@ def check_sparse_mathematical_core(name, stype,
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
 
+# This test takes several minutes to run.
+@attr('nightly')
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1135,6 +1145,7 @@ def test_elemwise_add_ex():
                               lhs_grad_stype='row_sparse', rhs_grad_stype='row_sparse')
 
 
+@attr('nightly')
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1432,6 +1443,9 @@ def test_sparse_square_sum():
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                            atol=1e-2, rtol=0.1)
 
+
+# This test takes several minutes to run, marking as nightly.
+@attr('nightly')
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
