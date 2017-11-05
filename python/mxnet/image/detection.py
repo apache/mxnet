@@ -728,13 +728,16 @@ class ImageDetIter(ImageIter):
         out = np.reshape(raw[header_width:], (-1, obj_width))
 
         # remove invalid ground-truths
-        if ((obj_width - 1) / 4) == 1:  # If only two points were given
-            valid = np.where(np.logical_and(out[:, 3] > out[:, 1], out[:, 4] > out[:, 2]))[0]  # x1 > x0 and y1 > y0
-        elif ((obj_width - 1) / 4) == 2:  # Else if four points were given
-            check_x = np.logical_and(out[:, 3] > out[:, 1], out[:, 5] > out[:, 7])  # x1 > x0 and x2 > x3
-            check_y = np.logical_and(out[:, 6] > out[:, 4], out[:, 8] > out[:, 2])  # y2 > y1 and y3 > y0
+        if ((obj_width - 1) / 4) == 1:
+            # x1 > x0 and y1 > y0
+            valid = np.where(np.logical_and(out[:, 3] > out[:, 1], out[:, 4] > out[:, 2]))[0]
+        elif ((obj_width - 1) / 4) == 2:
+            # x1 > x0 and x2 > x3
+            check_x = np.logical_and(out[:, 3] > out[:, 1], out[:, 5] > out[:, 7])
+            # y2 > y1 and y3 > y0
+            check_y = np.logical_and(out[:, 6] > out[:, 4], out[:, 8] > out[:, 2])
             valid = np.where(np.logical_and(check_x, check_y))[0]
-        else:  # If incorrect number of label was given
+        else:
             raise RuntimeError('Object width is not valid.')
 
         if valid.size < 1:
