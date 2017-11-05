@@ -2,7 +2,7 @@ MXNet Change Log
 ================
 ## 0.12.0
 ### Performance
-  - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training is up to 3.5x faster than Pascal when using float16.
+  - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training CNNs is up to 3.5x faster than Pascal when using float16 precision.
   - Enabled JIT compilation. Autograd and Gluon hybridize now use less memory and has faster speed. Performance is almost the same with old symbolic style code.
   - Improved ImageRecordIO image loading performance and added indexed RecordIO support.
   - Added better openmp thread management to improve CPU performance.
