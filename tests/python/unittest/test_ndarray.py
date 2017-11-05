@@ -23,8 +23,10 @@ import unittest
 from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
+from nose.plugins.attrib import attr
 import unittest
 import mxnet.autograd
+
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -495,6 +497,8 @@ def test_arange():
                         dtype="int32").asnumpy()
     assert_almost_equal(pred, gt)
 
+
+@attr('nightly')
 def test_order(ctx=default_context()):
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":

@@ -29,8 +29,10 @@ except ImportError:
 import sys
 from common import get_data, assertRaises
 import unittest
+from nose.plugins.attrib import attr
 
 
+@attr('nightly')
 def test_MNISTIter():
     # prepare data
     get_data.GetMNIST_ubyte()
@@ -60,6 +62,8 @@ def test_MNISTIter():
     label_1 = train_dataiter.getlabel().asnumpy().flatten()
     assert(sum(label_0 - label_1) == 0)
 
+
+@attr('nightly')
 def test_Cifar10Rec():
     get_data.GetCifar10()
     dataiter = mx.io.ImageRecordIter(
