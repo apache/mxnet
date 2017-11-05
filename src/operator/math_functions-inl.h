@@ -35,47 +35,29 @@ namespace op {
 namespace math {
 
 // Wrappers for math.h unary and binary functions
-// - For DType != double: math::name(a) does computation in float,
-//   casting back to DType afterwards
+// - For DType != double: math::name(a) does computation in float
+//   and returns float
 // - For DType == double: math::name(a) does computation in double
-// - math::namef(a) does computation in float and returns float value
-//   (no casting back). Use this in combined expressions (for example,
-//   math::log1p(math::expf(a)) in softrelu (mshadow_op.h))
+//   and returns double
 
 #define MXNET_UNARY_MATH_FUNC(name) \
 template<typename DType> MSHADOW_XINLINE \
-DType name(DType a) { \
-  return DType(::name##f(static_cast<float>(a))); \
+float name(DType a) { \
+  return ::name##f(static_cast<float>(a)); \
 } \
-template<> MSHADOW_XINLINE \
-float name(float a) { \
-  return ::name##f(a); \
-} \
-template<> MSHADOW_XINLINE \
+MSHADOW_XINLINE \
 double name(double a) { \
   return ::name(a); \
-} \
-template<typename DType> MSHADOW_XINLINE \
-float name##f(DType a) { \
-  return ::name##f(static_cast<float>(a)); \
 }
 
 #define MXNET_BINARY_MATH_FUNC(name) \
 template<typename DType> MSHADOW_XINLINE \
-DType name(DType a, DType b) { \
-  return DType(::name##f(static_cast<float>(a), static_cast<float>(b))); \
+float name(DType a, DType b) { \
+  return ::name##f(static_cast<float>(a), static_cast<float>(b)); \
 } \
-template<> MSHADOW_XINLINE \
+MSHADOW_XINLINE \
 double name(double a, double b) { \
   return ::name(a, b); \
-} \
-template<> MSHADOW_XINLINE \
-float name(float a, float b) { \
-  return ::name##f(a, b); \
-} \
-template<typename DType> MSHADOW_XINLINE \
-float name##f(DType a, DType b) { \
-  return ::name##f(static_cast<float>(a), static_cast<float>(b)); \
 }
 
 MXNET_UNARY_MATH_FUNC(exp)
@@ -135,6 +117,25 @@ MXNET_UNARY_MATH_FUNC(lgamma)
 MXNET_BINARY_MATH_FUNC(hypot)
 
 MXNET_BINARY_MATH_FUNC(pow)
+
+template<typename DType> MSHADOW_XINLINE
+float id(DType a) {
+  return static_cast<float>(a);
+}
+MSHADOW_XINLINE
+double id(double a) {
+  return a;
+}
+
+template<typename DType> MSHADOW_XINLINE
+float sqr(DType a) {
+  float af(static_cast<float>(a));
+  return af * af;
+}
+MSHADOW_XINLINE
+double sqr(double a) {
+  return a * a;
+}
 
 }  // namespace math
 }  // namespace op

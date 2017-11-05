@@ -476,17 +476,38 @@ def test_create_csr():
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
         assert same(csr_created.indices.asnumpy(), indices.asnumpy())
         # verify csr matrix dtype and ctx is consistent from the ones provided
-        assert csr_created.dtype == dtype
-        assert csr_created.data.dtype == dtype
-        assert csr_created.context == Context.default_ctx
+        assert csr_created.dtype == dtype, (csr_created, dtype)
+        assert csr_created.data.dtype == dtype, (csr_created.data.dtype, dtype)
+        assert csr_created.context == Context.default_ctx, (csr_created.context, Context.default_ctx)
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+
+    def check_create_csr_from_coo(shape, density, dtype):
+        matrix = rand_ndarray(shape, 'csr', density)
+        sp_csr = matrix.asscipy()
+        sp_coo = sp_csr.tocoo()
+        csr_created = mx.nd.sparse.csr_matrix((sp_coo.data, (sp_coo.row, sp_coo.col)), shape=shape, dtype=dtype)
+        assert csr_created.stype == 'csr'
+        assert same(csr_created.data.asnumpy(), sp_csr.data)
+        assert same(csr_created.indptr.asnumpy(), sp_csr.indptr)
+        assert same(csr_created.indices.asnumpy(), sp_csr.indices)
+        csr_copy = mx.nd.array(csr_created)
+        assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+        # verify csr matrix dtype and ctx is consistent
+        assert csr_created.dtype == dtype, (csr_created.dtype, dtype)
+        assert csr_created.data.dtype == dtype, (csr_created.data.dtype, dtype)
+        assert csr_created.context == Context.default_ctx, (csr_created.context, Context.default_ctx)
 
     def check_create_csr_from_scipy(shape, density, f):
         def assert_csr_almost_equal(nd, sp):
             assert_almost_equal(nd.data.asnumpy(), sp.data)
             assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
             assert_almost_equal(nd.indices.asnumpy(), sp.indices)
+            sp_csr = nd.asscipy()
+            assert_almost_equal(sp_csr.data, sp.data)
+            assert_almost_equal(sp_csr.indptr, sp.indptr)
+            assert_almost_equal(sp_csr.indices, sp.indices)
+            assert(sp.dtype == sp_csr.dtype), (sp.dtype, sp_csr.dtype)
 
         try:
             import scipy.sparse as spsp
@@ -498,8 +519,8 @@ def test_create_csr():
             indptr = np.array([0, 2, 3, 7])
             indices = np.array([0, 2, 2, 0, 1, 2, 1])
             data = np.array([1, 2, 3, 4, 5, 6, 1])
-            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3))
-            canonical_csr_nd = f(non_canonical_csr)
+            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3), dtype=csr_nd.dtype)
+            canonical_csr_nd = f(non_canonical_csr, dtype=csr_nd.dtype)
             canonical_csr_sp = non_canonical_csr.copy()
             canonical_csr_sp.sum_duplicates()
             canonical_csr_sp.sort_indices()
@@ -514,9 +535,9 @@ def test_create_csr():
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
         check_create_csr_from_nd(shape, density, dtype)
+        check_create_csr_from_coo(shape, density, dtype)
         check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
         check_create_csr_from_scipy(shape, density, mx.nd.array)
-
 
 def test_create_row_sparse():
     dim0 = 50
