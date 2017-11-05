@@ -357,9 +357,9 @@ template<int n_channels>
 void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
   mshadow::Tensor<cpu, 3, DType>* data_ptr, const bool is_mirrored, const float contrast_scaled,
   const float illumination_scaled) {
-  float RGBA_MULT[4];
-  float RGBA_BIAS[4];
-  float RGBA_MEAN[4];
+  float RGBA_MULT[4] = { 0 };
+  float RGBA_BIAS[4] = { 0 };
+  float RGBA_MEAN[4] = { 0 };
   mshadow::Tensor<cpu, 3, DType>& data = (*data_ptr);
   if (!std::is_same<DType, uint8_t>::value) {
     RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
@@ -555,8 +555,8 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
       std::bernoulli_distribution coin_flip(0.5);
       bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid])))
                          || normalize_param_.mirror;
-      float contrast_scaled;
-      float illumination_scaled;
+      float contrast_scaled = 1;
+      float illumination_scaled = 0;
       if (!std::is_same<DType, uint8_t>::value) {
         contrast_scaled =
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
