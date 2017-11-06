@@ -119,14 +119,40 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
 typedef std::shared_ptr<mkldnn::memory> mkldnn_mem_ptr;
 typedef std::shared_ptr<const mkldnn::memory> mkldnn_mem_const_ptr;
 
+class MKLDNNStream {
+  std::vector<mkldnn::primitive> net;
+  // Here we hold all memory related to the operators in the stream.
+  std::vector<mkldnn_mem_const_ptr> mem_holder;
+public:
+  static MKLDNNStream &Instance() {
+    static thread_local MKLDNNStream stream;
+    return stream;
+  }
+
+  void RegisterPrim(const mkldnn::primitive &prim) {
+    net.push_back(prim);
+  }
+
+  void RegisterMem(mkldnn_mem_const_ptr mem) {
+    mem_holder.push_back(mem);
+  }
+
+  void Submit() {
+    mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+    net.clear();
+    mem_holder.clear();
+  }
+};
+
 inline static mkldnn_mem_ptr CreateMKLDNNMem(const mkldnn::memory::primitive_desc &desc) {
   // TODO allocate memory more efficiently.
-  return std::shared_ptr<mkldnn::memory>(new mkldnn::memory(desc));
+  std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
+  MKLDNNStream::Instance().RegisterMem(ret);
+  return ret;
 }
 
-inline static std::pair<mkldnn_mem_const_ptr, mkldnn_mem_const_ptr> GetWeights(
-    const NDArray &arr, const mkldnn::memory::primitive_desc &target_pd,
-    int num_groups, std::vector<mkldnn::primitive> &net) {
+inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
+    const mkldnn::memory::primitive_desc &target_pd, int num_groups) {
   mkldnn_mem_const_ptr mem;
   auto engine = CpuEngine::Instance().get_engine();
   if (arr.shape().ndim() == 2) {
@@ -155,17 +181,17 @@ inline static std::pair<mkldnn_mem_const_ptr, mkldnn_mem_const_ptr> GetWeights(
   }
   else {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
-    return std::pair<mkldnn_mem_const_ptr, mkldnn_mem_const_ptr>(nullptr, nullptr);
+    return nullptr;
   }
   if (mem->get_primitive_desc() == target_pd)
-    return std::pair<mkldnn_mem_const_ptr, mkldnn_mem_const_ptr>(mem, nullptr);
+    return mem;
 
   std::shared_ptr<mkldnn::memory> ret = CreateMKLDNNMem(target_pd);
-  net.push_back(mkldnn::reorder(*mem, *ret));
-  return std::pair<mkldnn_mem_const_ptr, mkldnn_mem_const_ptr>(ret, mem);
+  MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(*mem, *ret));
+  return ret;
 }
 
-inline static std::shared_ptr<const mkldnn::memory> GetWeights(const NDArray &arr,
+inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
     const mkldnn::engine &engine, int num_groups = 1) {
   if (arr.shape().ndim() == 2) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
@@ -173,7 +199,6 @@ inline static std::shared_ptr<const mkldnn::memory> GetWeights(const NDArray &ar
     mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
       mkldnn::memory::format::oi};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
-    std::vector<mkldnn::primitive> net;
     return arr.GetMKLDNNData(pd);
   }
   else if (arr.shape().ndim() == 4 && num_groups == 1) {
@@ -182,7 +207,6 @@ inline static std::shared_ptr<const mkldnn::memory> GetWeights(const NDArray &ar
     mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
       mkldnn::memory::format::oihw};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
-    std::vector<mkldnn::primitive> net;
     return arr.GetMKLDNNData(pd);
   }
   else if (arr.shape().ndim() == 4) {
@@ -191,7 +215,6 @@ inline static std::shared_ptr<const mkldnn::memory> GetWeights(const NDArray &ar
     mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
       mkldnn::memory::format::goihw};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
-    std::vector<mkldnn::primitive> net;
     return arr.GetMKLDNNData(pd);
   }
   else {
