@@ -1,5 +1,10 @@
 MXNet Change Log
 ================
+## 0.12.1
+### Bug-fixes
+  - Fixed 
+  
+
 ## 0.12.0
 ### Performance
   - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training CNNs is up to 3.5x faster than Pascal when using float16 precision.
