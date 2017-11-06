@@ -19,14 +19,12 @@
 
 /*!
  */
-#include <iostream>
-#include <fstream>
 #include <map>
 #include <string>
 #include <vector>
+#include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
-// Allow IDE to parse the types
-#include "../include/mxnet-cpp/op.h"
+
 
 using namespace std;
 using namespace mxnet::cpp;
@@ -89,15 +87,15 @@ int main(int argc, char const *argv[]) {
   args_map["fc2_b"] = 0;
 
   auto train_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./train-images-idx3-ubyte")
-      .SetParam("label", "./train-labels-idx1-ubyte")
+      .SetParam("image", "./mnist_data/train-images-idx3-ubyte")
+      .SetParam("label", "./mnist_data/train-labels-idx1-ubyte")
       .SetParam("batch_size", batch_size)
       .SetParam("shuffle", 1)
       .SetParam("flat", 0)
       .CreateDataIter();
   auto val_iter = MXDataIter("MNISTIter")
-      .SetParam("image", "./t10k-images-idx3-ubyte")
-      .SetParam("label", "./t10k-labels-idx1-ubyte")
+      .SetParam("image", "./mnist_data/t10k-images-idx3-ubyte")
+      .SetParam("label", "./mnist_data/t10k-labels-idx1-ubyte")
       .CreateDataIter();
 
   Optimizer* opt = OptimizerRegistry::Find("ccsgd");
@@ -111,35 +109,62 @@ int main(int argc, char const *argv[]) {
   auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
   auto arg_names = lenet.ListArguments();
 
+  // Create metrics
+  Accuracy train_acc, val_acc;
+
   for (int iter = 0; iter < max_epoch; ++iter) {
-    LG << "Epoch: " << iter;
-    train_iter.Reset();
-    while (train_iter.Next()) {
+      int samples = 0;
+      train_iter.Reset();
+      train_acc.Reset();
+
+      auto tic = chrono::system_clock::now();
+
+     while (train_iter.Next()) {
+      samples += batch_size;
       auto data_batch = train_iter.GetDataBatch();
-      args_map["data"] = data_batch.data.Copy(Context::gpu());
-      args_map["data_label"] = data_batch.label.Copy(Context::gpu());
+
+      data_batch.data.CopyTo(&args_map["data"]);
+      data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
+
+      // Compute gradients
       exec->Forward(true);
       exec->Backward();
+
       // Update parameters
       for (size_t i = 0; i < arg_names.size(); ++i) {
         if (arg_names[i] == "data" || arg_names[i] == "data_label") continue;
         opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
       }
+
+      // Update metric
+      train_acc.Update(data_batch.label, exec->outputs[0]);
     }
+
+     // one epoch of training is finished
+     auto toc = chrono::system_clock::now();
+     float duration = chrono::duration_cast<chrono::milliseconds>(toc - tic).count() / 1000.0;
+     LG << "Epoch[" << iter << "] " << samples / duration \
+         << " samples/sec " << "Train-Accuracy=" << train_acc.Get();;
+
+      val_iter.Reset();
+      val_acc.Reset();
 
     Accuracy acu;
     val_iter.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      args_map["data"] = data_batch.data.Copy(Context::gpu());
-      args_map["data_label"] = data_batch.label.Copy(Context::gpu());
+      data_batch.data.CopyTo(&args_map["data"]);
+      data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
+
+      // Only forward pass is enough as no gradient is needed when evaluating
       exec->Forward(false);
       NDArray::WaitAll();
       acu.Update(data_batch.label, exec->outputs[0]);
+      val_acc.Update(data_batch.label, exec->outputs[0]);
     }
-    LG << "Accuracy: " << acu.Get();
+    LG << "Epoch[" << iter << "] Val-Accuracy=" << val_acc.Get();
   }
 
   delete exec;
