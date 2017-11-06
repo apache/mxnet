@@ -27,7 +27,7 @@ try:
 except ImportError:
     h5py = None
 import sys
-from common import get_data
+from common import get_data, assertRaises
 import unittest
 
 
@@ -163,12 +163,8 @@ def test_NDArrayIter_csr():
     dns = csr.asnumpy()
 
     # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError 
-    try:
-        csr_iter = mx.io.NDArrayIter({'data': csr}, dns, batch_size,
-                                     last_batch_handle='pad')
-        assert(False)
-    except NotImplementedError:
-        pass
+    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size,
+                 last_batch_handle='pad')
     
     # CSRNDArray with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
@@ -177,7 +173,7 @@ def test_NDArrayIter_csr():
     for batch in csr_iter:
         num_batch += 1
 
-    assert(num_batch == num_rows / batch_size)
+    assert(num_batch == num_rows // batch_size)
 
     # make iterators
     csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))

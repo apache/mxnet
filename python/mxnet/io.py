@@ -528,6 +528,20 @@ def _has_instance(data, dtype):
                 return True
     return False
 
+def _shuffle(data, idx):
+    """Shuffle the data."""
+    shuffle_data = []
+
+    for k, v in data:
+        if (isinstance(v, h5py.Dataset) if h5py else False):
+            shuffle_data.append((k, v))
+        elif isinstance(v, CSRNDArray):
+            shuffle_data.append((k, sparse_array(v.asscipy()[idx], v.context)))
+        else:
+            shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
+
+    return shuffle_data
+
 class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
     or ``mx.nd.sparse.CSRNDArray``.
@@ -641,18 +655,8 @@ class NDArrayIter(DataIter):
         # shuffle data
         if shuffle:
             np.random.shuffle(self.idx)
-            self.data = [(k, sparse_array(v.asscipy()[self.idx], v.context)
-                          if isinstance(v, CSRNDArray)
-                          else array(v.asnumpy()[self.idx], v.context))
-                         if not (isinstance(v, h5py.Dataset)
-                                 if h5py else False) else (k, v)
-                         for k, v in self.data]
-            self.label = [(k, sparse_array(v.asscipy()[self.idx], v.context)
-                           if isinstance(v, CSRNDArray)
-                           else array(v.asnumpy()[self.idx], v.context))
-                          if not (isinstance(v, h5py.Dataset)
-                                  if h5py else False) else (k, v)
-                          for k, v in self.label]
+            self.data = _shuffle(self.data, self.idx)
+            self.label = _shuffle(self.label, self.idx)
 
         # batching
         if last_batch_handle == 'discard':
