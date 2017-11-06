@@ -566,11 +566,10 @@ class NDArray {
    * The returned mkldnn::memory will have the same physical layout as
    * the given primitive_desc.
    */
-  std::shared_ptr<const mkldnn::memory> GetMKLDNNData(
-      const mkldnn::memory::primitive_desc &desc,
-      std::vector<mkldnn::primitive> &net) const;
+  std::shared_ptr<const mkldnn::memory> GetMKLDNNDataReorder(
+      const mkldnn::memory::primitive_desc &desc) const;
 
-  void CopyFrom(const mkldnn::memory &mem, std::vector<mkldnn::primitive> &net);
+  void CopyFrom(const mkldnn::memory &mem);
   std::shared_ptr<mkldnn::memory> CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
 #endif
