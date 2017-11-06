@@ -39,9 +39,9 @@
 #if MXNET_USE_NCCL
 #include "../common/cuda_utils.h"
 
-//NCCL v2 introduces NCCL_MAJOR macro for versioning,
-//so if there is no such macro defined in nccl.h
-//then it is NCCL v1
+// NCCL v2 introduces NCCL_MAJOR macro for versioning,
+// so if there is no such macro defined in nccl.h
+// then it is NCCL v1
 #ifndef NCCL_MAJOR
 #define NCCL_MAJOR 1
 #endif
@@ -841,14 +841,14 @@ class CommNCCL : public Comm {
       // Broadcast to other devices
       std::vector<Engine::VarHandle> mutable_vars;
       for (size_t i = 0; i < dst.size(); ++i) {
-        if ( i != root_id) {
+        if (i != root_id) {
           mutable_vars.push_back(dst[i]->var());
         }
       }
       // We need to capture NDArrays by value
       // in order to push to the engine
       std::vector<NDArray> broadcast(dst.size());
-      for(size_t i = 0; i < dst.size(); ++i) {
+      for (size_t i = 0; i < dst.size(); ++i) {
         broadcast[i] = *(dst[i]);
       }
       Engine::Get()->PushSync([src, broadcast, root_id, this](RunContext rctx) {
@@ -933,10 +933,10 @@ class CommNCCL : public Comm {
   // Functions that enable templates to work on both references
   // and pointers
   template<typename T>
-  T * ptr(T & obj) { return &obj; }
+  const T * ptr(const T & obj) { return &obj; }
 
   template<typename T>
-  T * ptr(T * obj) { return obj; }
+  const T * ptr(T * obj) { return obj; }
 
   // Find which element of the vector
   // corresponds to root dev_id
