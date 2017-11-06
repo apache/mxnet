@@ -16,6 +16,7 @@ from block.target import *
 from block.coder import MultiClassDecoder, NormalizedBoxCenterDecoder
 from trainer.metric import Accuracy, SmoothL1, LossRecorder, MultiBoxMetric
 from trainer.debugger import super_print, find_abnormal
+from evaluation.eval_metric import VOC07MApMetric, MApMetric
 
 def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, wd, log_interval=50,
               pretrained=0, seed=None, log_file=None, dev=False, ctx=mx.cpu(), **kwargs):
@@ -93,9 +94,11 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
     def evaluate_voc(net, val_data, ctx):
         ctx = ctx_as_list(ctx)
         results = []
+        valid_metric = VOC07MApMetric(class_names=val_dataset.classes)
         for i, batch in enumerate(val_data):
             data = gluon.utils.split_and_load(batch[0], ctx_list=ctx, batch_axis=0)
-            for x in data:
+            label = gluon.utils.split_and_load(batch[1], ctx_list=ctx, batch_axis=0)
+            for x, y in zip(data, label):
                 z = net(x)
                 cls_preds, box_preds, anchors = z
                 # print('box_preds',box_preds)
@@ -110,10 +113,12 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                 # print(result)
                 out = nd.contrib.box_nms(result, topk=400)
                 # print(out)
-                results.append(out.asnumpy())
-        results = np.vstack(results)
+                # results.append(out.asnumpy())
+                valid_metric.update(y, out)
+        # results = np.vstack(results)
         # write to disk for eval
-        return val_dataset.eval_results(results)
+        return valid_metric.get()
+        # return val_dataset.eval_results(results)
 
 
     # training process
@@ -208,6 +213,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
             logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
             map_name, mean_ap = evaluate_voc(net, val_data, ctx)
             # name, val_acc = test(ctx)
-            logging.info('[Epoch %d] validation: %s=%f'%(epoch, map_name, mean_ap))
+            for name, ap in zip(map_name, mean_ap):
+                logging.info('[Epoch %d] validation: %s=%f'%(epoch, name, ap))
 
     train(net, train_data, val_data, end_epoch, ctx=ctx)
