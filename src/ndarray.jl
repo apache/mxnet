@@ -682,25 +682,42 @@ function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
   end
 end
 
+"""
+Elementwise division of NDArray
+"""
+div(x::NDArray, y::NDArray) = _div(x, y)
+div(x::NDArray, s::Real) = _div_scalar(x, scalar=s)
+div(s::Real, x::NDArray) = _rdiv_scalar(x, scalar=s)
+
 import Base: /
 """
     ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
 
 Elementwise dividing an `NDArray` by a scalar or another `NDArray` of the same shape.
 """
-@compatdot function Base.broadcast(::typeof(/), arg0 :: NDArray, arg :: Union{Real, NDArray})
-  ret = copy(arg0, context(arg0))
-  div_from!(ret, arg)
+@compatdot function Base.broadcast(::typeof(/), arg0 :: NDArray,
+                                   arg :: Union{Real, NDArray})
+  div(arg0, arg)
+end
+
+@compatdot function Base.broadcast(::typeof(/), arg0 :: Real, arg :: NDArray)
+  div(arg0, arg)
 end
 
 """
     /(arg0 :: NDArray, arg :: Real)
 
-Divide an `NDArray` by a scalar. Matrix division (solving linear systems) is not implemented yet.
+Divide an `NDArray` by a scalar.
+Matrix division (solving linear systems) is not implemented yet.
 """
-function /(arg0 :: NDArray, arg :: Real)
-  arg0 ./ arg
-end
+/(arg0 :: NDArray, arg :: Real) = div(arg0, arg)
+
+"""
+    /(arg0 :: Real, arg :: NDArray)
+
+Elementwise divide a scalar by an `NDArray`.
+"""
+/(arg0 :: Real, arg :: NDArray) = div(arg0, arg)
 
 
 """

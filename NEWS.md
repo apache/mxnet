@@ -3,7 +3,7 @@
 ## New API
 
 * `deepcopy` for NDArray (#273)
-
+* `scalar ./ NDArray` is available now. (#292)
 * `fill` and `fill!` for NDArray (#TBD)
   An API correspond to Python's `mx.nd.full()`
 

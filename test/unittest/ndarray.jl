@@ -264,7 +264,46 @@ function test_div()
   t6, a6 = rand_tensors(Float16, dims)
   scalar_large = 1e4
   @test reldiff(t6 / scalar_large, copy(a6 ./ scalar_large)) < 1e-1
+
+  let x = mx.NDArray([1 2; 3 4])
+    @test eltype(x) == Int
+    @test copy(x / 2)   == [0 1; 1 2]
+    @test copy(x / 2.5) == [0 1; 1 2]
+    @test copy(x / 2.9) == [0 1; 1 2]
+  end
 end
+
+
+function test_rdiv()
+  info("NDarray::rdiv")
+
+  info("NDarray::rdiv::Inf16")
+  let x = 1 ./ mx.zeros(Float16, 4)
+    @test copy(x) == [Inf16, Inf16, Inf16, Inf16]
+  end
+
+  info("NDarray::rdiv::Inf32")
+  let x = 1 ./ mx.zeros(Float32, 4)
+    @test copy(x) == [Inf32, Inf32, Inf32, Inf32]
+  end
+
+  info("NDarray::rdiv::Inf64")
+  let x = 1 ./ mx.zeros(Float64, 4)
+    @test copy(x) == [Inf64, Inf64, Inf64, Inf64]
+  end
+
+  info("NDarray::rdiv::Int")
+  let x = 1 ./ mx.NDArray([1 2; 3 4])
+    @test copy(x) == [1 0; 0 0]
+  end
+
+  info("NDarray::rdiv::Float32")
+  let x = 1 ./ mx.NDArray(Float32[1 2; 3 4])
+    y = 1 ./ Float32[1 2; 3 4]
+    @test reldiff(copy(x), y) < 1e8
+  end
+end  # function test_rdiv
+
 
 function test_gd()
   dims   = rand_dims()
@@ -551,6 +590,7 @@ end
   test_minus()
   test_mul()
   test_div()
+  test_rdiv()
   test_gd()
   test_saveload()
   test_clip()
