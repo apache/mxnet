@@ -220,6 +220,9 @@ function get_name(self :: mx.SymbolicNode)
     return Symbol(unsafe_string(name[]))
 end
 
+Base.show(io::IO, sym::SymbolicNode) =
+  print(io, "$(typeof(sym)) $(get_name(sym))")
+
 import Base: print
 
 function print(io :: IO, sym :: SymbolicNode)
