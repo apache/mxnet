@@ -413,6 +413,71 @@ function test_reshape()
     @test size(C) == (50, 4)
 end
 
+function test_sum()
+  info("NDArray::sum")
+
+  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+    @test copy(sum(X))[]       == sum(A)
+    @test copy(sum(X, 1))      == sum(A, 1)
+    @test copy(sum(X, 2))      == sum(A, 2)
+    @test copy(sum(X, 3))      == sum(A, 3)
+    @test copy(sum(X, [1, 2])) == sum(A, [1, 2])
+    @test copy(sum(X, (1, 2))) == sum(A, (1, 2))
+  end
+end
+
+function test_mean()
+  info("NDArray::mean")
+
+  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+    @test copy(mean(X))[]       == mean(A)
+    @test copy(mean(X, 1))      == mean(A, 1)
+    @test copy(mean(X, 2))      == mean(A, 2)
+    @test copy(mean(X, 3))      == mean(A, 3)
+    @test copy(mean(X, [1, 2])) == mean(A, [1, 2])
+    @test copy(mean(X, (1, 2))) == mean(A, (1, 2))
+  end
+end
+
+function test_maximum()
+  info("NDArray::maximum")
+
+  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+    @test copy(maximum(X))[]       == maximum(A)
+    @test copy(maximum(X, 1))      == maximum(A, 1)
+    @test copy(maximum(X, 2))      == maximum(A, 2)
+    @test copy(maximum(X, 3))      == maximum(A, 3)
+    @test copy(maximum(X, [1, 2])) == maximum(A, [1, 2])
+    @test copy(maximum(X, (1, 2))) == maximum(A, (1, 2))
+  end
+end
+
+function test_minimum()
+  info("NDArray::minimum")
+
+  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+    @test copy(minimum(X))[]       == minimum(A)
+    @test copy(minimum(X, 1))      == minimum(A, 1)
+    @test copy(minimum(X, 2))      == minimum(A, 2)
+    @test copy(minimum(X, 3))      == minimum(A, 3)
+    @test copy(minimum(X, [1, 2])) == minimum(A, [1, 2])
+    @test copy(minimum(X, (1, 2))) == minimum(A, (1, 2))
+  end
+end
+
+function test_prod()
+  info("NDArray::prod")
+
+  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+    @test copy(prod(X))[]       == prod(A)
+    @test copy(prod(X, 1))      == prod(A, 1)
+    @test copy(prod(X, 2))      == prod(A, 2)
+    @test copy(prod(X, 3))      == prod(A, 3)
+    @test copy(prod(X, [1, 2])) == prod(A, [1, 2])
+    @test copy(prod(X, (1, 2))) == prod(A, (1, 2))
+  end
+end
+
 function test_fill()
   info("NDArray::fill")
   thresh = 1e8
@@ -449,21 +514,25 @@ function test_fill()
   end
 end  # function test_fill
 
-function test_kwargs()
-  info("NDArray::kwargs")
-  dims1 = (2,3,4)
+function test_transpose()
+  info("NDArray::transpose")
+  let A = rand(Float32, 2, 3), x = mx.NDArray(A)
+    @test size(x) == (2, 3)
+    @test size(x') == (3, 2)
+  end
 
-  A = rand(Float32, dims1)
-  x = mx.NDArray(A)
-  tx = mx.transpose(x, axes=(2,1,3))
-  tA = permutedims(A, [2,1,3])
-  @test size(tx) == size(tA)
-  @test all(copy(tx) .== tA)
+  info("NDArray::permutedims")
+  let A = collect(Float32, reshape(1.0:24, 2, 3, 4)), x = mx.NDArray(A)
+    A′ = permutedims(A, [2, 1, 3])
+    x′ = permutedims(x, [2, 1, 3])
+    @test size(A′) == size(x′)
+    @test A′ == copy(x′)
+  end
 end
 
 function test_show()
   let str = sprint(show, mx.NDArray([1 2 3 4]))
-    @test contains(str, "1x4")
+    @test contains(str, "1×4")
     @test contains(str, "mx.NDArray")
     @test contains(str, "Int64")
     @test contains(str, "CPU")
@@ -490,8 +559,13 @@ end
   test_nd_as_jl()
   test_dot()
   test_reshape()
+  test_sum()
+  test_mean()
+  test_maximum()
+  test_minimum()
+  test_prod()
   test_fill()
-  test_kwargs()
+  test_transpose()
   test_show()
 end
 

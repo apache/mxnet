@@ -13,12 +13,12 @@
 
 ## API Changes
 
-* `reshape` of NDArray share the same interface with Base (#272).
+* `reshape` of NDArray shares the same interface with Base (#272).
     * `reshape(NDArray, dim; reverse=false)`
     * `reshape(NDArray, dim...; reverse=false)`
     * `Reshape` deprecated.
 
-* `reshape` of SymbolicNode share the same interface with Base
+* `reshape` of SymbolicNode shares the same interface with Base
   and additional keyword argument (#279).
 
     * `reshape(SymbolicNode, dim; reverse=false, name)`
@@ -26,6 +26,34 @@
     * `Reshape` deprecated.
 
 * `srand!` deprecated, please use `srand` (#282)
+
+* `mean` and `sum` of NDArray share the same interface with Base
+  and fix the `axis` indexing (#TBD).
+
+    * This is a breaking change; no deprecated warning.
+    * Before: `mean(arr, axis=0)`
+    * After: `mean(arr, 1)`
+
+* `max` and `min` of NDArray renamed to `maximum` and `minimum` and share the
+  same interface with Base. The `axis` indexing is fixed, also. (#TBD)
+
+    * This is a breaking change; no deprecated warning.
+    * Before: `mx.max(arr, axis=0)` or `mx.max_axis(arr, axis=0)`
+    * After: `maximum(arr, 1)`
+
+* `mx.transpose` for high dimension NDArray has been renamed to `permutedims`
+  and shares the same interface with Base. (#TBD)
+
+    * This is a breaking changes; no deprecated warning.
+    * Before: `mx.transpose(A, axis=[2, 1, 3])`
+    * After: `permutedims(A, [2, 1, 3])`
+
+* `prod` of `NDArray` shares the same interface with Base and fix
+  the `axis` indexing. (#TBD).
+
+    * This is a breaking change; no deprecated warning.
+    * Before: `prod(arr, axis=-1)`
+    * After: `prod(arr, 1)`
 
 # v0.2.2 (2017.05.14)
 * Updated supported version of MXNet to 0.9.4.

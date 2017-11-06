@@ -41,6 +41,9 @@ script:
   - travis_wait 60 ${TRAVIS_DIR}/run_test.sh
 
 after_success:
+  # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
+  - julia -e 'using MXNet; mx._sig_checker()'
+
   - source ${TRAVIS_DIR}/run_coverage.sh
   - echo $TRAVIS_JULIA_VERSION
   - julia -e 'Pkg.add("Documenter")'

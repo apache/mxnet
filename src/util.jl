@@ -163,3 +163,28 @@ function _format_signature(narg::Int, arg_names::Ref{char_pp})
   return join([unsafe_string(name) for name in arg_names] , ", ")
 end
 
+@inline function _only2d(x)
+  @assert ndims(x) == 2
+  x
+end
+
+"""
+libmxnet operators signature checker.
+"""
+function _sig_checker()
+  names = filter(n -> ∉(lowercase(n), _op_import_bl), _get_libmx_op_names())
+  foreach(names) do name
+    op_handle = _get_libmx_op_handle(name)
+
+    desc, key_narg = _get_libmx_op_description(name, op_handle)
+    _sig = desc |> s -> split(s, '\n') |> first |> strip
+    _m = match(r"(axis|axes|keepdims|shape)", _sig)
+
+    if _m === nothing
+      return
+    end
+
+    warn(_sig)
+
+  end
+end
