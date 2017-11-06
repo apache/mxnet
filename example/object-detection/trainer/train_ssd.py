@@ -1,4 +1,5 @@
 import argparse
+import os
 import logging
 import time
 import random
@@ -114,7 +115,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                 out = nd.contrib.box_nms(result, topk=400)
                 # print(out)
                 # results.append(out.asnumpy())
-                valid_metric.update(y, out)
+                valid_metric.update([y], [out])
         # results = np.vstack(results)
         # write to disk for eval
         return valid_metric.get()
@@ -209,6 +210,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
             name, acc = cls_metric.get()
             name1, mae = box_metric1.get()
             name2, focalloss = cls_metric1.get()
+            net.save_params(os.path.join(os.path.dirname(__file__), '..', 'model', 'ssd.params'))
             logging.info('[Epoch %d] training: %s=%f, %s=%f, %s=%f'%(epoch, name, acc, name1, mae, name2, focalloss))
             logging.info('[Epoch %d] time cost: %f'%(epoch, time.time()-tic))
             map_name, mean_ap = evaluate_voc(net, val_data, ctx)
