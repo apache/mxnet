@@ -222,6 +222,37 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   return stride;
 }
 
+/* Increment coordinates and modify index */
+template<int ndim>
+MSHADOW_XINLINE void inc(Shape<ndim>* coord, const Shape<ndim>& shape,
+                         index_t* idx, const Shape<ndim>& stride) {
+  ++(*coord)[ndim-1];
+  *idx += stride[ndim-1];
+  #pragma unroll
+  for (int i = ndim - 1; i > 0 && (*coord)[i] >= shape[i]; --i) {
+    (*coord)[i] -= shape[i];
+    ++(*coord)[i-1];
+    *idx = *idx + stride[i-1] - shape[i] * stride[i];
+  }
+}
+
+/* Increment coordinates and modify index */
+template<int ndim>
+MSHADOW_XINLINE void inc(Shape<ndim>* coord, const Shape<ndim>& shape,
+                         index_t* idx1, const Shape<ndim>& stride1,
+                         index_t* idx2, const Shape<ndim>& stride2) {
+  ++(*coord)[ndim-1];
+  *idx1 += stride1[ndim-1];
+  *idx2 += stride2[ndim-1];
+  #pragma unroll
+  for (int i = ndim - 1; i > 0 && (*coord)[i] >= shape[i]; --i) {
+    (*coord)[i] -= shape[i];
+    ++(*coord)[i-1];
+    *idx1 = *idx1 + stride1[i-1] - shape[i] * stride1[i];
+    *idx2 = *idx2 + stride2[i-1] - shape[i] * stride2[i];
+  }
+}
+
 /*!
  * \brief Simple copy data from one blob to another
  * \param to Destination blob
@@ -357,6 +388,24 @@ struct Kernel<OP, cpu> {
     }
 #endif
   }
+
+  template<typename ...Args>
+  inline static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
+#ifdef _OPENMP
+    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
+    if (omp_cores <= 1) {
+      OP::Map(0, N, args...);
+    } else {
+      int length = (N + omp_cores - 1) / omp_cores;
+      #pragma omp parallel for num_threads(omp_cores)
+      for (int i = 0; i < N; i += length) {
+        OP::Map(i, i + length > N ? N - i : length, args...);
+      }
+    }
+#else
+    OP::Map(0, N, args...);
+#endif
+  }
 };
 
 
@@ -368,6 +417,13 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
   }
 }
 
+template<typename OP, typename ...Args>
+__global__ void mxnet_generic_kernel_ex(int N, Args... args) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
+    OP::Map(i, 1, args...);
+  }
+}
+
 template<typename OP>
 struct Kernel<OP, gpu> {
   template<typename ...Args>
@@ -375,6 +431,15 @@ struct Kernel<OP, gpu> {
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel<OP, Args...>
+      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        N, args...);
+  }
+
+  template<typename ...Args>
+  inline static void LaunchEx(mshadow::Stream<gpu> *s, int N, Args... args) {
+    using namespace mshadow::cuda;
+    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+    mxnet_generic_kernel_ex<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
   }
