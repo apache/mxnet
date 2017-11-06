@@ -314,13 +314,13 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     CHECK(ptr_->Mkl_mem_->get_primitive_desc() == desc);
     return ptr_->Mkl_mem_;
   }
-  return std::shared_ptr<const mkldnn::memory>(new mkldnn::memory(desc,
-        ptr_->shandle.dptr));
+  mkldnn_mem_const_ptr ret(new mkldnn::memory(desc, ptr_->shandle.dptr));
+  MKLDNNStream::Instance().RegisterMem(ret);
+  return ret;
 }
 
-std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
-    const mkldnn::memory::primitive_desc &desc,
-    std::vector<mkldnn::primitive> &net) const {
+std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
+    const mkldnn::memory::primitive_desc &desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
@@ -332,8 +332,10 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     return ptr_->Mkl_mem_;
   else {
     // TODO we should manage the memory allocation here.
-    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
-    net.push_back(mkldnn::reorder(*ptr_->Mkl_mem_, *ret));
+    mkldnn_mem_ptr ret(new mkldnn::memory(desc));
+    MKLDNNStream &stream = MKLDNNStream::Instance();
+    stream.RegisterMem(ret);
+    stream.RegisterPrim(mkldnn::reorder(*ptr_->Mkl_mem_, *ret));
     return ret;
   }
 }
@@ -347,14 +349,13 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData() const {
     return nullptr;
 }
 
-void NDArray::CopyFrom(const mkldnn::memory &mem,
-    std::vector<mkldnn::primitive> &net) {
+void NDArray::CopyFrom(const mkldnn::memory &mem) {
   if (ptr_ == nullptr) {
     LOG(FATAL) << "The NDArray hasn't been initialized";
     return;
   }
   ptr_->SetMKLMem(shape_, dtype_);
-  net.push_back(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
+  MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
 }
 
 std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
@@ -370,8 +371,7 @@ std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
   if (ptr_->Mkl_mem_ && ptr_->Mkl_mem_->get_primitive_desc() == desc)
     return ptr_->Mkl_mem_;
 
-  // TODO we should manage the memory allocation here.
-  ptr_->Mkl_mem_.reset(new mkldnn::memory(desc));
+  ptr_->Mkl_mem_ = CreateMKLDNNMem(desc);
   return ptr_->Mkl_mem_;
 }
 #endif
