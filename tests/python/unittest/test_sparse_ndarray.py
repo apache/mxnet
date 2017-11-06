@@ -752,11 +752,11 @@ def test_sparse_nd_check_format():
         except mx.base.MXNetError:
             pass
 
-    shape = (3, 4)
-    a = mx.nd.ones(shape)
+    shape = rand_shape_2d()
     stypes = ["csr", "row_sparse"]
     for stype in stypes:
-        a.tostype(stype).check_format()
+        arr, _ = rand_sparse_ndarray(shape, stype)
+        arr.check_format()
     # CSR format index pointer array should be less than the number of rows
     shape = (3, 4)
     data_list = [7, 8, 9]
@@ -766,6 +766,10 @@ def test_sparse_nd_check_format():
     # CSR format indices should be in ascending order per row
     indices_list = [2, 1, 1]
     indptr_list = [0, 2, 2, 3]
+    check_csr_format_exception(data_list, indices_list, indptr_list, shape)
+    # CSR format indptr should end with value equal with size of indices
+    indices_list = [1, 2, 1]
+    indptr_list = [0, 2, 2, 4]
     check_csr_format_exception(data_list, indices_list, indptr_list, shape)
     # CSR format indices should not be negative
     indices_list = [0, 2, 1]

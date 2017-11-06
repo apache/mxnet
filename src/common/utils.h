@@ -89,9 +89,9 @@ struct csr_idx_check {
 struct rsp_idx_check {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const IType* idx,
-                                  const nnvm::dim_t nrows) {
-    if (idx[i+1] <= idx[i] || idx[i+1] < 0 || idx[i+1] >= nrows ||
-        (i == 0 && (idx[i] >= nrows || idx[i] < 0)))
+                                  const nnvm::dim_t end, const nnvm::dim_t nrows) {
+    if ((i < end && idx[i+1] <= idx[i])
+        || idx[i] < 0 || idx[i] >= nrows)
       *out = kRSPIdxErr;
   }
 };
@@ -136,7 +136,7 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
           NDArray ret_xpu = NDArray(mshadow::Shape1(1),
                                     rctx.get_ctx(), false, err_cpu.type_flag_);
           TBlob val_xpu = ret_xpu.data();
-          Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
+          Kernel<set_to_int<kNormalErr>, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
           Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
             input.aux_data(csr::kIndPtr).dptr<RType>(),
             indptr_shape[0] - 1, idx_shape[0]);
@@ -165,12 +165,16 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
   using namespace op::mxnet_op;
   CHECK_EQ(input.storage_type(), kRowSparseStorage)
           << "CheckFormatRSPImpl is for RSPNDArray";
-  if (input.aux_shape(rowsparse::kIdx)[0] != input.storage_shape()[0]) {
+  const TShape idx_shape = input.aux_shape(rowsparse::kIdx);
+  if (idx_shape[0] != input.storage_shape()[0]) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
       auto err = err_cpu.dptr<DType>();
       *err = kRSPShapeErr;
     });
     return;
+  }
+  if (idx_shape[0] == 0) {
+      return;
   }
   if (full_check) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
@@ -179,10 +183,11 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
         NDArray ret_xpu = NDArray(mshadow::Shape1(1),
                                   rctx.get_ctx(), false, err_cpu.type_flag_);
         TBlob val_xpu = ret_xpu.data();
-        Kernel<set_zero, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
-        Kernel<rsp_idx_check, xpu>::Launch(s, input.aux_shape(rowsparse::kIdx)[0] - 1,
+        Kernel<set_to_int<kNormalErr>, xpu>::Launch(s, val_xpu.Size(), val_xpu.dptr<DType>());
+
+        Kernel<rsp_idx_check, xpu>::Launch(s, idx_shape[0],
           val_xpu.dptr<DType>(), input.aux_data(rowsparse::kIdx).dptr<IType>(),
-          input.shape()[0]);
+          idx_shape[0] - 1, input.shape()[0]);
         mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
                       val_xpu.get<xpu, 1, DType>(s), s);
       });
