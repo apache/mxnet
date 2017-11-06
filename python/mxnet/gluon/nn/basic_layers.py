@@ -552,4 +552,4 @@ class HybridLambda(HybridBlock):
 
     def __repr__(self):
         return '{name}({function})'.format(name=self.__class__.__name__,
-                                           function=self._func_impl.__name__)
+                                           function=self._func.__name__)
