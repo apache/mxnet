@@ -61,11 +61,11 @@ void MKLDNNRelu_Forward(const OpContext &ctx, const NDArray &in_data,
         mkldnn::eltwise_relu, data_md, alpha);
   mkldnn::eltwise_forward::primitive_desc pdesc(desc, cpu_engine);
 
-  std::vector<mkldnn::primitive> net;
   std::shared_ptr<const mkldnn::memory> output_memory
     = const_cast<NDArray &>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
-  net.push_back(mkldnn::eltwise_forward(pdesc, *input_mem, *output_memory));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  MKLDNNStream &stream = MKLDNNStream::Instance();
+  stream.RegisterPrim(mkldnn::eltwise_forward(pdesc, *input_mem, *output_memory));
+  stream.Submit();
 }
 
 template<typename Dtype>
@@ -92,12 +92,12 @@ void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
   mkldnn::eltwise_backward::desc bw_desc(mkldnn::eltwise_relu, diff_md, data_md, alpha);
   mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine, fw_pdesc);
 
-  std::vector<mkldnn::primitive> net;
   std::shared_ptr<const mkldnn::memory> diff_src_memory
     = const_cast<NDArray &>(in_grad).CreateMKLDNNData(bw_pdesc.diff_src_primitive_desc());
-  net.push_back(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
+  MKLDNNStream &stream = MKLDNNStream::Instance();
+  stream.RegisterPrim(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
         *diff_dst_memory, *diff_src_memory));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  stream.Submit();
 }
 
 }  // namespace op

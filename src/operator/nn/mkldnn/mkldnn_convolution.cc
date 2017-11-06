@@ -178,25 +178,23 @@ void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwd(param,
       ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
       param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
-  std::vector<mkldnn::primitive> net;
-  auto data_mem = in_data[conv::kData].GetMKLDNNData(fwd_pd.src_primitive_desc(), net);
+  auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd_pd.src_primitive_desc());
   auto engine = CpuEngine::Instance().get_engine();
-  auto weight_data = GetWeights(in_data[conv::kWeight],
-      fwd_pd.weights_primitive_desc(), param.num_group, net);
-  auto weight_mem = weight_data.first;
+  auto weight_mem = GetWeights(in_data[conv::kWeight],
+      fwd_pd.weights_primitive_desc(), param.num_group);
 
   auto out_mem = const_cast<NDArray &>(out_data[conv::kOut]).CreateMKLDNNData(
       fwd_pd.dst_primitive_desc());
 
   if (param.no_bias) {
-    net.push_back(mkldnn::convolution_forward(fwd_pd, *data_mem, *weight_mem,
-          *out_mem));
+    MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_forward(fwd_pd,
+          *data_mem, *weight_mem, *out_mem));
   } else {
-    auto bias_mem = in_data[conv::kBias].GetMKLDNNData(fwd_pd.bias_primitive_desc(), net);
-    net.push_back(mkldnn::convolution_forward(fwd_pd, *data_mem, *weight_mem,
-          *bias_mem, *out_mem));
+    auto bias_mem = in_data[conv::kBias].GetMKLDNNDataReorder(fwd_pd.bias_primitive_desc());
+    MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_forward(fwd_pd,
+          *data_mem, *weight_mem, *bias_mem, *out_mem));
   }
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  MKLDNNStream::Instance().Submit();
 }
 
 void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
@@ -210,39 +208,35 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
       param.no_bias ? nullptr : &inputs[conv::kBias + 1], inputs[conv::kOut]);
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
-  std::vector<mkldnn::primitive> net;
-  std::shared_ptr<mkldnn::memory> in_grad_mem, in_grad_weight, in_grad_bias;
-  std::pair<mkldnn_mem_const_ptr, mkldnn_mem_const_ptr> weight_data;
   if (req[conv::kData]) {
     mkldnn::convolution_backward_data::primitive_desc bwdData_pd
       = GetConvBwdData(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1],
           inputs[conv::kOut], fwd_pd);
-    auto out_grad_mem = inputs[conv::kOut].GetMKLDNNData(
-        bwdData_pd.diff_dst_primitive_desc(), net);
-    weight_data = GetWeights(inputs[conv::kWeight + 1],
-        bwdData_pd.weights_primitive_desc(), param.num_group, net);
-    auto weight_mem = weight_data.first;
-    in_grad_mem = const_cast<NDArray &>(in_grad[conv::kData]).CreateMKLDNNData(
+    auto out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
+        bwdData_pd.diff_dst_primitive_desc());
+    auto weight_mem = GetWeights(inputs[conv::kWeight + 1],
+        bwdData_pd.weights_primitive_desc(), param.num_group);
+    auto in_grad_mem = const_cast<NDArray &>(in_grad[conv::kData]).CreateMKLDNNData(
         bwdData_pd.diff_src_primitive_desc());
     bool copy_back = false;
     if (in_grad_mem == nullptr) {
       in_grad_mem = CreateMKLDNNMem(bwdData_pd.diff_src_primitive_desc());
       copy_back = true;
     }
-    net.push_back(mkldnn::convolution_backward_data(bwdData_pd, *out_grad_mem,
-          *weight_mem, *in_grad_mem));
+    MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_data(bwdData_pd,
+          *out_grad_mem, *weight_mem, *in_grad_mem));
     if (copy_back)
-      const_cast<NDArray &>(in_grad[conv::kData]).CopyFrom(*in_grad_mem, net);
+      const_cast<NDArray &>(in_grad[conv::kData]).CopyFrom(*in_grad_mem);
   }
   if (req[conv::kWeight]) {
     mkldnn::convolution_backward_weights::primitive_desc bwdWeights_pd
       = GetConvBwdWeights(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1], 
           param.no_bias ? nullptr : &inputs[conv::kBias + 1], inputs[conv::kOut], fwd_pd);
-    auto out_grad_mem = inputs[conv::kOut].GetMKLDNNData(
-        bwdWeights_pd.diff_dst_primitive_desc(), net);
-    auto data_mem = inputs[conv::kData + 1].GetMKLDNNData(
-        bwdWeights_pd.src_primitive_desc(), net);
-    in_grad_weight = const_cast<NDArray &>(in_grad[conv::kWeight]).CreateMKLDNNData(
+    auto out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
+        bwdWeights_pd.diff_dst_primitive_desc());
+    auto data_mem = inputs[conv::kData + 1].GetMKLDNNDataReorder(
+        bwdWeights_pd.src_primitive_desc());
+    auto in_grad_weight = const_cast<NDArray &>(in_grad[conv::kWeight]).CreateMKLDNNData(
         bwdWeights_pd.diff_weights_primitive_desc());
     bool copy_back_weight = false;
     bool copy_back_bias = false;
@@ -250,9 +244,10 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
       in_grad_weight = CreateMKLDNNMem(bwdWeights_pd.diff_weights_primitive_desc());
       copy_back_weight = true;
     }
+    mkldnn_mem_const_ptr in_grad_bias;
     if (param.no_bias) {
-      net.push_back(mkldnn::convolution_backward_weights(bwdWeights_pd,
-            *data_mem, *out_grad_mem, *in_grad_weight));
+      MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
+            bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight));
     } else {
       in_grad_bias = const_cast<NDArray &>(in_grad[conv::kBias]).CreateMKLDNNData(
           bwdWeights_pd.diff_bias_primitive_desc());
@@ -260,15 +255,15 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
         in_grad_bias = CreateMKLDNNMem(bwdWeights_pd.diff_bias_primitive_desc());
         copy_back_bias = true;
       }
-      net.push_back(mkldnn::convolution_backward_weights(bwdWeights_pd,
-            *data_mem, *out_grad_mem, *in_grad_weight, *in_grad_bias));
+      MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
+            bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight, *in_grad_bias));
     }
     if (copy_back_weight)
-      const_cast<NDArray &>(in_grad[conv::kWeight]).CopyFrom(*in_grad_weight, net);
+      const_cast<NDArray &>(in_grad[conv::kWeight]).CopyFrom(*in_grad_weight);
     if (copy_back_bias)
-      const_cast<NDArray &>(in_grad[conv::kBias]).CopyFrom(*in_grad_bias, net);
+      const_cast<NDArray &>(in_grad[conv::kBias]).CopyFrom(*in_grad_bias);
   }
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  MKLDNNStream::Instance().Submit();
 }
 
 }
