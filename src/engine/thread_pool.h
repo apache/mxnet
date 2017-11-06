@@ -57,8 +57,8 @@ class ThreadPool {
 
     /*! \brief Signal event upon destruction, even for exceptions (RAII) */
     struct SetReadyOnDestroy {
-      explicit inline SetReadyOnDestroy(std::shared_ptr<SimpleEvent> event)
-        : event_(event) {
+      explicit inline SetReadyOnDestroy(std::shared_ptr<SimpleEvent> *event)
+        : event_(*event) {
       }
       inline ~SetReadyOnDestroy() {
         if (event_) {

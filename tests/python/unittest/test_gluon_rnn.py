@@ -274,6 +274,19 @@ def test_rnn_layers():
     with mx.autograd.record():
         net(mx.nd.ones((2, 3, 10))).backward()
 
+def test_cell_fill_shape():
+    cell = gluon.rnn.LSTMCell(10)
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((2, 3, 7)))
+    assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
+
+def test_layer_fill_shape():
+    layer = gluon.rnn.LSTM(10)
+    layer.hybridize()
+    check_rnn_layer_forward(layer, mx.nd.ones((3, 2, 7)))
+    print(layer)
+    assert layer.i2h_weight[0].shape[1] == 7, layer.i2h_weight[0].shape[1]
+
 
 if __name__ == '__main__':
     import nose

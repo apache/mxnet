@@ -145,14 +145,14 @@ method toc()
     }
     for my $exe (@{ $self->exes })
     {
-        zip(sub {
-            my ($name, $array) = @_;
+        for(zip($exe->_symbol->list_arguments, $exe->arg_arrays)) {
+            my ($name, $array) = @$_;
             push @{ $self->queue }, [$self->step, $name, $self->stat_func->($array)];
-        }, $exe->_symbol->list_arguments, $exe->arg_arrays);
-        zip(sub {
-            my ($name, $array) = @_;
+        }
+        for(zip($exe->_symbol->list_auxiliary_states, $exe->aux_arrays)) {
+            my ($name, $array) = @$_;
             push @{ $self->queue }, [$self->step, $name, $self->stat_func->($array)];
-        }, $exe->_symbol->list_auxiliary_states, $exe->aux_arrays);
+        }
     }
     $self->activated(0);
     my @res;

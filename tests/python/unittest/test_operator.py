@@ -236,6 +236,53 @@ def test_regression():
                      lambda x, y : x - y)
 
 
+def check_softmax_grad(xpu):
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.zeros((1,4))
+    expected_grad_out[0, k] = -1
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
+def check_smoothed_softmax_grad(xpu):
+    alpha = 0.2
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False, smooth_alpha=alpha)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.full((1,4), fill_value=-alpha/float(4-1))
+    expected_grad_out[0, k] = - (1 - alpha)
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
 def check_softmax_with_ignore_label(xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
@@ -284,12 +331,6 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
     exec1.backward()
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
-
-
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
 
 
 def test_python_op():
@@ -1573,12 +1614,13 @@ def test_transpose():
 
 def test_expand_dims():
     for ndim in range(1, 6):
-        for t in range(5):
-            dims = list(np.random.randint(1, 10, size=ndim))
-            axis = np.random.randint(1, ndim+1)
-            x = mx.nd.array(np.random.normal(size=dims))
-            y = mx.nd.expand_dims(x, axis=axis)
-            assert_allclose(np.expand_dims(x.asnumpy(), axis=axis), y.asnumpy())
+        for axis in range(-ndim + 1, ndim):
+            x = np.random.normal(size=list(np.random.randint(1, 10, size=ndim)))
+            y = mx.nd.array(x)
+            x1 = np.expand_dims(x, axis=axis)
+            y1 = mx.nd.expand_dims(y, axis=axis)
+            assert_allclose(x1, y1.asnumpy())
+            assert_allclose(x1.shape, y1.shape)
 
 
 def test_crop():
@@ -2514,6 +2556,7 @@ def test_init():
                        (0, 10),
                        (5, 100, 4),
                        (50, -50, -2),
+                       (-100, 100, 1),
                        (1.3, 456.6, 1.3)]
         for dtype in dtype_list:
             for config in config_list:
@@ -4093,9 +4136,11 @@ def _syevd_backward(grad_u, grad_l, u, l):
     return np.dot(temp3, u)
 
 def test_laop_3():
-    # Operators implemented for CPU only currently
+    # Currently disabled on GPU as syevd needs cuda8
+    # and MxNet builds use cuda 7.5
     if not (default_context() == mx.cpu()):
         return
+
     np.random.seed(1896893923)
     dtype = np.float64
     rtol_fw = 1e-6
@@ -4107,7 +4152,6 @@ def test_laop_3():
     grad_check = 1
 
     data1 = mx.symbol.Variable('data1')
-
     check_fw = lambda sym, location, expected :\
         check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
                                atol=atol_fw, dtype=dtype)
@@ -4159,13 +4203,12 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
-# Note: Currently, linalg.syevd is activated for float64 only, due to the issues
-# demonstrated by this unit test. For this reason, the second part of this test
-# (float32) is deactivated for now.
 def test_laop_4():
-    # Operators implemented for CPU only currently
-    if not(default_context() == mx.cpu()):
+    # Currently disabled on GPU as syevd needs cuda8
+    # and MxNet builds use cuda 7.5
+    if not (default_context() == mx.cpu()):
         return
+
     np.random.seed(1896893923)
     rtol_fw = 1e-6
     atol_fw = 1e-6
@@ -4185,7 +4228,7 @@ def test_laop_4():
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float64)
     # float32
     #print('float32')
-    #check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
+    check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
 
 def test_stack():
@@ -4308,6 +4351,16 @@ def finite_diff_unary_op(
         name=op_name)
     check_grad(op_ex, [data_np])
 
+def np_smooth_l1(x, sigma):
+    issq = 1. / sigma / sigma
+    absx = np.abs(x)
+    temp = x * sigma
+    return np.where(absx < issq, 0.5 * (temp ** 2), absx - 0.5 * issq)
+
+def np_smooth_l1_grad(x, sigma):
+    ssq = sigma * sigma
+    return np.where(np.abs(x) < 1. / ssq, x * ssq, np.sign(x))
+
 # Tests for unary operators (basic mathematical functions):
 # - Forward: Comparison to NumPy (several dtype)
 # - Backward: Comparison to NumPy (several dtype)
@@ -4429,7 +4482,15 @@ def test_unary_math_operators():
         'tanh': [lambda x: mx.sym.tanh(x),
                  lambda x: np.tanh(x),
                  lambda x: 1. - np.tanh(x) ** 2,
-                 -4.0, 4.0]
+                 -4.0, 4.0],
+        'smooth_l1_sig1': [lambda x: mx.sym.smooth_l1(x, scalar=1.),
+                           lambda x: np_smooth_l1(x, 1.),
+                           lambda x: np_smooth_l1_grad(x, 1.),
+                           -2.0, 2.0],
+        'smooth_l1_sig2': [lambda x: mx.sym.smooth_l1(x, scalar=2.),
+                           lambda x: np_smooth_l1(x, 2.),
+                           lambda x: np_smooth_l1_grad(x, 2.),
+                           -1.0, 1.0]
     }
     if have_scipy:
         unary_ops['gamma'] = [lambda x: mx.sym.gamma(x),
@@ -4540,6 +4601,14 @@ def test_binary_math_operators():
         finite_diff_binary_op(
             name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
             num_eps)
+
+
+def test_softmax():
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
+    check_softmax_grad(default_context())
+    check_smoothed_softmax_grad(default_context())
 
 
 if __name__ == '__main__':

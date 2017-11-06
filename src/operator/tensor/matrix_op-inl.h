@@ -347,7 +347,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
 
   int axis = param.axis;
   if (axis < 0) {
-    axis += indim;
+    axis += indim + 1;
   }
   CHECK(axis >= 0 && axis <= indim)
       << "axis must be in the range [" << -indim << ", " << indim << "] ("
@@ -473,9 +473,14 @@ void Slice(const nnvm::NodeAttrs& attrs,
   TShape begin(N), end(N);
   for (index_t i = 0; i < N; ++i) {
     int s = 0;
-    if (param.begin[i]) {
+    if (i < param.begin.ndim() && param.begin[i]) {
       s = *param.begin[i];
-      if (s < 0) s += inputs[0].size(i);
+      if (s < 0) {
+        s += inputs[0].size(i);
+        CHECK(s >= 0)
+            << "Invalid slicing begin " << param.begin << " and end "
+            << param.end << " for data of shape " << inputs[0].shape_;
+      }
     }
     begin[i] = s;
     end[i] = s + outputs[0].size(i);
@@ -559,8 +564,11 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   if (req == kNullOp) return;
   CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
   CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
+  const TShape ishape = in.shape();
   int begin = *param.begin[0];
+  if (begin < 0) begin += ishape[0];
   int end = *param.end[0];
+  if (end < 0) end += ishape[0];
   int indptr_len = end - begin + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
   if (!in.storage_initialized()) {

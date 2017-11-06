@@ -85,15 +85,17 @@ class ElemwiseBinaryOp : public OpBase {
     kTempSpace
   };
 
-  /*! \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input */
-  template<typename xpu, typename DType, typename OP>
-  static inline size_t FillDense(mshadow::Stream<xpu> *s,
+  /*!
+   * \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input
+   *        CPU-Only version
+   */
+  template<typename DType, typename OP>
+  static inline size_t FillDense(mshadow::Stream<cpu> *s,
                                  const size_t idx_l,
                                  const size_t idx_r,
                                  const OpReqType req,
-                                 mshadow::Tensor<xpu, 2, DType> *out,
+                                 mshadow::Tensor<cpu, 2, DType> *out,
                                  const size_t iter_out) {
-    using namespace mshadow::expr;
     const int index_out_min = std::min(idx_l, idx_r);
     if (static_cast<size_t>(index_out_min) > iter_out) {
       const size_t size = (*out)[iter_out].shape_.Size();
@@ -101,8 +103,7 @@ class ElemwiseBinaryOp : public OpBase {
       #pragma omp parallel for
       for (int i = iter_out; i < index_out_min; ++i) {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          mxnet_op::Kernel<SetToScalar<Req>, xpu>::Launch(s, size, (*out)[i].dptr_,
-                                                          zero_input_val);
+          SerialLaunchCPU<OpBase::set_to_scalar<Req>>(s, size, (*out)[i].dptr_, zero_input_val);
         });
       }
     }
@@ -272,11 +273,55 @@ class ElemwiseBinaryOp : public OpBase {
    * \param out_attrs Output storage attributes
    * \return true if handled
    */
+  template<bool lhs_dense_ok = true, bool rhs_dense_ok = true>
   static bool AllowLRDenseInputWithSparseOutputStorageType(const nnvm::NodeAttrs& attrs,
                                                            int dev_mask,
                                                            DispatchMode* dispatch_mode,
                                                            std::vector<int> *in_attrs,
-                                                           std::vector<int> *out_attrs);
+                                                           std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
+    CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
+    const auto& lhs_stype = in_attrs->at(0);
+    const auto& rhs_stype = in_attrs->at(1);
+    auto& out_stype = out_attrs->at(0);
+    bool dispatched = false;
+    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+    const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                             DispatchMode::kFComputeEx;
+    if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
+      // dns, dns -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
+    if (!dispatched) {
+      if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
+          (rhs_dense_ok && lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+          (lhs_dense_ok && lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
+        // rsp, rsp -> rsp
+        // rsp, dns -> rsp
+        // dns, rsp -> rsp
+        dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                         dispatch_mode, dispatch_ex);
+      } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
+        // csr, csr -> csr
+        dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                         dispatch_mode, dispatch_ex);
+      } else if ((lhs_stype == kCSRStorage && rhs_dense_ok) ||
+        (rhs_stype == kCSRStorage && lhs_dense_ok)) {
+        // csr, dns -> csr
+        // dns, csr -> csr
+        dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                         dispatch_mode, DispatchMode::kFComputeFallback);
+      }
+    }
+    if (!dispatched) {
+      dispatch_fallback(out_attrs, dispatch_mode);
+    }
+    if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    }
+    return true;
+  }
 
   /*!
    * \brief Backward pass computing input gradient using forward inputs
