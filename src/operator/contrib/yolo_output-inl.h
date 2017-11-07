@@ -133,7 +133,7 @@ struct box_grad {
       const index_t num_anchor, const index_t num_label,
       const index_t width, const index_t height,
       const float box_scale, const float object_scale) {
-    for (int n = 0; n < num_label; ++n) {
+    for (int n = 0; n < static_cast<int>(num_label); ++n) {
       int offset = (i * num_label + n) * label_width;
       DType class_id = label[offset];
       if (class_id < 0) return;  // padded label
@@ -155,7 +155,7 @@ struct box_grad {
       int best_anchor = 0;
       DType best_ovp = 0;
       // find best anchor
-      for (int j = 0; j < num_anchor; ++j) {
+      for (int j = 0; j < static_cast<int>(num_anchor); ++j) {
         DType aw = anchor[j * 2] / width;
         DType ah = anchor[j * 2 + 1] / height;
         if (aw < 0 || ah < 0) continue;  // invalid param
@@ -369,7 +369,7 @@ class YoloOutputOp : public Operator {
      // apply nms
      if (param_.nms_threshold > 0 && param_.nms_threshold < 1) {
        int keep = param_.nms_topk < 0 ? out.shape_[1] : param_.nms_topk;
-       keep = keep > out.shape_[1] ? out.shape_[1] : keep;
+       keep = keep > static_cast<int>(out.shape_[1]) ? out.shape_[1] : keep;
        if (keep > 0) {
          // descend sort by score
          int num_batch = out.shape_[0];
@@ -645,7 +645,7 @@ class YoloOutputProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "_contrib_YoloOutput";
+    return "_contrib_Yolo2Output";
   }
 
   std::vector<int> DeclareBackwardDependency(

@@ -32,6 +32,7 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_Yolo2Output, YoloOutputProp)
 .describe("Yolo v2 output layer. This is a convolutional version as described in YOLO 9000 paper.")
 .add_argument("data", "NDArray-or-Symbol", "Input data to the YoloOutputOp.")
 .add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
+.add_argument("beta", "NDArray-or-Symbol", "Warm up counting buffer.")
 .add_arguments(YoloOutputParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
