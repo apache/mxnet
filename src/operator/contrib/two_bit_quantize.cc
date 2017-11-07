@@ -22,7 +22,7 @@
  * \brief registers quantize_2bit, dequantize_2bit
  * and create_2bit operators with nnvm
  */
-#include <operator/elemwise_op_common.h>
+#include "../elemwise_op_common.h"
 #include "./two_bit_quantize-inl.h"
 
 namespace mxnet {

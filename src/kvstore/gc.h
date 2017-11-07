@@ -29,9 +29,10 @@
 #include <sstream>
 #include <vector>
 
-#include <mxnet/ndarray.h>
-#include <mxnet/base.h>
-#include <operator/contrib/two_bit_quantize-inl.h>
+#include"../../include/mxnet/ndarray.h"
+#include "../../include/mxnet/base.h"
+#include <mshadow/tensor.h>
+#include "../operator/contrib/two_bit_quantize-inl.h"
 
 // TODO check if it returns empty between two delims
 template<typename Out>
@@ -134,7 +135,7 @@ class Gc {
               std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
               mxnet::op::Quantize2BitImpl<mshadow::gpu>(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
               // Wait GPU kernel to complete
-              ctx.get_stream<gpu>()->Wait();
+              ctx.get_stream<mshadow::gpu>()->Wait();
             }, from.ctx(), {from.var()}, {to->var(), residual->var()},
             mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
           } else {
@@ -170,7 +171,7 @@ class Gc {
               std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
               mxnet::op::Dequantize2BitImpl<mshadow::gpu>(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
               // Wait GPU kernel to complete
-              ctx.get_stream<gpu>()->Wait();
+              ctx.get_stream<mshadow::gpu>()->Wait();
             }, from.ctx(), {from.var()}, {to->var()},
             mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
           } else {

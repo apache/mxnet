@@ -32,8 +32,8 @@
 #include <mxnet/operator_util.h>
 #include <mxnet/c_api.h>
 #include <ps/ps.h>
-#include <operator/operator_common.h>
-#include <operator/mxnet_op.h>
+#include "../operator_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -142,7 +142,9 @@ struct quantize_2bit {
 template<typename xpu>
 void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                       const float threshold) {
-  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array size
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Kernel<quantize_2bit, xpu>::template Launch(s, inputs[2].Size(), // compressed array size
                                                inputs[0].Size(),    // original size
                                                inputs[2].dptr<float>(),   // compressed array
                                                inputs[0].dptr<float>(),     // original array
@@ -233,7 +235,7 @@ struct dequantize_2bit {
 template<typename xpu>
 void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                         const float threshold) {
-  mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
+  mxnet::op::mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s, inputs[1].Size(),  // original size
                                                  inputs[1].dptr<float>(),        // out array
                                                  inputs[0].dptr<float>(),      // compressed array
                                                  -1*threshold,     // negative threshold
