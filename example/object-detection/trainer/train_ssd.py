@@ -195,7 +195,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                 # box_metric.update(box_labels, box_preds)
                 cls_metric1.update(losses1)
                 box_metric1.update(losses2)
-                # debug_metric.update(cls_targets, [nd.softmax(z[0]).transpose((0, 2, 1)), nd.smooth_l1((z[1] - box_targets) * box_masks, scalar=1.0), cls_targets])
+                debug_metric.update(cls_targets, [nd.softmax(z[0]).transpose((0, 2, 1)), nd.smooth_l1((z[1] - box_targets) * box_masks, scalar=1.0), cls_targets])
                 if log_interval and not (i + 1) % log_interval:
                     # print(checker.grad())
                     name, acc = cls_metric.get()
@@ -203,8 +203,8 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                     name2, focalloss = cls_metric1.get()
                     name3, smoothl1loss = box_metric1.get()
                     logging.info("Epoch [%d] Batch [%d], Speed: %f samples/sec, %s=%f, %s=%f, %s=%f"%(epoch, i, batch_size/(time.time()-btic), name, acc, name2, focalloss, name3, smoothl1loss))
-                    # names, values = debug_metric.get()
-                    # logging.info("%s=%f, %s=%f"%(names[0], values[0], names[1], values[1]))
+                    names, values = debug_metric.get()
+                    logging.info("%s=%f, %s=%f"%(names[0], values[0], names[1], values[1]))
                 btic = time.time()
 
             name, acc = cls_metric.get()
