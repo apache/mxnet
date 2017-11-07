@@ -25,11 +25,14 @@
 #ifndef MXNET_OPERATOR_MXNET_OP_H_
 #define MXNET_OPERATOR_MXNET_OP_H_
 
+#include <cxxabi.h>
 #include <dmlc/omp.h>
 #include <mxnet/base.h>
-#include <mxnet/engine.h>
 #include <mxnet/op_attr_types.h>
 #include <algorithm>
+#include <string>
+#include "./operator_tune.h"
+#include "../engine/openmp.h"
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -288,45 +291,61 @@ struct op_with_req {
   }
 };
 
-/*!
- * \brief Set to immediate scalar value kernel
- * \tparam val Scalar immediate
- */
-template<int val>
-struct set_to_int {
-  // mxnet_op version (when used directly with Kernel<>::Launch()) */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out) {
-    out[i] = DType(val);
-  }
-  // mshadow_op version (when used with op_with_req<>)
-  MSHADOW_XINLINE static int Map() {
-    return val;
-  }
-};
 
-/*! \brief Special-case kernel shortcut for setting to zero */
-using set_zero = set_to_int<0>;
+/*! \brief Kernel operator wrapper used for tuning data */
+template<typename Operation, typename DType>
+struct tuned_op : public Operation {
+  static size_t workload_;       // nanos per operation * Tuner's WORKLOAD_COUNT
+  // the decision implementation
+  // TODO(cjolivier01): For more complex kernels, add a shape parameter version (diff LaunchEx)
+  static int UseOMP(size_t N, size_t thread_count);
+};
 
 template<typename OP, typename xpu>
 struct Kernel;
 
-
 template<typename OP>
 struct Kernel<OP, cpu> {
+  /*! \brief Launch CPU kernel */
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+  inline static void Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
 #ifdef _OPENMP
-    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
-    if (omp_cores <= 1) {
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
       // Zero means not to use OMP, but don't interfere with external OMP behavior
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     } else {
-      #pragma omp parallel for num_threads(omp_cores)
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
+      }
+    }
+#else
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, args...);
+    }
+#endif
+  }
+
+  /*! \brief Launch CPU kernel which has OMP tuning data available.
+   * When using this for a new kernel op, add declaration and tuning objects to
+   * operator_tune.cc
+   */
+  template<typename BasicOperation, typename DType, typename ...Args>
+  static void LaunchEx(mshadow::Stream<cpu> *, const int N, DType *dest, Args... args) {
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2 || !tuned_op<BasicOperation, DType>::UseOMP(N, omp_threads)) {
+      // Zero means not to use OMP, but don't interfere with external OMP behavior
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, dest, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, dest, args...);
       }
     }
 #else
@@ -335,8 +354,21 @@ struct Kernel<OP, cpu> {
     }
 #endif
   }
-};
 
+  /*! \brief Launch mshadow_op-type op (i.e. DType (*)( ... ) { return <operation> } */
+  template<typename ...Args>
+  MSHADOW_CINLINE static void LaunchMShadowOpEx(mshadow::Stream<cpu> *s,
+                                                const int N, Args... args) {
+    Kernel<OP, cpu>::template LaunchEx<typename OP::Operation>(s, N, args...);
+  }
+
+  /*! \brief Launch mxnet_op-type op (i.e. void (*)(int N, *out, ... ) */
+  template<typename ...Args>
+  MSHADOW_CINLINE static void LaunchMXNetOpEx(mshadow::Stream<cpu> *s,
+                                              const int N, Args... args) {
+    Kernel<OP, cpu>::template LaunchEx<OP>(s, N, args...);
+  }
+};
 
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
@@ -348,6 +380,7 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
 
 template<typename OP>
 struct Kernel<OP, gpu> {
+  /*! \brief Launch GPU kernel */
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
     using namespace mshadow::cuda;
@@ -356,10 +389,53 @@ struct Kernel<OP, gpu> {
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
   }
+  /*! \brief For GPU, LaunchEx redirects directly to the normal Launch */
+  template<typename ...Args>
+  MSHADOW_CINLINE static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
+    Launch(s, N, args...);
+  }
 };
 #endif  // __CUDACC__
 
+/*!
+ * \brief Set to immediate scalar value kernel
+ * \tparam val Scalar immediate
+ */
+template<int val>
+struct set_to_int {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*!
+ * \brief Special-case kernel shortcut for setting to zero and one
+ */
+using set_zero = set_to_int<0>;
+using set_one  = set_to_int<1>;
+_MXNET_TUNABLE_MXNET_OP_FWD(set_zero);
+_MXNET_TUNABLE_MXNET_OP_FWD(set_one);
+
 }  // namespace mxnet_op
+
+
+/*!
+ * \brief Tuning specializations for the simple ops in <mshadow/base.h>
+ */
+MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::identity)
+MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::plus)
+MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::minus)
+MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::mul)
+MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::div)
+MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::right)
+
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_MXNET_OP_H_
