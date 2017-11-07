@@ -69,6 +69,10 @@ Profiler::Profiler()
   }
 }
 
+Profiler::~Profiler(){
+  delete this->profile_stat;
+}
+
 Profiler* Profiler::Get() {
 #if MXNET_USE_PROFILER
   static Profiler inst;
@@ -110,7 +114,8 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
       idx = cpu_num_ + gpu_num_;
       break;
     default:
-      LOG(FATAL) << "Unknown dev_type: " << dev_type;
+      delete opr_stat;
+      LOG(FATAL) << "Unkown dev_type: " << dev_type;
       return NULL;
   }
 

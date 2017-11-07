@@ -93,6 +93,9 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     default:
       LOG(FATAL) << "Not Reached";
     }
+    default:
+      LOG(FATAL) << "Undefined dev_mask "<<ctx.dev_mask();
+      break;
   }
   return ret;
 }
@@ -122,6 +125,9 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
     default:
       LOG(FATAL) << "Not Reached";
     }
+    default:
+      LOG(FATAL) << "Undefined dev_mask "<<ctx.dev_mask();
+      break;
   }
   return ret;
 }
