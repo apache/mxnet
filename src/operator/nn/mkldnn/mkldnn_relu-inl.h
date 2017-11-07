@@ -76,9 +76,7 @@ void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
     return;
   }
 
-  // TODO we need to handle req
   std::shared_ptr<const mkldnn::memory> diff_dst_memory = out_grad.GetMKLDNNData();
-  // TODO shouldn't it be out_data?
   std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
@@ -92,11 +90,11 @@ void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
   mkldnn::eltwise_backward::desc bw_desc(mkldnn::eltwise_relu, diff_md, data_md, alpha);
   mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine, fw_pdesc);
 
-  std::shared_ptr<const mkldnn::memory> diff_src_memory
-    = const_cast<NDArray &>(in_grad).CreateMKLDNNData(bw_pdesc.diff_src_primitive_desc());
+  auto diff_src_memory = CreateMKLDNNMem(in_grad, bw_pdesc.diff_src_primitive_desc(), req);
   MKLDNNStream &stream = MKLDNNStream::Instance();
   stream.RegisterPrim(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
-        *diff_dst_memory, *diff_src_memory));
+        *diff_dst_memory, *diff_src_memory.second));
+  CommitOutput(in_grad, diff_src_memory);
   stream.Submit();
 }
 

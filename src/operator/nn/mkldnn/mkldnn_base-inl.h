@@ -151,6 +151,44 @@ inline static mkldnn_mem_ptr CreateMKLDNNMem(const mkldnn::memory::primitive_des
   return ret;
 }
 
+enum OutDataOp {
+  Noop,
+  CopyBack,
+  AddBack,
+};
+
+typedef std::pair<OutDataOp, mkldnn_mem_ptr> mkldnn_output_t;
+
+static inline mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
+    const mkldnn::memory::primitive_desc &desc, OpReqType req) {
+  if (kAddTo == req)
+    return mkldnn_output_t(OutDataOp::AddBack, CreateMKLDNNMem(desc));
+  else {
+    mkldnn_mem_ptr mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
+    if (mem == nullptr)
+      return mkldnn_output_t(OutDataOp::CopyBack, CreateMKLDNNMem(desc));
+    else
+      return mkldnn_output_t(OutDataOp::Noop, mem);
+  }
+}
+
+namespace op {
+void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
+    const mkldnn::memory &out);
+}
+
+static inline void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
+  if (res.first == CopyBack)
+    const_cast<NDArray &>(arr).CopyFrom(*res.second);
+  else if (res.first == AddBack) {
+    // TODO I might need to reorder.
+    mkldnn_mem_const_ptr mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
+    mkldnn_mem_ptr out = CreateMKLDNNMem(res.second->get_primitive_desc());
+    op::Sum(*res.second, *mem, *out);
+    const_cast<NDArray &>(arr).CopyFrom(*out);
+  }
+}
+
 inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
     const mkldnn::memory::primitive_desc &target_pd, int num_groups) {
   mkldnn_mem_const_ptr mem;
