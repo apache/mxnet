@@ -706,8 +706,7 @@ struct product {
   }
   /*! \brief do reduction into dst */
   template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src,
-                                     volatile DType& none) { // NOLINT(*)
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
   /*!
