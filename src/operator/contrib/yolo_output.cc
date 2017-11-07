@@ -28,8 +28,8 @@ Operator *YoloOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 
 DMLC_REGISTER_PARAMETER(YoloOutputParam);
 
-MXNET_REGISTER_OP_PROPERTY(_contrib_YoloOutput, YoloOutputProp)
-.describe("Yolo output layer.")
+MXNET_REGISTER_OP_PROPERTY(_contrib_Yolo2Output, YoloOutputProp)
+.describe("Yolo v2 output layer. This is a convolutional version as described in YOLO 9000 paper.")
 .add_argument("data", "NDArray-or-Symbol", "Input data to the YoloOutputOp.")
 .add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
 .add_arguments(YoloOutputParam::__FIELDS__());

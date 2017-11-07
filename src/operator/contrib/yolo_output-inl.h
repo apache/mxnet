@@ -15,6 +15,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <utility>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
@@ -120,24 +121,6 @@ struct clip_zero_one {
   }
 };  // struct clip_zero_one
 
-// create index mask for labels
-// struct index_mask {
-//   template<typename DType>
-//   MSHADOW_XINLINE static void Map(int i, DType* out,
-//       const DType* x, const DType* y, const index_t width, const index_t height,
-//       const int stride, const DType on_value) {
-//     if (x[i] < 0 || y[i] < 0) return;
-//     int depth = width * height * stride;
-//     int offset = i * depth;
-//     int start = static_cast<int>(y[i] * width + x[i]) * stride;
-//     for (int j = 0; j < stride; ++j) {
-//       int pos = start + j;
-//       if (pos >= 0 && pos < depth) {
-//         out[offset + pos] = on_value;
-//       }
-//     }
-//   }
-// };
 
 // find best anchor box per ground-truth, and calculate grad
 struct box_grad {
@@ -165,7 +148,7 @@ struct box_grad {
       DType gw = gr - gl;
       DType gh = gb - gt;
       if (gx < 0 || gy < 0 || gx > 1 || gy > 1) continue;  // invalid gt
-      if (gw <= 0 || gh <= 0 || gw > 1 || gh > 1) continue ;  // invalid gt
+      if (gw <= 0 || gh <= 0 || gw > 1 || gh > 1) continue;  // invalid gt
       // specific block region only where gt center located
       int col = static_cast<int>(gx * width);
       int row = static_cast<int>(gy * height);
@@ -186,10 +169,6 @@ struct box_grad {
         }
       }
       // box prediction and box grad
-      // if (i >= 0) {
-      //   printf("Batch: %d, Label: %d, Best anchor: %d, row:%d, col:%d, class: %d\n",
-      //     i, n, best_anchor, row, col, int(class_id));
-      // }
       offset = (i * width * height * num_anchor + row * width * num_anchor +
         col * num_anchor + best_anchor) * pred_width + pred_offset;
       DType px = pred[offset];
@@ -202,15 +181,9 @@ struct box_grad {
       DType ah = anchor[best_anchor * 2 + 1];
       DType scale = box_scale * (2 - gw * gh);
       grad[out_offset] = scale * (px - gx * width + col);  // x
-      grad[out_offset + 1] = scale * (py - gy * height + row); // y
+      grad[out_offset + 1] = scale * (py - gy * height + row);  // y
       grad[out_offset + 2] = scale * (pw - logf(gw * width / aw));  // w
-      grad[out_offset + 3] = scale * (ph - logf(gh * height / ah)); // h
-      // if (fabs(grad[out_offset + 3] > 5)) {
-      //   printf("best_anchor: %d, gw:%f, gh:%f, scale:%f, tx:%f, ty:%f, tw:%f, th:%f, x:%f, y:%f, w:%f, h:%f, dx:%f, dy:%f, dw:%f, dh:%f\n",
-      //     best_anchor, gw, gh, scale, gx * width - col, gy * height - row, log(gw * width / aw), log(gh * height / ah),
-      //     px, py, pw, ph, grad[out_offset], grad[out_offset+1], grad[out_offset+2], grad[out_offset+3]);
-      // }
-
+      grad[out_offset + 3] = scale * (ph - logf(gh * height / ah));  // h
 
       // object grad
       px = (px + col) / width;
@@ -227,7 +200,6 @@ struct box_grad {
         col * num_anchor + best_anchor;
       out_label[offset] = class_id;
     }
-
   }
 };
 
@@ -274,7 +246,6 @@ struct nms_impl {
     DType pb = input[pos_offset + 3];
     DType iou = IOU(refl, reft, refr, refb, pl, pt, pr, pb);
     if (iou > thresh) {
-      // printf("batch: %d, ref: %d, pos: %d, iou: %f\n", b, ref, pos, iou);
       index[b * num + pos] = -1;
     }
   }
@@ -289,19 +260,14 @@ struct nms_assign {
       int location = static_cast<int>(index[i * num + j]);
       if (location >= 0) {
         // copy to output
-        // printf("Batch: %d, Pos: %d, index: %d, %d\n", i, j, location, location % num);
         int out_location = (i * num + count) * stride;
         int in_location = location * stride;
         for (int s = 0; s < stride; ++s) {
           out[out_location + s] = input[in_location + s];
         }
-        // if (i == 0) {
-        //   printf("pos: %d, score: %f\n", j, float(out[out_location + 1]));
-        // }
         ++count;
       }
     }
-    // printf("batch: %d, count: %d\n", i, count);
   }
 };
 
@@ -378,18 +344,9 @@ class YoloOutputOp : public Operator {
      // anchors
      nnvm::Tuple<DType> anchors(param_.anchors.begin(), param_.anchors.end());
      Tensor<cpu, 1, DType> cpu_bias(anchors.begin(), Shape1(anchors.ndim()));
-    //  Tensor<xpu, 1, DType> xpu_bias = ctx.requested[yoloout_enum::kTempSpace]
-    //   .get_space_typed<xpu, 1, DType>(cpu_bias.shape_, s);
      Copy(xpu_bias, cpu_bias, s);
      temp_anchors = reshape(repmat(xpu_bias, data.shape_[0] * data.shape_[2] * data.shape_[3]),
       temp_anchors.shape_);
-    //  Tensor<cpu, 2, DType> debug_anchors = ctx.requested[yoloout_enum::kTempSpace]
-    //   .get_host_space_typed<2, DType>(Shape2(tshape[1], 2));
-    //  Copy(debug_anchors, temp_anchors[0], s);
-    //  for (int ii = 0; ii < tshape[1]; ++ii) {
-    //    LOG(INFO) << "anchor " << ii << ": " << debug_anchors[ii][0] << ", " << debug_anchors[ii][1];
-    //  }
-    //  CHECK_EQ(1, 0);
      // w = exp(pred[2]) * anchor[w] / in_w
      slice<2>(out, 4, 5) = in_w * F<mshadow_op::exp>(slice<2>(temp, nc + 3, nc + 4)) *
       slice<2>(temp_anchors, 0, 1);
@@ -457,22 +414,6 @@ class YoloOutputOp : public Operator {
           buffer.dptr_, sorted_index.dptr_, keep, num_elem, out.shape_[2]);
        }
      }
-
-      // Tensor<cpu, 3, DType> debug_bias = ctx.requested[yoloout_enum::kTempSpace]
-      //  .get_host_space_typed<3, DType>(temp.shape_);
-      // Copy(debug_bias, temp, s);
-      // for (int i = 0; i < 845; ++i) {
-      //   LOG(INFO) << i << ": " << debug_bias[0][i][0 + 20] << ", " << debug_bias[0][i][21];
-      // }
-
-      // Tensor<cpu, 2, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
-      //  .get_host_space_typed<2, DType>(Shape2(temp.shape_[1], 6));
-      // Copy(debug, out[0], s);
-      // for (int ii = 0; ii < debug.shape_[0]; ++ii) {
-      //   LOG(INFO) << ii << ": " << debug[ii][0] << ", " << debug[ii][1] << ", "
-      //    << debug[ii][2] << ", " << debug[ii][3] << ", " << debug[ii][4] << ", "
-      //    << debug[ii][5];
-      // }
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -503,7 +444,6 @@ class YoloOutputOp : public Operator {
     index_t grad_width = nc + 5;
     index_t num_anchor = param_.num_anchor;
     const DType ignore_label = static_cast<DType>(-1);
-    // LOG(INFO) << "Label size: " << num_label;
 
     // temp space
     Shape<2> label_shape = Shape2(num_batch, num_box);
@@ -515,23 +455,17 @@ class YoloOutputOp : public Operator {
     // Shape<3> temp_index_mask_shape = Shape3(num_batch, num_label, num_box);
     size_t temp_size_total = label_shape.Size() + 2 * softmax_shape.Size() +
      overlaps_shape.Size() + grad_shape.Size() + anchor_shape.Size();
-    // LOG(INFO) << "Total size: " << temp_size_total;
     Tensor<xpu, 1, DType> temp_space = ctx.requested[yoloout_enum::kTempSpace]
      .get_space_typed<xpu, 1, DType>(Shape1(temp_size_total), s);
     CHECK_EQ(temp_space.CheckContiguous(), true);
-    // LOG(INFO) << "Total dptr: " << temp_space.dptr_ << ", " << label_shape.Size();
     Tensor<xpu, 2, DType> temp_label(temp_space.dptr_, label_shape, s);
-    // LOG(INFO) << "Label dptr: " << temp_label.dptr_ << ", " << label_shape.Size();
     Tensor<xpu, 3, DType> temp_softmax(temp_label.dptr_ + temp_label.MSize(),
      softmax_shape, s);
-    // LOG(INFO) << "softmax dptr: " << temp_softmax.dptr_ << ", " << softmax_shape.Size();
     Tensor<xpu, 3, DType> temp_softmax_grad(temp_softmax.dptr_ + temp_softmax.MSize(),
      softmax_shape, s);
-    // LOG(INFO) << "softmaxgrad dptr: " << temp_softmax_grad.dptr_ << ", " << softmax_shape.Size();
     // [0]-[7] for x1, y1, w1, h1, x2, y2, w2, h2, [8] for overlap
     Tensor<xpu, 4, DType> buffer(temp_softmax_grad.dptr_ + temp_softmax_grad.MSize(),
      overlaps_shape, s);
-    // LOG(INFO) << "overlap dptr: " << buffer.dptr_ << ", " << overlaps_shape.Size();
     Tensor<xpu, 3, DType> temp_grad(buffer.dptr_ + buffer.MSize(),
      grad_shape, s);
     Tensor<xpu, 1, DType> xpu_bias(temp_grad.dptr_ + temp_grad.MSize(),
@@ -549,19 +483,6 @@ class YoloOutputOp : public Operator {
     mxnet_op::Kernel<calc_overlap, xpu>::Launch(s, tshape.Size(), buffer[8].dptr_,
      buffer[0].dptr_, buffer[1].dptr_, buffer[2].dptr_, buffer[3].dptr_,
      buffer[4].dptr_, buffer[5].dptr_, buffer[6].dptr_, buffer[7].dptr_);
-
-    // Tensor<cpu, 2, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
-    //  .get_host_space_typed<2, DType>(Shape2(num_box, num_label));
-    // Copy(debug, buffer[8][0], s);
-    // for (int ii = 0; ii < num_box; ++ii) {
-    //   for (int jj = 0; jj < num_label; ++jj) {
-    //     if (debug[ii][jj] > 0) {
-    //       LOG(INFO) << ii << ", " << jj << ": " << debug[ii][jj];
-    //     }
-    //   }
-    // }
-    // grad = 0;
-    // return;
 
     // objectness grad
     temp_grad = DType(0);
@@ -619,60 +540,6 @@ class YoloOutputOp : public Operator {
     // transpose grad to data shape
     grad = transpose(reshape(temp_grad, Shape4(num_batch, in_height,
       in_width, num_anchor * grad_width)), Shape4(0, 3, 1, 2));
-
-    // Tensor<cpu, 3, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
-    //  .get_host_space_typed<3, DType>(Shape3(125, in_height, in_width));
-    // Copy(debug, grad[0], s);
-    // for (int ii = 0; ii < in_height; ++ii) {
-    //   for (int jj = 0; jj < in_width; ++jj) {
-    //     for (int kk = 0; kk < 5; ++kk) {
-    //       std::stringstream ss;
-    //       ss << ii << "-" << jj << "-" << kk << ": ";
-    //       for (int nn = 0; nn < 25; ++nn) {
-    //         ss << "(" << nn << ")" << debug[kk * 25  + nn][jj][ii];
-    //       }
-    //       if (debug[kk * 25][jj][ii] > 1e10 || debug[kk * 25][jj][ii] < -1e10) {
-    //         LOG(INFO) << ss.str();
-    //       }
-    //     }
-    //   }
-    // }
-
-    // Tensor<cpu, 2, DType> debug = ctx.requested[yoloout_enum::kTempSpace]
-    //  .get_host_space_typed<2, DType>(Shape2(845, 25));
-    // Copy(debug, temp_grad[0], s);
-    // for (int ii = 0; ii < 845; ++ii) {
-    //   if (fabs(debug[ii].dptr_[0]) < 1e-10 ) continue;
-    //   std::stringstream ss;
-    //   ss << ii << ": ";
-    //   for (int jj = 0; jj < 25; ++jj) {
-    //     ss << jj << "-" << debug[ii].dptr_[jj] << ", ";
-    //   }
-    //   LOG(INFO) << ss.str();
-    // }
-
-    // store loss in temp_output for metric, [0]:softmax, [1]:object, [2]:box
-    // temp_out = 0;
-    // Tensor<xpu, 2, DType> metric_out = out_data[yoloout_enum::kTemp]
-    //  .get_with_shape<xpu, 2, DType>(Shape2(temp_out.shape_.Size() / num_batch,
-    //  num_batch), s);
-    // metric_out[0] = sumall_except_dim<0>(F<mshadow_op::abs>(slice<2>(temp_grad, 0, nc)));
-    // metric_out[1] = sumall_except_dim<0>(F<mshadow_op::abs>(slice<2>(temp_grad, nc, nc + 1)));
-    // metric_out[2] = sumall_except_dim<0>(F<mshadow_op::abs>(slice<2>(temp_grad, nc + 1, nc + 5)));
-    // Tensor<cpu, 2, DType> loss_debug = ctx.requested[yoloout_enum::kTempSpace]
-    //  .get_host_space_typed<2, DType>(Shape2(3, num_batch));
-    // Copy(loss_debug[0], metric_out[0], s);
-    // Copy(loss_debug[1], metric_out[1], s);
-    // Copy(loss_debug[2], metric_out[2], s);
-    // DType l1 = 0;
-    // DType l2 = 0;
-    // DType l3 = 0;
-    // for (int ii = 0; ii < num_batch; ++ii) {
-    //   l1 += loss_debug[0][ii];
-    //   l2 += loss_debug[1][ii];
-    //   l3 += loss_debug[2][ii];
-    // }
-    // LOG(INFO) << l1 << ", " << l2 << ", " << l3;
   }
 
  private:
