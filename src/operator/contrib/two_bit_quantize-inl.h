@@ -31,7 +31,6 @@
 #include <cmath>
 #include <mxnet/operator_util.h>
 #include <mxnet/c_api.h>
-#include <ps/ps.h>
 #include "../operator_common.h"
 #include "../mxnet_op.h"
 
@@ -143,8 +142,7 @@ template<typename xpu>
 void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
                       const float threshold) {
   using namespace mshadow;
-  using namespace mxnet_op;
-  Kernel<quantize_2bit, xpu>::template Launch(s, inputs[2].Size(), // compressed array size
+  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array size
                                                inputs[0].Size(),    // original size
                                                inputs[2].dptr<float>(),   // compressed array
                                                inputs[0].dptr<float>(),     // original array
