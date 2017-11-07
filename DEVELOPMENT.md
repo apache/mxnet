@@ -50,6 +50,10 @@ ninja -v
 For building in mac you can install cmake, ninja and openblas with [homebrew](https://brew.sh/) and
 use one of the above cmake configurations.
 
+## Further installation & build instructions:
+
+See `docs/install/index.md`
+
 ## Running unit tests:
 
 ```
