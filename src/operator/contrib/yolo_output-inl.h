@@ -587,7 +587,8 @@ class YoloOutputProp : public OperatorProperty {
       yoloout_enum::kData);
 
     // data shape
-    CHECK_EQ(param_.anchors.ndim() % 2, 0);
+    CHECK_EQ(param_.anchors.ndim() % 2, 0)
+      << "invalid anchor provided, should be continuous pairs of [w1, h1, w1, h2...]";
     CHECK_EQ(param_.num_anchor, param_.anchors.ndim() / 2) << "anchor number mismatch";
     int num_channel = param_.num_anchor * (param_.num_class + 1 + 4);
     TShape data_shape = Shape4(dshape[0], num_channel, dshape[2], dshape[3]);
