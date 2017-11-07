@@ -26,4 +26,4 @@ There is a couple of reasons why Caffe is needed:
 - Scale<sup>*</sup>
 - SoftmaxOutput
 
-<sup>*</sup> - Uses CaffePlugin
+<sup>*</sup> - Uses [CaffePlugin](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe)
