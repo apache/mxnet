@@ -14,6 +14,7 @@ There is a couple of reasons why Caffe is needed:
 - Batch Normalization
 - Concat
 - Convolution
+- Data<sup>*</sup>
 - Deconvolution
 - Eltwise
 - Inner Product (Fully Connected layer)
@@ -22,4 +23,7 @@ There is a couple of reasons why Caffe is needed:
 - Pooling
 - Power
 - Relu
+- Scale<sup>*</sup>
 - SoftmaxOutput
+
+<sup>*</sup> - Uses CaffePlugin
