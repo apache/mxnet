@@ -727,6 +727,19 @@ def test_sparse_mathematical_core():
                                        force_overlap=force_overlap,
                                        verbose=False)
 
+        # minus_scalar
+        check_sparse_mathematical_core("minus_scalar", stype,
+                                       lambda x, y: x - y,
+                                       lambda x, y: x - y,
+                                       lambda input, rhs: 1,
+                                       rhs_arg=5.0,
+                                       data_init=2, grad_init=3,
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       density=density, ograd_density=ograd_density,
+                                       force_overlap=force_overlap,
+                                       verbose=False)
+
     # Check many basic unary operators
     def check_mathematical_core(stype, output_grad_stype=None,
                                 input_grad_stype=None, force_overlap=False,
@@ -1677,4 +1690,3 @@ def test_scatter_ops():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-

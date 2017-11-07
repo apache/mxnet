@@ -29,44 +29,67 @@ namespace engine {
 #define ARCH_IS_INTEL_X86
 #endif
 
+static inline bool is_env_set(const char *var) {
+  return dmlc::GetEnv(var, INT_MIN) == INT_MIN;
+}
+
 OpenMP *OpenMP::Get() {
   static OpenMP openMP;
   return &openMP;
 }
 
 OpenMP::OpenMP()
-  : omp_num_threads_set_in_environment(dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN) {
+  : omp_num_threads_set_in_environment(is_env_set("OMP_NUM_THREADS")) {
 #ifdef _OPENMP
-  if (!omp_num_threads_set_in_environment) {
-    omp_set_nested(true);
-    omp_set_dynamic(false);
-  }
   const int max = dmlc::GetEnv("MXNET_OMP_MAX_THREADS", INT_MIN);
   if (max != INT_MIN) {
     omp_thread_max_ = max;
   } else {
+    if (!omp_num_threads_set_in_environment) {
+      omp_thread_max_ = omp_get_num_procs();
 #ifdef ARCH_IS_INTEL_X86
-    omp_thread_max_ = omp_get_num_procs() >> 1;
+      omp_thread_max_ >>= 1;
 #endif
+      omp_set_num_threads(omp_thread_max_);
+    } else {
+      omp_thread_max_ = omp_get_max_threads();
   }
+  }
+  omp_set_nested(dmlc::GetEnv("OMP_NESTED", false));
+  omp_set_dynamic(dmlc::GetEnv("OMP_DYNAMIC", false));
 #else
   enabled_ = false;
   omp_thread_max_ = 1;
 #endif
 }
 
-int OpenMP::GetRecommendedOMPThreadCount() const {
+void OpenMP::set_reserve_cores(int cores) {
+  CHECK_GE(cores, 0);
+  reserve_cores_ = cores;
+#ifdef _OPENMP
+  if (reserve_cores_ >= omp_thread_max_) {
+    omp_set_num_threads(1);
+  } else {
+    omp_set_num_threads(omp_thread_max_ - reserve_cores_);
+  }
+#endif
+}
+
+int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
 #ifdef _OPENMP
   if (omp_num_threads_set_in_environment) {
     return omp_get_max_threads();
   }
   if (enabled_) {
-#ifdef ARCH_IS_INTEL_X86
-    // x86 does hyperthreading, but do to cache issues, it's faster to only use # true CPUs
-    const int thread_count = omp_get_max_threads() >> 1;
-#else
-    const int thread_count = omp_get_max_threads();
-#endif
+    int thread_count = omp_get_max_threads();
+    if (exclude_reserved) {
+      if (reserve_cores_ >= thread_count) {
+        thread_count = 1;
+      } else {
+        thread_count -= reserve_cores_;
+      }
+    }
+    // Check that OMP doesn't suggest more than our 'omp_thread_max_' value
     if (!omp_thread_max_ || thread_count < omp_thread_max_) {
       return thread_count;
     }
@@ -77,6 +100,8 @@ int OpenMP::GetRecommendedOMPThreadCount() const {
   return 1;
 #endif
 }
+
+OpenMP *__init_omp__ = OpenMP::Get();
 
 }  // namespace engine
 }  // namespace mxnet
