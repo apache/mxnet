@@ -122,15 +122,14 @@ class OperatorRunner {
    * \param dim Data dimensions
    * \param count Number of times to run in each direction
    */
-  void TimingTest(const std::string& label,
-                  const bool isGPU,
-                  const bool stochastic,
-                  const test::op::kwargs_t& kwargs,
-                  int dim = 0,
-                  size_t count = 1,
-                  const std::vector<TShape>& timing_shapes = {}) {
-    std::cout << std::endl << std::flush;
-
+  std::unordered_map<int, perf::TimingInstrument::Info>
+  TimingTest(const std::string& label,
+             const bool isGPU,
+             const bool stochastic,
+             const test::op::kwargs_t& kwargs,
+             int dim = 0,
+             size_t count = 1,
+             const std::vector<TShape>& timing_shapes = {}) {
 #ifdef NDEBUG
     size_t COUNT = 50;
 #else
@@ -160,7 +159,7 @@ class OperatorRunner {
 
       if (timing_shapes.empty()) {
         do {
-          batchSize = stochastic ? test::rangedRand(1U, TES_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
+          batchSize = stochastic ? test::rangedRand(1U, TEST_BATCH_SIZE * 2U) : TIMING_BATCH_SIZE;
           channels = stochastic ? test::rangedRand(1U, TEST_CHANNELS * 2U) : TIMING_CHANNELS;
           depth = stochastic ? test::rangedRand(1U, TEST_DEPTH * 2U) : TIMING_DEPTH;
           height = stochastic ? test::rangedRand(1U, TEST_DH * 2U) : TIMING_DH;
@@ -218,12 +217,18 @@ class OperatorRunner {
       }
     }
 
-    timing.print(&std::cout, label);
-    std::cout << std::endl << std::flush;
+    if (verbose_) {
+      timing.print(&std::cout, label);
+      std::cout << std::endl << std::flush;
+    }
+
+    return timing.data();
   }
 
+  void set_verbose(bool verbose) { verbose_ = verbose; }
+
  protected:
-  static constexpr int TES_BATCH_SIZE = 5;
+  static constexpr int TEST_BATCH_SIZE = 5;
   static constexpr int TEST_CHANNELS = 3;
   static constexpr int TEST_DEPTH = 2;
   static constexpr int TEST_DH = 2;
@@ -234,6 +239,8 @@ class OperatorRunner {
   static constexpr int TIMING_DEPTH = 2;
   static constexpr int TIMING_DH = 64;
   static constexpr int TIMING_DW = 64;
+  /*! \brief verbose output */
+  bool verbose_ = true;
 };
 
 }  // namespace test

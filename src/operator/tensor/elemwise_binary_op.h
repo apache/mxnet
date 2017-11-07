@@ -33,8 +33,10 @@
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../../engine/openmp.h"
 #include "elemwise_unary_op.h"
 #include "../../common/utils.h"
+#include "./init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -42,23 +44,6 @@ namespace op {
 /*! Gather binary operator functions into ElemwiseBinaryOp class */
 class ElemwiseBinaryOp : public OpBase {
  public:
-  template<typename OP, int Req>
-  struct BackwardUseNoneOp {
-    template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType *igrad, const DType *ograd) {
-      KERNEL_ASSIGN(igrad[i], Req, OP::Map(ograd[i]));
-    }
-  };
-
-  template<typename OP, int Req>
-  struct BackwardUseInOp {
-    template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType *igrad,
-                                    const DType *ograd, const DType *lhs, const DType *rhs) {
-      KERNEL_ASSIGN(igrad[i], Req, ograd[i] * OP::Map(lhs[i], rhs[i]));
-    }
-  };
-
   /*! \brief For sparse, assume missing rvalue is 0 */
   template<typename OP, int Req>
   struct MissingRValueOp {
@@ -89,25 +74,22 @@ class ElemwiseBinaryOp : public OpBase {
    * \brief Fill contiguous dense output rows with value computed from 0 lhs and 0 rhs input
    *        CPU-Only version
    */
-  template<typename DType, typename OP>
-  static inline size_t FillDense(mshadow::Stream<cpu> *s,
+  template<typename DType, typename OP, typename xpu>
+  static inline size_t FillDense(mshadow::Stream<xpu> *s,
                                  const size_t idx_l,
                                  const size_t idx_r,
                                  const OpReqType req,
-                                 mshadow::Tensor<cpu, 2, DType> *out,
+                                 mshadow::Tensor<xpu, 2, DType> *out,
                                  const size_t iter_out) {
-    const int index_out_min = std::min(idx_l, idx_r);
+    const int index_out_min = static_cast<int>(std::min(idx_l, idx_r));
     if (static_cast<size_t>(index_out_min) > iter_out) {
-      const size_t size = (*out)[iter_out].shape_.Size();
       const DType zero_input_val = OP::Map(DType(0), DType(0));
-      #pragma omp parallel for
-      for (int i = iter_out; i < index_out_min; ++i) {
-        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          SerialLaunchCPU<OpBase::set_to_scalar<Req>>(s, size, (*out)[i].dptr_, zero_input_val);
-        });
+      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+      for (int i = static_cast<int>(iter_out); i < index_out_min; ++i) {
+        Fill<false>(s, (*out)[i], req, zero_input_val);
       }
     }
-    return index_out_min;
+    return static_cast<size_t>(index_out_min);  // MSVC wants OMP loops to always use 'int'
   }
 
   static inline bool IsSameArray(const NDArray& a1, const NDArray& a2) {
@@ -135,7 +117,7 @@ class ElemwiseBinaryOp : public OpBase {
     } else if (req[0] != kNullOp) {
       DType *lgrad_dptr = outputs[0].dptr<DType>();
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        Kernel<BackwardUseNoneOp<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr, ograd_dptr);
+        Kernel<mxnet_op::op_with_req<LOP, Req>, xpu>::Launch(s, size, lgrad_dptr, ograd_dptr);
       });
     }
     if (std::is_same<ROP, mshadow_op::identity>::value && req[1] == kWriteInplace) {
@@ -143,7 +125,7 @@ class ElemwiseBinaryOp : public OpBase {
     } else if (req[1] != kNullOp) {
       DType *rgrad_dptr = outputs[1].dptr<DType>();
       MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-        Kernel<BackwardUseNoneOp<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr, ograd_dptr);
+        Kernel<mxnet_op::op_with_req<ROP, Req>, xpu>::Launch(s, size, rgrad_dptr, ograd_dptr);
       });
     }
   }
@@ -165,14 +147,14 @@ class ElemwiseBinaryOp : public OpBase {
         (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
         / mxnet_op::DataType<DType>::kLanes);
       DType * lgrad_dptr = outputs[0].dptr<DType>();
-      mxnet_op::Kernel<BackwardUseInOp<LOP, Req>, xpu>::Launch(
+      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad<LOP>, Req>, xpu>::Launch(
         s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
     MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
       const int size = static_cast<int>(
         (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
         / mxnet_op::DataType<DType>::kLanes);
       DType * rgrad_dptr = outputs[1].dptr<DType>();
-      mxnet_op::Kernel<BackwardUseInOp<ROP, Req>, xpu>::Launch(
+      mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad<ROP>, Req>, xpu>::Launch(
         s, size, rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
   }
 
@@ -503,10 +485,7 @@ class ElemwiseBinaryOp : public OpBase {
         CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> rsp, _. op requires 0-input returns 0-output
         DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
-        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          UnaryOp::KernelComputeEx<xpu, BackwardUseNoneOp<LOP, Req>>(attrs, ctx, inputs,
-                                                                     req, {outputs[0]});
-        });
+        UnaryOp::ComputeEx<xpu, LOP>(attrs, ctx, inputs, req, {outputs[0]});
       } else {
         LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
       }
@@ -517,10 +496,7 @@ class ElemwiseBinaryOp : public OpBase {
         CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> _, rsp. op requires 0-input returns 0-output
         DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
-        MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-          UnaryOp::KernelComputeEx<xpu, BackwardUseNoneOp<ROP, Req>>(attrs, ctx, inputs,
-                                                                     req, {outputs[1]});
-        });
+        UnaryOp::ComputeEx<xpu, ROP>(attrs, ctx, inputs, req, {outputs[1]});
       } else {
         LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
       }
