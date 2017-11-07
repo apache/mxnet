@@ -271,7 +271,7 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // For example, if the array stores parameters, the MKL memory may store data
   // in 5 dimensions while the NDArray stores data in 4 dimensions.
   // TODO is it possible that the MKL memory is out-of-date?
-  if (Mkl_mem_) {
+  if (Mkl_mem_ && storage_type == kMKLDNNStorage) {
     return;
   }
 
@@ -315,6 +315,7 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
   }
   if (ptr_->Mkl_mem_) {
     CHECK(ptr_->Mkl_mem_->get_primitive_desc() == desc);
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
   }
   mkldnn_mem_const_ptr ret(new mkldnn::memory(desc, ptr_->shandle.dptr));
@@ -335,8 +336,10 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
   // the default storage. If it uses the MKLDNN format, the MKL memory should
   // have been initialized since we are trying to get data from the array.
   CHECK(ptr_->Mkl_mem_ != nullptr);
-  if (ptr_->Mkl_mem_->get_primitive_desc() == desc)
+  if (ptr_->Mkl_mem_->get_primitive_desc() == desc) {
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
+  }
   else {
     // TODO we should manage the memory allocation here.
     mkldnn_mem_ptr ret(new mkldnn::memory(desc));
@@ -349,8 +352,10 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
 
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData() const {
   ptr_->SetMKLMem(shape_, dtype_);
-  if (ptr_->Mkl_mem_)
+  if (ptr_->Mkl_mem_) {
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
+  }
   else
     // TODO We don't support converting sparse format.
     return nullptr;
@@ -375,8 +380,10 @@ std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
     return nullptr;
   }
 
-  if (ptr_->Mkl_mem_ && ptr_->Mkl_mem_->get_primitive_desc() == desc)
+  if (ptr_->Mkl_mem_ && ptr_->Mkl_mem_->get_primitive_desc() == desc) {
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
+  }
 
   ptr_->Mkl_mem_ = CreateMKLDNNMem(desc);
   return ptr_->Mkl_mem_;
