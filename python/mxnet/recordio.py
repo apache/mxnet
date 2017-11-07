@@ -19,15 +19,17 @@
 from __future__ import absolute_import
 from collections import namedtuple
 
+import sys
 import ctypes
 import struct
 import numbers
 import numpy as np
+from . import ndarray as nd
 
 from .base import _LIB
-from .base import RecordIOHandle
-from .base import check_call
-from .base import c_str
+from .base import RecordIOHandle, RecordIterHandle, NDArrayHandle
+from .base import check_call, ctypes2buffer, build_param_doc as _build_param_doc
+from .base import c_str, c_array, mx_uint, py_str
 try:
     import cv2
 except ImportError:
@@ -454,3 +456,261 @@ def pack_img(header, img, quality=95, img_fmt='.jpg'):
     ret, buf = cv2.imencode(img_fmt, img, encode_params)
     assert ret, 'failed to encode image'
     return pack(header, buf.tostring())
+# pb version of recordio
+RecordIOHead = namedtuple('HEAD', ['id', 'reserve'])
+RecordIOData = namedtuple('DATA', ['id', 'type', 'nd_value', 'str_value'])
+RecordIOExtraData = namedtuple('EXTRA_DATA', ['key', 'type', 'nd_value', 'str_value'])
+class RecordIOType(object):
+    NDARRAY = 0
+    BINARY = 1
+    STRING = 2
+
+class MXRecordIO_PB(object):
+    """ a recordio from pb-format files.
+
+    Parameters
+    ----------
+    data : list of `RecordIOData`
+          A list of input data.
+    label : list of `float`
+          A list of input label.
+    header : RecordIOHead
+          head of input record
+    extra_data : RecordIOExtraData
+          A list of input extra data.
+    """
+    def __init__(self, data, label=None, header=None, extra_data=None):
+        if data is not None:
+            assert isinstance(data, list), "Data must be list"
+        if label is not None:
+            assert isinstance(label, list), "Label must be list"
+        if extra_data is not None:
+            assert isinstance(extra_data, list), "extra_data must be list"
+        self.data = data
+        self.label = label
+        self.header = header
+        self.extra_data = extra_data
+
+class MXRecordIter(object):
+    """A python wrapper a C++ data iterator.
+
+    This iterator is the Python wrapper to native C++ RecordIter iterator.
+    When initializing `RecordIter` for example, you will get an `MXRecordIter`
+    instance to use in your Python code.
+    Calls to `next`, `reset`, etc will be delegated to the
+    underlying C++ data iterators.
+
+    Usually you don't need to interact with `MXRecordIter` directly unless you are
+    implementing your own data iterators in C++. To do that, please refer to
+    examples under the `src/io` folder.
+
+    Parameters
+    ----------
+    handle : DataIterHandle, required
+        The handle to the underlying C++ Data Iterator.
+
+    See Also
+    --------
+    src/io : The underlying C++ data iterator implementation.
+    """
+    def __init__(self, handle):
+        self.handle = handle
+
+    def __del__(self):
+        check_call(_LIB.MXRecordIterFree(self.handle))
+        self.handle = RecordIterHandle()
+
+    def __iter__(self):
+        return self
+
+    def reset(self):
+        """Reset the iterator to the begin of the data."""
+        check_call(_LIB.MXRecordIterBeforeFirst(self.handle))
+
+    def next(self):
+        if self.iter_next():
+            return MXRecordIO_PB(data = self.get_data(),
+                    label = self.get_label(),
+                    header = self.get_head(),
+                    extra_data = self.get_extra_data())
+        else:
+            raise StopIteration
+
+    def __next__(self):
+        return self.next()
+
+    def iter_next(self):
+        """Move to the next record.
+
+        Returns
+        -------
+        boolean
+            Whether the move is successful.
+        """
+        next_res = ctypes.c_int(0)
+        check_call(_LIB.MXRecordIterNext(self.handle, ctypes.byref(next_res)))
+        return next_res.value
+
+    def get_data(self):
+        """Get data of current record.
+        """
+        num = self.get_data_num()
+        data_list = []
+        for i in xrange(num):
+            data_id = ctypes.c_uint64(0)
+            data_type = ctypes.c_int(0)
+            data_ndarray = NDArrayHandle()
+            data_string_length = mx_uint()
+            data_string = ctypes.POINTER(ctypes.c_char)()
+            check_call(_LIB.MXRecordIterGetData(self.handle,
+                ctypes.c_uint(i),
+                ctypes.byref(data_id),
+                ctypes.byref(data_type),
+                ctypes.byref(data_ndarray),
+                ctypes.byref(data_string_length),
+                ctypes.byref(data_string)))
+            nd_value = nd.NDArray(data_ndarray, False)
+            data_list.append(RecordIOData(id=data_id.value, type=data_type.value,
+                nd_value=nd_value,
+                str_value=ctypes2buffer(data_string, data_string_length.value)))
+        return data_list
+
+    def get_extra_data(self):
+        """Get extra data of current record.
+        """
+        num = self.get_extra_data_num()
+        data_list = []
+        for i in xrange(num):
+            data_key = ctypes.POINTER(ctypes.c_char)()
+            data_key_length = mx_uint()
+            data_type = ctypes.c_int(0)
+            data_ndarray = NDArrayHandle()
+            data_string = ctypes.POINTER(ctypes.c_char)()
+            data_string_length = mx_uint()
+            check_call(_LIB.MXRecordIterGetExtraData(self.handle,
+                ctypes.c_uint(i),
+                ctypes.byref(data_key),
+                ctypes.byref(data_key_length),
+                ctypes.byref(data_type),
+                ctypes.byref(data_ndarray),
+                ctypes.byref(data_string),
+                ctypes.byref(data_string_length)))
+            nd_value = nd.NDArray(data_ndarray, False)
+            data_list.append(RecordIOExtraData(key=ctypes2buffer(data_key, data_key_length.value),
+                type=data_type.value,
+                nd_value=nd_value,
+                str_value=ctypes2buffer(data_string, data_string_length.value)))
+        return data_list
+
+    def get_data_num(self):
+        """Get data num of current record.
+        """
+        num = ctypes.c_uint(0)
+        check_call(_LIB.MXRecordIterGetDataNum(self.handle, ctypes.byref(num)))
+        return num.value
+
+    def get_extra_data_num(self):
+        """Get extra data num of current record.
+        """
+        num = ctypes.c_uint(0)
+        check_call(_LIB.MXRecordIterGetExtraDataNum(self.handle, ctypes.byref(num)))
+        return num.value
+
+    def get_label(self):
+        """Get label of the current record.
+        """
+        label_size = ctypes.c_uint(0)
+        label_data = ctypes.POINTER(ctypes.c_float)()
+        check_call(_LIB.MXRecordIterGetLabel(self.handle,
+            ctypes.byref(label_data),
+            ctypes.byref(label_size)))
+        label_list = [label_data[i] for i in xrange(label_size.value)]
+        return label_list
+
+    def get_head(self):
+        """Get head of the current record.
+        """
+        record_id = ctypes.c_uint64(0)
+        reserve = ctypes.c_uint64(0)
+        check_call(_LIB.MXRecordIterGetHead(self.handle,
+            ctypes.byref(record_id), ctypes.byref(reserve)))
+        return RecordIOHead(id=record_id.value, reserve=reserve.value)
+
+def _make_record_iterator():
+    """Create an io iterator by handle."""
+    name = ctypes.c_char_p()
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+
+    check_call(_LIB.MXRecordIterGetIterInfo( \
+            ctypes.byref(name), ctypes.byref(desc), \
+            ctypes.byref(num_args), \
+            ctypes.byref(arg_names), \
+            ctypes.byref(arg_types), \
+            ctypes.byref(arg_descs)))
+    if name.value is None:
+        return None
+    iter_name = py_str(name.value)
+
+    narg = int(num_args.value)
+    param_str = _build_param_doc(
+        [py_str(arg_names[i]) for i in range(narg)],
+        [py_str(arg_types[i]) for i in range(narg)],
+        [py_str(arg_descs[i]) for i in range(narg)])
+
+    doc_str = ('%s\n\n' +
+               '%s\n' +
+               'Returns\n' +
+               '-------\n' +
+               'MXRecordIter\n'+
+               '    The result iterator.')
+    doc_str = doc_str % (desc.value, param_str)
+
+    def creator(*args, **kwargs):
+        """Create an iterator.
+        The parameters listed below can be passed in as keyword arguments.
+
+        Parameters
+        ----------
+        kwargs : ...
+            arguments for creating MXRecordIter. See MXRecordIterCreate.
+
+        Returns
+        -------
+        MXRecordIter
+            The resulting data iterator.
+        """
+        param_keys = []
+        param_vals = []
+
+        for k, val in kwargs.items():
+            param_keys.append(c_str(k))
+            param_vals.append(c_str(str(val)))
+        # create atomic symbol
+        param_keys = c_array(ctypes.c_char_p, param_keys)
+        param_vals = c_array(ctypes.c_char_p, param_vals)
+        iter_handle = RecordIterHandle()
+        check_call(_LIB.MXRecordIterCreate(
+            mx_uint(len(param_keys)),
+            param_keys, param_vals,
+            ctypes.byref(iter_handle)))
+
+        if len(args):
+            raise TypeError('%s can only accept keyword arguments' % iter_name)
+
+        return MXRecordIter(iter_handle)
+
+    creator.__name__ = iter_name
+    creator.__doc__ = doc_str
+    return creator
+
+def _init_record_module():
+    module_obj = sys.modules[__name__]
+    record_iter = _make_record_iterator()
+    if record_iter is not None:
+        setattr(module_obj, record_iter.__name__, record_iter)
+
+_init_record_module()

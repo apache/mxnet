@@ -1,0 +1,45 @@
+/**
+ *  Copyright (c) 2017 by shuqian.qu@hobot.cc
+ */
+package mxnet.io;
+
+message RecordUnit {
+  // head
+  optional RecordHead head = 1;
+  // body
+  optional RecordBody body = 2;
+}
+
+message RecordHead {
+  // unique index
+  optional uint64 id = 1;
+  // reserve
+  optional uint64 reserve = 2;
+  // version
+  optional float version = 3;
+}
+
+message RecordBody {
+  repeated RecordData data = 1;
+  repeated float label = 2;
+  repeated ExtraData extra = 3;
+}
+
+/*!
+  type: 0 -> NDArray.
+        1 -> binary data, return NDArray which shape is (len(value),)
+             type is uint8
+        2 -> text data, return string in python.
+*/
+message RecordData {
+  // unique index
+  optional uint64 id = 1;
+  optional int32 type = 2;
+  optional bytes value = 3;
+}
+
+message ExtraData {
+  optional bytes key = 1;
+  optional int32 type = 2;
+  optional bytes value = 3;
+}

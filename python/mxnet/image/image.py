@@ -26,6 +26,8 @@ import random
 import logging
 import json
 import numpy as np
+import Queue
+import threading
 
 try:
     import cv2
@@ -39,6 +41,7 @@ from ..ndarray._internal import _cvimresize as imresize
 from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .. import recordio
+from ..context import cpu
 
 
 def imread(filename, *args, **kwargs):
@@ -478,6 +481,21 @@ def random_size_crop(src, size, min_area, ratio, interp=2):
     # fall back to center_crop
     return center_crop(src, size, interp)
 
+class MultiContextConstArray(object):
+    """multi-context array.
+
+       This array will buffer the copy in multi-contexts.
+    """
+    def __init__(self, arr):
+        self.ori_arr = arr
+        self.ctx_dict = {arr.context: arr}
+
+    def get(self, ctx):
+        ret_arr = self.ctx_dict.get(ctx)
+        if ret_arr is None:
+            ret_arr = self.ori_arr.as_in_context(ctx)
+            self.ctx_dict[ctx] = ret_arr
+        return ret_arr
 
 class Augmenter(object):
     """Image Augmenter base class"""
@@ -690,12 +708,12 @@ class ContrastJitterAug(Augmenter):
     def __init__(self, contrast):
         super(ContrastJitterAug, self).__init__(contrast=contrast)
         self.contrast = contrast
-        self.coef = nd.array([[[0.299, 0.587, 0.114]]])
+        self.coef = MultiContextConstArray(nd.array([[[0.299, 0.587, 0.114]]]))
 
     def __call__(self, src):
         """Augmenter body"""
         alpha = 1.0 + random.uniform(-self.contrast, self.contrast)
-        gray = src * self.coef
+        gray = src * self.coef.get(ctx=src.context)
         gray = (3.0 * (1.0 - alpha) / gray.size) * nd.sum(gray)
         src *= alpha
         src += gray
@@ -713,12 +731,12 @@ class SaturationJitterAug(Augmenter):
     def __init__(self, saturation):
         super(SaturationJitterAug, self).__init__(saturation=saturation)
         self.saturation = saturation
-        self.coef = nd.array([[[0.299, 0.587, 0.114]]])
+        self.coef = MultiContextConstArray(nd.array([[[0.299, 0.587, 0.114]]]))
 
     def __call__(self, src):
         """Augmenter body"""
         alpha = 1.0 + random.uniform(-self.saturation, self.saturation)
-        gray = src * self.coef
+        gray = src * self.coef.get(ctx=src.context)
         gray = nd.sum(gray, axis=2, keepdims=True)
         gray *= (1.0 - alpha)
         src *= alpha
@@ -756,7 +774,7 @@ class HueJitterAug(Augmenter):
                        [0.0, u, -w],
                        [0.0, w, u]])
         t = np.dot(np.dot(self.ityiq, bt), self.tyiq).T
-        src = nd.dot(src, nd.array(t))
+        src = nd.dot(src, nd.array(t, ctx=src.context))
         return src
 
 
@@ -805,7 +823,7 @@ class LightingAug(Augmenter):
         """Augmenter body"""
         alpha = np.random.normal(0, self.alphastd, size=(3,))
         rgb = np.dot(self.eigvec * alpha, self.eigval)
-        src += nd.array(rgb)
+        src += nd.array(rgb, ctx=src.context)
         return src
 
 
@@ -821,12 +839,14 @@ class ColorNormalizeAug(Augmenter):
     """
     def __init__(self, mean, std):
         super(ColorNormalizeAug, self).__init__(mean=mean, std=std)
-        self.mean = nd.array(mean) if mean is not None else None
-        self.std = nd.array(std) if std is not None else None
+        self.mean = MultiContextConstArray(nd.array(mean)) if mean is not None else None
+        self.std = MultiContextConstArray(nd.array(std)) if std is not None else None
 
     def __call__(self, src):
         """Augmenter body"""
-        return color_normalize(src, self.mean, self.std)
+        return color_normalize(src,
+                self.mean.get(src.context) if self.mean is not None else None,
+                self.std.get(src.context) if self.std is not None else None)
 
 
 class RandomGrayAug(Augmenter):
@@ -840,16 +860,15 @@ class RandomGrayAug(Augmenter):
     def __init__(self, p):
         super(RandomGrayAug, self).__init__(p=p)
         self.p = p
-        self.mat = nd.array([[0.21, 0.21, 0.21],
+        self.mat = MultiContextConstArray(nd.array([[0.21, 0.21, 0.21],
                              [0.72, 0.72, 0.72],
-                             [0.07, 0.07, 0.07]])
+                             [0.07, 0.07, 0.07]]))
 
     def __call__(self, src):
         """Augmenter body"""
         if random.random() < self.p:
-            src = nd.dot(src, self.mat)
+            src = nd.dot(src, self.mat.get(src.contex))
         return src
-
 
 class HorizontalFlipAug(Augmenter):
     """Random horizontal flip.
@@ -881,10 +900,27 @@ class CastAug(Augmenter):
         src = src.astype(self.typ)
         return src
 
+class CopyGpuAug(Augmenter):
+    """Copy to device to do following augs.
+
+    Parameters
+    ----------
+    ctxs : list of Context
+        GPU contexs
+    """
+    def __init__(self, ctxs):
+        super(CopyGpuAug, self).__init__(ctxs=ctxs)
+        self.ctxs = ctxs
+
+    def __call__(self, src):
+        """Augmenter body"""
+        idx = random.randint(0, len(self.ctxs)-1)
+        src = src.copyto(self.ctxs[idx])
+        return src
 
 def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, rand_mirror=False,
                     mean=None, std=None, brightness=0, contrast=0, saturation=0, hue=0,
-                    pca_noise=0, rand_gray=0, inter_method=2):
+                    pca_noise=0, rand_gray=0, inter_method=2, gpu_ctxs=None, **kwargs):
     """Creates an augmenter list.
 
     Parameters
@@ -934,6 +970,10 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
         When shrinking an image, it will generally look best with AREA-based
         interpolation, whereas, when enlarging an image, it will generally look best
         with Bicubic (slow) or Bilinear (faster but still looks OK).
+    gpu_ctxs : list of Context or None
+        GPU contexts.
+    kwargs : ...
+        Other arguments.
 
     Examples
     --------
@@ -958,6 +998,9 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
         auglist.append(RandomCropAug(crop_size, inter_method))
     else:
         auglist.append(CenterCropAug(crop_size, inter_method))
+
+    if gpu_ctxs is not None:
+        auglist.append(CopyGpuAug(gpu_ctxs))
 
     if rand_mirror:
         auglist.append(HorizontalFlipAug(0.5))
@@ -1003,7 +1046,8 @@ class ImageIter(io.DataIter):
     To load input images from .rec files, use `path_imgrec` parameter and to load from raw image
     files, use `path_imglist` and `path_root` parameters.
 
-    To use data partition (for distributed training) or shuffling, specify `path_imgidx` parameter.
+    To use data partition (for distributed training) or shuffling, specify `path_imgidx` parameter,
+    But when using pb-format data, `path_imgidx` is not necessary.
 
     Parameters
     ----------
@@ -1028,6 +1072,8 @@ class ImageIter(io.DataIter):
         Root folder of image files.
     path_imgidx : str
         Path to image index file. Needed for partition and shuffling when using .rec source.
+    pb_format : bool
+        whether use pb format data
     shuffle : bool
         Whether to shuffle all images at the start of each iteration or not.
         Can be slow for HDD.
@@ -1040,30 +1086,44 @@ class ImageIter(io.DataIter):
     label_name : str
         Label name for provided symbols.
     kwargs : ...
-        More arguments for creating augmenter. See mx.image.CreateAugmenter.
+        More arguments for creating augmenter and RecordIter. See mx.image.CreateAugmenter
+        and mx.io.RecordIter.
     """
 
     def __init__(self, batch_size, data_shape, label_width=1,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
+                 pb_format=False,
                  shuffle=False, part_index=0, num_parts=1, aug_list=None, imglist=None,
                  data_name='data', label_name='softmax_label', **kwargs):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist or (isinstance(imglist, list))
+        if pb_format and kwargs.has_key('preprocess_threads'):
+            os.environ["MXNET_CPU_WORKER_NTHREADS"] = str(kwargs.pop('preprocess_threads'))
         num_threads = os.environ.get('MXNET_CPU_WORKER_NTHREADS', 1)
         logging.info('Using %s threads for decoding...', str(num_threads))
         logging.info('Set enviroment variable MXNET_CPU_WORKER_NTHREADS to a'
                      ' larger number to use more threads.')
         class_name = self.__class__.__name__
+        self.pb_format = pb_format
         if path_imgrec:
             logging.info('%s: loading recordio %s...',
                          class_name, path_imgrec)
-            if path_imgidx:
-                self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
-                self.imgidx = list(self.imgrec.keys)
+            if self.pb_format:
+                self.recorditer = recordio.RecordIter(
+                        path_imgrec         = path_imgrec,
+                        shuffle             = shuffle,
+                        num_parts           = num_parts,
+                        part_index          = part_index,
+                        **kwargs)
             else:
-                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')  # pylint: disable=redefined-variable-type
-                self.imgidx = None
+                if path_imgidx:
+                    self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
+                    self.imgidx = list(self.imgrec.keys)
+                else:
+                    self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')  # pylint: disable=redefined-variable-type
+                    self.imgidx = None
         else:
+            self.recorditer = None
             self.imgrec = None
 
         if path_imglist:
@@ -1109,58 +1169,73 @@ class ImageIter(io.DataIter):
         self.data_shape = data_shape
         self.label_width = label_width
 
-        self.shuffle = shuffle
-        if self.imgrec is None:
-            self.seq = imgkeys
-        elif shuffle or num_parts > 1:
-            assert self.imgidx is not None
-            self.seq = self.imgidx
-        else:
-            self.seq = None
+        if not self.pb_format:
+            self.shuffle = shuffle
+            if self.imgrec is None:
+                self.seq = imgkeys
+            elif shuffle or num_parts > 1:
+                assert self.imgidx is not None
+                self.seq = self.imgidx
+            else:
+                self.seq = None
 
-        if num_parts > 1:
-            assert part_index < num_parts
-            N = len(self.seq)
-            C = N // num_parts
-            self.seq = self.seq[part_index * C:(part_index + 1) * C]
+            if num_parts > 1:
+                assert part_index < num_parts
+                N = len(self.seq)
+                C = N // num_parts
+                self.seq = self.seq[part_index * C:(part_index + 1) * C]
         if aug_list is None:
             self.auglist = CreateAugmenter(data_shape, **kwargs)
         else:
             self.auglist = aug_list
-        self.cur = 0
+        self.pre_batch_data = None
+        self.pre_batch_label = None
         self.reset()
+        self.cur = 0
 
     def reset(self):
         """Resets the iterator to the beginning of the data."""
-        if self.shuffle:
-            random.shuffle(self.seq)
-        if self.imgrec is not None:
-            self.imgrec.reset()
+        self.pre_batch_data = None
+        self.pre_batch_label = None
+        if self.pb_format:
+            if self.recorditer is not None:
+                self.recorditer.reset()
+        else:
+            if self.shuffle:
+                random.shuffle(self.seq)
+            if self.imgrec is not None:
+                self.imgrec.reset()
         self.cur = 0
 
     def next_sample(self):
         """Helper function for reading in next sample."""
-        if self.seq is not None:
-            if self.cur >= len(self.seq):
-                raise StopIteration
-            idx = self.seq[self.cur]
-            self.cur += 1
-            if self.imgrec is not None:
-                s = self.imgrec.read_idx(idx)
-                header, img = recordio.unpack(s)
-                if self.imglist is None:
-                    return header.label, img
-                else:
-                    return self.imglist[idx][0], img
-            else:
-                label, fname = self.imglist[idx]
-                return label, self.read_image(fname)
+        if self.pb_format:
+            s = self.recorditer.next()
+            assert s.data[0].type == recordio.RecordIOType.BINARY, 'this data must be binary data'
+            self.cur = s.header.id
+            return s.label[0], s.data[0].nd_value
         else:
-            s = self.imgrec.read()
-            if s is None:
-                raise StopIteration
-            header, img = recordio.unpack(s)
-            return header.label, img
+            if self.seq is not None:
+                if self.cur >= len(self.seq):
+                    raise StopIteration
+                idx = self.seq[self.cur]
+                self.cur += 1
+                if self.imgrec is not None:
+                    s = self.imgrec.read_idx(idx)
+                    header, img = recordio.unpack(s)
+                    if self.imglist is None:
+                        return header.label, img
+                    else:
+                        return self.imglist[idx][0], img
+                else:
+                    label, fname = self.imglist[idx]
+                    return label, self.read_image(fname)
+            else:
+                s = self.imgrec.read()
+                if s is None:
+                    raise StopIteration
+                header, img = recordio.unpack(s)
+                return header.label, img
 
     def next(self):
         """Returns the next batch of data."""
@@ -1183,9 +1258,19 @@ class ImageIter(io.DataIter):
                 batch_data[i] = self.postprocess_data(data)
                 batch_label[i] = label
                 i += 1
+            # store the last batch_data
+            self.pre_batch_data = batch_data
+            self.pre_batch_label = batch_label
         except StopIteration:
             if not i:
                 raise StopIteration
+            else:
+                if self.pre_batch_data is None:
+                    raise ValueError('must have one batch')
+                else:
+                    # pad current batch with the latest batch_data
+                    batch_data[i:] = self.pre_batch_data[i:]
+                    batch_label[i:] = self.pre_batch_label[i:]
 
         return io.DataBatch([batch_data], [batch_label], batch_size - i)
 
@@ -1206,16 +1291,19 @@ class ImageIter(io.DataIter):
         See mx.img.imdecode for more details."""
         def locate():
             """Locate the image file/index if decode fails."""
-            if self.seq is not None:
-                idx = self.seq[self.cur - 1]
+            if self.pb_format:
+                return "Broken image index: {}".format(self.cur)
             else:
-                idx = self.cur - 1
-            if self.imglist is not None:
-                _, fname = self.imglist[idx]
-                msg = "filename: {}".format(fname)
-            else:
-                msg = "index: {}".format(idx)
-            return "Broken image " + msg
+                if self.seq is not None:
+                    idx = self.seq[self.cur - 1]
+                else:
+                    idx = self.cur - 1
+                if self.imglist is not None:
+                    _, fname = self.imglist[idx]
+                    msg = "filename: {}".format(fname)
+                else:
+                    msg = "index: {}".format(idx)
+                return "Broken image " + msg
         try:
             img = imdecode(s)
         except Exception as e:
@@ -1241,4 +1329,144 @@ class ImageIter(io.DataIter):
 
     def postprocess_data(self, datum):
         """Final postprocessing step before image is loaded into the batch."""
-        return nd.transpose(datum, axes=(2, 0, 1))
+        return nd.transpose(datum, axes=(2, 0, 1)).as_in_context(cpu())
+
+class PrefetchDataFlag(object):
+    ITER_COMPLETE = 0
+
+class PrefetchThreadIter(io.DataIter):
+    """Performs pre-fetch for other data iterator.
+
+    This iterator will create another thread to perform ``iter_next`` and then
+    store the data in queue. It potentially accelerates the data read, at the
+    cost of more memory usage.
+
+    Parameters
+    ----------
+    data_iter : DataIter
+        The data iterators to be pre-fetched.
+    capacity : int
+        max prefetch num
+
+    Examples
+    --------
+    >>> iter1 = mx.io.NDArrayIter({'data':mx.nd.ones((100,10))}, batch_size=25)
+    >>> piter = mx.img.PrefetchThreadIter(iter1)
+    >>> print(piter.provide_data)
+    DataDesc[data_1,(25, 10L),<type 'numpy.float32'>,NCHW]
+    """
+    def __init__(self, data_iter, capacity = 4):
+        super(PrefetchThreadIter, self).__init__()
+        assert data_iter is not None
+        self.data_iter = data_iter
+        self.batch_size = self.provide_data[0][1][0]
+        self.queue = Queue.Queue(capacity)
+        self.data_reset = threading.Condition()
+
+        self.exit = False
+        self.iter_reset = False
+        self.iter_complete = False
+        self.current_batch = None
+        def prefetch_func():
+            """Thread entry"""
+            while True:
+                if self.exit:
+                    break
+                if self.iter_reset:
+                    self.iter_reset = False
+                    self.data_iter.reset()
+                    while True:
+                        try:
+                            self.queue.get_nowait()
+                        except Queue.Empty:
+                            break
+                try:
+                    next_data = self.data_iter.next()
+                    self.queue.put(next_data, block=True)
+                except StopIteration:
+                    self.queue.put(PrefetchDataFlag.ITER_COMPLETE, block=True)
+                    with self.data_reset:
+                        self.data_reset.wait()
+
+        self.prefetch_thread = threading.Thread(target=prefetch_func, args=[])
+        self.prefetch_thread.setDaemon(True)
+        self.prefetch_thread.start()
+
+    def __del__(self):
+        self.exit = True
+        while True:
+            try:
+                self.queue.get_nowait()
+            except Queue.Empty:
+                break
+        with self.data_reset:
+            self.data_reset.notify()
+        self.prefetch_thread.join()
+
+    @property
+    def provide_data(self):
+        return self.data_iter.provide_data
+
+    @property
+    def provide_label(self):
+        return self.data_iter.provide_label
+
+    def reset(self):
+        self.iter_reset = True
+        while True:
+            try:
+                self.queue.get_nowait()
+            except Queue.Empty:
+                break
+        with self.data_reset:
+            self.data_reset.notify()
+        self.iter_complete = False
+
+    def iter_next(self):
+        if self.iter_complete:
+            return False
+        else:
+            d = self.queue.get(block=True)
+            if d == PrefetchDataFlag.ITER_COMPLETE:
+                self.iter_complete = True
+                return False
+            else:
+                self.current_batch = d
+            return True
+
+    def next(self):
+        if self.iter_next():
+            return self.current_batch
+        else:
+            raise StopIteration
+
+    def getdata(self):
+        return self.current_batch.data
+
+    def getlabel(self):
+        return self.current_batch.label
+
+    def getindex(self):
+        return self.current_batch.index
+
+    def getpad(self):
+        return self.current_batch.pad
+
+def PrefetchImageIter(prefetch_num = 4, **kwargs):
+    """Performs Pre-fetch for ImageIter
+
+    This iterator will create another thread to perform ``iter_next`` and then
+    store the data in queue. It potentially accelerates the data read, at the
+    cost of more memory usage.
+
+    Parameters
+    ----------
+    prefetch_num : int
+        prefetch num of io.DataBatch object
+    kwargs : ...
+        More arguments for creating ImageIter. See mx.image.ImageIter.
+    """
+    data_iter = PrefetchThreadIter(ImageIter(**kwargs), prefetch_num)
+    import atexit
+    atexit.register(lambda a : a.__del__(), data_iter)
+    return data_iter

@@ -19,6 +19,7 @@ import mxnet as mx
 import random
 from mxnet.io import DataBatch, DataIter
 import numpy as np
+import os
 
 def add_data_args(parser):
     data = parser.add_argument_group('Data', 'the input images')
@@ -38,6 +39,10 @@ def add_data_args(parser):
                       help='number of threads for data decoding')
     data.add_argument('--benchmark', type=int, default=0,
                       help='if 1, then feed the network with synthetic data')
+    data.add_argument('--use-python-iter', type=int, default=0,
+                      help='whether or not use python version iter')
+    data.add_argument('--use-gpu-augmenter', type=int, default=0,
+                      help='whether or not augment the image in gpus')
     return data
 
 def add_data_aug_args(parser):
@@ -118,50 +123,90 @@ def get_rec_iter(args, kv=None):
         (rank, nworker) = (kv.rank, kv.num_workers)
     else:
         (rank, nworker) = (0, 1)
-    rgb_mean = [float(i) for i in args.rgb_mean.split(',')]
-    train = mx.io.ImageRecordIter(
-        path_imgrec         = args.data_train,
-        path_imgidx         = args.data_train_idx,
-        label_width         = 1,
-        mean_r              = rgb_mean[0],
-        mean_g              = rgb_mean[1],
-        mean_b              = rgb_mean[2],
-        data_name           = 'data',
-        label_name          = 'softmax_label',
-        data_shape          = image_shape,
-        batch_size          = args.batch_size,
-        rand_crop           = args.random_crop,
-        max_random_scale    = args.max_random_scale,
-        pad                 = args.pad_size,
-        fill_value          = 127,
-        min_random_scale    = args.min_random_scale,
-        max_aspect_ratio    = args.max_random_aspect_ratio,
-        random_h            = args.max_random_h,
-        random_s            = args.max_random_s,
-        random_l            = args.max_random_l,
-        max_rotate_angle    = args.max_random_rotate_angle,
-        max_shear_ratio     = args.max_random_shear_ratio,
-        rand_mirror         = args.random_mirror,
-        preprocess_threads  = args.data_nthreads,
-        shuffle             = True,
-        num_parts           = nworker,
-        part_index          = rank)
+    rgb_mean = np.array([float(i) for i in args.rgb_mean.split(',')])
+    gpu_devs = None
+    if args.use_gpu_augmenter:
+        gpu_devs = None if args.gpus is None or args.gpus is '' else [
+                mx.gpu(int(i)) for i in args.gpus.split(',')]
+    if not args.use_python_iter:
+        train = mx.io.ImageRecordIter(
+                path_imgrec         = args.data_train,
+                path_imgidx         = args.data_train_idx,
+                label_width         = 1,
+                mean_r              = rgb_mean[0],
+                mean_g              = rgb_mean[1],
+                mean_b              = rgb_mean[2],
+                data_name           = 'data',
+                label_name          = 'softmax_label',
+                data_shape          = image_shape,
+                batch_size          = args.batch_size,
+                rand_crop           = args.random_crop,
+                max_random_scale    = args.max_random_scale,
+                pad                 = args.pad_size,
+                fill_value          = 127,
+                min_random_scale    = args.min_random_scale,
+                max_aspect_ratio    = args.max_random_aspect_ratio,
+                random_h            = args.max_random_h,
+                random_s            = args.max_random_s,
+                random_l            = args.max_random_l,
+                max_rotate_angle    = args.max_random_rotate_angle,
+                max_shear_ratio     = args.max_random_shear_ratio,
+                rand_mirror         = args.random_mirror,
+                preprocess_threads  = args.data_nthreads,
+                shuffle             = True,
+                num_parts           = nworker,
+                part_index          = rank)
+    else:
+        train = mx.img.PrefetchImageIter(
+                path_imgrec         = args.data_train,
+                pb_format           = True,
+                mean                = rgb_mean,
+                data_name           = 'data',
+                label_name          = 'softmax_label',
+                data_shape          = image_shape,
+                batch_size          = args.batch_size,
+                rand_crop           = args.random_crop,
+                rand_mirror         = args.random_mirror,
+                std                 = True,
+                preprocess_threads  = args.data_nthreads,
+                shuffle             = True,
+                num_parts           = nworker,
+                part_index          = rank,
+                gpu_ctxs            = gpu_devs)
+
     if args.data_val is None:
         return (train, None)
-    val = mx.io.ImageRecordIter(
-        path_imgrec         = args.data_val,
-        path_imgidx         = args.data_val_idx,
-        label_width         = 1,
-        mean_r              = rgb_mean[0],
-        mean_g              = rgb_mean[1],
-        mean_b              = rgb_mean[2],
-        data_name           = 'data',
-        label_name          = 'softmax_label',
-        batch_size          = args.batch_size,
-        data_shape          = image_shape,
-        preprocess_threads  = args.data_nthreads,
-        rand_crop           = False,
-        rand_mirror         = False,
-        num_parts           = nworker,
-        part_index          = rank)
+    if not args.use_python_iter:
+        val = mx.io.ImageRecordIter(
+                path_imgrec         = args.data_val,
+                path_imgidx         = args.data_val_idx,
+                label_width         = 1,
+                mean_r              = rgb_mean[0],
+                mean_g              = rgb_mean[1],
+                mean_b              = rgb_mean[2],
+                data_name           = 'data',
+                label_name          = 'softmax_label',
+                batch_size          = args.batch_size,
+                data_shape          = image_shape,
+                preprocess_threads  = args.data_nthreads,
+                rand_crop           = False,
+                rand_mirror         = False,
+                round_batch         = False,
+                num_parts           = nworker,
+                part_index          = rank)
+    else:
+        val = mx.img.PrefetchImageIter(
+                path_imgrec         = args.data_val,
+                pb_format           = True,
+                mean                = rgb_mean,
+                data_name           = 'data',
+                label_name          = 'softmax_label',
+                data_shape          = image_shape,
+                batch_size          = args.batch_size,
+                rand_crop           = False,
+                rand_mirror         = False,
+                std                 = True,
+                num_parts           = nworker,
+                part_index          = rank,
+                gpu_ctxs            = gpu_devs)
     return (train, val)

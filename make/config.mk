@@ -56,6 +56,8 @@ USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
 USE_CUDNN = 0
+# whether use cuSOLVER library
+USE_CUSOLVER = 0
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -166,6 +168,10 @@ EXTRA_OPERATORS =
 
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
+
+# Running with the Protobuf-format rec files. If yes, then USE_DIST_KVSTORE must be setted to 1 and 
+# USE_OPENMP be setted to 0
+USE_PB_FORMAT_REC = 0
 
 #----------------------------
 # plugins

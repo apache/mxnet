@@ -236,3 +236,61 @@ def save(fname, data):
                                   mx_uint(len(handles)),
                                   c_array(NDArrayHandle, handles),
                                   keys))
+
+def load_from_str(data):
+    """Loads an array from string.
+
+    Parameters
+    ----------
+    data : str
+        string of ndarray
+
+    Returns
+    -------
+    NDArray
+        loaded data
+    """
+    handle = NDArrayHandle()
+    length = ctypes.c_size_t(len(data))
+    check_call(_LIB.MXNDArrayLoadFromRawBytes(c_str(data), length, ctypes.byref(handle)))
+    return NDArray(handle)
+
+def save_to_str(data):
+    """save an array to string.
+
+    Parameters
+    ----------
+    data : NDArray
+        The data to save.
+
+    Returns
+    -------
+    bytes
+        NDArray string of the data
+    Examples
+    --------
+    >>> x = mx.nd.zeros((2,3))
+    >>> y = mx.nd.save_to_str(x)
+    >>> mx.nd.load_from_str(y)
+    <NDArray 2x3 @cpu(0)>
+
+    --------
+    In [23]: a = nd.zeros((1000,1000))
+
+    In [24]: %timeit(cPickle.dumps(a))
+    10 loops, best of 3: 22 ms per loop
+
+    In [25]: %timeit(nd.save_to_str(a))
+    100 loops, best of 3: 2.24 ms per loop
+    """
+    handle = data.handle
+    if handle is None:
+        return ''
+    length = ctypes.c_size_t()
+    cptr = ctypes.POINTER(ctypes.c_char)()
+    check_call(_LIB.MXNDArraySaveRawBytes(handle,
+                                          ctypes.byref(length),
+                                          ctypes.byref(cptr)))
+    buf = bytes(ctypes2buffer(cptr, length.value))
+    return buf
+

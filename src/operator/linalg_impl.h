@@ -869,7 +869,7 @@ int linalg_gelqf_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
 LINALG_CPU_GELQF_WORKSPACE_QUERY(s, float)
 LINALG_CPU_GELQF_WORKSPACE_QUERY(d, double)
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__) && MXNET_USE_CUSOLVER == 1
 
 #define LINALG_GPU_GELQF(fname, DType) \
 template<> inline \

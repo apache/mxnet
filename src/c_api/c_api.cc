@@ -44,6 +44,7 @@
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../engine/profiler.h"
+#include "../io/iter_recordio.h"
 
 using namespace mxnet;
 
@@ -1228,3 +1229,202 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
 #endif
   API_END();
 }
+
+// RecordIter
+int MXRecordIterGetIterInfo(const char **name,
+                            const char **description,
+                            mx_uint *num_args,
+                            const char ***arg_names,
+                            const char ***arg_type_infos,
+                            const char ***arg_descriptions) {
+#if PB_FORMAT_REC
+  auto &vec = dmlc::Registry<io::RecordIteratorReg>::List();
+  CHECK(vec.size() == 1) << "RecordIter register error";
+  auto e = vec[0];
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 NULL);
+#else
+  API_BEGIN();
+  API_END();
+#endif
+}
+
+int MXRecordIterCreate(mx_uint num_param,
+                       const char **keys,
+                       const char **vals,
+                       RecordIterHandle *out) {
+#if PB_FORMAT_REC
+  IIterator<io::RecordInst> *iter = nullptr;
+  API_BEGIN();
+  auto &vec = dmlc::Registry<io::RecordIteratorReg>::List();
+  CHECK(vec.size() == 1) << "RecordIter register error";
+  auto e = vec[0];
+  iter = e->body();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (mx_uint i = 0; i < num_param; ++i) {
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+  }
+  iter->Init(kwargs);
+  *out = iter;
+  API_END_HANDLE_ERROR(delete iter);
+#else
+  API_BEGIN();
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+  API_END();
+#endif
+}
+
+int MXRecordIterFree(RecordIterHandle handle) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  delete static_cast<IIterator<io::RecordInst> *>(handle);
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
+int MXRecordIterBeforeFirst(RecordIterHandle handle) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  static_cast<IIterator<io::RecordInst>* >(handle)->BeforeFirst();
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
+int MXRecordIterNext(RecordIterHandle handle, int *out) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  *out = static_cast<IIterator<io::RecordInst>* >(handle)->Next();
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
+int MXRecordIterGetDataNum(RecordIterHandle handle,
+                           mx_uint *out) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
+  *out = static_cast<mx_uint>(record.data.size());
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
+int MXRecordIterGetData(RecordIterHandle handle,
+                        mx_uint index,
+                        uint64_t *out_id,
+                        int *out_type,
+                        NDArrayHandle *out_ndarray,
+                        mx_uint *out_string_len,
+                        const char **out_string) {
+  NDArray *ptr = nullptr;
+  API_BEGIN();
+#if PB_FORMAT_REC
+  const auto& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value().data;
+  *out_id = record[index].id;
+  *out_type = record[index].type;
+  const char * tmp_str = nullptr;
+  mx_uint tmp_str_len = 0;
+  switch (record[index].type) {
+    case io::record_data_type::kNdarray:
+    case io::record_data_type::kBinary:
+      ptr = new NDArray();
+      *ptr = record[index].value.nd;
+      break;
+    case io::record_data_type::kString:
+      tmp_str = record[index].value.str.c_str();
+      tmp_str_len = static_cast<mx_uint>(record[index].value.str.length());
+    default:
+      break;
+  }
+  *out_ndarray = ptr;
+  *out_string = tmp_str;
+  *out_string_len = tmp_str_len;
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXRecordIterGetExtraDataNum(RecordIterHandle handle,
+                           mx_uint *out) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
+  *out = static_cast<mx_uint>(record.extra.size());
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
+int MXRecordIterGetExtraData(RecordIterHandle handle,
+                             mx_uint index,
+                             const char **out_key,
+                             mx_uint *out_key_len,
+                             int *out_type,
+                             NDArrayHandle *out_ndarray,
+                             const char **out_string,
+                             mx_uint *out_string_len) {
+  NDArray *ptr = nullptr;
+  API_BEGIN();
+#if PB_FORMAT_REC
+  const auto& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value().extra;
+  *out_key = record[index].key.c_str();
+  *out_key_len = static_cast<mx_uint>(record[index].key.length());
+  *out_type = record[index].type;
+  const char * tmp_str = nullptr;
+  mx_uint tmp_str_len = 0;
+  switch (record[index].type) {
+    case io::record_data_type::kNdarray:
+    case io::record_data_type::kBinary:
+      ptr = new NDArray();
+      *ptr = record[index].value.nd;
+      break;
+    case io::record_data_type::kString:
+      tmp_str = record[index].value.str.c_str();
+      tmp_str_len = static_cast<mx_uint>(record[index].value.str.length());
+      break;
+    default:
+      break;
+  }
+  *out_ndarray = ptr;
+  *out_string = tmp_str;
+  *out_string_len = tmp_str_len;
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+int MXRecordIterGetLabel(RecordIterHandle handle, mx_float **out, mx_uint *out_size) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
+  *out_size = static_cast<mx_uint>(record.label.size());
+  *out = const_cast<float*>(dmlc::BeginPtr(record.label));
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
+int MXRecordIterGetHead(RecordIterHandle handle, uint64_t *out_id, uint64_t *out_reserve) {
+  API_BEGIN();
+#if PB_FORMAT_REC
+  const io::RecordInst& record = static_cast<IIterator<io::RecordInst>* >(handle)->Value();
+  *out_id = record.head.id();
+  *out_reserve = record.head.reserve();
+#else
+  LOG(FATAL) << "Need to compile with USE_PB_FORMAT_REC=1 for MXRecordIter.";
+#endif
+  API_END();
+}
+
