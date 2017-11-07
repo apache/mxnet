@@ -257,19 +257,20 @@ void NDArray::set_fresh_out_grad(bool state) const {
 }
 
 #if MXNET_USE_MKLDNN == 1
-static inline bool same_shape(const TShape &shape, mkldnn::memory::primitive_desc pd) {
-  int ndims = pd.desc().data.ndims;
+static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims) {
   if (shape.ndim() != ndims)
     return false;
   for (int i = 0; i < ndims; i++)
-    if (shape[i] != pd.desc().data.dims[i])
+    if (shape[i] != dims[i])
       return false;
   return true;
 }
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
-  if (Mkl_mem_ && same_shape(shape, Mkl_mem_->get_primitive_desc()))
+  if (Mkl_mem_ && same_shape(shape, Mkl_mem_->get_primitive_desc().desc().data.dims,
+        Mkl_mem_->get_primitive_desc().desc().data.ndims)) {
     return;
+  }
 
   mkldnn::memory::dims dims(shape.ndim());
   for (size_t i = 0; i < dims.size(); i++)
@@ -305,10 +306,6 @@ static int GetTypeSize(int dtype) {
 
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) const {
-  // If the array size doesn't match, we should reset MKL memory.
-  if (ptr_->Mkl_mem_ && !same_shape(shape(), ptr_->Mkl_mem_->get_primitive_desc()))
-    ptr_->Mkl_mem_ = nullptr;
-
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
@@ -324,10 +321,6 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
 
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
     const mkldnn::memory::primitive_desc &desc) const {
-  // If the array size doesn't match, we should reset MKL memory.
-  if (ptr_->Mkl_mem_ && !same_shape(shape(), ptr_->Mkl_mem_->get_primitive_desc()))
-    ptr_->Mkl_mem_ = nullptr;
-
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
@@ -397,7 +390,6 @@ void NDArray::SetTBlob() const {
   } else if (stype == kMKLDNNStorage) {
     // TODO we may really need to convert format.
     CHECK_EQ(byte_offset_, 0);
-    ptr_->SetMKLMem(shape_, dtype_);
     dptr = (char *) ptr_->Mkl_mem_->get_data_handle();
 #endif
   } else {
