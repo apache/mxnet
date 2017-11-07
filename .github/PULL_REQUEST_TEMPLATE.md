@@ -15,4 +15,4 @@
 
 ## Comments ##
 - If this change is a backward incompatible change, why must this change be made.
-- Intersting edge cases to note here
+- Interesting edge cases to note here
