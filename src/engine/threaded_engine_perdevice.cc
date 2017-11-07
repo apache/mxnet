@@ -114,7 +114,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           auto ptr =
           gpu_copy_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
             // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
-            Engine::Get()->set_num_omp_threads_per_worker(1);
+            OpenMP::Get()->set_enabled(false);
             auto blk = new ThreadWorkerBlock<kCopyQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -134,7 +134,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         } else {
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
             // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
-            Engine::Get()->set_num_omp_threads_per_worker(1);
+            OpenMP::Get()->set_enabled(false);
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -196,7 +196,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #if MXNET_USE_CUDA
     mshadow::Stream<gpu> *stream;
     do {
-      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(ready_event);
+      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(&ready_event);
       // allocate stream
       mshadow::SetDevice<gpu>(ctx.dev_id);
       if (is_copy_worker) {

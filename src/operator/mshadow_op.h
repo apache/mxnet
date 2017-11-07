@@ -147,12 +147,32 @@ MXNET_UNARY_MATH_OP(log_grad, 1.0f / math::id(a));
 MXNET_SIMPLE_UNARY_MATH_OP(log10);
 
 // Constant is 1 / log(10)
-MXNET_UNARY_MATH_OP(log10_grad, 0.43429448190325182765 / math::id(a));
+struct log10_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(0.4342944819f / static_cast<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double log10_grad::Map<double>(double a) {
+  return 0.43429448190325182765 / a;
+}
 
 MXNET_SIMPLE_UNARY_MATH_OP(log2);
 
 // Constant is 1 / log(2)
-MXNET_UNARY_MATH_OP(log2_grad, 1.44269504088896340737 / math::id(a));
+struct log2_grad {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return DType(1.442695041f / static_cast<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double log2_grad::Map<double>(double a) {
+  return 1.44269504088896340737 / a;
+}
 
 MXNET_SIMPLE_UNARY_MATH_OP(sin);
 

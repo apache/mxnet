@@ -1614,12 +1614,13 @@ def test_transpose():
 
 def test_expand_dims():
     for ndim in range(1, 6):
-        for t in range(5):
-            dims = list(np.random.randint(1, 10, size=ndim))
-            axis = np.random.randint(1, ndim+1)
-            x = mx.nd.array(np.random.normal(size=dims))
-            y = mx.nd.expand_dims(x, axis=axis)
-            assert_allclose(np.expand_dims(x.asnumpy(), axis=axis), y.asnumpy())
+        for axis in range(-ndim + 1, ndim):
+            x = np.random.normal(size=list(np.random.randint(1, 10, size=ndim)))
+            y = mx.nd.array(x)
+            x1 = np.expand_dims(x, axis=axis)
+            y1 = mx.nd.expand_dims(y, axis=axis)
+            assert_allclose(x1, y1.asnumpy())
+            assert_allclose(x1.shape, y1.shape)
 
 
 def test_crop():

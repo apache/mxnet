@@ -241,9 +241,9 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
-      auto lhs = MakeNonlossGradNode(
-          "_backward_copy", n, ograds, {},
-          std::unordered_map<std::string, std::string>());
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+                              std::unordered_map<std::string, std::string>());
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
@@ -284,9 +284,9 @@ NNVM_REGISTER_OP(reshape_like)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
-      auto lhs = MakeNonlossGradNode(
-          "_backward_copy", n, ograds, {},
-          std::unordered_map<std::string, std::string>());
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+                              std::unordered_map<std::string, std::string>());
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});

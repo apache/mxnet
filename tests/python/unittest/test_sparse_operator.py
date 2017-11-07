@@ -327,6 +327,11 @@ def test_elemwise_binary_ops():
             return rstype
         return lstype
 
+    def most_dense(lstype, rstype):
+      if lstype == rstype:
+        return lstype
+      return 'default'
+
     def check_elemwise_binary_ops(lhs_stype, rhs_stype, shape,
                                   lhs_grad_stype=None, rhs_grad_stype=None,
                                   lhs_density=.5, rhs_density=.5,
@@ -362,7 +367,7 @@ def test_elemwise_binary_ops():
                                 lambda outg, l, r: (outg * r, outg * l),
                                 least_sparse(lhs_stype, rhs_stype),
                                 least_sparse(lhs_stype, rhs_stype),
-                                expected_result_storage_type=least_sparse(lhs_stype, rhs_stype),
+                                expected_result_storage_type=most_dense(lhs_stype, rhs_stype),
                                 ograd_density=ograd_density,
                                 force_lr_overlap=force_lr_overlap,
                                 force_grad_overlap=force_grad_overlap,
@@ -449,8 +454,8 @@ def test_elemwise_binary_ops():
 
                                 shape = rand_shape_2d()
 
-                                print("  force_lr_overlap={}, force_grad_overlap={}, shape={}"
-                                    .format(force_lr_overlap, force_grad_overlap, shape))
+                                print("  force_lr_overlap={}, force_grad_overlap={}, shape={}".
+                                      format(force_lr_overlap, force_grad_overlap, shape))
 
                                 # Left and right always overlap when one is default storage
                                 # (assuming the row_sparse one has some entries in it)
