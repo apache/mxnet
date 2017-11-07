@@ -267,8 +267,11 @@ static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims
 }
 
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
-  if (Mkl_mem_ && same_shape(shape, Mkl_mem_->get_primitive_desc().desc().data.dims,
-        Mkl_mem_->get_primitive_desc().desc().data.ndims)) {
+  // The shape of the array and the one of the MKL memory may mismatch.
+  // For example, if the array stores parameters, the MKL memory may store data
+  // in 5 dimensions while the NDArray stores data in 4 dimensions.
+  // TODO is it possible that the MKL memory is out-of-date?
+  if (Mkl_mem_) {
     return;
   }
 
@@ -328,6 +331,10 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
   if (ptr_->storage_type == kDefaultStorage) {
     ptr_->SetMKLMem(shape_, dtype_);
   }
+  // If the array uses the default format, the MKL memory now references to
+  // the default storage. If it uses the MKLDNN format, the MKL memory should
+  // have been initialized since we are trying to get data from the array.
+  CHECK(ptr_->Mkl_mem_ != nullptr);
   if (ptr_->Mkl_mem_->get_primitive_desc() == desc)
     return ptr_->Mkl_mem_;
   else {
@@ -390,6 +397,7 @@ void NDArray::SetTBlob() const {
   } else if (stype == kMKLDNNStorage) {
     // TODO we may really need to convert format.
     CHECK_EQ(byte_offset_, 0);
+    ptr_->SetMKLMem(shape_, dtype_);
     dptr = (char *) ptr_->Mkl_mem_->get_data_handle();
 #endif
   } else {
