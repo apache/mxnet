@@ -138,18 +138,34 @@ struct quantize_2bit {
   }
 };
 
+//template<typename xpu>
+//void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+//                      const float threshold) {
+//  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array size
+//                                               inputs[0].Size(),    // original size
+//                                               inputs[2].dptr<float>(),   // compressed array
+//                                               inputs[0].dptr<float>(),     // original array
+//                                               inputs[1].dptr<float>(),     // residual array
+//                                               -1 * threshold,            // negative threshold
+//                                               threshold);              // positive threshold
+//}
+
+#ifndef __CUDACC__
+  void Quantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<TBlob>& inputs,
+                        const float threshold);
+#endif
 template<typename xpu>
 void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
-                      const float threshold) {
-  using namespace mshadow;
-  mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array size
-                                               inputs[0].Size(),    // original size
-                                               inputs[2].dptr<float>(),   // compressed array
-                                               inputs[0].dptr<float>(),     // original array
-                                               inputs[1].dptr<float>(),     // residual array
-                                               -1 * threshold,            // negative threshold
-                                               threshold);              // positive threshold
+                        const float threshold) {
+    mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s, inputs[2].Size(), // compressed array size
+                                                 inputs[0].Size(),    // original size
+                                                 inputs[2].dptr<float>(),   // compressed array
+                                                 inputs[0].dptr<float>(),     // original array
+                                                 inputs[1].dptr<float>(),     // residual array
+                                                 -1 * threshold,            // negative threshold
+                                                 threshold);              // positive threshold
 }
+
 
 // this function has been defined as quantize_2bit operator
 template<typename xpu>
@@ -160,7 +176,7 @@ void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Quantize2BitImpl<xpu>(s, inputs, param.threshold);
+  Quantize2BitImpl(s, inputs, param.threshold);
 }
 
 inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
@@ -229,6 +245,11 @@ struct dequantize_2bit {
     }
  }
 };
+
+#ifndef __CUDACC__
+  void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<TBlob>& inputs,
+                      const float threshold);
+#endif
 
 template<typename xpu>
 void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,

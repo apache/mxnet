@@ -125,7 +125,7 @@ class Gc {
         if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
           mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
             std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-            mxnet::op::Quantize2BitImpl<mshadow::cpu>(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+            mxnet::op::Quantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
             }, from.ctx(), {from.var()}, {to->var(), residual->var()},
             mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
         } else {
@@ -133,7 +133,7 @@ class Gc {
           if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
             mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
               std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-              mxnet::op::Quantize2BitImpl<mshadow::gpu>(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+              mxnet::op::Quantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
               // Wait GPU kernel to complete
               ctx.get_stream<mshadow::gpu>()->Wait();
             }, from.ctx(), {from.var()}, {to->var(), residual->var()},
@@ -161,7 +161,7 @@ class Gc {
       if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
         mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
           std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-          mxnet::op::Dequantize2BitImpl<mshadow::cpu>(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+          mxnet::op::Dequantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
           }, from.ctx(), {from.var()}, {to->var()},
           mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
       } else {
@@ -169,7 +169,7 @@ class Gc {
         if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
             mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
               std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-              mxnet::op::Dequantize2BitImpl<mshadow::gpu>(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+              mxnet::op::Dequantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
               // Wait GPU kernel to complete
               ctx.get_stream<mshadow::gpu>()->Wait();
             }, from.ctx(), {from.var()}, {to->var()},
