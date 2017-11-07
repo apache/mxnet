@@ -128,7 +128,9 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, color="black", fontcolor = "black")
   
   if (!is.null(shape)){
-    edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
+    if (is.list(shape)) {
+      edges_labels_raw<- symbol$get.internals()$infer.shape(shape)$out.shapes
+    } else edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
     if (!is.null(edges_labels_raw)){
       edge_label_str <- function(x) paste0(x, collapse="X")
       edges_labels_raw<- sapply(edges_labels_raw, edge_label_str)
