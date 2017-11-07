@@ -207,10 +207,10 @@ class Dense(HybridBlock):
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
+        shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
                         act=self.act if self.act else 'linear',
-                        layout='{0} -> {1}'.format(self._in_units, self._units) if self._in_units
-                        else self._units)
+                        layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
 class Activation(HybridBlock):
@@ -360,8 +360,8 @@ class BatchNorm(HybridBlock):
 
     def __repr__(self):
         s = '{name}({content}'
-        if hasattr(self, 'in_channels'):
-            s += ', in_channels={0}'.format(self.in_channels)
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels if in_channels else None)
         s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])

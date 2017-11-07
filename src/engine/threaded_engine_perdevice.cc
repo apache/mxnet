@@ -113,8 +113,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         if (is_copy) {
           auto ptr =
           gpu_copy_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
-            Engine::Get()->set_num_omp_threads_per_worker(1);
+            // Signify to kernel that GPU is being used, so reserve cores as necessary
+            OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
             auto blk = new ThreadWorkerBlock<kCopyQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -133,8 +133,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           }
         } else {
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
-            Engine::Get()->set_num_omp_threads_per_worker(1);
+            // Signify to kernel that GPU is being used, so reserve cores as necessary
+            OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -196,7 +196,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #if MXNET_USE_CUDA
     mshadow::Stream<gpu> *stream;
     do {
-      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(ready_event);
+      ThreadPool::SimpleEvent::SetReadyOnDestroy setReady(&ready_event);
       // allocate stream
       mshadow::SetDevice<gpu>(ctx.dev_id);
       if (is_copy_worker) {
@@ -232,6 +232,27 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
+  }
+
+  /*!
+   * \brief Get number of cores this engine should reserve for its own use
+   * \param using_gpu Whether there is GPU usage
+   * \return number of cores that this engine wishes to be reserved
+   * \note Testing found no degradation of performance using these values
+   *       running cifar10 with resnet50 on various GPU systems,
+   *       including AWS p2.16xlarge, which has 16 GPU's
+   */
+  int GetReserveCoreCount(const bool using_gpu) const {
+    int reserve = 0;
+    if (using_gpu) {
+      // Save at least one for GPU tasks
+      ++reserve;
+      // If we have 8 or more real cores, reserve another core for GPU tasks
+      if (OpenMP::Get()->GetRecommendedOMPThreadCount(true) >= 8) {
+        ++reserve;
+      }
+    }
+    return reserve;
   }
 
   /*! \brief Signal a single queue for shutdown */
