@@ -223,6 +223,18 @@ function test_mul()
   t6, a6 = rand_tensors(Float16, dims)
   scalar_small = Float16(1e-5)
   @test reldiff(t6 * scalar_small, copy(a6 .* scalar_small)) < 1e-1
+
+  info("NDArray::mul::matrix multiplication")
+  let x = mx.NDArray([1.  2])
+    y = x' * x
+    @test copy(y) == [1. 2; 2 4]
+  end
+
+  info("NDArray::mul::elementwise::issue 253")
+  let x = mx.NDArray([1.  2])
+    y = x .* x
+    @test copy(y) == [1. 4.]
+  end
 end
 
 function test_div()
@@ -246,31 +258,24 @@ function test_div()
 
   # test scalar
   scalar = rand() + 2
-  @test reldiff(t2./scalar, copy(a2./scalar)) < thresh
+  @test reldiff(t2 ./ scalar, copy(a2 ./ scalar)) < thresh
 
   # test small and large scalar
   t4, a4 = rand_tensors(Float32, dims)
   scalar_small = 1e-8
   scalar_large = 1e8
-  @test reldiff(t4 / scalar_small, copy(a4 ./ scalar_small)) < thresh
-  @test reldiff(t4 / scalar_large, copy(a4 ./ scalar_large)) < thresh
+  @test reldiff(t4 ./ scalar_small, copy(a4 ./ scalar_small)) < thresh
+  @test reldiff(t4 ./ scalar_large, copy(a4 ./ scalar_large)) < thresh
 
   t5, a5 = rand_tensors(Float64, dims)
   scalar_small = 1e-8
   scalar_large = 1e8
-  @test reldiff(t5 / scalar_small, copy(a5 ./ scalar_small)) < thresh
-  @test reldiff(t5 / scalar_large, copy(a5 ./ scalar_large)) < thresh
+  @test reldiff(t5 ./ scalar_small, copy(a5 ./ scalar_small)) < thresh
+  @test reldiff(t5 ./ scalar_large, copy(a5 ./ scalar_large)) < thresh
 
   t6, a6 = rand_tensors(Float16, dims)
   scalar_large = 1e4
-  @test reldiff(t6 / scalar_large, copy(a6 ./ scalar_large)) < 1e-1
-
-  let x = mx.NDArray([1 2; 3 4])
-    @test eltype(x) == Int
-    @test copy(x / 2)   == [0 1; 1 2]
-    @test copy(x / 2.5) == [0 1; 1 2]
-    @test copy(x / 2.9) == [0 1; 1 2]
-  end
+  @test reldiff(t6 ./ scalar_large, copy(a6 ./ scalar_large)) < 1e-1
 end
 
 

@@ -98,6 +98,10 @@ type NDArray
   end
 end
 
+const NDArrayOrReal = Union{NDArray, Real}
+
+@unfuse NDArray
+
 function Base.show(io :: IO, arr :: NDArray)
   println(io, "$(join(size(arr), "×")) mx.NDArray{$(eltype(arr))} @ $(context(arr)):")
   Base.showarray(io, try_get_shared(arr, sync=:read), false, header=false)
@@ -553,7 +557,6 @@ function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
   return dst
 end
 
-import Base.broadcast
 import Base: +
 
 """
@@ -561,23 +564,13 @@ import Base: +
     .+(args...)
 
 Summation. Multiple arguments of either scalar or `NDArray` could be
-added together. Note at least the first or second argument needs to be an `NDArray` to
-avoid ambiguity of built-in summation.
+added together. Note at least the first or second argument needs to be an
+`NDArray` to avoid ambiguity of built-in summation.
 """
-function +(arg0 :: NDArray, args :: Union{Real, NDArray}...)
-  ret = copy(arg0, context(arg0))
-  add_to!(ret, args...)
-end
-@compatdot function Base.broadcast(::typeof(+), arg0 :: NDArray, args :: Union{Real, NDArray}...)
-  +(arg0, args...)
-end
-function +(arg0 :: Real, arg1 :: NDArray, args :: Union{Real, NDArray}...)
-  +(arg1, arg0, args...)
-end
-@compatdot function Base.broadcast(::typeof(+), arg0 :: Real, arg1 :: NDArray,
-                                   args :: Union{Real, NDArray}...)
-  broadcast(+, arg1, arg0, args...)
-end
++(x::NDArray, ys::NDArrayOrReal...) = add_to!(copy(x, context(x)), ys...)
+
+broadcast_(::typeof(+), x::NDArray, y::NDArrayOrReal) = x + y
+broadcast_(::typeof(+), x::Real, y::NDArray)          = x + y
 
 """
     sub_from!(dst :: NDArray, args :: Union{Real, NDArray}...)
@@ -596,32 +589,19 @@ end
 import Base: -
 
 """
-    -(arg0, arg1)
-    -(arg0)
-    .-(arg0, arg1)
+    -(x::NDArray)
+    -(x, y)
+    .-(x, y)
 
-Subtraction `arg0 - arg1`, of scalar types or `NDArray`. Or create
-the negative of `arg0`.
+Subtraction `x - y`, of scalar types or `NDArray`.
+Or create the negative of `x`.
 """
-function -(arg0 :: NDArray, arg1 :: Union{Real, NDArray})
-  ret = copy(arg0, context(arg0))
-  sub_from!(ret, arg1)
-end
-@compatdot function Base.broadcast(::typeof(-), arg0 :: NDArray, arg1 :: Union{Real, NDArray})
-  -(arg0, arg1)
-end
-function -(arg0 :: Real, arg1 :: NDArray)
-  ret = -arg1
-  add_to!(ret, arg0)
-  return ret
-end
-@compatdot function Base.broadcast(::typeof(-), arg0 :: Real, arg1 :: NDArray)
-  -(arg0, arg1)
-end
+-(x::NDArray) = _mul_scalar(x, scalar=-one(eltype(x)))
+-(x::NDArray, y::NDArrayOrReal) = sub_from!(copy(x, context(x)), y)
+-(x::Real, y::NDArray) = -y .+ x
 
-function -(arg0 :: NDArray)
-  _mul_scalar(arg0, scalar=-one(eltype(arg0)))
-end
+broadcast_(::typeof(-), x::NDArray, y::NDArrayOrReal) = x - y
+broadcast_(::typeof(-), x::Real, y::NDArray)          = x - y
 
 """
     mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
@@ -636,36 +616,31 @@ function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
   else
     _mul(dst, arg, out=dst)
   end
-  return dst
 end
 
 import Base: *
 
 """
-    .*(arg0, arg1)
+    .*(x, y)
 
-Elementwise multiplication of `arg0` and `arg`, could be either scalar or `NDArray`.
+Currently only multiplication a scalar with an `NDArray` is implemented.
 """
-@compatdot function Base.broadcast(::typeof(*), arg0 :: NDArray, arg :: Union{Real, NDArray})
-  ret = copy(arg0, context(arg0))
-  mul_to!(ret, arg)
-end
-@compatdot function Base.broadcast(::typeof(*), arg0 :: Real, arg :: NDArray)
-  arg .* arg0
-end
+*(x:: NDArray, y::Real) = x .* y
+*(x::Real, y::NDArray)  = y .* x
+
+broadcast_(::typeof(*), x::NDArray, y::NDArrayOrReal) =
+  mul_to!(copy(x, context(x)), y)
+broadcast_(::typeof(*), x::Real, y::NDArray) = y .* x
 
 """
-    *(arg0, arg1)
+    *(A::NDArray, B::NDArray)
 
-Currently only multiplication a scalar with an `NDArray` is implemented. Matrix multiplication
-is to be added soon.
+Matrix (2D NDArray) multiplication.
 """
-function *(arg0 :: NDArray, arg :: Real)
-  ret = copy(arg0, context(arg0))
-  mul_to!(ret, arg)
-end
-function *(arg0 :: Real, arg :: NDArray)
-  *(arg, arg0)
+function *(x::NDArray, y::NDArray)
+  @assert ndims(x) == 2
+  @assert ndims(y) == 2
+  dot(x, y)
 end
 
 """
@@ -683,42 +658,36 @@ function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
 end
 
 """
-Elementwise division of NDArray
+    rdiv_from!(x:: Real, y::NDArray)
+
+Elementwise divide a scalar by an `NDArray`. Inplace updating.
 """
-div(x::NDArray, y::NDArray) = _div(x, y)
-div(x::NDArray, s::Real) = _div_scalar(x, scalar=s)
-div(s::Real, x::NDArray) = _rdiv_scalar(x, scalar=s)
+function rdiv_from!(x::Real, y::NDArray)
+  @assert y.writable
+  _rdiv_scalar(y, scalar=convert(eltype(y), x), out=y)
+end
 
 import Base: /
-"""
-    ./(arg0 :: NDArray, arg :: Union{Real, NDArray})
-
-Elementwise dividing an `NDArray` by a scalar or another `NDArray` of the same shape.
-"""
-@compatdot function Base.broadcast(::typeof(/), arg0 :: NDArray,
-                                   arg :: Union{Real, NDArray})
-  div(arg0, arg)
-end
-
-@compatdot function Base.broadcast(::typeof(/), arg0 :: Real, arg :: NDArray)
-  div(arg0, arg)
-end
 
 """
-    /(arg0 :: NDArray, arg :: Real)
+    ./(x::NDArray, y::NDArray)
+    ./(x::NDArray, y::Real)
+    ./(x:: Real, y::NDArray)
 
-Divide an `NDArray` by a scalar.
-Matrix division (solving linear systems) is not implemented yet.
+* Elementwise dividing an `NDArray` by a scalar or another `NDArray`
+of the same shape.
+
+* Elementwise divide a scalar by an `NDArray`.
+
+* Matrix division (solving linear systems) is not implemented yet.
 """
-/(arg0 :: NDArray, arg :: Real) = div(arg0, arg)
+/(x::NDArray, y::Real) = x ./ y
 
-"""
-    /(arg0 :: Real, arg :: NDArray)
+broadcast_(::typeof(/), x::NDArray, y::NDArrayOrReal) =
+  div_from!(copy(x, context(x)), y)
 
-Elementwise divide a scalar by an `NDArray`.
-"""
-/(arg0 :: Real, arg :: NDArray) = div(arg0, arg)
-
+broadcast_(::typeof(/), x::Real, y::NDArray) =
+  rdiv_from!(x, copy(y, context(y)))
 
 """
     fill!(x, arr::NDArray)

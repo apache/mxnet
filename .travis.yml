@@ -6,7 +6,6 @@ os:
   - osx
 osx_image: xcode8
 julia:
-  - 0.5
   - 0.6
 #  - nightly 0.6 supports depends on #170
 
@@ -38,7 +37,7 @@ script:
   # bump the time limit of no ouput
   # the `travis_wait` wrapper can be removed once this issue fixed:
   # https://github.com/JuliaLang/julia/pull/23601
-  - travis_wait 60 ${TRAVIS_DIR}/run_test.sh
+  - ${TRAVIS_DIR}/run_test.sh
 
 after_success:
   # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774

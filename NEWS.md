@@ -1,5 +1,7 @@
 # v0.3.0 (TBD)
 
+* Drop 0.5 support. (#TBD)
+
 ## New API
 
 * `deepcopy` for NDArray (#273)
@@ -10,6 +12,19 @@
     * `fill(x, dims, ctx=cpu())`
     * `fill(x, dims...)`
     * `fill!(x, arr::NDArray)`
+
+* Matrix (2D NDArray) multiplication is available now. (#TBD)
+
+    ```julia
+    julia> x
+    1x2 mx.NDArray{Float64} @ CPU0:
+     1.0  2.0
+
+    julia> x' * x
+    2x2 mx.NDArray{Float64} @ CPU0:
+     1.0  2.0
+     2.0  4.0
+    ```
 
 ## API Changes
 

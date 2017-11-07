@@ -33,7 +33,7 @@ pages:
     - Installation Guide: user-guide/install.md
     - Overview: user-guide/overview.md
     - FAQ: user-guide/faq.md
-  - API Documentation: 
+  - API Documentation:
     - Context: api/context.md
     - Models: api/model.md
     - Initializers: api/initializer.md

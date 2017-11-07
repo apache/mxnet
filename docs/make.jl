@@ -8,5 +8,5 @@ makedocs(
 deploydocs(
   deps = Deps.pip("pygments", "mkdocs", "mkdocs-material", "python-markdown-math"),
   repo = "github.com/dmlc/MXNet.jl.git",
-  julia = "0.5",
+  julia = "0.6",
 )
