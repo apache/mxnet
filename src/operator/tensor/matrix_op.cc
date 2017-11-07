@@ -739,6 +739,5 @@ NNVM_REGISTER_OP(_backward_stack)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", StackOpBackward<cpu>);
 
-
 }  // namespace op
 }  // namespace mxnet

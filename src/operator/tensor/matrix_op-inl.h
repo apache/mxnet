@@ -1726,6 +1726,7 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
 #endif
 }
 
+
 struct StackParam : public dmlc::Parameter<StackParam> {
   int axis;
   int num_args;
