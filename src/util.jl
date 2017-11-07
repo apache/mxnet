@@ -170,6 +170,20 @@ end
 
 """
 libmxnet operators signature checker.
+
+C/Python have different convernsion of accessing array. Those languages
+handle arrays in row-major and zero-indexing which differs from Julia's
+colume-major and 1-indexing.
+
+This function scans the docstrings of NDArray's APIs,
+filter out the signature which contain `axis`, `axes`, `keepdims` and `shape`
+as its function argument.
+
+We invoks this checker in Travis CI build and pop up the warning message
+if the functions does not get manually mapped
+(imply it's dimension refering may looks weird).
+
+If you found any warning in Travis CI build, please open an issue on GitHub.
 """
 function _sig_checker()
   names = filter(n -> ∉(lowercase(n), _op_import_bl), _get_libmx_op_names())
