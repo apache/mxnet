@@ -390,7 +390,7 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
   std::vector<void*> in_grad_ptr(in_data_index.size());
   for (size_t i = 0; i < in_grad_ptr.size(); ++i) {
     // in data index starts from 0 to num_inputs
-    in_grad_ptr[i] = (void*)&in_data_index[i];  // NOLINT(*)
+    in_grad_ptr[i] = (void*) &in_data_index[i];  // NOLINT(*)
   }
 
   auto remap_index = prop.ptr->BackwardInplaceOption(
