@@ -34,7 +34,7 @@ inline static mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const NDArray &output) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetWeightDesc(weight);
+  auto weight_md = GetMemDesc(weight);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Instance().get_engine();
   if (bias) {
@@ -54,7 +54,7 @@ inline static mkldnn::inner_product_backward_data::primitive_desc GetIpBwdData(
     const NDArray &data, const NDArray &weight, const NDArray &output,
     mkldnn::inner_product_forward::primitive_desc ipFwd_pd) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetWeightDesc(weight);
+  auto weight_md = GetMemDesc(weight);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Instance().get_engine();
   mkldnn::inner_product_backward_data::desc desc(data_md, weight_md, out_md);
@@ -65,7 +65,7 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const NDArray &output, mkldnn::inner_product_forward::primitive_desc ipFwd_pd) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetWeightDesc(weight);
+  auto weight_md = GetMemDesc(weight);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Instance().get_engine();
   if (bias) {
@@ -87,12 +87,18 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &out_data) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(
-      in_data[fullc::kData], in_data[fullc::kWeight],
+  const TShape& ishape = in_data[fullc::kData].shape();
+  NDArray weight = in_data[fullc::kWeight];
+  NDArray data = in_data[fullc::kData];
+  if (data.shape().ndim() > 2 && !param.flatten)
+    data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]));
+  else if (data.shape().ndim() > 2)
+    data = data.Reshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
+
+  mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
       param.no_bias ? nullptr : &in_data[fullc::kBias], out_data[fullc::kOut]);
-  auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(ipFwd_pd.src_primitive_desc());
-  auto weight_mem = in_data[fullc::kWeight].GetMKLDNNDataReorder(
-      ipFwd_pd.weights_primitive_desc());
+  auto data_mem = data.GetMKLDNNDataReorder(ipFwd_pd.src_primitive_desc());
+  auto weight_mem = weight.GetMKLDNNDataReorder(ipFwd_pd.weights_primitive_desc());
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
       ipFwd_pd.dst_primitive_desc(), req[fullc::kOut]);
   if (param.no_bias) {
@@ -112,19 +118,31 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &outputs) {
   const std::vector<NDArray> &in_grad = outputs;
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(
-      inputs[fullc::kData + 1], inputs[fullc::kWeight + 1],
-      param.no_bias ? nullptr : &in_grad[fullc::kBias], inputs[fullc::kOut]);
+  const TShape& ishape = inputs[fullc::kData + 1].shape();
+  const TShape& oshape = inputs[fullc::kOut].shape();
+
+  NDArray weight = inputs[fullc::kWeight + 1];
+  NDArray data = inputs[fullc::kData + 1];
+  if (data.shape().ndim() > 2 && !param.flatten)
+    data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]));
+  else if (data.shape().ndim() > 2)
+    data = data.Reshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
+  NDArray out_grad = inputs[fullc::kOut];
+  if (out_grad.shape().ndim() > 2 && !param.flatten)
+    out_grad = out_grad.Reshape(Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]));
+  else if (out_grad.shape().ndim() > 2)
+    out_grad = out_grad.Reshape(Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())));
+
+  mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
+      param.no_bias ? nullptr : &in_grad[fullc::kBias], out_grad);
 
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   if (req[fullc::kData]) {
     mkldnn::inner_product_backward_data::primitive_desc ipBwdData_pd = GetIpBwdData(
-        inputs[fullc::kData + 1], inputs[fullc::kWeight + 1], inputs[fullc::kOut],
-        ipFwd_pd);
-    auto out_grad_mem = inputs[fullc::kOut].GetMKLDNNDataReorder(
+        data, weight, out_grad, ipFwd_pd);
+    auto out_grad_mem = out_grad.GetMKLDNNDataReorder(
         ipBwdData_pd.diff_dst_primitive_desc());
-    auto weight_mem = inputs[fullc::kWeight + 1].GetMKLDNNDataReorder(
-        ipBwdData_pd.weights_primitive_desc());
+    auto weight_mem = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_primitive_desc());
     auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
         ipBwdData_pd.diff_src_primitive_desc(), req[fullc::kData]);
     MKLDNNStream::Instance().RegisterPrim(mkldnn::inner_product_backward_data(
@@ -133,13 +151,11 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   }
   if (req[fullc::kWeight]) {
     mkldnn::inner_product_backward_weights::primitive_desc ipBwdWeights_pd
-      = GetIPBwdWeights(inputs[fullc::kData + 1], inputs[fullc::kWeight + 1],
-          param.no_bias ? nullptr : &in_grad[fullc::kBias], inputs[fullc::kOut],
-          ipFwd_pd);
-    auto out_grad_mem = inputs[fullc::kOut].GetMKLDNNDataReorder(
+      = GetIPBwdWeights(data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias],
+          out_grad, ipFwd_pd);
+    auto out_grad_mem = out_grad.GetMKLDNNDataReorder(
         ipBwdWeights_pd.diff_dst_primitive_desc());
-    auto data_mem = inputs[fullc::kData + 1].GetMKLDNNDataReorder(
-        ipBwdWeights_pd.src_primitive_desc());
+    auto data_mem = data.GetMKLDNNDataReorder(ipBwdWeights_pd.src_primitive_desc());
     auto in_grad_weight = CreateMKLDNNMem(in_grad[fullc::kWeight],
         ipBwdWeights_pd.diff_weights_primitive_desc(), req[fullc::kWeight]);
     mkldnn_output_t in_grad_bias;
