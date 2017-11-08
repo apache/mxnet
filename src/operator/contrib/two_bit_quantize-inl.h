@@ -158,7 +158,7 @@ void Quantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<TBlob>
                       const float threshold);
 #else
 template<typename xpu>
-inline void Quantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+inline void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
                              const float threshold) {
   Quantize2BitKernelLaunch(s, inputs, threshold);
 }
@@ -263,7 +263,7 @@ void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<TBlo
                   const float threshold);
 #else
 template<typename xpu>
-inline void Dequantize2BitImpl(mshadow::Stream<xpu>* s, const std::vector<TBlob>& inputs,
+inline void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
                              const float threshold) {
   Dequantize2BitKernelLaunch(s, inputs, threshold);
 }
