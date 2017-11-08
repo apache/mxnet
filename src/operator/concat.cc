@@ -29,12 +29,29 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_concat-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkldnn_concat-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(ConcatParam param, int dtype, std::vector<TShape> *in_shape) {
   Operator *op = NULL;
+#if MXNET_USE_MKLDNN == 1
+  if ((1 == param.dim) && (param.num_args > 1)) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        return new MKLDNNConcatOp<cpu, float>(param);
+    default:
+      break;
+    }
+  }
+  if (EnableMkldnnWarnGenerated())
+    LOG(INFO) << MKLDNNConcatOp<cpu, float>::getName() << " Skip MKL optimization";
+#endif
 #if MXNET_USE_MKL2017 == 1
   // MKL supports 4D input tensors only for concat operation
   // 2D/3D input tensors are reshaped to 4D in mkl_concat-inl.h
@@ -52,7 +69,7 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype, std::vector<TShape> *in_sh
       break;
     }
   }
-  if (enableMKLWarnGenerated())
+  if (EnableMklWarnGenerated())
     LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
   MSHADOW_TYPE_SWITCH(dtype, DType, {

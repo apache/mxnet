@@ -30,6 +30,11 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_batch_norm-inl.h"
 #endif  // MXNET_USE_MKL2017
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkldnn_batch_norm-inl.h"
+#endif
 
 /*! \brief inverse standard deviation <-> variance */
 #define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
@@ -317,6 +322,30 @@ template<>
 Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& shape) {
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
   Operator *op = nullptr;
+#if MXNET_USE_MKLDNN == 1
+  if (shape.ndim() == 4
+      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
+      && shape[param.axis] % 8 == 0
+      && !mxnet::op::batchnorm::disable_mkl) {
+    switch (dtype) {
+      case mshadow::kFloat32:
+        op = new MKLDNNBatchNormOp<cpu, float>(param);
+        break;
+      default:
+        // MKL operator doesn't support half_t, so fall through
+        break;
+    }
+  }
+#define BATCHNORM_LOG_MKL_INFO() \
+  do { \
+    if (!mxnet::op::batchnorm::disable_mkl) { \
+      LOG(INFO) << MKLDNNBatchNormOp<cpu, float>::getName() \
+        << " Skipping MKL optimization (unsupported dimension, axis or type)"; \
+    } \
+  } while (0)
+#else
+#define BATCHNORM_LOG_MKL_INFO() ((void)0)
+#endif
 #if MXNET_USE_MKL2017 == 1
   if (shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS

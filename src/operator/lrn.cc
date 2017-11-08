@@ -32,13 +32,32 @@
 #include "./mkl/mkl_memory-inl.h"
 #include "./mkl/mkl_lrn-inl.h"
 #endif
+#if MXNET_USE_MKLDNN == 1
+#include <mkl_memory.h>
+#include "./mkl/mkldnn_memory-inl.h"
+#include "./mkl/mkl_util-inl.h"
+#include "./mkl/mkldnn_lrn-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(LRNParam param, int dtype) {
+#if MXNET_USE_MKLDNN == 1
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLDNNLRNOp<cpu, float>(param);
+  default:
+    break;
+  }
+#endif
 #if MXNET_USE_MKL2017 == 1
-  return new MKLLRNOp<cpu, float>(param);
+  switch (dtype) {
+  case mshadow::kFloat32:
+    return new MKLLRNOp<cpu, float>(param);
+  default:
+    break;
+  }
 #endif
   return new LocalResponseNormOp<cpu>(param);
 }

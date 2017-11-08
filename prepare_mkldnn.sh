@@ -54,72 +54,68 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-GetVersionName()
-{
-VERSION_LINE=0
-if [ $1 ]; then
-  VERSION_LINE=`grep __INTEL_MKL_BUILD_DATE $1/include/mkl_version.h 2>/dev/null | sed -e 's/.* //'`
-fi
-if [ -z $VERSION_LINE ]; then
-  VERSION_LINE=0
-fi
-echo $VERSION_LINE  # Return Version Line
-}
 
-# MKL
-HOME_MKL=$1
-if [ ! -d "$HOME_MKL" ]; then
-   mkdir $HOME_MKL
-fi
-MXNET_ROOT=`dirname $0`
-USE_MKLML=0
-# NOTE: if you update the following line, please also update the dockerfile at
-# tests/ci_build/Dockerfile.mkl
-VERSION_MATCH=20170908
-PLATFORM=$(uname)
-if [ $PLATFORM == "Darwin" ]; then
-    INFIX=mac
-elif [ $PLATFORM == "Linux" ]; then
-    INFIX=lnx
-fi
-ARCHIVE_BASENAME=mklml_${INFIX}_2018.0.20170908.tgz
-MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
-MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.10/$ARCHIVE_BASENAME"
-# there are diffrent MKL lib to be used for GCC and for ICC
-reg='^[0-9]+$'
-VERSION_LINE=`GetVersionName $MKLROOT`
-#echo $VERSION_LINE
-# Check if MKLROOT is set if positive then set one will be used..
-if [ -z $MKLROOT ]; then
-  # ..if MKLROOT is not set then check if we have MKL downloaded in proper version
-    VERSION_LINE=`GetVersionName $HOME_MKL`
-    #echo $VERSION_LINE
-    if [ $VERSION_LINE -lt $VERSION_MATCH ] ; then
-      #...If it is not then downloaded and unpacked
-      if [ $PLATFORM == "Darwin" ]; then
-        curl -L -o $MXNET_ROOT/$ARCHIVE_BASENAME $MKLURL
-      elif [ $PLATFORM == "Linux" ]; then
-        wget --quiet --no-check-certificate -P $MXNET_ROOT $MKLURL -O $MXNET_ROOT/$ARCHIVE_BASENAME
-      fi
-      tar -xzf $MXNET_ROOT/$ARCHIVE_BASENAME -C $MXNET_ROOT
-      #echo $HOME_MKL
-      yes | cp -rf $MXNET_ROOT/$MKL_CONTENT_DIR/* $HOME_MKL
-      rm -rf $MXNET_ROOT/$MKL_CONTENT_DIR
-    fi
-  if [ $PLATFORM == "Darwin" ]; then
-    MKLLIB=`find $HOME_MKL -name libmklml.dylib`
-  elif [ $PLATFORM == "Linux" ]; then
-    MKLLIB=`find $HOME_MKL -name libmklml_gnu.so`
+MXNET_ROOTDIR="$(pwd)"
+MKLDNN_ROOTDIR="$MXNET_ROOTDIR/external/mkldnn"
+MKLDNN_GITHUB="https://github.com/01org/mkl-dnn.git"
+MKLDNN_TMPDIR="$MKLDNN_ROOTDIR/tmp"
+MKLDNN_SRCDIR="$MKLDNN_ROOTDIR/src"
+MKLDNN_BUILDDIR="$MKLDNN_ROOTDIR/build"
+MKLDNN_INSTALLDIR="$MKLDNN_ROOTDIR/install"
+
+# MKL DNN release tag, or commit.
+MKLDNN_COMMIT="v0.10"
+
+# MKLDNN install destination
+HOME_MKLDNN=$1
+if [ ! -z "$HOME_MKLDNN" ]; then
+  mkdir -p $HOME_MKLDNN
+  if [ ! -w $HOME_MKLDNN ]; then
+    echo "MKLDNN install to $HOME_MKLDNN failed, please try with sudo" >&2
+    exit 1
   fi
-  MKLROOT=`echo $MKLLIB | sed -e 's/lib.*$//'`
 fi
 
-# Check what MKL lib we have in MKLROOT
-if [ -z `find $MKLROOT -name libmklml* -print -quit` ]; then
-  USE_MKLML=0
-elif [ -z `find $MKLROOT -name libmkl_core.so -print -quit` ]; then
-  USE_MKLML=1
+if [ -z $MKLDNNROOT ]; then
+if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
+    mkdir -p $MKLDNN_INSTALLDIR
+    if [ ! -d $MKLDNN_SRCDIR/.git ]; then
+      echo "Downloading MKLDNN ..." >&2
+      rm -rf $MKLDNN_SRCDIR
+      git clone --quiet --no-checkout $MKLDNN_GITHUB $MKLDNN_TMPDIR
+      rsync -a $MKLDNN_TMPDIR/ $MKLDNN_SRCDIR && rm -rf $MKLDNN_TMPDIR
+    fi
+    cd $MKLDNN_SRCDIR && git fetch --all && git reset --hard $MKLDNN_COMMIT 
+    if [ -z $MKLROOT ] && [ ! -f $MKLDNN_INSTALLDIR/include/mkl_cblas.h ]; then
+        rm -rf external && cd scripts && ./prepare_mkl.sh && cd ..
+        cp -a external/*/* $MKLDNN_INSTALLDIR/.
+    fi 
+    echo "Building MKLDNN ..." >&2
+    cd $MXNET_ROOTDIR
+    cmake $MKLDNN_SRCDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR
+    make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l)
+    make -C $MKLDNN_BUILDDIR install
+    rm -rf $MKLDNN_BUILDDIR
+fi
+MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
 
+if [ -z $MKLROOT ] && [ -f $MKLDNNROOT/include/mkl_cblas.h ]; then 
+  MKLROOT=$MKLDNNROOT;
+fi
+
+# user specified MKLDNN install folder
+if [ -d "$HOME_MKLDNN" ]; then
+  # skip if user specificed MKLDNNROOT
+  [ "$MKLDNNROOT" != "$HOME_MKLDNN" ] && rsync -a $MKLDNNROOT/include $MKLDNNROOT/lib $HOME_MKLDNN/.
+  [ "$MKLROOT" != "$HOME_MKLDNN" ] && rsync -a $MKLROOT/include $MKLROOT/lib $HOME_MKLDNN/.
+  # update ldconfig if possible
+  if [ -w /etc/ld.so.conf.d ]; then
+    echo "$HOME_MKLDNN/lib" > /etc/ld.so.conf.d/mxnmkldnn.conf && ldconfig
+  fi
 # return value to calling script (Makefile,cmake)
-echo $MKLROOT $USE_MKLML
+  echo $HOME_MKLDNN $HOME_MKLDNN
+else
+  echo $MKLDNNROOT $MKLROOT
+fi
+

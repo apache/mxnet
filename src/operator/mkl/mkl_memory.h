@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2016 Intel Corporation
+* Copyright 2016-2017 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ struct PrvMemDescr {
   virtual PrvDescrType get_descr_type() = 0;
 };
 
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
 // Currently HEAD_AT_PRV do not free CPU data
 enum SyncedHead {
   HEAD_AT_CPU,
@@ -64,11 +64,14 @@ struct MKLMemHolder {
     b_eager_mode = eager_mode;
   }
   void set_prv_descriptor(std::shared_ptr<PrvMemDescr> descriptor, bool same_data = false) {
-    head_ = HEAD_AT_PRV;
+    if (descriptor != nullptr) head_ = HEAD_AT_PRV;
     prv_descriptor_ = descriptor;
   }
   std::shared_ptr<PrvMemDescr> get_prv_descriptor() {
     return  prv_descriptor_;
+  }
+  bool head_at_cpu() {
+    return (head_ == HEAD_AT_CPU) ? true : false;
   }
   bool head_at_prv() {
     return (head_ == HEAD_AT_PRV) ? true : false;
@@ -97,10 +100,11 @@ struct MKLMemHolder {
   static std::shared_ptr<MKLMemHolder> create() {
     return std::make_shared<MKLMemHolder>();
   }
-  void  check_and_prv_to_cpu(void *dptr_) {
+  void  check_and_prv_to_cpu(void *dptr_, bool convert = true) {
     if (!b_disable_prv_2_cpu && head_ == HEAD_AT_PRV) {
       CHECK(prv_descriptor_ != nullptr);
-      prv_descriptor_->convert_from_prv(dptr_);
+      if (convert)
+        prv_descriptor_->convert_from_prv(dptr_);
       // Because operator use CPU & maybe change it, change to CPU Flag
       head_ = HEAD_AT_CPU;
     }
@@ -112,6 +116,7 @@ struct MKLMemHolder {
     head_(HEAD_AT_CPU), prv_descriptor_(nullptr),
     b_disable_prv_2_cpu(false), b_eager_mode(false) {}
 };
+
 #else
 struct MKLMemHolder {
  public:

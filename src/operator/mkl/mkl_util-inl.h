@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright 2016 Intel Corporation
+* Copyright 2016-2017 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -22,6 +22,12 @@
 #ifndef MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_
 #define MXNET_OPERATOR_MKL_MKL_UTIL_INL_H_
 #include <vector>
+#if MXNET_USE_MKL2017 == 1
+#include "mkl_memory-inl.h"
+#endif
+#if MXNET_USE_MKLDNN == 1
+#include "mkldnn_memory-inl.h"
+#endif
 #define MKLDNN_CALL(func)                                                               \
   {                                                                                     \
     dnnError_t status = (func);                                                                \
@@ -32,7 +38,7 @@
 namespace mxnet {
 namespace op {
 
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
   template<typename DType>
   inline DType * mkl_prv_data(const TBlob &b) {
     std::shared_ptr<MKLMemHolder> bottom_data_mem = b.Mkl_mem_;
@@ -54,7 +60,7 @@ namespace op {
   }
 #endif
   inline void mkl_set_priv_flag(const TBlob &b) {
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
     std::shared_ptr<MKLMemHolder> bottom_data_mem = b.Mkl_mem_;
     bool mem_valid = (bottom_data_mem != nullptr) && bottom_data_mem->head_at_prv();
     if (mem_valid) {
@@ -62,7 +68,21 @@ namespace op {
     }
 #endif
   }
-#if MKL_EXPERIMENTAL == 1
+#if MXNET_USE_MKLDNN == 1
+  template<typename DType>
+  inline std::shared_ptr<MKLDNNData<DType> > mkl_get_mem_desc(
+    const std::shared_ptr<MKLMemHolder> data_mem) {
+    std::shared_ptr<PrvMemDescr> prv_descriptor =
+      data_mem->get_prv_descriptor();
+    CHECK_EQ(prv_descriptor->get_descr_type(),
+      PrvMemDescr::PRV_DESCR_MKLDNN);
+    std::shared_ptr<MKLDNNData<DType> > mem_descr
+      = std::static_pointer_cast<MKLDNNData<DType>>(prv_descriptor);
+    CHECK(mem_descr != NULL);
+    return mem_descr;
+  }
+#endif
+#if MXNET_USE_MKL2017 == 1
   template<typename DType>
   inline std::shared_ptr<MKLData<DType> > mkl_get_mem_desc(
     const std::shared_ptr<MKLMemHolder> data_mem) {
@@ -90,7 +110,7 @@ namespace op {
     return b.get_with_shape<xpu, dim, DType>(shape, s);
   }
 }  // namespace op
-#if MKL_EXPERIMENTAL == 1
+#if MKL_EXPERIMENTAL == 1 || MXNET_USE_MKLDNN == 1
 inline void mkl_tblobs_prv_to_cpu(const std::vector<TBlob> &data) {
   for (size_t i = 0; i < data.size(); i++) {
     std::shared_ptr<MKLMemHolder> mem_holder = data[i].Mkl_mem_;
