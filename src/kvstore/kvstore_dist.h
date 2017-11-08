@@ -63,7 +63,6 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   virtual ~KVStoreDist() {
-    delete gc_;
     Engine::Get()->WaitForAll();
     if (IsWorkerNode()) {
       if (barrier_before_exit_) {
