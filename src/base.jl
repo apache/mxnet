@@ -1,5 +1,5 @@
 "Exception thrown when an error occurred calling MXNet API."
-immutable MXError <: Exception
+struct MXError <: Exception
   msg :: AbstractString
 end
 
@@ -91,7 +91,7 @@ end
 macro mx_define_handle_t(name, destructor)
   name = esc(name)
   quote
-    type $name
+    mutable struct $name
       value :: MX_handle
 
       function $name(value = C_NULL)
@@ -161,7 +161,7 @@ dump_mx_param(val::Any) = string(val)
 dump_mx_param(val::Float64) = @sprintf("%.16e", val)
 dump_mx_param(val::Float32) = @sprintf("%.8e", val)
 dump_mx_param(val::Float16) = @sprintf("%.4e", val)
-dump_mx_param{N, T<:Integer}(shape::NTuple{N, T}) =
+dump_mx_param(shape::NTuple{N, T}) where {N, T<:Integer} =
   string(tuple(flipdim([shape...], 1)...))
 
 
@@ -203,7 +203,7 @@ end
 """Internal use only, this value is used to indicate a required value
 is not specified.
 """
-immutable __Undefined
+struct __Undefined
 end
 
 function _defstruct_impl(is_immutable, name, fields)
@@ -285,7 +285,7 @@ function _defstruct_impl(is_immutable, name, fields)
 
   if is_immutable
     quote
-      immutable $(name) <: $(super_name)
+      struct $(name) <: $(super_name)
         $type_body
       end
 
@@ -293,7 +293,7 @@ function _defstruct_impl(is_immutable, name, fields)
     end
   else
     quote
-      type $(name) <: $(super_name)
+      mutable struct $(name) <: $(super_name)
         $type_body
       end
 

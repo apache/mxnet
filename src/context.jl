@@ -5,7 +5,7 @@
 
 A context describes the device type and id on which computation should be carried on.
 """
-immutable Context
+struct Context
   device_type :: CONTEXT_TYPE
   device_id   :: Int
 end

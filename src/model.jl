@@ -3,7 +3,7 @@
 
 The abstract super type of all models in MXNet.jl.
 """
-@compat abstract type AbstractModel end
+abstract type AbstractModel end
 
 """
     FeedForward
@@ -14,7 +14,7 @@ explicitly handling of *time index*, but it is relatively easy to implement
 unrolled RNN / LSTM under this framework (*TODO*: add example). For models
 that handles sequential data explicitly, please use *TODO*...
 """
-type FeedForward <: AbstractModel
+mutable struct FeedForward <: AbstractModel
   arch        :: SymbolicNode
   ctx         :: Vector{Context}
 
@@ -292,9 +292,9 @@ end
   verbosity   :: Int = 3
 )
 
-function _invoke_callbacks{T<:Real}(self::FeedForward, callbacks::Vector{AbstractCallback},
-                                    state::OptimizationState, type_filter::Type;
-                                    metric::Vector{Tuple{Base.Symbol, T}} = Vector{Tuple{Base.Symbol, Real}}())
+function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback},
+                           state::OptimizationState, type_filter::Type;
+                           metric::Vector{Tuple{Base.Symbol, T}} = Vector{Tuple{Base.Symbol, Real}}()) where T<:Real
   map(callbacks) do cb
     if isa(cb, type_filter)
       if type_filter == AbstractEpochCallback

@@ -117,11 +117,7 @@ if !libmxnet_detected
 
   blas_path = Libdl.dlpath(Libdl.dlopen(Base.libblas_name))
 
-  if VERSION >= v"0.5.0-dev+4338"
-    blas_vendor = Base.BLAS.vendor()
-  else
-    blas_vendor = Base.blas_vendor()
-  end
+  blas_vendor = Base.BLAS.vendor()
 
   ilp64 = ""
   if blas_vendor == :openblas64

@@ -3,23 +3,23 @@
 
 Abstract type of callback functions used in training.
 """
-@compat abstract type AbstractCallback end
+abstract type AbstractCallback end
 
 """
     AbstractBatchCallback
 
 Abstract type of callbacks to be called every mini-batch.
 """
-@compat abstract type AbstractBatchCallback <: AbstractCallback end
+abstract type AbstractBatchCallback <: AbstractCallback end
 
 """
     AbstractEpochCallback
 
 Abstract type of callbacks to be called every epoch.
 """
-@compat abstract type AbstractEpochCallback <: AbstractCallback end
+abstract type AbstractEpochCallback <: AbstractCallback end
 
-type BatchCallback <: AbstractBatchCallback
+mutable struct BatchCallback <: AbstractBatchCallback
   frequency :: Int
   call_on_0 :: Bool
   callback  :: Function
@@ -86,7 +86,7 @@ function speedometer(;frequency::Int=50)
 end
 
 
-type EpochCallback <: AbstractEpochCallback
+mutable struct EpochCallback <: AbstractEpochCallback
   frequency :: Int
   call_on_0 :: Bool
   callback  :: Function
@@ -107,7 +107,7 @@ See also [`every_n_batch`](@ref).
 function every_n_epoch(callback :: Function, n :: Int; call_on_0 :: Bool = false)
   EpochCallback(n, call_on_0, callback)
 end
-function (cb :: EpochCallback){T<:Real}(model :: Any, state :: OptimizationState, metric :: Vector{Tuple{Base.Symbol, T}})
+function (cb :: EpochCallback)(model :: Any, state :: OptimizationState, metric :: Vector{Tuple{Base.Symbol, T}}) where T<:Real
   if state.curr_epoch == 0
     if cb.call_on_0
       cb.callback(model, state, metric)

@@ -15,9 +15,9 @@ Or, if full behavior customization is needed, override the following function
 
     init(self :: AbstractInitializer, name :: Base.Symbol, array :: NDArray)
 """
-@compat abstract type AbstractInitializer end
+abstract type AbstractInitializer end
 
-function init{T<:AbstractInitializer}(self :: T, name :: Base.Symbol, array :: NDArray)
+function init(self :: T, name :: Base.Symbol, array :: NDArray) where T<:AbstractInitializer
   strname = string(name)
   if startswith(strname,"upsampling")
     _init_bilinear(self,name, array)
@@ -94,7 +94,7 @@ end
 
 Initialize weights according to a uniform distribution within the provided scale.
 """
-immutable UniformInitializer <: AbstractInitializer
+struct UniformInitializer <: AbstractInitializer
   scale :: AbstractFloat
 end
 """
@@ -113,7 +113,7 @@ end
 
 Initialize weights according to a univariate Gaussian distribution.
 """
-immutable NormalInitializer <: AbstractInitializer
+struct NormalInitializer <: AbstractInitializer
   μ :: AbstractFloat
   σ :: AbstractFloat
 end
@@ -150,7 +150,7 @@ used by various libraries.
 @enum XavierDistribution xv_uniform xv_normal
 @enum XavierRegularization xv_avg xv_in xv_out
 
-immutable XavierInitializer <: AbstractInitializer
+struct XavierInitializer <: AbstractInitializer
   distribution :: XavierDistribution
   regularization :: XavierRegularization
   magnitude :: Float64

@@ -2,14 +2,14 @@
 using MXNet
 
 #--LSTMState
-immutable LSTMState
+struct LSTMState
   c :: mx.SymbolicNode
   h :: mx.SymbolicNode
 end
 #--/LSTMState
 
 #--LSTMParam
-immutable LSTMParam
+struct LSTMParam
   i2h_W :: mx.SymbolicNode
   h2h_W :: mx.SymbolicNode
   i2h_b :: mx.SymbolicNode
@@ -116,7 +116,7 @@ end
 
 
 # Negative Log-likelihood
-type NLL <: mx.AbstractEvalMetric
+mutable struct NLL <: mx.AbstractEvalMetric
   nll_sum  :: Float64
   n_sample :: Int
 

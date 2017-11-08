@@ -5,7 +5,7 @@ datasets in this format could be found at http://www.csie.ntu.edu.tw/~cjlin/libs
 using MXNet
 using SVMLightLoader
 
-type SVMLightProvider <: mx.AbstractDataProvider
+mutable struct SVMLightProvider <: mx.AbstractDataProvider
   filename   :: AbstractString
   batch_size :: Int
   fea_dim    :: Int

@@ -8,7 +8,7 @@ interfaces:
 * [`reset!`](@ref)
 * [`get`](@ref)
 """
-@compat abstract type AbstractEvalMetric end
+abstract type AbstractEvalMetric end
 
 """
     hasNDArraySupport(metric) -> Val{true/false}
@@ -30,11 +30,11 @@ Update and accumulate metrics.
 * `labels::Vector{NDArray}`: the labels from the data provider.
 * `preds::Vector{NDArray}`: the outputs (predictions) of the network.
 """
-function update!{T <: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+function update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}) where T <: AbstractEvalMetric
   _update!(metric, labels, preds, hasNDArraySupport(metric))
 end
 
-function _update!{T<: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{true})
+function _update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{true}) where T<: AbstractEvalMetric
   if length(labels) != length(preds)
     Base.warn_once(
       "The number of labels ($(length(labels))) does not correspond to the\
@@ -45,7 +45,7 @@ function _update!{T<: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}
   end
 end
 
-function _update!{T<: AbstractEvalMetric}(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{false})
+function _update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{false}) where T<: AbstractEvalMetric
   if length(labels) != length(preds)
     Base.warn_once(
       "The number of labels ($(length(labels))) does not correspond to the\
@@ -88,7 +88,7 @@ end
 
 A metric that calculates nothing. Can be used to ignore an output during training.
 """
-type NullMetric <: mx.AbstractEvalMetric
+mutable struct NullMetric <: mx.AbstractEvalMetric
 end
 
 function update!(metric :: NullMetric, labels :: Vector{NDArray}, preds :: Vector{NDArray})
@@ -114,7 +114,7 @@ To calculate both mean-squared error [`Accuracy`](@ref) and log-loss [`ACE`](@re
   mx.fit(..., eval_metric = mx.MultiMetric([mx.Accuracy(), mx.ACE()]))
 ```
 """
-type MultiMetric <: mx.AbstractEvalMetric
+mutable struct MultiMetric <: mx.AbstractEvalMetric
     metrics :: Vector{mx.AbstractEvalMetric}
 end
 
@@ -146,7 +146,7 @@ and log-loss [`ACE`](@ref) for the second output:
   mx.fit(..., eval_metric = mx.SeqMetric([mx.Accuracy(), mx.ACE()]))
 ```
 """
-type SeqMetric <: mx.AbstractEvalMetric
+mutable struct SeqMetric <: mx.AbstractEvalMetric
     metrics :: Vector{mx.AbstractEvalMetric}
 end
 
@@ -176,7 +176,7 @@ Multiclass classification accuracy.
 Calculates the mean accuracy per sample for softmax in one dimension.
 For a multi-dimensional softmax the mean accuracy over all dimensions is calculated.
 """
-type Accuracy <: AbstractEvalMetric
+mutable struct Accuracy <: AbstractEvalMetric
   acc_sum  :: Float64
   n_sample :: Int
 
@@ -235,7 +235,7 @@ Calculates the mean squared error regression loss.
 Requires that label and prediction have the same shape.
 """
 
-type MSE <: AbstractEvalMetric
+mutable struct MSE <: AbstractEvalMetric
   mse_sum  :: Vector{NDArray}
   n_sample :: Int
 
@@ -310,7 +310,7 @@ For more discussion about normalized MSE, please see
 [#211](https://github.com/dmlc/MXNet.jl/pull/211) also.
 
 """
-type NMSE <: AbstractEvalMetric
+mutable struct NMSE <: AbstractEvalMetric
   nmse_sum  :: Float64
   n_sample :: Int
 
@@ -349,7 +349,7 @@ Calculates the averaged cross-entropy (logloss) for classification.
 # Arguments:
 * `eps::Float64`: Prevents returning `Inf` if `p = 0`.
 """
-type ACE <: AbstractEvalMetric
+mutable struct ACE <: AbstractEvalMetric
   ace_sum  :: Float64
   n_sample :: Int
   eps :: Float64
@@ -368,7 +368,7 @@ end
 
 hasNDArraySupport(::ACE) = Val{false}()
 
-function _update_single_output{T}(metric :: ACE, label :: Array{T}, pred :: Array{T})
+function _update_single_output(metric :: ACE, label :: Array{T}, pred :: Array{T}) where T
   eps = convert(T, metric.eps)
   # Samples are stored in the last dimension
   @assert size(label, ndims(label)) == size(pred, ndims(pred))
@@ -411,7 +411,7 @@ end
 Calculates the averaged cross-entropy per class and overall (see [`ACE`](@ref)).
 This can be used to quantify the influence of different classes on the overall loss.
 """
-type MultiACE <: AbstractEvalMetric
+mutable struct MultiACE <: AbstractEvalMetric
   aces  :: Vector{Float64}
   counts :: Vector{Int}
   eps :: Float64
@@ -432,7 +432,7 @@ end
 
 hasNDArraySupport(::MultiACE) = Val{false}()
 
-function _update_single_output{T}(metric :: MultiACE, label :: Array{T}, pred :: Array{T})
+function _update_single_output(metric :: MultiACE, label :: Array{T}, pred :: Array{T}) where T
   eps = convert(T, metric.eps)
   # Samples are stored in the last dimension
   @assert size(label, ndims(label)) == size(pred, ndims(pred))

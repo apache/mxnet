@@ -7,7 +7,7 @@ using ..Main: rand_dims, reldiff
 ################################################################################
 # Test Implementations
 ################################################################################
-function test_arithmetic{T <: mx.DType}(::Type{T}, uf, gf)
+function test_arithmetic(::Type{T}, uf, gf) where T <: mx.DType
   shape = rand_dims()
   info("Bind::arithmetic::$T::$uf::dims = $shape")
 

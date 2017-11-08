@@ -32,7 +32,7 @@ function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; m
 end
 
 #--CharSeqProvider
-type CharSeqProvider <: mx.AbstractDataProvider
+mutable struct CharSeqProvider <: mx.AbstractDataProvider
   text       :: AbstractString
   batch_size :: Int
   seq_len    :: Int

@@ -9,7 +9,7 @@ SymbolicNode is the basic building block of the symbolic graph in MXNet.jl.
 Make a new node by composing `self` with `args`. Or the arguments
 can be specified using keyword arguments.
 """
-type SymbolicNode
+mutable struct SymbolicNode
   handle :: MX_SymbolHandle
 end
 function Base.unsafe_convert(::Type{MX_handle}, obj::SymbolicNode)
@@ -723,13 +723,13 @@ from right to left.
     output shape would be (40,5)
   - with `reverse=true`, output shape will be (50,4).
 """
-reshape{N}(sym::SymbolicNode, dim::NTuple{N, Integer}; kwargs...) =
+reshape(sym::SymbolicNode, dim::NTuple{N, Integer}; kwargs...) where {N} =
   _reshape(sym, dim; kwargs...)
 reshape(sym::SymbolicNode, dim::Integer...; kwargs...) =
   _reshape(sym, dim; kwargs...)
 
-@inline function _reshape{N}(sym::SymbolicNode, dim::NTuple{N, Integer};
-                             reverse::Bool=false, name::String="")
+@inline function _reshape(sym::SymbolicNode, dim::NTuple{N, Integer};
+                          reverse::Bool=false, name::String="") where N
   op = _get_cached_libmx_op_handle("reshape")
   node = _create_atomic_symbol(op.value, ["shape", "reverse"],
                                [dump_mx_param(dim), dump_mx_param(!reverse)])

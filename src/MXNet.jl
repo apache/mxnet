@@ -11,9 +11,7 @@ using Compat
 import Compat.String
 import Compat.view
 
-if VERSION >= v"0.6.0-dev.1024"
-  import Base.Iterators: filter
-end
+import Base.Iterators: filter
 
 using Formatting
 using MacroTools

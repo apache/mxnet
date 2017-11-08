@@ -7,8 +7,8 @@ using ..Main: rand_dims, reldiff
 ################################################################################
 # Test Implementations
 ################################################################################
-rand_tensors{N}(dims::NTuple{N, Int}) = rand_tensors(mx.MX_float, dims)
-function rand_tensors{N, T}(::Type{T}, dims::NTuple{N, Int})
+rand_tensors(dims::NTuple{N, Int}) where {N} = rand_tensors(mx.MX_float, dims)
+function rand_tensors(::Type{T}, dims::NTuple{N, Int}) where {N, T}
   tensor = rand(T, dims)
   array  = copy(tensor, mx.cpu())
   return (tensor, array)

@@ -26,7 +26,7 @@ function generate_probs(n, m)
 end
 
 
-function loglikelihood{T <: AbstractFloat}(labels::Vector{T}, probs::Array{T, 2})
+function loglikelihood(labels::Vector{T}, probs::Array{T, 2}) where T <: AbstractFloat
     LL = 0.0
     eps = convert(T, 1.0e-8)
     for i = 1:size(labels, 1)
@@ -50,11 +50,7 @@ function test_ace()
     metric         = mx.ACE()    # For categorical variables, ACE == -LL
     mx._update_single_output(metric, labels, probs)
     LL_v2 = metric.ace_sum / metric.n_sample
-    @static if VERSION >= v"0.6.0-dev.2075"
-      @test LL ≈ LL_v2 atol=1e-12
-    else
-      @test_approx_eq_eps LL LL_v2 1e-12
-    end
+    @test LL ≈ LL_v2 atol=1e-12
 end
 
 

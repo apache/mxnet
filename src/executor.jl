@@ -5,7 +5,7 @@ An executor is a realization of a symbolic architecture defined by a `SymbolicNo
 The actual forward and backward computation specified by the network architecture can
 be carried out with an executor.
 """
-type Executor
+mutable struct Executor
   handle :: MX_ExecutorHandle
   symbol :: SymbolicNode
   arg_arrays  :: Vector{NDArray}

@@ -43,7 +43,7 @@ learning rate ``\eta_t`` is calculated as:
   (http://www.youtube.com/watch?v=O3sxAc4hxZU) (formula @5:20)
 """
 
-type RMSProp <: AbstractOptimizer
+mutable struct RMSProp <: AbstractOptimizer
   opts  :: RMSPropOptions
   state :: OptimizationState
 

@@ -34,7 +34,7 @@ julia> mx.rand(0, 1, (2, 2)) |> copy
  0.281153  0.713927
 ```
 """
-function rand{N}(low::Real, high::Real, shape::NTuple{N, Int}, ctx::Context=cpu())
+function rand(low::Real, high::Real, shape::NTuple{N, Int}, ctx::Context=cpu()) where N
   out = empty(shape, ctx)
   rand!(low, high, out)
 end
@@ -53,7 +53,7 @@ end
 
 Draw random samples from a normal (Gaussian) distribution.
 """
-function randn{N}(mean::Real, stdvar::Real, shape::NTuple{N,Int}, ctx::Context=cpu())
+function randn(mean::Real, stdvar::Real, shape::NTuple{N,Int}, ctx::Context=cpu()) where N
   out = empty(shape, ctx)
   randn!(mean, stdvar, out)
 end
