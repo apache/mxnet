@@ -23,6 +23,7 @@
  */
 
 #include <mxnet/gc.h>
+#include "./gc-inl.h"
 
 namespace mxnet{
   namespace kvstore{
