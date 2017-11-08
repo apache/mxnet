@@ -20,6 +20,7 @@ from trainer.debugger import super_print, find_abnormal
 from evaluation.eval_metric import VOC07MApMetric, MApMetric
 
 def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, wd, log_interval=50,
+              lr_steps=[], lr_factor=1.,
               pretrained=0, seed=None, log_file=None, dev=False, ctx=mx.cpu(), **kwargs):
     """Wrapper function for entire training phase.
 
@@ -67,7 +68,10 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
             ctx = [ctx]
         return ctx
 
-
+    if not isinstance(lr_factor, list):
+        lr_factor = [lr_factor]
+    if len(lr_factor) == 1 and len(lr_steps) > 1:
+        lr_factor *= len(lr_steps)
 
     # logging.debug(str(val_dataset))
     # for data in train_data:
@@ -151,6 +155,10 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
         # debug_metric = MultiBoxMetric()
 
         for epoch in range(epochs):
+            if epoch in lr_steps:
+                new_lr = trainer.learning_rate * lr_factor[lr_steps.index(epoch)]
+                trainer.set_learning_rate(new_lr)
+                logging.info("[Epoch {}] Set learning rate to {}".format(epoch, new_lr))
             tic = time.time()
             btic = time.time()
             cls_metric.reset()

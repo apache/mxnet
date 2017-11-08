@@ -42,10 +42,10 @@ def parse_args():
                         help="Random seed, -1 to disable fixed seed.")
     parser.add_argument('--dev', type=int, default=0,
                         help="Turn on develop mode with verbose informations.")
-    # parser.add_argument('--lr-steps', dest='lr_refactor_step', type=str, default='80, 160',
-    #                     help='refactor learning rate at specified epochs')
-    # parser.add_argument('--lr-factor', dest='lr_refactor_ratio', type=str, default=0.1,
-    #                     help='ratio to refactor learning rate')
+    parser.add_argument('--lr-steps', dest='lr_steps', type=str, default='80, 160',
+                        help='refactor learning rate at specified epochs')
+    parser.add_argument('--lr-factor', dest='lr_factor', type=str, default='0.1',
+                        help='ratio to refactor learning rate, can be float or list of floats.')
     # parser.add_argument('--freeze', dest='freeze_pattern', type=str, default="^(conv1_|conv2_).*",
     #                     help='freeze layer pattern')
     args = parser.parse_args()
@@ -66,6 +66,8 @@ if __name__ == '__main__':
                             seed=args.seed,
                             pretrained=args.pretrained,
                             log_file=args.log_file,
+                            lr_steps=[int(x.strip()) for x in args.lr_steps.split(',') if x.strip()],
+                            lr_factor=[float(x.strip()) for x in args.lr_factor.split(',') if x.strip()],
                             dev=args.dev,
                             ctx=ctx)
     else:
