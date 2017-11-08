@@ -101,24 +101,25 @@ NDArray::NDArray(const NDArrayStorageType stype, const TShape &shape, Context ct
 }
 
 void NDArray::Chunk::CheckAndAllocData(const TShape &shape, int dtype) {
+#if MXNET_USE_MKLDNN == 1
   if (storage_type == kMKLDNNStorage) {
     SetMKLMem(shape, dtype);
+    return;
   }
-  else {
-    CHECK_NE(aux_shapes.size(), 0)
-      << "data is expected to be allocated after aux_data";
-    auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
-    if (shandle.size < dbytes) {
-      // free storage if necessary and alloc again
-      if (shandle.size > 0) Storage::Get()->Free(shandle);
-      // init storage
-      shandle = Storage::Get()->Alloc(dbytes, ctx);
-    }
-    // init shape
-    storage_shape = shape;
-    // delay_alloc is only set when data storage handle is present
-    delay_alloc = false;
+#endif
+  CHECK_NE(aux_shapes.size(), 0)
+    << "data is expected to be allocated after aux_data";
+  auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
+  if (shandle.size < dbytes) {
+    // free storage if necessary and alloc again
+    if (shandle.size > 0) Storage::Get()->Free(shandle);
+    // init storage
+    shandle = Storage::Get()->Alloc(dbytes, ctx);
   }
+  // init shape
+  storage_shape = shape;
+  // delay_alloc is only set when data storage handle is present
+  delay_alloc = false;
 }
 
 NDArray NDArray::grad() const {
