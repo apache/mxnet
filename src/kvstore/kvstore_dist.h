@@ -183,8 +183,6 @@ class KVStoreDist : public KVStoreLocal {
         comm_buf_[key].WaitToWrite();
         compr_buf_[key].WaitToWrite();
       }
-      gc_->set_active();
-
     } else {
       // do nothing
     }
@@ -303,7 +301,7 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
-
+    if (do_merge && !gc_->get_active()) gc_->set_active();
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
@@ -332,6 +330,7 @@ class KVStoreDist : public KVStoreLocal {
       // push to servers
       if (storage_type == kDefaultStorage) {
         if (gc_->get_active_type() == GC_NONE) {
+          std::cout<<"gc is none for push of key"<<key<<std::endl;
           PushDefault(key, comm_buf, priority);
         } else {
           PushCompressed(key, comm_buf, priority);

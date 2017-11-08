@@ -25,7 +25,6 @@
 
 #ifndef MXNET_OPERATOR_CONTRIB_TWO_BIT_QUANTIZE_INL_H_
 #define MXNET_OPERATOR_CONTRIB_TWO_BIT_QUANTIZE_INL_H_
-#include <chrono>
 #include <vector>
 #include <limits>
 #include <cmath>

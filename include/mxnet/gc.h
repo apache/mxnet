@@ -67,6 +67,10 @@ class Gc {
       active_ = true;
     }
 
+    bool get_active() {
+      return active_;
+    }
+
     bool get_active_type() {
       if (active_) return type_;
       else return GC_NONE;
@@ -185,13 +189,12 @@ class Gc {
     }
   }
 
+private:
   CompressionType type_;
 
   bool active_;
 
   float threshold_ = 0;
-
-private:
 
 };
 
