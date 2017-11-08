@@ -37,68 +37,6 @@
 namespace mxnet {
 namespace op {
 
-struct init_mem_2bit {
-  // Initialize output array
-  MSHADOW_XINLINE static void Map(int i, float* out) {
-    *(out+i) = 0;
-  }
-};
-
-struct TwoBitParam : public dmlc::Parameter<TwoBitParam> {
-  float threshold;
-  DMLC_DECLARE_PARAMETER(TwoBitParam) {
-    DMLC_DECLARE_FIELD(threshold)
-      .set_default(0.5)
-      .describe("Threshold to quantize values. "
-                  "Must be greater than 0");
-  }
-};
-
-template<typename xpu>
-void Create2BitArrayCompute(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<TBlob>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<TBlob>& outputs) {
-  // For now, this method can only compress the float data
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  // Init the memory of output to 0x00000000
-  mxnet_op::Kernel<init_mem_2bit, xpu>::Launch(s, outputs[0].Size(),
-                              outputs[0].dptr<float>());  // compressed array
-
-}
-
-inline bool Create2BitArrayShape(const nnvm::NodeAttrs& attrs,
-                                 std::vector<TShape> *in_attrs,
-                                 std::vector<TShape> *out_attrs) {
-  // 0. input array
-  CHECK_EQ(in_attrs->size(), 1U);
-  // 0. output array
-  CHECK_EQ(out_attrs->size(), 1U);
-  // check input
-  CHECK(!shape_is_none(in_attrs->at(0)));
-  // output
-  int shape = in_attrs->at(0).Size() % 16 == 0 ?
-                    in_attrs->at(0).Size() / 16 :
-                    in_attrs->at(0).Size() / 16 + 1;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape{shape});
-  return true;
-}
-
-inline bool Create2BitArrayType(const nnvm::NodeAttrs &attrs,
-                                std::vector<int> *in_attrs,
-                                std::vector<int> *out_attrs) {
-  // 0. input array
-  CHECK_EQ(in_attrs->size(), 1U);
-  // 0. output array
-  CHECK_EQ(out_attrs->size(), 1U);
-  // check input
-  CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)
-    << "`create_2bit_` only supports float32 input for now";
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
-  return true;
-}
-
 struct quantize_2bit {
   MSHADOW_XINLINE static void Map(int out_block_id,
                                   int original_size,
@@ -153,66 +91,7 @@ inline void Quantize2BitImpl(mshadow::Stream<cpu>* s, const std::vector<TBlob>& 
   Quantize2BitKernelLaunch(s, inputs, threshold);
 }
 
-#ifndef __CUDACC__
-void Quantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<TBlob>& inputs,
-                      const float threshold);
-#else
-template<typename xpu>
-inline void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                             const float threshold) {
-  Quantize2BitKernelLaunch(s, inputs, threshold);
-}
-#endif
-
-
-// this function has been defined as quantize_2bit operator
-template<typename xpu>
-void Quantize2BitCompute(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Quantize2BitImpl(s, inputs, param.threshold);
-}
-
-inline bool Quantize2BitShape(const nnvm::NodeAttrs& attrs,
-                              std::vector<TShape> *in_attrs,
-                              std::vector<TShape> *out_attrs) {
-  // 0. input array
-  // 1. residual array
-  // 2. compressed array
-  CHECK_EQ(in_attrs->size(), 3U);
-  CHECK(!shape_is_none(in_attrs->at(0)));
-  CHECK(!shape_is_none(in_attrs->at(1)));
-  CHECK_EQ(in_attrs->at(0).Size(),
-           in_attrs->at(1).Size());
-  int shape = in_attrs->at(0).Size() % 16 == 0 ?
-                    in_attrs->at(0).Size() / 16 :
-                    in_attrs->at(0).Size() / 16 + 1;
-  CHECK_EQ(in_attrs->at(2).Size(), shape)
-    << "The size of output array is not equal to "
-    << "the size of compressed array";
-  return true;
-}
-
-inline bool Quantize2BitType(const nnvm::NodeAttrs& attrs,
-                             std::vector<int> *in_attrs,
-                             std::vector<int> *out_attrs) {
-  // 0. input array
-  // 1. residual array
-  // 2. compressed array
-  CHECK_EQ(in_attrs->size(), 3U);
-  // check input
-  CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)
-    << "`quantize_2bit_` only supports float32 input for now";
-  CHECK_EQ((*in_attrs)[1], mshadow::kFloat32)
-    << "`quantize_2bit_` only supports float32 input for now";
-  CHECK_EQ((*in_attrs)[2], mshadow::kFloat32)
-    << "`quantize_2bit_` only supports float32 input for now";
-  return true;
-}
+void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs, const float threshold);
 
 struct dequantize_2bit {
   // Decompress
@@ -258,60 +137,8 @@ inline void Dequantize2BitImpl(mshadow::Stream<cpu>* s, const std::vector<TBlob>
   Dequantize2BitKernelLaunch(s, inputs, threshold);
 }
 
-#ifndef __CUDACC__
 void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<TBlob>& inputs,
                   const float threshold);
-#else
-template<typename xpu>
-inline void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                             const float threshold) {
-  Dequantize2BitKernelLaunch(s, inputs, threshold);
-}
-#endif
-
-template<typename xpu>
-void Dequantize2BitCompute(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<TBlob>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<TBlob>& outputs) {
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TwoBitParam& param = nnvm::get<TwoBitParam>(attrs.parsed);
-  Dequantize2BitImpl(s, inputs, param.threshold);
-}
-
-inline bool Dequantize2BitShape(const nnvm::NodeAttrs& attrs,
-                                std::vector<TShape> *in_attrs,
-                                std::vector<TShape> *out_attrs) {
-  // 0. compressed array
-  // 1. original array
-  CHECK_EQ(in_attrs->size(), 2U);
-  // No output
-  CHECK_EQ(out_attrs->size(), 0U);
-  // check input
-  CHECK(!shape_is_none(in_attrs->at(0)));
-  CHECK(!shape_is_none(in_attrs->at(1)));
-  // TODO(huilgolr) check
-  CHECK_LE(in_attrs->at(1).Size(),
-           in_attrs->at(0).Size()*16)
-    << "The shape of the second input array are "
-    << "not equal to the original array.";
-  return true;
-}
-
-inline bool Dequantize2BitType(const nnvm::NodeAttrs& attrs,
-                               std::vector<int> *in_attrs,
-                               std::vector<int> *out_attrs) {
-  // 0. compressed array
-  // 1. original array
-  CHECK_EQ(in_attrs->size(), 2U);
-  // check input
-  CHECK_EQ((*in_attrs)[0], mshadow::kFloat32)
-    << "`dequantize_2bit_` only supports float32 input for now";
-  CHECK_EQ((*in_attrs)[1], mshadow::kFloat32)
-    << "`dequantize_2bit_` only supports float32 input for now";
-  return true;
-}
 
 }  // namespace op
 }  // namespace mxnet

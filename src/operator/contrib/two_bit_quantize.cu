@@ -27,14 +27,15 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_contrib_quantize_2bit)
-.set_attr<FCompute>("FCompute<gpu>", Quantize2BitCompute<gpu>);
+void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
+                             const float threshold) {
+  Quantize2BitKernelLaunch(s, inputs, threshold);
+}
 
-NNVM_REGISTER_OP(_contrib_dequantize_2bit)
-.set_attr<FCompute>("FCompute<gpu>", Dequantize2BitCompute<gpu>);
-
-NNVM_REGISTER_OP(_contrib_create_2bit)
-.set_attr<FCompute>("FCompute<gpu>", Create2BitArrayCompute<gpu>);
+void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
+                               const float threshold) {
+  Dequantize2BitKernelLaunch(s, inputs, threshold);
+}
 
 }  // namespace op
 }  // namespace mxnet
