@@ -1374,8 +1374,8 @@ def test_sparse_nd_zeros_like():
     check_sparse_nd_zeros_like('row_sparse', shape)
     check_sparse_nd_zeros_like('csr', shape)
 
-def test_sparse_sum_axis():
-    def test_variations():
+def test_sparse_axis_operations():
+    def test_variations(func_name):
         dim0 = 30
         dim1 = 100
         axes = [0, 1]
@@ -1385,21 +1385,23 @@ def test_sparse_sum_axis():
             csr_array = rand_ndarray(shape=shape, stype='csr', density=density)
             dns = csr_array.tostype('default')
             for axis in axes:
-                ret = mx.nd.sum(csr_array, axis=axis)
+                ret = func_name(csr_array, axis=axis)
                 assert ret.stype == 'default'
-                ret_expected = mx.nd.sum(dns, axis=axis)
+                ret_expected = func_name(dns, axis=axis)
                 assert_almost_equal(ret.asnumpy(), ret_expected.asnumpy())
 
-    def test_fallback(axis=0, keepdims=True, exclude=True):
+    def test_fallback(func_name, axis=0, keepdims=True, exclude=True):
         dim0 = 30
         dim1 = 100
         shape = rand_shape_2d(dim0, dim1)
         csr_array = rand_ndarray(shape=shape, stype='csr', density=0.01)
-        ret = mx.nd.sum(csr_array, axis=axis, keepdims=keepdims,
-                        exclude=exclude)
+        ret= func_name(csr_array, axis=axis, keepdims=keepdims,
+                       exclude=exclude)
 
-    test_variations()
-    test_fallback(axis=0, keepdims=True, exclude=True)
+    test_variations(mx.nd.sum)
+    test_fallback(mx.nd.sum, axis=0, keepdims=True, exclude=True)
+    test_variations(mx.nd.mean)
+    test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
 
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':
