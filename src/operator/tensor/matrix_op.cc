@@ -263,8 +263,10 @@ and ``end=(e_1, e_2, ... e_n)`` indices will result in an array with the shape
 The resulting array's *k*-th dimension contains elements
 from the *k*-th dimension of the input array with the open range ``[b_k, e_k)``.
 
-For an input array of non-default storage type(e.g. `csr` or `row_sparse`), it only supports
-slicing on the first dimension.
+The storage type of ``slice`` output depends on storage types of inputs
+
+- slice(csr) = csr
+- otherwise, ``slice`` generates output with default storage
 
 Example::
 

@@ -42,19 +42,6 @@ static typename Container::value_type average(const Container& cont) {
   return avg;
 }
 
-static std::string pretty_num(uint64_t val) {
-  std::string res, s = std::to_string(val);
-  size_t ctr = 0;
-  for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
-    if (ctr && (ctr % 3) == 0) {
-      res += ",";
-    }
-    res.push_back(s[i]);
-  }
-  std::reverse(res.begin(), res.end());
-  return res;
-}
-
 static int GetOMPThreadCount() {
   return omp_get_max_threads() >> 1;
 }
@@ -75,7 +62,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
 
     const size_t test_size = 2 * base;
     std::cout << "====================================" << std::endl
-              << "Data size: " << pretty_num(test_size) << std::endl << std::flush;
+              << "Data size: " << test::pretty_num(test_size) << std::endl << std::flush;
 
     std::unique_ptr<uint8_t> buffer_1(new uint8_t[test_size]), buffer_2(new uint8_t[test_size]);
     uint8_t *src = buffer_1.get(), *dest = buffer_2.get();
@@ -117,19 +104,21 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
       memcpy_times.push_back(memcpy_time);
       omp_copy_times.push_back(omp_copy_time);
 
-      std::cout << "memset time:   " << pretty_num(memcpy_time) << " ns" << std::endl
-                << "omp set time:  " << pretty_num(omp_set_time) << " ns" << std::endl
+      std::cout << "memset time:   " << test::pretty_num(memcpy_time) << " ns" << std::endl
+                << "omp set time:  " << test::pretty_num(omp_set_time) << " ns" << std::endl
                 << std::endl;
-      std::cout << "memcpy time:   " << pretty_num(memcpy_time) << " ns" << std::endl
-                << "omp copy time: " << pretty_num(omp_copy_time) << " ns" << std::endl
+      std::cout << "memcpy time:   " << test::pretty_num(memcpy_time) << " ns" << std::endl
+                << "omp copy time: " << test::pretty_num(omp_copy_time) << " ns" << std::endl
                 << std::endl;
     }
     std::cout << "------------------------------------" << std::endl;
     if (average(memset_times) > average(omp_set_times)) {
-      std::cout << "<< MEMSET SLOWER FOR " << pretty_num(test_size) << " items >>" << std::endl;
+      std::cout << "<< MEMSET SLOWER FOR " << test::pretty_num(test_size)
+                << " items >>" << std::endl;
     }
     if (average(memcpy_times) > average(omp_copy_times)) {
-      std::cout << "<< MEMCPY SLOWER FOR " << pretty_num(test_size) << " items >>" << std::endl;
+      std::cout << "<< MEMCPY SLOWER FOR " << test::pretty_num(test_size)
+                << " items >>" << std::endl;
     }
     if (!pass) {
       GTEST_ASSERT_LE(average(memset_times), average(omp_set_times));
