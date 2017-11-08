@@ -400,7 +400,7 @@ class KVStore {
    * starts with none, used after SetGradientCompression sets the type
    * currently there is no support for unsetting gradient compression
    */
-  Gc* gc_;
+  kvstore::Gc* gc_;
 
 
   /**

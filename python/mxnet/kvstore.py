@@ -398,7 +398,7 @@ class KVStore(object):
 
             compression: str
                 type of low-bit quantization to be used for gradient compression
-                Can only be '2bit' for now.
+                Can only be '2bit' or `none` for now.
                 2bit gradient compression uses 2bit quantization with residual to compress
                 gradients. It works by converts each value in the original gradient to use
                 2 bits, causing size of gradient to be 1/16th of the original gradient
@@ -417,7 +417,7 @@ class KVStore(object):
                 raise ValueError('compression_params requires `compression` to be set')
             elif not isinstance(compression_params['compression'], string_types):
                 raise TypeError('compression must be a string')
-            elif compression_params['compression'] not in ['2bit']:
+            elif compression_params['compression'] not in ['none','2bit']:
                 raise ValueError('Unsupported type of compression')
 
             if compression_params['compression'] == '2bit':
