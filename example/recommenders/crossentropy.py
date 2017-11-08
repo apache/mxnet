@@ -51,10 +51,10 @@ class CrossEntropyLoss(mx.operator.CustomOp):
         #  d = number of dimensions
         actually_calculate_loss = False
         if actually_calculate_loss:
-            p = in_data[0].asnumpy()  # shape=(b,d)
-            y = in_data[1].asnumpy()
-            out = y * np.log(p+self.eps) + (1.-y) * np.log((self.eps1) - p)
-            self.assign(out_data[0], req[0], mx.nd.array(out))
+            p = in_data[0]  # shape=(b,d)
+            y = in_data[1]
+            out = y * mx.nd.log(p+self.eps) + (1.-y) * mx.nd.log((self.eps1) - p)
+            self.assign(out_data[0], req[0], out)
         else:
             # Just copy the predictions forward
             self.assign(out_data[0], req[0], in_data[0])
@@ -70,19 +70,19 @@ class CrossEntropyLoss(mx.operator.CustomOp):
         grad = 1/(p-1+y)
         which is more numerically stable
         """
-        p = in_data[0].asnumpy()  # shape=(b,d)
-        y = in_data[1].asnumpy()
+        p = in_data[0]  # shape=(b,d)
+        y = in_data[1]
         grad = -1. / (p - self.eps_1 + y)
-        self.assign(in_grad[0], req[0], mx.nd.array(grad))
+        self.assign(in_grad[0], req[0], grad)
 
 
     def exact_backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         """grad = (y-p)/(p-p^2)
         """
-        p = in_data[0].asnumpy()  # shape=(b,d)
-        y = in_data[1].asnumpy()  # seems right
+        p = in_data[0]  # shape=(b,d)
+        y = in_data[1]  # seems right
         grad = (p - y) / ((p+self.eps) * (self.eps1 - p))
-        self.assign(in_grad[0], req[0], mx.nd.array(grad))
+        self.assign(in_grad[0], req[0], grad)
 
 
 @mx.operator.register("CrossEntropyLoss")
