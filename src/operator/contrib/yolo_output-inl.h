@@ -78,11 +78,11 @@ struct YoloOutputParam : public dmlc::Parameter<YoloOutputParam> {
     DMLC_DECLARE_FIELD(coord_grad_scale).set_default(1.0)
     .describe("Gradient scale for box offsets.");
     DMLC_DECLARE_FIELD(anchors)
-    .set_default({1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52})
+    .set_default({1.08f, 1.19f, 3.42f, 4.41f, 6.63f, 11.38f, 9.42f, 5.11f, 16.62f, 10.52f})
     .describe("Predefined anchor box widths and heights.");
     DMLC_DECLARE_FIELD(warmup_samples).set_default(12800)
     .describe("Number of images to warm up towards averaging position for box "
-    "predictions when start a new training. ");
+    "predictions when starting a new training. ");
     DMLC_DECLARE_FIELD(warmup_grad_scale).set_default(0.01)
     .describe("Gradient scale for non-critical anchors during warm-up stage.");
     DMLC_DECLARE_FIELD(nms_threshold).set_default(0.5f)

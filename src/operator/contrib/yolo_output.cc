@@ -48,6 +48,15 @@ DMLC_REGISTER_PARAMETER(YoloOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_Yolo2Output, YoloOutputProp)
 .describe(R"code(Yolo v2 output layer.  This is a convolutional version as described in YOLO 9000 paper.
+
+  Examples::
+
+    x = mx.nd.random.uniform(shape=(1, 75, 20, 20))
+    y = mx.nd.zeros((1, 1, 5))
+    beta = mx.nd.zeros((1))
+    output = Yolo2Output(x, y, beta, num_class=10)
+    output.shape = (1, 2000, 5)
+
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the YoloOutputOp.")
 .add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
