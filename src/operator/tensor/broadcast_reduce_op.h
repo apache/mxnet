@@ -566,14 +566,15 @@ struct SumCsrKernel<req, 1> {
   }
 };
 
-template <typename xpu>
+/*! \brief If normalize is true, the mean should be computed instead of sum */
+template <typename xpu, bool normalize = false>
 void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpContext& ctx,
                 const NDArray& input, const OpReqType req, NDArray* output) {
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
-  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr) only supports axis 0 or 1";
+  CHECK_EQ(param.axis.ndim(), 1U) << "sum(csr)/mean(csr) only supports axis 0 or 1";
   CHECK(param.axis[0] == 0 || param.axis[0] == 1)
-      << "sum(csr) only support axis 0 or 1";
+      << "sum(csr)/mean(csr) only support axis 0 or 1";
   CHECK(!param.keepdims) << "keepdims not supported for sparse";
   CHECK(!param.exclude) << "exclude not supported for sparse";
   int64_t out_data_size = 0;
@@ -586,6 +587,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
   CHECK_EQ(output->storage_type(), kDefaultStorage);
 
   using namespace mshadow;
+  using namespace mshadow::expr;
   using namespace mxnet_op;
   using namespace csr;
   using nnvm::dim_t;
@@ -630,19 +632,34 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 s, num_threads, output->data().dptr<DType>(), in_indptr, in_idx,
                 in_data, sum.dptr_, residual.dptr_, num_rows, num_cols,
                 seg_len);
+            if (normalize) {
+              mxnet_op::Kernel<
+                  mxnet_op::op_with_req<mshadow::op::div, req_type>,
+                  xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
+                               output->data().dptr<DType>(), DType(num_rows));
+            }
           });
         });
       });
     });
   } else if (1 == param.axis[0]) {
     MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIndPtr), RType, {
-      MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
-          const DType* in_data = input.data().dptr<DType>();
-          Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
-              s, out_data_size, output->data().dptr<DType>(), in_indptr,
-              in_data);
+      MSHADOW_IDX_TYPE_SWITCH(input.aux_type(kIdx), IType, {
+        MSHADOW_TYPE_SWITCH(input.dtype(), DType, {
+          MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            const RType* in_indptr = input.aux_data(kIndPtr).dptr<RType>();
+            const DType* in_data = input.data().dptr<DType>();
+            const IType num_cols = input.shape()[1];
+            Kernel<SumCsrKernel<req_type, 1>, xpu>::Launch(
+                s, out_data_size, output->data().dptr<DType>(), in_indptr,
+                in_data);
+            if (normalize) {
+              mxnet_op::Kernel<
+                  mxnet_op::op_with_req<mshadow::op::div, req_type>,
+                  xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
+                               output->data().dptr<DType>(), DType(num_cols));
+            }
+          });
         });
       });
     });
@@ -661,9 +678,9 @@ void SumOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   const NDArrayStorageType istype = inputs[0].storage_type();
   if (istype == kCSRStorage) {
     CHECK_EQ(inputs[0].shape().ndim(), 2U)
-        << "sum(csr) op only supports 2D ndarray as input";
+        << "sum(csr)/mean(csr) op only supports 2D ndarray as input";
     NDArray output = outputs[0];
-    SumCsrImpl(attrs, s, ctx, inputs[0], req[0], &output);
+    SumCsrImpl<xpu, normalize>(attrs, s, ctx, inputs[0], req[0], &output);
   } else {
     LOG(FATAL) << "Not implemented: "
                << operator_string(attrs, ctx, inputs, req, outputs);

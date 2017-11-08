@@ -676,38 +676,50 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
 /*!
  * \brief If the requested ndarray's shape size is less than
  * the corresponding shared_data_array's shape size and the
- * storage type is default storage, reuse the memory allocation
+ * storage type is shareable, reuse the memory allocation
  * in shared_buffer; otherwise, create a zero ndarray.
+ * Shareable storages include both default storage and row_sparse storage
+ * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
 NDArray ReshapeOrCreate(const std::string& name,
                         const TShape& dest_arg_shape,
                         const int dest_arg_dtype,
                         const NDArrayStorageType dest_arg_stype,
                         const Context& ctx,
-                        std::unordered_map<std::string, NDArray>* shared_buffer) {
-  if (dest_arg_dtype != kDefaultStorage) {
-    return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+                        std::unordered_map<std::string, NDArray>* shared_buffer,
+                        bool enable_row_sparse_sharing) {
+  bool stype_shareable = dest_arg_stype == kDefaultStorage;
+  if (enable_row_sparse_sharing) {
+    stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
   }
   auto it = shared_buffer->find(name);
   if (it != shared_buffer->end()) {
-    if (it->second.shape().Size() >= dest_arg_shape.Size()) {  // memory can be reused
+    // check if size is large enough for sharing
+    bool size_shareable = it->second.shape().Size() >= dest_arg_shape.Size();
+    if (size_shareable && stype_shareable) {  // memory can be reused
       CHECK_EQ(it->second.dtype(), dest_arg_dtype)
-        << "Requested arg array's dtype does not match the reusable ndarray";
-      CHECK_EQ(it->second.storage_type(), kDefaultStorage)
-               << "shared_buffer should only contain NDArrays with default storage type.";
+        << "Requested arg array's dtype does not match that of the reusable ndarray";
+      CHECK_EQ(it->second.storage_type(), dest_arg_stype)
+        << "Requested arg array's stype does not match that of the reusable ndarray";
       return it->second.Reshape(dest_arg_shape);
-    } else {
+    } else if (stype_shareable) {
       LOG(WARNING) << "Bucketing: data " << name << " has a shape " << dest_arg_shape
                    << ", which is larger than already allocated shape " << it->second.shape()
                    << ". Need to re-allocate. Consider putting default bucket key to be "
                    << "the bucket taking the largest input for better memory sharing.";
-      // the NDArrays in shared_buffer are guaranteed to be of default storage
+      // size is not large enough, creating a larger one for sharing
+      // the NDArrays in shared_buffer are guaranteed to be of shareable storages
       it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
       return it->second;
-    }  // arg_array.shape().Size() >= arg_shape.Size()
+    } else {
+      // not shareable storage
+      return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+    }
   } else {
     auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
-    shared_buffer->emplace(name, ret);
+    if (stype_shareable) {
+      shared_buffer->emplace(name, ret);
+    }
     return ret;
   }  // if (it != shared_buffer->end())
 }
@@ -745,18 +757,21 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const std::string& arg_name = idx[nid].source->attrs.name;
     // aux_states
     if (mutable_nodes.count(nid)) {
-      if (nullptr != shared_exec && inferred_stype == kDefaultStorage &&
-          shared_exec->aux_state_map().at(arg_name).storage_type() == kDefaultStorage) {
+      if (nullptr != shared_exec) {
         const NDArray& aux_nd = shared_exec->aux_state_map().at(arg_name);
+        CHECK(inferred_stype == kDefaultStorage && aux_nd.storage_type() == kDefaultStorage)
+          << "Non-default storage type detected when creating auxilliary NDArray. The allocated "
+          << "memory of shared_exec.aux_array cannot be resued for argument: "
+          << arg_name << " for the current executor";
         CHECK_EQ(inferred_shape, aux_nd.shape())
           << "Inferred shape does not match shared_exec.aux_array's shape."
              " Therefore, the allocated memory for shared_exec.aux_array cannot"
-             " be resued for creating auxilliary NDArray of the argument"
+             " be resued for creating auxilliary NDArray of the argument: "
           << arg_name << " for the current executor";
         CHECK_EQ(inferred_dtype, aux_nd.dtype())
           << "Inferred dtype does not match shared_exec.aux_array's dtype."
              " Therefore, the allocated memory for shared_exec.aux_array cannot"
-             " be resued for creating auxilliary NDArray of the argument"
+             " be resued for creating auxilliary NDArray of the argument: "
           << arg_name << " for the current executor";
         aux_state_vec->emplace_back(aux_nd);
       } else {
@@ -769,10 +784,21 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     } else {  // in_args and grad for in_args
       if (shared_arg_names.count(arg_name)) {  // model parameter
         // model parameter
-        if (nullptr != shared_exec && inferred_stype == kDefaultStorage &&
-            shared_exec->in_arg_map().at(arg_name).storage_type() == kDefaultStorage) {
-          // try to reuse memory from shared_exec
+        if (nullptr != shared_exec) {
           const NDArray& in_arg_nd = shared_exec->in_arg_map().at(arg_name);
+          auto arg_nd_stype = in_arg_nd.storage_type();
+          // for model parameter, both default storage and row_sparse storage can be shared
+          bool shareable_arg_stype = inferred_stype == kDefaultStorage ||
+                                     inferred_stype == kRowSparseStorage;
+          // try to reuse memory from shared_exec
+          CHECK(shareable_arg_stype) << "Inferred storage type "
+            << common::stype_string(inferred_stype)
+            << " does not support memory sharing with shared_exec.arg_array";
+          CHECK_EQ(inferred_stype, arg_nd_stype)
+            << "Inferred stype does not match shared_exec.arg_array's stype"
+               " Therefore, the allocated memory for shared_exec.arg_array cannot"
+               " be resued for creating NDArray of the argument"
+            << arg_name << " for the current executor";
           CHECK_EQ(inferred_shape, in_arg_nd.shape())
             << "Inferred shape does not match shared_exec.arg_array's shape"
                " Therefore, the allocated memory for shared_exec.arg_array cannot"
@@ -801,26 +827,30 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
             // try to reuse memory from shared_exec
             arg_grad_vec->emplace_back(shared_exec->arg_grad_map().at(arg_name));
           } else {
+            // no need to reuse memory from shared_exec for gradient of non-default storage
             EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
                              inferred_dtype, arg_grad_vec);
           }
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }
       } else {  // !shared_arg_names.count(arg_name)
-        // model parameter
+        // model parameter, row_sparse ndarray sharing enabled
+        bool enable_row_sparse_sharing = true;
         in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
                                                  inferred_stype, in_arg_ctxes[arg_top],
-                                                 shared_buffer));
-        // gradient for model parameter
+                                                 shared_buffer, enable_row_sparse_sharing));
+        // gradient for model parameter, row_sparse ndarray sharing disabled
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();
         } else {
           auto grad_oid = grad_store_.size() + num_forward_outputs_;
           auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
           auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
+          bool enable_row_sparse_sharing = false;
           arg_grad_vec->emplace_back(ReshapeOrCreate("grad of " + arg_name, inferred_shape,
                                                      inferred_dtype, grad_stype,
-                                                     arg_grad_ctxes[arg_top], shared_buffer));
+                                                     arg_grad_ctxes[arg_top], shared_buffer,
+                                                     enable_row_sparse_sharing));
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }  // if (kNullOp == grad_req_types[arg_top])
       }  // if (shared_arg_names.count(arg_name))

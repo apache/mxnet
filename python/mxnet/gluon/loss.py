@@ -138,7 +138,7 @@ class L2Loss(Loss):
 class L1Loss(Loss):
     r"""Calculates the mean absolute error between `pred` and `label`.
 
-    .. math:: L = \frac{1}{2} \sum_i \vert {pred}_i - {label}_i \vert.
+    .. math:: L = \sum_i \vert {pred}_i - {label}_i \vert.
 
     `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.

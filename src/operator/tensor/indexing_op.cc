@@ -95,6 +95,77 @@ Examples::
 .add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_contrib_SparseEmbedding)
+.describe(R"code(Maps integer indices to vector representations (embeddings).
+
+This operator maps words to real-valued vectors in a high-dimensional space,
+called word embeddings. These embeddings can capture semantic and syntactic properties of the words.
+For example, it has been noted that in the learned embedding spaces, similar words tend
+to be close to each other and dissimilar words far apart.
+
+For an input array of shape (d1, ..., dK),
+the shape of an output array is (d1, ..., dK, output_dim).
+All the input values should be integers in the range [0, input_dim).
+
+If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
+(ip0, op0).
+
+The storage type of weight must be `row_sparse`, and the gradient of the weight will be of
+`row_sparse` storage type, too.
+
+.. Note::
+
+    `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
+    The `row_sparse` weight cannot be used in a `BucketingModule`.
+    The operator is only available on CPU.
+
+Examples::
+
+  input_dim = 4
+  output_dim = 5
+
+  // Each row in weight matrix y represents a word. So, y = (w0,w1,w2,w3)
+  y = [[  0.,   1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.,   9.],
+       [ 10.,  11.,  12.,  13.,  14.],
+       [ 15.,  16.,  17.,  18.,  19.]]
+
+  // Input array x represents n-grams(2-gram). So, x = [(w1,w3), (w0,w2)]
+  x = [[ 1.,  3.],
+       [ 0.,  2.]]
+
+  // Mapped input x to its vector representation y.
+  SparseEmbedding(x, y, 4, 5) = [[[  5.,   6.,   7.,   8.,   9.],
+                                 [ 15.,  16.,  17.,  18.,  19.]],
+
+                                [[  0.,   1.,   2.,   3.,   4.],
+                                 [ 10.,  11.,  12.,  13.,  14.]]]
+
+)code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<EmbeddingParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "weight"};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape)
+.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
+                               {n->inputs[0]}, n->attrs.dict);
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array to the embedding operator.")
+.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
+.add_arguments(EmbeddingParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_backward_Embedding)
 .set_num_inputs(2)
 .set_num_outputs(2)
@@ -104,6 +175,17 @@ NNVM_REGISTER_OP(_backward_Embedding)
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
+
+NNVM_REGISTER_OP(_backward_SparseEmbedding)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpBackwardStorageType)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
 .describe(R"code(Takes elements from an input array along the given axis.
