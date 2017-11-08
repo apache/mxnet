@@ -35,7 +35,8 @@ def dmlc_opts(opts):
             '--num-servers', str(opts.num_servers),
             '--cluster', opts.launcher,
             '--host-file', opts.hostfile,
-            '--sync-dst-dir', opts.sync_dst_dir]
+            '--sync-dst-dir', opts.sync_dst_dir,
+            '--pass-env', opts.pass_env]
     args += opts.command;
     try:
         from dmlc_tracker import opts
@@ -64,6 +65,9 @@ def main():
     parser.add_argument('--launcher', type=str, default='ssh',
                         choices = ['local', 'ssh', 'mpi', 'sge', 'yarn'],
                         help = 'the launcher to use')
+    parser.add_argument('--pass-env', type=str, default='',
+                        help = 'given a comma separated list of environment \
+                        variables, passes their values while launching job')
     parser.add_argument('command', nargs='+',
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
