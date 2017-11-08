@@ -18,9 +18,10 @@
 import os, gzip
 import sys
 import mxnet as mx
+import numpy as np
 
 class DummyIter(mx.io.DataIter):
-    "A dummy iterator that always return the same batch, used for speed testing"
+    "A dummy iterator that always returns the same batch, used for speed testing"
     def __init__(self, real_iter):
         super(DummyIter, self).__init__()
         self.real_iter = real_iter
@@ -89,3 +90,93 @@ def get_movielens_iter(filename, batch_size, dummy_iter):
                                    batch_size=batch_size, shuffle=True)
     iter_train = DummyIter(iter_train) if dummy_iter else iter_train
     return mx.io.PrefetchingIter(iter_train)
+
+class Dictionary(object):
+    def __init__(self):
+        self.word2idx = {}
+        self.idx2word = []
+
+    def add_word(self, word):
+        if word not in self.word2idx:
+            self.idx2word.append(word)
+            self.word2idx[word] = len(self.idx2word) - 1
+        return self.word2idx[word]
+
+    def __len__(self):
+        return len(self.idx2word)
+
+
+class Corpus(object):
+    def __init__(self, path):
+        self.dictionary = Dictionary()
+        self.train = self.tokenize(path + 'train.txt')
+        self.valid = self.tokenize(path + 'valid.txt')
+        self.test = self.tokenize(path + 'test.txt')
+
+    def tokenize(self, path):
+        """Tokenizes a text file."""
+        assert os.path.exists(path)
+        # Add words to the dictionary
+        with open(path, 'r') as f:
+            tokens = 0
+            for line in f:
+                words = line.split() + ['<eos>']
+                tokens += len(words)
+                for word in words:
+                    self.dictionary.add_word(word)
+
+        # Tokenize file content
+        with open(path, 'r') as f:
+            ids = np.zeros((tokens,), dtype='int32')
+            token = 0
+            for line in f:
+                words = line.split() + ['<eos>']
+                for word in words:
+                    ids[token] = self.dictionary.word2idx[word]
+                    token += 1
+
+        return mx.nd.array(ids, dtype='int32')
+
+def batchify(data, batch_size):
+    """Reshape data into (num_example, batch_size)"""
+    nbatch = data.shape[0] // batch_size
+    data = data[:nbatch * batch_size]
+    data = data.reshape((batch_size, nbatch)).T
+    return data
+
+class CorpusIter(mx.io.DataIter):
+    "An iterator that returns the a batch of sequence each time"
+    def __init__(self, source, batch_size, bptt):
+        super(CorpusIter, self).__init__()
+        self.batch_size = batch_size
+        self.provide_data = [('data', (batch_size, bptt))]
+        self.provide_label = [('label', (batch_size, bptt))]
+        self._index = 0
+        self._bptt = bptt
+        self._source = batchify(source, batch_size)
+
+    def iter_next(self):
+        i = self._index
+        if i+self._bptt > self._source.shape[0] - 1:
+            return False
+        self._next_data = self._source[i:i+self._bptt]
+        self._next_label = self._source[i+1:i+1+self._bptt]
+        self._index += self._bptt
+        return True
+
+    def next(self):
+        if self.iter_next():
+            return mx.io.DataBatch(data=self.getdata(), label=self.getlabel())
+        else:
+            raise StopIteration
+
+    def reset(self):
+        self._index = 0
+        self._next_data = None
+        self._next_label = None
+
+    def getdata(self):
+        return [self._next_data.T]
+
+    def getlabel(self):
+        return [self._next_label.T]
