@@ -132,6 +132,12 @@ function test_plus()
   scalar_large = Float16(1e4)
   @test reldiff(t6 + scalar_small, copy(a6 .+ scalar_small)) < 1e-1
   @test reldiff(t6 + scalar_large, copy(a6 .+ scalar_large)) < 1e-1
+
+  let x = mx.NDArray([1 2; 3 4]), y = mx.NDArray([1 1; 1 1])
+    @test copy(42 .+ x) == [43 44; 45 46]
+    @test copy(x .+ 42) == [43 44; 45 46]
+    @test copy(0 .+ x .+ y .+ 41) == [43 44; 45 46]
+  end
 end
 
 function test_minus()

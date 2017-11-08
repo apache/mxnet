@@ -541,11 +541,11 @@ macro inplace(stmt)
 end
 
 """
-    add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
+    add_to!(dst::NDArray, args::NDArrayOrReal...)
 
 Add a bunch of arguments into `dst`. Inplace updating.
 """
-function add_to!(dst :: NDArray, args :: Union{Real, NDArray}...)
+function add_to!(dst::NDArray, args::NDArrayOrReal...)
   @assert dst.writable
   for arg in args
     if isa(arg, Real)
@@ -567,17 +567,18 @@ Summation. Multiple arguments of either scalar or `NDArray` could be
 added together. Note at least the first or second argument needs to be an
 `NDArray` to avoid ambiguity of built-in summation.
 """
-+(x::NDArray, ys::NDArrayOrReal...) = add_to!(copy(x, context(x)), ys...)
++(x::NDArray, ys::NDArrayOrReal...)          = add_to!(copy(x, context(x)), ys...)
++(x::Real, y::NDArray, zs::NDArrayOrReal...) = add_to!(copy(y, context(y)), x, zs...)
 
 broadcast_(::typeof(+), x::NDArray, y::NDArrayOrReal) = x + y
 broadcast_(::typeof(+), x::Real, y::NDArray)          = x + y
 
 """
-    sub_from!(dst :: NDArray, args :: Union{Real, NDArray}...)
+    sub_from!(dst::NDArray, args::NDArrayOrReal...)
 
 Subtract a bunch of arguments from `dst`. Inplace updating.
 """
-function sub_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+function sub_from!(dst::NDArray, arg::NDArrayOrReal)
   @assert dst.writable
   if isa(arg, Real)
     _minus_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
@@ -604,12 +605,12 @@ broadcast_(::typeof(-), x::NDArray, y::NDArrayOrReal) = x - y
 broadcast_(::typeof(-), x::Real, y::NDArray)          = x - y
 
 """
-    mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
+    mul_to!(dst::NDArray, arg::NDArrayOrReal)
 
 Elementwise multiplication into `dst` of either a scalar or an `NDArray` of the same shape.
 Inplace updating.
 """
-function mul_to!(dst :: NDArray, arg :: Union{Real, NDArray})
+function mul_to!(dst::NDArray, arg::NDArrayOrReal)
   @assert dst.writable
   if isa(arg, Real)
     _mul_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
@@ -644,11 +645,11 @@ function *(x::NDArray, y::NDArray)
 end
 
 """
-    div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+    div_from!(dst::NDArray, arg::NDArrayOrReal)
 
 Elementwise divide a scalar or an `NDArray` of the same shape from `dst`. Inplace updating.
 """
-function div_from!(dst :: NDArray, arg :: Union{Real, NDArray})
+function div_from!(dst::NDArray, arg::NDArrayOrReal)
   @assert dst.writable
   if isa(arg, Real)
     _div_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
