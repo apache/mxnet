@@ -19,17 +19,21 @@
 
 /*!
  * \file gc.cu
- * \brief for gpu
+ * \brief
  */
 
 #include <mxnet/gc.h>
 
-void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                      const float threshold) {
-  Quantize2BitKernelLaunch(s, inputs, threshold);
-}
+namespace mxnet{
+  namespace kvstore{
+    void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
+                          const float threshold) {
+      Quantize2BitKernelLaunch(s, inputs, threshold);
+    }
 
-void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                        const float threshold) {
-  Dequantize2BitKernelLaunch(s, inputs, threshold);
+    void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
+                            const float threshold) {
+      Dequantize2BitKernelLaunch(s, inputs, threshold);
+    }
+  }
 }
