@@ -178,10 +178,8 @@ class RandomSampleCrop(object):
                 # calculate iou
                 overlap = jaccard_numpy(label[:, 1:5], rect)
 
-                # check min and max iou constraint TODO(zhreshold): this is disabled?
+                # check min and max iou constraint? if not try again
                 if overlap.min() < min_iou and max_iou < overlap.max():
-                    print("Possible?????")
-                    raise RuntimeError("ATTENTION.")
                     continue
 
                 # crop
@@ -207,7 +205,7 @@ class RandomSampleCrop(object):
                 current_label[:, 1:3] = np.maximum(current_label[:, 1:3], rect[:2])
                 # adjust to crop
                 current_label[:, 1:3] -= rect[:2]
-                current_label[:, 3:5] = np.minimum(current_label[:, 1:3], rect[2:])
+                current_label[:, 3:5] = np.minimum(current_label[:, 3:5], rect[2:])
                 current_label[:, 3:5] -= rect[:2]
 
                 return current_image, current_label
@@ -253,15 +251,26 @@ class SSDAugmentation(object):
     def __init__(self, data_shape, mean_pixel=[123, 117, 104], std_pixel=[58, 57, 58]):
         self._augments = Compose([
             Cast(),
-            # ToAbsoluteCoords(),
-            # Expand(mean_pixel),
-            # RandomSampleCrop(),
-            # ToPercentCoords(),
-            # image.det.DetRandomCropAug(0.3, (0.5, 2), (0.3, 1.0)),
-            # image.det.DetRandomPadAug((0.5, 2), (1.0, 3.0)),
-            # image.det.DetHorizontalFlipAug(0.5),
+            ToAbsoluteCoords(),
+            Expand(mean_pixel),
+            RandomSampleCrop(),
+            ToPercentCoords(),
+            image.det.DetHorizontalFlipAug(0.5),
             ForceResize(data_shape),
-            # image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
+            image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
+            Transpose(),
+        ])
+
+    def __call__(self, src, label):
+        # print(self._augments(src, label)[1])
+        return self._augments(src, label)
+
+class SSDValid(object):
+    def __init__(self, data_shape, mean_pixel=[123, 117, 104], std_pixel=[58, 57, 58]):
+        self._augments = Compose([
+            Cast(),
+            ForceResize(data_shape),
+            image.det.DetBorrowAug(image.ColorNormalizeAug(mean_pixel, std_pixel)),
             Transpose(),
         ])
 

@@ -47,8 +47,8 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
     if dataset == 'voc':
         # dataset
         num_class = 20
-        t = transform.SSDAugmentation2(data_shape)
-        t2 = transform.SSDAugmentation(data_shape)
+        t = transform.SSDAugmentation(data_shape)
+        t2 = transform.SSDValid(data_shape)
         train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'trainval'), (2012, 'trainval')], transform=t)
         # train_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'train')], transform=transform)
         val_dataset = VOCDetection('./data/VOCdevkit', [(2007, 'test')], transform=t2)
@@ -71,14 +71,21 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
 
     # logging.debug(str(val_dataset))
     # for data in train_data:
-    #     pass
-    # raise
-    #     print(data[0].shape, data[1].shape, type(data[0]), type(data[1]))
-        # import cv2
-        # import numpy as np
-        # img = data[0][0].asnumpy()[:, :, (2, 1, 0)].astype('uint8')
-        # cv2.imshow('debug', img)
-        # cv2.waitKey()
+    #     import cv2
+    #     import numpy as np
+    #     for i in range(data[0].shape[0]):
+    #         img = data[0][i].asnumpy().transpose((1, 2, 0))[:, :, (2, 1, 0)].astype('uint8')
+    #         w, h, _ =  img.shape
+    #         label = data[1][i].asnumpy()
+    #         canvas = np.asarray(img.copy())
+    #         for j in range(label.shape[0]):
+    #             if label[j, 0] < 0:
+    #                 break
+    #             pt1 = (int(label[j, 1] * w), int(label[j, 2] * h))
+    #             pt2 = (int(label[j, 3] * w), int(label[j, 4] * w))
+    #             cv2.rectangle(canvas, pt1, pt2, (255, 0, 0), 2)
+    #         cv2.imshow('debug', canvas)
+    #         cv2.waitKey()
 
 
 
@@ -169,17 +176,17 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
                             cls_targets, box_targets, box_masks = target_generator(z, y)
                             valid_cls = nd.sum(cls_targets >= 0, axis=0, exclude=True)
                             valid_cls = nd.maximum(valid_cls, nd.ones_like(valid_cls))
-                            # valid_box = nd.sum(box_masks > 0, axis=0, exclude=True)
+                            valid_box = nd.sum(box_masks > 0, axis=0, exclude=True)
                         # super_print(y, cls_targets, box_targets)
                         # raise
                         loss1 = cls_loss(z[0], cls_targets)
-                        valid_cls1 = nd.sum(valid_cls).asscalar()
+                        # valid_cls1 = nd.sum(valid_cls).asscalar()
                         # print(valid_cls1)
                         # loss1 = loss1 * cls_targets.shape[1] / valid_cls
-                        loss1 = loss1 / valid_cls1
+                        loss1 = loss1 / valid_cls
                         loss2 = box_loss(z[1] * box_masks, box_targets)
                         # loss2 = loss2 * box_masks.shape[1] / valid_cls
-                        loss2 = loss2 / valid_cls1
+                        loss2 = loss2 / valid_box
                         L = loss1 + loss2
                         # L = loss1
                         Ls.append(L)
