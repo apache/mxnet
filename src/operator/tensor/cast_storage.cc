@@ -30,6 +30,7 @@
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_MKLDNN == 1
 static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   switch(dtype) {
     case mshadow::kFloat32:
@@ -72,6 +73,7 @@ void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArr
   net.push_back(mkldnn::reorder(*src.GetMKLDNNData(), *dst.GetMKLDNNData()));
   mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
 }
+#endif
 
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)
