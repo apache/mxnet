@@ -689,6 +689,21 @@ broadcast_(::typeof(/), x::NDArray, y::NDArrayOrReal) =
 broadcast_(::typeof(/), x::Real, y::NDArray) =
   rdiv_from!(x, copy(y, context(y)))
 
+import Base: ^
+
+"""
+    .^(x::NDArray, y::NDArray)
+    .^(x::NDArray, s::Real)
+    .^(s::Real, x::NDArray)
+
+Elementwise power of NDArray.
+"""
+^
+
+broadcast_(::typeof(^), x::NDArray, y::NDArray) = _power(x, y)
+broadcast_(::typeof(^), x::NDArray, s::Real) = _power_scalar(x, scalar=s)
+broadcast_(::typeof(^), s::Real, x::NDArray) = _rpower_scalar(x, scalar=s)
+
 """
     fill!(x, arr::NDArray)
 
@@ -712,7 +727,6 @@ function fill{N}(x, dims::NTuple{N, Integer}, ctx::Context=cpu())
 end
 
 fill(x, dims::Integer...) = fill(x, dims)
-
 
 """
 Manipulating as Julia Arrays

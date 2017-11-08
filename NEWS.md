@@ -26,6 +26,12 @@
      2.0  4.0
     ```
 
+* Elementwise power of `NDArray`. (#293)
+    * `x.^2`
+    * `2.^x`
+    * `x.^y`
+    * where `x` and `y` are `NDArray`s.
+
 ## API Changes
 
 * `reshape` of NDArray shares the same interface with Base (#272).

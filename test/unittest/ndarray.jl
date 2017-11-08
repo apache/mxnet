@@ -380,6 +380,77 @@ function test_clip()
   @test all(clip_down .<= copy(clipped) .<= clip_up)
 end
 
+function test_power()
+  info("NDArray::power")
+  thresh = 1e8
+
+  info("NDArray::power::Int::x.^n")
+  let x = mx.NDArray([1 2; 3 4])
+    @test eltype(x) == Int
+    @test copy(x.^-1)  == [1 0; 0 0]
+    @test copy(x.^0)   == [1 1; 1 1]
+    @test copy(x.^1)   == [1 2; 3 4]
+    @test copy(x.^1.1) == [1 2; 3 4]
+    @test copy(x.^2)   == [1 4; 9 16]
+    @test copy(x.^2.9) == [1 4; 9 16]
+    @test copy(x.^3)   == [1 8; 27 64]
+  end
+
+  info("NDArray::power::Int::n.^x")
+  let x = mx.NDArray([1 2; 3 4])
+    @test eltype(x) == Int
+    @test copy(0.^x)   == [0 0; 0 0]
+    @test copy(1.^x)   == [1 1; 1 1]
+    @test copy(1.1.^x) == [1 1; 1 1]
+    @test copy(2.^x)   == [2 4; 8 16]
+    @test copy(2.9.^x) == [2 4; 8 16]
+    @test copy(3.^x)   == [3 9; 27 81]
+  end
+
+  info("NDArray::power::Int::x.^y")
+  let x = mx.NDArray([1 2; 3 4]), y = mx.NDArray([2 2; 2 2])
+    @test eltype(x) == Int
+    @test eltype(y) == Int
+    @test copy(x.^y) == [1 4; 9 16]
+    @test copy(y.^x) == [2 4; 8 16]
+  end
+
+  info("NDArray::power::Float32::x.^n")
+  let x = mx.NDArray(Float32[1 2; 3 4]), A = Float32[1 2; 3 4]
+    @test eltype(x) == Float32
+    @test copy(x.^0) == Float32[1 1; 1 1]
+    @test copy(x.^1) == Float32[1 2; 3 4]
+    @test copy(x.^2) == Float32[1 4; 9 16]
+    @test copy(x.^3) == Float32[1 8; 27 64]
+
+    @test reldiff(copy(x.^-1), A.^-1)   < thresh
+    @test reldiff(copy(x.^1.1), A.^1.1) < thresh
+    @test reldiff(copy(x.^2.9), A.^2.9) < thresh
+  end
+
+  info("NDArray::power::Float32::n.^x")
+  let x = mx.NDArray(Float32[1 2; 3 4]), A = Float32[1 2; 3 4]
+    @test eltype(x) == Float32
+    @test copy(0.^x) == Float32[0 0; 0 0]
+    @test copy(1.^x) == Float32[1 1; 1 1]
+    @test copy(2.^x) == Float32[2 4; 8 16]
+    @test copy(3.^x) == Float32[3 9; 27 81]
+
+    @test reldiff(copy(1.1.^x), 1.1.^A) < thresh
+    @test reldiff(copy(2.9.^x), 2.9.^A) < thresh
+  end
+
+  info("NDArray::power::Float32::x.^y")
+  let x = mx.NDArray(Float32[1 2; 3 4]), y = mx.NDArray(Float32[2 2; 2 2])
+    @test eltype(x) == Float32
+    @test eltype(y) == Float32
+    @test copy(x.^y) == Float32[1 4; 9 16]
+    @test copy(y.^x) == Float32[2 4; 8 16]
+  end
+
+  # TODO: Float64: wait for https://github.com/apache/incubator-mxnet/pull/8012
+end # function test_power
+
 function test_sqrt()
   dims = rand_dims()
   info("NDArray::sqrt::dims = $dims")
@@ -599,6 +670,7 @@ end
   test_gd()
   test_saveload()
   test_clip()
+  test_power()
   test_sqrt()
   test_eltype()
   test_nd_as_jl()
