@@ -20,6 +20,7 @@
 """Cross-entropy loss layer for MXNet.
 """
 import os
+import time
 
 import numpy as np
 import mxnet as mx
@@ -126,5 +127,15 @@ if __name__ == "__main__":
         out = e.outputs[0].asnumpy()
         if np.abs(out).max() > 1e20:
             raise ValueError("output too high!")
-    print("Done with test")
 
+    print("performance test")
+    sz = (6,4)
+    d = mx.nd.array(rand.uniform(0.01,0.99,sz))
+    l = mx.nd.array(rand.randint(0,2,sz))
+    e = net.bind(ctx=mx.cpu(), args={'data':d, 'labs':l})
+    tic = time.time()
+    for i in range(5000):
+        e.forward()
+        e.outputs[0].wait_to_read()
+    print("5000 tests costs time: %f s" % (time.time()-tic))
+    print("Done with test")
