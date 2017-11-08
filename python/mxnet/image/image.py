@@ -867,7 +867,7 @@ class RandomGrayAug(Augmenter):
     def __call__(self, src):
         """Augmenter body"""
         if random.random() < self.p:
-            src = nd.dot(src, self.mat.get(src.contex))
+            src = nd.dot(src, self.mat.get(src.context))
         return src
 
 class HorizontalFlipAug(Augmenter):
@@ -1237,12 +1237,18 @@ class ImageIter(io.DataIter):
                 header, img = recordio.unpack(s)
                 return header.label, img
 
-    def next(self):
+    def next_batch(self, data_batch=None):
         """Returns the next batch of data."""
         batch_size = self.batch_size
         c, h, w = self.data_shape
-        batch_data = nd.empty((batch_size, c, h, w))
-        batch_label = nd.empty(self.provide_label[0][1])
+        if data_batch is None:
+            batch_data = nd.empty((batch_size, c, h, w))
+            batch_label = nd.empty(self.provide_label[0][1])
+        else:
+            batch_data = data_batch.data[0]
+            batch_label = data_batch.label[0]
+        assert batch_data.shape == (batch_size, c, h, w), "batch_data shape mismatch"
+        assert batch_label.shape == self.provide_label[0][1], "batch_label shape mismatch"
         i = 0
         try:
             while i < batch_size:
@@ -1273,6 +1279,9 @@ class ImageIter(io.DataIter):
                     batch_label[i:] = self.pre_batch_label[i:]
 
         return io.DataBatch([batch_data], [batch_label], batch_size - i)
+
+    def next(self):
+        return self.next_batch()
 
     def check_data_shape(self, data_shape):
         """Checks if the input data shape is valid"""
@@ -1361,10 +1370,11 @@ class PrefetchThreadIter(io.DataIter):
         self.data_iter = data_iter
         self.batch_size = self.provide_data[0][1][0]
         self.queue = Queue.Queue(capacity)
-        self.data_reset = threading.Condition()
+        self.free_queue = Queue.Queue()
+        self.reset_begin = threading.Event()
+        self.reset_end = threading.Event()
 
         self.exit = False
-        self.iter_reset = False
         self.iter_complete = False
         self.current_batch = None
         def prefetch_func():
@@ -1372,21 +1382,26 @@ class PrefetchThreadIter(io.DataIter):
             while True:
                 if self.exit:
                     break
-                if self.iter_reset:
-                    self.iter_reset = False
+                if self.reset_begin.is_set():
+                    self.reset_begin.clear()
                     self.data_iter.reset()
-                    while True:
-                        try:
-                            self.queue.get_nowait()
-                        except Queue.Empty:
-                            break
+                    self.__clear_queue()
+                    # notify reset over
+                    self.reset_end.set()
                 try:
-                    next_data = self.data_iter.next()
+                    # get free data
+                    try:
+                        free_data = self.free_queue.get_nowait()
+                    except Queue.Empty:
+                        batch_data = nd.empty(self.provide_data[0][1])
+                        batch_label = nd.empty(self.provide_label[0][1])
+                        free_data = io.DataBatch([batch_data], [batch_label])
+                    next_data = self.data_iter.next_batch(free_data)
                     self.queue.put(next_data, block=True)
                 except StopIteration:
                     self.queue.put(PrefetchDataFlag.ITER_COMPLETE, block=True)
-                    with self.data_reset:
-                        self.data_reset.wait()
+                    # wait for new epoch
+                    self.reset_begin.wait()
 
         self.prefetch_thread = threading.Thread(target=prefetch_func, args=[])
         self.prefetch_thread.setDaemon(True)
@@ -1394,14 +1409,17 @@ class PrefetchThreadIter(io.DataIter):
 
     def __del__(self):
         self.exit = True
+        self.__clear_queue()
+        self.reset_begin.set()
+        self.prefetch_thread.join()
+
+    def __clear_queue(self):
+        """ clear the queue"""
         while True:
             try:
                 self.queue.get_nowait()
             except Queue.Empty:
                 break
-        with self.data_reset:
-            self.data_reset.notify()
-        self.prefetch_thread.join()
 
     @property
     def provide_data(self):
@@ -1412,20 +1430,22 @@ class PrefetchThreadIter(io.DataIter):
         return self.data_iter.provide_label
 
     def reset(self):
-        self.iter_reset = True
-        while True:
-            try:
-                self.queue.get_nowait()
-            except Queue.Empty:
-                break
-        with self.data_reset:
-            self.data_reset.notify()
+        # notify reset begining
+        self.reset_begin.set()
+        self.__clear_queue()
         self.iter_complete = False
+        # wait for reset over
+        self.reset_end.wait()
+        self.reset_end.clear()
 
     def iter_next(self):
         if self.iter_complete:
             return False
         else:
+            # recyle first
+            if self.current_batch is not None:
+                self.free_queue.put_nowait(self.current_batch)
+                self.current_batch = None
             d = self.queue.get(block=True)
             if d == PrefetchDataFlag.ITER_COMPLETE:
                 self.iter_complete = True
