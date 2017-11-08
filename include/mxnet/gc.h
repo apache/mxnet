@@ -34,58 +34,56 @@
 namespace mxnet {
   namespace kvstore {
 
-enum CompressionType {
-  GC_NONE, GC_TWO_BIT
-};
+    enum CompressionType {
+      GC_NONE, GC_TWO_BIT
+    };
 
-class Gc {
-  public:
-    Gc();
+    class Gc {
+    public:
+      Gc();
 
-    virtual ~Gc() {}
+      virtual ~Gc() {}
 
-    void SetParams(const std::string& compression_type, const float threshold);
+      void SetParams(const std::string &compression_type, const float threshold);
 
-    void set_active();
+      void set_active();
 
-    bool get_active();
+      bool get_active();
 
-    bool get_active_type();
+      bool get_active_type();
 
-    void SetTwoBitCompression(const float threshold);
+      void SetTwoBitCompression(const float threshold);
 
-    std::string EncodeParams();
+      std::string EncodeParams();
 
-    void DecodeParams(const std::string& s);
+      void DecodeParams(const std::string &s);
 
-    int GetCompressionFactor();
+      int GetCompressionFactor();
 
-    int64_t GetCompressedSize(const int64_t original_size);
+      int64_t GetCompressedSize(const int64_t original_size);
 
-    void Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
-                  mxnet::NDArray *residual, const int priority);
+      void Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
+                    mxnet::NDArray *residual, const int priority);
 
-    void Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority);
+      void Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority);
 
-private:
-//    void Quantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<mxnet::TBlob>& inputs, const float threshold);
-//    void Quantize2BitImpl(mshadow::Stream<mshadow::cpu>* s, const std::vector<mxnet::TBlob>& inputs, const float threshold);
-//
-//    void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu>* s, const std::vector<mxnet::TBlob>& inputs, const float threshold);
-//    void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu>* s, const std::vector<mxnet::TBlob>& inputs, const float threshold);
-//
-//    template<typename xpu>
-//    void Quantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob>& inputs, const float threshold);
-//    template<typename xpu>
-//    void Dequantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob>& inputs, const float threshold);
+    private:
+      CompressionType type_;
 
-    CompressionType type_;
+      bool active_;
 
-    bool active_;
+      float threshold_ = 0;
 
-    float threshold_ = 0;
+    };
 
-};
+    void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                          const float threshold);
+    void Quantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                          const float threshold);
+    void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                            const float threshold);
+    void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                            const float threshold);
   }
 }
 

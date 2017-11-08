@@ -23,13 +23,12 @@
  * \author Rahul Huilgol
  */
 #include <mxnet/gc.h>
-#include "../operator/mxnet_op.h"
 #include "./gc-inl.h"
 
 namespace mxnet {
   namespace kvstore {
 
-// TODO check if it returns empty between two delims
+    // TODO check if it returns empty between two delims like (a,,b)
     template<typename Out>
     void split(const std::string &s, const char delim, Out result) {
       std::stringstream ss;
@@ -104,22 +103,6 @@ namespace mxnet {
               original_size / bits + 1);
     }
 
-    void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                                     const float threshold) {
-      Quantize2BitKernelLaunch(s, inputs, threshold);
-    }
-
-    void Quantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                          const float threshold);
-
-    void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                                const float threshold) {
-      Dequantize2BitKernelLaunch(s, inputs, threshold);
-    }
-
-    void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                          const float threshold);
-
     void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                       mxnet::NDArray *residual, const int priority) {
       CHECK(from.shape().ndim() != 0)
@@ -191,6 +174,16 @@ namespace mxnet {
       } else {
         LOG(FATAL) << "Unsupported dequantization of type " << type_;
       }
+    }
+
+    void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                                     const float threshold) {
+      Quantize2BitKernelLaunch(s, inputs, threshold);
+    }
+
+    void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
+                                const float threshold) {
+      Dequantize2BitKernelLaunch(s, inputs, threshold);
     }
 
   }

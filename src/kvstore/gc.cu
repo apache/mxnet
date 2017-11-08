@@ -19,6 +19,7 @@
 
 /*!
  * \file gc.cu
+ * \author Rahul Huilgol
  * \brief
  */
 
