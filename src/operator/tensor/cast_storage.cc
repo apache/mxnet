@@ -40,28 +40,19 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   }
 }
 
+static inline int get_type_size(int dtype) {
+  MSHADOW_TYPE_SWITCH(dtype, DType, {return sizeof(DType);});
+  return -1;
+}
+
 void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns) {
   CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), cpu::kDevMask);
   CHECK(src.shape() == dns->shape_);
   CHECK_EQ(src.dtype(), dns->type_flag_);
-
-  mkldnn::memory::dims dims(dns->shape_.ndim());
-  for (size_t i = 0; i < dims.size(); i++)
-    dims[i] = dns->shape_[i];
-  mkldnn::memory::format layout = mkldnn::memory::format::format_undef;
-  switch (dns->shape_.ndim()) {
-    case 1: layout = mkldnn::memory::format::x; break;
-    case 2: layout = mkldnn::memory::format::nc; break;
-    case 4: layout = mkldnn::memory::format::nchw; break;
-    default: LOG(FATAL) << "Unsupported number of dimensions for MKLDNN";
-  }
-  mkldnn::memory::desc data_md({dims}, get_mkldnn_type(src.dtype()), layout);
-  auto cpu_engine = CpuEngine::Instance().get_engine();
-  mkldnn::memory dst_mem(mkldnn::memory::primitive_desc(data_md, cpu_engine), dns->dptr_);
-
-  std::vector<mkldnn::primitive> net;
-  net.push_back(mkldnn::reorder(*src.GetMKLDNNData(), dst_mem));
-  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+  // This converts the source data to the default format and copy the data to
+  // the destination.
+  const TBlob &src_blob = src.data();
+  memcpy(dns->dptr_, src_blob.dptr_, src.shape().Size() * get_type_size(dns->type_flag_));
 }
 
 void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dst) {
