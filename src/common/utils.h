@@ -177,7 +177,7 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
     return;
   }
   if (idx_shape[0] == 0) {
-      return;
+    return;
   }
   if (full_check) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
