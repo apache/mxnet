@@ -123,7 +123,7 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
       (indptr_shape[0] != shape[0] + 1) ||
       (idx_shape[0] != storage_shape[0])) {
      MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
-       auto err = err_cpu.dptr<DType>();
+       DType* err = err_cpu.dptr<DType>();
        *err = kCSRShapeErr;
      });
      return;
@@ -140,9 +140,12 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
           Kernel<csr_indptr_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
             input.aux_data(csr::kIndPtr).dptr<RType>(),
             indptr_shape[0] - 1, idx_shape[0]);
-          Kernel<csr_idx_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
-            input.aux_data(csr::kIdx).dptr<IType>(),
-            input.aux_data(csr::kIndPtr).dptr<RType>(), shape[1]);
+          // no need to check indices if indices are empty
+          if (idx_shape[0] != 0) {
+            Kernel<csr_idx_check, xpu>::Launch(s, indptr_shape[0] - 1, val_xpu.dptr<DType>(),
+              input.aux_data(csr::kIdx).dptr<IType>(),
+              input.aux_data(csr::kIndPtr).dptr<RType>(), shape[1]);
+          }
           mshadow::Copy(err_cpu.get<cpu, 1, DType>(),
                         val_xpu.get<xpu, 1, DType>(s), s);
         });
@@ -168,7 +171,7 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
   const TShape idx_shape = input.aux_shape(rowsparse::kIdx);
   if (idx_shape[0] != input.storage_shape()[0]) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
-      auto err = err_cpu.dptr<DType>();
+      DType* err = err_cpu.dptr<DType>();
       *err = kRSPShapeErr;
     });
     return;
@@ -203,6 +206,10 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
     CheckFormatCSRImpl<xpu>(rctx, input, err_cpu, full_check);
   } else if (stype == kRowSparseStorage) {
     CheckFormatRSPImpl<xpu>(rctx, input, err_cpu, full_check);
+  } else if (stype == kDefaultStorage) {
+    // no-op for default storage
+  } else {
+    LOG(FATAL) << "Unknown storage type " << stype;
   }
 }
 

@@ -460,7 +460,7 @@ class NDArray {
   * \param full_check if `True`, rigorous check, O(N) operations
   *    Otherwise basic check, O(1) operations
   */
-  void CheckFormat(const bool full_check) const;
+  void SyncCheckFormat(const bool full_check) const;
   /*!
    * \brief Slice a NDArray
    * \param begin begin index in first dim (inclusive)

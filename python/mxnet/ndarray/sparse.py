@@ -230,7 +230,7 @@ class BaseSparseNDArray(NDArray):
             If `True`, rigorous check, O(N) operations. Otherwise
             basic check, O(1) operations (default True).
         """
-        check_call(_LIB.MXNDArrayCheckFormat(self.handle, ctypes.c_bool(full_check)))
+        check_call(_LIB.MXNDArraySyncCheckFormat(self.handle, ctypes.c_bool(full_check)))
 
     def _data(self):
         """A deep copy NDArray of the data array associated with the BaseSparseNDArray.

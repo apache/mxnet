@@ -271,10 +271,10 @@ int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
   API_END();
 }
 
-int MXNDArrayCheckFormat(NDArrayHandle handle, const bool full_check) {
+int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-  arr->CheckFormat(full_check);
+  arr->SyncCheckFormat(full_check);
   API_END();
 }
 
