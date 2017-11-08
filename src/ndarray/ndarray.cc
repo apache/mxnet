@@ -435,14 +435,29 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
   // the default storage. If it uses the MKLDNN format, the MKL memory should
   // have been initialized since we are trying to get data from the array.
   CHECK(ptr_->Mkl_mem_ != nullptr);
+  // If the memory descriptor matches, it's easy.
+  MKLDNNStream &stream = MKLDNNStream::Instance();
+  // We need to make sure Mkl_mem_ is always valid as well.
+  stream.RegisterMem(ptr_->Mkl_mem_);
   if (ptr_->Mkl_mem_->get_primitive_desc() == desc) {
-    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
+  }
+
+  mkldnn::memory::primitive_desc _desc = desc;
+  // Now we need to determine if we should reorder the memory.
+  // If both use the default formats, we think we don't need to reshape.
+  // TODO if the memory format isn't the default one, it may not work.
+  auto desc1 = ptr_->Mkl_mem_->get_primitive_desc().desc();
+  auto desc2 = _desc.desc();
+  if (desc1.data.format == GetDefaultFormat(desc1) && 
+      desc2.data.format == GetDefaultFormat(desc2)) {
+    mkldnn_mem_ptr ret(new mkldnn::memory(desc, ptr_->Mkl_mem_->get_data_handle()));
+    stream.RegisterMem(ret);
+    return ret;
   }
   else {
     // TODO we should manage the memory allocation here.
     mkldnn_mem_ptr ret(new mkldnn::memory(desc));
-    MKLDNNStream &stream = MKLDNNStream::Instance();
     stream.RegisterMem(ret);
     stream.RegisterPrim(mkldnn::reorder(*ptr_->Mkl_mem_, *ret));
     return ret;
