@@ -324,8 +324,10 @@ void CastStorageCsrDnsImpl(const OpContext& ctx,
   });
 }
 
+#if MXNET_USE_MKLDNN == 1
 void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns);
 void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dns);
+#endif
 
 template<typename xpu>
 void CastStorageComputeImpl(const OpContext& ctx,
