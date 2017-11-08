@@ -239,11 +239,14 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
     for (size_t i = 0; i < grad_graph_.outputs.size(); ++i) {
       if (curr_grad_req_[i]) g.outputs.emplace_back(grad_graph_.outputs[i]);
     }
+    bwd_input_eid_.clear();
+  }
 
-    const auto& idx = g.indexed_graph();
+  const auto& idx = g.indexed_graph();
+
+  if (bwd_input_eid_.size() != inputs.size()) {
     bwd_input_eid_.clear();
     for (const auto& i : bwd_ograd_dep_) {
-      if (!idx.exist(ograd_entries_[i].node.get())) continue;
       auto eid = idx.entry_id(ograd_entries_[i]);
       bwd_input_eid_.push_back(eid);
     }
@@ -255,9 +258,9 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
       auto eid = idx.entry_id(idx.outputs()[i]);
       bwd_input_eid_.push_back(eid);
     }
+    CHECK_EQ(inputs.size(), bwd_input_eid_.size());
   }
 
-  const auto& idx = g.indexed_graph();
   size_t num_forward_nodes = fwd_graph_.indexed_graph().num_nodes();
   size_t num_forward_entries = fwd_graph_.indexed_graph().num_node_entries();
 

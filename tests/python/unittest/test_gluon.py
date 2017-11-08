@@ -572,6 +572,11 @@ def test_dtype():
     net.initialize()
     net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
 
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
 
 def test_fill_shape_load():
     ctx = mx.context.current_context()
