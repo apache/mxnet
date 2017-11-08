@@ -33,6 +33,17 @@
 #include <mshadow/tensor.h>
 #include "../../src/operator/contrib/two_bit_quantize-inl.h"
 
+// TODO check if it returns empty between two delims
+template<typename Out>
+void split(const std::string &s, const char delim, Out result) {
+  std::stringstream ss;
+  ss.str(s);
+  std::string item;
+  while (std::getline(ss, item, delim)) {
+    *(result++) = item;
+  }
+}
+
 enum CompressionType {
   GC_NONE, GC_TWO_BIT
 };
