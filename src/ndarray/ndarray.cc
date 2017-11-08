@@ -266,6 +266,90 @@ static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims
   return true;
 }
 
+static inline mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc) {
+  if (desc.data.ndims == 1)
+    return desc.data.format;
+  else if (desc.data.ndims == 2) {
+    if (desc.data.format == mkldnn_io)
+      return mkldnn_oi;
+    else
+      return desc.data.format;
+  }
+  else if (desc.data.ndims == 4) {
+    switch (desc.data.format) {
+      case mkldnn_nchw:
+      case mkldnn_nhwc:
+      case mkldnn_chwn:
+      case mkldnn_nChw8c:
+      case mkldnn_nChw16c:
+        return mkldnn_nchw;
+      case mkldnn_oihw:
+      case mkldnn_ihwo:
+      case mkldnn_hwio:
+      case mkldnn_OIhw8i8o:
+      case mkldnn_OIhw16i16o:
+      case mkldnn_OIhw8i16o2i:
+      case mkldnn_OIhw8o16i2o:
+      case mkldnn_OIhw8o8i:
+      case mkldnn_OIhw16o16i:
+      case mkldnn_IOhw16o16i:
+      case mkldnn_Oihw8o:
+      case mkldnn_Oihw16o:
+      case mkldnn_Ohwi8o:
+      case mkldnn_Ohwi16o:
+      case mkldnn_OhIw16o4i:
+        return mkldnn_oihw;
+      default:
+        LOG(FATAL) << "Unknown MKLDNN format for 4 dimensions: " << desc.data.format;
+        return mkldnn_format_undef;
+    }
+  }
+  else if (desc.data.ndims == 5) {
+    switch (desc.data.format) {
+      case mkldnn_goihw:
+      case mkldnn_gOIhw8i8o:
+      case mkldnn_gOIhw16i16o:
+      case mkldnn_gOIhw8i16o2i:
+      case mkldnn_gOIhw8o16i2o:
+      case mkldnn_gOIhw8o8i:
+      case mkldnn_gOIhw16o16i:
+      case mkldnn_gIOhw16o16i:
+      case mkldnn_gOihw8o:
+      case mkldnn_gOihw16o:
+      case mkldnn_gOhwi8o:
+      case mkldnn_gOhwi16o:
+      case mkldnn_gOhIw16o4i:
+        return mkldnn_goihw;
+      default:
+        LOG(FATAL) << "Unknown MKLDNN format for 4 dimensions: " << desc.data.format;
+        return mkldnn_format_undef;
+    }
+  }
+  else {
+    LOG(FATAL) << "Unsupported dimensions: " << desc.data.ndims;
+    return mkldnn_format_undef;
+  }
+}
+
+static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem) {
+  auto format = GetDefaultFormat(mem->get_primitive_desc().desc());
+  if (format == mem->get_primitive_desc().desc().data.format)
+    return mem;
+
+  printf("reorder to default\n");
+  mkldnn::memory::desc desc = mem->get_primitive_desc().desc();
+  desc.data.format = format;
+  mkldnn::memory::primitive_desc pd(desc, mem->get_primitive_desc().get_engine());
+  mkldnn_mem_ptr def_mem(new mkldnn::memory(pd));
+
+  MKLDNNStream &stream = MKLDNNStream::Instance();
+  stream.RegisterMem(def_mem);
+  stream.RegisterPrim(mkldnn::reorder(*mem, *def_mem));
+  // TODO do I have to submit it here?
+  stream.Submit();
+  return def_mem;
+}
+
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // The shape of the array and the one of the MKL memory may mismatch.
   // For example, if the array stores parameters, the MKL memory may store data
@@ -318,6 +402,9 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
   }
+  // If we are getting data from the NDArray, it has to use the default storage
+  // if Mkl_mem_ is null.
+  CHECK_EQ(ptr_->storage_type, kDefaultStorage);
   mkldnn_mem_const_ptr ret(new mkldnn::memory(desc, ptr_->shandle.dptr));
   MKLDNNStream::Instance().RegisterMem(ret);
   return ret;
@@ -366,6 +453,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     LOG(FATAL) << "The NDArray hasn't been initialized";
     return;
   }
+  // TODO if the shape mismatches.
   ptr_->SetMKLMem(shape_, dtype_);
   MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
 }
@@ -404,7 +492,10 @@ void NDArray::SetTBlob() const {
   } else if (stype == kMKLDNNStorage) {
     // TODO we may really need to convert format.
     CHECK_EQ(byte_offset_, 0);
-    ptr_->SetMKLMem(shape_, dtype_);
+    if (ptr_->Mkl_mem_)
+      ptr_->Mkl_mem_ = Reorder2Default(ptr_->Mkl_mem_);
+    else
+      ptr_->SetMKLMem(shape_, dtype_);
     dptr = (char *) ptr_->Mkl_mem_->get_data_handle();
 #endif
   } else {
