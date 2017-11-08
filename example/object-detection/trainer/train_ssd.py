@@ -59,7 +59,7 @@ def train_net(model, dataset, data_shape, batch_size, end_epoch, lr, momentum, w
     train_data = DataLoader(train_dataset, batch_size, True, last_batch='rollover')
     val_data = DataLoader(val_dataset, batch_size, False, last_batch='keep')
 
-    net = model_zoo.get_detection_model(model, pretrained=pretrained, classes=num_class, ctx=ctx)
+    net = model_zoo.get_detection_model(model, pretrained=pretrained, classes=num_class)
     if dev:
         print(net)
 
