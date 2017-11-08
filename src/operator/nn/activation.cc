@@ -141,8 +141,13 @@ inline static bool backward_ActStorageType(const nnvm::NodeAttrs& attrs,
     return true;
   }
 #endif
-  return ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask,
+#if MXNET_USE_CUDNN == 1
+  return ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
       dispatch_mode, in_attrs, out_attrs);
+#else
+  return ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
+      dispatch_mode, in_attrs, out_attrs);
+#endif
 }
 
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
