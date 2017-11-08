@@ -456,7 +456,7 @@ class NDArray {
    */
   void SyncCopyToCPU(void *data, size_t size) const;
   /*!
-  * \brief check whether the matrix format is valid
+  * \brief check whether the NDArray format is valid
   * \param full_check if `True`, rigorous check, O(N) operations
   *    Otherwise basic check, O(1) operations
   */

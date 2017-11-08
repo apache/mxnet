@@ -405,7 +405,7 @@ MXNET_DLL int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                            const int i);
 
 /*!
- * \brief check whether the matrix format is valid
+ * \brief check whether the NDArray format is valid
  * \param full_check if `True`, rigorous check, O(N) operations
  *    Otherwise basic check, O(1) operations
  */
