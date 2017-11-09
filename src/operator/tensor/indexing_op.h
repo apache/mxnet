@@ -44,6 +44,7 @@
 #include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
+#include "../../engine/openmp.h"
 
 namespace mxnet {
 namespace op {
@@ -657,7 +658,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
         // add the final gradients
-        int num_threads = Engine::Get()->num_omp_threads_per_worker();
+        const int num_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
         dim_t segment_len = (nnr + num_threads - 1) / num_threads;
         Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
                                                   ograd.dptr<DType>(), row_length,
