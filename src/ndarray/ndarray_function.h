@@ -23,12 +23,13 @@
  */
 #ifndef MXNET_NDARRAY_NDARRAY_FUNCTION_H_
 #define MXNET_NDARRAY_NDARRAY_FUNCTION_H_
-#include <vector>
+
 #include <dmlc/logging.h>
 #include <mshadow/tensor.h>
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
 #include <mxnet/ndarray.h>
+#include <vector>
 #include "../operator/mshadow_op.h"
 
 namespace mxnet {

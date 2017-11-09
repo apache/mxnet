@@ -42,11 +42,7 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_fullyconn_args;
   test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
-<<<<<<< HEAD
-  runner.RunBidirectional(false, shape, kwargs, 1);
-=======
   runner.RunBidirectional(false, { shape }, kwargs, 1);
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
 }
 
 /*!
@@ -55,13 +51,9 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
 TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   kwargs_t kwargs = basic_fullyconn_args;
   test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
-<<<<<<< HEAD
-  runner.RunBidirectional(false, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
-=======
   runner.RunBidirectional(false,
                           { TShape({10, 10, 10, 10}) },
                           kwargs, 1);  // prime code and cache
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {
@@ -91,13 +83,9 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   test::OperatorRunner<mxnet::op::FullyConnectedProp,
     test::op::LegacyOperatorExecutor<float, float>>
     runner;
-<<<<<<< HEAD
-  runner.RunBidirectional(true, {10, 10, 10, 10}, kwargs, 1);  // prime code and cache
-=======
   runner.RunBidirectional(true,
                           { TShape({10, 10, 10, 10}) },
                           kwargs, 1);  // prime code and cache
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
   std::vector <TShape> shapes;
   if (test::performance_run) {
     shapes = {

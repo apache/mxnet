@@ -23,7 +23,6 @@
  */
 
 // this will be invoked by gcc and compile CPU version
-#include <ps/sarray.h>
 #include "./ndarray_function.h"
 #include "./ndarray_function-inl.h"
 #include "../common/utils.h"

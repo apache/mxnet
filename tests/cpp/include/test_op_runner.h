@@ -43,10 +43,6 @@ template<typename OperatorProp, typename OperatorExecutor>
 class OperatorRunner {
  public:
   typedef typename OperatorExecutor::DataType    DType;
-<<<<<<< HEAD
-  //typedef typename OperatorExecutor::AccRealType AccReal;
-=======
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
 
   /*!
    * \brief Test operator forward pass
@@ -71,11 +67,7 @@ class OperatorRunner {
     isGPU = false;
 #endif
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
-<<<<<<< HEAD
-      test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShape);
-=======
       test::op::createOpAndInfoF<OperatorProp, OperatorExecutor>(kwargs, isGPU, inputShapes);
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
     info.executor_->initForward(*info.prop_, &info.in_type_);
     info.executor_->forward(count);
     return info;
@@ -111,13 +103,8 @@ class OperatorRunner {
     const std::vector<std::pair<std::string, std::string> > &kwargs,
     const size_t count = 1) {
     test::op::OpInfo<OperatorProp, OperatorExecutor> info =
-<<<<<<< HEAD
-      RunGenericOperatorForward(isGPU, inputShape, kwargs, count);
-    if(info.executor_->HasBackward()) {
-=======
       RunGenericOperatorForward(isGPU, inputShapes, kwargs, count);
     if (info.executor_->HasBackward()) {
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
       return RunGenericOperatorBackward(&info, count);
     }
     return info;
@@ -224,11 +211,7 @@ class OperatorRunner {
           CHECK(false) << "Unsupported dimension count: " << (D + 1);
       }
       if (info.executor_) {
-<<<<<<< HEAD
-        if(info.executor_->HasBackward()) {
-=======
         if (info.executor_->HasBackward()) {
->>>>>>> 100eb88add1c5a18185226eebde0664cc313f557
           RunGenericOperatorBackward(&info, count);
         }
         timing += info.executor_->GetTiming();

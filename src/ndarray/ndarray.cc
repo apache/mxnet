@@ -30,6 +30,7 @@
 #include <mxnet/resource.h>
 #include <mxnet/imperative.h>
 #include <mshadow/tensor.h>
+#include "./ndarray_function.h"
 #include "../common/utils.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
@@ -556,6 +557,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
 #endif
   }
 }
+
 
 void CopyFromTo(const NDArray& from, NDArray *to, int priority) {
   CopyFromTo(from, *to, priority);
