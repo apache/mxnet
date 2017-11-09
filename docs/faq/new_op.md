@@ -339,7 +339,7 @@ NNVM_REGISTER_OP(_backward_abs)
 [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
 })
-.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, unary_bwd<mshadow_op::sign> >);
+.set_attr<FCompute>("FCompute<cpu>", BinaryCompute<cpu, backward_grad<mshadow_op::sign> >);
 ```
 
 ### Legacy Operators
