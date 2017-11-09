@@ -20,22 +20,19 @@
 /*!
  * \file gc.cu
  * \author Rahul Huilgol
- * \brief
+ * \brief Implementation for gpu version of code
  */
 
-#include <mxnet/gc.h>
 #include "./gc-inl.h"
 
-namespace mxnet{
-  namespace kvstore{
-    void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                          const float threshold) {
-      Quantize2BitKernelLaunch(s, inputs, threshold);
-    }
-
-    void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs,
-                            const float threshold) {
-      Dequantize2BitKernelLaunch(s, inputs, threshold);
-    }
-  }
+namespace mxnet {
+namespace kvstore {
+void Quantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs, const float threshold) {
+  Quantize2BitKernelLaunch(s, inputs, threshold);
 }
+
+void Dequantize2BitImpl(mshadow::Stream<gpu>* s, const std::vector<TBlob>& inputs, const float threshold) {
+  Dequantize2BitKernelLaunch(s, inputs, threshold);
+}
+} // namespace kvstore
+} // namespace mxnet

@@ -26,65 +26,111 @@
 #ifndef MXNET_KVSTORE_GC_H
 #define MXNET_KVSTORE_GC_H
 #include <string>
-#include <sstream>
-#include <vector>
 #include"./ndarray.h"
-#include "./base.h"
-#include <mshadow/tensor.h>
+
 namespace mxnet {
-  namespace kvstore {
+namespace kvstore {
 
-    enum CompressionType {
-      GC_NONE, GC_TWO_BIT
-    };
+enum CompressionType {
+  GC_NONE, GC_TWO_BIT
+};
 
-    class Gc {
-    public:
-      Gc();
+class Gc {
+public:
+  Gc();
 
-      virtual ~Gc() {}
+  virtual ~Gc() {}
 
-      void SetParams(const std::string &compression_type, const float threshold);
+  /*!
+   * \brief sets parameters for gradient compression
+   * \param compression_type str representing types like 2bit
+   * \param threshold float value used for thresholding gradients
+   */
+  void SetParams(const std::string &compression_type, const float threshold);
 
-      void set_active();
+  /*!
+   * \brief sets gradient compression to active mode
+   * Active mode is when gradients are compressed
+   * Gc is in inactive mode during init of parameters
+   */
+  void set_active();
 
-      bool get_active();
+  /*!
+   * \brief returns boolean whether or not gc is in active mode
+   */
+  bool get_active();
 
-      bool get_active_type();
+  /*!
+   * \brief if gc is in active mode, returns type of compression set
+   * else returns GC_NONE
+   */
+  bool get_active_type();
 
-      void SetTwoBitCompression(const float threshold);
+  void SetTwoBitCompression(const float threshold);
 
-      std::string EncodeParams();
+  /*!
+   * \brief encodes parameters of gc into a string
+   */
+  std::string EncodeParams();
 
-      void DecodeParams(const std::string &s);
+  /*!
+   * \brief decodes parameters of gc from a string and assigns them to member variables
+   */
+  void DecodeParams(const std::string &s);
 
-      int GetCompressionFactor();
+  /*!
+   * \brief returns compression factor, which is the factor by which size of gradient
+   * reduces when using a particular type of compression
+   */
+  int GetCompressionFactor();
 
-      int64_t GetCompressedSize(const int64_t original_size);
+  /*!
+   * \brief returns the size of compressed gradients given an original sized gradient array
+   */
+  int64_t GetCompressedSize(const int64_t original_size);
 
-      void Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
-                    mxnet::NDArray *residual, const int priority);
+  /*!
+  * \brief Issues quantize operation to be scheduled by the engine
+  * Compresses `from` into `to` and accumulates the quantization error
+  * into 'residual', using the quantization of type `type_`
+  * \param from the ndarray containing original data to be quantized
+  * \param to the target ndarray which contains quantized data
+  * \param residual the ndarray which accumulates quantization error
+  * \param priority Priority of the action.
+  */
+  void Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
+                mxnet::NDArray *residual, const int priority);
 
-      void Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority);
+  /*!
+  * \brief Issues dequantize operation to be scheduled by the engine
+  * Decompresses `from` into `to` using current parameters of `type` and `threshold`
+  * \param from the ndarray containing quantized data
+  * \param to the target ndarray which contains final dequantized data
+  * \param priority Priority of the action.
+  */
+  void Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority);
 
-    private:
-      CompressionType type_;
+private:
+  /*!
+   * \brief denotes the type of gradient compression which has been set
+   */
+  CompressionType type_;
 
-      bool active_;
+  /*!
+   * \brief denotes whether gradient compression is active
+   * Value starts with false because we don't want initialization of parameters to be compressed.
+   * That would lead to bad convergence results. Currently after initialization, gc becomes active.
+   */
+  bool active_;
 
-      float threshold_ = 0;
+  /*!
+   * \brief denotes threshold used for quantization and dequantization
+   * Must be a positive value. All positive gradients will be thresholded to `threshold_` and
+   * all negative gradients will be thresholded to -1*`threshold_`
+   */
+  float threshold_ = 0;
 
-    };
-
-    void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                          const float threshold);
-    void Quantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                          const float threshold);
-    void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                            const float threshold);
-    void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                            const float threshold);
-  }
-}
-
-#endif //MXNET_KVSTORE_GC_H
+};
+} // namespace kvstore
+} // namespace mxnet
+#endif // MXNET_KVSTORE_GC_H
