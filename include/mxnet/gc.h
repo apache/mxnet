@@ -49,31 +49,21 @@ public:
   void SetParams(const std::string &compression_type, const float threshold);
 
   /*!
-   * \brief sets gradient compression to active mode
+   * \brief sets gradient compression to given mode
    * Active mode is when gradients are compressed
    * Gc is in inactive mode during init of parameters
    */
-  void set_active();
-
-  /*!
-   * \brief sets gradient compression to inactive mode
-   */
-  void set_inactive();
+  void set_active(bool active);
 
   /*!
    * \brief returns boolean whether or not gc is in active mode
    */
-  bool get_active();
-
-  CompressionType get_type();
+  bool is_active();
 
   /*!
-   * \brief if gc is in active mode, returns type of compression set
-   * else returns GC_NONE
+   * \brief returns type of compression if any
    */
-  bool get_active_type();
-
-  void increment_push(int key);
+  CompressionType get_type();
 
   void SetTwoBitCompression(const float threshold);
 
@@ -138,7 +128,6 @@ private:
    * all negative gradients will be thresholded to -1*`threshold_`
    */
   float threshold_ = 0;
-  std::unordered_map<int, int> num_pushes_;
 };
 } // namespace kvstore
 } // namespace mxnet

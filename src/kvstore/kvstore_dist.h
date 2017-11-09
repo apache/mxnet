@@ -177,9 +177,7 @@ class KVStoreDist : public KVStoreLocal {
     }
     if (get_rank() == 0) {
       // set inactive for inits
-      if (gc_->get_active()) {
-        gc_->set_inactive();
-      }
+      if (gc_->is_active()) gc_->set_active(false);
 
       Push_(keys, values, 0, false);
       // wait until the push is finished
@@ -225,7 +223,7 @@ class KVStoreDist : public KVStoreLocal {
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
-        PSKV& pskv = (gc_->get_active_type() == GC_NONE) ?
+        PSKV& pskv = (gc_->get_type() == GC_NONE) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
 #if MKL_EXPERIMENTAL == 1
@@ -235,7 +233,7 @@ class KVStoreDist : public KVStoreLocal {
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
-        int cmd = (gc_->get_active_type() == GC_NONE) ? kDefaultPushPull : kCompressedPushPull;
+        int cmd = (gc_->get_type() != GC_NONE) ? kCompressedPushPull : kDefaultPushPull;
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
       };
@@ -307,12 +305,11 @@ class KVStoreDist : public KVStoreLocal {
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
 
     // set active for non init pushes
-    if (do_merge && !gc_->get_active()) gc_->set_active();
+    if (do_merge && !gc_->is_active()) gc_->set_active(true);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
-      gc_->increment_push(key);
       const auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
 
@@ -344,8 +341,8 @@ class KVStoreDist : public KVStoreLocal {
           // returns push_pskv if active, else pull_pskv
           // we want inactive gc to send uncompressed gradients, but sharded same as active gc
           // but calculates both push and pull pskv
-          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), gc_->get_active());
-          if (gc_->get_active()) {
+          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), gc_->is_active());
+          if (gc_->is_active()) {
             PushCompressed(key, comm_buf, pskv, priority);
           } else {
             PushDefault(key, comm_buf, pskv, priority);

@@ -151,7 +151,7 @@ private:
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
     comm_->SetGradientCompression(gc_);
-    gc_->set_active();
+    gc_->set_active(true);
   }
 
   virtual void PushImpl(const std::vector<int>& keys,

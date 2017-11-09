@@ -491,7 +491,7 @@ class CommDevice : public Comm {
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
 
-    if (gc_->get_active_type() != GC_NONE) {
+    if (gc_->is_active()) {
       return ReduceCompressed(key, src, priority);
     }
 
