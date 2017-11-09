@@ -19,6 +19,7 @@ import pickle as pkl
 
 from mxnet.ndarray import NDArray
 from mxnet.test_utils import *
+from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 
@@ -104,28 +105,45 @@ def test_sparse_nd_setitem():
 
 
 def test_sparse_nd_slice():
-    def check_sparse_nd_csr_slice(shape):
-        stype = 'csr'
-        A, _ = rand_sparse_ndarray(shape, stype)
-        A2 = A.asnumpy()
-        start = rnd.randint(0, shape[0] - 1)
-        end = rnd.randint(start + 1, shape[0])
-        assert same(A[start:end].asnumpy(), A2[start:end])
-        assert same(A[start:].asnumpy(), A2[start:])
-        assert same(A[:end].asnumpy(), A2[:end])
+    shape = (rnd.randint(2, 10), rnd.randint(2, 10))    
+    stype = 'csr'
+    A, _ = rand_sparse_ndarray(shape, stype)
+    A2 = A.asnumpy()
+    start = rnd.randint(0, shape[0] - 1)
+    end = rnd.randint(start + 1, shape[0])
+    assert same(A[start:end].asnumpy(), A2[start:end])
+    assert same(A[start - shape[0]:end].asnumpy(), A2[start:end])
+    assert same(A[start:].asnumpy(), A2[start:])
+    assert same(A[:end].asnumpy(), A2[:end])
+    ind = rnd.randint(-shape[0], shape[0] - 1)
+    assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
+        
+    start_col = rnd.randint(0, shape[1] - 1)
+    end_col = rnd.randint(start_col + 1, shape[1])
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
     
+    A = mx.nd.sparse.zeros('csr', shape)
+    A2 = A.asnumpy()
+    assert same(A[start:end].asnumpy(), A2[start:end])
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
+
     def check_slice_nd_csr_fallback(shape):
         stype = 'csr'
         A, _ = rand_sparse_ndarray(shape, stype)
         A2 = A.asnumpy()
         start = rnd.randint(0, shape[0] - 1)
         end = rnd.randint(start + 1, shape[0])
-        result = mx.nd.sparse.slice(A, begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
-        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
+
+        # non-trivial step should fallback to dense slice op
+        result = mx.nd.sparse.slice(A, begin=(start,), end=(end + 1,), step=(2,))
+        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start,), end=(end + 1,), step=(2,))
         assert same(result_dense.asnumpy(), result.asnumpy())
 
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
-    check_sparse_nd_csr_slice(shape)
     check_slice_nd_csr_fallback(shape)
 
 
@@ -242,7 +260,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
-def test_sparse_nd_binary_rop():
+def test_sparse_nd_binary_scalar_op():
     N = 3
     def check(fn, stype):
         for _ in range(N):
@@ -265,6 +283,7 @@ def test_sparse_nd_binary_rop():
         check(lambda x: 0.5 >= x, stype)
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
+        check(lambda x: x / 2, stype)
 
 def test_sparse_nd_binary_iop():
     N = 3
@@ -396,11 +415,11 @@ def test_sparse_nd_astype():
 
 def test_sparse_nd_pickle():
     np.random.seed(0)
-    repeat = 10
+    repeat = 1
     dim0 = 40
     dim1 = 40
     stypes = ['row_sparse', 'csr']
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5]
     stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
     for _ in range(repeat):
         shape = rand_shape_2d(dim0, dim1)
@@ -420,7 +439,7 @@ def test_sparse_nd_save_load():
     stypes = ['default', 'row_sparse', 'csr']
     stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
     num_data = 20
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5]
     fname = 'tmp_list.bin'
     for _ in range(repeat):
         data_list1 = []
@@ -460,38 +479,63 @@ def test_sparse_nd_unsupported():
             pass
 
 def test_create_csr():
-    def check_create_csr_from_nd(shape, density):
+    def check_create_csr_from_nd(shape, density, dtype):
         matrix = rand_ndarray(shape, 'csr', density)
-        data = matrix.data
+        # create data array with provided dtype and ctx
+        data = mx.nd.array(matrix.data.asnumpy(), dtype=dtype)
         indptr = matrix.indptr
         indices = matrix.indices
-        csr_created = mx.nd.sparse.csr_matrix(data=data, indptr=indptr,
-                                              indices=indices, shape=shape)
+        csr_created = mx.nd.sparse.csr_matrix((data, indices, indptr), shape=shape)
         assert csr_created.stype == 'csr'
         assert same(csr_created.data.asnumpy(), data.asnumpy())
         assert same(csr_created.indptr.asnumpy(), indptr.asnumpy())
         assert same(csr_created.indices.asnumpy(), indices.asnumpy())
+        # verify csr matrix dtype and ctx is consistent from the ones provided
+        assert csr_created.dtype == dtype, (csr_created, dtype)
+        assert csr_created.data.dtype == dtype, (csr_created.data.dtype, dtype)
+        assert csr_created.context == Context.default_ctx, (csr_created.context, Context.default_ctx)
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+
+    def check_create_csr_from_coo(shape, density, dtype):
+        matrix = rand_ndarray(shape, 'csr', density)
+        sp_csr = matrix.asscipy()
+        sp_coo = sp_csr.tocoo()
+        csr_created = mx.nd.sparse.csr_matrix((sp_coo.data, (sp_coo.row, sp_coo.col)), shape=shape, dtype=dtype)
+        assert csr_created.stype == 'csr'
+        assert same(csr_created.data.asnumpy(), sp_csr.data)
+        assert same(csr_created.indptr.asnumpy(), sp_csr.indptr)
+        assert same(csr_created.indices.asnumpy(), sp_csr.indices)
+        csr_copy = mx.nd.array(csr_created)
+        assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
+        # verify csr matrix dtype and ctx is consistent
+        assert csr_created.dtype == dtype, (csr_created.dtype, dtype)
+        assert csr_created.data.dtype == dtype, (csr_created.data.dtype, dtype)
+        assert csr_created.context == Context.default_ctx, (csr_created.context, Context.default_ctx)
 
     def check_create_csr_from_scipy(shape, density, f):
         def assert_csr_almost_equal(nd, sp):
             assert_almost_equal(nd.data.asnumpy(), sp.data)
             assert_almost_equal(nd.indptr.asnumpy(), sp.indptr)
             assert_almost_equal(nd.indices.asnumpy(), sp.indices)
+            sp_csr = nd.asscipy()
+            assert_almost_equal(sp_csr.data, sp.data)
+            assert_almost_equal(sp_csr.indptr, sp.indptr)
+            assert_almost_equal(sp_csr.indices, sp.indices)
+            assert(sp.dtype == sp_csr.dtype), (sp.dtype, sp_csr.dtype)
 
         try:
-            import scipy.sparse as sp
+            import scipy.sparse as spsp
             # random canonical csr
-            csr_sp = sp.rand(shape[0], shape[1], density, format="csr")
+            csr_sp = spsp.rand(shape[0], shape[1], density, format="csr")
             csr_nd = f(csr_sp)
             assert_csr_almost_equal(csr_nd, csr_sp)
             # non-canonical csr which contains duplicates and unsorted indices
             indptr = np.array([0, 2, 3, 7])
             indices = np.array([0, 2, 2, 0, 1, 2, 1])
             data = np.array([1, 2, 3, 4, 5, 6, 1])
-            non_canonical_csr = sp.csr_matrix((data, indices, indptr), shape=(3, 3))
-            canonical_csr_nd = f(non_canonical_csr)
+            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3), dtype=csr_nd.dtype)
+            canonical_csr_nd = f(non_canonical_csr, dtype=csr_nd.dtype)
             canonical_csr_sp = non_canonical_csr.copy()
             canonical_csr_sp.sum_duplicates()
             canonical_csr_sp.sort_indices()
@@ -499,38 +543,166 @@ def test_create_csr():
         except ImportError:
             print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
 
-    dim0 = 50
-    dim1 = 50
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    dim0 = 20
+    dim1 = 20
+    densities = [0, 0.5]
+    dtype = np.float64
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
-        check_create_csr_from_nd(shape, density)
+        check_create_csr_from_nd(shape, density, dtype)
+        check_create_csr_from_coo(shape, density, dtype)
         check_create_csr_from_scipy(shape, density, mx.nd.sparse.array)
         check_create_csr_from_scipy(shape, density, mx.nd.array)
-
 
 def test_create_row_sparse():
     dim0 = 50
     dim1 = 50
-    densities = [0, 0.01, 0.1, 0.2, 0.5]
+    densities = [0, 0.5, 1]
     for density in densities:
         shape = rand_shape_2d(dim0, dim1)
         matrix = rand_ndarray(shape, 'row_sparse', density)
         data = matrix.data
         indices = matrix.indices
-        rsp_created = mx.nd.sparse.row_sparse_array(data=data, indices=indices, shape=shape)
+        rsp_created = mx.nd.sparse.row_sparse_array((data, indices), shape=shape)
         assert rsp_created.stype == 'row_sparse'
         assert same(rsp_created.data.asnumpy(), data.asnumpy())
         assert same(rsp_created.indices.asnumpy(), indices.asnumpy())
         rsp_copy = mx.nd.array(rsp_created)
         assert(same(rsp_copy.asnumpy(), rsp_created.asnumpy()))
 
-def test_sparse_nd_empty():
-    stypes = ['csr', 'row_sparse', 'default']
-    for stype in stypes:
-        nd = mx.nd.empty((2,2), stype=stype)
-        assert(nd.stype == stype)
+def test_create_sparse_nd_infer_shape():
+    def check_create_csr_infer_shape(shape, density, dtype):
+        try:
+            matrix = rand_ndarray(shape, 'csr', density=density)
+            data = matrix.data
+            indptr = matrix.indptr
+            indices = matrix.indices
+            nd = mx.nd.sparse.csr_matrix((data, indices, indptr), dtype=dtype)
+            num_rows, num_cols = nd.shape
+            assert(num_rows == len(indptr) - 1)
+            assert(indices.shape[0] > 0), indices
+            assert(np.sum((num_cols <= indices).asnumpy()) == 0)
+            assert(nd.dtype == dtype), (nd.dtype, dtype)
+        # cannot infer on invalid shape
+        except ValueError:
+            pass
 
+    def check_create_rsp_infer_shape(shape, density, dtype):
+        try:
+            array = rand_ndarray(shape, 'row_sparse', density=density)
+            data = array.data
+            indices = array.indices
+            nd = mx.nd.sparse.row_sparse_array((data, indices), dtype=dtype)
+            inferred_shape = nd.shape
+            assert(inferred_shape[1:] == data.shape[1:])
+            assert(indices.ndim > 0)
+            assert(nd.dtype == dtype)
+            if indices.shape[0] > 0:
+                assert(np.sum((inferred_shape[0] <= indices).asnumpy()) == 0)
+        # cannot infer on invalid shape
+        except ValueError:
+            pass
+
+    dtype = np.int32
+    shape = rand_shape_2d()
+    shape_3d = rand_shape_3d()
+    densities = [0, 0.5, 1]
+    for density in densities:
+        check_create_csr_infer_shape(shape, density, dtype)
+        check_create_rsp_infer_shape(shape, density, dtype)
+        check_create_rsp_infer_shape(shape_3d, density, dtype)
+
+def test_create_sparse_nd_from_dense():
+    def check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx):
+        arr = f(dense_arr, dtype=dtype, ctx=ctx)
+        assert(same(arr.asnumpy(), np.ones(shape)))
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
+        # verify the default dtype inferred from dense arr
+        arr2 = f(dense_arr)
+        assert(arr2.dtype == default_dtype)
+        assert(arr2.context == Context.default_ctx)
+    shape = rand_shape_2d()
+    dtype = np.int32
+    src_dtype = np.float64
+    ctx = mx.cpu(1)
+    dense_arrs = [mx.nd.ones(shape, dtype=src_dtype), np.ones(shape, dtype=src_dtype), \
+                  np.ones(shape, dtype=src_dtype).tolist()]
+    for f in [mx.nd.sparse.csr_matrix, mx.nd.sparse.row_sparse_array]:
+        for dense_arr in dense_arrs:
+            default_dtype = dense_arr.dtype if isinstance(dense_arr, (NDArray, np.ndarray)) \
+                            else np.float32
+            check_create_from_dns(shape, f, dense_arr, dtype, default_dtype, ctx)
+
+def test_create_sparse_nd_from_sparse():
+    def check_create_from_sp(shape, f, sp_arr, dtype, src_dtype, ctx):
+        arr = f(sp_arr, dtype=dtype, ctx=ctx)
+        assert(same(arr.asnumpy(), np.ones(shape)))
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
+        # verify the default dtype inferred from dense arr
+        arr2 = f(sp_arr)
+        assert(arr2.dtype == src_dtype)
+        assert(arr2.context == Context.default_ctx)
+
+    shape = rand_shape_2d()
+    src_dtype = np.float64
+    dtype = np.int32
+    ctx = mx.cpu(1)
+    ones = mx.nd.ones(shape, dtype=src_dtype)
+    csr_arrs = [ones.tostype('csr')]
+    rsp_arrs = [ones.tostype('row_sparse')]
+    try:
+        import scipy.sparse as spsp
+        csr_sp = spsp.csr_matrix(np.ones(shape, dtype=src_dtype))
+        csr_arrs.append(csr_sp)
+    except ImportError:
+        print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
+    f_csr = mx.nd.sparse.csr_matrix
+    f_rsp = mx.nd.sparse.row_sparse_array
+    for sp_arr in csr_arrs:
+        check_create_from_sp(shape, f_csr, sp_arr, dtype, src_dtype, ctx)
+    for sp_arr in rsp_arrs:
+        check_create_from_sp(shape, f_rsp, sp_arr, dtype, src_dtype, ctx)
+
+def test_create_sparse_nd_empty():
+    def check_empty(shape, stype):
+        arr = mx.nd.empty(shape, stype=stype)
+        assert(arr.stype == stype)
+        assert same(arr.asnumpy(), np.zeros(shape))
+
+    def check_csr_empty(shape, dtype, ctx):
+        arr = mx.nd.sparse.csr_matrix(shape, dtype=dtype, ctx=ctx)
+        assert(arr.stype == 'csr')
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
+        assert same(arr.asnumpy(), np.zeros(shape))
+        # check the default value for dtype and ctx
+        arr = mx.nd.sparse.csr_matrix(shape)
+        assert(arr.dtype == np.float32)
+        assert(arr.context == Context.default_ctx)
+
+    def check_rsp_empty(shape, dtype, ctx):
+        arr = mx.nd.sparse.row_sparse_array(shape, dtype=dtype, ctx=ctx)
+        assert(arr.stype == 'row_sparse')
+        assert(arr.dtype == dtype)
+        assert(arr.context == ctx)
+        assert same(arr.asnumpy(), np.zeros(shape))
+        # check the default value for dtype and ctx
+        arr = mx.nd.sparse.row_sparse_array(shape)
+        assert(arr.dtype == np.float32)
+        assert(arr.context == Context.default_ctx)
+
+    stypes = ['csr', 'row_sparse']
+    shape = rand_shape_2d()
+    shape_3d = rand_shape_3d()
+    dtype = np.int32
+    ctx = mx.cpu(1)
+    for stype in stypes:
+        check_empty(shape, stype)
+    check_csr_empty(shape, dtype, ctx)
+    check_rsp_empty(shape, dtype, ctx)
+    check_rsp_empty(shape_3d, dtype, ctx)
 
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):
@@ -566,11 +738,17 @@ def test_synthetic_dataset_generator():
 
 def test_sparse_nd_exception():
     """ test invalid sparse operator will throw a exception """
-    a = mx.nd.zeros((2,2))
+    a = mx.nd.ones((2,2))
     assert_exception(mx.nd.sparse.retain, mx.base.MXNetError,
                      a, invalid_arg="garbage_value")
-    assert_exception(mx.nd.sparse.zeros, NotImplementedError,
-                     'csr', (2,2), aux_types=[np.int32, np.int32])
+    assert_exception(mx.nd.sparse.csr_matrix, ValueError,
+                     a, shape=(3,2))
+    assert_exception(mx.nd.sparse.csr_matrix, ValueError,
+                     (2,2), shape=(3,2))
+    assert_exception(mx.nd.sparse.row_sparse_array, ValueError,
+                     (2,2), shape=(3,2))
+    assert_exception(mx.nd.sparse.zeros, ValueError,
+                     "invalid_stype", (2,2))
 
 
 if __name__ == '__main__':

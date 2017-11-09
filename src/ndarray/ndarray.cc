@@ -65,10 +65,10 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 NDArray NDArray::Reshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
+  auto stype = storage_type();
+  // reshape is not supported for non-default ndarray with dismatching shapes
+  CHECK((shape_ == shape) || stype == kDefaultStorage)
+    << "Reshape for storage type " << stype << " is not implemented yet";
   CHECK_GE(shape_.Size(), shape.Size())
     << "NDArray.Reshape: target shape size is larger current shape";
   NDArray ret = this->Detach();
@@ -402,7 +402,7 @@ inline void CopyFromToCsrImpl(const NDArray& from, const NDArray& to, RunContext
   // if source storage is not initialized, fill destination with zeros
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosCsrImpl<to_xpu>(s, to);
+    op::FillZerosCsrImpl(s, to);
     return;
   }
   // Allocate storage
@@ -428,7 +428,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
   // if source is zeros, fill destination with zeros, too
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosRspImpl<to_xpu>(s, to);
+    op::FillZerosRspImpl(s, to);
     return;
   }
   auto aux_shape = from.aux_shape(rowsparse::kIdx);

@@ -106,7 +106,44 @@ static void ExecutorMonitor_callback(const char* name, NDArrayHandle handle, voi
 
 %}
 
+%{
+
+/* this is an adaptation of Python/bltinmodule.c's builtin_zip() */
+XS(py_zip) {
+    dXSARGS;
+    I32 i;
+    I32 len = -1;
+    AV *l[items];
+
+    for(i = 0; i < items; i++) {
+        AV *av = (AV *)SvRV(ST(i));
+        I32 thislen;
+
+        if(SvTYPE(av) != SVt_PVAV)
+            croak("zip argument#%d must be an array", i);
+        thislen = av_len(av) + 1;
+        if(len < 0 || thislen < len)
+            len = thislen;
+        l[i] = av;
+    }
+    EXTEND(SP, len);
+    for(i = 0; i < len; i++) {
+        I32 j;
+        SV *next[items];
+
+        for(j = 0; j < items; j++) {
+            SV **sv = av_fetch(l[j], i, 0);
+            next[j] = sv ? *sv : &PL_sv_undef;
+        }
+        ST(i) = sv_2mortal(newRV_noinc((SV *)av_make(items, next)));
+    }
+    XSRETURN(len);
+}
+
+%}
+
 %init %{
+    newXS(SWIG_prefix "py_zip", py_zip, (char *)__FILE__);
     /* These SWIG_TypeClientData() calls might break in the future, but
      * %rename should work on these types before that happens. */
     SWIG_TypeClientData(SWIGTYPE_p_MXNDArray, (void *)"NDArrayHandle");

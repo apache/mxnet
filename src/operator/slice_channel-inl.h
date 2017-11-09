@@ -41,7 +41,6 @@ namespace op {
 
 namespace slice_enum {
 enum SliceChannelOpInputs {kData};
-enum SliceChannelOpOutputs {kOut0, kOut1, kOut2, kOut3, kOut4};
 }  // namespace slice_enum
 
 struct SliceChannelParam : public dmlc::Parameter<SliceChannelParam> {

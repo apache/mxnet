@@ -1,3 +1,4 @@
+
 # Fine-tune with Pretrained Models
 
 Many of the exciting deep learning algorithms for computer vision require
@@ -68,12 +69,19 @@ python ~/mxnet/tools/im2rec.py --resize 256 --quality 90 --num-thread 16 caltech
 
 The following code downloads the pregenerated rec files. It may take a few minutes.
 
+
 ```python
-import os, urllib
+import os, sys
+
+if sys.version_info[0] >= 3:
+    from urllib.request import urlretrieve
+else:
+    from urllib import urlretrieve
+
 def download(url):
     filename = url.split("/")[-1]
     if not os.path.exists(filename):
-        urllib.urlretrieve(url, filename)
+        urlretrieve(url, filename)
 download('http://data.mxnet.io/data/caltech-256/caltech-256-60-train.rec')
 download('http://data.mxnet.io/data/caltech-256/caltech-256-60-val.rec')
 ```
@@ -137,8 +145,8 @@ def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
     return (net, new_args)
 ```
 
-Now we create a module. We first call `init_params` to randomly initialize parameters, next use `set_params` to replace all parameters except for the last fully-connected layer with pretrained model.
-
+Now we create a module. Note we pass the existing parameters from the loaded model via the `arg_params` argument.
+The parameters of the last fully-connected layer will be randomly initialized by the `initializer`.
 
 ```python
 import logging

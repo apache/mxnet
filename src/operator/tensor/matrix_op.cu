@@ -21,7 +21,6 @@
  * \file matrix_op.cu
  * \brief GPU Implementation of matrix operations
  */
-// this will be invoked by gcc and compile GPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
 
@@ -40,10 +39,10 @@ NNVM_REGISTER_OP(expand_dims)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(slice)
-.set_attr<FCompute>("FCompute<gpu>", Slice<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_slice)
-.set_attr<FCompute>("FCompute<gpu>", SliceBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_slice_assign)
 .set_attr<FCompute>("FCompute<gpu>", SliceAssign<gpu>);
@@ -58,7 +57,8 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
 
 NNVM_REGISTER_OP(clip)
-.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", Clip<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ClipEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<gpu>", ClipGrad_<gpu>);

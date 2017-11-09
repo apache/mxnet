@@ -26,6 +26,7 @@
 #include <thread>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "./openmp.h"
 
 namespace mxnet {
 namespace engine {
@@ -185,6 +186,13 @@ class NaiveEngine final : public Engine {
 
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
+  }
+
+  /*! \brief Return the number of OMP threads that should be used per worker
+   * \return Number of OMP threads that should be used per worker
+   */
+  int num_omp_threads_per_worker() const override {
+    return OpenMP::Get()->GetRecommendedOMPThreadCount();
   }
 
  private:

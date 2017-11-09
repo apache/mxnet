@@ -227,7 +227,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   } else {
     (*outputs)[0] = NDArray();
     ImdecodeImpl(param.flag, param.to_rgb, buff, fsize, &((*outputs)[0]));
-    delete buff;
+    delete[] buff;
     return;
   }
 

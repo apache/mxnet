@@ -62,11 +62,10 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
   }
 
   // construct backward graph
-  std::vector<NodeEntry> ograd_entries;
   {
-    ograd_entries.reserve(fwd_graph_.outputs.size());
+    ograd_entries_.reserve(fwd_graph_.outputs.size());
     for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i) {
-      ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+      ograd_entries_.emplace_back(NodeEntry{Node::Create(), 0, 0});
     }
 
     std::vector<NodeEntry> xs;
@@ -77,7 +76,7 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
         << "There are no inputs in computation graph that require gradients.";
 
     grad_graph_ = pass::Gradient(
-        fwd_graph_, fwd_graph_.outputs, xs, ograd_entries,
+        fwd_graph_, fwd_graph_.outputs, xs, ograd_entries_,
         exec::AggregateGradient, nullptr, nullptr,
         zero_ops, "_copy");
   }
@@ -105,12 +104,12 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
         std::make_shared<dmlc::any>(std::move(full_ref_count));
 
     size_t num_forward_inputs = num_inputs();
-    for (uint32_t i = 0; i < ograd_entries.size(); ++i) {
-      if (!idx.exist(ograd_entries[i].node.get())) continue;
-      auto eid = idx.entry_id(ograd_entries[i]);
+    size_t num_forward_outputs = num_outputs();
+    for (uint32_t i = 0; i < ograd_entries_.size(); ++i) {
+      if (!idx.exist(ograd_entries_[i].node.get())) continue;
+      auto eid = idx.entry_id(ograd_entries_[i]);
       if (ref_count[eid] > 0) {
         bwd_ograd_dep_.push_back(i);
-        bwd_input_eid_.push_back(eid);
       }
     }
     save_inputs_.resize(num_forward_inputs, false);
@@ -119,16 +118,14 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
       if (ref_count[eid] > 0) {
         save_inputs_[i] = true;
         bwd_in_dep_.push_back(i);
-        bwd_input_eid_.push_back(eid);
       }
     }
     save_outputs_.resize(idx.outputs().size(), false);
-    for (uint32_t i = 0; i < idx.outputs().size(); ++i) {
+    for (uint32_t i = 0; i < num_forward_outputs; ++i) {
       auto eid = idx.entry_id(idx.outputs()[i]);
       if (ref_count[eid] > 0) {
         save_outputs_[i] = true;
         bwd_out_dep_.push_back(i);
-        bwd_input_eid_.push_back(eid);
       }
     }
   }
@@ -242,9 +239,28 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
     for (size_t i = 0; i < grad_graph_.outputs.size(); ++i) {
       if (curr_grad_req_[i]) g.outputs.emplace_back(grad_graph_.outputs[i]);
     }
+    bwd_input_eid_.clear();
   }
 
   const auto& idx = g.indexed_graph();
+
+  if (bwd_input_eid_.size() != inputs.size()) {
+    bwd_input_eid_.clear();
+    for (const auto& i : bwd_ograd_dep_) {
+      auto eid = idx.entry_id(ograd_entries_[i]);
+      bwd_input_eid_.push_back(eid);
+    }
+    for (const auto& i : bwd_in_dep_) {
+      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+      bwd_input_eid_.push_back(eid);
+    }
+    for (const auto& i : bwd_out_dep_) {
+      auto eid = idx.entry_id(idx.outputs()[i]);
+      bwd_input_eid_.push_back(eid);
+    }
+    CHECK_EQ(inputs.size(), bwd_input_eid_.size());
+  }
+
   size_t num_forward_nodes = fwd_graph_.indexed_graph().num_nodes();
   size_t num_forward_entries = fwd_graph_.indexed_graph().num_node_entries();
 
@@ -310,11 +326,24 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
                                          const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
   using namespace imperative;
+
   bool recording = Imperative::Get()->set_is_recording(false);
   // Initialize
   nnvm::Graph g = GetForwardGraph(recording, inputs);
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
+
+  CHECK_EQ(num_inputs, inputs.size())
+      << "CachedOp requires " << num_inputs << " but got " << inputs.size();
+
+  Context default_ctx = inputs[0]->ctx();
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    CHECK_EQ(inputs[i]->ctx(), default_ctx)
+        << "CachedOp requires all inputs to live on the same context. But "
+        << idx[idx.input_nodes()[0]].source->attrs.name << " is on " << default_ctx
+        << " while " << idx[idx.input_nodes()[i]].source->attrs.name << " is on "
+        << inputs[i]->ctx();
+  }
 
   auto op_state_ptr = OpStatePtr::Create<CachedOpState>();
   auto& cached_op_state = op_state_ptr.get_state<CachedOpState>();
@@ -346,7 +375,6 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
 
-  Context default_ctx = inputs[0]->ctx();
   const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
       recording ? "full_mem_plan" : "forward_mem_plan");
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),

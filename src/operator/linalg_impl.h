@@ -985,42 +985,111 @@ template<> inline \
 void linalg_syevd<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                               const Tensor<cpu, 1, DType>& L, \
                               const Tensor<cpu, 1, DType>& work, \
-                              const Tensor<cpu, 1, int>& iwork, \
                               Stream<cpu> *s) { \
   check_syevd(A, L); \
+  int liwork(0); \
+  MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                       A.dptr_, A.stride_, L.dptr_, work.dptr_, -1, &liwork, \
+                      -1); \
+  int lwork(static_cast<int>(*work.dptr_)); \
+  int *iwork = static_cast<int*>(static_cast<void*>(work.dptr_ + lwork)); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
                                A.dptr_, A.stride_, L.dptr_, work.dptr_, \
-                               work.size(0), iwork.dptr_, iwork.size(0))); \
+                               lwork, iwork, liwork)); \
   CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
 }
-// LINALG_CPU_SYEVD(ssyevd, float)
+LINALG_CPU_SYEVD(ssyevd, float)
 LINALG_CPU_SYEVD(dsyevd, double)
 
-template<> inline
-void linalg_syevd<cpu, float>(const Tensor<cpu, 2, float>& A,
-                              const Tensor<cpu, 1, float>& L,
-                              const Tensor<cpu, 1, float>& work,
-                              const Tensor<cpu, 1, int>& iwork,
-                              Stream<cpu> *s) {
-  CHECK(false) << "linalg_syevd is not currently implemented for float32." << std::endl
-               << "Please use float64 for now. If the rest of your code runs on float32,"
-               << " please use the Cast operator.";
-}
-
+// Mangle temp storage requirements for DType and int into a single
+// request as we can only allocate one temp space per operator. We
+// partition this temp space into two chunks again when calling sseyvd.
+// Returned is the number of elements of type DType that the temp space
+// needs to accomodate. This also makes this function signature equivalent
+// to the work space query on GPU.
 #define LINALG_CPU_SYEVD_WORKSPACE_QUERY(func, DType) \
 template<> inline \
-void linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
-                                              int* lwork, int* liwork, \
-                                              Stream<cpu> *s) { \
+int linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                                             const Tensor<cpu, 1, DType>& L, \
+                                             Stream<cpu> *s) { \
   DType work(0.0); \
   int iwork(0); \
-  int ret(MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
-                              A.dptr_, A.stride_, &work, &work, -1, &iwork, \
-                              -1)); \
-  *lwork = static_cast<int>(work); \
-  *liwork = iwork; \
+  MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                      A.dptr_, A.stride_, L.dptr_, &work, -1, &iwork, \
+                      -1); \
+  iwork = (sizeof(int) * iwork + sizeof(DType) - 1) / sizeof(DType); \
+  return static_cast<int>(work) + iwork; \
 }
 LINALG_CPU_SYEVD_WORKSPACE_QUERY(ssyevd, float)
 LINALG_CPU_SYEVD_WORKSPACE_QUERY(dsyevd, double)
+
+#ifdef __CUDACC__
+
+// SYEVD only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+// Row-major vs. col-major handled by using upper triangular
+// in cusolver-call.
+#define LINALG_GPU_SYEVD(fname, DType) \
+template<> inline \
+void linalg_syevd<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                              const Tensor<gpu, 1, DType>& L, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using mshadow::gpu; \
+  CHECK_NOTNULL(s); \
+  check_syevd(A, L); \
+  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
+                CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, \
+                A.size(0), A.dptr_ , A.stride_, L.dptr_, work.dptr_, \
+                work.size(0), static_cast<int *>(info.dptr))); \
+  Storage::Get()->Free(info); \
+}
+
+#define LINALG_GPU_SYEVD_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_syevd_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                                             const Tensor<gpu, 1, DType>& L, \
+                                             Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using mshadow::gpu; \
+  int lwork(0); \
+  CUSOLVER_CALL(cusolver##fname##_bufferSize(Stream<gpu>::GetSolverHandle(s), \
+                CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, \
+                A.size(0), A.dptr_ , A.stride_, L.dptr_, &lwork)); \
+  return lwork; \
+}
+
+#else
+
+#define LINALG_GPU_SYEVD(fname, DType) \
+template<> inline \
+void linalg_syevd<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                              const Tensor<gpu, 1, DType>& L, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  LOG(FATAL) << "syevd requires CUDA version >= 8.0!"; \
+}
+
+#define LINALG_GPU_SYEVD_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_syevd_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                                             const Tensor<gpu, 1, DType>& L, \
+                                             Stream<gpu> *s) { \
+  LOG(FATAL) << "syevd requires CUDA version >= 8.0!"; \
+  return 0; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_SYEVD(DnSsyevd, float)
+LINALG_GPU_SYEVD(DnDsyevd, double)
+
+LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnSsyevd, float)
+LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnDsyevd, double)
+
+#endif  // __CUDACC__
 
 #endif  // MXNET_OPERATOR_LINALG_IMPL_H_

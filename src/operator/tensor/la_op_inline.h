@@ -324,16 +324,13 @@ struct syevd {
     linalg_check_batch_size(A.size(0), U.size(0), L.size(0));
     if (A.dptr_ != U.dptr_) Copy(U, A, s);
     // From here on, we work on U only
-    // Reserve workspaces (size determined by query)
-    int lwork(0), liwork(0);
-    linalg_syevd_workspace_query(U[0], &lwork, &liwork, s);
+    // Reserve workspace (size determined by query)
+    int lwork(linalg_syevd_workspace_query(U[0], L[0], s));
     Tensor<xpu, 1, DType> work = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
-    Tensor<xpu, 1, int> iwork = ctx.requested[0]
-      .get_space_typed<xpu, 1, int>(Shape1(liwork), s);
     // Loop over items in batch
     for (index_t i = 0; i < U.size(0); ++i) {
-      linalg_syevd(U[i], L[i], work, iwork, s);
+      linalg_syevd(U[i], L[i], work, s);
     }
     // Set signs of eigenvectors in a deterministic way
     using namespace mxnet_op;
@@ -603,13 +600,13 @@ struct gelqf_backward {
 template<typename DType>
 DType syevd_back_helper_eps(DType* X);
 
-template<> inline
-float syevd_back_helper_eps(float* X) {
+template<>
+MSHADOW_XINLINE float syevd_back_helper_eps(float* X) {
   return 1e-30;
 }
 
-template<> inline
-double syevd_back_helper_eps(double* X) {
+template<>
+MSHADOW_XINLINE double syevd_back_helper_eps(double* X) {
   return 1e-100;
 }
 

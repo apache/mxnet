@@ -110,7 +110,7 @@
 /*! \brief major version */
 #define MXNET_MAJOR 0
 /*! \brief minor version */
-#define MXNET_MINOR 11
+#define MXNET_MINOR 12
 /*! \brief patch version */
 #define MXNET_PATCH 1
 /*! \brief mxnet version */
