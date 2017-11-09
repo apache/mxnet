@@ -62,6 +62,10 @@ void Gc::set_active() {
   active_ = true;
 }
 
+void Gc::set_inactive() {
+  active_ = false;
+}
+
 bool Gc::get_active() {
   return active_;
 }

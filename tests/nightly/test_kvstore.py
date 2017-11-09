@@ -191,7 +191,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 kv.pull(keys[j], out=val)
 
                 diffs = [val[g] - orig_val[g] for g in range(nworker)]
-                # compute expected by directly using simulation of operator
+                # compute expected by using simulation of operator
                 # on cpu
                 sum_dequantized_vals = np.zeros(shapes[j])
                 for g in range(nworker):

@@ -150,7 +150,6 @@ private:
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
-    //TODO verify if comm destruction doesn't cause double free memory corruption
     comm_->SetGradientCompression(gc_);
     gc_->set_active();
   }

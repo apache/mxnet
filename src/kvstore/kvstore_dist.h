@@ -177,6 +177,11 @@ class KVStoreDist : public KVStoreLocal {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
     if (get_rank() == 0) {
+      // set inactive for inits
+      if (gc_->get_active()) {
+        gc_->set_inactive();
+      }
+
       Push_(keys, values, 0, false);
       // wait until the push is finished
       for (const int key : keys) {
@@ -301,7 +306,10 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
+
+    // set active for non init pushes
     if (do_merge && !gc_->get_active()) gc_->set_active();
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];

@@ -183,6 +183,51 @@ def test_sync_push_pull():
                 expected[row] = updated_val[row]
             check_diff_to_scalar(val, expected, rank=my_rank)
 
+    def compute_expected(arr, curr_residual, threshold):
+        from struct import pack,unpack
+        def bits2int(bits):
+            bits = [int(x) for x in bits[::-1]]
+            x = 0
+            for i in range(len(bits)):
+                x += bits[i]*2**i
+            return x
+
+        def as_float32(s):
+            return unpack("f",pack("I", bits2int(s)))[0]
+
+        # str_quant stores the quantized representation as a sequence of bits
+        str_quant = ''
+        new_residual = []
+        decompr = []
+        arr_npy = arr.asnumpy()
+        curr_res_npy = curr_residual.asnumpy()
+        for i, a in np.ndenumerate(arr_npy):
+            a += curr_res_npy[i]
+            if a >= threshold:
+                str_quant += '11'
+                new_residual.append(a - threshold)
+                decompr.append(threshold)
+            elif a <= (-1*threshold):
+                str_quant += '10'
+                new_residual.append(a + threshold)
+                decompr.append(-1*threshold)
+            else:
+                str_quant += '00'
+                new_residual.append(a)
+                decompr.append(0)
+        # append extra bits when size of array not a factor of 16
+        if len(str_quant)%16 != 0:
+            str_quant += '0'*(16 - len(str_quant)%16)
+
+        compr = []
+        # converts the string generated into integers 32chars at a time
+        i = 0
+        while i<len(str_quant):
+            cur_float = str_quant[i+24:i+32] + str_quant[i+16:i+24] + str_quant[i+8:i+16] + str_quant[i:i+8]
+            compr.append(as_float32(cur_float))
+            i+=32
+        return compr, new_residual, decompr
+
     def check_compr_residual(kv, threshold, nworker):
         for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
             # doesn't meet threshold
@@ -243,26 +288,30 @@ def test_sync_push_pull():
         # calculate expected value after pull
         mx.random.seed(123)
         rnd.seed(123)
-        for k,s in [('1121', shape)]:#,('112221',irregular_shape),('11221', big_shape)]:
-            orig_val = mx.nd.zeros(s)
-            kv.pull(k, orig_val)
+        nrepeat = 5
+        compr_random_keys_shapes = [('2121', shape),('212221',irregular_shape),('21221', big_shape)]
+        # use new keys so residual is 0 for calculation of expected
+        for k,s in compr_random_keys_shapes:
+            kv.init(k, mx.nd.zeros(s))
+        for k,s in compr_random_keys_shapes:
+            curr_residual = np.zeros(s)
+            for l in range(nrepeat):
+                orig_val = mx.nd.zeros(s)
+                kv.pull(k, orig_val)
 
-            grad = mx.nd.array(rnd.rand(s[0], s[1]))
-            # creates a copy because pull changes grad
-            grad_cpy = mx.nd.array(grad)
-            kv.push(k, grad)
-            val = mx.nd.zeros(s)
-            kv.pull(k, val)
+                grad = mx.nd.array(rnd.rand(s[0], s[1]))
+                # creates a copy because pull changes grad because of assignment
+                grad_cpy = mx.nd.array(grad)
+                kv.push(k, grad)
+                val = mx.nd.zeros(s)
+                kv.pull(k, val)
 
-            diff = val - orig_val
-            # compute expected by directly using operators
-            compr = mx.contrib.nd.create_2bit(grad_cpy)
-            mx.contrib.ndarray.quantize_2bit(grad_cpy, mx.nd.zeros(s), compr, threshold)
-            decompr = mx.nd.zeros(grad.shape)
-            mx.contrib.ndarray.dequantize_2bit(compr, decompr, threshold)
+                diff = val - orig_val
 
-            decompr *= nworker * rate
-            assert_almost_equal(diff.asnumpy(), decompr.asnumpy())
+                # compute expected by using simulation of operator
+                compr, curr_residual, decompr = compute_expected(grad_cpy, curr_residual, threshold)
+                decompr *= nworker * rate
+                assert_almost_equal(diff.asnumpy(), decompr.asnumpy())
 
     print ('worker '+str(my_rank)+' started')
     check_default_keys(kv, my_rank, nworker)

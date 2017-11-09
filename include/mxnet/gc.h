@@ -56,6 +56,11 @@ public:
   void set_active();
 
   /*!
+   * \brief sets gradient compression to inactive mode
+   */
+  void set_inactive();
+
+  /*!
    * \brief returns boolean whether or not gc is in active mode
    */
   bool get_active();
