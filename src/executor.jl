@@ -156,7 +156,7 @@ function simple_bind(self :: SymbolicNode, ctx :: Context;
 end
 
 
-function forward(self :: Executor; is_train::Bool=false, kwargs...)
+function forward(self::Executor; is_train::Bool = false, kwargs...)
   for (k,v) in kwargs
     @assert(k ∈ self.arg_dict, "Unknown argument $k")
     @assert(isa(v, NDArray), "Keyword argument $k must be an NDArray")
@@ -164,6 +164,8 @@ function forward(self :: Executor; is_train::Bool=false, kwargs...)
   end
 
   @mxcall(:MXExecutorForward, (MX_handle, Cint), self, is_train)
+
+  self.outputs
 end
 
 function backward(self :: Executor)
