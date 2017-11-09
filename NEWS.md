@@ -51,6 +51,11 @@
     * `x.^y`
     * where `x` and `y` are `NDArray`s.
 
+* Elementwise power of irrational and `NDArray` (#TBD)
+    * `e.^x`
+    * `x.^e`
+    * `π.^x`
+
 ## API Changes
 
 * `reshape` of NDArray shares the same interface with Base (#272).

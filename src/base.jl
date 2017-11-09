@@ -157,11 +157,12 @@ end
 #
 # TODO: find a better solution in case this cause issues in the future.
 ################################################################################
-dump_mx_param(val::Any) = string(val)
-dump_mx_param(val::Float64) = @sprintf("%.16e", val)
-dump_mx_param(val::Float32) = @sprintf("%.8e", val)
-dump_mx_param(val::Float16) = @sprintf("%.4e", val)
-dump_mx_param(shape::NTuple{N, T}) where {N, T<:Integer} =
+dump_mx_param(val::Any)        = string(val)
+dump_mx_param(val::Float64)    = @sprintf("%.16e", val)
+dump_mx_param(val::Float32)    = @sprintf("%.8e", val)
+dump_mx_param(val::Float16)    = @sprintf("%.4e", val)
+dump_mx_param(val::Irrational) = @sprintf("%.16e", val)
+dump_mx_param(shape::NTuple{N, <:Integer}) where N =
   string(tuple(flipdim([shape...], 1)...))
 
 

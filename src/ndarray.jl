@@ -754,6 +754,10 @@ broadcast_(::typeof(^), x::NDArray, y::NDArray) = _power(x, y)
 broadcast_(::typeof(^), x::NDArray, s::Real) = _power_scalar(x, scalar=s)
 broadcast_(::typeof(^), s::Real, x::NDArray) = _rpower_scalar(x, scalar=s)
 
+broadcast_(::typeof(^), ::Irrational{:e}, x::NDArray) = exp(x)
+broadcast_(::typeof(^), x::NDArray, s::Irrational) = _power_scalar(x, scalar=s)
+broadcast_(::typeof(^), s::Irrational, x::NDArray) = _rpower_scalar(x, scalar=s)
+
 """
     fill!(x, arr::NDArray)
 

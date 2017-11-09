@@ -516,6 +516,22 @@ function test_power()
     @test copy(y.^x) == Float32[2 4; 8 16]
   end
 
+  info("NDArray::power::e.^x::x.^e")
+  let x = mx.zeros(2, 3), A = [1 1 1; 1 1 1]
+    @test copy(e.^x) ≈ A
+  end
+
+  let A = Float32[1 2; 3 4], x = mx.NDArray(A)
+    @test copy(e.^x) ≈ e.^A
+    @test copy(x.^e) ≈ A.^e
+  end
+
+  info("NDArray::power::π.^x::x.^π")
+  let A = Float32[1 2; 3 4], x = mx.NDArray(A)
+    @test copy(π.^x) ≈ π.^A
+    @test copy(x.^π) ≈ A.^π
+  end
+
   # TODO: Float64: wait for https://github.com/apache/incubator-mxnet/pull/8012
 end # function test_power
 
