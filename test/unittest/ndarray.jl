@@ -706,10 +706,10 @@ function test_fill()
   end
 
   info("NDArray::fill!::arr")
-  let x = mx.fill!(42, mx.zeros(2, 3, 4))
+  let x = fill!(mx.zeros(2, 3, 4), 42)
     @test eltype(x) == Float32
     @test size(x) == (2, 3, 4)
-    @test reldiff(copy(x), fill(Float32(42), 2, 3, 4)) < thresh
+    @test copy(x) ≈ fill(Float32(42), 2, 3, 4)
   end
 end  # function test_fill
 

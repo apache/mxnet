@@ -11,7 +11,7 @@
 
     * `fill(x, dims, ctx=cpu())`
     * `fill(x, dims...)`
-    * `fill!(x, arr::NDArray)`
+    * `fill!(arr::NDArray, x)`
 
 * Matrix (2D NDArray) multiplication is available now. (#TBD)
 

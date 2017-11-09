@@ -759,11 +759,11 @@ broadcast_(::typeof(^), x::NDArray, s::Irrational) = _power_scalar(x, scalar=s)
 broadcast_(::typeof(^), s::Irrational, x::NDArray) = _rpower_scalar(x, scalar=s)
 
 """
-    fill!(x, arr::NDArray)
+    fill!(arr::NDArray, x)
 
-Create an `NDArray` filled with the value `x`, like `Base.fill`.
+Create an `NDArray` filled with the value `x`, like `Base.fill!`.
 """
-function fill!(x, arr::NDArray)
+function Base.fill!(arr::NDArray, x)
   arr[:] = x
   arr
 end
