@@ -110,6 +110,10 @@ NNVM_REGISTER_OP(_contrib_box_iou)
   - rhs: (b_1, b_2, ..., b_n, 4) array
   - output: (a_1, a_2, ..., a_n, b_1, b_2, ..., b_n) array
 
+  Note::
+
+    Zero gradients are back-propagated in this op for now.
+
   Example::
 
     x = [[0.5, 0.5, 1.0, 1.0], [0.0, 0.0, 0.5, 0.5]]
@@ -146,6 +150,14 @@ NNVM_REGISTER_OP(_contrib_bipartite_matching)
   - B: batch_size
   - N: number of rows to match
   - M: number of columns as reference to be matched against.
+
+  Returns:
+  x : matched column indices. -1 indicating non-matched elements in rows.
+  y : matched row indices.
+
+  Note::
+
+    Zero gradients are back-propagated in this op for now.
 
   Example::
 

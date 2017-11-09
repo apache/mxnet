@@ -158,6 +158,74 @@ def test_box_nms_op():
     thresh = 0.5
     test_box_nms_forward(np.array(boxes), np.array(expected), force=force, thresh=thresh, cid=-1)
 
+def test_box_iou_op():
+    def numpy_box_iou(a, b, fmt='corner'):
+        def area(left, top, right, bottom):
+            return np.maximum(0, right - left) * np.maximum(0, bottom - top)
+
+        assert a.shape[-1] == 4
+        assert b.shape[-1] == 4
+        oshape = a.shape[:-1] + b.shape[:-1]
+        a = a.reshape((-1, 4))
+        ashape = a.shape
+        b = b.reshape((-1, 4))
+        a = np.tile(a, reps=[1, b.shape[0]]).reshape((-1, 4))
+        b = np.tile(b, reps=[ashape[0], 1]).reshape((-1, 4))
+        if fmt == 'corner':
+            al, at, ar, ab = np.split(a, 4, axis=-1)
+            bl, bt, br, bb = np.split(b, 4, axis=-1)
+        elif fmt == 'center':
+            ax, ay, aw, ah = np.split(a, 4, axis=-1)
+            bx, by, bw, bh = np.split(b, 4, axis=-1)
+            al, at, ar, ab = ax - aw / 2, ay - ah / 2, ax + aw / 2, ay + ah / 2
+            bl, bt, br, bb = bx - bw / 2, by - bh / 2, bx + bw / 2, by + bh / 2
+        else:
+            raise NotImplementedError("Fmt {} not supported".format(fmt))
+        width = np.maximum(0, np.minimum(ar, br) - np.maximum(al, bl))
+        height = np.maximum(0, np.minimum(ab, bb) - np.maximum(at, bt))
+        intersect = width * height
+        union = area(al, at, ar, ab) + area(bl, bt, br, bb) - intersect
+        union[np.where(intersect <= 0)] = 1e-12
+        iou = intersect / union
+        return iou.reshape(oshape)
+
+    def generate_boxes(dims):
+        s1, off1, s2, off2 = np.random.rand(4) * 100
+        xy = np.random.rand(*(dims + [2])) * s1 + off1
+        wh = np.random.rand(*(dims + [2])) * s2 + off2
+        xywh = np.concatenate([xy, wh], axis=-1)
+        ltrb = np.concatenate([xy - wh / 2, xy + wh / 2], axis=-1)
+        return xywh, ltrb
+
+
+    for ndima in range(1, 6):
+        for ndimb in range(1, 6):
+            dims_a = np.random.randint(low=1, high=3, size=ndima).tolist()
+            dims_b = np.random.randint(low=1, high=3, size=ndimb).tolist()
+            # generate left, top, right, bottom
+            xywh_a, ltrb_a = generate_boxes(dims_a)
+            xywh_b, ltrb_b = generate_boxes(dims_b)
+
+            iou_np = numpy_box_iou(ltrb_a, ltrb_b, fmt='corner')
+            iou_np2 = numpy_box_iou(xywh_a, xywh_b, fmt='center')
+            iou_mx = mx.nd.contrib.box_iou(mx.nd.array(ltrb_a), mx.nd.array(ltrb_b), format='corner')
+            iou_mx2 = mx.nd.contrib.box_iou(mx.nd.array(xywh_a), mx.nd.array(xywh_b), format='center')
+            assert_allclose(iou_np, iou_np2, rtol=1e-5, atol=1e-5)
+            assert_allclose(iou_np, iou_mx.asnumpy(), rtol=1e-5, atol=1e-5)
+            assert_allclose(iou_np, iou_mx2.asnumpy(), rtol=1e-5, atol=1e-5)
+
+def test_bipartite_matching_op():
+    def assert_match(inputs, x, y, threshold, is_ascend=False):
+        inputs = mx.nd.array(inputs)
+        x = np.array(x)
+        y = np.array(y)
+        a, b = mx.nd.contrib.bipartite_matching(inputs, threshold=threshold, is_ascend=is_ascend)
+        print(a, b)
+        assert_array_equal(a.asnumpy().astype('int64'), x.astype('int64'))
+        assert_array_equal(b.asnumpy().astype('int64'), y.astype('int64'))
+    assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [1, -1, 0], [2, 0], 1e-12, False)
+    assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

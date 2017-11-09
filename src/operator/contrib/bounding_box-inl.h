@@ -340,7 +340,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
   int width_elem = in_shape[indim - 1];
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 3, DType> data = inputs[box_nms_enum::kData]
      .get_with_shape<xpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
     Tensor<xpu, 3, DType> out = outputs[box_nms_enum::kOut]
@@ -669,7 +669,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   int row = dshape[dshape.ndim() - 2];
   int col = dshape[dshape.ndim() - 1];
   int batch_size = dshape.Size() / row / col;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> scores = inputs[0]
      .get_with_shape<xpu, 1, DType>(Shape1(dshape.Size()), s);
     Tensor<xpu, 2, DType> row_marker = outputs[0]
