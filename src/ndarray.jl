@@ -312,6 +312,9 @@ function eltype(arr :: T) where T <: Union{NDArray, MX_NDArrayHandle}
   end
 end
 
+@inline _first(arr::NDArray) = try_get_shared(arr, sync = :read) |> first
+
+Base.first(arr::NDArray) = _first(arr)
 
 """
     slice(arr :: NDArray, start:stop)
@@ -341,37 +344,58 @@ function slice(arr :: NDArray, slice::UnitRange{Int})
   return NDArray(MX_NDArrayHandle(hdr_ref[]), arr.writable)
 end
 
+function _at(handle::Union{MX_NDArrayHandle, MX_handle}, idx::Integer)
+  h_ref = Ref{MX_handle}(C_NULL)
+  @mxcall(:MXNDArrayAt, (MX_handle, MX_uint, Ref{MX_handle}),
+          handle, idx, h_ref)
+  h_ref[]
+end
+
 import Base: setindex!
 
 """
-    setindex!(arr :: NDArray, val, idx)
+    setindex!(arr::NDArray, val, idx)
 
-Assign values to an `NDArray`. Elementwise assignment is not implemented, only the following
-scenarios are supported
+Assign values to an `NDArray`.
+The following scenarios are supported
+
+* single value assignment via linear indexing: `arr[42] = 24`
 
 * `arr[:] = val`: whole array assignment, `val` could be a scalar or an array (Julia `Array`
   or `NDArray`) of the same shape.
 * `arr[start:stop] = val`: assignment to a *slice*, `val` could be a scalar or an array of
   the same shape to the slice. See also [`slice`](@ref).
 """
-function setindex!(arr :: NDArray, val :: Real, ::Colon)
-  @assert(arr.writable)
+function setindex!(arr::NDArray, val::Real, idx::Integer)
+  # linear indexing
+  @assert arr.writable
+  _set_value(out=arr[idx], src=val)
+end
+
+function setindex!(arr::NDArray, val::Real, ::Colon)
+  @assert arr.writable
   _set_value(out=arr, src=convert(eltype(arr), val))
-  return arr
 end
-function setindex!(arr :: NDArray, val :: Array{T}, ::Colon) where T<:Real
+
+function setindex!(arr::NDArray, val::Array{T}, ::Colon) where T<:Real
+  @assert arr.writable
   copy!(arr, val)
 end
-function setindex!(arr :: NDArray, val :: NDArray, ::Colon)
+
+function setindex!(arr::NDArray, val::NDArray, ::Colon)
+  @assert arr.writable
   copy!(arr, val)
 end
-function setindex!(arr :: NDArray, val :: Union{T,Array{T},NDArray}, idx::UnitRange{Int}) where T<:Real
+
+function setindex!(arr::NDArray, val::Union{T,Array{T},NDArray},
+                   idx::UnitRange{Int}) where T<:Real
+  @assert arr.writable
   setindex!(slice(arr, idx), val, Colon())
 end
 
 import Base: getindex
 """
-    getindex(arr :: NDArray, idx)
+    getindex(arr::NDArray, idx)
 
 Shortcut for [`slice`](@ref). A typical use is to write
 
@@ -396,16 +420,41 @@ which furthur translates into
     create a **copy** of the sub-array for Julia `Array`, while for `NDArray`, this is
     a *slice* that shares the memory.
 """
-function getindex(arr :: NDArray, ::Colon)
+function getindex(arr::NDArray, ::Colon)
   return arr
 end
 
 """
-Shortcut for [`slice`](@ref). **NOTE** the behavior for Julia's built-in index slicing is to create a
-copy of the sub-array, while here we simply call `slice`, which shares the underlying memory.
+Shortcut for [`slice`](@ref).
+**NOTE** the behavior for Julia's built-in index slicing is to create a
+copy of the sub-array, while here we simply call `slice`,
+which shares the underlying memory.
 """
-function getindex(arr :: NDArray, idx::UnitRange{Int})
+function getindex(arr::NDArray, idx::UnitRange{Int})
   slice(arr, idx)
+end
+
+getindex(arr::NDArray) = _first(arr)
+
+function getindex(arr::NDArray, idx::Integer)
+  # linear indexing
+  len = length(arr)
+  size_ = size(arr)
+
+  if idx <= 0 || idx > len
+    throw(BoundsError(
+      "attempt to access $(join(size_, 'x')) NDArray at index $(idx)"))
+  end
+
+  idx -= 1
+  offsets = size_[1:end-1] |> reverse ∘ cumprod ∘ collect
+  handle = arr.handle
+  for offset ∈ offsets
+    handle = _at(handle, idx ÷ offset)
+    idx %= offset
+  end
+
+  _at(handle, idx) |> MX_NDArrayHandle |> x -> NDArray(x, arr.writable)
 end
 
 import Base: copy!, copy, convert, deepcopy

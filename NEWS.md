@@ -26,6 +26,25 @@
      2.0  4.0
     ```
 
+* `NDArray` `getindex`/`setindex!` linear indexing support and `first` for extracting scalar value. (#TBD)
+
+  ```julia
+  julia> x = mx.zeros(2, 5)
+
+  julia> x[5] = 42  # do synchronization and set the value
+  ```
+
+  ```julia
+  julia> y = x[5]  # actually, getindex won't do synchronization, but REPL's showing did it for you
+  1 mx.NDArray{Float32} @ CPU0:
+   42.0
+
+  julia> first(y)  # do sync and get the value
+  42.0f0
+
+  julia> y[]  # this is available, also
+  42.0f0
+  ```
 * Elementwise power of `NDArray`. (#293)
     * `x.^2`
     * `2.^x`

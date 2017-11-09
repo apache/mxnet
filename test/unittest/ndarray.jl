@@ -85,6 +85,68 @@ function test_slice()
   @test copy(mx.slice(array, 2:3)) == [1 1; 1 1]
 end
 
+function test_linear_idx()
+  info("NDArray::getindex::linear indexing")
+  let A = reshape(collect(1:30), 3, 10)
+    x = mx.NDArray(A)
+
+    @test copy(x) == A
+    @test copy(x[1])  == [1]
+    @test copy(x[2])  == [2]
+    @test copy(x[3])  == [3]
+    @test copy(x[12]) == [12]
+    @test copy(x[13]) == [13]
+    @test copy(x[14]) == [14]
+
+    @test_throws BoundsError x[-1]
+    @test_throws BoundsError x[0]
+    @test_throws BoundsError x[31]
+    @test_throws BoundsError x[42]
+  end
+
+  let A = reshape(collect(1:24), 3, 2, 4)
+    x = mx.NDArray(A)
+
+    @test copy(x) == A
+    @test copy(x[1])  == [1]
+    @test copy(x[2])  == [2]
+    @test copy(x[3])  == [3]
+    @test copy(x[11]) == [11]
+    @test copy(x[12]) == [12]
+    @test copy(x[13]) == [13]
+    @test copy(x[14]) == [14]
+  end
+
+  info("NDArray::setindex!::linear indexing")
+  let A = reshape(collect(1:24), 3, 2, 4)
+    x = mx.NDArray(A)
+
+    @test copy(x) == A
+
+    x[4] = -4
+    @test copy(x[4])  == [-4]
+
+    x[11] = -11
+    @test copy(x[11]) == [-11]
+
+    x[24] = 42
+    @test copy(x[24]) == [42]
+  end
+end  # function test_linear_idx
+
+function test_first()
+  info("NDArray::first")
+  let A = reshape(collect(1:30), 3, 10)
+    x = mx.NDArray(A)
+
+    @test x[]    == 1
+    @test x[5][] == 5
+
+    @test first(x)    == 1
+    @test first(x[5]) == 5
+  end
+end  # function test_first
+
 function test_plus()
   dims   = rand_dims()
   t1, a1 = rand_tensors(dims)
@@ -668,6 +730,8 @@ end
   test_assign()
   test_copy()
   test_slice()
+  test_linear_idx()
+  test_first()
   test_plus()
   test_minus()
   test_mul()
