@@ -185,11 +185,11 @@ class Dense(HybridBlock):
             self._units = units
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer,
+                                          dtype=None, init=weight_initializer,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer,
+                                            dtype=None, init=bias_initializer,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
@@ -336,20 +336,20 @@ class BatchNorm(HybridBlock):
             self.in_channels = in_channels
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True,
+                                     shape=(in_channels,), dtype=None,
+                                     init=gamma_initializer, allow_deferred_init=True,
                                      differentiable=scale)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True,
+                                    shape=(in_channels,), dtype=None,
+                                    init=beta_initializer, allow_deferred_init=True,
                                     differentiable=center)
         self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(in_channels,),
+                                            shape=(in_channels,), dtype=None,
                                             init=running_mean_initializer,
                                             allow_deferred_init=True,
                                             differentiable=False)
         self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(in_channels,),
+                                           shape=(in_channels,), dtype=None,
                                            init=running_variance_initializer,
                                            allow_deferred_init=True,
                                            differentiable=False)
@@ -437,7 +437,7 @@ class Embedding(HybridBlock):
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer,
+                                      dtype=None, init=weight_initializer,
                                       allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, weight):

@@ -404,7 +404,8 @@ Examples::
 
   data = [2, 3, 0]
   indices = [[1, 1, 0], [0, 1, 0]]
-  scatter_nd(data, indices) = [[0, 0], [2, 3]]
+  shape = (2, 2)
+  scatter_nd(data, indices, shape) = [[0, 0], [2, 3]]
 
 )code")
 .set_num_outputs(1)

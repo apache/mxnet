@@ -740,7 +740,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
     using namespace mshadow;
     const TShape &arrshape = (*in_attrs)[take_::kArr];
     const TShape &idxshape = (*in_attrs)[take_::kIdx];
-    if (idxshape.ndim() == 0) return false;
+    if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
 
     out_attrs->clear();
 
