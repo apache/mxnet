@@ -65,11 +65,15 @@ public:
    */
   bool get_active();
 
+  CompressionType get_type();
+
   /*!
    * \brief if gc is in active mode, returns type of compression set
    * else returns GC_NONE
    */
   bool get_active_type();
+
+  void increment_push(int key);
 
   void SetTwoBitCompression(const float threshold);
 
@@ -134,7 +138,7 @@ private:
    * all negative gradients will be thresholded to -1*`threshold_`
    */
   float threshold_ = 0;
-
+  std::unordered_map<int, int> num_pushes_;
 };
 } // namespace kvstore
 } // namespace mxnet

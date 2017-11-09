@@ -25,6 +25,8 @@
 #include <mxnet/gc.h>
 #include <sstream>
 #include <vector>
+// for get_rank
+#include <ps/ps.h>
 #include "./gc-inl.h"
 
 namespace mxnet {
@@ -70,9 +72,32 @@ bool Gc::get_active() {
   return active_;
 }
 
+CompressionType Gc::get_type() {
+  return type_;
+}
+
 bool Gc::get_active_type() {
   if (active_) return type_;
   else return GC_NONE;
+}
+
+void Gc::increment_push(int key) {
+//  if (!get_active()) {
+    std::unordered_map<int, int>::const_iterator got = num_pushes_.find(key);
+    if (got == num_pushes_.end()) {
+      // first push is init, so not counting that
+      num_pushes_[key] = 0;
+    } else {
+      num_pushes_[key] += 1;
+    }
+//    if(ps::MyRank()==0) std::cout<<"numpush for key "<<key<<" is "<<num_pushes_[key]<<std::endl;
+    // if we see n+1 th push for any key, then we have waited for n pushes for all keys TODO(true?)
+    // if delay is 0, this means we set active after second push (which is first non-init push)
+    if (num_pushes_[key] > 0) {
+//      if(ps::MyRank()==0) std::cout<<"would set active "<<std::endl;
+//      set_active();
+    }
+//  } // else only needs to be added if we want to set GC inactive at some point after it turns on
 }
 
 void Gc::SetTwoBitCompression(const float threshold) {
@@ -117,6 +142,7 @@ int64_t Gc::GetCompressedSize(const int64_t original_size) {
 
 void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                   mxnet::NDArray *residual, const int priority) {
+  if(ps::MyRank()==0) std::cout<<from.shape().Size()<< " to "<<to->shape().Size()<<std::endl;
   CHECK(from.shape().ndim() != 0) << "source operands have zero dimension shape";
   int a = from.ctx().dev_mask();
   int b = to->ctx().dev_mask();

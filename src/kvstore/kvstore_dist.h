@@ -312,6 +312,7 @@ class KVStoreDist : public KVStoreLocal {
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
+      gc_->increment_push(key);
       const auto& vals = grouped_vals[i];
       NDArray merged = do_merge ? comm_->Reduce(key, vals, priority) : vals[0];
 
@@ -336,14 +337,22 @@ class KVStoreDist : public KVStoreLocal {
 
       // push to servers
       if (storage_type == kDefaultStorage) {
-        if (gc_->get_active_type() == GC_NONE) {
-          std::cout<<"gc is none for push of key"<<key<<std::endl;
-          PushDefault(key, comm_buf, priority);
+        if (gc_->get_type() == GC_NONE) {
+          PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), true);
+          PushDefault(key, comm_buf, pskv, priority);
         } else {
-          PushCompressed(key, comm_buf, priority);
+          // returns push_pskv if active, else pull_pskv
+          // we want inactive gc to send uncompressed gradients, but sharded same as active gc
+          // but calculates both push and pull pskv
+          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), gc_->get_active());
+          if (gc_->get_active()) {
+            PushCompressed(key, comm_buf, pskv, priority);
+          } else {
+            PushDefault(key, comm_buf, pskv, priority);
+          }
         }
       } else if (storage_type == kRowSparseStorage) {
-        if (gc_->get_active_type() != GC_NONE) {
+        if (gc_->get_type() != GC_NONE) {
           LOG(FATAL) << "Gradient compression for row sparse storage type is not supported";
         }
         PushRowSparse(key, comm_buf, priority);
@@ -353,13 +362,10 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void PushCompressed(int key, const NDArray& comm_buf, int priority) {
+  void PushCompressed(int key, const NDArray& comm_buf, PSKV& pskv, int priority) {
     auto &small_buf = compr_buf_[key];
     auto &res_buf = residual_[key];
     size_t original_size = comm_buf.shape().Size();
-
-    // returns push_pskv but calculates both push and pull pskv
-    PSKV &pskv = EncodeCompressedKey(key, original_size, true);
 
     // Init the small buffer and residual_ buffer for quantize
     if (small_buf.is_none()) {
@@ -393,16 +399,15 @@ class KVStoreDist : public KVStoreLocal {
       PROFILER_MESSAGE("KVStoreDistCompressedPush"));
   }
 
-  void PushDefault(int key, const NDArray &send_buf, int priority) {
+  void PushDefault(int key, const NDArray &send_buf, const PSKV& pskv, int priority) {
     auto push_to_servers =
-        [this, key, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+        [this, key, pskv, send_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
           // convert to ps keys
           size_t size = send_buf.shape().Size();
           real_t* data = send_buf.data().dptr<real_t>();
 #if MKL_EXPERIMENTAL == 1
           mkl_set_tblob_eager_mode(send_buf.data());
 #endif
-          PSKV& pskv = EncodeDefaultKey(key, size, true);
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
