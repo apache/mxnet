@@ -125,7 +125,7 @@ def test_bucket_module_ctx_group():
     mod.bind(data_shapes=[['data', (batch_size, num_hidden)]],
              label_shapes=[['label', (batch_size,)]],
              for_training=True, inputs_need_grad=True)
-
+    assert(mod.binded)
 
 def test_module_layout():
     sym = mx.sym.Variable('data')

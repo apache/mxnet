@@ -75,9 +75,7 @@ class Module(BaseModule):
         assert len(work_load_list) == len(self._context)
         self._work_load_list = work_load_list
 
-        if group2ctxs is None:
-            group2ctxs = [None] * len(self._context)
-        assert len(group2ctxs) == len(self._context)
+        # length of group2ctxs should be equal with length of context
         self._group2ctxs = group2ctxs
 
         self._symbol = symbol
