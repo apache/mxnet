@@ -751,7 +751,6 @@ def test_sparse_nd_exception():
     assert_exception(mx.nd.sparse.zeros, ValueError,
                      "invalid_stype", (2,2))
 
-
 def test_sparse_nd_check_format():
     """ test check_format for sparse ndarray """
     shape = rand_shape_2d()
