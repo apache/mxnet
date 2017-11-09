@@ -130,15 +130,10 @@ if __name__ == '__main__':
             kv.row_sparse_pull('weight', weight_param, row_ids=[all_row_ids],
                                priority=-weight_index)
         # evaluate metric on validation dataset
-<<<<<<< HEAD
         score = mod.score(eval_data, metric)
         logging.info('epoch %d, eval nll = %s, accuracy = %s' % (epoch, score[0][1], score[1][1]))
-=======
-        score = mod.score(eval_data, ['nll_loss'])
-        logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
-        save_optimizer_states = 'dist' not in kv.type
-        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=False)
->>>>>>> upstream/master
+        save_optimizer_states = 'dist' not in kv.type if kv else True
+        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=save_optimizer_states)
         # reset the iterator for next pass of data
         data_iter.reset()
     logging.info('Training completed.')

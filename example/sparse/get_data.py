@@ -54,7 +54,7 @@ def get_libsvm_data(data_dir, data_name, url):
         print("Dataset " + data_name + " is now present.")
     os.chdir("..")
 
-<<<<<<< HEAD
+
 def get_uci_data(data_dir, data_name, url):
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
@@ -152,7 +152,7 @@ def preprocess(data_name, out_name):
             s += '\n'
 
             f.write(s)
-=======
+
 def get_movielens_data(prefix):
     if not os.path.exists("%s.zip" % prefix):
         print("Dataset MovieLens 10M not present. Downloading now ...")
@@ -191,4 +191,3 @@ def get_movielens_iter(filename, batch_size, dummy_iter):
                                    batch_size=batch_size, shuffle=True)
     iter_train = DummyIter(iter_train) if dummy_iter else iter_train
     return mx.io.PrefetchingIter(iter_train)
->>>>>>> upstream/master

@@ -32,9 +32,6 @@ parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
 parser.add_argument('--lr', type=float, default=0.01,
                     help='learning rate')
-parser.add_argument('--kvstore', type=str, default=None,
-                    help='what kvstore to use',
-                    choices=["dist_async", "local"])
 parser.add_argument('--optimizer', type=str, default='adam',
                     help='what optimizer to use',
                     choices=["ftrl", "sgd", "adam"])
@@ -66,16 +63,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.info(args)
     num_epoch = args.num_epoch
-    kvstore = args.kvstore
     batch_size = args.batch_size
     optimizer = args.optimizer
     log_interval = args.log_interval
     lr = args.lr
-
-    # create kvstore
-    kv = mx.kvstore.create(kvstore) if kvstore else None
-    rank = kv.rank if kv else 0
-    num_worker = kv.num_workers if kv else 1
 
     # dataset    
     num_features = ADULT['num_features']
@@ -90,8 +81,7 @@ if __name__ == '__main__':
 
     # data iterator
     train_data = mx.io.LibSVMIter(data_libsvm=train_data, data_shape=(num_features,),
-                                  batch_size=batch_size, num_parts=num_worker,
-                                  part_index=rank)
+                                  batch_size=batch_size)
     eval_data = mx.io.LibSVMIter(data_libsvm=val_data, data_shape=(num_features,),
                                  batch_size=batch_size)
 
@@ -99,14 +89,12 @@ if __name__ == '__main__':
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
-    optim = mx.optimizer.create(optimizer, learning_rate=lr, rescale_grad=1.0/batch_size/num_worker)
-    mod.init_optimizer(optimizer=optim, kvstore=kv)
+    optim = mx.optimizer.create(optimizer, learning_rate=lr, rescale_grad=1.0/batch_size)
+    mod.init_optimizer(optimizer=optim)
     # use accuracy as the metric
     metric = mx.metric.create(['nll_loss', 'acc'])
 
     # get the sparse weight parameter
-    arg_params, _ = mod.get_params()
-    weight = arg_params['weight']
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     logging.info('Training started ...')
@@ -117,11 +105,6 @@ if __name__ == '__main__':
         for batch in data_iter:
             nbatch += 1
             # for distributed training, we need to manually pull sparse weights from kvstore
-            if kv:
-                row_ids = batch.data[0].indices.asnumpy().tolist()
-                # remove row ids which corresponding to embedding or continuous features
-                row_ids = mx.nd.array([row_id for row_id in row_ids if row_id < ADULT['num_linear_features']])
-                kv.row_sparse_pull('weight', weight, row_ids=[row_ids])
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
@@ -133,6 +116,8 @@ if __name__ == '__main__':
         # evaluate metric on validation dataset
         score = mod.score(eval_data, metric)
         logging.info('epoch %d, eval nll = %s, accuracy = %s' % (epoch, score[0][1], score[1][1]))
+        
+        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=True)
         # reset the iterator for next pass of data
         data_iter.reset()
     logging.info('Training completed.')

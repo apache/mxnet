@@ -24,24 +24,27 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
     data = mx.symbol.Variable("data", stype='csr')
     label = mx.symbol.Variable("softmax_label")
 
-    x = mx.symbol.slice_axis(data=data, axis=1, begin=0, end=num_linear_features)
+    x = mx.symbol.slice(data=data, begin=(0, 0), end=(None, num_linear_features))
     norm_init = mx.initializer.Normal(sigma=0.01)
     # weight with row_sparse storage type to enable sparse gradient updates
-    weight = mx.symbol.Variable("weight", shape=(num_linear_features, 2),
+    weight = mx.symbol.Variable("linear_weight", shape=(num_linear_features, 2),
                                 init=norm_init, stype='row_sparse')
-    bias = mx.symbol.Variable("bias", shape=(2,))
+    bias = mx.symbol.Variable("linear_bias", shape=(2,))
     dot = mx.symbol.sparse.dot(x, weight)
     linear_out = mx.symbol.broadcast_add(dot, bias)
 
-    x = mx.symbol.slice_axis(data=data, axis=1, begin=num_linear_features, end=(num_linear_features+num_embed_features))
+    x = mx.symbol.slice(data=data, begin=(0, num_linear_features),
+                        end=(None, num_linear_features+num_embed_features))
     embeds = mx.symbol.split(data=x, num_outputs=num_embed_features, squeeze_axis=1)
 
-    x = mx.symbol.slice_axis(data=data, axis=1, begin=(num_linear_features+num_embed_features),
-                             end=(num_linear_features+num_embed_features+num_cont_features))
+    x = mx.symbol.slice(data=data, begin=(0, num_linear_features+num_embed_features),
+                        end=(None, num_linear_features+num_embed_features+num_cont_features))
     features = [x]
 
     for i, embed in enumerate(embeds):
-        features.append(mx.symbol.Embedding(data=embed, input_dim=input_dims[i], output_dim=hidden_units[0]))
+        embed_weight = mx.symbol.Variable('embed_%d_weight' % i, stype='row_sparse')
+        features.append(mx.symbol.contrib.SparseEmbedding(data=embed, weight=embed_weight,
+                        input_dim=input_dims[i], output_dim=hidden_units[0]))
 
     hidden = mx.symbol.concat(*features, dim=1)
     hidden = mx.symbol.BatchNorm(data=hidden)
