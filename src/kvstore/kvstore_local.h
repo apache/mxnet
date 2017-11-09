@@ -387,7 +387,6 @@ private:
   std::unordered_set<int> warnings_printed_;
   /// whether int or string is used for keys
   KeyType key_type_ = kUndefinedKey;
-
 };
 }  // namespace kvstore
 }  // namespace mxnet

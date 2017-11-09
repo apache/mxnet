@@ -706,7 +706,6 @@ class CommDevice : public Comm {
     std::vector<NDArray> small_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
-
   bool inited_;
 };
 

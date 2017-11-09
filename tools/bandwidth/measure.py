@@ -92,9 +92,6 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
     data_shape = (32,) + tuple([int(s) for s in image_shape.split(',')])
     shapes = get_shapes(symbol, data_shape)
 
-
-    for s in shapes:
-         print(s)
     size = float(sum([reduce(lambda x,y : x*y, s, 1) for s in shapes])) * 4 / 1e6
     logging.info('num of arrays = %d, total size = %f MB' % (len(shapes), size))
 

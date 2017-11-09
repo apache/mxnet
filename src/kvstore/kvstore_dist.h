@@ -31,7 +31,6 @@
 #include "mxnet/engine.h"
 #include "ps/ps.h"
 #include "./kvstore_dist_server.h"
-#include "../ndarray/ndarray_function.h"
 #if MKL_EXPERIMENTAL == 1
 #include <mkl_memory.h>
 #include "../operator/mkl/mkl_memory-inl.h"
@@ -701,39 +700,32 @@ class KVStoreDist : public KVStoreLocal {
    * \brief for worker to push and pull data
    */
   ps::KVWorker<real_t>* ps_worker_;
-
   /**
    * \brief the server handle
    */
   KVStoreDistServer* server_;
-
   /**
    * \brief threshold for partition
    */
   size_t bigarray_bound_;
-
   /**
    * \brief buffer for non-compressed data.
    * When gradient compression is active, this is used
    * for the data in pull and for original data in push
    */
   std::unordered_map<int, NDArray> comm_buf_;
-
   /**
    * \brief buffer for compressed data
    * Used when gradient compression is active and action
    * is push
    */
   std::unordered_map<int, NDArray> compr_buf_;
-
   /**
    * \brief residual buffer to accumulate quantization error
    * during gradient compression
    */
   std::unordered_map<int, NDArray> residual_;
-
   bool log_verbose_;
-
 };
 
 }  // namespace kvstore

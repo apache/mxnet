@@ -35,7 +35,6 @@
 #include "mxnet/kvstore.h"
 #include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
-#include "../ndarray/ndarray_function.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -475,7 +474,7 @@ class KVStoreDistServer {
       if (stored.is_none()) {
         // initialization
         stored = NDArray(dshape, Context());
-          CopyFromTo(recved, &stored, 0);
+        CopyFromTo(recved, &stored, 0);
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
@@ -485,17 +484,17 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-            CopyFromTo(recved, &merged.array, 0);
+          CopyFromTo(recved, &merged.array, 0);
         } else {
-            merged.array += recved;
+          merged.array += recved;
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-          exec_.Exec([this, key, &recved, &stored]() {
-              CHECK(updater_);
-              updater_(key, recved, &stored);
+        exec_.Exec([this, key, &recved, &stored]() {
+          CHECK(updater_);
+          updater_(key, recved, &stored);
           });
         server->Response(req_meta);
         stored.WaitToRead();
