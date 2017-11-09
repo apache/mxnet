@@ -249,7 +249,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
   #pragma omp parallel
   {
     // be conservative, set number of real cores - 1
-    maxthread = std::max(omp_get_num_procs() - 1, 1);
+    maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
   }
   param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
   #pragma omp parallel num_threads(param_.preprocess_threads)
