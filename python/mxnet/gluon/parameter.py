@@ -171,11 +171,12 @@ class Parameter(object):
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self.shape:
-            for i, j in zip(self.shape, data.shape):
-                assert i == 0 or i == j, \
+            for self_dim, data_dim in zip(self.shape, data.shape):
+                assert self_dim == 0 or self_dim == data_dim, \
                     "Failed loading Parameter %s from saved params: " \
                     "shape incompatible expacted %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
+            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter %s from saved params: " \
@@ -305,7 +306,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if self.dtype is None or not self.shape or np.prod(self.shape) <= 0:
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init)
                 return
@@ -344,6 +345,8 @@ class Parameter(object):
             "Parameter %s has not been initialized"%self.name
         for arr in self.list_data():
             arr[:] = data
+        if not self.shape or np.prod(self.shape) <= 0:
+            self.shape = data.shape
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been

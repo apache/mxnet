@@ -77,6 +77,7 @@ inline int get_num_threads<gpu>(const int N) {
   using namespace mshadow::cuda;
   return kBaseThreadNum * cuda_get_num_blocks(N);
 }
+
 #endif  // __CUDACC__
 
 template<>
@@ -104,6 +105,28 @@ inline int get_num_threads<cpu>(const int N) {
     break;                                          \
   default:                                          \
     break;                                          \
+  }
+
+
+#define MXNET_NDIM_SWITCH(NDim, ndim, ...)         \
+  if (NDim == 0) {                                 \
+  } else if (NDim == 1) {                          \
+    const int ndim = 1;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 2) {                          \
+    const int ndim = 2;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 3) {                          \
+    const int ndim = 3;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 4) {                          \
+    const int ndim = 4;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 5) {                          \
+    const int ndim = 5;                            \
+    {__VA_ARGS__}                                  \
+  } else {                                         \
+    LOG(FATAL) << "ndim=" << NDim << "too large "; \
   }
 
 

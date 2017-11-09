@@ -273,11 +273,55 @@ class ElemwiseBinaryOp : public OpBase {
    * \param out_attrs Output storage attributes
    * \return true if handled
    */
+  template<bool lhs_dense_ok = true, bool rhs_dense_ok = true>
   static bool AllowLRDenseInputWithSparseOutputStorageType(const nnvm::NodeAttrs& attrs,
                                                            int dev_mask,
                                                            DispatchMode* dispatch_mode,
                                                            std::vector<int> *in_attrs,
-                                                           std::vector<int> *out_attrs);
+                                                           std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
+    CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
+    const auto& lhs_stype = in_attrs->at(0);
+    const auto& rhs_stype = in_attrs->at(1);
+    auto& out_stype = out_attrs->at(0);
+    bool dispatched = false;
+    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+    const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                             DispatchMode::kFComputeEx;
+    if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
+      // dns, dns -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
+    if (!dispatched) {
+      if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
+          (rhs_dense_ok && lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+          (lhs_dense_ok && lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
+        // rsp, rsp -> rsp
+        // rsp, dns -> rsp
+        // dns, rsp -> rsp
+        dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                         dispatch_mode, dispatch_ex);
+      } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
+        // csr, csr -> csr
+        dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                         dispatch_mode, dispatch_ex);
+      } else if ((lhs_stype == kCSRStorage && rhs_dense_ok) ||
+        (rhs_stype == kCSRStorage && lhs_dense_ok)) {
+        // csr, dns -> csr
+        // dns, csr -> csr
+        dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                         dispatch_mode, DispatchMode::kFComputeFallback);
+      }
+    }
+    if (!dispatched) {
+      dispatch_fallback(out_attrs, dispatch_mode);
+    }
+    if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+      LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+    }
+    return true;
+  }
 
   /*!
    * \brief Backward pass computing input gradient using forward inputs
