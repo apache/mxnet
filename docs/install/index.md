@@ -228,14 +228,26 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources 
 
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
+```
+
+
+**Step 5** build MXNet core shared library with Make
+```bash
+$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+```
+
+*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
+
+
+**Step 5a** (Alternative) Build MXNet core shared library with CMake
+```bash
 $ mkdir -p build && cd build
-$ cmake -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja ..
-$ ninja
+$ cmake -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja .. && ninja
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are build flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `CMakeLists.txt`.
@@ -462,14 +474,25 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources 
 
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
+```
+
+**Step 5** build MXNet core shared library.
+```bash
+$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+```
+
+*Note* - USE_OPENCV, USE_BLAS, USE_CUDA, USE_CUDA_PATH AND USE_CUDNN are make file flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `make/config.mk`. Make sure to set USE_CUDA_PATH to right CUDA installation path. In most cases it is - */usr/local/cuda*.
+
+
+**Step 5a** (Alternative) build MXNet core shared library.
+```bash
 $ mkdir -p build && cd build
-$ cmake -DUSE_CUDA=ON -DUSE_CUDNN=ON -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja ..
-$ ninja
+$ cmake -DUSE_CUDA=ON -DUSE_CUDNN=ON -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja .. && ninja
 ```
 
 *Note* - USE_OPENCV, USE_BLAS, USE_CUDA and USE_CUDNN are build flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `CMakeLists.txt`. To set a different cuda path you can set the environment variable CUDA_HOME to the cuda location. In most cases it is - */usr/local/cuda*.
