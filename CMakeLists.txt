@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0.2)
 
 if((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0"))
-    set(FIRST_CUDA TRUE)
+  set(FIRST_CUDA TRUE)
 else()
-    set(FIRST_CUDA FALSE)
+  set(FIRST_CUDA FALSE)
 endif()
 include(cmake/Utils.cmake)
 
@@ -158,9 +158,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(FIRST_CUDA)
-  include(cmake/Blas.cmake)
+  include(cmake/ChooseBlas.cmake)
   include(mshadow/cmake/Utils.cmake)
-  include(cmake/FirstCuda.cmake)
+  include(cmake/FirstClassLangCuda.cmake)
 else()
   if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
     include(mshadow/cmake/mshadow.cmake)
