@@ -91,13 +91,15 @@ def test_image_folder_dataset():
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
 
-def test_multi_worker():
-    class Dataset(gluon.data.Dataset):
-        def __len__(self):
-            return 100
-        def __getitem__(self, key):
-            return mx.nd.full((10,), key)
 
+class Dataset(gluon.data.Dataset):
+    def __len__(self):
+        return 100
+    def __getitem__(self, key):
+        return mx.nd.full((10,), key)
+
+
+def test_multi_worker():
     data = Dataset()
     loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5)
     for i, batch in enumerate(loader):
