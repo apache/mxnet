@@ -385,43 +385,6 @@ struct SliceParam : public dmlc::Parameter<SliceParam> {
   }
 };
 
-#if 0
-inline TShape GetSliceShape(const SliceParam& param, const TShape& dshape) {
-  CHECK_LE(param.begin.ndim(), dshape.ndim())
-    << "Slicing axis exceeds data dimensions";
-  CHECK_LE(param.end.ndim(), dshape.ndim())
-    << "Slicing axis exceeds data dimensions";
-  CHECK_EQ(param.begin.ndim(), param.end.ndim())
-    << "begin and end must have the same length";
-
-  TShape oshape = dshape;
-  for (index_t i = 0; i < param.begin.ndim(); ++i) {
-    int s = 0, e = dshape[i];
-    if (e != 0) {
-      if (param.begin[i]) {
-        CHECK_LE(*param.begin[i], e)
-          << "Slicing begin exceeds data dimensions "
-          << param.begin << " vs " << dshape;
-        s = *param.begin[i];
-        if (s < 0) s += dshape[i];
-      }
-      if (param.end[i]) {
-        CHECK_LE(*param.end[i], e)
-          << "Slicing end exceeds data dimensions "
-          << param.end << " vs " << dshape;
-        e = *param.end[i];
-        if (e < 0) e += dshape[i];
-      }
-      CHECK(s >= 0 && s < e && e <= static_cast<int>(dshape[i]))
-        << "Invalid slicing begin " << param.begin << " and end "
-        << param.end << " for data of shape " << dshape;
-    }
-    oshape[i] = e - s;
-  }
-  return oshape;
-}
-#endif
-
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          DispatchMode* dispatch_mode,
@@ -912,21 +875,6 @@ void SliceOpBackward(const nnvm::NodeAttrs& attrs,
   })
 }
 
-#if 0
-inline bool SliceAssignShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  const TShape& lshape = (*in_attrs)[0];
-  if (lshape.ndim() == 0U || lshape.Size() == 0U) return false;
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, GetSliceShape(param, lshape));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, lshape);
-  return true;
-}
-#endif
-
 inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
@@ -948,93 +896,6 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   return true;
 }
-
-#if 0
-template<typename xpu>
-void SliceAssignImpl(mshadow::Stream<xpu> *s, const SliceParam& param,
-                     const TBlob& dst, const TBlob& src) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  index_t N = dst.ndim();
-  TShape begin(N), end(N);
-  for (index_t i = 0; i < N; ++i) {
-    int s = 0;
-    if (param.begin[i]) {
-      s = *param.begin[i];
-      if (s < 0) s += dst.size(i);
-    }
-    begin[i] = s;
-    end[i] = s + src.size(i);
-  }
-
-  MSHADOW_TYPE_SWITCH(dst.type_flag_, DType, {
-    switch (dst.ndim()) {
-      case 0:
-        break;
-      case 1: {
-        Tensor<xpu, 1, DType> out = dst.get<xpu, 1, DType>(s);
-        Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
-        slice(out, begin.get<1>(), end.get<1>()) = in;
-        break;
-      }
-      case 2: {
-        Tensor<xpu, 2, DType> out = dst.get<xpu, 2, DType>(s);
-        Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
-        slice(out, begin.get<2>(), end.get<2>()) = in;
-        break;
-      }
-      case 3: {
-        Tensor<xpu, 3, DType> out = dst.get<xpu, 3, DType>(s);
-        Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s);
-        slice(out, begin.get<3>(), end.get<3>()) = in;
-        break;
-      }
-      case 4: {
-        Tensor<xpu, 4, DType> out = dst.get<xpu, 4, DType>(s);
-        Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s);
-        slice(out, begin.get<4>(), end.get<4>()) = in;
-        break;
-      }
-      case 5: {
-        Tensor<xpu, 5, DType> out = dst.get<xpu, 5, DType>(s);
-        Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s);
-        slice(out, begin.get<5>(), end.get<5>()) = in;
-        break;
-      }
-      default:
-        LOG(FATAL) << "CropAssign supports at most 5 dimensions";
-        break;
-    }
-  });
-}
-
-template<typename xpu>
-void SliceAssign(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  if (req[0] == kNullOp) {
-    return;
-  } else if (req[0] == kWriteTo) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> in = inputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      Copy(out, in, s);
-    });
-  } else if (req[0] != kWriteInplace) {
-    LOG(FATAL) << "CropAssign only supports kWriteTo and kWriteInplace";
-  }
-
-  SliceAssignImpl<xpu>(s, param, outputs[0], inputs[1]);
-}
-#endif
 
 template<typename xpu>
 void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
@@ -1072,27 +933,11 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
   })
 }
 
-#if 0
-struct SimpleCropAssignScalarParam : public dmlc::Parameter<SimpleCropAssignScalarParam> {
-  real_t scalar;
-  TShape begin, end;
-  DMLC_DECLARE_PARAMETER(SimpleCropAssignScalarParam) {
-    DMLC_DECLARE_FIELD(scalar)
-    .set_default(0)
-    .describe("The scalar value for assignment.");
-    DMLC_DECLARE_FIELD(begin)
-    .describe("starting coordinates");
-    DMLC_DECLARE_FIELD(end)
-    .describe("ending coordinates");
-  }
-};
-#endif
-
-struct CropAssignScalarParam : public dmlc::Parameter<CropAssignScalarParam> {
+struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
   real_t scalar;
   nnvm::Tuple<dmlc::optional<int>> begin, end;
   nnvm::Tuple<dmlc::optional<int>> step;
-  DMLC_DECLARE_PARAMETER(CropAssignScalarParam) {
+  DMLC_DECLARE_PARAMETER(SliceAssignScalarParam) {
     DMLC_DECLARE_FIELD(scalar)
     .set_default(0)
     .describe("The scalar value for assignment.");
@@ -1106,71 +951,7 @@ struct CropAssignScalarParam : public dmlc::Parameter<CropAssignScalarParam> {
   }
 };
 
-#if 0
-template<typename xpu>
-void CropAssignScalar(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  const SimpleCropAssignScalarParam& param = nnvm::get<SimpleCropAssignScalarParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  if (req[0] == kWriteTo) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> in = inputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      Copy(out, in, s);
-    });
-  } else if (req[0] != kWriteInplace) {
-    LOG(FATAL) << "CropAssignScalar only supports kWriteTo and kWriteInplace";
-  }
-
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    switch (outputs[0].shape_.ndim()) {
-      case 0:
-        break;
-      case 1: {
-        Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-        slice(out, param.begin.get<1>(), param.end.get<1>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 2: {
-        Tensor<xpu, 2, DType> out = outputs[0].get<xpu, 2, DType>(s);
-        slice(out, param.begin.get<2>(), param.end.get<2>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 3: {
-        Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-        slice(out, param.begin.get<3>(), param.end.get<3>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 4: {
-        Tensor<xpu, 4, DType> out = outputs[0].get<xpu, 4, DType>(s);
-        slice(out, param.begin.get<4>(), param.end.get<4>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 5: {
-        Tensor<xpu, 5, DType> out = outputs[0].get<xpu, 5, DType>(s);
-        slice(out, param.begin.get<5>(), param.end.get<5>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      default:
-        LOG(FATAL) << "CropAssign supports at most 5 dimensions";
-        break;
-    }
-  });
-}
-#endif
-
-inline bool CropAssignScalarOpShape(const nnvm::NodeAttrs& attrs,
+inline bool SliceAssignScalarOpShape(const nnvm::NodeAttrs& attrs,
                                     std::vector<TShape> *in_attrs,
                                     std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -1211,7 +992,7 @@ struct slice_assign_scalar {
 };
 
 template<typename xpu>
-void CropAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
+void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx,
                                const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
@@ -1235,7 +1016,7 @@ void CropAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
   }
 
   TShape vshape = data.shape_;
-  const CropAssignScalarParam& param = nnvm::get<CropAssignScalarParam>(attrs.parsed);
+  const SliceAssignScalarParam& param = nnvm::get<SliceAssignScalarParam>(attrs.parsed);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<int, ndim> begin, end, step;
     GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);

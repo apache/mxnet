@@ -48,7 +48,7 @@ NNVM_REGISTER_OP(_slice_assign)
 .set_attr<FCompute>("FCompute<gpu>", SliceAssignOpForward<gpu>);
 
 NNVM_REGISTER_OP(_crop_assign_scalar)
-.set_attr<FCompute>("FCompute<gpu>", CropAssignScalarOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceAssignScalarOpForward<gpu>);
 
 NNVM_REGISTER_OP(slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxis<gpu>);
