@@ -105,31 +105,45 @@ def test_sparse_nd_setitem():
 
 
 def test_sparse_nd_slice():
-    def check_sparse_nd_csr_slice(shape):
-        stype = 'csr'
-        A, _ = rand_sparse_ndarray(shape, stype)
-        A2 = A.asnumpy()
-        start = rnd.randint(0, shape[0] - 1)
-        end = rnd.randint(start + 1, shape[0])
-        assert same(A[start:end].asnumpy(), A2[start:end])
-        assert same(A[start - shape[0]:end].asnumpy(), A2[start:end])
-        assert same(A[start:].asnumpy(), A2[start:])
-        assert same(A[:end].asnumpy(), A2[:end])
-        ind = rnd.randint(-shape[0], shape[0] - 1)
-        assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
+    shape = (rnd.randint(2, 10), rnd.randint(2, 10))    
+    stype = 'csr'
+    A, _ = rand_sparse_ndarray(shape, stype)
+    A2 = A.asnumpy()
+    start = rnd.randint(0, shape[0] - 1)
+    end = rnd.randint(start + 1, shape[0])
+    assert same(A[start:end].asnumpy(), A2[start:end])
+    assert same(A[start - shape[0]:end].asnumpy(), A2[start:end])
+    assert same(A[start:].asnumpy(), A2[start:])
+    assert same(A[:end].asnumpy(), A2[:end])
+    ind = rnd.randint(-shape[0], shape[0] - 1)
+    assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
+        
+    start_col = rnd.randint(0, shape[1] - 1)
+    end_col = rnd.randint(start_col + 1, shape[1])
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
     
+    A = mx.nd.sparse.zeros('csr', shape)
+    A2 = A.asnumpy()
+    assert same(A[start:end].asnumpy(), A2[start:end])
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
+
     def check_slice_nd_csr_fallback(shape):
         stype = 'csr'
         A, _ = rand_sparse_ndarray(shape, stype)
         A2 = A.asnumpy()
         start = rnd.randint(0, shape[0] - 1)
         end = rnd.randint(start + 1, shape[0])
-        result = mx.nd.sparse.slice(A, begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
-        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
+
+        # non-trivial step should fallback to dense slice op
+        result = mx.nd.sparse.slice(A, begin=(start,), end=(end + 1,), step=(2,))
+        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start,), end=(end + 1,), step=(2,))
         assert same(result_dense.asnumpy(), result.asnumpy())
 
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
-    check_sparse_nd_csr_slice(shape)
     check_slice_nd_csr_fallback(shape)
 
 
@@ -246,7 +260,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
-def test_sparse_nd_binary_rop():
+def test_sparse_nd_binary_scalar_op():
     N = 3
     def check(fn, stype):
         for _ in range(N):
@@ -269,6 +283,7 @@ def test_sparse_nd_binary_rop():
         check(lambda x: 0.5 >= x, stype)
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
+        check(lambda x: x / 2, stype)
 
 def test_sparse_nd_binary_iop():
     N = 3

@@ -518,14 +518,17 @@ inline std::string demangle(const char *name) {
   return status ? name : res.get();
 }
 
+template<typename T>
+inline std::string type_name() { return demangle(typeid(T).name()); }
+
 #define PRINT_NDARRAYS(__ctx$, __var)  test::print(__ctx$, __FUNCTION__, #__var, __var)
 #define PRINT_OP_AND_ARRAYS(__ctx$, __op, __var)  test::print(__ctx$, __FUNCTION__, \
   static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
-  "<" << test::demangle(typeid(__op).name()) << ">"))->str(), __var)
+  "<" << type_name<__op>() << ">"))->str(), __var)
 #define PRINT_OP2_AND_ARRAYS(__ctx$, __op1, __op2, __var)  test::print(__ctx$, __FUNCTION__, \
   static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
-  "<" << test::demangle(typeid(__op1).name()) << ", " \
-  << test::demangle(typeid(__op2).name()) << ">"))->str(), __var)
+  "<" << type_name<__op1>().name()) << ", " \
+  << type_name<__op2>() << ">"))->str(), __var)
 
 /*! \brief Fill blob with some pattern defined by the getNextData() callback
  * Pattern fill in the defined order (important for analysis):
@@ -604,6 +607,19 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
   } while (num_rand - defect <= (uint64_t)x);
 
   return static_cast<ScalarType>(x / bin_size + min);
+}
+
+inline std::string pretty_num(uint64_t val) {
+  std::string res, s = std::to_string(val);
+  size_t ctr = 0;
+  for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
+    if (ctr && (ctr % 3) == 0) {
+      res += ",";
+    }
+    res.push_back(s[i]);
+  }
+  std::reverse(res.begin(), res.end());
+  return res;
 }
 
 /*! \brief Change a value during the scope of this declaration */
