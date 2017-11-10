@@ -868,6 +868,8 @@ def test_ndarray_indexing():
                   ((1, 2, 3), False), ((1, 2, 3, 4), True),
                   ((slice(None, None, -1), 2, slice(1, 5), 1), False),
                   ((slice(None, None, -1), 2, slice(1, 7, 2), 1), False),
+                  ((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)), False),
+                  ((slice(1, 8, 2), 1, slice(3, 8), 2), False),
                   ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
                   (np.array([6, 3], dtype=np.int32), False),
                   (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
