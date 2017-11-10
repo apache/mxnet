@@ -115,7 +115,6 @@ int64_t Gc::GetCompressedSize(const int64_t original_size) {
 
 void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                   mxnet::NDArray *residual, const int priority) {
-  if(ps::MyRank()==0) std::cout<<from.shape().Size()<< " to "<<to->shape().Size()<<std::endl;
   CHECK(from.shape().ndim() != 0) << "source operands have zero dimension shape";
   int a = from.ctx().dev_mask();
   int b = to->ctx().dev_mask();
