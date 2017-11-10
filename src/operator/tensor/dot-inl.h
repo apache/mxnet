@@ -29,9 +29,12 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <iostream>
 #include <type_traits>
+#include "./util/tensor_util-inl.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "./init_op.h"
 #include "../mxnet_op.h"
 #ifdef __CUDACC__
 #include "./dot-inl.cuh"
@@ -373,10 +376,10 @@ struct DotCsrTransDnsRspByRowBlocks {
    * \brief
    * \param i the i-th thread
    */
-  template<typename DType, typename RType, typename IType, typename CType>
+  template<typename DType, typename IType, typename CType>
   MSHADOW_CINLINE static void Map(int i,
                                   DType* out,
-                                  RType* row_idx,
+                                  nnvm::dim_t* row_flg_sum,
                                   const DType* data_l,
                                   const IType* indptr_l,
                                   const CType* col_idx_l,
@@ -395,9 +398,11 @@ struct DotCsrTransDnsRspByRowBlocks {
       for (IType k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
         const CType col_idx = col_idx_l[k];
         if (col_idx < seg_start || col_idx >= seg_end) continue;
-        const dim_t offset_out = col_idx * num_cols;
-        row_idx[col_idx] = 1;
+
+        const nnvm::dim_t rsp_row = row_flg_sum[col_idx] - 1;
+        const nnvm::dim_t offset_out = rsp_row * num_cols;
         const DType val = data_l[k];
+
         for (dim_t l = 0; l < num_cols; ++l) {
           out[offset_out+l] += data_r[offset_r+l] * val;
         }
@@ -573,6 +578,18 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   });
 }
 
+
+struct MarkCsrColKernel {
+  template<typename CType>
+  MSHADOW_CINLINE static void Map(int tid,
+                                  nnvm::dim_t* flg,
+                                  CType* col_idx) {
+    CType idx = col_idx[tid];
+    flg[idx] = 1;
+  }
+};
+
+
 /*!
  * \brief CPU Impl of dot(csr.T, dns) = rsp
  */
@@ -598,40 +615,52 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
   const TBlob& data_r = rhs;
 
-  // pre-allocate spaces for ret using the dense dimension size
-  ret->CheckAndAlloc({mshadow::Shape1(lhs.shape()[1])});
-  const TBlob data_out = ret->data();
-  const TBlob row_idx_out = ret->aux_data(rowsparse::kIdx);
-
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_l.type_flag_, CType, {  // col idx type
-        MSHADOW_IDX_TYPE_SWITCH(row_idx_out.type_flag_, RType, {  // row idx type
+        MSHADOW_IDX_TYPE_SWITCH(ret->aux_type(rowsparse::kIdx), RType, {  // row idx type
+          const dim_t num_rows = lhs.shape()[1];
+          size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
+          mshadow::Tensor<cpu, 1, char> workspace =
+            ctx.requested[0].get_space_typed<cpu, 1, char>(
+            mshadow::Shape1(workspace_size), s);
+          dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
+          dim_t* prefix_sum = row_flg + num_rows;
+
+          Fill<false>(s, TBlob(row_flg, mshadow::Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
+          mxnet_op::Kernel<MarkCsrColKernel, cpu>::Launch(s, lhs.aux_shape(csr::kIdx)[0], row_flg,
+            col_idx_l.dptr<CType>());
+
+          prefix_sum[0] = row_flg[0];
+          for (nnvm::dim_t i = 1; i < num_rows; i++) {
+            prefix_sum[i] = prefix_sum[i - 1] + row_flg[i];
+          }
+          dim_t nnr = prefix_sum[num_rows - 1];
+
+          if (nnr == 0) {
+            FillZerosRspImpl(s, *ret);
+            return;
+          }
+
+          ret->CheckAndAlloc({mshadow::Shape1(nnr)});
+          const TBlob& data_out = ret->data();
+          const TBlob& row_idx = ret->aux_data(rowsparse::kIdx);
+
           dim_t num_threads = data_out.Size();
           mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, data_out.dptr<DType>());
-          RType* row_idx = row_idx_out.dptr<RType>();
-          num_threads = row_idx_out.Size();
-          mxnet_op::Kernel<set_zero, cpu>::Launch(s, num_threads, row_idx);
-          num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
-          dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+          RType* row_idx_out = row_idx.dptr<RType>();
+
+          mxnet_op::Kernel<FillRspRowIdxKernel, cpu>::Launch(s, num_rows,
+            row_idx_out, prefix_sum, num_rows);
+
+          num_threads = mxnet_op::get_num_threads<cpu>(ret->shape()[0]);
+          dim_t seg_len = (ret->shape()[0] + num_threads - 1) / num_threads;
+
           if (trans_lhs) {
             mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, cpu>::Launch(s, num_threads,
-                data_out.dptr<DType>(), row_idx, data_l.dptr<DType>(),
-                indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
-                seg_len, lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
-            dim_t nnr = 0;
-            nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
-            ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            if (0 == nnr) return;
-            mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
-            dim_t idx = 0;
-            for (index_t i = 0; i < ret->shape()[0]; ++i) {
-              if (row_idx[i] > 0) {
-                row_idx[idx] = i;
-                mshadow::Copy(rsp_data[idx], rsp_data[i], s);
-                ++idx;
-              }
-            }
+              data_out.dptr<DType>(), prefix_sum, data_l.dptr<DType>(),
+              indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
+              seg_len, lhs.shape()[0], ret->shape()[0], ret->shape()[1]);
           } else {
             LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns)=rsp yet.";
           }
