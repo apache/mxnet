@@ -29,7 +29,6 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
-#include <iostream>
 #include <type_traits>
 #include "./util/tensor_util-inl.h"
 #include "../mshadow_op.h"
