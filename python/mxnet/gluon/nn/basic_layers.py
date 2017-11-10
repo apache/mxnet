@@ -19,11 +19,13 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten']
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
+           'Lambda', 'HybridLambda']
 import warnings
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
+from ... import nd, sym
 
 
 class Sequential(Block):
@@ -183,11 +185,11 @@ class Dense(HybridBlock):
             self._units = units
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer,
+                                          dtype=None, init=weight_initializer,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer,
+                                            dtype=None, init=bias_initializer,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
@@ -205,10 +207,10 @@ class Dense(HybridBlock):
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
+        shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
                         act=self.act if self.act else 'linear',
-                        layout='{0} -> {1}'.format(self._in_units, self._units) if self._in_units
-                        else self._units)
+                        layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
 class Activation(HybridBlock):
@@ -334,20 +336,20 @@ class BatchNorm(HybridBlock):
             self.in_channels = in_channels
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True,
+                                     shape=(in_channels,), dtype=None,
+                                     init=gamma_initializer, allow_deferred_init=True,
                                      differentiable=scale)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True,
+                                    shape=(in_channels,), dtype=None,
+                                    init=beta_initializer, allow_deferred_init=True,
                                     differentiable=center)
         self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(in_channels,),
+                                            shape=(in_channels,), dtype=None,
                                             init=running_mean_initializer,
                                             allow_deferred_init=True,
                                             differentiable=False)
         self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(in_channels,),
+                                           shape=(in_channels,), dtype=None,
                                            init=running_variance_initializer,
                                            allow_deferred_init=True,
                                            differentiable=False)
@@ -358,8 +360,8 @@ class BatchNorm(HybridBlock):
 
     def __repr__(self):
         s = '{name}({content}'
-        if hasattr(self, 'in_channels'):
-            s += ', in_channels={0}'.format(self.in_channels)
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels if in_channels else None)
         s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
@@ -435,7 +437,7 @@ class Embedding(HybridBlock):
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer,
+                                      dtype=None, init=weight_initializer,
                                       allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, weight):
@@ -464,3 +466,90 @@ class Flatten(HybridBlock):
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class Lambda(Block):
+    r"""Wraps an operator or an expression as a Block object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in ndarray. For example::
+
+            block = Lambda('tanh')
+
+        2) a function that conforms to "def function(*args)". For example::
+
+            block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
+
+    Inputs:
+        - ** *args **: one or more input data. Their shapes depend on the function.
+
+    Output:
+        - ** *outputs **: one or more output data. Their shapes depend on the function.
+    """
+    def __init__(self, function):
+        super(Lambda, self).__init__()
+        if isinstance(function, str):
+            assert hasattr(nd, function), \
+                   "Function name %s is not found in ndarray." % function
+            self._func_impl = getattr(nd, function)
+        elif callable(function):
+            self._func_impl = function
+        else:
+            raise ValueError(
+                "Unrecognized function in lambda: {} of type {}"
+                .format(function, type(function)))
+
+    def forward(self, *args):
+        return self._func_impl(*args)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_impl.__name__)
+
+
+class HybridLambda(HybridBlock):
+    r"""Wraps an operator or an expression as a HybridBlock object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in both symbol and ndarray. For example::
+
+            block = HybridLambda('tanh')
+
+        2) a function that conforms to "def function(F, data, *args)". For example::
+
+            block = HybridLambda(lambda F, x: F.LeakyReLU(x, slope=0.1))
+
+    Inputs:
+        - ** *args **: one or more input data. First argument must be symbol or ndarray.
+        Their shapes depend on the function.
+
+    Output:
+        - ** *outputs **: one or more output data. Their shapes depend on the function.
+    """
+    def __init__(self, function):
+        super(HybridLambda, self).__init__()
+        if isinstance(function, str):
+            assert hasattr(nd, function) and hasattr(sym, function), \
+                   "Function name %s is not found in symbol/ndarray." % function
+            self._func = lambda F, *args: getattr(F, function)(*args)
+        elif callable(function):
+            self._func = function
+        else:
+            raise ValueError(
+                "Unrecognized function in lambda: {} of type {}"
+                .format(function, type(function)))
+
+    def hybrid_forward(self, F, x, *args):
+        return self._func(F, x, *args)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_impl.__name__)

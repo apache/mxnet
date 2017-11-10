@@ -129,7 +129,7 @@ inline std::string shape_string(const TShape& x) {
   return os.str();
 }
 
-/*! \brief get string representation of shape */
+/*! \brief get string representation of data type */
 inline std::string type_string(const int& x) {
   switch (x) {
     case mshadow::kFloat32:
@@ -138,10 +138,14 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kInt8:
+      return "int8";
     case mshadow::kUint8:
       return "uint8";
     case mshadow::kInt32:
       return "int32";
+    case mshadow::kInt64:
+      return "int64";
   }
   return "unknown";
 }
@@ -412,8 +416,8 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 
 // check whether all output grads are zero.
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
-  const auto zero_op = nnvm::Op::Get("_zeros");
-  const auto zero_like_op = nnvm::Op::Get("zeros_like");
+  static const auto zero_op = nnvm::Op::Get("_zeros");
+  static const auto zero_like_op = nnvm::Op::Get("zeros_like");
   if (!ograds.size()) return false;
   for (const auto& grad : ograds) {
     if (!grad.node) return false;
