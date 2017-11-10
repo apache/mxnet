@@ -63,8 +63,7 @@ void Gc::SetParams(const std::string &compression_type, const float threshold) {
 void Gc::set_active(bool active) {
   active_ = active;
 }
-
-// can only be active when type is not GC_NONE
+// can be active when type is none
 bool Gc::is_active() {
   return active_;
 }
@@ -101,7 +100,7 @@ int Gc::GetCompressionFactor() {
   if (type_ == GC_TWO_BIT) {
     return 16;
   } else {
-    LOG(FATAL) << "Unsupported compression type";
+    LOG(FATAL) << "Unsupported compression type: " << type_;
     return 0;
   }
 }
