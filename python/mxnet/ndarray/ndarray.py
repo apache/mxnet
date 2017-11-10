@@ -470,16 +470,15 @@ fixed-size items.
             raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
 
-    def _get_index_nd_from_advanced_index(self, key):
-        """This function is called when key is an advanced index. Returns an index array
-        for use in scatter_nd and gather_nd."""
+    def _get_index_nd(self, key):
+        """Returns an index array for use in scatter_nd and gather_nd."""
         def _is_advanced_index(index):
             """The definition of advanced index here includes integers as well, while
             integers are considered as basic index type when the key contains only
             slices and integers."""
             return not isinstance(index, py_slice)
 
-        if isinstance(key, (NDArray, np.ndarray, list, integer_types)):
+        if isinstance(key, (NDArray, np.ndarray, list, integer_types, py_slice)):
             key = (key,)
 
         assert isinstance(key, tuple),\
@@ -647,26 +646,28 @@ fixed-size items.
             sliced_arr[:] = value
             return
         elif isinstance(key, py_slice):
-            if key.step is None or key.step == 1:
+            if key.step is None or key.step == 1:  # trivial step
                 if key.start is not None or key.stop is not None:
                     sliced_arr = self._slice(key.start, key.stop)
                     sliced_arr[:] = value
                     return
+                # assign value to the whole NDArray
+                # may need to broadcast first
                 if isinstance(value, NDArray):
                     if value.handle is not self.handle:
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
-                    _internal._set_value(float(value), out=self)
+                    _internal._full(shape=shape, ctx=self.context,
+                                    dtype=self.dtype, value=value, out=self)
                 elif isinstance(value, (np.ndarray, np.generic)):
                     if isinstance(value, np.generic) or value.shape != shape:
                         value = np.broadcast_to(value, shape)
                     self._sync_copyfrom(value)
-                else:
-                    raise TypeError(
-                        'NDArray does not support assignment with %s of type %s'%(
-                            str(value), str(type(value))))
+                else:  # value might be a list or a tuple
+                    value_nd = self._prepare_value_nd(value, shape)
+                    value_nd.copyto(self)
                 return
-            else:  # non-trivial step, use op
+            else:  # non-trivial step, use _slice_assign or _slice_assign_scalar
                 key = (key,)
 
         assert isinstance(key, tuple), "key=%s must be a tuple of slices and integers" % str(key)
@@ -713,7 +714,7 @@ fixed-size items.
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
-        indices = self._get_index_nd_from_advanced_index(key)
+        indices = self._get_index_nd(key)
         vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
         value_nd = self._prepare_value_nd(value, vshape)
         _internal._scatter_set_nd(data=value_nd, indices=indices, shape=self.shape, out=self)
@@ -788,7 +789,7 @@ fixed-size items.
         NDArray, np.ndarray, list, tuple, slice, and integer. Note that if
         all the objects in the tuple are of type slice with step=1, it should
         invoke _get_nd_basic_indexing_step_equal_one for better efficiency."""
-        return op.gather_nd(self, self._get_index_nd_from_advanced_index(key))
+        return op.gather_nd(self, self._get_index_nd(key))
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.
@@ -2173,10 +2174,8 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     >>> mx.nd.full((1, 2), 2.0, dtype='float16').asnumpy()
     array([[ 2.,  2.]], dtype=float16)
     """
-    if ctx is None:
-        ctx = Context.default_ctx
-    dtype = mx_real_t if dtype is None else dtype
-    out = _internal._full(shape=shape, ctx=ctx, dtype=dtype, value=val, out=out)
+    out = empty(shape, ctx, dtype) if out is None else out
+    out[:] = val
     return out
 
 

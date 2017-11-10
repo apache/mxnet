@@ -829,7 +829,7 @@ struct slice_assign {
     const int begin_last_dim = begin[ndim-1];
     int offset = i * out_last_dim_size;
     for (int j = 0; j < out_last_dim_size; ++j) {
-      int irow = 0;  // row id of flattend 2D out 
+      int irow = 0;  // row id of flattend 2D out
       int stride = 1;
       int idx = i;
       #pragma unroll
@@ -977,7 +977,7 @@ struct slice_assign_scalar {
     const int step_last_dim = step[ndim-1];
     const int begin_last_dim = begin[ndim-1];
     for (int j = 0; j < out_last_dim_size; ++j) {
-      int irow = 0;  // row id of flattend 2D out 
+      int irow = 0;  // row id of flattend 2D out
       int stride = 1;
       int idx = i;
       #pragma unroll

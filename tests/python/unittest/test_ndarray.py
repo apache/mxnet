@@ -844,15 +844,22 @@ def test_ndarray_indexing():
         mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
         np_array = mx_array.asnumpy()
         if is_scalar:
+            # test value is a numeric type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
         else:
             indexed_array_shape = np_array[np_index].shape
             np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
+            # test value is a numpy array without broadcast
             assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+            # test value is an numeric_type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                # test numpy array with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
+                # test list with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
 
     shape = (8, 16, 9, 9)
     np_array = np.arange(np.prod(shape), dtype='int32').reshape(shape)
