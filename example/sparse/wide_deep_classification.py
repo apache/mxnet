@@ -92,19 +92,18 @@ if __name__ == '__main__':
     optim = mx.optimizer.create(optimizer, learning_rate=lr, rescale_grad=1.0/batch_size)
     mod.init_optimizer(optimizer=optim)
     # use accuracy as the metric
-    metric = mx.metric.create(['nll_loss', 'acc'])
-
+    metric = mx.metric.create(['acc'])
     # get the sparse weight parameter
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     logging.info('Training started ...')
+    
     data_iter = iter(train_data)
     for epoch in range(num_epoch):
         nbatch = 0
         metric.reset()
         for batch in data_iter:
             nbatch += 1
-            # for distributed training, we need to manually pull sparse weights from kvstore
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
@@ -114,10 +113,11 @@ if __name__ == '__main__':
                                                        eval_metric=metric, locals=locals())
             speedometer(speedometer_param)
         # evaluate metric on validation dataset
-        score = mod.score(eval_data, metric)
-        logging.info('epoch %d, eval nll = %s, accuracy = %s' % (epoch, score[0][1], score[1][1]))
+        score = mod.score(eval_data, ['acc'])
+        logging.info('epoch %d, accuracy = %s' % (epoch, score[0][1]))
         
         mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=True)
         # reset the iterator for next pass of data
         data_iter.reset()
+    
     logging.info('Training completed.')

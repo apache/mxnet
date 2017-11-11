@@ -106,6 +106,7 @@ if __name__ == '__main__':
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     logging.info('Training started ...')
+    
     data_iter = iter(train_data)
     for epoch in range(num_epoch):
         nbatch = 0
@@ -130,10 +131,11 @@ if __name__ == '__main__':
             kv.row_sparse_pull('weight', weight_param, row_ids=[all_row_ids],
                                priority=-weight_index)
         # evaluate metric on validation dataset
-        score = mod.score(eval_data, metric)
+        score = mod.score(eval_data, ['nll_loss', 'acc'])
         logging.info('epoch %d, eval nll = %s, accuracy = %s' % (epoch, score[0][1], score[1][1]))
         save_optimizer_states = 'dist' not in kv.type if kv else True
         mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=save_optimizer_states)
         # reset the iterator for next pass of data
         data_iter.reset()
+
     logging.info('Training completed.')
