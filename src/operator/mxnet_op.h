@@ -30,6 +30,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/op_attr_types.h>
 #include <algorithm>
+#include "../engine/openmp.h"
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -341,50 +342,30 @@ struct op_with_req {
   }
 };
 
-/*!
- * \brief Set to immediate scalar value kernel
- * \tparam val Scalar immediate
- */
-template<int val>
-struct set_to_int {
-  // mxnet_op version (when used directly with Kernel<>::Launch()) */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out) {
-    out[i] = DType(val);
-  }
-  // mshadow_op version (when used with op_with_req<>)
-  MSHADOW_XINLINE static int Map() {
-    return val;
-  }
-};
-
-/*! \brief Special-case kernel shortcut for setting to zero */
-using set_zero = set_to_int<0>;
-
 template<typename OP, typename xpu>
 struct Kernel;
 
-
 template<typename OP>
 struct Kernel<OP, cpu> {
+  /*! \brief Launch CPU kernel */
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+  inline static void Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
 #ifdef _OPENMP
-    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
-    if (omp_cores <= 1) {
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
       // Zero means not to use OMP, but don't interfere with external OMP behavior
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     } else {
-      #pragma omp parallel for num_threads(omp_cores)
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     }
 #else
     for (int i = 0; i < N; ++i) {
-        OP::Map(i, args...);
+      OP::Map(i, args...);
     }
 #endif
   }
@@ -408,7 +389,6 @@ struct Kernel<OP, cpu> {
   }
 };
 
-
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
 __global__ void mxnet_generic_kernel(int N, Args... args) {
@@ -426,6 +406,7 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 
 template<typename OP>
 struct Kernel<OP, gpu> {
+  /*! \brief Launch GPU kernel */
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
     using namespace mshadow::cuda;
@@ -446,7 +427,30 @@ struct Kernel<OP, gpu> {
 };
 #endif  // __CUDACC__
 
+/*!
+ * \brief Set to immediate scalar value kernel
+ * \tparam val Scalar immediate
+ */
+template<int val>
+struct set_to_int {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*!
+ * \brief Special-case kernel shortcut for setting to zero and one
+ */
+using set_zero = set_to_int<0>;
+using set_one  = set_to_int<1>;
 }  // namespace mxnet_op
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_MXNET_OP_H_
