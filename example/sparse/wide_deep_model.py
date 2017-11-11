@@ -21,24 +21,24 @@ from weighted_softmax_ce import *
 
 def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, 
                     input_dims, hidden_units, positive_cls_weight):
-    data = mx.symbol.Variable("data", stype='csr')
+    csr_data = mx.symbol.Variable("csr_data", stype='csr')
     label = mx.symbol.Variable("softmax_label")
 
-    x = mx.symbol.slice(data=data, begin=(0, 0), end=(None, num_linear_features))
     norm_init = mx.initializer.Normal(sigma=0.01)
     # weight with row_sparse storage type to enable sparse gradient updates
     weight = mx.symbol.Variable("linear_weight", shape=(num_linear_features, 2),
                                 init=norm_init, stype='row_sparse')
     bias = mx.symbol.Variable("linear_bias", shape=(2,))
-    dot = mx.symbol.sparse.dot(x, weight)
+    dot = mx.symbol.sparse.dot(csr_data, weight)
     linear_out = mx.symbol.broadcast_add(dot, bias)
 
-    x = mx.symbol.slice(data=data, begin=(0, num_linear_features),
-                        end=(None, num_linear_features+num_embed_features))
+    dns_data = mx.symbol.Variable("dns_data")
+    x = mx.symbol.slice(data=dns_data, begin=(0, 0),
+                        end=(None, num_embed_features))
     embeds = mx.symbol.split(data=x, num_outputs=num_embed_features, squeeze_axis=1)
 
-    x = mx.symbol.slice(data=data, begin=(0, num_linear_features+num_embed_features),
-                        end=(None, num_linear_features+num_embed_features+num_cont_features))
+    x = mx.symbol.slice(data=dns_data, begin=(0, num_embed_features),
+                        end=(None, num_embed_features + num_cont_features))
     features = [x]
 
     for i, embed in enumerate(embeds):

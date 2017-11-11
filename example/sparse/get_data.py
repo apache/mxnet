@@ -20,6 +20,7 @@ from csv import DictReader
 import os, gzip
 import sys
 import mxnet as mx
+import numpy as np
 
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always return the same batch, used for speed testing"
@@ -54,8 +55,7 @@ def get_libsvm_data(data_dir, data_name, url):
         print("Dataset " + data_name + " is now present.")
     os.chdir("..")
 
-
-def get_uci_data(data_dir, data_name, url):
+def get_uci_adult(data_dir, data_name, url):
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
     os.chdir(data_dir)
@@ -64,11 +64,13 @@ def get_uci_data(data_dir, data_name, url):
         os.system("wget %r" % url + data_name)
         if "test" in data_name:
             os.system("sed -i '1d' %r" % data_name)
-        preprocess(data_name, data_name + ".libsvm")
-        print("Dataset " + data_name + ".libsvm" + " is now present.")
+        print("Dataset " + data_name + " is now present.")
+    csr, dns, label = preprocess_uci_adult(data_name)
     os.chdir("..")
+    return csr, dns, label
 
-def preprocess(data_name, out_name):
+
+def preprocess_uci_adult(data_name):
     # Some tricks of feature engineering are adapted from tensorflow's wide and deep tutorial
     csv_columns = [
         "age", "workclass", "fnlwgt", "education", "education_num",
@@ -116,42 +118,49 @@ def preprocess(data_name, out_name):
 
     hash_bucket_size = 1000
 
-    all_rows = []
+    csr_ncols = len(crossed_columns) * hash_bucket_size
+    dns_ncols = len(continuous_columns) + len(embedding_columns)
+    for col in indicator_columns:
+        dns_ncols += len(vocabulary_dict[col])
+
+    label_list = []
+    csr_list = []
+    dns_list = []
 
     with open(data_name) as f:
-        for t, row in enumerate(DictReader(f, fieldnames=csv_columns)):
-            feats = [labels.index(row['income_bracket'].strip()[0])]
+        for row in DictReader(f, fieldnames=csv_columns):
+            label_list.append(labels.index(row['income_bracket'].strip()[0]))
 
-            for cols in crossed_columns:
+            for i, cols in enumerate(crossed_columns):
                 s = '_'.join([row[col].strip() for col in cols])
-                feats.append([hash_bucket_size, hash(s) % hash_bucket_size])
-
+                csr_list.append((i * hash_bucket_size + hash(s) % hash_bucket_size, 1.0))
+            
+            dns_row = [0] * dns_ncols
+            dns_dim = 0
             for col in embedding_columns:
-                feats.append([1, hash(row[col].strip()) % hash_bucket_size])
+                dns_row[dns_dim] = hash(row[col].strip()) % hash_bucket_size
+                dns_dim += 1
 
             for col in indicator_columns:
-                feats.append([len(vocabulary_dict[col]), vocabulary_dict[col].index(row[col].strip())])
+                dns_row[dns_dim + vocabulary_dict[col].index(row[col].strip())] = 1.0
+                dns_dim += len(vocabulary_dict[col])
 
             for col in continuous_columns:
-                feats.append([1, float(row[col].strip())])
+                dns_row[dns_dim] = float(row[col].strip())
+                dns_dim += 1
 
-            all_rows.append(feats)
+            dns_list.append(dns_row)
 
-    with open(out_name, "w") as f:
-        for row in all_rows:
-            s = ''
-            feat_dim = 0
-            s += str(row[0])
-            for feat in row[1:]:
-                s += ' '
-                if feat[0] != 1:
-                   s += str(feat_dim + feat[1]) + ':1.0'
-                else:
-                   s += str(feat_dim) + ':' + str(feat[1])
-                feat_dim += feat[0]
-            s += '\n'
+    nrows = len(label_list)
+    data_list = [item[1] for item in csr_list]
+    indices_list = [item[0] for item in csr_list]
+    indptr_list = range(0, len(indices_list) + 1, 2)
+    csr = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list),
+                                  shape=(nrows, hash_bucket_size * len(crossed_columns)))
+    dns = np.array(dns_list)
+    label = np.array(label_list)
+    return csr, dns, label
 
-            f.write(s)
 
 def get_movielens_data(prefix):
     if not os.path.exists("%s.zip" % prefix):

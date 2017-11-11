@@ -26,7 +26,7 @@ import os
 parser = argparse.ArgumentParser(description="Run sparse wide and deep classification " \
                                              "with distributed kvstore",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--num-epoch', type=int, default=5,
+parser.add_argument('--num-epoch', type=int, default=10,
                     help='number of epochs to train')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
@@ -71,22 +71,24 @@ if __name__ == '__main__':
     # dataset    
     num_features = ADULT['num_features']
     data_dir = os.path.join(os.getcwd(), 'data')
-    train_data = os.path.join(data_dir, ADULT['train']+'.libsvm')
-    val_data = os.path.join(data_dir, ADULT['test']+'.libsvm')
-    get_uci_data(data_dir, ADULT['train'], ADULT['url'])
-    get_uci_data(data_dir, ADULT['test'], ADULT['url'])
+    train_data = os.path.join(data_dir, ADULT['train'])
+    val_data = os.path.join(data_dir, ADULT['test'])
+    train_csr, train_dns, train_label = get_uci_adult(data_dir, ADULT['train'], ADULT['url'])
+    val_csr, val_dns, val_label = get_uci_adult(data_dir, ADULT['test'], ADULT['url'])
 
     model = wide_deep_model(ADULT['num_linear_features'], ADULT['num_embed_features'], ADULT['num_cont_features'],
                             ADULT['embed_input_dims'], ADULT['hidden_units'], ADULT['positive_class_weight'])
 
     # data iterator
-    train_data = mx.io.LibSVMIter(data_libsvm=train_data, data_shape=(num_features,),
-                                  batch_size=batch_size)
-    eval_data = mx.io.LibSVMIter(data_libsvm=val_data, data_shape=(num_features,),
-                                 batch_size=batch_size)
-
+    train_data = mx.io.NDArrayIter({'csr_data': train_csr, 'dns_data': train_dns},
+                                   {'softmax_label': train_label}, batch_size,
+                                   shuffle=True, last_batch_handle='discard')
+    eval_data = mx.io.NDArrayIter({'csr_data': val_csr, 'dns_data': val_dns},
+                                  {'softmax_label': val_label}, batch_size,
+                                  shuffle=True, last_batch_handle='discard')
+    
     # module
-    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['softmax_label'])
+    mod = mx.mod.Module(symbol=model, data_names=['csr_data', 'dns_data'], label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
     optim = mx.optimizer.create(optimizer, learning_rate=lr, rescale_grad=1.0/batch_size)
