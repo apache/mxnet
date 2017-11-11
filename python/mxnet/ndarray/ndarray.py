@@ -700,6 +700,9 @@ fixed-size items.
 
         oshape.extend(shape[len(key):])
         vshape.extend(shape[len(key):])
+        # if key contains all integers, vshape should be (1,)
+        if len(vshape) == 0:
+            vshape.append(1)
         oshape = tuple(oshape)
         vshape = tuple(vshape)
 

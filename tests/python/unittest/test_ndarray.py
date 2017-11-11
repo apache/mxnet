@@ -24,6 +24,7 @@ from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import unittest
+import mxnet.autograd
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -824,9 +825,12 @@ def test_ndarray_indexing():
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
 
     def test_setitem(np_array, index, is_scalar):
-        def assert_same(np_array, np_index, mx_array, mx_index, value):
-            np_array[np_index] = value
-            mx_array[mx_index] = value
+        def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
+            if np_value is not None:
+                np_array[np_index] = np_value
+            else:
+                np_array[np_index] = mx_value
+            mx_array[mx_index] = mx_value
             assert same(np_array, mx_array.asnumpy())
 
         np_index = index
@@ -846,6 +850,8 @@ def test_ndarray_indexing():
         if is_scalar:
             # test value is a numeric type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
+            value_nd = [np.random.randint(low=-10000, high=0)]
+            assert_same(np_array, np_index, mx_array, index, value_nd, value_nd[0])
         else:
             indexed_array_shape = np_array[np_index].shape
             np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
@@ -860,6 +866,17 @@ def test_ndarray_indexing():
                 # test list with broadcast
                 assert_same(np_array, np_index, mx_array, index,
                             [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
+
+    def test_getitem_autograd(np_array, index):
+        x = mx.nd.array(np_array, dtype=np_array.dtype)
+        x.attach_grad()
+        with mx.autograd.record():
+            y = x[index]
+        y.backward()
+        value = mx.nd.ones_like(y)
+        x_grad = mx.nd.zeros_like(x)
+        x_grad[index] = value
+        assert same(x_grad.asnumpy(), x.grad.asnumpy())
 
     shape = (8, 16, 9, 9)
     np_array = np.arange(np.prod(shape), dtype='int32').reshape(shape)
@@ -906,6 +923,7 @@ def test_ndarray_indexing():
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
+        test_getitem_autograd(np_array, index[0])
 
 
 if __name__ == '__main__':
