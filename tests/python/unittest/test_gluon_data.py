@@ -93,6 +93,5 @@ def test_image_folder_dataset():
 
 
 if __name__ == '__main__':
-    test_array_dataset()
     import nose
     nose.runmodule()
