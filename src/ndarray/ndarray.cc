@@ -266,12 +266,34 @@ NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
   return ret;
 }
 
-
 NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK(!is_none()) << "NDArray is empty";
   CHECK_LE(begin, end)
       << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
+#if MXNET_USE_MKLDNN == 1
+  CHECK(storage_type() == kDefaultStorage || storage_type() == kMKLDNNStorage);
+  if (storage_type() == kMKLDNNStorage) {
+    TShape new_shape = shape_;
+    new_shape[0] = end - begin;
+    NDArray ret(kMKLDNNStorage, new_shape, ctx(), ptr_->delay_alloc, dtype());
+    size_t length = shape_.ProdShape(1, shape_.ndim());
+    MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
+        ret.byte_offset_ += begin * length * sizeof(DType);
+        });
+
+    // We need to convert the MKL memory to the default layout.
+    Engine::Get()->PushSync([&](RunContext ctx) {
+        auto def_format = GetDefaultFormat(this->ptr_->Mkl_mem_->get_primitive_desc().desc());
+        if (this->ptr_->Mkl_mem_->get_primitive_desc().desc().data.format != def_format) {
+          ret.ptr_->Mkl_mem_ = Reorder2Default(this->ptr_->Mkl_mem_);
+        }
+
+    }, ctx(), {this->var()}, {ret.var()},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncMKLDNN2Default"));
+    return ret;
+  }
+#endif
   CHECK_EQ(storage_type(), kDefaultStorage);
   NDArray ret = this->Detach();
   size_t length = shape_.ProdShape(1, shape_.ndim());
@@ -480,6 +502,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     LOG(FATAL) << "The NDArray hasn't been initialized";
     return;
   }
+
   // TODO if the shape mismatches.
   ptr_->SetMKLMem(shape_, dtype_);
   MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
@@ -517,8 +540,6 @@ void NDArray::SetTBlob() const {
     shape = storage_shape();
 #if MXNET_USE_MKLDNN == 1
   } else if (stype == kMKLDNNStorage) {
-    // TODO we may really need to convert format.
-    CHECK_EQ(byte_offset_, 0);
     if (ptr_->Mkl_mem_)
       ptr_->Mkl_mem_ = Reorder2Default(ptr_->Mkl_mem_);
     else
