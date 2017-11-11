@@ -502,6 +502,8 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     LOG(FATAL) << "The NDArray hasn't been initialized";
     return;
   }
+  if (ptr_->Mkl_mem_.get() == &mem)
+    return;
 
   // TODO if the shape mismatches.
   ptr_->SetMKLMem(shape_, dtype_);
@@ -510,8 +512,18 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
 
 std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) {
-  if (storage_type() != kMKLDNNStorage)
+  mkldnn::memory::primitive_desc _desc = desc;
+  auto required_format = _desc.desc().data.format;
+  auto def_format = GetDefaultFormat(_desc.desc());
+  if (storage_type() != kMKLDNNStorage && required_format != def_format)
     return nullptr;
+
+  if (required_format == def_format) {
+    ptr_->SetMKLMem(shape_, dtype_);
+    CHECK(ptr_->Mkl_mem_->get_primitive_desc() == desc);
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
+    return ptr_->Mkl_mem_;
+  }
 
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
