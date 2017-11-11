@@ -151,12 +151,11 @@ def preprocess_uci_adult(data_name):
 
             dns_list.append(dns_row)
 
-    nrows = len(label_list)
     data_list = [item[1] for item in csr_list]
     indices_list = [item[0] for item in csr_list]
     indptr_list = range(0, len(indices_list) + 1, 2)
     csr = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list),
-                                  shape=(nrows, hash_bucket_size * len(crossed_columns)))
+                                  shape=(len(label_list), hash_bucket_size * len(crossed_columns)))
     dns = np.array(dns_list)
     label = np.array(label_list)
     return csr, dns, label
