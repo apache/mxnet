@@ -134,7 +134,6 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
 }
 
 namespace mxnet_op {
-
 template<int ndim, typename DType, typename OP>
 struct binary_broadcast_kernel {
   MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
