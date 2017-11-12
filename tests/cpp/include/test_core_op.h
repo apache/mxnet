@@ -33,7 +33,24 @@ namespace op {
 // Tried making this a struct w/constexpr, but getting undefined reference on gcc 5.4.1
 #define COREOP_FWD_OP_NAME_KEY          "fwd_op_name"
 #define COREOP_BWD_OP_NAME_KEY          "bwd_op_name"
-#define COREOP_BWD_OP_NAME_VALUE_NONE   "<none>"
+#define COREOP_BWD_OP_NAME_VALUE_NONE   "[none]"
+
+enum TimingDirection {
+  Forward,
+  Backward
+};
+
+inline const char *TimingDirectionAsString(const TimingDirection td) {
+  switch (td) {
+    case Forward:
+      return "Forward";
+    case Backward:
+      return "Backward";
+    default:
+      CHECK(false) << "Unknown timing direction: " << static_cast<int>(td);
+      return "<unknown>";
+  }
+}
 
 /*!
  * Low-noise operator executor
@@ -43,11 +60,6 @@ template<typename DType>
 class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   , public test::op::OperatorExecutorTiming {
   /*! \brief Performance timing categories */
-  enum TimingId {
-    Forward,
-    Backward
-  };
-
   /*!
    * \brief Access data blob as if on the CPU via a callback
    * \tparam Type of callback Function to call with CPU-data NDArray
@@ -92,8 +104,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     values.reserve(count);
     for (kwargs_t::const_iterator i_iter = args.begin(), e_iter = args.end();
          i_iter != e_iter; ++i_iter) {
-      keys.push_back(i_iter->first.c_str());
-      values.push_back(i_iter->second.c_str());
+      keys.emplace_back(i_iter->first.c_str());
+      values.emplace_back(i_iter->second.c_str());
     }
     return imperative::ParseAttrs(op, op->num_inputs, count, &keys[0], &values[0]);
   }
@@ -108,7 +120,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
                                                  std::vector<TBlob> *dest) {
     dest->reserve(dest->size() + src.size());
     for (size_t i = 0, n = src.size(); i < n; ++i) {
-      dest->push_back(src[i].data());
+      dest->emplace_back(src[i].data());
     }
     return *dest;
   }
@@ -194,9 +206,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {
           Resource r = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
-          requested.push_back(r);
+          requested.emplace_back(r);
         } else if (req.type == ResourceRequest::kRandom) {
-          requested.push_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+          requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
         } else {
           LOG(FATAL) << "resource type not yet supported";
         }
@@ -216,7 +228,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     new_args.reserve(args.size() + 1);
     for (const auto& a : args) {
       if (a.first != COREOP_FWD_OP_NAME_KEY && a.first != COREOP_BWD_OP_NAME_KEY) {
-        new_args.push_back(a);
+        new_args.emplace_back(a);
       }
     }
     new_args.push_back({ COREOP_FWD_OP_NAME_KEY, fwd_op_name});
@@ -241,7 +253,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       } else if (a.first == COREOP_BWD_OP_NAME_KEY) {
         *bwd_op_name_ptr = a.second;
       } else {
-        new_args.push_back(a);
+        new_args.emplace_back(a);
       }
     }
     return new_args;
@@ -317,7 +329,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       // operators such as dot
       std::vector<TShape> shapes;
       for (size_t i = 0, n = std::max(num_visible_outputs, num_inputs); i < n; ++i) {
-        shapes.push_back(i < input_shapes_.size() ? input_shapes_[i]
+        shapes.emplace_back(i < input_shapes_.size() ? input_shapes_[i]
                                                   : input_shapes_[input_shapes_.size() - 1]);
       }
       std::vector<NDArray *> inputs_p, outputs_p;
@@ -331,21 +343,21 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       outputs_.reserve(num_visible_outputs);
       outputs_p.reserve(num_visible_outputs);
 
-      for (int i = 0; i < num_inputs; ++i) {
+      for (size_t i = 0; i < static_cast<size_t>(num_inputs); ++i) {
         CHECK_LT(i, static_cast<int>(shapes.size()));
-        inputs_.push_back(i < inputs.size() ? inputs[i] : CreateRandArray(shapes[i],
+        inputs_.emplace_back(i < inputs.size() ? inputs[i] : CreateRandArray(shapes[i],
                                                                           ctx_.run_ctx.ctx));
-        inputs_p.push_back(&*inputs_.rbegin());
+        inputs_p.emplace_back(&*inputs_.rbegin());
       }
 
-      for (int i = 0; i < num_visible_outputs; ++i) {
+      for (size_t i = 0; i < static_cast<size_t>(num_visible_outputs); ++i) {
         // If supplied and valid, pass from the supplied outputs vector
         // Otherwise use empty for forward pass, or zero-filled for backward pass
-        outputs_.push_back(i < outputs.size()
-                           ? outputs[i]
-                           : (backward_for_op ? CreateZeroArray(shapes[i], ctx_.run_ctx.ctx)
-                                              : NDArray()));
-        outputs_p.push_back(&*outputs_.rbegin());
+        outputs_.emplace_back(i < outputs.size()
+                              ? outputs[i]
+                              : (backward_for_op ? CreateZeroArray(shapes[i], ctx_.run_ctx.ctx)
+                                                 : NDArray()));
+        outputs_p.emplace_back(&*outputs_.rbegin());
       }
 
       if (!backward_for_op) {
@@ -396,7 +408,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
             << "Can't automatically determine backward op name. Please specify";
           for (std::pair<std::shared_ptr<CoreOpExecutor>, std::string> &bw_item : bwd) {
             bw_item.first->set_verbose(verbose_);
-            backward_.push_back(bw_item.first);
+            backward_.emplace_back(bw_item.first);
             bw_item.first->Init(ArgsWithOpName(args, bw_item.second), {}, {}, this);
           }
         }

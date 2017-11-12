@@ -66,7 +66,7 @@ def get_movielens_iter(filename, batch_size, dummy_iter):
     user = []
     item = []
     score = []
-    with file(filename) as f:
+    with open(filename, 'r') as f:
         num_samples = 0
         for line in f:
             tks = line.strip().split('::')
