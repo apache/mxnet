@@ -637,9 +637,8 @@ fixed-size items.
 
     def _set_nd_basic_indexing(self, key, value):
         """This function is called by __setitem__ when key is a basic index, i.e.
-        an integer, or a slice, or a tuple of integers and slices. No requirements
-        on the steps of slices. For key with all the steps of slices are either None
-        or 1, call _set_nd_basic_indexing_step_equal_one which is more efficient."""
+        an integer, or a slice, or a tuple of integers and slices. No restrictions
+        on the values of slices' steps."""
         shape = self.shape
         if isinstance(key, integer_types):
             sliced_arr = self._at(key)
@@ -789,9 +788,7 @@ fixed-size items.
 
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
-        NDArray, np.ndarray, list, tuple, slice, and integer. Note that if
-        all the objects in the tuple are of type slice with step=1, it should
-        invoke _get_nd_basic_indexing_step_equal_one for better efficiency."""
+        NDArray, np.ndarray, list, tuple, slice, and integer."""
         return op.gather_nd(self, self._get_index_nd(key))
 
     def _sync_copyfrom(self, source_array):
