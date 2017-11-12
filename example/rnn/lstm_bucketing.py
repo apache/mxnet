@@ -47,6 +47,8 @@ parser.add_argument('--batch-size', type=int, default=32,
                     help='the batch size.')
 parser.add_argument('--disp-batches', type=int, default=50,
                     help='show progress for every n batches')
+parser.add_argument('--gc-type', type=str, default='none',
+                    help='type of gradient compression')
 
 
 def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
@@ -111,7 +113,8 @@ if __name__ == '__main__':
     model = mx.mod.BucketingModule(
         sym_gen             = sym_gen,
         default_bucket_key  = data_train.default_bucket_key,
-        context             = contexts)
+        context             = contexts,
+        compression_params = {'compression':args.gc_type})
 
     model.fit(
         train_data          = data_train,

@@ -33,6 +33,8 @@ if __name__ == '__main__':
     # use a large aug level
     data.set_data_aug_level(parser, 3)
     parser.set_defaults(
+        data_train = 'data/imagenet1k-train-t3.rec',
+        data_train_idx = 'data/imagenet1k-train-t3.rec',
         # network
         network          = 'resnet',
         num_layers       = 50,
