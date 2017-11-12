@@ -373,12 +373,12 @@ struct Kernel<OP, cpu> {
   template<typename ...Args>
   inline static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
 #ifdef _OPENMP
-    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
-    if (omp_cores <= 1) {
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads <= 1) {
       OP::Map(0, N, args...);
     } else {
-      int length = (N + omp_cores - 1) / omp_cores;
-      #pragma omp parallel for num_threads(omp_cores)
+      int length = (N + omp_threads - 1) / omp_threads;
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i += length) {
         OP::Map(i, i + length > N ? N - i : length, args...);
       }
