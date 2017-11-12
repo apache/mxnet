@@ -515,28 +515,6 @@ class CustomOpProp(object):
         return in_type, [in_type[0]]*len(self.list_outputs()), \
             [in_type[0]]*len(self.list_auxiliary_states())
 
-    def infer_storage_type_backward(self, in_stype):
-        """infer_storage_type_backward interface. Used to infer storage
-        type of inputs and outputs in the backward pass.
-
-        Parameters
-        ----------
-        in_stype : list of stypes. Provide the in_stypes in the
-        following order: output_grads, in_data, out_data, aux_data(optional)
-
-        Returns
-        -------
-        in_stype : list
-            list of input stypes. Can be modified from in_stype.
-        out_stype : list
-            list of output stypes calculated from in_stype.
-        aux_stype : list
-            list of aux stypes calculated from in_stype,
-            in the same order as declared in list_auxiliary_states.
-        """
-        return in_stype, [in_stype[0]]*len(self.list_outputs()), \
-            [in_stype[0]]*len(self.list_auxiliary_states())
-
     def infer_storage_type(self, in_stype):
         """infer_storage_type interface. Used to infer storage type of
         inputs and outputs in the forward pass.
@@ -549,12 +527,34 @@ class CustomOpProp(object):
         Returns
         -------
         in_stype : list
-            list of argument stypes. Can be modified from in_stype.
+            list of argument stypes.
         out_stype : list
             list of output types calculated from in_stype,
             in the same order as declared in list_outputs.
         aux_type : Optional, list
             list of aux types calculated from in_stype,
+            in the same order as declared in list_auxiliary_states.
+        """
+        return in_stype, [in_stype[0]]*len(self.list_outputs()), \
+            [in_stype[0]]*len(self.list_auxiliary_states())
+
+    def infer_storage_type_backward(self, in_stype):
+        """infer_storage_type_backward interface. Used to infer storage
+        type of inputs and outputs in the backward pass.
+
+        Parameters
+        ----------
+        in_stype : list of stypes. Provide the in_stypes in the
+        following order: output_grads, in_data, out_data, aux_data(optional)
+
+        Returns
+        -------
+        in_stype : list
+            list of input stypes.
+        out_stype : list
+            list of output stypes calculated from in_stype.
+        aux_stype : list
+            list of aux stypes calculated from in_stype,
             in the same order as declared in list_auxiliary_states.
         """
         return in_stype, [in_stype[0]]*len(self.list_outputs()), \

@@ -365,7 +365,7 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     for (size_t i = 0; i < oattr->size(); i++) {
       STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
     }
-    dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
     return true;
   }
 
@@ -395,7 +395,7 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
         stypes[i + 2 * params.num_outs + 2 * params.num_args]);
   }
 
-  dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
 
@@ -413,7 +413,7 @@ inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
     for (size_t i = 0; i < oattr->size(); i++) {
       STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
     }
-    dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
     return true;
   }
 
@@ -444,7 +444,7 @@ inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
                               stypes[params.num_args + params.num_outs + i]);
   }
 
-  dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
 
