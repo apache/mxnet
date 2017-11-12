@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file broadcast_reduce_op.cc
+ * \file broadcast_reduce_op_index.cc
  * \brief CPU Implementation of broadcast and reduce functions.
  */
 #include "./broadcast_reduce_op.h"
