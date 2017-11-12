@@ -375,28 +375,32 @@ struct DotCsrTransDnsRspByRowBlocks {
    * \brief
    * \param i the i-th thread
    */
-  template<typename DType, typename IType, typename CType>
+  template<typename DType, typename IType, typename CType, typename RType>
   MSHADOW_CINLINE static void Map(int i,
                                   DType* out,
                                   nnvm::dim_t* row_flg_sum,
+                                  RType* row_idx,
                                   const DType* data_l,
                                   const IType* indptr_l,
                                   const CType* col_idx_l,
                                   const DType* data_r,
                                   const nnvm::dim_t seg_len,
                                   const nnvm::dim_t num_rows_l,
-                                  const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t nnr,
                                   const nnvm::dim_t num_cols) {
     using nnvm::dim_t;
     const dim_t seg_start = i * seg_len;
-    if (seg_start >= num_rows) return;
+    if (seg_start >= nnr) return;
     const dim_t seg_end = (i + 1) * seg_len;
+    const dim_t col_start = row_idx[seg_start];
+    const dim_t end_ind = seg_end >= nnr ? (row_idx[nnr-1] + 1) : seg_end;
+    const dim_t col_end = row_idx[end_ind];
     for (dim_t j = 0; j < num_rows_l; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
       const dim_t offset_r = j * num_cols;
       for (IType k = indptr_l[j]; k < indptr_l[j+1]; ++k) {
         const CType col_idx = col_idx_l[k];
-        if (col_idx < seg_start || col_idx >= seg_end) continue;
+        if (col_idx < col_start || col_idx >= col_end) continue;
 
         const nnvm::dim_t rsp_row = row_flg_sum[col_idx] - 1;
         const nnvm::dim_t offset_out = rsp_row * num_cols;
@@ -578,17 +582,6 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
 }
 
 
-struct MarkCsrColKernel {
-  template<typename CType>
-  MSHADOW_CINLINE static void Map(int tid,
-                                  nnvm::dim_t* flg,
-                                  CType* col_idx) {
-    CType idx = col_idx[tid];
-    flg[idx] = 1;
-  }
-};
-
-
 /*!
  * \brief CPU Impl of dot(csr.T, dns) = rsp
  */
@@ -627,7 +620,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           dim_t* prefix_sum = row_flg + num_rows;
 
           Fill<false>(s, TBlob(row_flg, mshadow::Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
-          mxnet_op::Kernel<MarkCsrColKernel, cpu>::Launch(s, lhs.aux_shape(csr::kIdx)[0], row_flg,
+          mxnet_op::Kernel<MarkRowFlgKernel, cpu>::Launch(s, lhs.aux_shape(csr::kIdx)[0], row_flg,
             col_idx_l.dptr<CType>());
 
           prefix_sum[0] = row_flg[0];
@@ -652,14 +645,14 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           mxnet_op::Kernel<FillRspRowIdxKernel, cpu>::Launch(s, num_rows,
             row_idx_out, prefix_sum, num_rows);
 
-          num_threads = mxnet_op::get_num_threads<cpu>(ret->shape()[0]);
-          dim_t seg_len = (ret->shape()[0] + num_threads - 1) / num_threads;
+          num_threads = mxnet_op::get_num_threads<cpu>(nnr);
+          dim_t seg_len = (nnr + num_threads - 1) / num_threads;
 
           if (trans_lhs) {
             mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, cpu>::Launch(s, num_threads,
-              data_out.dptr<DType>(), prefix_sum, data_l.dptr<DType>(),
+              data_out.dptr<DType>(), prefix_sum, row_idx_out, data_l.dptr<DType>(),
               indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
-              seg_len, lhs.shape()[0], ret->shape()[0], ret->shape()[1]);
+              seg_len, lhs.shape()[0], nnr, ret->shape()[1]);
           } else {
             LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns)=rsp yet.";
           }
