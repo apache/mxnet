@@ -183,8 +183,8 @@ else:
         Examples
         --------
         >>> x = mx.base.c_str("Hello, World")
-        >>> print x.value
-        Hello, World
+        >>> print(x.value)
+        b"Hello, World"
         """
         return ctypes.c_char_p(string.encode('utf-8'))
 

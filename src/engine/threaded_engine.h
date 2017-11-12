@@ -297,25 +297,6 @@ class ThreadedEngine : public Engine {
     finished_cv_.notify_all();
   }
 
-  /*! \brief Return default OMP thread count. Currently, this is whatever OMP shows as number
-   * of procs
-   * \warning Do not call this in any performance-sensitive use-case since checking the environment
-   * is slow
-   */
-  static int DefaultOMPThreadsPerWorker() {
-#ifdef _OPENMP
-    // If OMP_NUM_THREADS is set, use omp_get_max_threads(), which will be the value
-    // interpreted by the implemetation from the OMP_NUM_THREADS environment variable.
-    // Otherwise, return the number of processors, not counting hyperthreading.
-    // Test for set OMP_NUM_THREADS by checking against some nonsensical value
-    const int max_threads = dmlc::GetEnv("OMP_NUM_THREADS", INT_MIN) == INT_MIN ?
-                            omp_get_num_procs() : omp_get_max_threads();
-    return max_threads;
-#else
-    return 1;
-#endif
-  }
-
  protected:
   /*!
    * \brief Push the opr block to execution queue to be executed.
@@ -381,13 +362,6 @@ class ThreadedEngine : public Engine {
     } else {
       callback();
     }
-  }
-
-  /*! \brief Return the number of OMP threads that should be used per worker
-   * \return Number of OMP threads that should be used per worker
-   */
-  int num_omp_threads_per_worker() const override {
-    return OpenMP::Get()->GetRecommendedOMPThreadCount();
   }
 
  private:

@@ -26,10 +26,15 @@ def test_array_dataset():
     Y = np.random.uniform(size=(10,))
     dataset = gluon.data.ArrayDataset(X, Y)
     loader = gluon.data.DataLoader(dataset, 2)
-
     for i, (x, y) in enumerate(loader):
         assert mx.test_utils.almost_equal(x.asnumpy(), X[i*2:(i+1)*2])
         assert mx.test_utils.almost_equal(y.asnumpy(), Y[i*2:(i+1)*2])
+
+    dataset = gluon.data.ArrayDataset(X)
+    loader = gluon.data.DataLoader(dataset, 2)
+
+    for i, x in enumerate(loader):
+        assert mx.test_utils.almost_equal(x.asnumpy(), X[i*2:(i+1)*2])
 
 
 def prepare_record():
