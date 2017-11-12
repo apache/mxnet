@@ -21,6 +21,7 @@ This produces a library called ```libmxnet.dll```.
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
+
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.s
 2. Download and Install [CMake GUI version](https://cmake.org/download/) if it is not already installed.
 3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
