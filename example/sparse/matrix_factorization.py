@@ -36,6 +36,8 @@ parser.add_argument('--factor-size', type=int, default=128,
                     help="the factor size of the embedding operation")
 parser.add_argument('--use-dense', action='store_true',
                     help="use the dense embedding operator")
+parser.add_argument('--use-gpu', action='store_true',
+                    help="use gpu")
 parser.add_argument('--dummy-iter', action='store_true',
                     help="use the dummy data iterator for speed test")
 
@@ -64,6 +66,7 @@ if __name__ == '__main__':
 
     momentum = 0.9
     ctx = mx.cpu(0)
+    dev_ctx = mx.gpu(0) if args.use_gpu else mx.cpu(0)
     learning_rate = 0.1
 
     # prepare dataset and iterators
@@ -79,7 +82,7 @@ if __name__ == '__main__':
 
     # initialize the module
     mod = mx.module.Module(symbol=net, context=ctx, data_names=['user', 'item'],
-                           label_names=['score'])
+                           label_names=['score'], group2ctxs=[{'dev1': ctx, 'dev2': dev_ctx}])
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
     mod.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
     optim = mx.optimizer.create(optimizer, learning_rate=learning_rate, momentum=momentum,
