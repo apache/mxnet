@@ -74,6 +74,7 @@ class Comm {
    */
   virtual const NDArray& Reduce(
       int key, const std::vector<NDArray>& src, int priority) = 0;
+
   /**
    * \brief copy from src to dst[i] for every i
    */
@@ -82,6 +83,17 @@ class Comm {
       const std::vector<NDArray*> dst, int priority) = 0;
 
 #if MXNET_USE_NCCL
+  // Aggregated reductions
+  virtual void Reduce(const std::vector<int> keys,
+                      const std::vector<std::vector<NDArray>>& srcs,
+                      int priority,
+                      std::vector<const NDArray*>* merged_ptrs) { }
+
+  virtual void Broadcast(const std::vector<int> keys,
+      const std::vector<NDArray>& srcs,
+      const std::vector<std::vector<NDArray*>>& dsts,
+      int priority) { }
+
   // Functions that wait for NCCL collective to complete
   virtual void CommSync(const std::vector<const NDArray*>& dst, int priority) { }
   virtual void CommSync(const std::vector<NDArray>& dst, int priority) { }
@@ -688,77 +700,115 @@ class CommNCCL : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
-    // avoid extra copy for single device, but it may bring problems for
-    // abnormal usage of kvstore
-    if (src.size() == 1) {
-      return src[0];
-    }
+    std::vector<const NDArray*> merged_ptrs;
+    Reduce(std::vector<int> {key}, {src}, priority, merged_ptrs);
+    return *(merged_ptrs[0]);
+  }
 
-    if (!inited_) {
-      std::vector<Context> devs;
-      for (const auto& a : src) {
-        devs.push_back(a.ctx());
-      }
-      InitNCCL(devs);
-      InitMergeBuffer(devs);
-    }
-
-    // Check whether we got the same set of devices
-    std::vector<int> dev_ids;
-    for (auto e : src) {
-      dev_ids.push_back(e.ctx().dev_id);
-    }
-    std::sort(dev_ids.begin(), dev_ids.end());
-    CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
-
-    auto& buf = merge_buf_[key];
-    int root = buf.merged.ctx().dev_id;
-    size_t root_id = FindRootId(src, root);
-
-    auto& reduce = buf.merged;
-
+  void Reduce(const std::vector<int> keys,
+              const std::vector<std::vector<NDArray>>& srcs,
+              int priority,
+              std::vector<const NDArray*>* merged_ptrs) override {
+    std::vector<size_t> root_ids(keys.size());
+    std::vector<NDArray> reduces(keys.size());
+    merged_ptrs->resize(keys.size());
     std::vector<Engine::VarHandle> const_vars;
-    for (size_t i = 0; i < src.size(); ++i) {
-      const_vars.push_back(src[i].var());
-    }
-    Engine::Get()->PushSync([src, reduce, root_id, this](RunContext rctx) {
-        std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
-        int root = nccl_data_[src[root_id].ctx().dev_id].rank;
-        ncclGroupStart();
-        for (size_t i = 0; i < src.size(); ++i) {
-          NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
-          if (i == root_id) {
-          MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
-          ncclReduce(src[i].data().dptr<DType>(),
-                            reduce.data().dptr<DType>(),
-                            src[i].shape().Size(),
-                            GetNCCLType(src[i].dtype()),
-                            ncclSum,
-                            root,
-                            cur.comm,
-                            cur.stream););
-          } else {
-          MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
-          ncclReduce(src[i].data().dptr<DType>(),
-                            NULL,
-                            src[i].shape().Size(),
-                            GetNCCLType(src[i].dtype()),
-                            ncclSum,
-                            root,
-                            cur.comm,
-                            cur.stream););
-          }
+    std::vector<Engine::VarHandle> mutate_vars;
+
+    for (size_t k = 0; k < keys.size(); ++k) {
+      auto& key = keys[k];
+      auto& src = srcs[k];
+      auto& root_id = root_ids[k];
+
+      // avoid extra copy for single device, but it may bring problems for
+      // abnormal usage of kvstore
+      if (src.size() == 1) {
+        (*merged_ptrs)[k] = &src[0];
+        continue;
+      }
+
+      if (!inited_) {
+        std::vector<Context> devs;
+        for (const auto& a : src) {
+          devs.push_back(a.ctx());
         }
+        InitNCCL(devs);
+        InitMergeBuffer(devs);
+      }
+
+      // Check whether we got the same set of devices
+      std::vector<int> dev_ids;
+      for (auto e : src) {
+        dev_ids.push_back(e.ctx().dev_id);
+      }
+      std::sort(dev_ids.begin(), dev_ids.end());
+      CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
+
+      auto& buf = merge_buf_[key];
+      int root = buf.merged.ctx().dev_id;
+      root_id = FindRootId(src, root);
+
+      auto& reduce = buf.merged;
+      (*merged_ptrs)[k] = &reduce;
+      // Need to pass NDArrays by value to the engine
+      reduces[k] = reduce;
+
+      for (size_t i = 0; i < src.size(); ++i) {
+        const_vars.push_back(src[i].var());
+      }
+      mutate_vars.push_back(reduce.var());
+    }
+
+    Engine::Get()->PushSync([srcs, reduces, root_ids, this](RunContext rctx) {
+        std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
+        ncclGroupStart();
+#endif
+        for (size_t k = 0; k < srcs.size(); ++k) {
+          auto& src = srcs[k];
+          auto& root_id = root_ids[k];
+          auto& reduce = reduces[k];
+          if (src.size() <= 1) {
+            continue;
+          }
+          int root = nccl_data_[src[root_id].ctx().dev_id].rank;
+          ncclGroupStart();
+          for (size_t i = 0; i < src.size(); ++i) {
+            NCCLEntry cur = nccl_data_[src[i].ctx().dev_id];
+            if (i == root_id) {
+            MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+            ncclReduce(src[i].data().dptr<DType>(),
+                              reduce.data().dptr<DType>(),
+                              src[i].shape().Size(),
+                              GetNCCLType(src[i].dtype()),
+                              ncclSum,
+                              root,
+                              cur.comm,
+                              cur.stream););
+            } else {
+            MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+            ncclReduce(src[i].data().dptr<DType>(),
+                              NULL,
+                              src[i].shape().Size(),
+                              GetNCCLType(src[i].dtype()),
+                              ncclSum,
+                              root,
+                              cur.comm,
+                              cur.stream););
+            }
+          }
+          ncclGroupEnd();
+        }
+#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
         ncclGroupEnd();
+#endif
       },
       Context::CPU(),
       const_vars,
-      {reduce.var()},
+      mutate_vars,
       FnProperty::kCPUPrioritized,
       priority,
       PROFILER_MESSAGE("KVStoreReduce"));
-
-    return buf.merged;
   }
 
   void CommSync(const std::vector<const NDArray*>& dst,
@@ -810,53 +860,90 @@ class CommNCCL : public Comm {
 
   void Broadcast(int key, const NDArray& src,
                  const std::vector<NDArray*> dst, int priority) override {
+    Broadcast(std::vector<int> {key}, {src}, {dst}, priority);
+  }
+
+  void Broadcast(const std::vector<int> keys,
+      const std::vector<NDArray>& srcs,
+      const std::vector<std::vector<NDArray*>>& dsts,
+      int priority) override {
+    std::vector<size_t> root_ids(keys.size());
+    std::vector<Engine::VarHandle> const_vars;
+    std::vector<Engine::VarHandle> mutable_vars;
+
+    for (size_t k = 0; k < keys.size(); ++k) {
+      auto& key = keys[k];
+      auto& src = srcs[k];
+      auto& dst = dsts[k];
+      auto& root_id = root_ids[k];
+
+      if (!inited_) {
+        // copy to a random device first
+        int dev_id = key % dst.size();
+        CopyFromTo(src, *dst[dev_id], priority);
+        for (size_t i = 0; i < dst.size(); ++i) {
+          if (i != static_cast<size_t>(dev_id)) {
+            CopyFromTo(*dst[dev_id], *dst[i], priority);
+          }
+        }
+      } else {
+        auto& buf = merge_buf_[key];
+        int root = src.ctx().dev_id;
+        assert(root == buf.ctx().dev_id);
+        root_id = FindRootId(dst, root);
+
+        // Check whether we got the same set of devices
+        std::vector<int> dev_ids;
+        for (size_t i = 0; i < dst.size(); ++i) {
+          auto& bcast = (i == root_id) ? src : *dst[i];
+          dev_ids.push_back(bcast.ctx().dev_id);
+        }
+        std::sort(dev_ids.begin(), dev_ids.end());
+        CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
+
+        // On root perform simple copy to the output
+        CopyFromTo(src, *dst[root_id], priority);
+        for (size_t i = 0; i < dst.size(); ++i) {
+          if ( i != root_id)
+            mutable_vars.push_back(dst[i]->var());
+        }
+        const_vars.push_back(src.var());
+      }
+    }
+
+    // If not yet inited, then all work is already scheduled
     if (!inited_) {
-      // copy to a random device first
-      int dev_id = key % dst.size();
-      CopyFromTo(src, dst[dev_id], priority);
-      for (size_t i = 0; i < dst.size(); ++i) {
-        if (i != static_cast<size_t>(dev_id)) {
-          CopyFromTo(*(dst[dev_id]), dst[i], priority);
-        }
-      }
-    } else {
-      auto& buf = merge_buf_[key];
-      int root = src.ctx().dev_id;
-      assert(root == buf.ctx().dev_id);
-      size_t root_id = FindRootId(dst, root);
+      return;
+    }
 
-      // Check whether we got the same set of devices
-      std::vector<int> dev_ids;
-      for (size_t i = 0; i < dst.size(); ++i) {
-        auto& bcast = (i == root_id) ? src : *(dst[i]);
-        dev_ids.push_back(bcast.ctx().dev_id);
+    // We need to capture NDArrays by value
+    // in order to push to the engine
+    std::vector<std::vector<NDArray>> broadcasts(dsts.size());
+    for (size_t i = 0; i < dsts.size(); ++i) {
+      auto& broadcast = broadcasts[i];
+      broadcast.resize(dsts[i].size());
+      for (size_t j = 0; j < dsts[i].size(); ++j) {
+        broadcast[j] = *(dsts[i][j]);
       }
-      std::sort(dev_ids.begin(), dev_ids.end());
-      CHECK(device_ids_ == dev_ids) << "NCCL KVStore supports only single set of devices";
+    }
 
-      // On root perform simple copy to the output
-      CopyFromTo(src, dst[root_id], priority);
-      if (dst.size() == 1) return;
+    Engine::Get()->PushSync([srcs, broadcasts, root_ids, this](RunContext rctx) {
+        std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
+#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
+        ncclGroupStart();
+#endif
+        for (size_t k = 0; k < srcs.size(); ++k) {
+          auto& src = srcs[k];
+          auto& dst = broadcasts[k];
+          auto& root_id = root_ids[k];
+          if (dst.size() <= 1) {
+            continue;
+          }
 
-      // Broadcast to other devices
-      std::vector<Engine::VarHandle> mutable_vars;
-      for (size_t i = 0; i < dst.size(); ++i) {
-        if (i != root_id) {
-          mutable_vars.push_back(dst[i]->var());
-        }
-      }
-      // We need to capture NDArrays by value
-      // in order to push to the engine
-      std::vector<NDArray> broadcast(dst.size());
-      for (size_t i = 0; i < dst.size(); ++i) {
-        broadcast[i] = *(dst[i]);
-      }
-      Engine::Get()->PushSync([src, broadcast, root_id, this](RunContext rctx) {
-          std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
           int root = nccl_data_[src.ctx().dev_id].rank;
           ncclGroupStart();
-          for (size_t i = 0; i < broadcast.size(); ++i) {
-            auto& bcast = (i == root_id) ? src : broadcast[i];
+          for (size_t i = 0; i < dst.size(); ++i) {
+            auto& bcast = (i == root_id) ? src : dst[i];
             NCCLEntry cur = nccl_data_[bcast.ctx().dev_id];
             MSHADOW_TYPE_SWITCH(bcast.dtype(), DType,
                 ncclBcast(bcast.data().dptr<DType>(),
@@ -867,14 +954,17 @@ class CommNCCL : public Comm {
                   cur.stream););
           }
           ncclGroupEnd();
-        },
-        Context::CPU(),
-        {src.var()},
-        mutable_vars,
-        FnProperty::kCPUPrioritized,
-        priority,
-        PROFILER_MESSAGE("KVStoreBCast"));
-    }
+        }
+#if (NCCL_MAJOR > 2 || (NCCL_MAJOR == 2 && NCCL_MINOR > 1))
+        ncclGroupEnd();
+#endif
+      },
+      Context::CPU(),
+      const_vars,
+      mutable_vars,
+      FnProperty::kCPUPrioritized,
+      priority,
+      PROFILER_MESSAGE("KVStoreBCast"));
   }
 
  private:

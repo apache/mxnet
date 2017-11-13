@@ -79,14 +79,15 @@ class KVStoreNCCL : public KVStoreLocal {
     std::vector<NDArray*> local_ptrs;
     bool nccl_called = false;
 
+    comm_->Reduce(uniq_keys, grouped_vals, priority, &merged_ptrs);
+
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority - i);
       if (grouped_vals[i].size() > 1) {
         // We issued NCCL kernels, need to synchronize
         nccl_called = true;
       }
-      merged_ptrs.push_back(&merged);
+      auto& merged = *(merged_ptrs[i]);
       NDArray& local = local_[key];
       if (updater_ != nullptr) {
         CHECK(!local.is_none()) << "key " << key << " has not been inited";
@@ -131,19 +132,21 @@ class KVStoreNCCL : public KVStoreLocal {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
     GroupKVPairsPullHelper(keys, values, &uniq_keys, &grouped_vals);
+    std::vector<NDArray> locals;
     bool nccl_called = false;
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
       const NDArray& local = local_[key];
+      locals.push_back(local_[key]);
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
-      comm_->Broadcast(key, local, grouped_vals[i], priority - i);
       if (grouped_vals[i].size() > 1) {
         // We issued NCCL kernels, need to synchronize
         nccl_called = true;
       }
     }
 
+    comm_->Broadcast(uniq_keys, locals, grouped_vals, priority);
     // Sync after all broadcasts in a group
     if (nccl_called) {
       const std::vector<const NDArray*> values_copy(values.begin(), values.end());
