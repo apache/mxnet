@@ -212,10 +212,16 @@ static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem) {
   if (format == mem->get_primitive_desc().desc().data.format)
     return mem;
 
-  mkldnn::memory::desc desc = mem->get_primitive_desc().desc();
-  desc.data.format = format;
-  mkldnn::memory::primitive_desc pd(desc, mem->get_primitive_desc().get_engine());
-  mkldnn_mem_ptr def_mem(new mkldnn::memory(pd));
+  auto pd = mem->get_primitive_desc();
+  mkldnn::memory::dims dims(pd.desc().data.ndims);
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = pd.desc().data.dims[i];
+  mkldnn::memory::format cpp_format = static_cast<mkldnn::memory::format>(format);
+  mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
+      pd.desc().data.data_type);
+  mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
+  mkldnn_mem_ptr def_mem(new mkldnn::memory(mkldnn::memory::primitive_desc(data_md,
+          pd.get_engine())));
 
   MKLDNNStream &stream = MKLDNNStream::Instance();
   stream.RegisterMem(def_mem);
