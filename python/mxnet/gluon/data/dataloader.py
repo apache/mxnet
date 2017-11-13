@@ -25,7 +25,9 @@ import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
 import pickle
 import io
+import os
 import sys
+import warnings
 import numpy as np
 
 from . import sampler as _sampler
@@ -110,6 +112,7 @@ def default_mp_batchify_fn(data):
 
 
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
+    """Worker loop for multiprocessing DataLoader."""
     while True:
         idx, samples = key_queue.get()
         if idx is None:
@@ -142,6 +145,23 @@ class DataLoader(object):
     batch_sampler : Sampler
         A sampler that returns mini-batches. Do not specify batch_size,
         shuffle, sampler, and last_batch if batch_sampler is specified.
+    batchify_fn : callable
+        Callback function to allow users to specify how to merge samples
+        into a batch. Defaults to `default_batchify_fn`::
+
+            def default_batchify_fn(data):
+                if isinstance(data[0], nd.NDArray):
+                    return nd.stack(*data)
+                elif isinstance(data[0], tuple):
+                    data = zip(*data)
+                    return [default_batchify_fn(i) for i in data]
+                else:
+                    data = np.asarray(data)
+                    return nd.array(data, dtype=data.dtype)
+
+    num_workers : int, default 0
+        The number of multiprocessing workers to use for data preprocessing.
+        `num_workers > 0` is not supported on Windows yet.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
@@ -168,6 +188,9 @@ class DataLoader(object):
                              "not be specified if batch_sampler is specified.")
 
         self._batch_sampler = batch_sampler
+        if num_workers > 0 and os.name == 'nt':
+            warnings.warn("DataLoader does not support num_workers > 0 on Windows yet.")
+            num_workers = 0
         self._num_workers = num_workers
         if batchify_fn is None:
             if num_workers > 0:
