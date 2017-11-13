@@ -1,8 +1,6 @@
-Overview
-========
+# Overview
 
-MXNet.jl Namespace
-------------------
+## MXNet.jl Namespace
 
 Most the functions and types in MXNet.jl are organized in a flat
 namespace. Because many some functions are conflicting with existing
@@ -11,13 +9,32 @@ convention of accessing the MXNet.jl interface is the to use the `mx.`
 prefix explicitly:
 
 ```julia
-using MXNet
+julia> using MXNet
 
-x = mx.zeros(2,3)              # MXNet NDArray
-y = zeros(eltype(x), size(x))  # Julia Array
-copy!(y, x)                    # Overloaded function in Julia Base
-z = mx.ones(size(x), mx.gpu()) # MXNet NDArray on GPU
-mx.copy!(z, y)                 # Same as copy!(z, y)
+julia> x = mx.zeros(2,3)              # MXNet NDArray
+2×3 mx.NDArray{Float32} @ CPU0:
+ 0.0  0.0  0.0
+ 0.0  0.0  0.0
+
+julia> y = zeros(eltype(x), size(x))  # Julia Array
+2×3 Array{Float32,2}:
+ 0.0  0.0  0.0
+ 0.0  0.0  0.0
+
+julia> copy!(y, x)                    # Overloaded function in Julia Base
+2×3 Array{Float32,2}:
+ 0.0  0.0  0.0
+ 0.0  0.0  0.0
+
+julia> z = mx.ones(size(x), mx.gpu()) # MXNet NDArray on GPU
+2×3 mx.NDArray{Float32} @ GPU0:
+ 1.0  1.0  1.0
+ 1.0  1.0  1.0
+
+julia> mx.copy!(z, y)                 # Same as copy!(z, y)
+2×3 mx.NDArray{Float32} @ GPU0:
+ 0.0  0.0  0.0
+ 0.0  0.0  0.0
 ```
 
 Note functions like `size`, `copy!` that is extensively overloaded for
@@ -26,24 +43,23 @@ various types works out of the box. But functions like `zeros` and
 prefer, the `mx.` prefix can be used explicitly for all MXNet.jl
 functions, including `size` and `copy!` as shown in the last line.
 
-Low Level Interface
--------------------
+## Low Level Interface
 
-### NDArrays
+### `NDArray`
 
-NDArray is the basic building blocks of the actual computations in
+`NDArray` is the basic building blocks of the actual computations in
 MXNet. It is like a Julia `Array` object, with some important
 differences listed here:
 
 -   The actual data could live on different `Context` (e.g. GPUs). For
     some contexts, iterating into the elements one by one is very slow,
-    thus indexing into NDArray is not supported in general. The easiest
+    thus indexing into NDArray is not recommanded in general. The easiest
     way to inspect the contents of an NDArray is to use the `copy`
     function to copy the contents as a Julia `Array`.
--   Operations on NDArray (including basic arithmetics and neural
+-   Operations on `NDArray` (including basic arithmetics and neural
     network related operators) are executed in parallel with automatic
     dependency tracking to ensure correctness.
--   There is no generics in NDArray, the `eltype` is always
+-   There is no generics in `NDArray`, the `eltype` is always
     `mx.MX_float`. Because for applications in machine learning, single
     precision floating point numbers are typical a best choice balancing
     between precision, speed and portability. Also since libmxnet is
@@ -52,14 +68,14 @@ differences listed here:
 
 While most of the computation is hidden in libmxnet by operators
 corresponding to various neural network layers. Getting familiar with
-the NDArray API is useful for implementing `Optimizer` or customized
+the `NDArray` API is useful for implementing `Optimizer` or customized
 operators in Julia directly.
 
-The followings are common ways to create NDArray objects:
+The followings are common ways to create `NDArray` objects:
 
 -   `mx.empty(shape[, context])`: create on uninitialized array of a
     given shape on a specific device. For example,
-    ` mx.empty(2,3)`, `mx.((2,3), mx.gpu(2)) `.
+    `mx.empty(2,3)`, `mx.((2,3), mx.gpu(2))`.
 -   `mx.zeros(shape[, context])` and `mx.ones(shape[, context])`:
     similar to the Julia's built-in `zeros` and `ones`.
 -   `mx.copy(jl_arr, context)`: copy the contents of a Julia `Array` to
@@ -80,11 +96,13 @@ println(copy(a))
 ```
 
 A slice is a sub-region sharing the same memory with the original
-NDArray object. A slice is always a contiguous piece of memory, so only
+`NDArray` object. A slice is always a contiguous piece of memory, so only
 slicing on the *last* dimension is supported. The example above also
-shows a way to set the contents of an NDArray.
+shows a way to set the contents of an `NDArray`.
 
-```julia
+```@repl
+using MXNet
+mx.srand(42)
 a = mx.empty(2,3)
 a[:] = 0.5              # set all elements to a scalar
 a[:] = rand(size(a))    # set contents with a Julia Array
@@ -101,39 +119,37 @@ a = b
 ```
 
 does **not** mean copying the contents of `b` to `a`. Instead, it just
-make the variable `a` pointing to a new object, which is `b`. Similarly,
-inplace arithmetics does not work as expected:
+make the variable `a` pointing to a new object, which is `b`.
+Similarly, inplace arithmetics does not work as expected:
 
-```julia
+```@repl inplace-macro
+using MXNet
 a = mx.ones(2)
 r = a           # keep a reference to a
 b = mx.ones(2)
 a += b          # translates to a = a + b
-println(copy(a))
-# => Float32[2.0f0,2.0f0]
-println(copy(r))
-# => Float32[1.0f0,1.0f0]
+a
+r
 ```
 
 As we can see, `a` has expected value, but instead of inplace updating,
-a new NDArray is created and `a` is set to point to this new object. If
+a new `NDArray` is created and `a` is set to point to this new object. If
 we look at `r`, which still reference to the old `a`, its content has
 not changed. There is currently no way in Julia to overload the
 operators like `+=` to get customized behavior.
 
-Instead, you will need to write `a[:] = a+b`, or if you want *real*
+Instead, you will need to write `a[:] = a + b`, or if you want *real*
 inplace `+=` operation, MXNet.jl provides a simple macro `@mx.inplace`:
 
-```julia
+```@repl inplace-macro
 @mx.inplace a += b
 macroexpand(:(@mx.inplace a += b))
-# => :(MXNet.mx.add_to!(a,b))
 ```
 
 As we can see, it translate the `+=` operator to an explicit `add_to!`
 function call, which invokes into libmxnet to add the contents of `b`
 into `a` directly. For example, the following is the update rule in the
-SGD `Optimizer` (both `grad` and `weight` are NDArray objects):
+`SGD Optimizer` (both `grad` and `weight` are `NDArray` objects):
 
 ```julia
 @inplace weight += -lr * (grad_scale * grad + self.weight_decay * weight)
@@ -142,10 +158,10 @@ SGD `Optimizer` (both `grad` and `weight` are NDArray objects):
 Note there is no much magic in `mx.inplace`: it only does a shallow
 translation. In the SGD update rule example above, the computation like
 scaling the gradient by `grad_scale` and adding the weight decay all
-create temporary NDArray objects. To mitigate this issue, libmxnet has a
+create temporary `NDArray` objects. To mitigate this issue, libmxnet has a
 customized memory allocator designed specifically to handle this kind of
 situations. The following snippet does a simple benchmark on allocating
-temp NDArray vs. pre-allocating:
+temp `NDArray` vs. pre-allocating:
 
 ```julia
 using Benchmark
@@ -224,24 +240,24 @@ println(copy(a))
 #        2.0 2.0 2.0]
 ```
 
-Intermediate Level Interface
-----------------------------
+## Intermediate Level Interface
 
 ### Symbols and Composition
 
 The way we build deep learning models in MXNet.jl is to use the powerful
 symbolic composition system. It is like
 [Theano](http://deeplearning.net/software/theano/), except that we
-avoided long expression compiliation time by providing *larger* neural
+avoided long expression compilation time by providing *larger* neural
 network related building blocks to guarantee computation performance.
 See also [this
 note](http://mxnet.readthedocs.org/en/latest/program_model.html) for the
 design and trade-off of the MXNet symbolic composition system.
 
-The basic type is `mx.Symbol`. The following is a trivial example of
+The basic type is `mx.SymbolicNode`. The following is a trivial example of
 composing two symbols with the `+` operation.
 
-```julia
+```@repl
+using MXNet
 A = mx.Variable(:A)
 B = mx.Variable(:B)
 C = A + B
@@ -253,12 +269,13 @@ be realized by recursive composition. For example, the following code
 snippet shows a simple 2-layer MLP construction, using a hidden layer of
 128 units and a ReLU activation function.
 
-```julia
+```@repl fcnet
+using MXNet
 net = mx.Variable(:data)
-net = mx.FullyConnected(data=net, name=:fc1, num_hidden=128)
-net = mx.Activation(data=net, name=:relu1, act_type=:relu)
-net = mx.FullyConnected(data=net, name=:fc2, num_hidden=64)
-net = mx.Softmax(data=net, name=:out)
+net = mx.FullyConnected(net, name=:fc1, num_hidden=128)
+net = mx.Activation(net, name=:relu1, act_type=:relu)
+net = mx.FullyConnected(net, name=:fc2, num_hidden=64)
+net = mx.SoftmaxOutput(net, name=:out)
 ```
 
 Each time we take the previous symbol, and compose with an operation.
@@ -284,55 +301,33 @@ the networks, while *parameters* are typically trainable *weights*,
 When composing symbols, their arguments accumulates. We can list all the
 arguments by
 
-```julia
-julia> mx.list_arguments(net)
-6-element Array{Symbol,1}:
- :data         # Input data, name from the first data variable
- :fc1_weight   # Weights of the fully connected layer named :fc1
- :fc1_bias     # Bias of the layer :fc1
- :fc2_weight   # Weights of the layer :fc2
- :fc2_bias     # Bias of the layer :fc2
- :out_label    # Input label, required by the softmax layer named :out
+```@repl fcnet
+mx.list_arguments(net)
 ```
 
 Note the names of the arguments are generated according to the provided
 name for each layer. We can also specify those names explicitly:
 
-```julia
+```@repl
+using MXNet
 net = mx.Variable(:data)
 w   = mx.Variable(:myweight)
-net = mx.FullyConnected(data=data, weight=w, name=:fc1, num_hidden=128)
+net = mx.FullyConnected(data, weight=w, name=:fc1, num_hidden=128)
 mx.list_arguments(net)
-# =>
-# 3-element Array{Symbol,1}:
-#  :data
-#  :myweight
-#  :fc1_bias
 ```
 
-The simple fact is that a `Variable` is just a placeholder `mx.Symbol`.
+The simple fact is that a `Variable` is just a placeholder `mx.SymbolicNode`.
 In composition, we can use arbitrary symbols for arguments. For example:
 
-```julia
+```@repl
+using MXNet
 net  = mx.Variable(:data)
-net  = mx.FullyConnected(data=net, name=:fc1, num_hidden=128)
+net  = mx.FullyConnected(net, name=:fc1, num_hidden=128)
 net2 = mx.Variable(:data2)
-net2 = mx.FullyConnected(data=net2, name=:net2, num_hidden=128)
+net2 = mx.FullyConnected(net2, name=:net2, num_hidden=128)
 mx.list_arguments(net2)
-# =>
-# 3-element Array{Symbol,1}:
-#  :data2
-#  :net2_weight
-#  :net2_bias
 composed_net = net2(data2=net, name=:composed)
 mx.list_arguments(composed_net)
-# =>
-# 5-element Array{Symbol,1}:
-#  :data
-#  :fc1_weight
-#  :fc1_bias
-#  :net2_weight
-#  :net2_bias
 ```
 
 Note we use a composed symbol, `net` as the argument `data2` for `net2`
@@ -347,9 +342,10 @@ symbol could be inferred automatically. For example, given the input
 shape, and some hyper-parameters like `num_hidden`, the shapes for the
 weights and bias in a neural network could be inferred.
 
-```julia
+```@repl infer-shape
+using MXNet
 net = mx.Variable(:data)
-net = mx.FullyConnected(data=net, name=:fc1, num_hidden=10)
+net = mx.FullyConnected(net, name=:fc1, num_hidden=10)
 arg_shapes, out_shapes, aux_shapes = mx.infer_shape(net, data=(10, 64))
 ```
 
@@ -357,19 +353,15 @@ The returned shapes corresponds to arguments with the same order as
 returned by `mx.list_arguments`. The `out_shapes` are shapes for
 outputs, and `aux_shapes` can be safely ignored for now.
 
-```julia
-for (n,s) in zip(mx.list_arguments(net), arg_shapes)
-  println("$n => $s")
+```@repl infer-shape
+for (n, s) in zip(mx.list_arguments(net), arg_shapes)
+  println("$n\t=> $s")
 end
-# =>
-# data => (10,64)
-# fc1_weight => (10,10)
-# fc1_bias => (10,)
-for (n,s) in zip(mx.list_outputs(net), out_shapes)
-  println("$n => $s")
+```
+```@repl infer-shape
+for (n, s) in zip(mx.list_outputs(net), out_shapes)
+  println("$n\t=> $s")
 end
-# =>
-# fc1_output => (10,64)
 ```
 
 ### Binding and Executing
@@ -381,21 +373,18 @@ A context describes the computation devices (CPUs, GPUs, etc.) and an
 executor will carry out the computation (forward/backward) specified in
 the corresponding symbolic composition.
 
-```julia
+```@repl
+using MXNet
 A = mx.Variable(:A)
 B = mx.Variable(:B)
 C = A .* B
 a = mx.ones(3) * 4
 b = mx.ones(3) * 2
-c_exec = mx.bind(C, context=mx.cpu(), args=Dict(:A => a, :B => b))
+c_exec = mx.bind(C, context=mx.cpu(), args=Dict(:A => a, :B => b));
 
 mx.forward(c_exec)
+c_exec.outputs[1]
 copy(c_exec.outputs[1])  # copy turns NDArray into Julia Array
-# =>
-# 3-element Array{Float32,1}:
-#  8.0
-#  8.0
-#  8.0
 ```
 
 For neural networks, it is easier to use `simple_bind`. By providing the
@@ -406,7 +395,6 @@ the binding and executing steps are hidden under the `Model` interface.
 **TODO** Provide pointers to model tutorial and further details about
 binding and symbolic API.
 
-High Level Interface
---------------------
+## High Level Interface
 
 The high level interface include model training and prediction API, etc.

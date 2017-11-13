@@ -10,7 +10,7 @@ To install MXNet.jl, simply type
 Pkg.add("MXNet")
 ```
 
-in the Julia REPL. Or to use the latest git version of MXNet.jl, use the
+In the Julia REPL. Or to use the latest git version of MXNet.jl, use the
 following command instead
 
 ```julia
@@ -27,9 +27,9 @@ to point the build-process in the right direction. If the automatic
 cuda detection fails you can also set `CUDA_HOME` to override the process.
 To control which version of libmxnet will be compiled, you can use the
 `MXNET_COMMIT` variable to point to either a version tag (e.g. `v0.10.0`), a
-branch name (e.g.  `master`) or a specific commit hash (e.g. `a0b1c2d3`).
+branch name (e.g. `master`) or a specific commit hash (e.g. `a0b1c2d3`).
 
-The libmxnet source is downloaded to `Pkg.dir("MXNet")/deps/src/mxnet`.
+The libmxnet source is downloaded to `Pkg.dir("MXNet", "deps", "src", "mxnet")`.
 The automatic build is using default configurations, with OpenCV disabled.
 If the compilation failed due to unresolved dependency, or if
 you want to customize the build, you can compile and
@@ -39,12 +39,12 @@ Manual Compilation
 ------------------
 
 It is possible to compile libmxnet separately and point MXNet.jl to a
-the existing library in case automatic compilation fails due to
-unresolved dependencies in an un-standard environment; Or when one want
-to work with a seperate, maybe customized libmxnet.
+existing library in case automatic compilation fails due to
+unresolved dependencies in an non-standard environment; Or when one want
+to work with a separate, maybe customized libmxnet.
 
 To build libmxnet, please refer to [the installation guide of
-libmxnet](http://mxnet.readthedocs.org/en/latest/build.html). After
+libmxnet](https://mxnet.incubator.apache.org/install/index.html). After
 successfully installing libmxnet, set the `MXNET_HOME` *environment
 variable* to the location of libmxnet. In other words, the compiled
 `libmxnet.so` should be found in `$MXNET_HOME/lib`.
@@ -65,7 +65,7 @@ Basically, MXNet.jl will search `libmxnet.so` or `libmxnet.dll` in the
 following paths (and in that order):
 
 -   `$MXNET_HOME/lib`: customized libmxnet builds
--   `Pkg.dir("MXNet")/deps/usr/lib`: automatic builds
+-   `Pkg.dir("MXNet", "deps", "usr", "lib")`: automatic builds
 -   Any system wide library search path
 
 Note that MXNet.jl can not load `libmxnet.so` even if it is on one of
