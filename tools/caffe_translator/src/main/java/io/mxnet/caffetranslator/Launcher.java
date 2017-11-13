@@ -10,13 +10,16 @@ import java.io.PrintWriter;
 public class Launcher {
 
     private String trainingPrototextPath, solverPrototextPath;
+    private String paramsFilePath;
     private File outFile;
 
     protected final String TRAINING_PROTOTXT = "training-prototxt";
     protected final String SOLVER_PROTOTXT = "solver";
     protected final String CUSTOM_DATA_LAYERS = "custom-data-layers";
     protected final String OUTPUT_FILE = "output-file";
+    protected final String PARAMS_FILE = "params-file";
     protected final String GRAPH_FILE = "graph-file";
+
 
     public static void main(String[] args) {
         Launcher launcher = new Launcher();
@@ -27,6 +30,9 @@ public class Launcher {
         parseCommandLine(args);
 
         Converter converter = new Converter(trainingPrototextPath, solverPrototextPath);
+        if(paramsFilePath != null) {
+            converter.setParamsFilePath(paramsFilePath);
+        }
         String code = converter.generateMXNetCode();
 
         writeToOutFile(code);
@@ -78,6 +84,13 @@ public class Launcher {
                 .build();
         options.addOption(outfileOpt);
 
+        Option paramsFileOpt = Option.builder("p")
+                .longOpt(PARAMS_FILE)
+                .hasArg()
+                .desc("Params file")
+                .build();
+        options.addOption(paramsFileOpt);
+
         Option graphFileOpt = Option.builder("g")
                 .longOpt(GRAPH_FILE)
                 .hasArg()
@@ -106,6 +119,8 @@ public class Launcher {
             bail("Command line argument " + OUTPUT_FILE + " missing");
         }
         outFile = new File(strOutFile);
+
+        paramsFilePath = getOption(line, PARAMS_FILE);
 
         String dataLayers;
         Config config = Config.getInstance();

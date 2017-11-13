@@ -1,6 +1,7 @@
 package io.mxnet.caffetranslator;
 
 import io.mxnet.caffetranslator.generators.*;
+import lombok.Setter;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -26,6 +27,8 @@ public class Converter {
     private SymbolGeneratorFactory generators;
     private final String NL;
     private GenHelper gh;
+    @Setter
+    private String paramsFilePath;
 
 
     Converter(String trainPrototxt, String solverPrototxt) {
@@ -100,6 +103,11 @@ public class Converter {
 
         code.append(generateMetricsClasses());
         code.append(System.lineSeparator());
+
+        if(paramsFilePath != null) {
+            code.append(generateParamsLoader());
+            code.append(System.lineSeparator());
+        }
 
         // Convert data layerList
         code.append(generateIterators());
@@ -195,6 +203,10 @@ public class Converter {
         return st.render();
     }
 
+    private String generateParamsLoader() {
+        return gh.getTemplate("params_loader").render();
+    }
+
     private String getLoss(MLModel model, StringBuilder out) {
         List<String> losses = new ArrayList<>();
         for (Layer layer : model.getLayerList()) {
@@ -270,16 +282,16 @@ public class Converter {
                 st = gh.getTemplate("opt_default");
                 st.add("opt_name", "AdaGrad");
                 break;
-            case "Adam":
+            case "adam":
                 st = gh.getTemplate("opt_default");
                 st.add("opt_name", "Adam");
                 break;
-            case "Nesterov":
+            case "nesterov":
                 st = gh.getTemplate("opt_sgd");
                 st.add("opt_name", "NAG");
                 st.add("momentum", momentum);
                 break;
-            case "RMSProp":
+            case "rmsprop":
                 st = gh.getTemplate("opt_default");
                 st.add("opt_name", "RMSProp");
                 break;
@@ -299,11 +311,9 @@ public class Converter {
     }
 
     private String generateInitializer() {
-        //ToDo: Fix this
-        StringBuilder out = new StringBuilder();
-        out.append("module.init_params(initializer=mx.init.Xavier())");
-        out.append(System.lineSeparator());
-        return out.toString();
+        ST st = gh.getTemplate("init_params");
+        st.add("params_file", paramsFilePath);
+        return st.render();
     }
 
     private String generateImports() {
