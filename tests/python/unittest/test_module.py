@@ -78,15 +78,15 @@ def test_module_ctx_group():
         b = mx.symbol.Variable('b')
         c = a + b
     shape = (2, 5)
-    mod1 = mx.mod.Module(c, context=[mx.cpu(0)], data_names=['a', 'b'], label_names=None,
-                         group2ctxs=[{'dev1':mx.cpu(1),'dev2':mx.cpu(2)}])
+    mod1 = mx.mod.Module(c, context=[mx.cpu(0), mx.cpu(1)], data_names=['a', 'b'], label_names=None,
+                         group2ctxs={'dev1': mx.cpu(2),'dev2': [mx.cpu(3), mx.cpu(4)]})
     mod1.bind(data_shapes=[['a', shape], ['b', shape]], inputs_need_grad=True)
     mod1.init_params()
     mod1.forward(data_batch=mx.io.DataBatch(data=[mx.nd.ones(shape), mx.nd.ones(shape)]), is_train=True)
     mod1.backward([mx.nd.ones(shape)])
     mod1_input_grads = mod1.get_input_grads()
 
-    mod2 = mx.mod.Module(c, data_names=['a', 'b'], label_names=None)
+    mod2 = mx.mod.Module(c, context=[mx.cpu(0), mx.cpu(1)], data_names=['a', 'b'], label_names=None)
     mod2.bind(data_shapes=[['a', shape], ['b', shape]], inputs_need_grad=True)
     mod2.init_params()
     mod2.forward(data_batch=mx.io.DataBatch(data=[mx.nd.ones(shape), mx.nd.ones(shape)]), is_train=True)
@@ -121,7 +121,7 @@ def test_bucket_module_ctx_group():
         return sym, ('data',), ('label',)
 
     mod = mx.mod.BucketingModule(sym_gen=sym_gen, default_bucket_key=10, context=[mx.cpu(0)],
-                                 group2ctxs=[{'dev1':mx.cpu(1), 'dev2':mx.cpu(2)}])
+                                 group2ctxs={'dev1': [mx.cpu(1)], 'dev2':mx.cpu(2)})
     mod.bind(data_shapes=[['data', (batch_size, num_hidden)]],
              label_shapes=[['label', (batch_size,)]],
              for_training=True, inputs_need_grad=True)
