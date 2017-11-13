@@ -420,8 +420,6 @@ def _init_op_module(root_namespace, module_name, make_op_func):
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         op_name_prefix = _get_op_name_prefix(name)
-        if op_name_prefix == "_image_":
-            print(1)
         module_name_local = module_name
         if len(op_name_prefix) > 0:
             func_name = name[len(op_name_prefix):]

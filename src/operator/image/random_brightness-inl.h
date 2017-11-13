@@ -25,9 +25,10 @@
 #ifndef MXNET_OPERATOR_IMAGE_RANDOM_BRIGHTNESS_INL_H_
 #define MXNET_OPERATOR_IMAGE_RANDOM_BRIGHTNESS_INL_H_
 
+#include <vector>
 #include <mxnet/base.h>
-#include "mxnet/op_attr_types.h"
 #include <opencv2/core/mat.hpp>
+#include "mxnet/op_attr_types.h"
 
 namespace mxnet {
 namespace op {
@@ -42,70 +43,62 @@ namespace op {
 
 
   template<typename xpu>
-  static void RandomBrightness(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {  
+  static void RandomBrightness(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
     auto input = inputs[0];
     cv::Mat m;
 
     int hight = input.shape_[0];
     int weight = input.shape_[1];
     int channel = input.shape_[2];
-    switch (input.type_flag_)
-    {
-    case mshadow::kFloat32:                      
-    {                                            
-      typedef float DType;                       
-      m = cv::Mat(hight, weight, CV_MAKETYPE(CV_32F, channel), input.dptr<DType>());
-    }                                            
-      break;                                     
-    case mshadow::kFloat64:                      
-    {                                            
-      typedef double DType;                      
-      m = cv::Mat(hight, weight, CV_MAKETYPE(CV_64F, channel), input.dptr<DType>());
-    }                                            
-      break;                                     
-    case mshadow::kFloat16:                      
-    {                                            
-      typedef mshadow::half::half_t DType;       
+    switch (input.type_flag_) {
+      case mshadow::kFloat32: {
+        typedef float DType;
+        m = cv::Mat(hight, weight, CV_MAKETYPE(CV_32F, channel), input.dptr<DType>());
+      }
+      break;
+      case mshadow::kFloat64: {
+        typedef double DType;
+        m = cv::Mat(hight, weight, CV_MAKETYPE(CV_64F, channel), input.dptr<DType>());
+      }
+      break;
+      case mshadow::kFloat16: {
+        typedef mshadow::half::half_t DType;
 
-    }                                            
-      break;                                     
-    case mshadow::kUint8:                        
-    {                                            
-      typedef uint8_t DType;                     
-      m = cv::Mat(hight, weight, CV_MAKETYPE(CV_8U, channel), input.dptr<DType>());
-    }                                            
-      break;                                     
-    case mshadow::kInt8:                         
-    {                                            
-      typedef int8_t DType;                      
-      m = cv::Mat(hight, weight, CV_MAKETYPE(CV_8S, channel), input.dptr<DType>());
-    }                                            
-      break;                                     
-    case mshadow::kInt32:                        
-    {                                            
-      typedef int32_t DType;                     
-      m = cv::Mat(hight, weight, CV_MAKETYPE(CV_32S, channel), input.dptr<DType>());
-    }                                            
-      break;                                     
-    case mshadow::kInt64:                        
-    {                                            
-      typedef int64_t DType;                     
-    }                                            
-      break;                                     
-    default:                                     
-      LOG(FATAL) << "Unknown type enum " << input.type_flag_;
-    
+      }
+      break;
+      case mshadow::kUint8: {
+        typedef uint8_t DType;
+        m = cv::Mat(hight, weight, CV_MAKETYPE(CV_8U, channel), input.dptr<DType>());
+      }
+      break;
+      case mshadow::kInt8: {
+        typedef int8_t DType;
+        m = cv::Mat(hight, weight, CV_MAKETYPE(CV_8S, channel), input.dptr<DType>());
+      }
+      break;
+      case mshadow::kInt32: {
+        typedef int32_t DType;
+        m = cv::Mat(hight, weight, CV_MAKETYPE(CV_32S, channel), input.dptr<DType>());
+      }
+      break;
+      case mshadow::kInt64: {
+        typedef int64_t DType;
+      }
+      break;
+      default:
+        LOG(FATAL) << "Unknown type enum " << input.type_flag_;
+
     }
     std::default_random_engine generator;
-    const RandomBrightnessParam& param = nnvm::get<RandomBrightnessParam>(attrs.parsed);
+    const RandomBrightnessParam &param = nnvm::get<RandomBrightnessParam>(attrs.parsed);
     float alpha_b = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(generator);
     m.convertTo(m, -1, alpha_b, 0);
   }
-}
-}
+} // namespace op
+} // namespace mxnet
 
-#endif
+#endif  // MXNET_OPERATOR_IMAGE_RANDOM_BRIGHTNESS_INL_H_
