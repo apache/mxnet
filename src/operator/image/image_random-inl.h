@@ -18,12 +18,12 @@
 */
 
 /*!
-* \file random_brightness-inl.h
+* \file image_random-inl.h
 * \brief
 * \author
 */
-#ifndef MXNET_OPERATOR_IMAGE_RANDOM_BRIGHTNESS_INL_H_
-#define MXNET_OPERATOR_IMAGE_RANDOM_BRIGHTNESS_INL_H_
+#ifndef MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
+#define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
 #include <vector>
 #include <mxnet/base.h>
@@ -96,4 +96,4 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
 } // namespace op
 } // namespace mxnet
 
-#endif  // MXNET_OPERATOR_IMAGE_RANDOM_BRIGHTNESS_INL_H_
+#endif  // MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
