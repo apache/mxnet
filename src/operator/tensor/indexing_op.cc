@@ -29,10 +29,10 @@ namespace op {
 
 template<>
 void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
-                                     const TBlob& data,
-                                     const NDArray& weight,
-                                     const OpReqType req,
-                                     const TBlob& output) {
+                                          const TBlob& data,
+                                          const NDArray& weight,
+                                          const OpReqType req,
+                                          const TBlob& output) {
   if (req == kNullOp) return;
   using namespace rowsparse;
   using namespace mxnet_op;
@@ -68,10 +68,10 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
 
 template<>
 inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
-                                             const TBlob& ograd,
-                                             const TBlob& data,
-                                             const OpReqType req,
-                                             const NDArray& output) {
+                                                  const TBlob& ograd,
+                                                  const TBlob& data,
+                                                  const OpReqType req,
+                                                  const NDArray& output) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace mshadow::expr;
