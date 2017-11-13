@@ -212,8 +212,16 @@ std::vector<nnvm::NodeEntry> Gradient(
   }
 
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < g->num_outputs(); ++i) {
+  for (index_t i = 0; i < params.num_args; ++i) {
     ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+  }
+  if (params.num_auxs) {
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = nnvm::Op::Get("_NoGradient");
+    ng->attrs.name = "NoGradient";
+    for (index_t i = 0; i < params.num_auxs; ++i) {
+      ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
+    }
   }
 
   return ret;
@@ -225,8 +233,8 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
                        const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
-  std::vector<uint32_t*> shapes(params.num_args);
-  std::vector<int> ndims(params.num_args);
+  std::vector<uint32_t*> shapes(in_shape.size());
+  std::vector<int> ndims(in_shape.size());
   size_t buff_size = 0;
   for (const auto& i : in_shape) buff_size += i.ndim();
   std::vector<uint32_t> buff(buff_size);
@@ -245,7 +253,7 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   MXCallbackList *op_info = new MXCallbackList;
   CHECK(reinterpret_cast<CustomOpCreateFunc>(
       params.info->callbacks[kCustomOpPropCreateOperator])(
-          os.str().c_str(), params.num_args, shapes.data(), ndims.data(), in_type.data(),
+          os.str().c_str(), shapes.size(), shapes.data(), ndims.data(), in_type.data(),
           op_info, params.info->contexts[kCustomOpPropCreateOperator]));
 
   CustomParam state = params;
