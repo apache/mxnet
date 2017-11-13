@@ -63,7 +63,7 @@ if HAS_CUDA
   if HAS_CUDNN
     info("Found a CuDNN installation.")
   end
-  info("CUDA_HOME -> $(ENV["CUDA_HOME"])")
+  info("CUDA_HOME -> $(get(ENV, "CUDA_HOME", nothing))")
 else
   info("Did not find a CUDA installation, using CPU-only version of MXNet.")
 end
