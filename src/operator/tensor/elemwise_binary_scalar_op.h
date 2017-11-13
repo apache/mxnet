@@ -66,7 +66,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t dense_block_count = next_input_row - output_row;
         if (dense_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            mxnet_op::Kernel<OpBase::set_to_scalar<Req>, cpu>::Launch(
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, cpu>::Launch(
               stream,
               items_per_row * dense_block_count,
               output_data.dptr_ + items_per_row * output_row,
@@ -237,11 +237,8 @@ class BinaryScalarOp : public UnaryOp {
     const double alpha = nnvm::get<double>(attrs.parsed);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s,
-                                                                      inputs[0].Size(),
-                                                                      outputs[0].dptr<DType>(),
-                                                                      inputs[0].dptr<DType>(),
-                                                                      DType(alpha));
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha));
       });
     });
   }
@@ -286,10 +283,13 @@ class BinaryScalarOp : public UnaryOp {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const double alpha = nnvm::get<double>(attrs.parsed);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd * F<OP>(lhs, scalar<DType>(DType(alpha))));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
+          mxnet::op::mxnet_op::backward_grad<OP>, Req>, xpu>::
+          Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                 inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                 DType(alpha));
+      });
     });
   }
 };

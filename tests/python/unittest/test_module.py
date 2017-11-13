@@ -70,6 +70,63 @@ def test_module_input_grads():
     assert np.all(c_grad == 3), c_grad
 
 
+def test_module_ctx_group():
+    with mx.AttrScope(ctx_group='dev1'):
+        a = mx.symbol.Variable('a')
+        a = a * 2
+    with mx.AttrScope(ctx_group='dev2'):
+        b = mx.symbol.Variable('b')
+        c = a + b
+    shape = (2, 5)
+    mod1 = mx.mod.Module(c, context=[mx.cpu(0)], data_names=['a', 'b'], label_names=None,
+                         group2ctxs=[{'dev1':mx.cpu(1),'dev2':mx.cpu(2)}])
+    mod1.bind(data_shapes=[['a', shape], ['b', shape]], inputs_need_grad=True)
+    mod1.init_params()
+    mod1.forward(data_batch=mx.io.DataBatch(data=[mx.nd.ones(shape), mx.nd.ones(shape)]), is_train=True)
+    mod1.backward([mx.nd.ones(shape)])
+    mod1_input_grads = mod1.get_input_grads()
+
+    mod2 = mx.mod.Module(c, data_names=['a', 'b'], label_names=None)
+    mod2.bind(data_shapes=[['a', shape], ['b', shape]], inputs_need_grad=True)
+    mod2.init_params()
+    mod2.forward(data_batch=mx.io.DataBatch(data=[mx.nd.ones(shape), mx.nd.ones(shape)]), is_train=True)
+    mod2.backward([mx.nd.ones(shape)])
+    mod2_input_grads = mod2.get_input_grads()
+
+    assert np.all(mod1_input_grads[0].asnumpy() == mod2_input_grads[0].asnumpy())
+    assert np.all(mod1_input_grads[1].asnumpy() == mod2_input_grads[1].asnumpy())
+
+
+def test_bucket_module_ctx_group():
+    num_hidden = 10
+    batch_size = 5
+    def sym_gen(seq_len):
+        with mx.AttrScope(ctx_group='dev1'):
+            data = mx.symbol.Variable('data')
+            weight = mx.symbol.Variable('dev1_weight')
+            bias = mx.symbol.Variable('dev1_bias')
+            fc = data
+            for i in range(seq_len):
+                fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
+                                               name='dev1_fc_%d' % i, num_hidden=num_hidden)
+        with mx.AttrScope(ctx_group='dev2'):
+            label = mx.symbol.Variable('label')
+            weight = mx.symbol.Variable('dev2_weight')
+            bias = mx.symbol.Variable('dev2_bias')
+            for i in range(seq_len):
+                fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
+                                               name='dev2_fc_%d' % i, num_hidden=num_hidden)
+            sym = mx.symbol.SoftmaxOutput(fc, label, name='softmax')
+        
+        return sym, ('data',), ('label',)
+
+    mod = mx.mod.BucketingModule(sym_gen=sym_gen, default_bucket_key=10, context=[mx.cpu(0)],
+                                 group2ctxs=[{'dev1':mx.cpu(1), 'dev2':mx.cpu(2)}])
+    mod.bind(data_shapes=[['data', (batch_size, num_hidden)]],
+             label_shapes=[['label', (batch_size,)]],
+             for_training=True, inputs_need_grad=True)
+    assert(mod.binded)
+
 def test_module_layout():
     sym = mx.sym.Variable('data')
     sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
