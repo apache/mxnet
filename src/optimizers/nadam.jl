@@ -91,7 +91,7 @@ function update(self :: Nadam, index :: Int, weight :: NDArray,
   mt = state.mt / (1.0 - momentum_next)
 
   @inplace state.nt .*= self.opts.beta2
-  @inplace state.nt .+= (1.0 - self.opts.beta2) * @compatmul(grad, grad)
+  @inplace state.nt .+= (1.0 - self.opts.beta2) .* grad .* grad
   nt = state.nt / (1.0 - state.beta2Power)
   state.beta2Power *= self.opts.beta2
 

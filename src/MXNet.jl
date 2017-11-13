@@ -24,8 +24,6 @@ import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm,
 
 include("base.jl")
 
-include("compat.jl")
-
 include("context.jl")
 include("util.jl")
 

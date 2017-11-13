@@ -61,6 +61,6 @@ function update(self :: AdaGrad, index :: Int, weight :: NDArray,
   lr = get_learning_rate(self.opts.lr_scheduler, self.state)
   grad = normalized_gradient(self.opts, self.state, weight, grad)
 
-  @inplace state .+= @compatmul(grad, grad)
+  @inplace state .+= grad .* grad
   @inplace weight .+= -lr * grad ./ (sqrt(state + self.opts.epsilon))
 end

@@ -65,7 +65,7 @@ function update(self :: RMSProp, index :: Int, weight :: NDArray,
   grad = normalized_gradient(self.opts, self.state, weight, grad)
 
   @inplace state .*= self.opts.rho
-  @inplace state .+= (1 - self.opts.rho) * @compatmul(grad, grad)
+  @inplace state .+= (1 - self.opts.rho) * grad .* grad
 
   @inplace weight .+= -lr * grad ./ (sqrt(state + self.opts.epsilon))
 end

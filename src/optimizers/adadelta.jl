@@ -78,14 +78,14 @@ function update(self :: AdaDelta, index :: Int, weight :: NDArray,
 
   # Update state.acc as in RMSProp
   @inplace state.acc .*= self.opts.rho
-  @inplace state.acc .+= (1 - self.opts.rho) * @compatmul(grad, grad)
+  @inplace state.acc .+= (1 - self.opts.rho) * grad .* grad
 
   # Compute update using the "old" state.delta_acc
-  update = @compatmul(grad, sqrt(state.delta_acc + self.opts.epsilon)) ./
+  update = grad .* sqrt(state.delta_acc + self.opts.epsilon) ./
     (sqrt(state.acc + self.opts.epsilon))
   @inplace weight .+= -lr * update
 
   # update state.delta_acc using update
   @inplace state.delta_acc .*= self.opts.rho
-  @inplace state.delta_acc .+= (1 - self.opts.rho) * @compatmul(update, update)
+  @inplace state.delta_acc .+= (1 - self.opts.rho) * update .* update
 end
