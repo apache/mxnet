@@ -1,8 +1,9 @@
 module TestIO
+
 using MXNet
 using Base.Test
 
-using ..Main: rand_dims, reldiff
+using ..Main: rand_dims
 
 function test_mnist()
   info("IO::MNIST")
@@ -64,7 +65,7 @@ function test_arrays_impl(data::Vector, label::Vector, provider::mx.ArrayDataPro
     data_get   = mx.get_data(provider, batch)
 
     for (d_real, d_get) in zip(data_batch, data_get)
-      @test reldiff(d_real, copy(d_get)[[1:n for n in size(d_real)]...]) < 1e-6
+      @test d_real ≈ copy(d_get)[[1:n for n in size(d_real)]...]
       @test mx.count_samples(provider, batch) == size(d_real)[end]
     end
   end
@@ -97,7 +98,7 @@ function test_arrays_shuffle()
 
   sample_count = 15
   batch_size   = 4
-  data         = rand(1, sample_count)
+  data         = rand(mx.MX_float, 1, sample_count)
   label        = collect(1:sample_count)
   provider     = mx.ArrayDataProvider(data, :index => label, batch_size=batch_size, shuffle=true)
 
@@ -107,14 +108,15 @@ function test_arrays_shuffle()
   for (idx, batch) in zip(idx_all, provider)
     data_batch  = mx.get(provider, batch, :data)
     label_batch = mx.get(provider, batch, :index)
-    ns_batch = mx.count_samples(provider, batch)
-    data_got[idx:idx+ns_batch-1] = copy(data_batch)[1:ns_batch]
+    ns_batch    = mx.count_samples(provider, batch)
+    data_got[idx:idx+ns_batch-1]  = copy(data_batch)[1:ns_batch]
     label_got[idx:idx+ns_batch-1] = copy(label_batch)[1:ns_batch]
   end
 
   @test label_got != label
   @test sort(label_got) == label
-  @test reldiff(data_got, data[:,Int[label_got...]]) < 1e-6
+  @test size(data_got) == size(data[:, Int[label_got...]])
+  @test data_got ≈ data[:, Int[label_got...]]
 end
 
 @testset "IO Test" begin

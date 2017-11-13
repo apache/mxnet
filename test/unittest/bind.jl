@@ -2,7 +2,7 @@ module TestBind
 using MXNet
 using Base.Test
 
-using ..Main: rand_dims, reldiff
+using ..Main: rand_dims
 
 ################################################################################
 # Test Implementations

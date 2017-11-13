@@ -1,8 +1,9 @@
 module TestOperator
+
 using MXNet
 using Base.Test
 
-using ..Main: rand_dims, reldiff
+using ..Main: rand_dims
 
 function test_scalar_op()
   data  = mx.Variable(:data)
@@ -19,13 +20,13 @@ function test_scalar_op()
   out = copy(exec_test.outputs[1])
   jl_out1 = (4 - ((1+data_jl+1)*2/5) - 0.2)
   jl_out = 2 ./ jl_out1
-  @test reldiff(copy(out), jl_out) < 1e-6
+  @test copy(out) ≈ jl_out
 
   out_grad = 2mx.ones(shape)
   jl_grad  = 2copy(out_grad) / 5
   jl_grad  = 2jl_grad ./ (jl_out1 .^ 2)
   mx.backward(exec_test, out_grad)
-  @test reldiff(copy(arr_grad), jl_grad) < 1e-6
+  @test copy(arr_grad) ≈ jl_grad
 end
 
 ################################################################################

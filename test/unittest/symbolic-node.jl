@@ -1,8 +1,9 @@
 module TestSymbolicNode
+
 using MXNet
 using Base.Test
 
-using ..Main: mlp2, mlpchain, reldiff, exec
+using ..Main: mlp2, mlpchain, exec
 
 ################################################################################
 # Test Implementations
@@ -233,12 +234,12 @@ function test_dot()
   y = mx.Variable(:y)
   z = mx.dot(x, y)
   z_exec = mx.bind(z, context=mx.cpu(),
-                   args=Dict(:x=>mx.ones((100, 2)), :y=>mx.ones((2, 200))))
+                   args=Dict(:x => mx.ones((100, 2)), :y => mx.ones((2, 200))))
   mx.forward(z_exec)
 
   ret = copy(z_exec.outputs[1])
   @test size(ret) == (100, 200)
-  @test reldiff(ret, 2*ones(100, 200)) < 1e-6
+  @test ret ≈ 2*ones(100, 200)
 end
 
 function test_print()
@@ -253,7 +254,7 @@ function test_misc()
   # Test for #189
   a = mx.Variable("a")
   b = mx.Variable("b")
-  symb = mx.ElementWiseSum(a,b)
+  symb = mx.ElementWiseSum(a, b)
 end
 
 function test_add()
@@ -340,7 +341,7 @@ function test_minus()
 end  # function test_minus
 
 function test_mul()
-  info("SymoblicNode::elementwise mul")
+  info("SymbolicNode::elementwise mul")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x .* 42; :x => A)[]
       @test size(y) == size(A)
@@ -379,7 +380,7 @@ function test_mul()
 end  # function test_mul
 
 function test_div()
-  info("SymoblicNode::elementwise div")
+  info("SymbolicNode::elementwise div")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x ./ 42; :x => A)[]
       @test size(y) == size(A)
@@ -418,7 +419,7 @@ function test_div()
 end  # function test_div
 
 function test_power()
-  info("SymoblicNode::elementwise power")
+  info("SymbolicNode::elementwise power")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x.^42; :x => A)[]
       @test size(y) == size(A)
