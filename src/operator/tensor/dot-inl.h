@@ -365,10 +365,7 @@ struct DotCsrTransDnsDnsByRowBlocks {
 
 /*!
  * \brief CPU Kernel of dot(csr.T(), dns) = rsp
- * Parallelization by row blocks.
- * This kernel fills up the row_idx array of the rsp
- * with 1 for nonzero rows and 0 for zero rows.
- * The matrix will be compacted after this kernel call.
+ * Parallelization by row blocks which evenly partition the non-zero rows.
  */
 struct DotCsrTransDnsRspByRowBlocks {
   /*!
@@ -393,8 +390,7 @@ struct DotCsrTransDnsRspByRowBlocks {
     if (seg_start >= nnr) return;
     const dim_t seg_end = (i + 1) * seg_len;
     const dim_t col_start = row_idx[seg_start];
-    const dim_t end_ind = seg_end >= nnr ? (row_idx[nnr-1] + 1) : seg_end;
-    const dim_t col_end = row_idx[end_ind];
+    const dim_t col_end = seg_end >= nnr ? (row_idx[nnr-1] + 1) : row_idx[seg_end];
     for (dim_t j = 0; j < num_rows_l; ++j) {
       if (indptr_l[j] == indptr_l[j+1]) continue;
       const dim_t offset_r = j * num_cols;
