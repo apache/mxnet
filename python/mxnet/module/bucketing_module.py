@@ -53,6 +53,7 @@ class BucketingModule(BaseModule):
         States are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by set_states()
     group2ctxs : dict of str to context or list of context
+                 or list of dict of str to context
         Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     """
     def __init__(self, sym_gen, default_bucket_key=None, logger=logging,

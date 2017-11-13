@@ -101,7 +101,11 @@ def _prepare_group2ctxs(group2ctxs, ctx_len):
     """
     if group2ctxs is None:
         return [None] * ctx_len
-    else:
+    elif isinstance(group2ctxs, list):
+        assert(len(group2ctxs) == ctx_len), "length of group2ctxs\
+            should be %d" % ctx_len
+        return group2ctxs
+    elif isinstance(group2ctxs, dict):
         ret = [{}] * ctx_len
         for k, v in group2ctxs.items():
             ctxs = None
@@ -117,6 +121,9 @@ def _prepare_group2ctxs(group2ctxs, ctx_len):
             for i in range(ctx_len):
                 ret[i][k] = ctxs[i]
         return ret
+    else:
+        assert(False), "group2ctxs should be list of dict of str to context,\
+            or dict of str to context or list of context"
 
 class DataParallelExecutorGroup(object):
     """A group of executors that lives on a group of devices.
@@ -162,6 +169,7 @@ class DataParallelExecutorGroup(object):
         (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
     group2ctxs : dict of str to context or list of context
+                 or list of dict of str to context
         Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
