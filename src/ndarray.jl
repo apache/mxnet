@@ -722,7 +722,7 @@ import Base: /
 """
     ./(x::NDArray, y::NDArray)
     ./(x::NDArray, y::Real)
-    ./(x:: Real, y::NDArray)
+    ./(x::Real, y::NDArray)
 
 * Elementwise dividing an `NDArray` by a scalar or another `NDArray`
 of the same shape.
@@ -746,7 +746,7 @@ import Base: ^
     .^(x::NDArray, s::Real)
     .^(s::Real, x::NDArray)
 
-Elementwise power of NDArray.
+Elementwise power of `NDArray`.
 """
 ^
 

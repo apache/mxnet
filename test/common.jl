@@ -25,3 +25,15 @@ function mlpchain()
             mx.Activation(act_type=:relu) =>
             mx.FullyConnected(name=:fc2, num_hidden=10)
 end
+
+"""
+execution helper of SymbolicNode
+"""
+function exec(x::mx.SymbolicNode; feed...)
+  ks, vs = zip(feed...)
+  vs′ = mx.NDArray.(vs)
+
+  e = mx.bind(x, context = mx.cpu(), args = Dict(zip(ks, vs′)))
+  mx.forward(e)
+  e.outputs
+end

@@ -2,7 +2,7 @@ module TestSymbolicNode
 using MXNet
 using Base.Test
 
-using ..Main: mlp2, mlpchain, reldiff
+using ..Main: mlp2, mlpchain, reldiff, exec
 
 ################################################################################
 # Test Implementations
@@ -256,6 +256,232 @@ function test_misc()
   symb = mx.ElementWiseSum(a,b)
 end
 
+function test_add()
+  info("SymbolicNode::elementwise add")
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = exec(x .+ 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == A .+ 42
+    end
+
+    let y = exec(42 .+ x; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == 42 .+ A
+    end
+
+    let y = exec(-1 .+ x .+ 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == -1 .+ A .+ 42
+    end
+  end
+
+  let A = Float32[1 2; 3 4], B = Float32[2 4; 6 8]
+    x = mx.Variable(:x)
+    y = mx.Variable(:y)
+
+    let z = x .+ y
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) == A .+ B
+    end
+
+    let z = y .+ x
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) == B .+ A
+    end
+  end
+end  # function test_add
+
+function test_minus()
+  info("SymbolicNode::elementwise minus")
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = exec(x .- 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == A .- 42
+    end
+
+    let y = exec(42 .- x; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == 42 .- A
+    end
+
+    let y = exec(-1 .- x .- 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == -1 .- A .- 42
+    end
+
+    let y = exec(-x; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == -A
+    end
+  end
+
+  let A = Float32[1 2; 3 4], B = Float32[2 4; 6 8]
+    x = mx.Variable(:x)
+    y = mx.Variable(:y)
+
+    let z = x .- y
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) == A .- B
+    end
+
+    let z = y .- x
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) == B .- A
+    end
+  end
+end  # function test_minus
+
+function test_mul()
+  info("SymoblicNode::elementwise mul")
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = exec(x .* 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == A .* 42
+    end
+
+    let y = exec(42 .* x; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == 42 .* A
+    end
+
+    let y = exec(-1 .* x .* 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) == -1 .* A .* 42
+    end
+  end
+
+  let A = Float32[1 2; 3 4], B = Float32[2 4; 6 8]
+    x = mx.Variable(:x)
+    y = mx.Variable(:y)
+
+    let z = x .* y
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) == A .* B
+    end
+
+    let z = y .* x
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) == B .* A
+    end
+  end
+end  # function test_mul
+
+function test_div()
+  info("SymoblicNode::elementwise div")
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = exec(x ./ 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) ≈ A ./ 42
+    end
+
+    let y = exec(42 ./ x; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) ≈ 42 ./ A
+    end
+
+    let y = exec(-1 ./ x ./ 42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) ≈ -1 ./ A ./ 42
+    end
+  end
+
+  let A = Float32[1 2; 3 4], B = Float32[2 4; 6 8]
+    x = mx.Variable(:x)
+    y = mx.Variable(:y)
+
+    let z = x ./ y
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) ≈ A ./ B
+    end
+
+    let z = y ./ x
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) ≈ B ./ A
+    end
+  end
+end  # function test_div
+
+function test_power()
+  info("SymoblicNode::elementwise power")
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = exec(x.^42; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) ≈ A.^42
+    end
+
+    let y = exec(42.^x; :x => A)[]
+      @test size(y) == size(A)
+      @test copy(y) ≈ 42.^A
+    end
+  end
+
+  let A = Float32[1 2; 3 4], B = Float32[2 4; 6 8]
+    x = mx.Variable(:x)
+    y = mx.Variable(:y)
+
+    let z = x.^y
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) ≈ A.^B
+    end
+
+    let z = y.^x
+      z = exec(z; :x => A, :y => B)[]
+
+      @test size(z) == size(A)
+      @test copy(z) ≈ B.^A
+    end
+  end
+
+  info("NDArray::power::e.^x::x.^e")
+  let x = mx.Variable(:x), A = [0 0 0; 0 0 0]
+    y = exec(e.^x; :x => A)[]
+    @test copy(y) ≈ ones(A)
+  end
+
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = e.^x
+      z = exec(y; :x => A)[]
+      @test copy(z) ≈ e.^A
+    end
+
+    let y = x.^e
+      z = exec(y; :x => A)[]
+      @test copy(z) ≈ A.^e
+    end
+  end
+
+  info("NDArray::power::π.^x::x.^π")
+  let x = mx.Variable(:x), A = Float32[1 2; 3 4]
+    let y = π.^x
+      z = exec(y; :x => A)[]
+      @test copy(z) ≈ π.^A
+    end
+
+    let y = x.^π
+      z = exec(y; :x => A)[]
+      @test copy(z) ≈ A.^π
+    end
+  end
+end  # function test_power
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -273,6 +499,11 @@ end
   test_dot()
   test_print()
   test_misc()
+  test_add()
+  test_minus()
+  test_mul()
+  test_div()
+  test_power()
 end
 
 end
