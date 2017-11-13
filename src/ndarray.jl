@@ -741,14 +741,7 @@ broadcast_(::typeof(/), x::Real, y::NDArray) =
 
 import Base: ^
 
-"""
-    .^(x::NDArray, y::NDArray)
-    .^(x::NDArray, s::Real)
-    .^(s::Real, x::NDArray)
-
-Elementwise power of `NDArray`.
-"""
-^
+# document of `.^` is merged into SymbolicNode's
 
 broadcast_(::typeof(^), x::NDArray, y::NDArray) = _power(x, y)
 broadcast_(::typeof(^), x::NDArray, s::Real) = _power_scalar(x, scalar=s)

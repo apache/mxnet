@@ -579,7 +579,7 @@ import Base: ^
 """
     .^(x, y)
 
-Elementwise power of `SymbolicNode`.
+Elementwise power of `SymbolicNode` and `NDArray`.
 Operating with `Real` is available.
 """
 ^
