@@ -26,11 +26,149 @@
 #include "./indexing_op.h"
 namespace mxnet {
 namespace op {
+
+/*! \brief If there are out-of-bound indices, out will be assigned to 1.
+ */
+
+struct is_valid_check {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int32_t* out, const DType* data,
+                                  const DType min, const DType max) {
+    if (data[i] < min || data[i] > max) *out = 1;
+  }
+};
+
+template<>
+void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
+                                          const TBlob& data,
+                                          const NDArray& weight,
+                                          const OpReqType req,
+                                          const TBlob& output) {
+  if (req == kNullOp) return;
+  using namespace rowsparse;
+  using namespace mxnet_op;
+  // zeros weight
+  if (req == kWriteTo && !weight.storage_initialized()) {
+    size_t out_size = output.shape_.Size();
+    MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+      Kernel<set_zero, gpu>::Launch(s, out_size, output.dptr<DType>());
+    })
+    return;
+  }
+  // check out-of-bound indices
+  int32_t is_valid = 0;
+  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+    DType min = 0;
+    DType max = static_cast<DType>(weight.shape()[0] - 1);
+    // check with single thread is faster since data is small
+    DType* data_ptr = data.dptr<DType>();
+    size_t data_size = data.shape_.Size();
+    int32_t* is_valid_ptr = NULL;
+    CUDA_CALL(cudaMalloc(&is_valid_ptr, sizeof(int32_t)));
+    Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
+    Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
+    CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(int32_t),
+              cudaMemcpyDeviceToHost));
+  })
+  CHECK_EQ(is_valid, 0) << "SparseEmbedding input contains data out of bound";
+  // the weight is actually dense
+  if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
+    EmbeddingOpForwardDnsImpl<gpu>(s, data, weight.data(), req, output);
+  } else {
+    EmbeddingOpForwardRspImpl<gpu>(s, data, weight, req, output);
+  }
+}
+
+
+template<>
+inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
+                                                  const TBlob& ograd,
+                                                  const TBlob& data,
+                                                  const OpReqType req,
+                                                  const NDArray& output) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace mshadow::expr;
+  using namespace rowsparse;
+  using nnvm::dim_t;
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteTo) << "SparseEmbedding layer doesn't support "
+                          << "weight gradient calculation with req != write";
+
+  // Request temporary storage for marking non-zero rows and prefix sum
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+  dim_t num_rows = output.shape()[0];
+  dim_t row_length = output.shape()[1];
+  dim_t data_size = static_cast<dim_t>(data.shape_.Size());
+  dim_t num_threads;
+
+  MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+        dim_t* prefix_sum = NULL;
+        void* d_temp_storage = NULL;
+        size_t temp_storage_bytes = 0;
+        cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                      temp_storage_bytes,
+                                      prefix_sum,
+                                      prefix_sum,
+                                      num_rows,
+                                      mshadow::Stream<gpu>::GetStream(s));
+        mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+            .get_space_typed<gpu, 1, char>(Shape1(num_rows * sizeof(dim_t) +
+                                           temp_storage_bytes), s);
+        prefix_sum = reinterpret_cast<dim_t*>(workspace.dptr_);
+        d_temp_storage = workspace.dptr_ + num_rows*sizeof(dim_t);
+        num_threads = num_rows;
+        Kernel<set_zero, gpu>::Launch(s, num_threads, prefix_sum);
+
+        Kernel<MarkRowFlgKernel, gpu>::Launch(s, data_size, prefix_sum, data.dptr<IType>());
+
+        cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                      temp_storage_bytes,
+                                      prefix_sum,
+                                      prefix_sum,
+                                      num_rows,
+                                      mshadow::Stream<gpu>::GetStream(s));
+        dim_t nnr = 0;
+        CUDA_CALL(cudaMemcpy(&nnr, &prefix_sum[num_rows-1], sizeof(dim_t),
+                  cudaMemcpyDeviceToHost));
+
+        if (nnr == 0) {
+          FillZerosRspImpl(s, output);
+          return;
+        }
+        output.CheckAndAlloc({Shape1(nnr)});
+        RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
+        // fill row_idx array of output matrix, using the row_flg values
+        Kernel<FillRspRowIdxKernel, gpu>::Launch(s, num_rows,
+            grad_row_idx, prefix_sum, num_rows);
+        // prefill with zeros
+        DType* grad_data = output.data().dptr<DType>();
+        Kernel<set_zero, gpu>::Launch(s, nnr * row_length, grad_data);
+        // add the final gradients
+        const int num_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+        dim_t segment_len = (nnr + num_threads - 1) / num_threads;
+        Kernel<AddTakeGradRspKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
+                                                  ograd.dptr<DType>(), row_length,
+                                                  data.dptr<IType>(), data_size, segment_len,
+                                                  num_rows);
+      });
+    });
+  });
+}
+
 NNVM_REGISTER_OP(Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
 
+NNVM_REGISTER_OP(_contrib_SparseEmbedding)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
+
 NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_backward_SparseEmbedding)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpBackwardEx<gpu>);
 
 NNVM_REGISTER_OP(take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpForward<gpu>);
