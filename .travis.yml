@@ -9,6 +9,12 @@ julia:
   - 0.6
 #  - nightly 0.6 supports depends on #170
 
+branches:
+  only:
+    - master
+    - stable
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/  # for tagging
+
 # dependent apt packages
 addons:
   apt:
