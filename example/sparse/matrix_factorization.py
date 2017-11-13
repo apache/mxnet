@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(description="Run matrix factorization with spar
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-epoch', type=int, default=3,
                     help='number of epochs to train')
-parser.add_argument('--batch-size', type=int, default=4096,
+parser.add_argument('--batch-size', type=int, default=128,
                     help='number of examples per batch')
 parser.add_argument('--print-every', type=int, default=100,
                     help='logging frequency')
