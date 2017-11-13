@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # For cmake_parse_arguments
 include(CMakeParseArguments)
 
@@ -388,15 +405,19 @@ endfunction()
 # Usage:
 #   caffe_source_group(<group> GLOB[_RECURSE] <globbing_expression>)
 function(mxnet_source_group group)
-  cmake_parse_arguments(CAFFE_SOURCE_GROUP "" "" "GLOB;GLOB_RECURSE" ${ARGN})
-  if(CAFFE_SOURCE_GROUP_GLOB)
-    file(GLOB srcs1 ${CAFFE_SOURCE_GROUP_GLOB})
-    source_group(${group} FILES ${srcs1})
-  endif()
-
-  if(CAFFE_SOURCE_GROUP_GLOB_RECURSE)
-    file(GLOB_RECURSE srcs2 ${CAFFE_SOURCE_GROUP_GLOB_RECURSE})
-    source_group(${group} FILES ${srcs2})
-  endif()
+  message(WARNING "mxnet_source_group function is obsolete, it not do anything now.")
 endfunction()
 
+
+function(assign_source_group group)
+    foreach(_source IN ITEMS ${ARGN})
+        if (IS_ABSOLUTE "${_source}")
+            file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")
+        else()
+            set(_source_rel "${_source}")
+        endif()
+        get_filename_component(_source_path "${_source_rel}" PATH)
+        string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
+        source_group("${group}\\${_source_path_msvc}" FILES "${_source}")
+    endforeach()
+endfunction(assign_source_group)

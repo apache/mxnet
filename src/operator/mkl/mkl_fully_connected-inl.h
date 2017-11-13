@@ -115,6 +115,20 @@ class MKLFullyConnectedOp : public Operator {
     CHECK_EQ(in_data.size(), param_.no_bias ? 2 : 3);
     CHECK_EQ(out_data.size(), 1);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
+    const TShape& ishape = in_data[fullc::kData].shape_;
+    const TShape& oshape = out_data[fullc::kOut].shape_;
+
+    Tensor<xpu, 4, DType> data;
+    Tensor<xpu, 4, DType> out;
+
+    Shape4(in_data[fullc::kData].shape_[0], in_data[fullc::kData].shape_[1], 1, 1);
+
+    Shape<4> dshape = Shape4(ishape[0], ishape.ProdShape(1, ishape.ndim()), 1, 1);
+    Shape<4> odshape = Shape4(oshape[0], oshape.ProdShape(1, oshape.ndim()), 1, 1);
+
+    data = in_data[fullc::kData].get_with_shape<xpu, 4, DType>(dshape, s);
+    out = out_data[fullc::kOut].get_with_shape<xpu, 4, DType>(odshape, s);
     res_fullyConnected[dnnResourceSrc] =
       reinterpret_cast<void *>(in_data[fullc::kData].dptr_);
     res_fullyConnected[dnnResourceDst] =

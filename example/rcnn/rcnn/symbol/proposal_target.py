@@ -1,15 +1,31 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Proposal Target Operator selects foreground and background roi and assigns label, bbox_transform to them.
 """
 
-from __future__ import print_function
+import logging
 import mxnet as mx
 import numpy as np
 from distutils.util import strtobool
 
+from ..logger import logger
 from rcnn.io.rcnn import sample_rois
-
-DEBUG = False
 
 
 class ProposalTargetOperator(mx.operator.CustomOp):
@@ -20,7 +36,7 @@ class ProposalTargetOperator(mx.operator.CustomOp):
         self._batch_rois = batch_rois
         self._fg_fraction = fg_fraction
 
-        if DEBUG:
+        if logger.level == logging.DEBUG:
             self._count = 0
             self._fg_num = 0
             self._bg_num = 0
@@ -43,17 +59,17 @@ class ProposalTargetOperator(mx.operator.CustomOp):
         rois, labels, bbox_targets, bbox_weights = \
             sample_rois(all_rois, fg_rois_per_image, rois_per_image, self._num_classes, gt_boxes=gt_boxes)
 
-        if DEBUG:
-            print("labels=", labels)
-            print('num fg: {}'.format((labels > 0).sum()))
-            print('num bg: {}'.format((labels == 0).sum()))
+        if logger.level == logging.DEBUG:
+            logger.debug("labels: %s" % labels)
+            logger.debug('num fg: {}'.format((labels > 0).sum()))
+            logger.debug('num bg: {}'.format((labels == 0).sum()))
             self._count += 1
             self._fg_num += (labels > 0).sum()
             self._bg_num += (labels == 0).sum()
-            print("self._count=", self._count)
-            print('num fg avg: {}'.format(self._fg_num / self._count))
-            print('num bg avg: {}'.format(self._bg_num / self._count))
-            print('ratio: {:.3f}'.format(float(self._fg_num) / float(self._bg_num)))
+            logger.debug("self._count: %d" % self._count)
+            logger.debug('num fg avg: %d' % (self._fg_num / self._count))
+            logger.debug('num bg avg: %d' % (self._bg_num / self._count))
+            logger.debug('ratio: %.3f' % (float(self._fg_num) / float(self._bg_num)))
 
         for ind, val in enumerate([rois, labels, bbox_targets, bbox_weights]):
             self.assign(out_data[ind], req[ind], val)

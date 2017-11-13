@@ -1,14 +1,32 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Symbol;
 
 =head1 NAME
 
-AI::MXNet::Symbol - Symbolic interface of MXNet.
+    AI::MXNet::Symbol - Symbolic interface of MXNet.
 =cut
 
 use strict;
 use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Symbol::Base;
+use AI::MXNet::Symbol::Random;
 use AI::MXNet::Types;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -20,6 +38,7 @@ use overload
     '/'   => \&divide,
     '/='  => \&idivide,
     '**'  => \&power,
+    '%'   => \&mod,
     '=='  => \&equal,
     '!='  => \&not_equal,
     '>'   => \&greater,
@@ -55,7 +74,11 @@ method STORABLE_thaw($cloning, $json)
 method stringify($other=, $reverse=)
 {
     my $name = $self->name;
-    sprintf("<%s %s>", ref($self), $name ? $name : 'Grouped');
+    sprintf(
+        "<%s %s%s>",
+        ref($self),
+        $name ? ($name, '') : ('group [', join(', ', map { $_->name } @{ $self }) . ']')
+    );
 }
 
 method add(AI::MXNet::Symbol|Num $other, $reverse=)
@@ -169,6 +192,16 @@ method true_divide(AI::MXNet::Symbol|Num $other, $reverse=)
     return $self->divide($other, $reverse);
 }
 
+method mod(AI::MXNet::Symbol|Num $other, $reverse=)
+{
+    return _ufunc_helper(
+        $self,
+        $other,
+        qw/_Mod _ModScalar _RModScalar/,
+        $reverse
+    );
+}
+
 method maximum(AI::MXNet::Symbol|Num $other)
 {
     return _ufunc_helper(
@@ -241,12 +274,12 @@ method slice(Str|Index $index)
 
 =head2 name
 
-Get name string from the symbol, this function only works for non-grouped symbol.
+    Get name string from the symbol, this function only works for non-grouped symbol.
 
-Returns
--------
-value : str
-    The name of this symbol, returns None for grouped symbol.
+    Returns
+    -------
+    value : str
+        The name of this symbol, returns None for grouped symbol.
 =cut
 
 method name()
@@ -257,17 +290,17 @@ method name()
 
 =head2 attr
 
-Get an attribute string from the symbol, this function only works for non-grouped symbol.
+    Get an attribute string from the symbol, this function only works for non-grouped symbol.
 
-Parameters
-----------
-key : str
-    The key to get attribute from.
+    Parameters
+    ----------
+    key : str
+        The key to get attribute from.
 
-Returns
--------
-value : str
-    The attribute value of the key, returns None if attribute do not exist.
+    Returns
+    -------
+    value : str
+        The attribute value of the key, returns None if attribute do not exist.
 =cut
 
 
@@ -281,12 +314,12 @@ method attr(Str $key)
 
 =head2 list_attr
 
-Get all attributes from the symbol.
+    Get all attributes from the symbol.
 
-Returns
--------
-ret : hash ref of str to str
-    a dicitonary mapping attribute keys to values
+    Returns
+    -------
+    ret : hash ref of str to str
+        a dicitonary mapping attribute keys to values
 =cut
 
 method list_attr()
@@ -304,13 +337,13 @@ method list_attr()
 
 =head2 attr_dict
 
-Recursively get all attributes from the symbol and its childrens
+    Recursively get all attributes from the symbol and its childrens
 
-Returns
--------
-ret : hash ref of str to hash ref.
-    Returns a dict whose keys are names of the symbol and its children.
-    Values of the returned dict are dictionaries that map attribute keys to values.
+    Returns
+    -------
+    ret : hash ref of str to hash ref.
+        Returns a dict whose keys are names of the symbol and its children.
+        Values of the returned dict are dictionaries that map attribute keys to values.
 =cut
 
 method attr_dict()
@@ -329,7 +362,7 @@ method attr_dict()
 
 method _set_attr(Str @args)
 {
-    my %kwargs = @args; 
+    my %kwargs = @args;
     while(my ($key, $val) = each(%kwargs))
     {
         check_call(
@@ -342,12 +375,12 @@ method _set_attr(Str @args)
 
 =head2 get_internals
 
-Get a new grouped symbol whose output contains all the internal outputs of this symbol.
+    Get a new grouped symbol whose output contains all the internal outputs of this symbol.
 
-Returns
--------
+    Returns
+    -------
     sgroup : AI::MXNet::Symbol
-    The internal symbol of the symbol.
+        The internal symbol of the symbol.
 =cut
 
 method get_internals()
@@ -358,14 +391,14 @@ method get_internals()
 
 =head2 get_children
 
-Get a new grouped symbol whose output contains
-inputs to output nodes of the original symbol
+    Get a new grouped symbol whose output contains
+    inputs to output nodes of the original symbol
 
-Returns
--------
-sgroup : Symbol or undef
-    The children of the head node. If the symbol has no
-    inputs undef will be returned.
+    Returns
+    -------
+    sgroup : Symbol or undef
+        The children of the head node. If the symbol has no
+        inputs undef will be returned.
 =cut
 
 
@@ -379,11 +412,11 @@ method get_children()
 
 =head2 list_arguments
 
-List all the arguments in the symbol.
+    List all the arguments in the symbol.
 
-Returns
--------
-args : array ref of strings
+    Returns
+    -------
+    args : array ref of strings
 =cut
 
 method list_arguments()
@@ -393,11 +426,11 @@ method list_arguments()
 
 =head2 list_outputs()
 
-List all outputs in the symbol.
+    List all outputs in the symbol.
 
-Returns
--------
-$out : array ref of strings.
+    Returns
+    -------
+    $out : array ref of strings.
 =cut
 
 method list_outputs()
@@ -408,12 +441,12 @@ method list_outputs()
 
 =head2 list_auxiliary_states()
 
-List all auxiliary states in the symbol.
+    List all auxiliary states in the symbol.
 
-Returns
--------
-aux_states : array ref of string
-    List the names of the auxiliary states.
+    Returns
+    -------
+    aux_states : array ref of string
+        List the names of the auxiliary states.
 
     Notes
     -----
@@ -428,6 +461,25 @@ method list_auxiliary_states()
     return scalar(check_call(AI::MXNetCAPI::SymbolListAuxiliaryStates($self->handle)));
 }
 
+
+=head2 list_inputs
+
+    Lists all arguments and auxiliary states of this Symbol.
+
+    Returns
+    -------
+    inputs : array ref of str
+    List of all inputs.
+
+    Examples
+    --------
+    >>> my $bn = mx->sym->BatchNorm(name=>'bn');
+=cut
+
+method list_inputs()
+{
+    return scalar(check_call(AI::NNVMCAPI::SymbolListInputNames($self->handle, 0)));
+}
 
 =head2 infer_type
 
@@ -462,7 +514,7 @@ method list_auxiliary_states()
 
 method infer_type(Str|Undef @args)
 {
-    my ($positional_arguments, $kwargs, $kwargs_order) = _parse_arguments("Dtype", @args); 
+    my ($positional_arguments, $kwargs, $kwargs_order) = _parse_arguments("Dtype", @args);
     my $sdata = [];
     my $keys  = [];
     if(@$positional_arguments)
@@ -533,8 +585,8 @@ method infer_shape(Maybe[Str|Shape] @args)
         my ($arg_shapes) = $self->_infer_shape_impl(1, @args);
         my $arg_names    = $self->list_arguments;
         my @unknowns;
-        zip(sub {
-            my ($name, $shape) = @_;
+        for(zip($arg_names, $arg_shapes)) {
+            my ($name, $shape) = @$_;
             if(not ref $shape or not @$shape or not product(@$shape))
             {
                 if(@unknowns >= 10)
@@ -547,7 +599,7 @@ method infer_shape(Maybe[Str|Shape] @args)
                     push @unknowns, "$name @shape";
                 }
             }
-        }, $arg_names, $arg_shapes);
+        }
         AI::MXNet::Logging->warning(
             "Cannot decide shape for the following arguments "
             ."(0s in shape means unknown dimensions). "
@@ -561,8 +613,8 @@ method infer_shape(Maybe[Str|Shape] @args)
 
 =head2 infer_shape_partial
 
-Partially infer the shape. The same as infer_shape, except that the partial
-results can be returned.
+    Partially infer the shape. The same as infer_shape, except that the partial
+    results can be returned.
 =cut
 
 method infer_shape_partial(Maybe[Str|Shape] @args)
@@ -616,12 +668,12 @@ method _infer_shape_impl(Maybe[Str|Shape] @args)
 
 =head2 debug_str
 
-The debug string.
+    The debug string.
 
-Returns
--------
-debug_str : string
-    Debug string of the symbol.
+    Returns
+    -------
+    debug_str : string
+        Debug string of the symbol.
 =cut
 
 method debug_str()
@@ -633,7 +685,7 @@ method debug_str()
 
         Save the symbol into a file.
 
-        You can also use Storable to do the job if you only work on Perl.
+        You can also use Storable to do the job if you only work with Perl.
         The advantage of load/save is the file is language agnostic.
         This means the file saved using save can be loaded by other language binding of mxnet.
         You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
@@ -680,7 +732,7 @@ method _get_ndarray_inputs(
     my ($arg_handles, $arg_arrays) = ([], []);
     if(ref $args eq 'ARRAY')
     {
-        confess("Length of $arg_key do not match number of arguments") 
+        confess("Length of $arg_key do not match number of arguments")
             unless @$args == @$arg_names;
         @{ $arg_handles } = map { $_->handle } @{ $args };
         $arg_arrays = $args;
@@ -704,215 +756,274 @@ method _get_ndarray_inputs(
 
 =head2 simple_bind
 
-Bind current symbol to get an executor, allocate all the ndarrays needed.
-Allows specifying data types.
+    Bind current symbol to get an executor, allocate all the ndarrays needed.
+    Allows specifying data types.
 
-This function will ask user to pass in ndarray of position
-they like to bind to, and it will automatically allocate the ndarray
-for arguments and auxiliary states that user did not specify explicitly.
+    This function will ask user to pass in ndarray of position
+    they like to bind to, and it will automatically allocate the ndarray
+    for arguments and auxiliary states that user did not specify explicitly.
 
-Parameters
-----------
-:$ctx : AI::MXNet::Context
-    The device context the generated executor to run on.
+    Parameters
+    ----------
+    :$ctx : AI::MXNet::Context
+        The device context the generated executor to run on.
 
-:$grad_req: string
-    {'write', 'add', 'null'}, or list of str or dict of str to str, optional
-    Specifies how we should update the gradient to the args_grad.
-    - 'write' means everytime gradient is write to specified args_grad NDArray.
-    - 'add' means everytime gradient is add to the specified NDArray.
-    - 'null' means no action is taken, the gradient may not be calculated.
+    :$grad_req: string
+        {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+        Specifies how we should update the gradient to the args_grad.
+            - 'write' means everytime gradient is write to specified args_grad NDArray.
+            - 'add' means everytime gradient is add to the specified NDArray.
+            - 'null' means no action is taken, the gradient may not be calculated.
 
-:$type_dict  : hash ref of str->Dtype
-    Input type map, name->dtype
+    :$type_dict  : hash ref of str->Dtype
+        Input type map, name->dtype
 
-:$group2ctx : hash ref of string to AI::MXNet::Context
-    The mapping of the ctx_group attribute to the context assignment.
+    :$group2ctx : hash ref of string to AI::MXNet::Context
+        The mapping of the ctx_group attribute to the context assignment.
 
-:$shapes : hash ref of str->Shape
-    Input shape map, name->shape
+    :$shapes : hash ref of str->Shape
+        Input shape map, name->shape
 
-Returns
--------
-$executor : AI::MXNet::Executor
-    The generated Executor
+    :$shared_arg_names : Maybe[ArrayRef[Str]]
+        The argument names whose 'NDArray' of shared_exec can be reused for initializing
+        the current executor.
+
+    :$shared_exec : Maybe[AI::MXNet::Executor]
+        The executor whose arg_arrays, arg_arrays, grad_arrays, and aux_arrays can be
+        reused for initializing the current executor.
+
+    :$shared_buffer : Maybe[HashRef[AI::MXNet::NDArray]]
+        The dict mapping argument names to the `NDArray` that can be reused for initializing
+        the current executor. This buffer will be checked for reuse if one argument name
+        of the current executor is not found in `shared_arg_names`.
+
+    Returns
+    -------
+    $executor : AI::MXNet::Executor
+        The generated Executor
 =cut
 
 method simple_bind(
-            AI::MXNet::Context                 :$ctx=AI::MXNet::Context->current_ctx,
-            Maybe[HashRef[Shape]]              :$shapes=,
-            Str|HashRef[Str]                   :$grad_req='write',
-            Maybe[HashRef[Dtype]]              :$type_dict=,
-            Maybe[HashRef[AI::MXNet::Context]] :$group2ctx=
+    AI::MXNet::Context                             :$ctx=AI::MXNet::Context->current_ctx,
+    GradReq|ArrayRef[GradReq]|HashRef[GradReq]     :$grad_req='write',
+    Maybe[HashRef[Shape]]                          :$shapes=,
+    Maybe[HashRef[Dtype]]                          :$type_dict=,
+    Maybe[HashRef[AI::MXNet::Context]]             :$group2ctx=,
+    Maybe[ArrayRef[Str]]                           :$shared_arg_names=,
+    Maybe[AI::MXNet::Executor]                     :$shared_exec=,
+    Maybe[HashRef[AI::MXNet::NDArray]]             :$shared_buffer=
 )
 {
-    $shapes //= {};
-    if(not defined $type_dict)
+    my $num_provided_arg_types;
+    my @provided_arg_type_names;
+    my @provided_arg_type_data;
+    if(defined $type_dict)
     {
-        $type_dict =  {};
-        my $attrs = $self->attr_dict;
-        for my $k (@{ $self->list_arguments })
+        while(my ($k, $v) = each %{ $type_dict })
         {
-            if(not exists $attrs->{$k} or not exists $attrs->{$k}{__dtype__})
+            push @provided_arg_type_names, $k;
+            push @provided_arg_type_data, DTYPE_STR_TO_MX->{$v};
+        }
+        $num_provided_arg_types = @provided_arg_type_names;
+    }
+    my @provided_arg_shape_data;
+    # argument shape index in sdata,
+    # e.g. [sdata[indptr[0]], sdata[indptr[1]]) is the shape of the first arg
+    my @provided_arg_shape_idx = (0);
+    my @provided_arg_shape_names;
+    while(my ($k, $v) = each %{ $shapes//{} })
+    {
+        push @provided_arg_shape_names, $k;
+        push @provided_arg_shape_data, @{ $v };
+        push @provided_arg_shape_idx, scalar(@provided_arg_shape_data);
+    }
+    $num_provided_arg_types = @provided_arg_type_names;
+
+    my $provided_req_type_list_len = 0;
+    my @provided_grad_req_types;
+    my @provided_grad_req_names;
+    if(defined $grad_req)
+    {
+        if(not ref $grad_req)
+        {
+            push @provided_grad_req_types, $grad_req;
+        }
+        elsif(ref $grad_req eq 'ARRAY')
+        {
+            assert((@{ $grad_req } != 0), 'grad_req in simple_bind cannot be an empty list');
+            @provided_grad_req_types = @{ $grad_req };
+            $provided_req_type_list_len = @provided_grad_req_types;
+        }
+        elsif(ref $grad_req eq 'HASH')
+        {
+            assert((keys %{ $grad_req } != 0), 'grad_req in simple_bind cannot be an empty hash');
+            while(my ($k, $v) = each %{ $grad_req })
             {
-                $type_dict->{ $k } = 'float32';
+                push @provided_grad_req_names, $k;
+                push @provided_grad_req_types, $v;
             }
+            $provided_req_type_list_len = @provided_grad_req_types;
         }
     }
-    my @keys = keys %$shapes;
-    my @shape_input;
-    my @type_input;
-    for my $k (@keys)
-    {
-        push @shape_input, ($k => $shapes->{$k});
-        push @type_input,  ($k => $type_dict->{$k})
-    }
-    my ($arg_shapes, undef, $aux_shapes) = $self->infer_shape(@shape_input);
-    my ($arg_types,  undef, $aux_types)  = $self->infer_type(@type_input);
-    confess("Input node is not complete") 
-        unless $arg_shapes and $arg_types;
-
-    my ($arg_ctx, $aux_ctx) = ([], []);
+    my $num_ctx_map_keys = 0;
+    my @ctx_map_keys;
+    my @ctx_map_dev_types;
+    my @ctx_map_dev_ids;
     if(defined $group2ctx)
     {
-        my $attr_dict = $self->attr_dict();
-        for my $name (@{ $self->list_arguments() })
+        while(my ($k, $v) = each %{ $group2ctx })
         {
-            if(
-                exists $attr_dict->{ $name }
-                    and
-                exists $attr_dict->{ $name }{ __ctx_group__ }
-                    and
-                $group2ctx->{ $attr_dict->{ $name }{ __ctx_group__ } }
-            )
-            {
-                push @{ $arg_ctx }, $group2ctx->{ $attr_dict->{ $name }{ __ctx_group__ } };
-            }
-            else
-            {
-                push @{ $arg_ctx }, $ctx;
-            }
+            push @ctx_map_keys, $k;
+            push @ctx_map_dev_types, $v->device_type_id;
+            push @ctx_map_dev_ids, $v->device_id;
         }
-        for my $name (@{ $self->list_auxiliary_states() })
+        $num_ctx_map_keys = @ctx_map_keys;
+    }
+
+    my @shared_arg_name_list;
+    if(defined $shared_arg_names)
+    {
+        @shared_arg_name_list = @{ $shared_arg_names };
+    }
+    my %shared_data;
+    if(defined $shared_buffer)
+    {
+        while(my ($k, $v) = each %{ $shared_buffer })
         {
-            if(
-                exists $attr_dict->{ $name }
-                    and
-                exists $attr_dict->{ $name }{ __ctx_group__ }
-                    and
-                $group2ctx->{ $attr_dict->{ $name }{ __ctx_group__ } }
-            )
-            {
-                push @{ $aux_ctx }, $group2ctx->{ $attr_dict->{ $name }{ __ctx_group__ } };
-            }
-            else
-            {
-                push @{ $aux_ctx }, $ctx;
-            }
+            $shared_data{$k} = $v->handle;
         }
     }
-    else
-    {
-        @{ $arg_ctx } = (($ctx) x @{ $arg_shapes });
-        @{ $aux_ctx } = (($ctx) x @{ $aux_shapes });
-    }
-    my @arg_ndarrays;
-    for (my $i = 0; $i < @{ $arg_types }; $i++)
-    {
-        push @arg_ndarrays, AI::MXNet::NDArray->zeros(
-            $arg_shapes->[$i], ctx => $arg_ctx->[$i], dtype => $arg_types->[$i]
-        );
-    }
-    my $grad_ndarrays;
-    if($grad_req ne 'null')
-    {
-        my $names = $self->list_arguments;
-        for (my $i = 0; $i < @{ $arg_types }; $i++)
-        {
-            if(not ref $grad_req eq 'HASH' or not ($grad_req->{ $names->[$i] }//'') eq 'null')
-            {
-                $grad_ndarrays->{ $names->[$i] } = AI::MXNet::NDArray->zeros(
-                    $arg_shapes->[$i], ctx => $arg_ctx->[$i], dtype => $arg_types->[$i]
-                );
-            }
-        }
-    }
-    my @aux_ndarrays;
-    for (my $i = 0; $i < @{ $aux_types }; $i++)
-    {
-        push @aux_ndarrays, AI::MXNet::NDArray->zeros(
-            $aux_shapes->[$i], ctx => $aux_ctx->[$i], dtype => $aux_types->[$i]
-        );
-    }
-    my $executor = $self->bind(
-        ctx => $ctx, args => \@arg_ndarrays, args_grad => $grad_ndarrays,
-        grad_req => $grad_req, aux_states => \@aux_ndarrays, group2ctx => $group2ctx
+    my $shared_exec_handle = defined $shared_exec ? $shared_exec->handle : undef;
+    my (
+        $updated_shared_data,
+        $in_arg_handles,
+        $arg_grad_handles,
+        $aux_state_handles,
+        $exe_handle
     );
+    eval {
+        ($updated_shared_data, $in_arg_handles, $arg_grad_handles, $aux_state_handles, $exe_handle)
+            =
+        check_call(
+            AI::MXNetCAPI::ExecutorSimpleBind(
+                $self->handle,
+                $ctx->device_type_id,
+                $ctx->device_id,
+                $num_ctx_map_keys,
+                \@ctx_map_keys,
+                \@ctx_map_dev_types,
+                \@ctx_map_dev_ids,
+                $provided_req_type_list_len,
+                \@provided_grad_req_names,
+                \@provided_grad_req_types,
+                scalar(@provided_arg_shape_names),
+                \@provided_arg_shape_names,
+                \@provided_arg_shape_data,
+                \@provided_arg_shape_idx,
+                $num_provided_arg_types,
+                \@provided_arg_type_names,
+                \@provided_arg_type_data,
+                scalar(@shared_arg_name_list),
+                \@shared_arg_name_list,
+                defined $shared_buffer ? \%shared_data : undef,
+                $shared_exec_handle
+            )
+        );
+    };
+    if($@)
+    {
+        confess(
+            "simple_bind failed: Error: $@; Arguments: ".
+            Data::Dumper->new(
+                [$shapes//{}]
+            )->Purity(1)->Deepcopy(1)->Terse(1)->Dump
+        );
+    }
+    if(defined $shared_buffer)
+    {
+        while(my ($k, $v) = each %{ $updated_shared_data })
+        {
+            $shared_buffer->{$k} = AI::MXNet::NDArray->new(handle => $v);
+        }
+    }
+    my @arg_arrays  = map { AI::MXNet::NDArray->new(handle => $_) } @{ $in_arg_handles };
+    my @grad_arrays = map { defined $_ ? AI::MXNet::NDArray->new(handle => $_) : undef  } @{ $arg_grad_handles };
+    my @aux_arrays  = map { AI::MXNet::NDArray->new(handle => $_) } @{ $aux_state_handles };
+    my $executor = AI::MXNet::Executor->new(
+        handle    => $exe_handle,
+        symbol    => $self,
+        ctx       => $ctx,
+        grad_req  => $grad_req,
+        group2ctx => $group2ctx
+    );
+    $executor->arg_arrays(\@arg_arrays);
+    $executor->grad_arrays(\@grad_arrays);
+    $executor->aux_arrays(\@aux_arrays);
     return $executor;
 }
 
 =head2 bind
 
-Bind current symbol to get an executor.
+    Bind current symbol to get an executor.
 
-Parameters
-----------
-:$ctx : AI::MXNet::Context
-    The device context the generated executor to run on.
+    Parameters
+    ----------
+    :$ctx : AI::MXNet::Context
+        The device context the generated executor to run on.
 
-:$args : HashRef[AI::MXNet::NDArray]|ArrayRef[AI::MXNet::NDArray]
-    Input arguments to the symbol.
-    - If type is array ref of NDArray, the position is in the same order of list_arguments.
-    - If type is hash ref of str to NDArray, then it maps the name of arguments
-    to the corresponding NDArray.
-    - In either case, all the arguments must be provided.
+    :$args : HashRef[AI::MXNet::NDArray]|ArrayRef[AI::MXNet::NDArray]
+        Input arguments to the symbol.
+            - If type is array ref of NDArray, the position is in the same order of list_arguments.
+            - If type is hash ref of str to NDArray, then it maps the name of arguments
+                to the corresponding NDArray.
+            - In either case, all the arguments must be provided.
 
-:$args_grad : Maybe[HashRef[AI::MXNet::NDArray]|ArrayRef[AI::MXNet::NDArray]]
-    When specified, args_grad provide NDArrays to hold
-    the result of gradient value in backward.
-    - If type is array ref of NDArray, the position is in the same order of list_arguments.
-    - If type is hash ref of str to NDArray, then it maps the name of arguments
-    to the corresponding NDArray.
-    - When the type is hash ref of str to NDArray, users only need to provide the dict
-    for needed argument gradient.
-    Only the specified argument gradient will be calculated.
+    :$args_grad : Maybe[HashRef[AI::MXNet::NDArray]|ArrayRef[AI::MXNet::NDArray]]
+        When specified, args_grad provide NDArrays to hold
+        the result of gradient value in backward.
+            - If type is array ref of NDArray, the position is in the same order of list_arguments.
+            - If type is hash ref of str to NDArray, then it maps the name of arguments
+                to the corresponding NDArray.
+            - When the type is hash ref of str to NDArray, users only need to provide the dict
+                for needed argument gradient.
+        Only the specified argument gradient will be calculated.
 
-:$grad_req : {'write', 'add', 'null'}, or array ref of str or hash ref of str to str, optional
-    Specifies how we should update the gradient to the args_grad.
-    - 'write' means everytime gradient is write to specified args_grad NDArray.
-    - 'add' means everytime gradient is add to the specified NDArray.
-    - 'null' means no action is taken, the gradient may not be calculated.
+    :$grad_req : {'write', 'add', 'null'}, or array ref of str or hash ref of str to str, optional
+        Specifies how we should update the gradient to the args_grad.
+            - 'write' means everytime gradient is write to specified args_grad NDArray.
+            - 'add' means everytime gradient is add to the specified NDArray.
+            - 'null' means no action is taken, the gradient may not be calculated.
 
-:$aux_states : array ref of NDArray, or hash ref of str to NDArray, optional
-    Input auxiliary states to the symbol, only need to specify when
-    list_auxiliary_states is not empty.
-    - If type is array ref of NDArray, the position is in the same order of list_auxiliary_states
-    - If type is hash ref of str to NDArray, then it maps the name of auxiliary_states
-    to the corresponding NDArray,
-    - In either case, all the auxiliary_states need to be provided.
+    :$aux_states : array ref of NDArray, or hash ref of str to NDArray, optional
+        Input auxiliary states to the symbol, only need to specify when
+        list_auxiliary_states is not empty.
+            - If type is array ref of NDArray, the position is in the same order of list_auxiliary_states
+            - If type is hash ref of str to NDArray, then it maps the name of auxiliary_states
+                to the corresponding NDArray,
+            - In either case, all the auxiliary_states need to be provided.
 
-:$group2ctx : hash ref of string to AI::MXNet::Context
-    The mapping of the ctx_group attribute to the context assignment.
+    :$group2ctx : hash ref of string to AI::MXNet::Context
+        The mapping of the ctx_group attribute to the context assignment.
 
-:$shared_exec : AI::MXNet::Executor
-    Executor to share memory with. This is intended for runtime reshaping, variable length
-    sequences, etc. The returned executor shares state with shared_exec, and should not be
-    used in parallel with it.
+    :$shared_exec : AI::MXNet::Executor
+        Executor to share memory with. This is intended for runtime reshaping, variable length
+        sequences, etc. The returned executor shares state with shared_exec, and should not be
+        used in parallel with it.
 
-Returns
--------
-$executor : AI::MXNet::Executor
-    The generated Executor
+    Returns
+    -------
+    $executor : AI::MXNet::Executor
+        The generated Executor
 
-Notes
------
-Auxiliary states are special states of symbols that do not corresponds to an argument,
-and do not have gradient. But still be useful for the specific operations.
-A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
-Most operators do not have auxiliary states and this parameter can be safely ignored.
+    Notes
+    -----
+    Auxiliary states are special states of symbols that do not corresponds to an argument,
+    and do not have gradient. But still be useful for the specific operations.
+    A common example of auxiliary state is the moving_mean and moving_variance in BatchNorm.
+    Most operators do not have auxiliary states and this parameter can be safely ignored.
 
-User can give up gradient by using a hash ref in args_grad and only specify
-the gradient they're interested in.
+    User can give up gradient by using a hash ref in args_grad and only specify
+    the gradient they're interested in.
 =cut
 
 method bind(
@@ -1022,38 +1133,38 @@ method bind(
 
 =head2 eval
 
-Evaluate a symbol given arguments
+    Evaluate a symbol given arguments
 
-The `eval` method combines a call to `bind` (which returns an executor)
-with a call to `forward` (executor method).
-For the common use case, where you might repeatedly evaluate with same arguments,
-eval is slow.
-In that case, you should call `bind` once and then repeatedly call forward.
-Eval allows simpler syntax for less cumbersome introspection.
+    The `eval` method combines a call to `bind` (which returns an executor)
+    with a call to `forward` (executor method).
+    For the common use case, where you might repeatedly evaluate with same arguments,
+    eval is slow.
+    In that case, you should call `bind` once and then repeatedly call forward.
+    Eval allows simpler syntax for less cumbersome introspection.
 
-Parameters
-----------
-:$ctx : Context
-The device context the generated executor to run on.
-Optional, defaults to cpu(0)
+    Parameters
+    ----------
+    :$ctx : Context
+    The device context the generated executor to run on.
+    Optional, defaults to cpu(0)
 
-:$args array ref of NDArray or hash ref of NDArray
+    :$args array ref of NDArray or hash ref of NDArray
 
-- If the type is an array ref of NDArray, the position is in the same order of list_arguments.
-- If the type is a hash of str to NDArray, then it maps the name of the argument
-  to the corresponding NDArray.
-- In either case, all arguments must be provided.
+        - If the type is an array ref of NDArray, the position is in the same order of list_arguments.
+        - If the type is a hash of str to NDArray, then it maps the name of the argument
+            to the corresponding NDArray.
+        - In either case, all arguments must be provided.
 
-Returns
-----------
-result :  an array ref of NDArrays corresponding to the values
-taken by each symbol when evaluated on given args.
-When called on a single symbol (not a group),
-the result will be an array ref with one element.
+    Returns
+    ----------
+    result :  an array ref of NDArrays corresponding to the values
+        taken by each symbol when evaluated on given args.
+        When called on a single symbol (not a group),
+        the result will be an array ref with one element.
 
-Examples:
-my $result = $symbol->(ctx => mx->gpu, args => {data => mx->nd->ones([5,5])});
-my $result = $symbol->(args => {data => mx->nd->ones([5,5])});
+    Examples:
+    my $result = $symbol->eval(ctx => mx->gpu, args => {data => mx->nd->ones([5,5])});
+    my $result = $symbol->eval(args => {data => mx->nd->ones([5,5])});
 
 =cut
 
@@ -1064,18 +1175,18 @@ method eval(:$ctx=AI::MXNet::Context->cpu, HashRef[AI::MXNet::NDArray]|ArrayRef[
 
 =head2  grad
 
-Get the autodiff of current symbol.
-This function can only be used if current symbol is a loss function.
+    Get the autodiff of current symbol.
+    This function can only be used if current symbol is a loss function.
 
-Parameters
-----------
-$wrt : Array of String
-    keyword arguments of the symbol that the gradients are taken.
+    Parameters
+    ----------
+    $wrt : Array of String
+        keyword arguments of the symbol that the gradients are taken.
 
-Returns
--------
-grad : AI::MXNet::Symbol
-    A gradient Symbol with returns to be the corresponding gradients.
+    Returns
+    -------
+    grad : AI::MXNet::Symbol
+        A gradient Symbol with returns to be the corresponding gradients.
 =cut
 
 method grad(ArrayRef[Str] $wrt)
@@ -1111,6 +1222,8 @@ method grad(ArrayRef[Str] $wrt)
         Similar to shape, we can specify dtype for this variable.
     init : initializer (mx->init->*)
         Specify initializer for this variable to override the default initializer
+    kwargs : hash ref
+        other additional attribute variables
     Returns
     -------
     variable : Symbol
@@ -1124,7 +1237,9 @@ method Variable(
     Maybe[Num]                    :$lr_mult=,
     Maybe[Num]                    :$wd_mult=,
     Maybe[Dtype]                  :$dtype=,
-    Maybe[AI::MXNet::Initializer] :$init=
+    Maybe[Initializer]            :$init=,
+    HashRef[Str]                  :$kwargs={},
+    Maybe[Str]                    :$__layout__=
 )
 {
     my $handle = check_call(AI::MXNetCAPI::SymbolCreateVariable($name));
@@ -1135,9 +1250,31 @@ method Variable(
     $attr->{__wd_mult__} =  $wd_mult if defined $wd_mult;
     $attr->{__dtype__}   = DTYPE_STR_TO_MX->{ $dtype } if $dtype;
     $attr->{__init__}    = "$init" if defined $init;
+    $attr->{__layout__}  = $__layout__ if defined $__layout__;
+    while(my ($k, $v) = each %{ $kwargs })
+    {
+        if($k =~ /^__/ and $k =~ /__$/)
+        {
+            $attr->{$k} = "$v";
+        }
+        else
+        {
+            confess("Attribute name=$k is not supported.".
+                    ' Additional attributes must start and end with double underscores,'.
+                    ' e.g, __yourattr__'
+            );
+        }
+    }
     $ret->_set_attr(%{ $attr });
     return $ret;
 }
+
+=head2 var
+
+    A synonym to Variable.
+=cut
+
+*var = \&Variable;
 
 =head2 Group
 
@@ -1210,7 +1347,7 @@ method load(Str $fname)
 
     See Also
     --------
-    Symbol.tojson : Used to save symbol into json string.
+    AI::MXNet::Symbol->tojson : Used to save symbol into json string.
 =cut
 
 method load_json(Str $json)
@@ -1219,14 +1356,14 @@ method load_json(Str $json)
     return __PACKAGE__->new(handle => $handle);
 }
 
-method zeros(Shape :$shape, Dtype :$dtype='float32', Str :$name)
+method zeros(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[Str] :$__layout__=)
 {
-    return __PACKAGE__->_zeros({ shape => $shape, dtype => $dtype, name => $name });
+    return __PACKAGE__->_zeros({ shape => $shape, dtype => $dtype, name => $name, ($__layout__ ? (__layout__ => $__layout__) : ()) });
 }
 
-method ones(Shape :$shape, Dtype :$dtype='float32', Str :$name)
+method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[Str] :$__layout__=)
 {
-    return __PACKAGE__->_ones({ shape => $shape, dtype => $dtype, name => $name });
+    return __PACKAGE__->_ones({ shape => $shape, dtype => $dtype, name => $name, ($__layout__ ? (__layout__ => $__layout__) : ()) });
 }
 
 =head2 arange
@@ -1254,13 +1391,14 @@ method ones(Shape :$shape, Dtype :$dtype='float32', Str :$name)
         The created Symbol
 =cut
 
-method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, Str :$name, Dtype :$dtype='float32')
+method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, Maybe[Str] :$name=, Dtype :$dtype='float32')
 {
     return __PACKAGE__->_arange({
                  start => $start, (defined $stop ? (stop => $stop) : ()),
                  step => $step, repeat => $repeat, name => $name, dtype => $dtype
     });
 }
+
 
 sub _parse_arguments
 {
@@ -1329,5 +1467,8 @@ sub  _ufunc_helper
         return __PACKAGE__->can($fn_symbol)->(__PACKAGE__, $lhs, $rhs);
     }
 }
+
+sub contrib { 'AI::MXNet::Contrib::Symbol' }
+sub random  { 'AI::MXNet::Symbol::Random' }
 
 1;

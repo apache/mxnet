@@ -1,7 +1,11 @@
 var searchBox = $("#search-input-wrap");
-var APIsubMenu;
+var TITLE = ['/get_started/', '/tutorials/', '/gluon/' , '/api/', '/community/contribute.html', ];
+var DOC_TITLE = ['/faq/', '/architecture/', '/model_zoo/'];
+var APISubmenu, versionSubmenu, docSubmenu;
 $("#burgerMenu").children().each(function () {
-    if($(this).children().first().html() == 'API') APIsubMenu = $(this).clone()
+    if($(this).children().first().html() == 'API') APISubmenu = $(this).clone();
+    if($(this).children().first().html().startsWith('Versions')) versionSubmenu = $(this).clone();
+    if($(this).children().first().html() == 'Docs') docSubmenu= $(this).clone();
 });
 
 function navbar() {
@@ -37,8 +41,14 @@ function navbar() {
     }
     $("#plusMenu").empty();
     for (var i = 0; i < plusMenuList.length; ++i) {
-        if(plusMenuList[i].html().length > 20) {
-            $("#plusMenu").append(APIsubMenu);
+        if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor') {
+            $("#plusMenu").append(APISubmenu);
+        }
+        else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-version') {
+            $("#plusMenu").append(versionSubmenu);
+        }
+        else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-docs') {
+            $("#plusMenu").append(docSubmenu);
         }
         else {
             $("#plusMenu").append("<li></li>");
@@ -48,10 +58,33 @@ function navbar() {
     }
 };
 
+/*Show bottom border of current tab*/
+function showTab() {
+    var url = window.location.href;
+    if(url.indexOf('/get_started/why_mxnet') != -1) return;
+    for(var i = 0; i < TITLE.length; ++i) {
+        if(url.indexOf(TITLE[i]) != -1) {
+            var tab = $($('#main-nav').children().eq(i));
+            if(!tab.is('a')) tab = tab.find('a').first();
+            tab.css('border-bottom', '3px solid');
+            return;
+        }
+    }
+     for(var i = 0; i < DOC_TITLE.length; ++i) {
+        if(url.indexOf(DOC_TITLE[i]) != -1) {
+            var tab = $($('#main-nav').children().eq(4));
+            if(!tab.is('a')) tab = tab.find('a').first();
+            tab.css('border-bottom', '3px solid');
+        }
+     }
+}
 
 $(document).ready(function () {
     navbar();
+    showTab();
     $(window).resize(function () {
         navbar();
+        if($("body").prop("clientWidth") < 1000 || $('div.sphinxsidebar').css('visibility') == 'hidden') $('div.content').css('width', '100%');
+        else $('div.content').css('width', 'calc(100% - 300px)');
     });
 });

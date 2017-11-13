@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::IO;
 use strict;
 use warnings;
@@ -7,12 +24,12 @@ use Scalar::Util qw/blessed/;
 
 =head1 NAME
 
-AI::MXNet::IO - NDArray interface of mxnet.
+    AI::MXNet::IO - NDArray interface of mxnet.
 =cut
 
 # Convert data into canonical form.
 method init_data(
-    AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Undef $data,
+    Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered] $data,
     Undef|Int :$allow_empty=,
     Str :$default_name
 )
@@ -20,8 +37,7 @@ method init_data(
     Carp::confess("data must be defined or allow_empty set to true value")
         if(not defined $data and not $allow_empty);
     $data //= [];
-
-    if(ref($data) and ref($data) ne 'ARRAY' and ref($data) ne 'HASH')
+    if(blessed $data and not $data->isa('Hash::Ordered'))
     {
         $data = [$data];
     }
@@ -42,11 +58,22 @@ method init_data(
             @ret = map { $i++; ["_${i}_$default_name", $_] } @{ $data };
         }
     }
-    if(ref($data) eq 'HASH')
+    elsif(ref($data) eq 'HASH')
     {
+        AI::MXNet::Logging->warning(
+            "Use of a raw perl hash as input is obsolete and the behaviour of the iterator is undefined.\n".
+            "Please use Hash::Ordered object instead."
+        );
         while(my ($k, $v) = each %{ $data })
         {
             push @ret, [$k, $v];
+        }
+    }
+    elsif(blessed $data and $data->isa('Hash::Ordered'))
+    {
+        for my $k ($data->keys)
+        {
+            push @ret, [$k, $data->get($k)];
         }
     }
     for my $d (@ret)
@@ -101,24 +128,24 @@ method to_nameshape($other=, $reverse=)
 
 =head1 NAME
 
-AI::MXNet::DataDesc - A container class for describing the data layout.
+    AI::MXNet::DataDesc - A container class for describing the data layout.
 =cut
 
 =head2 get_batch_axis
 
-Get the dimension that corresponds to the batch size.
+    Get the dimension that corresponds to the batch size.
 
-Parameters
-----------
-layout : str
-    layout string. For example, "NCHW".
+    Parameters
+    ----------
+    layout : str
+        layout string. For example, "NCHW".
 
-Returns
--------
-An axis indicating the batch_size dimension. When data-parallelism is
-used, the data will be automatically split and concatenate along the batch_size
-dimension. Axis can be -1, which means the whole array will be copied for each
-data-parallelism device.
+    Returns
+    -------
+    An axis indicating the batch_size dimension. When data-parallelism is
+    used, the data will be automatically split and concatenate along the batch_size
+    dimension. Axis can be -1, which means the whole array will be copied for each
+    data-parallelism device.
 =cut
 
 method get_batch_axis(Str|Undef $layout)
@@ -129,12 +156,12 @@ method get_batch_axis(Str|Undef $layout)
 
 =head2 get_list
 
-Coverts the input to an array ref AI::MXNet::DataDesc objects.
+    Coverts the input to an array ref AI::MXNet::DataDesc objects.
 
-Parameters
-----------
-$shapes : HashRef[Shape]
-$types :  Maybe[HashRef[Dtype]]
+    Parameters
+    ----------
+    $shapes : HashRef[Shape]
+    $types= :  Maybe[HashRef[Dtype]]
 =cut
 
 method get_list(HashRef[Shape] $shapes, Maybe[HashRef[Dtype]] $types=)
@@ -156,12 +183,12 @@ use Mouse;
 
 =head1 NAME
 
-AI::MXNet::DataBatch - A container for a mini-batch of the data and related information.
+    AI::MXNet::DataBatch - A container for a mini-batch of the data and related information.
 =cut
 
 =head1 DESCRIPTION
 
-Default object for holding a mini-batch of data and related information.
+    Default object for holding a mini-batch of data and related information.
 =cut
 
 has 'data'          => (is => 'rw', isa => 'Maybe[ArrayRef[AI::MXNet::NDArray]]', required => 1);
@@ -179,41 +206,43 @@ use overload '<>' =>  sub { shift->next },
 
 =head1 NAME
 
-AI::MXNet::DataIter - A parent class for MXNet data iterators.
+    AI::MXNet::DataIter - A parent class for MXNet data iterators.
 =cut
 
 has 'batch_size' => (is => 'rw', isa => 'Int', default => 0);
 
 =head2 reset
 
-Reset the iterator.
+    Reset the iterator.
 =cut
 
 method reset(){}
 
 =head2 list
 
-Returns remaining iterator items as an array ref.
+    Returns remaining iterator items as an array ref.
 =cut
 
 method list()
 {
     my @ret;
-    while(<$self>)
+    while(my $data = <$self>)
     {
-        push @ret, $_;
+        $data->label([map { $_->copy } @{ $data->label }]);
+        $data->data([map { $_->copy } @{ $data->data }]);
+        push @ret, $data;
     }
     return \@ret;
 }
 
 =head2 next
 
-Returns the next data batch from the iterator.
+    Returns the next data batch from the iterator.
 
-Returns
--------
-$data : AI::MXNet::DataBatch
-The data of next batch.
+    Returns
+    -------
+    $data : AI::MXNet::DataBatch
+    The data of next batch.
 =cut
 
 method next()
@@ -235,55 +264,55 @@ method next()
 
 =head2 iter_next
 
-Iterate to next batch.
+    Iterate to next batch.
 
-Returns
--------
-$has_next : Bool
+    Returns
+    -------
+    $has_next : Bool
 =cut
 
 method iter_next(){}
 
 =head2 get_data
 
-The data of current batch.
+    The data of current batch.
 
-Returns
--------
-data : AI::MXNet::NDArray
+    Returns
+    -------
+    data : AI::MXNet::NDArray
 =cut
 
 method get_data(){}
 
 =head2 getlabel
 
-The label of the current batch.
+    The label of the current batch.
 
-Returns
--------
-label : AI::MXNet::NDArray
+    Returns
+    -------
+    label : AI::MXNet::NDArray
 =cut
 
 method getlabel(){}
 
 =head2 getindex
 
-The index of the current batch.
+    The index of the current batch.
 
-Returns
--------
-$index : PDL
+    Returns
+    -------
+    $index : PDL
 =cut
 
 method getindex(){}
 
 =head2 getpad
 
-The number of padding examples in the current batch.
+    The number of padding examples in the current batch.
 
-Returns
--------
-$pad : Int
+    Returns
+    -------
+    $pad : Int
 =cut
 
 method getpad(){}
@@ -295,21 +324,21 @@ extends 'AI::MXNet::DataIter';
 
 =head1 NAME
 
-AI::MXNet::ResizeIter
+    AI::MXNet::ResizeIter
 =cut
 
 =head1 DESCRIPTION
 
-Resize a DataIter to given number of batches per epoch.
-May produce incomplete batch in the middle of an epoch due
-to padding from internal iterator.
+    Resize a DataIter to a given number of batches per epoch.
+    May produce incomplete batch in the middle of an epoch due
+    to the padding from internal iterator.
 
-Parameters
-----------
-data_iter : DataIter
-    Internal data iterator.
-size : number of batches per epoch to resize to.
-reset_internal : whether to reset internal iterator on ResizeIter.reset
+    Parameters
+    ----------
+    data_iter : DataIter
+        Internal data iterator.
+    size : number of batches per epoch to resize to.
+    reset_internal : whether to reset internal iterator on ResizeIter.reset
 =cut
 
 has 'data_iter'      => (is => 'ro', isa => 'AI::MXnet::DataIter', required => 1);
@@ -379,59 +408,51 @@ method getpad()
 package AI::MXNet::NDArrayIter;
 use Mouse;
 use AI::MXNet::Base;
-use List::Util qw(shuffle);
+use List::Util;
 extends 'AI::MXNet::DataIter';
 
 =head1 NAME
 
-AI::MXNet::NDArrayIter - Predefined NDArray iterator.
+    AI::MXNet::NDArrayIter - Predefined NDArray iterator.
 =cut
 
 =head1 DESCRIPTION
 
-Predefined NDArray iterator. Accepts PDL or AI::MXNet::NDArray object as an input.
+    Predefined NDArray iterator. Accepts PDL or AI::MXNet::NDArray object as an input.
 
-Parameters
-----------
-data: Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]].
-    NDArrayIter supports single or multiple data and label.
-label: Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]].
-    Same as data, but is not given to the model during testing.
-batch_size=1: Int
-    Batch Size
-shuffle=0: Bool
-    Whether to shuffle the data
-last_batch_handle='pad': 'pad', 'discard' or 'roll_over'
-    How to handle the last batch
+    Parameters
+    ----------
+    data: Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]].
+        NDArrayIter supports single or multiple data and label.
+    label: Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]].
+        Same as data, but is not given to the model during testing.
+    batch_size=1: Int
+        Batch Size
+    shuffle=0: Bool
+        Whether to shuffle the data
+    last_batch_handle='pad': 'pad', 'discard' or 'roll_over'
+        How to handle the last batch
 
-Note
-----
-This iterator will pad, discard or roll over the last batch if
-the size of data does not match batch_size. Roll over is intended
-for training and can cause problems if used for prediction.
+    Note
+    ----
+    This iterator will pad, discard or roll over the last batch if
+    the size of data does not match batch_size. Roll over is intended
+    for training and can cause problems if used for prediction.
 =cut
 
-has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
+has 'data'                => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered]');
 has 'data_list'           => (is => 'rw', isa => 'ArrayRef[AI::MXNet::NDArray]');
-has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]]');
+has 'label'               => (is => 'rw', isa => 'Maybe[AcceptableInput|HashRef[AcceptableInput]|ArrayRef[AcceptableInput]|Hash::Ordered]');
 has 'batch_size'          => (is => 'rw', isa => 'Int', default => 1);
-has '_shuffle'            => (is => 'rw', init_arg => 'shuffle', isa => 'Bool', default => 0);
+has 'shuffle'             => (is => 'rw', isa => 'Bool', default => 0);
 has 'last_batch_handle'   => (is => 'rw', isa => 'Str', default => 'pad');
 has 'label_name'          => (is => 'rw', isa => 'Str', default => 'softmax_label');
 has 'num_source'          => (is => 'rw', isa => 'Int');
 has 'cursor'              => (is => 'rw', isa => 'Int');
 has 'num_data'            => (is => 'rw', isa => 'Int');
 
-around BUILDARGS => sub {
-    my $orig  = shift;
-    my $class = shift;
-    if(@_%2)
-    {
-        my $data  = shift;
-        return $class->$orig(data => $data, @_);
-    }
-    return $class->$orig(@_);
-};
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
+method python_constructor_arguments() { ['data', 'label'] };
 
 sub BUILD
 {
@@ -441,9 +462,9 @@ sub BUILD
     my $num_data  = $data->[0][1]->shape->[0];
     confess("size of data dimension 0 $num_data < batch_size ${\ $self->batch_size }")
         unless($num_data >= $self->batch_size);
-    if($self->_shuffle)
+    if($self->shuffle)
     {
-        my @idx = shuffle(0..$num_data-1);
+        my @idx = List::Util::shuffle(0..$num_data-1);
         $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$data;
         $_->[1] = AI::MXNet::NDArray->array(pdl_shuffle($_->[1]->aspdl, \@idx)) for @$label;
     }
@@ -579,7 +600,6 @@ method getpad()
         return 0;
     }
 }
-
 package AI::MXNet::MXDataIter;
 use Mouse;
 use AI::MXNet::Base;
@@ -588,7 +608,7 @@ extends 'AI::MXNet::DataIter';
 
 =head1 NAME
 
-AI::MXNet::MXDataIter - A data iterator pre-built in C++ layer of MXNet.
+    AI::MXNet::MXDataIter - A data iterator pre-built in C++ layer of MXNet.
 =cut
 
 has 'handle'           => (is => 'ro', isa => 'DataIterHandle', required => 1);
@@ -631,11 +651,11 @@ sub DEMOLISH
 
 =head2 debug_skip_load
 
-Set the iterator to simply return always first batch.
-Notes
------
-This can be used to test the speed of network without taking
-the loading delay into account.
+    Set the iterator to simply return always first batch.
+    Notes
+    -----
+    This can be used to test the speed of network without taking
+    the loading delay into account.
 =cut
 
 method debug_skip_load()
@@ -650,6 +670,7 @@ method reset()
     $self->first_batch(undef);
     check_call(AI::MXNetCAPI::DataIterBeforeFirst($self->handle));
 }
+
 
 method next()
 {
@@ -784,7 +805,7 @@ method _init_io_module()
             no strict 'refs';
             {
                 *{__PACKAGE__."::$name"} = $data_iter;
-            } 
+            }
         }
     }
 }

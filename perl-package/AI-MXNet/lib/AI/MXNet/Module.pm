@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 ## TODO
 ## this class is here because of https://github.com/gfx/p5-Mouse/pull/67
 ## once 2.4.7 version of Mouse in Ubuntu for affected Perl version
@@ -18,6 +35,7 @@ package AI::MXNet::Module;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use List::Util qw(max);
+use Data::Dumper ();
 use Mouse;
 
 func _create_kvstore(
@@ -71,10 +89,11 @@ func _initialize_kvstore(
 {
     enumerate(sub{
         my ($idx, $param_on_devs) = @_;
-        $kvstore->init($idx, $arg_params->{ $param_names->[$idx] });
+        my $name = $param_names->[$idx];
+        $kvstore->init($name, $arg_params->{ $name });
         if($update_on_kvstore)
         {
-            $kvstore->pull($idx, out => $param_on_devs, priority => -$idx);
+            $kvstore->pull($name, out => $param_on_devs, priority => -$idx);
         }
     }, $param_arrays);
 }
@@ -82,7 +101,8 @@ func _initialize_kvstore(
 func _update_params_on_kvstore(
     ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $param_arrays,
     ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $grad_arrays,
-    AI::MXNet::KVStore           $kvstore
+    AI::MXNet::KVStore           $kvstore,
+    ArrayRef[Str]                $param_names
 )
 {
     enumerate(sub{
@@ -91,10 +111,11 @@ func _update_params_on_kvstore(
         {
             return;
         }
+        my $name = $param_names->[$index];
         # push gradient, priority is negative index
-        $kvstore->push($index, $grad_list, priority => -$index);
+        $kvstore->push($name, $grad_list, priority => -$index);
         # pull back the weights
-        $kvstore->pull($index, out => $arg_list, priority  => -$index);
+        $kvstore->pull($name, out => $arg_list, priority  => -$index);
     }, $param_arrays, $grad_arrays);
 }
 
@@ -103,7 +124,8 @@ func _update_params(
     ArrayRef[ArrayRef[AI::MXNet::NDArray]] $grad_arrays,
     AI::MXNet::Updater                     $updater,
     Int                                    $num_device,
-    Maybe[AI::MXNet::KVStore]              $kvstore=
+    Maybe[AI::MXNet::KVStore]              $kvstore=,
+    Maybe[ArrayRef[Str]]                   $param_names=
 )
 {
     enumerate(sub{
@@ -114,17 +136,18 @@ func _update_params(
         }
         if($kvstore)
         {
+            my $name = $param_names->[$index];
             # push gradient, priority is negative index
-            $kvstore->push($index, $grad_list, priority => -$index);
+            $kvstore->push($name, $grad_list, priority => -$index);
             # pull back the sum gradients, to the same locations.
-            $kvstore->pull($index, out => $grad_list, priority => -$index);
+            $kvstore->pull($name, out => $grad_list, priority => -$index);
         }
         enumerate(sub {
             my ($k, $w, $g) = @_;
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)
-            # use a better solution latter
-            &{$updater}($index*$num_device+$k, $g, $w);
+            # use a better solution later
+            $updater->($index*$num_device+$k, $g, $w);
         }, $arg_list, $grad_list);
     }, $param_arrays, $grad_arrays);
 }
@@ -152,8 +175,8 @@ method load_checkpoint(Str $prefix, Int $epoch)
 
 =head1 NAME
 
-AI::MXNet::Module - FeedForward interface of MXNet.
-See AI::MXNet::Module::Base for the details.
+    AI::MXNet::Module - FeedForward interface of MXNet.
+    See AI::MXNet::Module::Base for the details.
 =cut
 
 extends 'AI::MXNet::Module::Base';
@@ -167,7 +190,7 @@ has 'state_names'       => (is => 'rw', isa => 'Maybe[ArrayRef[Str]]');
 has 'logger'            => (is => 'ro', default => sub { AI::MXNet::Logging->get_logger });
 has '_p'                => (is => 'rw', init_arg => undef);
 has 'context'           => (
-    is => 'ro', 
+    is => 'ro',
     isa => 'AI::MXNet::Context|ArrayRef[AI::MXNet::Context]',
     default => sub { AI::MXNet::Context->cpu }
 );
@@ -223,7 +246,7 @@ sub BUILD
 method Module(@args) { return @args ?  __PACKAGE__->new(@args) : __PACKAGE__ }
 method BucketingModule(@args) { return AI::MXNet::Module::Bucketing->new(@args) }
 
-=head load
+=head2 load
 
         Create a model from previously saved checkpoint.
 
@@ -275,17 +298,17 @@ method load(
 
 =head2 save_checkpoint
 
-Save current progress to checkpoint.
-Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
+    Save current progress to a checkpoint.
+    Use mx->callback->module_checkpoint as epoch_end_callback to save during training.
 
-Parameters
-----------
-prefix : str
-    The file prefix to checkpoint to
-epoch : int
-    The current epoch number
-save_optimizer_states : bool
-    Whether to save optimizer states for continue training
+    Parameters
+    ----------
+    prefix : str
+        The file prefix to checkpoint to
+    epoch : int
+        The current epoch number
+    save_optimizer_states : bool
+        Whether to save optimizer states for later training
 =cut
 
 
@@ -399,7 +422,8 @@ method init_params(
     Maybe[HashRef[AI::MXNet::NDArray]] :$arg_params=,
     Maybe[HashRef[AI::MXNet::NDArray]] :$aux_params=,
     Bool                               :$allow_missing=0,
-    Bool                               :$force_init=0
+    Bool                               :$force_init=0,
+    Bool                               :$allow_extra=0
 )
 {
     if($self->params_initialized and not $force_init)
@@ -433,13 +457,13 @@ method init_params(
                     }
                     if(defined $initializer)
                     {
-                        &{$initializer}($name, $arr);
+                        $initializer->($name, $arr);
                     }
                 }
             }
             else
             {
-                &{$initializer}($name, $arr) if defined $initializer;
+                $initializer->($name, $arr) if defined $initializer;
             }
     };
     my $attrs = $self->_symbol->attr_dict;
@@ -467,21 +491,23 @@ method init_params(
     $self->_p->_params_dirty(0);
 
     # copy the initialized parameters to devices
-    $self->_p->_exec_group->set_params($self->_p->_arg_params, $self->_p->_aux_params);
+    $self->_p->_exec_group->set_params($self->_p->_arg_params, $self->_p->_aux_params, $allow_extra);
 }
 
 method set_params(
     HashRef[AI::MXNet::NDArray]  $arg_params,
     HashRef[AI::MXNet::NDArray]  $aux_params,
     Bool                        :$allow_missing=0,
-    Bool                        :$force_init=1
+    Bool                        :$force_init=1,
+    Bool                        :$allow_extra=0
 )
 {
     if(not $allow_missing)
     {
         $self->init_params(
             arg_params    => $arg_params,    aux_params => $aux_params,
-            allow_missing => $allow_missing, force_init => $force_init
+            allow_missing => $allow_missing, force_init => $force_init,
+            allow_extra   => $allow_extra
         );
         return;
     }
@@ -494,35 +520,35 @@ method set_params(
         );
         return;
     }
-    $self->_p->_exec_group->set_params($arg_params, $aux_params);
+    $self->_p->_exec_group->set_params($arg_params, $aux_params, $allow_extra);
     $self->_p->_params_dirty(1);
     $self->params_initialized(1);
 }
 
 =head2 bind
 
-Bind the symbols to construct executors. This is necessary before one
-can perform computation with the module.
+    Bind the symbols to construct executors. This is necessary before one
+    can perform computation with the module.
 
-Parameters
-----------
-:$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
-    Typically is $data_iter->provide_data.
-:$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
-    Typically is $data_iter->provide_label.
-:$for_training : bool
-    Default is 1. Whether the executors should be bind for training.
-:$inputs_need_grad : bool
-    Default is 0. Whether the gradients to the input data need to be computed.
-    Typically this is not needed. But this might be needed when implementing composition
-    of modules.
-:$force_rebind : bool
-    Default is 0. This function does nothing if the executors are already
-    binded. But with this 1, the executors will be forced to rebind.
-:$shared_module : Module
-    Default is undef. This is used in bucketing. When not undef, the shared module
-    essentially corresponds to a different bucket -- a module with different symbol
-    but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc|NameShape]
+        Typically is $data_iter->provide_data.
+    :$label_shapes : Maybe[ArrayRef[AI::MXNet::DataDesc|NameShape]]
+        Typically is $data_iter->provide_label.
+    :$for_training : bool
+        Default is 1. Whether the executors should be bind for training.
+    :$inputs_need_grad : bool
+        Default is 0. Whether the gradients to the input data need to be computed.
+        Typically this is not needed. But this might be needed when implementing composition
+        of modules.
+    :$force_rebind : bool
+        Default is 0. This function does nothing if the executors are already
+        binded. But with this 1, the executors will be forced to rebind.
+    :$shared_module : Module
+        Default is undef. This is used in bucketing. When not undef, the shared module
+        essentially corresponds to a different bucket -- a module with different symbol
+        but with the same sets of parameters (e.g. unrolled RNNs with different lengths).
 =cut
 
 method bind(
@@ -623,13 +649,13 @@ method bind(
 
 =head2 reshape
 
-Reshape the module for new input shapes.
-Parameters
-----------
-:$data_shapes : ArrayRef[AI::MXNet::DataDesc]
-    Typically is $data_iter->provide_data.
-:$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
-    Typically is $data_iter->provide_label.
+    Reshape the module for new input shapes.
+    Parameters
+    ----------
+    :$data_shapes : ArrayRef[AI::MXNet::DataDesc]
+        Typically is $data_iter->provide_data.
+    :$label_shapes= : Maybe[ArrayRef[AI::MXNet::DataDesc]]
+        Typically is $data_iter->provide_label.
 =cut
 
 method reshape(
@@ -746,12 +772,12 @@ method init_optimizer(
 
 =head2 borrow_optimizer
 
-Borrow optimizer from a shared module. Used in bucketing, where exactly the same
-optimizer (esp. kvstore) is used.
+    Borrow optimizer from a shared module. Used in bucketing, where exactly the same
+    optimizer (esp. kvstore) is used.
 
-Parameters
-----------
-shared_module : AI::MXNet::Module
+    Parameters
+    ----------
+    shared_module : AI::MXNet::Module
 =cut
 
 method borrow_optimizer(AI::MXNet::Module $shared_module)
@@ -770,6 +796,43 @@ method forward(
 )
 {
     assert($self->binded and $self->params_initialized);
+
+    my @curr_data_shapes = map { $_->shape } @{ $self->data_shapes };
+    my @new_data_shapes  = map { $_->shape } @{ $data_batch->data };
+    if(Data::Dumper->Dump(\@curr_data_shapes) ne Data::Dumper->Dump(\@new_data_shapes))
+    {
+        my $new_dshape;
+        if($data_batch->can('provide_data') and $data_batch->provide_data)
+        {
+            $new_dshape = $data_batch->provide_data;
+        }
+        else
+        {
+            $new_dshape = [];
+            for(zip($self->data_shapes, \@new_data_shapes)) {
+                my ($i, $shape) = @$_;
+                push @{ $new_dshape }, AI::MXNet::DataDesc->new(
+                    $i->name, $shape, $i->dtype, $i->layout
+                );
+            }
+        }
+        my $new_lshape;
+        if($data_batch->can('provide_label') and $data_batch->provide_label)
+        {
+            $new_lshape = $data_batch->provide_label;
+        }
+        elsif($data_batch->can('label') and $data_batch->label)
+        {
+            $new_lshape = [];
+            for(zip($self->label_shapes, $data_batch->label)) {
+                my ($i, $j) = @$_;
+                push @{ $new_lshape }, AI::MXNet::DataDesc->new(
+                    $i->name, $j->shape, $i->dtype, $i->layout
+                );
+            }
+        }
+        $self->reshape(data_shapes => $new_dshape, label_shapes => $new_lshape);
+    }
     $self->_p->_exec_group->forward($data_batch, $is_train);
 }
 
@@ -788,7 +851,8 @@ method update()
         _update_params_on_kvstore(
             $self->_p->_exec_group->_p->param_arrays,
             $self->_p->_exec_group->_p->grad_arrays,
-            $self->_p->_kvstore
+            $self->_p->_kvstore,
+            $self->_p->_exec_group->param_names
         );
     }
     else
@@ -798,7 +862,8 @@ method update()
             $self->_p->_exec_group->_p->grad_arrays,
             $self->_p->_updater,
             scalar(@{ $self->_p->_context}),
-            $self->_p->_kvstore
+            $self->_p->_kvstore,
+            $self->_p->_exec_group->param_names
         );
     }
 }
@@ -837,9 +902,9 @@ method update_metric(
 
 =head2 _sync_params_from_devices
 
-Synchronize parameters from devices to CPU. This function should be called after
-calling 'update' that updates the parameters on the devices, before one can read the
-latest parameters from $self->_arg_params and $self->_aux_params.
+    Synchronize parameters from devices to CPU. This function should be called after
+    calling 'update' that updates the parameters on the devices, before one can read the
+    latest parameters from $self->_arg_params and $self->_aux_params.
 =cut
 
 method _sync_params_from_devices()

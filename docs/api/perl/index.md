@@ -12,6 +12,12 @@ that's all that is needed there.
 In addition please refer to [excellent metacpan doc interface](https://metacpan.org/release/AI-MXNet) and to very detailed
 [MXNet Python API Documentation](http://mxnet.io/api/python/index.html).
 
+AI::MXNet supports new imperative PyTorch like Gluon MXNet interface. Please get acquainted with this new interface
+at [Deep Learning - The Straight Dope](http://gluon.mxnet.io/).
+
+For specific Perl Gluon usage please refer to Perl examples and tests directories on github, but be assured that the Python and Perl usage
+are extremely close in order to make the use of the Python Gluon docs and examples as easy as possible.
+
 AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initialized from PDL and the results can be
 transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
 
@@ -56,9 +62,9 @@ pdl> print mx->nd->array(sequence(2,3))->aspdl ## 3 rows, 2 columns
 ]
 ```
  ## Perl API Reference
- * [Module API](module.md) is a flexible high-level interface for training neural networks.
- * [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
- * [IO Data Loading API](io.md) performs parsing and data loading.
- * [NDArray API](ndarray.md) performs vector/matrix/tensor operations.
- * [KVStore API](kvstore.md) performs multi-GPU and multi-host distributed training.
+ * [Module API is a flexible high-level interface for training neural networks.](module.md)
+ * [Symbolic API performs operations on NDArrays to assemble neural networks from layers.](symbol.md)
+ * [IO Data Loading API performs parsing and data loading.](io.md)
+ * [NDArray API performs vector/matrix/tensor operations.](ndarray.md)
+ * [KVStore API performs multi-GPU and multi-host distributed training.](kvstore.md)
 

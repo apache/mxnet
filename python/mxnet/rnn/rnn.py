@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=too-many-arguments, no-member
 """Functions for constructing recurrent neural networks."""
@@ -18,7 +35,7 @@ def save_rnn_checkpoint(cells, prefix, epoch, symbol, arg_params, aux_params):
 
     Parameters
     ----------
-    cells : RNNCells or list of RNNCells
+    cells : RNNCell or list of RNNCells
         The RNN cells used by this symbol.
     prefix : str
         Prefix of model name.
@@ -48,7 +65,7 @@ def load_rnn_checkpoint(cells, prefix, epoch):
 
     Parameters
     ----------
-    cells : RNNCells or list of RNNCells
+    cells : RNNCell or list of RNNCells
         The RNN cells used by this symbol.
     prefix : str
         Prefix of model name.
@@ -83,8 +100,8 @@ def do_rnn_checkpoint(cells, prefix, period=1):
 
     Parameters
     ----------
-    cells : subclass of BaseRNNCell
-        RNN cells used by this module.
+    cells : RNNCell or list of RNNCells
+        The RNN cells used by this symbol.
     prefix : str
         The file prefix to checkpoint to
     period : int

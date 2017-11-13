@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """Trains an `Agent` using trajectories from multiple environments."""
 
 import argparse
@@ -28,24 +45,15 @@ def train_episode(agent, envs, preprocessors, t_max, render):
                     for p, e in zip(preprocessors, envs)]
 
     done = np.array([False for _ in range(num_envs)])
-    any_done = False
+    all_done = False
     t = 1
 
-    # NOTE(reed): For simplicity, it stops this episode when any of the envs is
-    # done. As a side effect, the episode_rs may appear to vibrate for the
-    # initial rounds instead of decreasing gradually.
-    while not any_done:
+    while not all_done:
         if render:
             envs[0].render()
 
-        # NOTE(reed): Rebind to set the data shape.
-        agent.model.bind(
-            data_shapes=[('data', (num_envs, preprocessors[0].obs_size))],
-            label_shapes=None,
-            for_training=False,
-            force_rebind=True,
-            grad_req="null")
-
+        # NOTE(reed): Reshape to set the data shape.
+        agent.model.reshape([('data', (num_envs, preprocessors[0].obs_size))])
         step_xs = np.vstack([o.ravel() for o in observations])
 
         # Get actions and values for all environments in a single forward pass.
@@ -76,11 +84,9 @@ def train_episode(agent, envs, preprocessors, t_max, render):
                     env_vs[i].append(0.0)
                 else:
                     observations[i] = preprocessors[i].preprocess(obs)
-            else:
-                any_done = True
 
         # Perform an update every `t_max` steps.
-        if t == t_max and not any_done:
+        if t == t_max:
             # If the episode has not finished, add current state's value. This
             # will be used to 'bootstrap' the final return (see Algorithm S3
             # in A3C paper).
@@ -101,6 +107,7 @@ def train_episode(agent, envs, preprocessors, t_max, render):
             env_rs, env_vs = _2d_list(num_envs), _2d_list(num_envs)
             t = 0
 
+        all_done = np.all(done)
         t += 1
 
     return episode_rs

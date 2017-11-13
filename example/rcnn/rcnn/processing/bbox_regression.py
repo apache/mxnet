@@ -1,10 +1,27 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 This file has functions about generating bounding box regression targets
 """
 
-from __future__ import print_function
 import numpy as np
 
+from ..logger import logger
 from bbox_transform import bbox_overlaps, bbox_transform
 from rcnn.config import config
 
@@ -22,12 +39,13 @@ def compute_bbox_regression_targets(rois, overlaps, labels):
 
     # Sanity check
     if len(rois) != len(overlaps):
-        print('bbox regression: this should not happen')
+        logger.warning('bbox regression: len(rois) != len(overlaps)')
 
     # Indices of ground-truth ROIs
     gt_inds = np.where(overlaps == 1)[0]
     if len(gt_inds) == 0:
-        print('something wrong : zero ground truth rois')
+        logger.warning('bbox regression: len(gt_inds) == 0')
+
     # Indices of examples for which we try to make predictions
     ex_inds = np.where(overlaps >= config.TRAIN.BBOX_REGRESSION_THRESH)[0]
 
@@ -52,7 +70,7 @@ def add_bbox_regression_targets(roidb):
     :param roidb: roidb to be processed. must have gone through imdb.prepare_roidb
     :return: means, std variances of targets
     """
-    print('add bounding box regression targets')
+    logger.info('bbox regression: add bounding box regression targets')
     assert len(roidb) > 0
     assert 'max_classes' in roidb[0]
 

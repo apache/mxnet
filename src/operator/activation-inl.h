@@ -1,9 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file activation-inl.h
  * \brief Activation operator
  * \author Bing Xu
 */
+
 #ifndef MXNET_OPERATOR_ACTIVATION_INL_H_
 #define MXNET_OPERATOR_ACTIVATION_INL_H_
 
@@ -16,6 +35,7 @@
 #include <vector>
 #include <utility>
 #include "./operator_common.h"
+#include "./mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -57,9 +77,16 @@ class ActivationOp : public Operator {
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> data = in_data[activation::kData].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
-    Assign(out, req[activation::kOut], F<ForwardOp>(data));
+    const TBlob& input = in_data[activation::kData];
+    const size_t sz = input.shape_.Size();
+    if (sz) {
+      MXNET_ASSIGN_REQ_SWITCH(req[activation::kOut], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
+          s, sz,
+          out_data[activation::kOut].dptr<DType>(),
+          input.dptr<DType>());
+      });
+    }
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -75,16 +102,26 @@ class ActivationOp : public Operator {
     CHECK(in_data.size() == 1 && in_grad.size() == 1);
     CHECK_EQ(req.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> m_out_grad = out_grad[activation::kOut].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> m_out_data = out_data[activation::kOut].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> m_in_grad = in_grad[activation::kData].FlatTo2D<xpu, DType>(s);
-    Assign(m_in_grad, req[activation::kData], F<BackwardOp>(m_out_data) * m_out_grad);
+    const TBlob& m_out_grad = out_grad[activation::kOut];
+    const TBlob& m_out_data = out_data[activation::kOut];
+    const TBlob&  m_in_grad = in_grad[activation::kData];
+    const size_t sz = m_out_data.shape_.Size();
+    if (sz) {
+      MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<
+          mxnet::op::mxnet_op::backward_grad<BackwardOp>, Req>, xpu>::Launch(
+          s, sz,
+          m_in_grad.dptr<DType>(),
+          m_out_grad.dptr<DType>(),
+          m_out_data.dptr<DType>());
+      });
+    }
   }
 };  // class ActivationOp
 
-// Decalre Factory function, used for dispatch specialization
+// Declare Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type, int dtype);
+Operator* CreateOp(ActivationParam type, int dtype, const TShape& dshape);
 
 #if DMLC_USE_CXX11
 class ActivationProp : public OperatorProperty {
@@ -119,9 +156,7 @@ class ActivationProp : public OperatorProperty {
       if ((*in_type)[i] == -1) {
           (*in_type)[i] = dtype;
       } else {
-        CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. "
-                                       << "Expected " << dtype << " v.s. given "
-                                       << (*in_type)[i] << " at " << ListArguments()[i];
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();
@@ -146,8 +181,6 @@ class ActivationProp : public OperatorProperty {
     const std::vector<int> &out_data) const override {
 #if MXNET_USE_CUDNN == 1
     return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
-#elif MXNET_USE_MKL2017 == 1
-    return{ out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData] };
 #else
     return {out_grad[activation::kOut], out_data[activation::kOut]};
 #endif  // MXNET_USE_CUDNN

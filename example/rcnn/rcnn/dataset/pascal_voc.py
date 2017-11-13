@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Pascal VOC database
 This class loads ground truth notations from standard Pascal VOC XML data formats
@@ -6,12 +23,12 @@ function. Results are written as the Pascal VOC format. Evaluation is based on m
 criterion.
 """
 
-from __future__ import print_function
 import cPickle
 import cv2
 import os
 import numpy as np
 
+from ..logger import logger
 from imdb import IMDB
 from pascal_voc_eval import voc_eval
 from ds_utils import unique_boxes, filter_small_boxes
@@ -42,7 +59,7 @@ class PascalVOC(IMDB):
         self.num_classes = len(self.classes)
         self.image_set_index = self.load_image_set_index()
         self.num_images = len(self.image_set_index)
-        print('num_images', self.num_images)
+        logger.info('%s num_images %d' % (self.name, self.num_images))
 
         self.config = {'comp_id': 'comp4',
                        'use_diff': False,
@@ -78,13 +95,13 @@ class PascalVOC(IMDB):
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print('{} gt roidb loaded from {}'.format(self.name, cache_file))
+            logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self.load_pascal_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print('wrote gt roidb to {}'.format(cache_file))
+        logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb
 
@@ -168,18 +185,18 @@ class PascalVOC(IMDB):
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 roidb = cPickle.load(fid)
-            print('{} ss roidb loaded from {}'.format(self.name, cache_file))
+            logger.info('%s ss roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         if append_gt:
-            print('appending ground truth annotations')
+            logger.info('%s appending ground truth annotations' % self.name)
             ss_roidb = self.load_selective_search_roidb(gt_roidb)
             roidb = IMDB.merge_roidbs(gt_roidb, ss_roidb)
         else:
             roidb = self.load_selective_search_roidb(gt_roidb)
         with open(cache_file, 'wb') as fid:
             cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print('wrote ss roidb to {}'.format(cache_file))
+        logger.info('%s wrote ss roidb to %s' % (self.name, cache_file))
 
         return roidb
 
@@ -224,7 +241,7 @@ class PascalVOC(IMDB):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print('Writing {} VOC results file'.format(cls))
+            logger.info('Writing %s VOC results file' % cls)
             filename = self.get_result_file_template().format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_set_index):
@@ -248,7 +265,7 @@ class PascalVOC(IMDB):
         aps = []
         # The PASCAL VOC metric changed in 2010
         use_07_metric = True if int(self.year) < 2010 else False
-        print('VOC07 metric? ' + ('Y' if use_07_metric else 'No'))
+        logger.info('VOC07 metric? ' + ('Y' if use_07_metric else 'No'))
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
@@ -256,5 +273,5 @@ class PascalVOC(IMDB):
             rec, prec, ap = voc_eval(filename, annopath, imageset_file, cls, annocache,
                                      ovthresh=0.5, use_07_metric=use_07_metric)
             aps += [ap]
-            print('AP for {} = {:.4f}'.format(cls, ap))
-        print('Mean AP = {:.4f}'.format(np.mean(aps)))
+            logger.info('AP for {} = {:.4f}'.format(cls, ap))
+        logger.info('Mean AP = {:.4f}'.format(np.mean(aps)))

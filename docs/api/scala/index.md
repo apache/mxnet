@@ -26,17 +26,17 @@ You can perform tensor or matrix computation in pure Scala:
 ```
 
  ## Scala API Reference
- * [Module API](module.md) is a flexible high-level interface for training neural networks.
- * [Model API](model.md) is an alternate simple high-level interface for training neural networks.
- * [Symbolic API](symbol.md) performs operations on NDArrays to assemble neural networks from layers.
- * [IO Data Loading API](io.md) performs parsing and data loading.
- * [NDArray API](ndarray.md) performs vector/matrix/tensor operations.
- * [KVStore API](kvstore.md) performs multi-GPU and multi-host distributed training.
+ * [Module API is a flexible high-level interface for training neural networks.](module.md)
+ * [Model API is an alternate simple high-level interface for training neural networks.](model.md)
+ * [Symbolic API performs operations on NDArrays to assemble neural networks from layers.](symbol.md)
+ * [IO Data Loading API performs parsing and data loading.](io.md)
+ * [NDArray API performs vector/matrix/tensor operations.](ndarray.md)
+ * [KVStore API performs multi-GPU and multi-host distributed training.](kvstore.md)
 
 
 ## Resources
 
 * [MXNet Scala API Documentation](http://mxnet.io/api/scala/docs/index.html)
 * [Handwritten Digit Classification in Scala](http://mxnet.io/tutorials/scala/mnist.html)
-* [Neural Style in Scala on MXNet](https://github.com/dmlc/mxnet/blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples/neuralstyle/NeuralStyle.scala)
-* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnet/examples)
+* [Neural Style in Scala on MXNet](https://github.com/dmlc/mxnet/blob/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples/neuralstyle/NeuralStyle.scala)
+* [More Scala Examples](https://github.com/dmlc/mxnet/tree/master/scala-package/examples/src/main/scala/ml/dmlc/mxnetexamples)

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from itertools import chain
 import numpy as np
 import scipy.signal
@@ -62,11 +79,8 @@ class Agent(object):
         return as_
 
     def train_step(self, env_xs, env_as, env_rs, env_vs):
-        # NOTE(reed): Rebind to set the data shape.
-        self.model.bind(
-            data_shapes=[('data', (self.paralell_num, self.input_size))],
-            label_shapes=None, for_training=True,
-            force_rebind=True, grad_req="write")
+        # NOTE(reed): Reshape to set the data shape.
+        self.model.reshape([('data', (len(env_xs), self.input_size))])
 
         xs = mx.nd.array(env_xs, ctx=self.ctx)
         as_ = np.array(list(chain.from_iterable(env_as)))

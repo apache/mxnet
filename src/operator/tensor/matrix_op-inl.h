@@ -1,7 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
- * \brief Function defintion of matrix related operators
+ * \brief Function definition of matrix related operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
@@ -10,10 +28,14 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <type_traits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
+#include "../channel_op_common.h"
 #include "../mxnet_op.h"
 #include "broadcast_reduce_op.h"
+#include "./init_op.h"
+#include "../../common/static_array.h"
 
 #if MXNET_USE_CUDA
 #include <thrust/device_vector.h>
@@ -28,22 +50,21 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   nnvm::Tuple<int> shape;
   bool reverse;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
-    int tmp[] = {0, 0};
     DMLC_DECLARE_FIELD(shape)
     .set_default(nnvm::Tuple<int>())
     .describe("The target shape");
+    DMLC_DECLARE_FIELD(reverse)
+    .set_default(false)
+    .describe("If true then the special values are inferred from right to left");
+    DMLC_DECLARE_FIELD(target_shape)
+    .set_default(TShape())
+    .describe("(Deprecated! Use ``shape`` instead.) "
+              "Target new shape. One and only one dim can be 0, "
+              "in which case it will be inferred from the rest of dims");
     DMLC_DECLARE_FIELD(keep_highest).set_default(false)
     .describe("(Deprecated! Use ``shape`` instead.) Whether keep the highest dim unchanged."
               "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
-    DMLC_DECLARE_FIELD(reverse)
-    .set_default(false)
-    .describe("If true then translating the input shape from right to left");
-    DMLC_DECLARE_FIELD(target_shape)
-    .set_default(TShape(tmp, tmp + 2))
-    .describe("(Deprecated! Use ``shape`` instead.) "
-              "Target new shape. One and only one dim can be 0, "
-              "in which case it will be inferred from the rest of dims");
   }
 };
 
@@ -53,8 +74,6 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_EQ(param_.target_shape.ndim() > 0 ||
-           param_.shape.ndim() > 0, true) << "targe_shape or shape must be present.";
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   if (param_.shape.ndim() != 0) {
@@ -138,9 +157,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
       << "Target shape size is different to source. "
       << "Target: " << oshape
       << "\nSource: " << dshape;
-    out_attrs->clear();
-    out_attrs->push_back(oshape);
-  } else {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  } else if (param_.target_shape.ndim()) {
     LOG(INFO) << "Using target_shape will be deprecated.";
     TShape oshape = param_.target_shape;
     int neg_count = 0;
@@ -164,8 +182,9 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
         << "Target shape size is different to source. "
         << "Target: " << param_.target_shape.Size()
         << "\nSource: " << dshape.Size();
-    out_attrs->clear();
-    out_attrs->push_back(oshape);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  } else {
+    return (*out_attrs)[0].ndim();
   }
   return true;
 }
@@ -177,12 +196,11 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
-  out_attrs->clear();
   uint32_t target_dim = 1;
   for (uint32_t i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }
-  out_attrs->push_back(mshadow::Shape2(dshape[0], target_dim));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(dshape[0], target_dim));
   return true;
 }
 
@@ -241,8 +259,14 @@ void TransposeImpl(RunContext ctx,
       out = transpose(in, axes.get<5>());
       break;
      }
+     case 6: {
+      Tensor<xpu, 6, DType> in = src.get<xpu, 6, DType>(s);
+      Tensor<xpu, 6, DType> out = ret.get<xpu, 6, DType>(s);
+      out = transpose(in, axes.get<6>());
+      break;
+     }
      default:
-      LOG(FATAL) << "Transpose support at most 5 dimensions";
+      LOG(FATAL) << "Transpose support at most 6 dimensions";
       break;
     }
   });
@@ -275,7 +299,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 5U) << "Transpose support at most 5 dimensions";
+  CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
   TShape ret(shp.ndim());
   if (param.axes.ndim() == 0) {
     for (index_t i = 0; i < shp.ndim(); ++i) {
@@ -283,8 +307,8 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK_EQ(shp.ndim(), param.axes.ndim());
-    for (index_t i = 0; i < shp.ndim(); ++i) {
-      CHECK(param.axes[i] < shp.ndim());
+    for (size_t i = 0; i < shp.ndim(); ++i) {
+      CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
       ret[i] = shp[param.axes[i]];
     }
   }
@@ -294,10 +318,12 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
 
 
 struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
-  index_t axis;
+  int axis;
   DMLC_DECLARE_PARAMETER(ExpandDimParam) {
     DMLC_DECLARE_FIELD(axis)
-    .describe("Position (amongst axes) where new axis is to be inserted.");
+    .describe("Position where new axis is to be inserted. Suppose that "
+              "the input `NDArray`'s dimension is `ndim`, the range of "
+              "the inserted axis is `[-ndim, ndim]`");
   }
 };
 
@@ -308,374 +334,54 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& shp = (*in_attrs)[0];
-  CHECK_LE(param.axis, shp.ndim())
-      << "axis exceeds the dimension of the array";
-  TShape ret(shp.ndim() + 1);
-  for (index_t i = 0; i < param.axis; ++i) ret[i] = shp[i];
-  ret[param.axis] = 1;
-  for (index_t i = param.axis+1; i < ret.ndim(); ++i) ret[i] = shp[i-1];
+  if (in_attrs->at(0).ndim() == 0U && out_attrs->at(0).ndim() == 0U) {
+    return false;
+  }
+
+  TShape& ishape = (*in_attrs)[0];
+  TShape& oshape = (*out_attrs)[0];
+  int indim = ishape.ndim();
+  bool unknown_ishape = false;
+  if (0 == indim) {
+    indim = oshape.ndim() - 1;
+    unknown_ishape = true;
+  }
+
+  int axis = param.axis;
+  if (axis < 0) {
+    axis += indim + 1;
+  }
+  CHECK(axis >= 0 && axis <= indim)
+      << "axis must be in the range [" << -indim << ", " << indim << "] ("
+      << param.axis << " provided)";
+  TShape ret(indim + 1);
+  for (int i = 0; i < axis; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i]);
+  }
+  ret[axis] = 1;
+  for (int i = axis+1; i < indim+1; ++i) {
+    ret[i] = (unknown_ishape? 0 : ishape[i-1]);
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
-  return true;
-}
 
-struct DotParam : public dmlc::Parameter<DotParam> {
-  bool transpose_a;
-  bool transpose_b;
-  DMLC_DECLARE_PARAMETER(DotParam) {
-    DMLC_DECLARE_FIELD(transpose_a)
-      .describe("If true then transpose the first input before dot.")
-      .set_default(false);
-    DMLC_DECLARE_FIELD(transpose_b)
-      .describe("If true then transpose the second input before dot.")
-      .set_default(false);
-  }
-};
-
-template<typename xpu>
-void DotForward_(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
-      << "Binary function only support input/output with the same type";
-  CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
-      << "Binary function only support input/output with the same type";
-  CHECK_EQ(outputs[0].type_flag_, kFloat32)
-      << "dot only support 32 bit float so far";
-
-  if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
-    CHECK_NE(req[0], kAddTo) << "AddTo not yet suported";
-    Tensor<xpu, 1, real_t> out = outputs[0].get<xpu, 1, real_t>(s);
-    VectorDot(out,
-              inputs[0].get<xpu, 1, real_t>(s),
-              inputs[1].get<xpu, 1, real_t>(s));
-  } else {
-    int ma, na, mb, nb, m, n;
-    if (param.transpose_a) {
-      ma = inputs[0].size(0);
-      na = inputs[0].Size()/ma;
-      m = na;
-    } else {
-      na = inputs[0].size(inputs[0].ndim()-1);
-      ma = inputs[0].Size()/na;
-      m = ma;
-    }
-    if (param.transpose_b) {
-      nb = inputs[1].size(inputs[1].ndim()-1);
-      mb = inputs[1].Size()/nb;
-      n = mb;
-    } else {
-      mb = inputs[1].size(0);
-      nb = inputs[1].Size()/mb;
-      n = nb;
-    }
-
-    Tensor<xpu, 2, real_t> input0 =
-      inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
-    Tensor<xpu, 2, real_t> input1 =
-      inputs[1].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
-    Tensor<xpu, 2, real_t> out =
-      outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(m, n), s);
-    if (param.transpose_a && param.transpose_b) {
-      ASSIGN_DISPATCH(out, req[0], dot(input0.T(), input1.T()));
-    } else if (!param.transpose_a && param.transpose_b) {
-      ASSIGN_DISPATCH(out, req[0], dot(input0, input1.T()));
-    } else if (param.transpose_a && !param.transpose_b) {
-      ASSIGN_DISPATCH(out, req[0], dot(input0.T(), input1));
-    } else {
-      ASSIGN_DISPATCH(out, req[0], dot(input0, input1));
-    }
-  }
-}
-
-template<typename xpu>
-void DotBackward_(const nnvm::NodeAttrs& attrs,
-                  const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_NE(req[0], kWriteInplace);
-  CHECK_NE(req[1], kWriteInplace);
-
-  if (inputs[1].ndim() == 1 && inputs[2].ndim() == 1) {
-    Tensor<xpu, 1, real_t> mout_grad = inputs[0].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1, real_t> mlhs_data = inputs[1].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1, real_t> mrhs_data = inputs[2].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1, real_t> mlhs_grad = outputs[0].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1, real_t> mrhs_grad = outputs[1].get<xpu, 1, real_t>(s);
-    ASSIGN_DISPATCH(mrhs_grad, req[1],
-                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mlhs_data);
-    ASSIGN_DISPATCH(mlhs_grad, req[0],
-                    broadcast_scalar(mout_grad, mlhs_data.shape_) * mrhs_data);
-  } else {
-    int ma, na, mb, nb, m, n;
-    if (param.transpose_a) {
-      ma = outputs[0].size(0);
-      na = outputs[0].Size()/ma;
-      m = na;
-    } else {
-      na = outputs[0].size(outputs[0].ndim()-1);
-      ma = outputs[0].Size()/na;
-      m = ma;
-    }
-    if (param.transpose_b) {
-      nb = outputs[1].size(outputs[1].ndim()-1);
-      mb = outputs[1].Size()/nb;
-      n = mb;
-    } else {
-      mb = outputs[1].size(0);
-      nb = outputs[1].Size()/mb;
-      n = nb;
-    }
-
-    Tensor<xpu, 2, real_t> mout_grad =
-      inputs[0].get_with_shape<xpu, 2, real_t>(Shape2(m, n), s);
-    Tensor<xpu, 2, real_t> mlhs_data =
-      inputs[1].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
-    Tensor<xpu, 2, real_t> mrhs_data =
-      inputs[2].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
-    Tensor<xpu, 2, real_t> mlhs_grad =
-      outputs[0].get_with_shape<xpu, 2, real_t>(Shape2(ma, na), s);
-    Tensor<xpu, 2, real_t> mrhs_grad =
-      outputs[1].get_with_shape<xpu, 2, real_t>(Shape2(mb, nb), s);
-    if (param.transpose_a && param.transpose_b) {
-      // Gradient of z = dot(x.T, y.T)
-      // dy = dot(x, dz).T = dot(dz.T, x.T)
-      // dx = dot(dz, y).T = dot(y.T, dz.T)
-      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mout_grad.T(), mlhs_data.T()));
-      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mrhs_data.T(), mout_grad.T()));
-    } else if (!param.transpose_a && param.transpose_b) {
-      // Gradient of z = dot(x, y.T)
-      // dy = dot(x.T, dz).T = dot(dz.T, x)
-      // dx = dot(dz, y)
-      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mout_grad.T(), mlhs_data));
-      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data));
-    } else if (param.transpose_a && !param.transpose_b) {
-      // Gradient of z = dot(x.T, y)
-      // dy = dot(x, dz)
-      // dx = dot(dz, y.T).T = dot(y, dz.T)
-      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data, mout_grad));
-      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mrhs_data, mout_grad.T()));
-    } else {
-      // Gradient of z = dot(x, y)
-      // dy = dot(x.T, dz)
-      // dx = dot(dz, y.T)
-      ASSIGN_DISPATCH(mrhs_grad, req[1], dot(mlhs_data.T(), mout_grad));
-      ASSIGN_DISPATCH(mlhs_grad, req[0], dot(mout_grad, mrhs_data.T()));
-    }
-  }
-}
-
-inline bool DotShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_attrs,
-                     std::vector<TShape> *out_attrs) {
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
-  if (lshape.ndim() == 1 && rshape.ndim() == 1) {
-    CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
-    CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
-  } else {
-    bool Ta = param.transpose_a, Tb = param.transpose_b;
-    TShape L[2], R[2];
-    if (Ta) {
-      L[0] = mshadow::Shape1(lshape[0]);
-      L[1] = lshape.ndim() > 1 ? TShape(&lshape[1], &lshape[lshape.ndim()]) : TShape(1);
-    } else {
-      L[0] = lshape.ndim() > 1 ? TShape(&lshape[0], &lshape[lshape.ndim()-1]) : TShape(1);
-      L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
-    }
-    if (Tb) {
-      R[0] = rshape.ndim() > 1 ? TShape(&rshape[0], &rshape[rshape.ndim()-1]) : TShape(1);
-      R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
-    } else {
-      R[0] = mshadow::Shape1(rshape[0]);
-      R[1] = rshape.ndim() > 1 ? TShape(&rshape[1], &rshape[rshape.ndim()]) : TShape(1);
-    }
-
-    if (L[!Ta].Size() != 0 && R[Tb].Size() != 0) {
-      CHECK_EQ(L[!Ta].Size(), R[Tb].Size())
-        << "dot shape error: " << lshape << " X " << rshape;
-    }
-    std::vector<index_t> buf;
-    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
-    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
-    TShape oshape(buf.begin(), buf.end());
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  }
-  return true;
-}
-
-template<typename xpu>
-void BatchDotForward_(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
-      << "Binary function only support input/output with the same type";
-  CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
-      << "Binary function only support input/output with the same type";
-  CHECK_EQ(outputs[0].type_flag_, mshadow::kFloat32)
-      << "dot only support 32 bit float so far";
-
-  mshadow::Tensor<xpu, 3, real_t> out = outputs[0].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3, real_t> mlhs = inputs[0].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3, real_t> mrhs = inputs[1].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 1, real_t*> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, real_t*>(mshadow::Shape1(3 * out.size(0)), s);
-  if (kNullOp != req[0]) {
-    if (param.transpose_a && param.transpose_b) {
-      mshadow::BatchGEMM<true, true>(out, mlhs, mrhs, 1.0f,
-                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                     workspace);
-    } else if (!param.transpose_a && param.transpose_b) {
-      mshadow::BatchGEMM<false, true>(out, mlhs, mrhs, 1.0f,
-                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                     workspace);
-    } else if (param.transpose_a && !param.transpose_b) {
-      mshadow::BatchGEMM<true, false>(out, mlhs, mrhs, 1.0f,
-                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                     workspace);
-    } else {
-      mshadow::BatchGEMM<false, false>(out, mlhs, mrhs, 1.0f,
-                                     (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                     workspace);
-    }
-  }
-}
-
-template<typename xpu>
-void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_NE(req[1], kWriteInplace);
-  CHECK_NE(req[0], kWriteInplace);
-
-  mshadow::Tensor<xpu, 3, real_t> mout_grad = inputs[0].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3, real_t> mlhs_data = inputs[1].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3, real_t> mrhs_data = inputs[2].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3, real_t> mlhs_grad = outputs[0].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 3, real_t> mrhs_grad = outputs[1].get<xpu, 3, real_t>(s);
-  mshadow::Tensor<xpu, 2, real_t*> workspace =
-    ctx.requested[0].get_space_typed<xpu, 2, real_t*>(
-      mshadow::Shape2(2, 3 * mout_grad.size(0)), s);
-  mshadow::Tensor<xpu, 1, real_t*> rhs_workspace = workspace[0];
-  mshadow::Tensor<xpu, 1, real_t*> lhs_workspace = workspace[1];
-  if (param.transpose_a && param.transpose_b) {
-    // Gradient of z = dot(x.T, y.T)
-    // dy = dot(x, dz).T = dot(dz.T, x.T)
-    // dx = dot(dz, y).T = dot(y.T, dz.T)
-    if (kNullOp != req[1]) {
-      mshadow::BatchGEMM<true, true>(mrhs_grad, mout_grad, mlhs_data, 1.0f,
-                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
-                                      rhs_workspace);
-    }
-    if (kNullOp != req[0]) {
-      mshadow::BatchGEMM<true, true>(mlhs_grad, mrhs_data, mout_grad, 1.0f,
-                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                      lhs_workspace);
-    }
-  } else if (!param.transpose_a && param.transpose_b) {
-    // Gradient of z = dot(x, y.T)
-    // dy = dot(x.T, dz).T = dot(dz.T, x)
-    // dx = dot(dz, y)
-    if (kNullOp != req[1]) {
-      mshadow::BatchGEMM<true, false>(mrhs_grad, mout_grad, mlhs_data, 1.0f,
-                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
-                                      rhs_workspace);
-    }
-    if (kNullOp != req[0]) {
-      mshadow::BatchGEMM<false, false>(mlhs_grad, mout_grad, mrhs_data, 1.0f,
-                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                      lhs_workspace);
-    }
-  } else if (param.transpose_a && !param.transpose_b) {
-    // Gradient of z = dot(x.T, y)
-    // dy = dot(x, dz)
-    // dx = dot(dz, y.T).T = dot(y, dz.T)
-    if (kNullOp != req[1]) {
-      mshadow::BatchGEMM<false, false>(mrhs_grad, mlhs_data, mout_grad, 1.0f,
-                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
-                                      rhs_workspace);
-    }
-    if (kNullOp != req[0]) {
-      mshadow::BatchGEMM<false, true>(mlhs_grad, mrhs_data, mout_grad, 1.0f,
-                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                      lhs_workspace);
-    }
-  } else {
-    // Gradient of z = dot(x, y)
-    // dy = dot(x.T, dz)
-    // dx = dot(dz, y.T)
-    if (kNullOp != req[1]) {
-      mshadow::BatchGEMM<true, false>(mrhs_grad, mlhs_data, mout_grad, 1.0f,
-                                      (kAddTo == req[1]) ? 1.0f : 0.0f,
-                                      rhs_workspace);
-    }
-    if (kNullOp != req[0]) {
-      mshadow::BatchGEMM<false, true>(mlhs_grad, mout_grad, mrhs_data, 1.0f,
-                                      (kAddTo == req[0]) ? 1.0f : 0.0f,
-                                      lhs_workspace);
-    }
-  }
-}
-
-inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
-  if (lshape.ndim() == 3 && rshape.ndim() == 3) {
-    CHECK(lshape[0] == rshape[0])
-      << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape
-      << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
-    index_t out_m = param.transpose_a ? lshape[2] : lshape[1];
-    index_t lshape_k = param.transpose_a ? lshape[1] : lshape[2];
-    index_t out_n = param.transpose_b ? rshape[1] : rshape[2];
-    index_t rshape_k = param.transpose_b ? rshape[2] : rshape[1];
-    CHECK(lshape_k == rshape_k)
-      << "batch_dot shape error(shape mismatch): " << lshape << " X " << rshape
-      << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape3(lshape[0], out_m, out_n));
-  } else {
-    LOG(FATAL) << "batch_dot currently only support 3D*3D array"
-               << lshape << " v.s. " << rshape;
-  }
+  ret = TShape(indim);
+  for (int i = 0; i < axis; ++i) ret[i] = oshape[i];
+  for (int i = axis+1; i < indim+1; ++i) ret[i-1] = oshape[i];
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, ret);
   return true;
 }
 
 struct SliceParam : public dmlc::Parameter<SliceParam> {
-  nnvm::Tuple<dmlc::optional<int> > begin, end;
+  nnvm::Tuple<dmlc::optional<int>> begin, end;
+  nnvm::Tuple<dmlc::optional<int>> step;
   DMLC_DECLARE_PARAMETER(SliceParam) {
     DMLC_DECLARE_FIELD(begin)
-    .describe("starting coordinates");
+    .describe("starting indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(end)
-    .describe("ending coordinates");
+    .describe("ending indices for the slice operation, supports negative indices.");
+    DMLC_DECLARE_FIELD(step)
+    .set_default(nnvm::Tuple<dmlc::optional<int>>())
+    .describe("step for the slice operation, supports negative values.");
   }
 };
 
@@ -684,9 +390,11 @@ inline TShape GetSliceShape(const SliceParam& param, const TShape& dshape) {
     << "Slicing axis exceeds data dimensions";
   CHECK_LE(param.end.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
+  CHECK_EQ(param.begin.ndim(), param.end.ndim())
+    << "begin and end must have the same length";
 
-  TShape oshape(dshape.ndim());
-  for (index_t i = 0; i < dshape.ndim(); ++i) {
+  TShape oshape = dshape;
+  for (index_t i = 0; i < param.begin.ndim(); ++i) {
     int s = 0, e = dshape[i];
     if (e != 0) {
       if (param.begin[i]) {
@@ -712,78 +420,487 @@ inline TShape GetSliceShape(const SliceParam& param, const TShape& dshape) {
   return oshape;
 }
 
-inline bool SliceShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
-  const TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0) return false;
+inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, GetSliceShape(param, dshape));
+  const auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
+  // If step = 1, no need to fallback; otherwise fallback to dense
+  bool trivial_step = false;
+  if (param.step.ndim() == 0U) {
+    trivial_step = true;
+  } else if (param.step.ndim() == 1U
+      && (!param.step[0].has_value() || param.step[0].value() == 1)) {
+    trivial_step = true;
+  }
+  if (!dispatched && in_stype == kDefaultStorage) {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+
+  if (!dispatched && in_stype == kCSRStorage && trivial_step) {
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+
   return true;
 }
 
-// matrix crop for multi dimensional cropping: see also slice
-template<typename xpu>
-void Slice(const nnvm::NodeAttrs& attrs,
-          const OpContext& ctx,
-          const std::vector<TBlob>& inputs,
-          const std::vector<OpReqType>& req,
-          const std::vector<TBlob>& outputs) {
+// slice the indptr of a csr
+struct SliceCsrIndPtr {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* out, const IType* in, const IType* base) {
+    KERNEL_ASSIGN(out[i], kWriteTo, in[i] - *base);
+  }
+};
+
+/*
+ * a wrapper to launch SliceCsrIndPtr kernel.
+ * slice [src[begin] .. src[end]) and store in dst[0, end - begin)
+ */
+template<typename xpu, typename IType>
+void SliceCsrIndPtrImpl(const int begin, const int end, RunContext ctx,
+                        const IType* src, IType* dst) {
   using namespace mshadow;
-  using namespace mshadow::expr;
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  index_t N = inputs[0].ndim();
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  int indptr_len = end - begin + 1;
+  Kernel<SliceCsrIndPtr, xpu>::Launch(s, indptr_len, dst, src + begin, src + begin);
+}
+
+/*
+ * Slice a CSR NDArray for first dimension
+ * Only implemented for CPU
+ */
+template<typename xpu>
+void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
+                        const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  CHECK((std::is_same<xpu, cpu>::value)) << "SliceDimOneCsrImpl is only implemented for CPU";
+  nnvm::dim_t begin_row = begin[0];
+  nnvm::dim_t end_row = end[0];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        SliceCsrIndPtrImpl<cpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
+
+        // retrieve nnz (CPU implementation)
+        int nnz = out_indptr[indptr_len - 1];
+        // return csr zeros if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        // copy indices and values
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType* in_data = in.data().dptr<DType>();
+        DType* out_data = out.data().dptr<DType>();
+        int offset = in_indptr[begin_row];
+        // this is also a CPU-only implementation
+        memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
+        memcpy(out_data, in_data + offset, nnz * sizeof(DType));
+      });
+    });
+  });
+}
+
+/*!
+ * \brief slice a CSRNDArray for two dimensions
+ */
+struct SliceDimTwoCsrAssign {
+  /*!
+   * \brief This function slices a CSRNDArray on axis one between begin_col and end_col
+   * \param i           loop index
+   * \param out_idx     output csr ndarray column indices    
+   * \param out_data    output csr ndarray data
+   * \param out_indptr  output csr ndarray row index pointer
+   * \param in_idx      input csr ndarray column indices
+   * \param in_data     input csr ndarray data
+   * \param in_indptr   input csr ndarray row index pointer
+   * \param begin_col   begin column indice
+   * \param end_col     end column indice
+   */
+  template<typename IType, typename RType, typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  IType* out_idx, DType* out_data,
+                                  const RType* out_indptr,
+                                  const IType* in_idx, const DType* in_data,
+                                  const RType* in_indptr,
+                                  const int begin_col, const int end_col) {
+    RType ind = out_indptr[i];
+    for (RType j = in_indptr[i]; j < in_indptr[i+1]; j++) {
+      // indices of CSRNDArray are in ascending order per row
+      if (in_idx[j] >= end_col) {
+        break;
+      } else if (in_idx[j] >= begin_col) {
+        out_idx[ind] = in_idx[j] - begin_col;
+        out_data[ind] = in_data[j];
+        ind++;
+      }
+    }
+  }
+};
+
+/*
+ * Slice a CSR NDArray for two dimensions
+ * Only implemented for CPU
+ */
+template<typename xpu>
+void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
+                        const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  CHECK((std::is_same<xpu, cpu>::value)) << "SliceDimTwoCsrImpl is only implemented for CPU";
+  nnvm::dim_t begin_row = begin[0], end_row = end[0];
+  nnvm::dim_t begin_col = begin[1], end_col = end[1];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
+        // retrieve nnz (CPU implementation)
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        int nnz = 0;
+        out_indptr[0] = 0;
+        // loop through indptr array and corresponding indices to count for nnz
+        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
+          out_indptr[i+1] = out_indptr[i];
+          for (RType j = in_indptr[i + begin_row];
+               j < in_indptr[i + begin_row + 1]; j++) {
+            // indices of CSRNDArray are in ascending order per row
+            if (in_idx[j] >= end_col) {
+              break;
+            } else if (in_idx[j] >= begin_col) {
+              out_indptr[i+1]++;
+              nnz++;
+            }
+          }
+        }
+        // returns zeros in csr format if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Kernel<SliceDimTwoCsrAssign, xpu>::Launch(s, indptr_len - 1, out_idx, out_data,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
+                                                  begin_col, end_col);
+      });
+    });
+  });
+}
+
+
+template<typename xpu>
+void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
+                  const NDArray &in, OpReqType req, const NDArray &out) {
+  CHECK((std::is_same<xpu, cpu>::value)) << "Slice for CSR input only implemented for CPU";
+  if (req == kNullOp) return;
+  CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
+  CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
+
+  const TShape ishape = in.shape();
+  const TShape oshape = out.shape();
+
+  uint32_t N = ishape.ndim();
   TShape begin(N), end(N);
-  for (index_t i = 0; i < N; ++i) {
+  for (uint32_t i = 0; i < N; ++i) {
     int s = 0;
     if (param.begin[i]) {
       s = *param.begin[i];
-      if (s < 0) s += inputs[0].size(i);
+      if (s < 0) s += ishape[i];
     }
     begin[i] = s;
-    end[i] = s + outputs[0].size(i);
+    end[i] = s + oshape[i];
   }
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    switch (inputs[0].ndim()) {
-     case 0:
-      break;
-     case 1: {
-      Tensor<xpu, 1, DType> in = inputs[0].get<xpu, 1, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-      out = slice(in, begin.get<1>(), end.get<1>());
-      break;
-     }
-     case 2: {
-      Tensor<xpu, 2, DType> in = inputs[0].get<xpu, 2, DType>(s);
-      Tensor<xpu, 2, DType> out = outputs[0].get<xpu, 2, DType>(s);
-      out = slice(in, begin.get<2>(), end.get<2>());
-      break;
-     }
-     case 3: {
-      Tensor<xpu, 3, DType> in = inputs[0].get<xpu, 3, DType>(s);
-      Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-      out = slice(in, begin.get<3>(), end.get<3>());
-      break;
-     }
-     case 4: {
-      Tensor<xpu, 4, DType> in = inputs[0].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out = outputs[0].get<xpu, 4, DType>(s);
-      out = slice(in, begin.get<4>(), end.get<4>());
-      break;
-     }
-     case 5: {
-      Tensor<xpu, 5, DType> in = inputs[0].get<xpu, 5, DType>(s);
-      Tensor<xpu, 5, DType> out = outputs[0].get<xpu, 5, DType>(s);
-      out = slice(in, begin.get<5>(), end.get<5>());
-      break;
-     }
-     default:
-      LOG(FATAL) << "crop supports at most 5 dimensions";
+  switch (N) {
+    case 1: {
+      SliceDimOneCsrImpl<xpu>(begin, end, ctx, in, out);
       break;
     }
+    case 2: {
+      SliceDimTwoCsrImpl<xpu>(begin, end, ctx, in, out);
+      break;
+    }
+    default:
+      LOG(FATAL) << "CSR is only for 2-D shape";
+      break;
+  }
+}
+
+template<typename xpu>
+void SliceEx(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<NDArray>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  auto in_stype = inputs[0].storage_type();
+  if (in_stype == kCSRStorage) {
+    SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+  } else {
+    LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
+  }
+}
+
+template<int ndim>
+inline void GetIndexRange(const SliceParam& param,
+                          const TShape& dshape,
+                          common::StaticArray<int, ndim>* begin,
+                          common::StaticArray<int, ndim>* end,
+                          common::StaticArray<int, ndim>* step) {
+  CHECK_NE(dshape.ndim(), 0U);
+  CHECK_NE(dshape.Size(), 0U);
+  CHECK_LE(param.begin.ndim(), dshape.ndim())
+    << "Slicing axis exceeds data dimensions";
+  CHECK_LE(param.end.ndim(), dshape.ndim())
+    << "Slicing axis exceeds data dimensions";
+  CHECK_EQ(param.begin.ndim(), param.end.ndim())
+    << "begin and end must have the same length";
+  CHECK_EQ(ndim, dshape.ndim())
+    << "Static array size=" << ndim
+    << " is not equal to data shape ndim=" << dshape.ndim();
+
+  if (param.step.ndim() != 0U) {
+    CHECK_EQ(param.step.ndim(), param.begin.ndim())
+      << "step and begin must have the same length";
+  }
+
+  for (index_t i = 0; i < param.begin.ndim(); ++i) {
+    int b = 0, e = dshape[i], s = 1;
+    const int len = dshape[i];
+    if (param.step.ndim() != 0U) {
+      const auto& opt_step_val = param.step[i];
+      if (opt_step_val.has_value()) {
+        s = opt_step_val.value();
+        CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
+      }
+    }
+
+    if (param.begin[i].has_value()) {
+      b = param.begin[i].value();
+      if (b < 0) {
+        b += len;
+        CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
+                       << b - len << " exceeds limit of " << len;
+      }
+    } else if (s < 0) {
+      b = len - 1;
+    }
+    CHECK_LT(b, len) << "slicing with begin[" << i << "]="
+                     << b << " exceends limit of " << len;
+
+    if (param.end[i].has_value()) {
+      e = param.end[i].value();
+      if (e < 0) {
+        e += len;
+        CHECK_GE(e, 0) << "slicing with end[" << i << "]="
+                       << e - len << " exceeds limit of " << len;
+      }
+    } else if (s < 0) {
+      e = -1;
+    }
+    CHECK_LE(e, len) << "slicing with end[" << i << "]="
+                     << e << " exceeds limit of " << len;
+
+    (*begin)[i] = b;
+    (*end)[i] = e;
+    (*step)[i] = s;
+  }
+  for (index_t i = param.begin.ndim(); i < dshape.ndim(); ++i) {
+    (*begin)[i] = 0;
+    (*end)[i] = dshape[i];
+    (*step)[i] = 1;
+  }
+}
+
+inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape>* in_attrs,
+                         std::vector<TShape>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const TShape& dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0 || dshape.Size() == 0) return false;
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  TShape oshape = dshape;
+  MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(param, dshape, &begin, &end, &step);
+
+    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+      const int b = begin[i], e = end[i], s = step[i];
+      if (s > 0) {
+        CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                       << e << ", and step[" << i << "]=" << s << " is invalid";
+        oshape[i] = (e - b - 1) / s + 1;
+      } else {
+        CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                       << e << ", and step[" << i << "]=" << s << " is invalid";
+        oshape[i] = (b - e - 1) / (-s) + 1;
+      }
+    }
   });
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return oshape.ndim() != 0 && oshape.Size() != 0;
+}
+
+template<int ndim>
+struct slice_forward {
+  // i is the i-th row after flattening out into 2D tensor
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data,
+                                  const OpReqType req,
+                                  const mshadow::Shape<ndim> dshape,
+                                  const mshadow::Shape<ndim> oshape,
+                                  const common::StaticArray<int, ndim> begin,
+                                  const common::StaticArray<int, ndim> step) {
+    const int data_last_dim_size = dshape[ndim-1];
+    const int out_last_dim_size = oshape[ndim-1];
+    const int step_last_dim = step[ndim-1];
+    const int begin_last_dim = begin[ndim-1];
+    int out_offset = i * out_last_dim_size;
+    for (int j = 0; j < out_last_dim_size; ++j) {
+      int irow = 0;  // row id of flattend 2D data
+      int stride = 1;
+      int idx = i;
+      #pragma unroll
+      for (int k = ndim - 2; k >= 0; --k) {
+        irow += stride * ((idx % oshape[k]) * step[k] + begin[k]);
+        idx /= oshape[k];
+        stride *= dshape[k];
+      }
+      KERNEL_ASSIGN(out[out_offset++], req,
+                    data[irow * data_last_dim_size + j * step_last_dim + begin_last_dim]);
+    }
+  }
+};
+
+template<typename xpu>
+void SliceOpForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  using namespace mshadow;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob& data = inputs[0];
+  const TBlob& out = outputs[0];
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  MXNET_NDIM_SWITCH(data.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(param, data.shape_, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+      mxnet_op::Kernel<slice_forward<ndim>, xpu>::Launch(s, out.shape_.FlatTo2D()[0],
+          out.dptr<DType>(), data.dptr<DType>(), req[0],
+          data.shape_.get<ndim>(), out.shape_.get<ndim>(), begin, step);
+    })
+  })
+}
+
+template<int ndim>
+struct slice_backward {
+  // i is the i-th row after flattening out into 2D tensor
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* igrad, const DType* ograd,
+                                  const OpReqType req,
+                                  const mshadow::Shape<ndim> dshape,
+                                  const mshadow::Shape<ndim> oshape,
+                                  const common::StaticArray<int, ndim> begin,
+                                  const common::StaticArray<int, ndim> step) {
+    const int data_last_dim_size = dshape[ndim-1];
+    const int out_last_dim_size = oshape[ndim-1];
+    const int step_last_dim = step[ndim-1];
+    const int begin_last_dim = begin[ndim-1];
+    int ograd_offset = i * out_last_dim_size;
+    for (int j = 0; j < out_last_dim_size; ++j) {
+      int irow = 0;  // row id of flattend 2D igrad
+      int stride = 1;
+      int idx = i;
+      #pragma unroll
+      for (int k = ndim - 2; k >= 0; --k) {
+        irow += stride * ((idx % oshape[k]) * step[k] + begin[k]);
+        idx /= oshape[k];
+        stride *= dshape[k];
+      }
+      KERNEL_ASSIGN(igrad[irow * data_last_dim_size + j * step_last_dim + begin_last_dim],
+                    req, ograd[ograd_offset++]);
+    }
+  }
+};
+
+template<typename xpu>
+void SliceOpBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  using namespace mshadow;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob& ograd = inputs[0];
+  const TBlob& igrad = outputs[0];
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  if (req[0] == kWriteTo) {
+    Fill(s, igrad, req[0], 0);
+  } else if (req[0] == kWriteInplace) {
+    LOG(FATAL) << "_slice_backward does not support kWriteInplace";
+  }
+  MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(param, igrad.shape_, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+      mxnet_op::Kernel<slice_backward<ndim>, xpu>::Launch(s, ograd.shape_.FlatTo2D()[0],
+          igrad.dptr<DType>(), ograd.dptr<DType>(), req[0],
+          igrad.shape_.get<ndim>(), ograd.shape_.get<ndim>(), begin, step);
+    })
+  })
 }
 
 inline bool SliceAssignShape(const nnvm::NodeAttrs& attrs,
@@ -880,32 +997,6 @@ void SliceAssign(const nnvm::NodeAttrs& attrs,
   }
 
   SliceAssignImpl<xpu>(s, param, outputs[0], inputs[1]);
-}
-
-template<typename xpu>
-void SliceBackward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  if (req[0] == kNullOp) {
-    return;
-  } else if (req[0] == kWriteTo) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      out = DType(0);
-    });
-  } else {
-    LOG(FATAL) << "CropAssign only supports kWriteTo";
-  }
-
-  SliceAssignImpl<xpu>(s, param, outputs[0], inputs[0]);
 }
 
 struct SimpleCropAssignScalarParam : public dmlc::Parameter<SimpleCropAssignScalarParam> {
@@ -1005,15 +1096,13 @@ struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
   dmlc::optional<int> end;
   DMLC_DECLARE_PARAMETER(SliceAxisParam) {
     DMLC_DECLARE_FIELD(axis)
-      .describe("The axis to be sliced."
-                " Negative axis means to count from the last to the first axis.");
+      .describe("Axis along which to be sliced, supports negative indexes.");
     DMLC_DECLARE_FIELD(begin)
-      .describe("The beginning index to be sliced."
-                " Negative values are interpreted as counting from the backward.");
+      .describe("The beginning index along the axis to be sliced, "
+                " supports negative indexes.");
     DMLC_DECLARE_FIELD(end)
-      .describe("The end index to be sliced."
-                " The end can be None, in which case all the rest elements are used."
-                " Also, negative values are interpreted as counting from the backward.");
+      .describe("The ending index along the axis to be sliced, "
+                " supports negative indexes.");
   }
 };
 
@@ -1198,15 +1287,27 @@ void Clip(const nnvm::NodeAttrs& attrs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  using namespace mxnet_op;
   const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
   CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-    inputs[0].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+    mxnet_op::Kernel<mxnet::op::clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                                   inputs[0].dptr<DType>(),
+                                                   DType(param.a_min), DType(param.a_max));
   });
+}
+
+template<typename xpu>
+void ClipEx(const nnvm::NodeAttrs& attrs,
+            const OpContext& ctx,
+            const std::vector<NDArray>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs[0].dtype(), outputs[0].dtype());
+  CHECK_EQ(inputs[0].storage_type(), outputs[0].storage_type());
+  CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
+  UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Clip<xpu>);
 }
 
 template<typename xpu>
@@ -1385,15 +1486,16 @@ void RepeatOpForward(const nnvm::NodeAttrs& attrs,
   GetRepeatParams(param, ishape, &repeats, &axisOpt);
   if (0 == repeats) return;
 
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForRepeatOp(ishape, axisOpt, repeats);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1431,11 +1533,13 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
     ReshapeInputOutputForRepeatOp(oshape, axisOpt, repeats);
 
   // reshaped output grad tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   // reshaped input grad tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
@@ -1565,10 +1669,12 @@ void TileOpForward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(ishape, reps);
 
   // reshaped input tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.first, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
   // reshaped output tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.second, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
 
   BroadcastCompute<xpu>(attrs, ctx, newInputs, req, newOutputs);
@@ -1605,10 +1711,12 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   std::pair<TShape, TShape> rshapes = ReshapeInputOutputForTileOp(oshape, reps);
 
   // reshaped output grad tblob
-  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask_, outputs[0].type_flag_);
+  TBlob oblob(outputs[0].dptr_, rshapes.first, outputs[0].dev_mask(),
+    outputs[0].type_flag_, outputs[0].dev_id());
   std::vector<TBlob> newOutputs = {oblob};
   // reshaped input grad tblob
-  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask_, inputs[0].type_flag_);
+  TBlob iblob(inputs[0].dptr_, rshapes.second, inputs[0].dev_mask(),
+    inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
@@ -1690,7 +1798,7 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
     CHECK_LT(*axis_iter, static_cast<int>(ishape.ndim()));
     stride_[reverse_index] = ishape[*axis_iter];
     trailing_[reverse_index] = 1;
-    for (int i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
+    for (index_t i2 = *axis_iter + 1; i2 < ishape.ndim(); ++i2) {
       trailing_[reverse_index] *= ishape[i2];
     }
     reverse_index++;
@@ -1726,6 +1834,114 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
     stride_.data(), trailing_.data());
   });
 #endif
+}
+
+
+struct StackParam : public dmlc::Parameter<StackParam> {
+  int axis;
+  int num_args;
+  DMLC_DECLARE_PARAMETER(StackParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .set_default(0)
+    .describe("The axis in the result array along which the input arrays are stacked.");
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of inputs to be stacked.");
+  }
+};
+
+
+inline bool StackOpShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+
+  TShape dshape;
+  for (const TShape& i : (*in_attrs)) {
+    shape_assign(&dshape, i);
+  }
+  if (dshape.ndim() == 0) return false;
+
+  TShape oshape(dshape.ndim() + 1);
+  int axis = CheckAxis(param.axis, oshape.ndim());
+  for (int i = 0; i < axis; ++i) {
+    oshape[i] = dshape[i];
+  }
+  oshape[axis] = param.num_args;
+  for (index_t i = axis + 1; i < oshape.ndim(); ++i) {
+    oshape[i] = dshape[i-1];
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+
+  return true;
+}
+
+
+template<typename xpu>
+void StackOpForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+  int axis = CheckAxis(param.axis, outputs[0].ndim());
+
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    std::vector<Tensor<xpu, 3, DType> > data(inputs.size());
+    Tensor<xpu, 3, DType> out;
+    size_t leading = 1, trailing = 1;
+    for (int i = 0; i < axis; ++i) {
+      leading *= outputs[0].shape_[i];
+    }
+    for (int i = axis + 1; i < outputs[0].ndim(); ++i) {
+      trailing *= outputs[0].shape_[i];
+    }
+    size_t mid = outputs[0].shape_[axis];
+    Shape<3> oshape = Shape3(leading, mid, trailing);
+    out = outputs[0].get_with_shape<xpu, 3, DType>(oshape, s);
+
+    for (index_t i = 0; i < inputs.size(); ++i) {
+      Shape<3> dshape = Shape3(leading, 1, trailing);
+      data[i] = inputs[i].get_with_shape<xpu, 3, DType>(dshape, s);
+    }
+    Concatenate(data, &out, 1, req[0]);
+  })
+}
+
+template<typename xpu>
+void StackOpBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+  int axis = CheckAxis(param.axis, inputs[0].ndim());
+
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    std::vector<Tensor<xpu, 3, DType> > grad_in(outputs.size());
+    Tensor<xpu, 3, DType> grad;
+    size_t leading = 1, trailing = 1;
+    for (int i = 0; i < axis; ++i) {
+      leading *= inputs[0].shape_[i];
+    }
+    for (int i = axis + 1; i < inputs[0].ndim(); ++i) {
+      trailing *= inputs[0].shape_[i];
+    }
+    size_t mid = inputs[0].shape_[axis];
+    Shape<3> oshape = Shape3(leading, mid, trailing);
+    grad = inputs[0].get_with_shape<xpu, 3, DType>(oshape, s);
+
+    for (index_t i = 0; i < outputs.size(); ++i) {
+      Shape<3> dshape = Shape3(leading, 1, trailing);
+      grad_in[i] = outputs[i].get_with_shape<xpu, 3, DType>(dshape, s);
+    }
+    Split(grad, &grad_in, 1, req);
+  })
 }
 
 

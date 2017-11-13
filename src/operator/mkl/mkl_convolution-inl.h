@@ -306,12 +306,8 @@ class MKLConvolutionOp : public Operator {
         fwd_bias_data->get_converted_prv(bias.dptr_, true, in_data[conv::kBias]);
     }
 
-    std::shared_ptr<MKLMemHolder> top_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-    top_mem = out_data[conv::kOut].Mkl_mem_;
-#endif
     res_convolutionFwd[dnnResourceDst] = fwd_top_data->get_output_ptr(out_ptr,
-      fwd_top_data, top_mem);
+      fwd_top_data, out_data[conv::kOut]);
     status = dnnExecute<DType>(convolutionFwd, res_convolutionFwd);
     CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
 #if MKL_EXPERIMENTAL == 0
@@ -388,12 +384,8 @@ class MKLConvolutionOp : public Operator {
        AddToModeAllocAndStoreBuffer(gdata.dptr_, in_grad[conv::kData].Size(), &addtoWorkspace);
      }
 
-     std::shared_ptr<MKLMemHolder> bottom_diff_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-     bottom_diff_mem = in_grad[conv::kData].Mkl_mem_;
-#endif
      res_convolutionBwdData[dnnResourceDiffSrc] = bwdd_bottom_diff->get_output_ptr(gdata.dptr_,
-       bwdd_bottom_diff, bottom_diff_mem);
+       bwdd_bottom_diff, in_grad[conv::kData]);
      status = dnnExecute<DType>(convolutionBwdData, res_convolutionBwdData);
      CHECK_EQ(status, 0) << "Backward Data conv failed with status " << status;
 #if MKL_EXPERIMENTAL == 0
@@ -423,12 +415,8 @@ class MKLConvolutionOp : public Operator {
        AddToModeAllocAndStoreBuffer(gwmat.dptr_, in_grad[conv::kWeight].Size(), &addtoWorkspace);
      }
 
-     std::shared_ptr<MKLMemHolder> gwamt_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-     gwamt_mem = in_grad[conv::kWeight].Mkl_mem_;
-#endif
      res_convolutionBwdFilter[dnnResourceDiffFilter] = bwdf_filter_diff->get_output_ptr(
-       gwmat.dptr_, bwdf_filter_diff, gwamt_mem);
+       gwmat.dptr_, bwdf_filter_diff, in_grad[conv::kWeight]);
      status = dnnExecute<DType>(convolutionBwdFilter, res_convolutionBwdFilter);
      CHECK_EQ(status, 0) << "Backward Filter conv failed with status " << status;
 #if MKL_EXPERIMENTAL == 0
@@ -450,12 +438,8 @@ class MKLConvolutionOp : public Operator {
       res_convolutionBwdBias[dnnResourceDiffDst] =
         bwdb_top_diff->get_converted_prv(grad.dptr_, true, out_grad[conv::kOut]);
 
-      std::shared_ptr<MKLMemHolder> gbias_mem = NULL;
-#if MKL_EXPERIMENTAL == 1
-      gbias_mem = in_grad[conv::kBias].Mkl_mem_;
-#endif
       res_convolutionBwdBias[dnnResourceDiffBias] = bwdb_bias_diff->get_output_ptr(gbias.dptr_,
-        bwdb_bias_diff, gbias_mem);
+        bwdb_bias_diff, in_grad[conv::kBias]);
       status = dnnExecute<DType>(convolutionBwdBias, res_convolutionBwdBias);
       CHECK_EQ(status, 0) << "Backward Bias failed with status " << status;
 #if MKL_EXPERIMENTAL == 0

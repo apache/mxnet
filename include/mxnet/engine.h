@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file engine.h
  * \brief Engine that schedules all the operations according to dependency.
  */
@@ -66,7 +84,9 @@ enum class FnProperty {
   /*! \brief Prioritized sync operation on CPU */
   kCPUPrioritized,
   /*! \brief Asynchronous function call */
-  kAsync
+  kAsync,
+  /*! \brief Delete variable call */
+  kDeleteVar
 };  // enum class FnProperty
 
 /*!
@@ -225,6 +245,27 @@ class MXNET_API Engine {
     ret.engine_ = this;
     ret.param_ = param;
     return ret;
+  }
+  // For each var vector, sort it and remove the duplicated vars.
+  // Also remove vars from read_vars if it also appears in write_vars
+  inline void DeduplicateVarHandle(std::vector<engine::VarHandle> *read_vars,
+                                   std::vector<engine::VarHandle> *write_vars) {
+    std::sort(write_vars->begin(), write_vars->end());
+    write_vars->resize(std::unique(write_vars->begin(), write_vars->end()) -
+                      write_vars->begin());
+    std::sort(read_vars->begin(), read_vars->end());
+    read_vars->resize(std::unique(read_vars->begin(), read_vars->end()) -
+                      read_vars->begin());
+    auto wit = write_vars->begin();
+    auto rtop = read_vars->begin();
+    for (auto rit = read_vars->begin(); rit != read_vars->end(); ++rit) {
+      while (wit != write_vars->end() && *wit < *rit) ++wit;
+      if (wit == write_vars->end() || *wit != *rit) {
+        *rtop = *rit;
+        ++rtop;
+      }
+    }
+    read_vars->resize(rtop - read_vars->begin());
   }
 };  // class Engine
 #endif  // DMLC_USE_CXX11

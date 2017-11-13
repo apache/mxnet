@@ -56,8 +56,12 @@ struct MKLMemHolder {
   SyncedHead head_;
   std::shared_ptr<PrvMemDescr> prv_descriptor_;
   bool  b_disable_prv_2_cpu;
+  bool  b_eager_mode;
   void disable_prv_2_cpu(bool flag) {
     b_disable_prv_2_cpu = flag;
+  }
+  void set_eager_mode(bool eager_mode) {
+    b_eager_mode = eager_mode;
   }
   void set_prv_descriptor(std::shared_ptr<PrvMemDescr> descriptor, bool same_data = false) {
     head_ = HEAD_AT_PRV;
@@ -105,10 +109,8 @@ struct MKLMemHolder {
     }
   }
   MKLMemHolder() :
-    head_(HEAD_AT_CPU) {
-    prv_descriptor_ = NULL;
-    b_disable_prv_2_cpu = false;
-  }
+    head_(HEAD_AT_CPU), prv_descriptor_(nullptr),
+    b_disable_prv_2_cpu(false), b_eager_mode(false) {}
 };
 #else
 struct MKLMemHolder {

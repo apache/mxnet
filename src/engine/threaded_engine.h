@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine.h
  * \brief Implements base class of threaded engine
  *    that tracks the dependency and pushes actions to execute.
@@ -10,6 +28,7 @@
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/omp.h>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -19,6 +38,7 @@
 #include <thread>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "./openmp.h"
 #include "../common/object_pool.h"
 
 namespace mxnet {
@@ -266,6 +286,8 @@ class ThreadedEngine : public Engine {
     objpool_blk_ref_    = common::ObjectPool<OprBlock>::_GetSharedRef();
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
+
+    /*! \brief Set default OMP threads per kernel worker to default */
   }
   ~ThreadedEngine() {
     {
@@ -327,7 +349,7 @@ class ThreadedEngine : public Engine {
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
           LOG(FATAL) << e.what() << "\n" <<
-            "An fatal error occurred in asynchronous engine operation. "
+            "A fatal error occurred in asynchronous engine operation. "
             "If you do not know what caused this error, "
             "you can try set environment variable MXNET_ENGINE_TYPE "
             "to NaiveEngine and run with debugger (i.e. gdb). "
@@ -387,6 +409,7 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+
   /*!
    * \brief Disallow copy construction and assignment.
    */
@@ -395,4 +418,5 @@ class ThreadedEngine : public Engine {
 
 }  // namespace engine
 }  // namespace mxnet
+
 #endif  // MXNET_ENGINE_THREADED_ENGINE_H_

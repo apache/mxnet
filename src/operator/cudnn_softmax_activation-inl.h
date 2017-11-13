@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file cudnn_activation-inl.h
  * \brief
  * \author Bing Xu
@@ -23,7 +41,7 @@ class CuDNNSoftmaxActivationOp : public Operator {
 
   ~CuDNNSoftmaxActivationOp() {
     if (init_cudnn_) {
-      CHECK_EQ(cudnnDestroyTensorDescriptor(shape_desc_), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(shape_desc_));
     }
   }
 
@@ -71,24 +89,24 @@ class CuDNNSoftmaxActivationOp : public Operator {
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     if (!init_cudnn_) {
       init_cudnn_ = true;
-      CHECK_EQ(cudnnCreateTensorDescriptor(&shape_desc_), CUDNN_STATUS_SUCCESS);
-      CHECK_EQ(cudnnSetTensor4dDescriptor(shape_desc_,
-                                          CUDNN_TENSOR_NCHW,
-                                          dtype_,
-                                          data.shape_[0],
-                                          data.shape_[1],
-                                          data.shape_[2],
-                                          data.shape_[3]), CUDNN_STATUS_SUCCESS);
+      CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
+      CUDNN_CALL(cudnnSetTensor4dDescriptor(shape_desc_,
+                                            CUDNN_TENSOR_NCHW,
+                                            dtype_,
+                                            data.shape_[0],
+                                            data.shape_[1],
+                                            data.shape_[2],
+                                            data.shape_[3]));
     }
-    CHECK_EQ(cudnnSoftmaxForward(s->dnn_handle_,
-                                 CUDNN_SOFTMAX_ACCURATE,
-                                 softmax_mode,
-                                 &alpha,
-                                 shape_desc_,
-                                 data.dptr_,
-                                 &beta,
-                                 shape_desc_,
-                                 out.dptr_), CUDNN_STATUS_SUCCESS);
+    CUDNN_CALL(cudnnSoftmaxForward(s->dnn_handle_,
+                                   CUDNN_SOFTMAX_ACCURATE,
+                                   softmax_mode,
+                                   &alpha,
+                                   shape_desc_,
+                                   data.dptr_,
+                                   &beta,
+                                   shape_desc_,
+                                   out.dptr_));
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -141,17 +159,17 @@ class CuDNNSoftmaxActivationOp : public Operator {
       softmax_mode = CUDNN_SOFTMAX_MODE_CHANNEL;
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    CHECK_EQ(cudnnSoftmaxBackward(s->dnn_handle_,
-                                  CUDNN_SOFTMAX_ACCURATE,
-                                  softmax_mode,
-                                  &alpha,
-                                  shape_desc_,
-                                  output_data.dptr_,
-                                  shape_desc_,
-                                  grad.dptr_,
-                                  &beta,
-                                  shape_desc_,
-                                  input_grad.dptr_), CUDNN_STATUS_SUCCESS);
+    CUDNN_CALL(cudnnSoftmaxBackward(s->dnn_handle_,
+                                    CUDNN_SOFTMAX_ACCURATE,
+                                    softmax_mode,
+                                    &alpha,
+                                    shape_desc_,
+                                    output_data.dptr_,
+                                    shape_desc_,
+                                    grad.dptr_,
+                                    &beta,
+                                    shape_desc_,
+                                    input_grad.dptr_));
   }
 
  private:

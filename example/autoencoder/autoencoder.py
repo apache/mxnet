@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: skip-file
 import mxnet as mx
 from mxnet import misc
@@ -131,32 +148,32 @@ class AutoEncoderModel(model.MXModel):
                 x = mx.symbol.Dropout(data=x, p=dropout)
         return x
 
-    def layerwise_pretrain(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None):
+    def layerwise_pretrain(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None, print_every=1000):
         def l2_norm(label, pred):
             return np.mean(np.square(label-pred))/2.0
         solver = Solver(optimizer, momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
         solver.set_metric(mx.metric.CustomMetric(l2_norm))
-        solver.set_monitor(Monitor(1000))
+        solver.set_monitor(Monitor(print_every))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=True,
                                       last_batch_handle='roll_over')
         for i in range(self.N):
             if i == 0:
                 data_iter_i = data_iter
             else:
-                X_i = model.extract_feature(self.internals[i-1], self.args, self.auxs,
-                                            data_iter, X.shape[0], self.xpu).values()[0]
+                X_i = list(model.extract_feature(self.internals[i-1], self.args, self.auxs,
+                                            data_iter, X.shape[0], self.xpu).values())[0]
                 data_iter_i = mx.io.NDArrayIter({'data': X_i}, batch_size=batch_size,
                                                 last_batch_handle='roll_over')
             logging.info('Pre-training layer %d...'%i)
             solver.solve(self.xpu, self.stacks[i], self.args, self.args_grad, self.auxs, data_iter_i,
                          0, n_iter, {}, False)
 
-    def finetune(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None):
+    def finetune(self, X, batch_size, n_iter, optimizer, l_rate, decay, lr_scheduler=None, print_every=1000):
         def l2_norm(label, pred):
            return np.mean(np.square(label-pred))/2.0
         solver = Solver(optimizer, momentum=0.9, wd=decay, learning_rate=l_rate, lr_scheduler=lr_scheduler)
         solver.set_metric(mx.metric.CustomMetric(l2_norm))
-        solver.set_monitor(Monitor(1000))
+        solver.set_monitor(Monitor(print_every))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=True,
                                       last_batch_handle='roll_over')
         logging.info('Fine tuning...')
@@ -167,6 +184,6 @@ class AutoEncoderModel(model.MXModel):
         batch_size = 100
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=False,
                                       last_batch_handle='pad')
-        Y = model.extract_feature(self.loss, self.args, self.auxs, data_iter,
-                                 X.shape[0], self.xpu).values()[0]
+        Y = list(model.extract_feature(self.loss, self.args, self.auxs, data_iter,
+                                 X.shape[0], self.xpu).values())[0]
         return np.mean(np.square(Y-X))/2.0

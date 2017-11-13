@@ -32,14 +32,43 @@ mx.symbol.Group <- function(...) {
 #' @return out The result mx.symbol
 #' 
 #' @export
-mx.symbol.Concat <- function(data, num.args, dim = NULL, name = NULL) {
+mx.symbol.concat <- function(data, num.args, dim = NULL, name = NULL) {
   data[['num.args']] <- num.args
   
   if(!is.null(dim)) data[['dim']] <- dim
   
   if(!is.null(name)) data[['name']] <- name
   
-  mx.varg.symbol.Concat(data)
+  mx.varg.symbol.concat(data)
+}
+
+#' Perform an feature concat on channel dim (dim 1) over all the inputs.
+#' 
+#' @param data  list, required
+#'     List of tensors to concatenate
+#' @param num.args  int, required
+#'     Number of inputs to be concated.
+#' @param dim  int, optional, default='1'
+#'     the dimension to be concated.
+#' @param name  string, optional
+#'     Name of the resulting symbol.
+#' @return out The result mx.symbol
+#' 
+#' @export
+mx.symbol.Concat <- function(data, num.args, dim = NULL, name = NULL) {
+  warning("mx.symbol.Concat is deprecated. Use mx.symbol.concat instead.")
+  mx.symbol.concat(data, num.args, dim, name)
+}
+
+#' @export
+mx.symbol.min <- function(e1, e2) {
+  if (is.mx.symbol(e1) && is.mx.symbol(e2)) {
+    mx.varg.symbol.internal.minimum(list(e1, e2))
+  } else if (is.mx.symbol(e1)) {
+    mx.varg.symbol.internal.minimum_scalar(list(e1, scalar = e2))
+  } else if (is.mx.symbol(e2)) {
+    mx.varg.symbol.internal.minimum_scalar(list(e2, scalar = e1))
+  }
 }
 
 #' Save an mx.symbol object
@@ -123,6 +152,24 @@ mx.apply <- function(x, ...) {
   x$apply(list(...))
 }
 
+#' Get a symbol that contains all the internals
+#' @param x The input symbol
+#'
+#' @export
+internals <- function(x) {
+  if (!is.MXSymbol(x)) stop("only for MXSymbol type")
+  x$get.internals()
+}
+
+#' Gets a new grouped symbol whose output contains inputs to output nodes of the original symbol.
+#' @param x The input symbol
+#'
+#' @export
+children <- function(x) {
+  if (!is.MXSymbol(x)) stop("only for MXSymbol type")
+  x$get.children()
+}
+
 #' Get the outputs of a symbol.
 #' @param x The input symbol
 #'
@@ -140,22 +187,61 @@ init.symbol.methods <- function() {
   setMethod("+", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
     mx.varg.symbol.internal.PlusScalar(list(e1, scalar = e2))
   })
+  setMethod("+", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.PlusScalar(list(e2, scalar = e1))
+  })  
   setMethod("-", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Minus(list(e1, e2))
   })
   setMethod("-", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
     mx.varg.symbol.internal.MinusScalar(list(e1, scalar = e2))
   })
+  setMethod("-", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.rminus_scalar(list(e2, scalar = e1))
+  })  
   setMethod("*", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Mul(list(e1, e2))
   })
   setMethod("*", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
     mx.varg.symbol.internal.MulScalar(list(e1, scalar = e2))
   })
+  setMethod("*", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.MulScalar(list(e2, scalar = e1))
+  })  
   setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
     mx.varg.symbol.internal.Div(list(e1, e2))
   })
   setMethod("/", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
     mx.varg.symbol.internal.DivScalar(list(e1, scalar = e2))
+  })
+  setMethod("/", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.rdiv_scalar(list(e2, scalar = e1))
+  })  
+  setMethod("%%", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.Mod(list(e1, e2))
+  })
+  setMethod("%%", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.ModScalar(list(e1, scalar = e2))
+  })
+  setMethod("%%", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.RModScalar(list(e2, scalar = e1))
+  })  
+  setMethod("%/%", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.Mod(list(e1, e2))
+  })
+  setMethod("%/%", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.ModScalar(list(e1, scalar = e2))
+  })
+  setMethod("%/%", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.RModScalar(list(e2, scalar = e1))
+  })
+  setMethod("^", signature(e1 = "Rcpp_MXSymbol", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.power(list(e1, e2))
+  })
+  setMethod("^", signature(e1 = "Rcpp_MXSymbol", e2 = "numeric"), function(e1, e2) {
+    mx.varg.symbol.internal.power_scalar(list(e1, scalar = e2))
+  })
+  setMethod("^", signature(e1 = "numeric", e2 = "Rcpp_MXSymbol"), function(e1, e2) {
+    mx.varg.symbol.internal.rpower_scalar(list(e2, scalar = e1))
   })
 }

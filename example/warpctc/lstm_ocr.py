@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 from __future__ import print_function
@@ -55,7 +72,7 @@ class OCRIter(mx.io.DataIter):
         self.num_label = num_label
         self.init_states = init_states
         self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
-        self.provide_data = [('data', (batch_size, 2400))] + init_states
+        self.provide_data = [('data', (batch_size, 80, 30))] + init_states
         self.provide_label = [('label', (self.batch_size, 4))]
 
     def __iter__(self):
@@ -71,7 +88,7 @@ class OCRIter(mx.io.DataIter):
                 img = cv2.imdecode(img, cv2.IMREAD_GRAYSCALE)
                 img = cv2.resize(img, (80, 30))
                 img = img.transpose(1, 0)
-                img = img.reshape((80 * 30))
+                img = img.reshape((80, 30))
                 img = np.multiply(img, 1/255.0)
                 data.append(img)
                 label.append(get_label(num))
@@ -80,8 +97,8 @@ class OCRIter(mx.io.DataIter):
             label_all = [mx.nd.array(label)]
             data_names = ['data'] + init_state_names
             label_names = ['label']
-            
-            
+
+
             data_batch = SimpleBatch(data_names, data_all, label_names, label_all)
             yield data_batch
 
@@ -198,14 +215,14 @@ if __name__ == '__main__':
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
-    
+
     print('begin fit')
 
     prefix = 'ocr'
     model.fit(X=data_train, eval_data=data_val,
               eval_metric = mx.metric.np(Accuracy),
               # Use the following eval_metric if your num_label >= 10, or varies in a wide range
-              # eval_metric = mx.metric.np(Accuracy_LCS), 
+              # eval_metric = mx.metric.np(Accuracy_LCS),
               batch_end_callback=mx.callback.Speedometer(BATCH_SIZE, 50),
               epoch_end_callback = mx.callback.do_checkpoint(prefix, 1))
 

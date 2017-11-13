@@ -83,13 +83,13 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    * @param keys The keys.
    * @param values The values.
    */
-  def init(keys: Array[Int], values: Array[NDArray]): Unit = {
+  def init(keys: Array[String], values: Array[NDArray]): Unit = {
     require(keys.length == values.length, "len(keys) != len(values)")
     val valuePtrs = values.map(_.handle)
-    checkCall(_LIB.mxKVStoreInit(handle, keys.length, keys, valuePtrs))
+    checkCall(_LIB.mxKVStoreInitEx(handle, keys.length, keys, valuePtrs))
   }
 
-  def init(key: Int, value: NDArray): Unit = {
+  def init(key: String, value: NDArray): Unit = {
     init(Array(key), Array(value))
   }
 
@@ -107,24 +107,24 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    *         The higher the priority, the faster this action is likely
    *         to be executed before other push actions.
    */
-  def push(keys: Array[Int], values: Array[NDArray], priority: Int): Unit = {
+  def push(keys: Array[String], values: Array[NDArray], priority: Int): Unit = {
     require(keys.length == values.length, "len(keys) != len(values)")
     val valuePtrs = values.map(_.handle)
-    checkCall(_LIB.mxKVStorePush(handle, keys.length, keys, valuePtrs, priority))
+    checkCall(_LIB.mxKVStorePushEx(handle, keys.length, keys, valuePtrs, priority))
   }
 
-  def push(keys: Array[Int], values: Array[NDArray]): Unit = push(keys, values, 0)
+  def push(keys: Array[String], values: Array[NDArray]): Unit = push(keys, values, 0)
 
-  def push(key: Int, value: NDArray, priority: Int = 0): Unit = {
+  def push(key: String, value: NDArray, priority: Int = 0): Unit = {
     push(Array(key), Array(value), priority)
   }
 
-  def push(key: Int, values: Array[NDArray], priority: Int): Unit = {
+  def push(key: String, values: Array[NDArray], priority: Int): Unit = {
     val keys = Array.fill(values.length)(key)
     push(keys, values, priority)
   }
 
-  def push(key: Int, values: Array[NDArray]): Unit = {
+  def push(key: String, values: Array[NDArray]): Unit = {
     push(key, values, 0)
   }
 
@@ -143,24 +143,24 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) {
    *     The higher the priority, the faster this action is likely
    *     to be executed before other push actions.
    */
-  def pull(keys: Array[Int], outs: Array[NDArray], priority: Int): Unit = {
+  def pull(keys: Array[String], outs: Array[NDArray], priority: Int): Unit = {
     require(keys.length == outs.length, "len(keys) != len(outs)")
     val outPtrs = outs.map(_.handle)
-    checkCall(_LIB.mxKVStorePull(handle, keys.length, keys, outPtrs, priority))
+    checkCall(_LIB.mxKVStorePullEx(handle, keys.length, keys, outPtrs, priority))
   }
 
-  def pull(keys: Array[Int], outs: Array[NDArray]): Unit = pull(keys, outs, 0)
+  def pull(keys: Array[String], outs: Array[NDArray]): Unit = pull(keys, outs, 0)
 
-  def pull(key: Int, out: NDArray, priority: Int = 0): Unit = {
+  def pull(key: String, out: NDArray, priority: Int = 0): Unit = {
     pull(Array(key), Array(out), priority)
   }
 
-  def pull(key: Int, outs: Array[NDArray], priority: Int): Unit = {
+  def pull(key: String, outs: Array[NDArray], priority: Int): Unit = {
     val keys = Array.fill(outs.length)(key)
     pull(keys, outs, priority)
   }
 
-  def pull(key: Int, outs: Array[NDArray]): Unit = {
+  def pull(key: String, outs: Array[NDArray]): Unit = {
     pull(key, outs, 0)
   }
 

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 '''
 Adapted from https://github.com/tornadomeet/ResNet/blob/master/symbol_resnet.py
 Original author Wei Wu
@@ -7,6 +24,7 @@ Implemented the following paper:
 Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun. "Identity Mappings in Deep Residual Networks"
 '''
 import mxnet as mx
+import numpy as np
 
 def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, bn_mom=0.9, workspace=256, memonger=False):
     """Return ResNet Unit symbol for building ResNet
@@ -18,9 +36,9 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
         Number of output channels
     bnf : int
         Bottle neck channels factor with regard to num_filter
-    stride : tupe
+    stride : tuple
         Stride used in convolution
-    dim_match : Boolen
+    dim_match : Boolean
         True means channel number between input and output is the same, otherwise means differ
     name : str
         Base name of the operators
@@ -67,7 +85,7 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck=True, b
             shortcut._set_attr(mirror_stage='True')
         return conv2 + shortcut
 
-def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck=True, bn_mom=0.9, workspace=256, memonger=False):
+def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck=True, bn_mom=0.9, workspace=256, dtype='float32', memonger=False):
     """Return ResNet symbol of
     Parameters
     ----------
@@ -83,10 +101,17 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
         Dataset type, only cifar10 and imagenet supports
     workspace : int
         Workspace used in convolution operator
+    dtype : str
+        Precision (float32 or float16)
     """
     num_unit = len(units)
     assert(num_unit == num_stages)
     data = mx.sym.Variable(name='data')
+    if dtype == 'float32':
+        data = mx.sym.identity(data=data, name='id')
+    else:
+        if dtype == 'float16':
+            data = mx.sym.Cast(data=data, dtype=np.float16)
     data = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=bn_mom, name='bn_data')
     (nchannel, height, width) = image_shape
     if height <= 32:            # such as cifar10
@@ -97,7 +122,7 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
                                   no_bias=True, name="conv0", workspace=workspace)
         body = mx.sym.BatchNorm(data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn0')
         body = mx.sym.Activation(data=body, act_type='relu', name='relu0')
-        body = mx.symbol.Pooling(data=body, kernel=(3, 3), stride=(2,2), pad=(1,1), pool_type='max')
+        body = mx.sym.Pooling(data=body, kernel=(3, 3), stride=(2,2), pad=(1,1), pool_type='max')
 
     for i in range(num_stages):
         body = residual_unit(body, filter_list[i+1], (1 if i==0 else 2, 1 if i==0 else 2), False,
@@ -109,12 +134,14 @@ def resnet(units, num_stages, filter_list, num_classes, image_shape, bottle_neck
     bn1 = mx.sym.BatchNorm(data=body, fix_gamma=False, eps=2e-5, momentum=bn_mom, name='bn1')
     relu1 = mx.sym.Activation(data=bn1, act_type='relu', name='relu1')
     # Although kernel is not used here when global_pool=True, we should put one
-    pool1 = mx.symbol.Pooling(data=relu1, global_pool=True, kernel=(7, 7), pool_type='avg', name='pool1')
-    flat = mx.symbol.Flatten(data=pool1)
-    fc1 = mx.symbol.FullyConnected(data=flat, num_hidden=num_classes, name='fc1')
-    return mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
+    pool1 = mx.sym.Pooling(data=relu1, global_pool=True, kernel=(7, 7), pool_type='avg', name='pool1')
+    flat = mx.sym.Flatten(data=pool1)
+    fc1 = mx.sym.FullyConnected(data=flat, num_hidden=num_classes, name='fc1')
+    if dtype == 'float16':
+        fc1 = mx.sym.Cast(data=fc1, dtype=np.float32)
+    return mx.sym.SoftmaxOutput(data=fc1, name='softmax')
 
-def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwargs):
+def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, dtype='float32', **kwargs):
     """
     Adapted from https://github.com/tornadomeet/ResNet/blob/master/train_resnet.py
     Original author Wei Wu
@@ -132,7 +159,7 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
             filter_list = [16, 16, 32, 64]
             bottle_neck = False
         else:
-            raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
+            raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
         units = per_unit * num_stages
     else:
         if num_layers >= 50:
@@ -157,7 +184,7 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
         elif num_layers == 269:
             units = [3, 30, 48, 8]
         else:
-            raise ValueError("no experiments done on num_layers {}, you can do it youself".format(num_layers))
+            raise ValueError("no experiments done on num_layers {}, you can do it yourself".format(num_layers))
 
     return resnet(units       = units,
                   num_stages  = num_stages,
@@ -165,4 +192,5 @@ def get_symbol(num_classes, num_layers, image_shape, conv_workspace=256, **kwarg
                   num_classes = num_classes,
                   image_shape = image_shape,
                   bottle_neck = bottle_neck,
-                  workspace   = conv_workspace)
+                  workspace   = conv_workspace,
+                  dtype       = dtype)

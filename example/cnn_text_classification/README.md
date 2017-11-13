@@ -1,12 +1,12 @@
 Implementing CNN for Text Classification in MXNet
 ============
-It is slightly simplified implementation of Kim's [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882) paper in MXNet.
+It is a slightly simplified implementation of Kim's [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882) paper in MXNet.
 
-Recently, I have been learning mxnet for Natural Language Processing (NLP). I followed this nice blog ["Implementing a CNN for Text Classification in Tensorflow" blog post.](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/) to reimplement it by mxnet framwork.
-Data preprocessing code and courpus are directly borrowed from original author [cnn-text-classification-tf](https://github.com/dennybritz/cnn-text-classification-tf).
+Recently, I have been learning mxnet for Natural Language Processing (NLP). I followed this nice blog ["Implementing a CNN for Text Classification in Tensorflow" blog post.](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/) to reimplement it by mxnet framework.
+Data preprocessing code and corpus are directly borrowed from original author [cnn-text-classification-tf](https://github.com/dennybritz/cnn-text-classification-tf).
 
 ## Performance compared to original paper
-I use the same pretrained word2vec [GoogleNews-vectors-negative300.bin](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing) in Kim's paper. However, I don't implement L2-normalization of weight on penultimate layer, but provide a L2-normalization of gradients.
+I use the same pretrained word2vec [GoogleNews-vectors-negative300.bin](https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit?usp=sharing) in Kim's paper. However, I don't implement L2-normalization of weights on penultimate layer, but provide a L2-normalization of gradients.
 Finally, I got a best dev accuracy 80.1%, close to 81% that reported in the original paper.
 
 ## Data

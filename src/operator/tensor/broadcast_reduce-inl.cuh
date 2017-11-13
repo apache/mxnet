@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce-inl.cuh
@@ -76,8 +95,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       Shape<ndim> coord = unravel(idx, small_shape);
       int idx_big0 = ravel(coord, big_shape0);
 
-      DType val;
-      Reducer::SetInitValue(val);
+      DType val, residual;
+      Reducer::SetInitValue(val, residual);
       if (idx < N) {
         for (int k = tidy + Mstart; k < Mend; k += by*unroll) {
           int idx_big[unroll];
@@ -94,7 +113,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u]);
+            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u], residual);
           }
         }
       }
@@ -107,11 +126,11 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         shTile[it0] = val;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp;
-          Reducer::SetInitValue(tmp);
+          DType tmp, residual;
+          Reducer::SetInitValue(tmp, residual);
           if (tidy + t < by) tmp = shTile[it0 + t*fbx];
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp);
+          Reducer::Reduce(shTile[it0], tmp, residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
@@ -120,7 +139,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       } else {
         if (idx < N) {
           assign(&small[idx + m0*N], addto, val);
-        }        
+        }
       }
     }
   }
@@ -156,8 +175,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       int idx_lhs0 = ravel(coord, lhs_shape0);
       int idx_rhs0 = ravel(coord, rhs_shape0);
 
-      DType val;
-      Reducer::SetInitValue(val);
+      DType val, residual;
+      Reducer::SetInitValue(val, residual);
       if (idx < N) {
         for (int k = tidy + Mstart; k < Mend; k += by*unroll) {
           int idx_big[unroll];
@@ -178,7 +197,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u]);
+            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u], residual);
           }
         }
       }
@@ -191,11 +210,11 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         shTile[it0] = val;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp;
-          Reducer::SetInitValue(tmp);
+          DType tmp, residual;
+          Reducer::SetInitValue(tmp, residual);
           if (tidy + t < by) tmp = shTile[it0 + t*fbx];
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp);
+          Reducer::Reduce(shTile[it0], tmp, residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
@@ -204,7 +223,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       } else {
         if (idx < N) {
           assign(&small[idx + m0*N], addto, val);
-        }        
+        }
       }
     }
   }
@@ -217,11 +236,11 @@ __launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
   const int small_in_stride, const DType* __restrict small_in, DType *small_out) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    
-    DType val;
-    Reducer::SetInitValue(val);
+
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
     for (int k = 0; k < M; k++) {
-      Reducer::Reduce(val, small_in[idx + k*small_in_stride]);
+      Reducer::Reduce(val, small_in[idx + k*small_in_stride], residual);
     }
 
     if (idx < N) {
@@ -265,7 +284,7 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
 // Returns the stride with which the fastest dimension is moving.
 // Used to detect memory access scatter.
 template<int ndim>
-MSHADOW_XINLINE int fastest_stride(const Shape<ndim>& small, const Shape<ndim>& big, 
+MSHADOW_XINLINE int fastest_stride(const Shape<ndim>& small, const Shape<ndim>& big,
   const Shape<ndim>& big_stride) {
   for (int i = ndim-1; i >= 0; --i) {
     if (big[i] != 1) {

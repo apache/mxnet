@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file proposal.cu
  * \brief Proposal Operator
  * \author Shaoqing Ren, Jian Guo
@@ -400,7 +418,7 @@ class ProposalGPUOp : public Operator{
                                       in_data[proposal::kClsProb].shape_[1] / 2,
                                       in_data[proposal::kClsProb].shape_[2],
                                       in_data[proposal::kClsProb].shape_[3]);
-    real_t* foreground_score_ptr = reinterpret_cast<real_t *>(in_data[proposal::kClsProb].dptr_)
+    real_t* foreground_score_ptr = in_data[proposal::kClsProb].dptr<real_t>()
                                     + fg_scores_shape.Size();
     Tensor<xpu, 4> scores = Tensor<xpu, 4>(foreground_score_ptr, fg_scores_shape);
     Tensor<xpu, 4> bbox_deltas = in_data[proposal::kBBoxPred].get<xpu, 4, real_t>(s);
@@ -424,11 +442,11 @@ class ProposalGPUOp : public Operator{
     base_anchor[1] = 0.0;
     base_anchor[2] = param_.feature_stride - 1.0;
     base_anchor[3] = param_.feature_stride - 1.0;
-    CHECK_EQ(num_anchors, param_.ratios.info.size() * param_.scales.info.size());
+    CHECK_EQ(num_anchors, param_.ratios.ndim() * param_.scales.ndim());
     std::vector<float> anchors;
     utils::GenerateAnchors(base_anchor,
-                           param_.ratios.info,
-                           param_.scales.info,
+                           param_.ratios,
+                           param_.scales,
                            &anchors);
 
     // Copy generated anchors to GPU

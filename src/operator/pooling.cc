@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2017 by Contributors
  * \file pooling.cc
  * \brief
  * \author Bing Xu, Jun Wu
@@ -20,13 +38,8 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
   Operator *op = NULL;
-  // TODO(junwu): Since MKL has a bug when pad and stride > 0,
-  // we disable MKL in those cases and will re-enable it after
-  // it is fixed by deleting lines 28 and 29.
 #if MXNET_USE_MKL2017 == 1
     if (param.kernel.ndim() == 2
-      && 0 == param.pad[0] && 0 == param.pad[1]
-      && 0 == param.stride[0] && 0 == param.stride[1]
       && ((param.pool_type == pool_enum::kMaxPooling)
       || (param.pool_type == pool_enum::kAvgPooling))) {
       switch (dtype) {
@@ -38,7 +51,6 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
         break;
       }
     }
-    LOG(INFO) << MKLPoolingOp<cpu, float>::getName() << " Skip MKL optimization";
 #endif
 #if MXNET_USE_NNPACK == 1
   // NNPACK only support max-pooling with kernel = 2, stride = 2, pooling_convention
@@ -73,17 +85,13 @@ Operator *CreateOp<cpu>(PoolingParam param, int dtype) {
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator* PoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 MXNET_REGISTER_OP_PROPERTY(Pooling, PoolingProp)
-.describe(R"code(Perform pooling on the input.
+.describe(R"code(Performs pooling on the input.
 
 The shapes for 1-D pooling are
 
@@ -98,15 +106,15 @@ The shapes for 2-D pooling are
     out_height = f(height, kernel[0], pad[0], stride[0])
     out_width = f(width, kernel[1], pad[1], stride[1])
 
-The defintion of *f* depends on ``pooling_convention``, which has two options:
+The definition of *f* depends on ``pooling_convention``, which has two options:
 
 - **valid** (default)::
 
-    f(x, k, p, s) = floor(x+2*p-k)/s+1
+    f(x, k, p, s) = floor((x+2*p-k)/s)+1
 
 - **full**, which is compatible with Caffe::
 
-    f(x, k, p, s) = ceil(x+2*p-k)/s+1
+    f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
 But ``global_pool`` is set to be true, then do a global pooling, namely reset
 ``kernel=(height, width)``.

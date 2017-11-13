@@ -1,5 +1,23 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
- * Copyright (c) 2015 by Contributors
  * \file threaded_engine.cc
  * \brief implements base threaded engine.
  * \author Yutian Li
@@ -307,7 +325,7 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
       // so during `ThreadedEngine::OnComplete` it could be recycled.
       threaded_var->SetToDelete();
       delete_fn(ctx);
-    }, exec_ctx, {}, {var}, FnProperty::kAsync, 0,
+    }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0,
     PROFILER_MESSAGE("DeleteVariable"));
 }
 
@@ -349,6 +367,7 @@ void ThreadedEngine::WaitForAll() {
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
+  bool is_temporary_opr = threaded_opr->temporary;
   // Mark complete for read variables
   for (auto&& i : threaded_opr->const_vars) {
     i->CompleteReadDependency([this](OprBlock* opr) {
@@ -376,6 +395,10 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
       ThreadedVar::Delete(i);
     }
   }
+  // The function been pushed from `ThreadedEngine::DeleteOperator`
+  // could execute right after we mark all vars as complete, so if
+  // threaded_opr is not temporary, its value is not reliable
+  // anymore start from here.
   int npending;
   {
     std::unique_lock<std::mutex> lock{finished_m_};
@@ -388,7 +411,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
 
   // delte operator if it is temperory
-  if (threaded_opr->temporary) {
+  if (is_temporary_opr) {
     ThreadedOpr::Delete(threaded_opr);
   }
 }

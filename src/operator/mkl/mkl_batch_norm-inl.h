@@ -36,7 +36,6 @@
 namespace mxnet {
 namespace op {
 
-
 template<typename xpu, typename DType>
 class MKLBatchNormOp : public Operator {
  public:
@@ -218,8 +217,7 @@ class MKLBatchNormOp : public Operator {
               &batchNormBwdScaleShift, NULL, layout_usr_, eps_, bwd_flags);
         CHECK_EQ(e, E_SUCCESS);
       }
-      bottom_data =
-        reinterpret_cast<void *>(data.dptr_);
+      bottom_data = reinterpret_cast<void *>(data.dptr_);
     }
 
     DType * scaleShift_buf = reinterpret_cast<DType*>(scaleShift_space.dptr);
@@ -234,12 +232,9 @@ class MKLBatchNormOp : public Operator {
     void* BatchNorm_res[dnnResourceNumber];
     BatchNorm_res[dnnResourceSrc] = bottom_data;
     BatchNorm_res[dnnResourceScaleShift] = scaleShift_space.dptr;
-    std::shared_ptr<MKLMemHolder> topDnnChunk = NULL;
-#if MKL_EXPERIMENTAL == 1
-    topDnnChunk = out_data[batchnorm::kOut].Mkl_mem_;
-#endif
+
     BatchNorm_res[dnnResourceDst] = fwd_top_data->get_output_ptr(out.dptr_,
-      fwd_top_data, topDnnChunk);
+      fwd_top_data, out_data[batchnorm::kOut]);
     if (ctx.is_train && !param_.use_global_stats) {
       Tensor<xpu, 1, DType> mean = out_data[batchnorm::kMean].get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> var = out_data[batchnorm::kVar].get<xpu, 1, DType>(s);
@@ -330,8 +325,6 @@ class MKLBatchNormOp : public Operator {
         moving_var_ptr[i] = moving_var_ptr[i] * param_.momentum
           + var_ptr[i] * minus_mom;
       }
-
-
       BatchNorm_res[dnnResourceMean] = mean.dptr_;
       BatchNorm_res[dnnResourceVariance] = var.dptr_;
     } else {
@@ -339,14 +332,9 @@ class MKLBatchNormOp : public Operator {
       BatchNorm_res[dnnResourceVariance] = moving_var.dptr_;
     }
 
-    std::shared_ptr<MKLMemHolder> bottom_diff_mem =
-#if MKL_EXPERIMENTAL == 1
-      in_grad[batchnorm::kData].Mkl_mem_;
-#else
-    NULL;
-#endif
+
     BatchNorm_res[dnnResourceDiffSrc] = bwd_bottom_diff->get_output_ptr(grad_in.dptr_,
-      bwd_bottom_diff, bottom_diff_mem);
+      bwd_bottom_diff, in_grad[batchnorm::kData]);
     BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(grad.dptr_,
              true, out_grad[batchnorm::kOut]);
     BatchNorm_res[dnnResourceDiffScaleShift] = scaleShiftDiff_space.dptr;

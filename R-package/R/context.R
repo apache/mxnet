@@ -1,6 +1,6 @@
 # Initialize the global context
 init.context.default <- function() {
-  assign("mx.ctx.internal.default.value", mx.cpu(), envir = .MXNetEnv)
+  .MXNetEnv[["mx.ctx.internal.default.value"]] <- mx.cpu()
 }
 
 #' Set/Get default context for array creation.
@@ -11,7 +11,7 @@ init.context.default <- function() {
 #' @export
 mx.ctx.default <- function(new = NULL) {
   if (!is.null(new)) {
-    assign("mx.ctx.internal.default.value", new, envir = .MXNetEnv)
+  	.MXNetEnv[["mx.ctx.internal.default.value"]] <- new
   }
   return (.MXNetEnv$mx.ctx.internal.default.value)
 }

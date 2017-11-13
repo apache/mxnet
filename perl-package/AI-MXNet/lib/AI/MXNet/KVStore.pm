@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::KVStore;
 use strict;
 use warnings;
@@ -11,11 +28,11 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::KVStore - Key value store interface of MXNet.
+    AI::MXNet::KVStore - Key value store interface of MXNet.
 
-=head1 DESCRIPTION 
+=head1 DESCRIPTION
 
-Key value store interface of MXNet for parameter synchronization, over multiple devices.
+    Key value store interface of MXNet for parameter synchronization, over multiple devices.
 =cut
 
 has 'handle' => (is => 'ro', isa => 'KVStoreHandle', required => 1);
@@ -29,17 +46,17 @@ sub DEMOLISH
 
 =head2  init
 
-Initialize a single or a sequence of key-value pairs into the store.
-For each key, one must init it before push and pull.
-Only worker 0's (rank == 0) data are used.
-This function returns after data have been initialized successfully
+    Initialize a single or a sequence of key-value pairs into the store.
+    For each key, one must init it before push and pull.
+    Only worker 0's (rank == 0) data are used.
+    This function returns after data have been initialized successfully
 
-Parameters
-----------
-key : int or an array ref of int
-    The keys.
-value : NDArray or an array ref of NDArray objects
-    The values.
+    Parameters
+    ----------
+    key : str or an array ref of str
+        The keys.
+    value : NDArray or an array ref of NDArray objects
+        The values.
 
     Examples
     --------
@@ -59,13 +76,13 @@ value : NDArray or an array ref of NDArray objects
 =cut
 
 method init(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $value
 )
 {
     my ($keys, $vals) = _key_value($key, $value);
     check_call(
-        AI::MXNetCAPI::KVStoreInit(
+        AI::MXNetCAPI::KVStoreInitEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals
         )
     );
@@ -73,22 +90,22 @@ method init(
 
 =head2  push
 
-Push a single or a sequence of key-value pairs into the store.
-Data consistency:
-1. this function returns after adding an operator to the engine.
-2. push is always called after all previous push and pull on the same
-key are finished
-3. there is no synchronization between workers. One can use _barrier()
-to sync all workers
+    Push a single or a sequence of key-value pairs into the store.
+    Data consistency:
+    1. this function returns after adding an operator to the engine.
+    2. push is always called after all previous push and pull on the same
+        key are finished.
+    3. there is no synchronization between workers. One can use _barrier()
+    to sync all workers.
 
-Parameters
-----------
-key : int or array ref of int
-value : NDArray or array ref of NDArray or array ref of array refs of NDArray
-priority : int, optional
-    The priority of the push operation.
-    The higher the priority, the faster this action is likely
-    to be executed before other push actions.
+    Parameters
+    ----------
+    key : str or array ref of str
+    value : NDArray or array ref of NDArray or array ref of array refs of NDArray
+    priority : int, optional
+        The priority of the push operation.
+        The higher the priority, the faster this action is likely
+        to be executed before other push actions.
 
     Examples
     --------
@@ -127,14 +144,14 @@ priority : int, optional
 =cut
 
 method push(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] $value,
     Int :$priority=0
 )
 {
     my ($keys, $vals) = _key_value($key, $value);
     check_call(
-        AI::MXNetCAPI::KVStorePush(
+        AI::MXNetCAPI::KVStorePushEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
         )
     );
@@ -142,27 +159,27 @@ method push(
 
 =head2 pull
 
-Pull a single value or a sequence of values from the store.
+    Pull a single value or a sequence of values from the store.
 
-Data consistency:
+    Data consistency:
 
-1. this function returns after adding an operator to the engine. But any
-further read on out will be blocked until it is finished.
-2. pull is always called after all previous push and pull on the same
-key are finished.
-3. It pulls the newest value from the store.
+    1. this function returns after adding an operator to the engine. But any
+        further read on out will be blocked until it is finished.
+    2. pull is always called after all previous push and pull on the same
+        key are finished.
+    3. It pulls the newest value from the store.
 
-Parameters
-----------
-key : int or array ref of int
-    Keys
-out: NDArray or array ref of NDArray or array ref of array refs of NDArray
-    According values
+    Parameters
+    ----------
+    key : str or array ref of str
+        Keys
+    out: NDArray or array ref of NDArray or array ref of array refs of NDArray
+        According values
 
-priority : int, optional
-    The priority of the push operation.
-    The higher the priority, the faster this action is likely
-    to be executed before other push actions.
+    priority : int, optional
+        The priority of the push operation.
+        The higher the priority, the faster this action is likely
+        to be executed before other push actions.
 
     Examples
     --------
@@ -197,14 +214,14 @@ priority : int, optional
 =cut
 
 method pull(
-    Int|ArrayRef[Int] $key,
+    Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$out,
     Int :$priority=0
 )
 {
     my ($keys, $vals) = _key_value($key, $out);
     check_call(
-        AI::MXNetCAPI::KVStorePull(
+        AI::MXNetCAPI::KVStorePullEx(
             $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
         )
     );
@@ -212,22 +229,22 @@ method pull(
 
 =head2  set_optimizer
 
-Register an optimizer to the store
+    Register an optimizer to the store
 
-If there are multiple machines, this process (should be a worker node)
-will pack this optimizer and send it to all servers. It returns after
-this action is done.
+    If there are multiple machines, this process (should be a worker node)
+    will pack this optimizer and send it to all servers. It returns after
+    this action is done.
 
-Parameters
-----------
-optimizer : Optimizer
-    the optimizer
+    Parameters
+    ----------
+    optimizer : Optimizer
+        the optimizer
 =cut
 
 method set_optimizer(AI::MXNet::Optimizer $optimizer)
 {
     my $is_worker = check_call(AI::MXNetCAPI::KVStoreIsWorkerNode());
-    if($self->type eq 'dist' and $is_worker)
+    if($self->type =~ /dist/ and $is_worker)
     {
         my $optim_str = MIME::Base64::encode_base64(Storable::freeze($optimizer), "");
         $self->_send_command_to_servers(0, $optim_str);
@@ -235,18 +252,18 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
     else
     {
         $self->_updater(AI::MXNet::Optimizer->get_updater($optimizer));
-        $self->_set_updater(sub { &{$self->_updater}(@_) });
+        $self->_set_updater($self->_updater);
     }
 }
 
 =head2  type
 
-Get the type of this kvstore
+    Get the type of this kvstore
 
-Returns
--------
-type : str
-    the string type
+    Returns
+    -------
+    type : str
+        the string type
 =cut
 
 method type()
@@ -256,12 +273,12 @@ method type()
 
 =head2  rank
 
-Get the rank of this worker node
+    Get the rank of this worker node
 
-Returns
--------
-rank : int
-    The rank of this node, which is in [0, get_num_workers())
+    Returns
+    -------
+    rank : int
+        The rank of this node, which is in [0, get_num_workers())
 =cut
 
 method rank()
@@ -271,12 +288,12 @@ method rank()
 
 =head2  num_workers
 
-Get the number of worker nodes
+    Get the number of worker nodes
 
-Returns
--------
-size :int
-    The number of worker nodes
+    Returns
+    -------
+    size :int
+        The number of worker nodes
 =cut
 
 method num_workers()
@@ -286,31 +303,34 @@ method num_workers()
 
 =head2 save_optimizer_states
 
-Save optimizer (updater) state to file
+    Save optimizer (updater) state to file
 
-Parameters
-----------
-fname : str
-    Path to output states file.
+    Parameters
+    ----------
+    fname : str
+        Path to output states file.
+    dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
 =cut
 
-method save_optimizer_states(Str $fname)
+method save_optimizer_states(Str $fname, Bool :$dump_optimizer=0)
 {
     confess("Cannot save states for distributed training")
         unless defined $self->_updater;
     open(F, ">:raw", "$fname") or confess("can't open $fname for writing: $!");
-    print F $self->_updater->get_states();
+    print F $self->_updater->get_states($dump_optimizer);
     close(F);
 }
 
 =head2 load_optimizer_states
 
-Load optimizer (updater) state from file.
+    Load optimizer (updater) state from file.
 
-Parameters
-----------
-fname : str
-    Path to input states file.
+    Parameters
+    ----------
+    fname : str
+        Path to input states file.
 =cut
 
 method load_optimizer_states(Str $fname)
@@ -326,15 +346,15 @@ method load_optimizer_states(Str $fname)
 
 =head2 _set_updater
 
-Set a push updater into the store.
+    Set a push updater into the store.
 
-This function only changes the local store. Use set_optimizer for
-multi-machines.
+    This function only changes the local store. Use set_optimizer for
+    multi-machines.
 
-Parameters
-----------
-updater : function
-    the updater function
+    Parameters
+    ----------
+    updater : function
+        the updater function
 
     Examples
     --------
@@ -354,7 +374,7 @@ updater : function
         [ 6.  6.  6.]]
 =cut
 
-method _set_updater(CodeRef $updater_func)
+method _set_updater(Updater $updater_func)
 {
     $self->_updater_func(
         sub {
@@ -376,12 +396,12 @@ method _set_updater(CodeRef $updater_func)
 
 =head2 _barrier
 
-Global barrier among all worker nodes
+    Global barrier between all worker nodes.
 
-For example, assume there are n machines, we want to let machine 0 first
-init the values, and then pull the inited value to all machines. Before
-pulling, we can place a barrier to guarantee that the initialization is
-finished.
+    For example, assume there are n machines, we want to let machine 0 first
+    init the values, and then pull the inited value to all machines. Before
+    pulling, we can place a barrier to guarantee that the initialization is
+    finished.
 =cut
 
 method _barrier()
@@ -391,18 +411,18 @@ method _barrier()
 
 =head2 _send_command_to_servers
 
-Send a command to all server nodes
-Send a command to all server nodes, which will make each server node run
-KVStoreServer.controller
-This function returns after the command has been executed in all server
-nodes
+    Send a command to all server nodes
+    Send a command to all server nodes, which will make each server node run
+    KVStoreServer.controller
+    This function returns after the command has been executed in all server
+    nodes.
 
-Parameters
-----------
-head : int
-    the head of the command
-body : str
-    the body of the command
+    Parameters
+    ----------
+    head : int
+        the head of the command
+    body : str
+        the body of the command
 =cut
 
 method _send_command_to_servers(Int $head, Str $body)
@@ -418,18 +438,18 @@ method _send_command_to_servers(Int $head, Str $body)
 
 =head2 create
 
-Create a new KVStore.
+    Create a new KVStore.
 
-Parameters
-----------
-name : {'local'}
-The type of KVStore
-    - local works for multiple devices on a single machine (single process)
-    - dist works for multi-machines (multiple processes)
-Returns
--------
-kv : KVStore
-    The created AI::MXNet::KVStore
+    Parameters
+    ----------
+    name : {'local'}
+    The type of KVStore
+        - local works for multiple devices on a single machine (single process)
+        - dist works for multi-machines (multiple processes)
+    Returns
+    -------
+    kv : KVStore
+        The created AI::MXNet::KVStore
 =cut
 
 method create(Str $name='local')
@@ -461,12 +481,12 @@ sub _key_value
         assert(not blessed($vals) and @$keys == @$vals);
         my @c_keys;
         my @c_vals;
-        zip(sub {
-            my ($key, $val) = @_;
+        for(zip($keys, $vals)) {
+            my ($key, $val) = @$_;
             my ($c_key, $c_val) = _key_value($key, $val);
             push @c_keys, @$c_key;
             push @c_vals, @$c_val;
-        }, $keys, $vals);
+        }
         return (\@c_keys, \@c_vals);
     }
 }

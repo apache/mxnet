@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Monitor;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -5,25 +22,25 @@ use AI::MXNet::Base;
 
 =head1 NAME
 
-AI::MXNet::Monitor - Monitor outputs, weights, and gradients for debugging.
+    AI::MXNet::Monitor - Monitor outputs, weights, and gradients for debugging.
 
 =head1 DESCRIPTION
 
-Monitor outputs, weights, and gradients for debugging.
+    Monitor outputs, weights, and gradients for debugging.
 
-Parameters
-----------
-interval : int
-    Number of batches between printing.
-stat_func : function
-    a function that computes statistics of tensors.
-    Takes a NDArray and returns a NDArray. defaults to mean
-    absolute value |x|/size(x).
-pattern : str
-    A regular expression specifying which tensors to monitor.
-    Only tensors with names that match name_pattern will be included.
-    For example, '.*weight|.*output' will print all weights and outputs;
-    '.*backward.*' will print all gradients.
+    Parameters
+    ----------
+    interval : int
+        Number of batches between printing.
+    stat_func : function
+        a function that computes statistics of tensors.
+        Takes a NDArray and returns a NDArray. defaults to mean
+        absolute value |x|/size(x).
+    pattern : str
+        A regular expression specifying which tensors to monitor.
+        Only tensors with names that match name_pattern will be included.
+        For example, '.*weight|.*output' will print all weights and outputs;
+        '.*backward.*' will print all gradients.
 =cut
 
 has 'interval'  => (is => 'ro', isa => 'Int', required => 1);
@@ -72,13 +89,13 @@ has 'stat_helper'          => (
 
 =head2 install
 
-install callback to executor.
-Supports installing to multiple exes
+    install callback to executor.
+    Supports installing to multiple exes.
 
-Parameters
-----------
-exe : AI::MXNet::Executor
-    the Executor (returned by $symbol->bind) to install to.
+    Parameters
+    ----------
+    exe : AI::MXNet::Executor
+        the Executor (returned by $symbol->bind) to install to.
 =cut
 
 method install(AI::MXNet::Executor $exe)
@@ -89,8 +106,8 @@ method install(AI::MXNet::Executor $exe)
 
 =head2 tic
 
-start collecting stats for current batch.
-Call before forward
+    start collecting stats for current batch.
+    Call before forward
 =cut
 
 method tic()
@@ -110,12 +127,12 @@ method tic()
 
 =head2 toc
 
-End collecting for current batch and return results.
-Call after computation of current batch.
+    End collecting for current batch and return results.
+    Call after computation of current batch.
 
-Returns
--------
-res : array ref of array refs with debug info
+    Returns
+    -------
+    res : array ref of array refs with debug info
 =cut
 
 method toc()
@@ -128,14 +145,14 @@ method toc()
     }
     for my $exe (@{ $self->exes })
     {
-        zip(sub {
-            my ($name, $array) = @_;
+        for(zip($exe->_symbol->list_arguments, $exe->arg_arrays)) {
+            my ($name, $array) = @$_;
             push @{ $self->queue }, [$self->step, $name, $self->stat_func->($array)];
-        }, $exe->_symbol->list_arguments, $exe->arg_arrays);
-        zip(sub {
-            my ($name, $array) = @_;
+        }
+        for(zip($exe->_symbol->list_auxiliary_states, $exe->aux_arrays)) {
+            my ($name, $array) = @$_;
             push @{ $self->queue }, [$self->step, $name, $self->stat_func->($array)];
-        }, $exe->_symbol->list_auxiliary_states, $exe->aux_arrays);
+        }
     }
     $self->activated(0);
     my @res;
@@ -153,7 +170,7 @@ method toc()
         my $s = '';
         for my $v (@{ $v_list })
         {
-            confess("the argument must be NDArray") 
+            confess("the argument must be NDArray")
                 unless blessed($v) and $v->isa('AI::MXNet::NDArray');
             if($v->size == 1)
             {
@@ -172,7 +189,7 @@ method toc()
 
 =head2 toc_print
 
-End collecting and print results
+    End collecting and print results
 =cut
 
 method toc_print()
@@ -182,6 +199,11 @@ method toc_print()
     {
         AI::MXNet::Logging->info('Batch: %7d %30s %s', @{ $r });
     }
+}
+
+method Monitor(@args)
+{
+    __PACKAGE__->new(@args % 2 ? ('interval', @args) : @args);
 }
 
 1;

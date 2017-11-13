@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::RNN::IO;
 use strict;
 use warnings;
@@ -8,44 +25,41 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
+    AI::MXNet::RNN::IO - Functions for constructing recurrent neural networks.
 =cut
-
-=head1 SYNOPSIS
-
 
 =head1 DESCRIPTION
 
-Functions for constructing recurrent neural networks.
+    Functions for constructing recurrent neural networks.
 =cut
 
-=head2
+=head2 encode_sentences
 
-Encode sentences and (optionally) build a mapping
-from string tokens to integer indices. Unknown keys
-will be added to vocabulary.
+    Encode sentences and (optionally) build a mapping
+    from string tokens to integer indices. Unknown keys
+    will be added to vocabulary.
 
-Parameters
-----------
-sentences : array ref of array refs of str
-    A array ref of sentences to encode. Each sentence
-    should be a array ref of string tokens.
-vocab : undef or hash ref of str -> int
-    Optional input Vocabulary
-invalid_label : int, default -1
-    Index for invalid token, like <end-of-sentence>
-invalid_key : str, default '\n'
-    Key for invalid token. Use '\n' for end
-    of sentence by default.
-start_label : int
-    lowest index.
+    Parameters
+    ----------
+    $sentences : array ref of array refs of str
+        A array ref of sentences to encode. Each sentence
+        should be a array ref of string tokens.
+    :$vocab : undef or hash ref of str -> int
+        Optional input Vocabulary
+    :$invalid_label : int, default -1
+        Index for invalid token, like <end-of-sentence>
+    :$invalid_key : str, default '\n'
+        Key for invalid token. Uses '\n' for end
+        of sentence by default.
+    :$start_label=0 : int
+        lowest index.
 
-Returns
--------
-result : array ref of array refs of int
-    encoded sentences
-vocab : hash ref of str -> int
-    result vocabulary
+    Returns
+    -------
+    $result : array ref of array refs of int
+        encoded sentences
+    $vocab : hash ref of str -> int
+        result vocabulary
 =cut
 
 
@@ -97,41 +111,37 @@ package AI::MXNet::BucketSentenceIter;
 
 =head1 NAME
 
-AI::MXNet::BucketSentenceIter
+    AI::MXNet::BucketSentenceIter
 =cut
-
-=head1 SYNOPSIS
-
 
 =head1 DESCRIPTION
 
-Simple bucketing iterator for language model.
-Label for each step is constructed from data of
-next step.
-
+    Simple bucketing iterator for language model.
+    Label for each step is constructed from data of
+    next step.
 =cut
 
 =head2 new
 
-Parameters
-----------
-sentences : array ref of array refs of int
-    encoded sentences
-batch_size : int
-    batch_size of data
-invalid_label : int, default -1
-    key for invalid label, e.g. <end-of-sentence>
-dtype : str, default 'float32'
-    data type
-buckets : array ref of int
-    size of data buckets. Automatically generated if undef.
-data_name : str, default 'data'
-    name of data
-label_name : str, default 'softmax_label'
-    name of label
-layout : str
-    format of data and label. 'NT' means (batch_size, length)
-    and 'TN' means (length, batch_size).
+    Parameters
+    ----------
+    sentences : array ref of array refs of int
+        encoded sentences
+    batch_size : int
+        batch_size of data
+    invalid_label : int, default -1
+        key for invalid label, e.g. <end-of-sentence>
+    dtype : str, default 'float32'
+        data type
+    buckets : array ref of int
+        size of data buckets. Automatically generated if undef.
+    data_name : str, default 'data'
+        name of data
+    label_name : str, default 'softmax_label'
+        name of label
+    layout : str
+        format of data and label. 'NT' means (batch_size, length)
+        and 'TN' means (length, batch_size).
 =cut
 
 use Mouse;
@@ -144,7 +154,7 @@ has 'invalid_label' => (is => 'ro', isa => 'Int',   default => -1);
 has 'data_name'     => (is => 'ro', isa => 'Str',   default => 'data');
 has 'label_name'    => (is => 'ro', isa => 'Str',   default => 'softmax_label');
 has 'dtype'         => (is => 'ro', isa => 'Dtype', default => 'float32');
-has 'layout'        => (is => 'ro', isa => 'Str',   default => 'NTC');
+has 'layout'        => (is => 'ro', isa => 'Str',   default => 'NT');
 has 'buckets'       => (is => 'rw', isa => 'Maybe[ArrayRef[Int]]');
 has [qw/data nddata ndlabel
         major_axis default_bucket_key
@@ -211,14 +221,16 @@ sub BUILD
         AI::MXNet::DataDesc->new(
             name  => $self->data_name,
             shape => $shape,
-            dtype => $self->dtype
+            dtype => $self->dtype,
+            layout => $self->layout
         )
     ]);
     $self->provide_label([
         AI::MXNet::DataDesc->new(
             name  => $self->label_name,
             shape => $shape,
-            dtype => $self->dtype
+            dtype => $self->dtype,
+            layout => $self->layout
         )
     ]);
     $self->idx([]);
@@ -279,14 +291,16 @@ method next()
             AI::MXNet::DataDesc->new(
                 name  => $self->data_name,
                 shape => $data->shape,
-                dtype => $self->dtype
+                dtype => $self->dtype,
+                layout => $self->layout
             )
         ],
         provide_label => [
             AI::MXNet::DataDesc->new(
                 name  => $self->label_name,
                 shape => $label->shape,
-                dtype => $self->dtype
+                dtype => $self->dtype,
+                layout => $self->layout
             )
         ],
     );

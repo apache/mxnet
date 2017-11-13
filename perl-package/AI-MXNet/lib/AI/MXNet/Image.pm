@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Image;
 use strict;
 use warnings;
@@ -7,23 +24,66 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet:Image - Read invidual image files and perform augmentations.
+    AI::MXNet:Image - Read individual image files and perform augmentations.
 =cut
+
+=head2 imread
+
+    Read and decode an image to an NDArray.
+
+    Note: `imread` uses OpenCV.
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+
+    Parameters
+    ----------
+    $filename : str
+        Name of the image file to be loaded.
+    :$flag : int
+        0 for grayscale. 1 for colored.
+    :$to_rgb : int
+        0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
+    :$out : NDArray
+        Output buffer. Do not specify for automatic allocation.
+
+    Returns
+    -------
+    An NDArray containing the image.
+
+    Example
+    -------
+    >>> mx->img->imread("flower.jpg");
+    <NDArray 224x224x3 @cpu(0)>
+
+    Set `flag` parameter to 0 to get grayscale output
+
+    >>> mx->img->imdecode("flower.jpg", flag=>0);
+    <NDArray 224x224x1 @cpu(0)>
+
+    Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
+
+    >>> mx->img->imdecode($str_image, to_rgb=>0);
+    <NDArray 224x224x3 @cpu(0)>
+=cut
+
+method imread(Str $filename, Int :$flag=1, Int :$to_rgb=1, Maybe[AI::MXNet::NDArray] :$out=)
+{
+    return AI::MXNet::NDArray->_cvimread($filename, { flag => $flag, to_rgb => $to_rgb, ($out ? (out => $out) : ()) });
+}
 
 =head2 imdecode
 
-Decode an image from string. Requires OpenCV to work.
+    Decode an image from string. Requires OpenCV to work.
 
-Parameters
-----------
-$buf : str, array ref, pdl, ndarray
-    Binary image data.
-:$flag : int
-    0 for grayscale. 1 for colored.
-:$to_rgb : int
-    0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
-:$out : NDArray
-    Output buffer. Do not specify for automatic allocation.
+    Parameters
+    ----------
+    $buf : str, array ref, pdl, ndarray
+        Binary image data.
+    :$flag : int
+        0 for grayscale. 1 for colored.
+    :$to_rgb : int
+        0 for BGR format (OpenCV default). 1 for RGB format (MXNet default).
+    :$out : NDArray
+        Output buffer. Do not specify for automatic allocation.
 =cut
 
 method imdecode(Str|PDL $buf, Int :$flag=1, Int :$to_rgb=1, Maybe[AI::MXNet::NDArray] :$out=)
@@ -46,14 +106,16 @@ method imdecode(Str|PDL $buf, Int :$flag=1, Int :$to_rgb=1, Maybe[AI::MXNet::NDA
 
 =head2 scale_down
 
-Scale down crop size if it's bigger than image size
+Scale down crop size if it's bigger than the image size.
 
-Parameters:
-Shape $src_size
-Shape $size
+    Parameters:
+    -----------
+    Shape $src_size
+    Shape $size
 
-Returns:
-($w, $h)
+    Returns:
+    --------
+    ($w, $h)
 =cut
 
 method scale_down(Shape $src_size, Shape $size)
@@ -73,15 +135,17 @@ method scale_down(Shape $src_size, Shape $size)
 
 =head2 resize_short
 
-Resize shorter edge to size
+    Resize shorter edge to the size.
 
-Parameters:
-AI::MXNet::NDArray $src
-Int                $size
-Int                $interp=2
+    Parameters:
+    -----------
+    AI::MXNet::NDArray $src
+    Int                $size
+    Int                $interp=2
 
-Returns:
-AI::MXNet::NDArray $resized_image
+    Returns:
+    --------
+    AI::MXNet::NDArray $resized_image
 =cut
 
 method resize_short(AI::MXNet::NDArray $src, Int $size, Int $interp=2)
@@ -101,19 +165,21 @@ method resize_short(AI::MXNet::NDArray $src, Int $size, Int $interp=2)
 
 =head2 fixed_crop
 
-Crop src at fixed location, and (optionally) resize it to size
+    Crop src at fixed location, and (optionally) resize it to the size.
 
-Parameters:
-AI::MXNet::NDArray $src
-Int                $x0
-Int                $y0
-Int                $w
-Int                $h
-Maybe[Shape]       $size=
-Int                $interp=2
+    Parameters:
+    -----------
+    AI::MXNet::NDArray $src
+    Int                $x0
+    Int                $y0
+    Int                $w
+    Int                $h
+    Maybe[Shape]       $size=
+    Int                $interp=2
 
-Returns:
-AI::MXNet::NDArray $cropped_image
+    Returns:
+    --------
+    AI::MXNet::NDArray $cropped_image
 =cut
 
 method fixed_crop(AI::MXNet::NDArray $src, Int $x0, Int $y0, Int $w, Int $h, Maybe[Shape] $size=, Int $interp=2)
@@ -128,15 +194,17 @@ method fixed_crop(AI::MXNet::NDArray $src, Int $x0, Int $y0, Int $w, Int $h, May
 
 =head2 random_crop
 
-Randomly crop src with size. Upsample result if src is smaller than size
+    Randomly crop src with size. Upsample result if src is smaller than the size.
 
-Parameters:
-AI::MXNet::NDArray $src
-Shape              $size=
-Int                $interp=2
+    Parameters:
+    -----------
+    AI::MXNet::NDArray $src
+    Shape              $size=
+    Int                $interp=2
 
-Returns:
-($cropped_image, [$x0, $y0, $new_w, $new_h])
+    Returns:
+    --------
+    ($cropped_image, [$x0, $y0, $new_w, $new_h])
 =cut
 
 method random_crop(AI::MXNet::NDArray $src, Shape $size, Int $interp=2)
@@ -153,15 +221,17 @@ method random_crop(AI::MXNet::NDArray $src, Shape $size, Int $interp=2)
 
 =head2 center_crop
 
-Randomly crop src with size around the center. Upsample result if src is smaller than size
+    Randomly crop src with size around the center. Upsample result if src is smaller than the size.
 
-Parameters:
-AI::MXNet::NDArray $src
-Shape              $size=
-Int                $interp=2
+    Parameters:
+    -----------
+    AI::MXNet::NDArray $src
+    Shape              $size=
+    Int                $interp=2
 
-Returns:
-($cropped_image, [$x0, $y0, $new_w, $new_h])
+    Returns:
+    --------
+    ($cropped_image, [$x0, $y0, $new_w, $new_h])
 =cut
 
 method center_crop(AI::MXNet::NDArray $src, Shape $size, Int $interp=2)
@@ -178,16 +248,18 @@ method center_crop(AI::MXNet::NDArray $src, Shape $size, Int $interp=2)
 
 =head2 color_normalize
 
-Normalize src with mean and std
+    Normalize src with mean and std.
 
-Parameter:
-AI::MXNet::NDArray $src
-Num|AI::MXNet::NDArray $mean
-Maybe[Num|AI::MXNet::NDArray] $std=
-Int $interp=2
+    Parameters:
+    -----------
+    AI::MXNet::NDArray $src
+    Num|AI::MXNet::NDArray $mean
+    Maybe[Num|AI::MXNet::NDArray] $std=
+    Int $interp=2
 
-Returns:
-AI::MXNet::NDArray $normalized_image
+    Returns:
+    --------
+    AI::MXNet::NDArray $normalized_image
 =cut
 
 method color_normalize(AI::MXNet::NDArray $src, Num|AI::MXNet::NDArray $mean, Maybe[Num|AI::MXNet::NDArray] $std=)
@@ -202,17 +274,19 @@ method color_normalize(AI::MXNet::NDArray $src, Num|AI::MXNet::NDArray $mean, Ma
 
 =head2 random_size_crop
 
-Randomly crop src with size. Randomize area and aspect ratio
+    Randomly crop src with size. Randomize area and aspect ratio.
 
-Parameters:
-AI::MXNet::NDArray $src
-Shape              $size
-Num                $min_area
-ArrayRef[Int]      [$from, $to] # $ratio
-Maybe[Int]         $interp=2
+    Parameters:
+    -----------
+    AI::MXNet::NDArray $src
+    Shape              $size
+    Num                $min_area
+    ArrayRef[Int]      [$from, $to] # $ratio
+    Maybe[Int]         $interp=2
 
-Returns:
-($cropped_image, [$x0, $y0, $new_w, $new_h])
+    Returns:
+    --------
+    ($cropped_image, [$x0, $y0, $new_w, $new_h])
 =cut
 
 method random_size_crop(AI::MXNet::NDArray $src, Shape $size, Num $min_area, ArrayRef[Num] $ratio, Maybe[Int] $interp=2)
@@ -249,15 +323,17 @@ method random_size_crop(AI::MXNet::NDArray $src, Shape $size, Num $min_area, Arr
 
 =head2 ResizeAug
 
-Makes "resize shorter edge to size augumenter" closure
+    Makes "resize shorter edge to size augumenter" closure.
 
-Parameters:
-Shape              $size
-Int                $interp=2
+    Parameters:
+    -----------
+    Shape              $size
+    Int                $interp=2
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [__PACKAGE__->resize_short($src, $size, $interp)]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [__PACKAGE__->resize_short($src, $size, $interp)]
 =cut
 
 method ResizeAug(Shape $size, Int $interp=2)
@@ -271,15 +347,17 @@ method ResizeAug(Shape $size, Int $interp=2)
 
 =head2 RandomCropAug
 
-Makes "random crop augumenter" closure
+    Makes "random crop augumenter" closure.
 
-Parameters:
-Shape              $size
-Int                $interp=2
+    Parameters:
+    -----------
+    Shape              $size
+    Int                $interp=2
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [(__PACKAGE__->random_crop($src, $size, $interp))[0]]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [(__PACKAGE__->random_crop($src, $size, $interp))[0]]
 =cut
 
 method RandomCropAug(Shape $size, Int $interp=2)
@@ -293,17 +371,18 @@ method RandomCropAug(Shape $size, Int $interp=2)
 
 =head2 RandomSizedCropAug
 
-Makes "random crop augumenter" closure
+    Makes "random crop augumenter" closure.
 
-Parameters:
-Shape              $size
-Num                $min_area
-ArrayRef[Num]      $ratio
-Int                $interp=2
+    Parameters:
+    -----------
+    Shape              $size
+    Num                $min_area
+    ArrayRef[Num]      $ratio
+    Int                $interp=2
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [(__PACKAGE__->random_size_crop($src, $size, $min_area, $ratio, $interp))[0]]
+    Returns:
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [(__PACKAGE__->random_size_crop($src, $size, $min_area, $ratio, $interp))[0]]
 =cut
 
 method RandomSizedCropAug(Shape $size, Num $min_area, ArrayRef[Num] $ratio, Int $interp=2)
@@ -317,15 +396,16 @@ method RandomSizedCropAug(Shape $size, Num $min_area, ArrayRef[Num] $ratio, Int 
 
 =head2 CenterCropAug
 
-Makes "center crop augumenter" closure
+    Makes "center crop augumenter" closure.
 
-Parameters:
-Shape              $size
-Int                $interp=2
+    Parameters:
+    -----------
+    Shape              $size
+    Int                $interp=2
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [(__PACKAGE__->center_crop($src, $size, $interp))[0]]
+    Returns:
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [(__PACKAGE__->center_crop($src, $size, $interp))[0]]
 =cut
 
 method CenterCropAug(Shape $size, Int $interp=2)
@@ -339,14 +419,16 @@ method CenterCropAug(Shape $size, Int $interp=2)
 
 =head2 RandomOrderAug
 
-Makes "Apply list of augmenters in random order" closure
+    Makes "Apply list of augmenters in random order" closure.
 
-Parameters:
-ArrayRef[CodeRef]  $ts
+    Parameters:
+    -----------
+    ArrayRef[CodeRef]  $ts
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns ArrayRef[AI::MXNet::NDArray]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns ArrayRef[AI::MXNet::NDArray]
 =cut
 
 method RandomOrderAug(ArrayRef[CodeRef] $ts)
@@ -357,7 +439,7 @@ method RandomOrderAug(ArrayRef[CodeRef] $ts)
         my @tmp;
         for my $t (@ts)
         {
-            push @tmp, &{$t}($src);
+            push @tmp, $t->($src);
         }
         return \@tmp;
     };
@@ -366,16 +448,18 @@ method RandomOrderAug(ArrayRef[CodeRef] $ts)
 
 =head2 RandomOrderAug
 
-Makes "Apply random brightness, contrast and saturation jitter in random order" closure
+    Makes "Apply random brightness, contrast and saturation jitter in random order" closure
 
-Parameters:
-Num $brightness
-Num $contrast
-Num $saturation
+    Parameters:
+    -----------
+    Num $brightness
+    Num $contrast
+    Num $saturation
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns ArrayRef[AI::MXNet::NDArray]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns ArrayRef[AI::MXNet::NDArray]
 =cut
 
 method ColorJitterAug(Num $brightness, Num $contrast, Num $saturation)
@@ -424,16 +508,18 @@ method ColorJitterAug(Num $brightness, Num $contrast, Num $saturation)
 
 =head2 LightingAug
 
-Makes "Add PCA based noise" closure
+    Makes "Add PCA based noise" closure.
 
-Parameters:
-Num $alphastd
-PDL $eigval
-PDL $eigvec
+    Parameters:
+    -----------
+    Num $alphastd
+    PDL $eigval
+    PDL $eigvec
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns ArrayRef[AI::MXNet::NDArray]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns ArrayRef[AI::MXNet::NDArray]
 =cut
 
 method LightingAug(Num $alphastd, PDL $eigval, PDL $eigvec)
@@ -450,15 +536,17 @@ method LightingAug(Num $alphastd, PDL $eigval, PDL $eigvec)
 
 =head2 ColorNormalizeAug
 
-Makes "Mean and std normalization" closure
+    Makes "Mean and std normalization" closure.
 
-Parameters:
-PDL $mean
-PDL $std
+    Parameters:
+    -----------
+    PDL $mean
+    PDL $std
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [__PACKAGE__->color_normalize($src, $mean, $std)]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [__PACKAGE__->color_normalize($src, $mean, $std)]
 =cut
 
 method ColorNormalizeAug(PDL $mean, PDL $std)
@@ -473,14 +561,16 @@ method ColorNormalizeAug(PDL $mean, PDL $std)
 
 =head2 HorizontalFlipAug
 
-Makes "Random horizontal flipping" closure
+    Makes "Random horizontal flipping" closure.
 
-Parameters:
-Num $p < 1
+    Parameters:
+    -----------
+    Num $p < 1
 
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [$p > rand ? AI::MXNet::NDArray->flip($src, axis=1>) : $src]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [$p > rand ? AI::MXNet::NDArray->flip($src, axis=1>) : $src]
 =cut
 
 method HorizontalFlipAug(Num $p)
@@ -493,14 +583,12 @@ method HorizontalFlipAug(Num $p)
 
 =head2 CastAug
 
-Makes "Cast to float32" closure
+    Makes "Cast to float32" closure.
 
-Parameters:
-Num $p < 1
-
-Returns:
-CodeRef that accepts AI::MXNet::NDArray $src as input
-and returns [$src->astype('float32')]
+    Returns:
+    --------
+    CodeRef that accepts AI::MXNet::NDArray $src as input
+    and returns [$src->astype('float32')]
 =cut
 
 method CastAug()
@@ -513,21 +601,22 @@ method CastAug()
 
 =head2 CreateAugmenter
 
-Create augumenter list
+    Create augumenter list
 
-Parameters:
-Shape          :$data_shape,
-Bool           :$resize=0,
-Bool           :$rand_crop=0,
-Bool           :$rand_resize=0,
-Bool           :$rand_mirror=0,
-Maybe[Num|PDL] :$mean=,
-Maybe[Num|PDL] :$std=,
-Num            :$brightness=0,
-Num            :$contrast=0,
-Num            :$saturation=0,
-Num            :$pca_noise=0,
-Int            :$inter_method=2
+    Parameters:
+    -----------
+    Shape          :$data_shape,
+    Bool           :$resize=0,
+    Bool           :$rand_crop=0,
+    Bool           :$rand_resize=0,
+    Bool           :$rand_mirror=0,
+    Maybe[Num|PDL] :$mean=,
+    Maybe[Num|PDL] :$std=,
+    Num            :$brightness=0,
+    Num            :$contrast=0,
+    Num            :$saturation=0,
+    Num            :$pca_noise=0,
+    Int            :$inter_method=2
 =cut
 
 method CreateAugmenter(
@@ -603,6 +692,11 @@ Int            :$inter_method=2
     return \@auglist;
 }
 
+method imresize(AI::MXNet::NDArray $src, Int $w, Int $h, Int $interp=2)
+{
+    return AI::MXNet::NDArray->_cvimresize($src, $w, $h, { interp=>$interp });
+}
+
 method ImageIter(@args) { AI::MXNet::ImageIter->new(@args) }
 
 package AI::MXNet::ImageIter;
@@ -612,56 +706,60 @@ extends 'AI::MXNet::DataIter';
 
 =head1 NAME
 
-AI::MXNet::ImageIter - Image data iterator
+    AI::MXNet::ImageIter - Image data iterator.
 =cut
 
 =head1 DESCRIPTION
 
 
-Image data iterator with a large number of augumentation choices.
-Supports reading from both .rec files and raw image files with image list.
+    Image data iterator with a large number of augumentation choices.
+    Supports reading from both .rec files and raw image files with image list.
 
-To load from .rec files, please specify path_imgrec. Also specify path_imgidx
-to use data partition (for distributed training) or shuffling.
+    To load from .rec files, please specify path_imgrec. Also specify path_imgidx
+    to use data partition (for distributed training) or shuffling.
 
-To load from raw image files, specify path_imglist and path_root.
+    To load from raw image files, specify path_imglist and path_root.
 
-Parameters
-----------
-batch_size : Int
-    Number of examples per batch
-data_shape : Shape
-    Data shape in (channels, height, width).
-    For now, only RGB image with 3 channels is supported.
-label_width : Int
-    dimension of label
-path_imgrec : str
-    path to image record file (.rec).
-    Created with tools/im2rec.py or bin/im2rec
-path_imglist : str
-    path to image list (.lst)
-    Created with tools/im2rec.py or with custom script.
-    Format: index\t[one or more label separated by \t]\trelative_path_from_root
-imglist: array ref
-    a list of image with the label(s)
-    each item is a list [imagelabel: float or list of float, imgpath]
-path_root : str
-    Root folder of image files
-path_imgidx : str
-    Path to image index file. Needed for partition and shuffling when using .rec source.
-shuffle : bool
-    Whether to shuffle all images at the start of each iteration.
+    Parameters
+    ----------
+    batch_size : Int
+        Number of examples per batch
+    data_shape : Shape
+        Data shape in (channels, height, width).
+        For now, only RGB image with 3 channels is supported.
+    label_width : Int
+        dimension of label
+    path_imgrec : str
+        path to image record file (.rec).
+        Created with tools/im2rec.py or bin/im2rec
+    path_imglist : str
+        path to image list (.lst)
+        Created with tools/im2rec.py or with custom script.
+        Format: index\t[one or more label separated by \t]\trelative_path_from_root
+    imglist: array ref
+        a list of image with the label(s)
+        each item is a list [imagelabel: float or array ref of float, imgpath]
+    path_root : str
+        Root folder of image files
+    path_imgidx : str
+        Path to image index file. Needed for partition and shuffling when using .rec source.
+    shuffle : bool
+        Whether to shuffle all images at the start of each iteration.
     Can be slow for HDD.
-part_index : int
-    Partition index
-num_parts : int
-    Total number of partitions.
-kwargs : hash ref with any additional arguments for augmenters
+    part_index : int
+        Partition index
+    num_parts : int
+        Total number of partitions.
+    data_name='data' Str
+    label_name='softmax_label' Str
+    kwargs : hash ref with any additional arguments for augmenters
 =cut
 
 has 'batch_size'  => (is => 'ro', isa => 'Int',   required => 1);
 has 'data_shape'  => (is => 'ro', isa => 'Shape', required => 1);
 has 'label_width' => (is => 'ro', isa => 'Int',   default  => 1);
+has 'data_name'   => (is => 'ro', isa => 'Str',   default  => 'data');
+has 'label_name'  => (is => 'ro', isa => 'Str',   default  => 'softmax_label');
 has [qw/path_imgrec
         path_imglist
         path_root
@@ -714,7 +812,7 @@ sub BUILD
         {
             chomp($line);
             my @line = split(/\t/, $line);
-            my $label = AI::MXNet::NDArray->array([@line[1..@line-1]]);
+            my $label = AI::MXNet::NDArray->array([@line[1..@line-2]]);
             my $key   = $line[0];
             $imglist{$key} = [$label, $line[-1]];
             push @imgkeys, $key;
@@ -746,7 +844,7 @@ sub BUILD
     assert(@{ $self->data_shape } == 3 and $self->data_shape->[0] == 3);
     $self->provide_data([
         AI::MXNet::DataDesc->new(
-            name  => 'data',
+            name  => $self->data_name,
             shape => [$self->batch_size, @{ $self->data_shape }]
         )
     ]);
@@ -754,7 +852,7 @@ sub BUILD
     {
         $self->provide_label([
             AI::MXNet::DataDesc->new(
-                name  => 'softmax_label',
+                name  => $self->label_name,
                 shape => [$self->batch_size, $self->label_width]
             )
         ]);
@@ -763,7 +861,7 @@ sub BUILD
     {
         $self->provide_label([
             AI::MXNet::DataDesc->new(
-                name  => 'softmax_label',
+                name  => $self->label_name,
                 shape => [$self->batch_size]
             )
         ]);
@@ -787,6 +885,10 @@ sub BUILD
     if(defined $self->aug_list or defined $self->kwargs)
     {
         $self->aug_list(AI::MXNet::Image->CreateAugmenter(data_shape => $self->data_shape, %{ $self->kwargs//{} }));
+    }
+    else
+    {
+        $self->aug_list([]);
     }
     $self->cur(0);
     $self->reset();
@@ -827,7 +929,7 @@ method next_sample()
         }
         else
         {
-            my ($label, $fname) = $self->imglist->{$idx};
+            my ($label, $fname) = @{ $self->imglist->{$idx} };
             if(not defined $self->imgrec)
             {
                 open(F, $self->path_root . "/$fname") or confess("can't open $fname $!");

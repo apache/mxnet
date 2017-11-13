@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except
 """numpy interface for operators."""
@@ -9,9 +26,9 @@ from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call
+from .base import _LIB, check_call, MXCallbackList
 from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
-from . import symbol
+from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 
 c_int_p = POINTER(c_int)
@@ -448,7 +465,7 @@ class CustomOpProp(object):
         The default declare_backward_dependency function. Use this value
         to determine whether this operator needs gradient input.
     """
-    def __init__(self, need_top_grad=False):
+    def __init__(self, need_top_grad=True):
         self.need_top_grad_ = need_top_grad
 
     def infer_shape(self, in_shape):
@@ -471,7 +488,7 @@ class CustomOpProp(object):
             List of aux shapes calculated from in_shape,
             in the same order as declared in list_auxiliary_states.
         """
-        return in_shape, [in_shape[0]], []
+        return in_shape, (in_shape[0],)*len(self.list_outputs()), ()
 
     def infer_type(self, in_type):
         """infer_type interface. override to create new operators
@@ -577,15 +594,6 @@ def register(reg_name):
     """Register a subclass of CustomOpProp to the registry with name reg_name."""
     def do_register(prop_cls):
         """Register a subclass of CustomOpProp to the registry."""
-
-        class MXCallbackList(Structure):
-            """Structure that holds Callback information. Passed to CustomOpProp."""
-            _fields_ = [
-                ('num_callbacks', c_int),
-                ('callbacks', POINTER(CFUNCTYPE(c_int))),
-                ('contexts', POINTER(c_void_p))
-                ]
-
         fb_functype = CFUNCTYPE(c_int, c_int, POINTER(c_void_p), POINTER(c_int),
                                 POINTER(c_int), c_int, c_void_p)
         del_functype = CFUNCTYPE(c_int, c_void_p)
@@ -626,9 +634,15 @@ def register(reg_name):
                         ishape, oshape, ashape = ret
                     else:
                         raise AssertionError("infer_shape must return 2 or 3 lists")
-                    assert len(oshape) == n_out
-                    assert len(ishape) == n_in
-                    assert len(ashape) == n_aux
+                    assert len(oshape) == n_out, \
+                        "InferShape Error: expecting %d entries in returned output " \
+                        "shapes, got %d."%(n_out, len(oshape))
+                    assert len(ishape) == n_in, \
+                        "InferShape Error: expecting %d entries in returned input " \
+                        "shapes, got %d."%(n_in, len(ishape))
+                    assert len(ashape) == n_aux, \
+                        "InferShape Error: expecting %d entries in returned aux state " \
+                        "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
                         tensor_shapes[i] = cast(c_array(mx_uint, rshape[i]), POINTER(mx_uint))
@@ -657,9 +671,15 @@ def register(reg_name):
                         itype, otype, atype = ret
                     else:
                         raise AssertionError("infer_type must return 2 or 3 lists")
-                    assert len(otype) == n_out
-                    assert len(itype) == n_in
-                    assert len(atype) == n_aux
+                    assert len(otype) == n_out, \
+                        "InferType Error: expecting %d entries in returned output " \
+                        "shapes, got %d."%(n_out, len(otype))
+                    assert len(itype) == n_in, \
+                        "InferType Error: expecting %d entries in returned input " \
+                        "shapes, got %d."%(n_in, len(itype))
+                    assert len(atype) == n_aux, \
+                        "InferType Error: expecting %d entries in returned aux state " \
+                        "shapes, got %d."%(n_aux, len(atype))
                     rtype = list(itype) + list(otype) + list(atype)
                     for i, dtype in enumerate(rtype):
                         tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
@@ -734,6 +754,9 @@ def register(reg_name):
             def create_operator_entry(ctx, num_inputs, shapes, ndims, dtypes, ret, _):
                 """C Callback for CustomOpProp::CreateOperator"""
                 try:
+                    ctx = py_str(ctx)
+                    sep = ctx.find('(')
+                    ctx = context.Context(ctx[:sep], int(ctx[sep+1:-1]))
                     ndims = [ndims[i] for i in range(num_inputs)]
                     shapes = [[shapes[i][j] for j in range(ndims[i])] for i in range(num_inputs)]
                     dtypes = [dtypes[i] for i in range(num_inputs)]
@@ -753,9 +776,10 @@ def register(reg_name):
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
-                            op.forward(is_train=is_train, req=reqs,
-                                       in_data=tensors[0], out_data=tensors[1],
-                                       aux=tensors[4])
+                            with ctx:
+                                op.forward(is_train=is_train, req=reqs,
+                                           in_data=tensors[0], out_data=tensors[1],
+                                           aux=tensors[4])
                         except Exception:
                             print('Error in CustomOp.forward: %s' % traceback.format_exc())
                             return False
@@ -776,10 +800,11 @@ def register(reg_name):
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]
-                            op.backward(req=reqs,
-                                        in_data=tensors[0], out_data=tensors[1],
-                                        in_grad=tensors[2], out_grad=tensors[3],
-                                        aux=tensors[4])
+                            with ctx:
+                                op.backward(req=reqs,
+                                            in_data=tensors[0], out_data=tensors[1],
+                                            in_grad=tensors[2], out_grad=tensors[3],
+                                            aux=tensors[4])
                         except Exception:
                             print('Error in CustomOp.backward: %s' % traceback.format_exc())
                             return False

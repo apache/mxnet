@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::KVStoreServer;
 use strict;
 use warnings;
@@ -10,16 +27,16 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-AI::MXNet::KVStoreServer - The key-value store server
+    AI::MXNet::KVStoreServer - The key-value store server
 =cut
 
 =head2 new
 
-Initialize a new KVStoreServer.
+    Initialize a new KVStoreServer.
 
-Parameters
+    Parameters
     ----------
-kvstore : KVStore
+    kvstore : KVStore
 =cut
 
 has 'kvstore' => (is => 'ro', isa => 'AI::MXNet::KVStore', required => 1);
@@ -30,7 +47,7 @@ has 'init_logging' => (is => 'rw', isa => 'Int', default => 0);
 # return the server controller
 method _controller()
 {
-    return  sub { 
+    return  sub {
         my ($cmd_id, $cmd_body) = @_;
         if (not $self->init_logging)
         {
@@ -52,10 +69,10 @@ method _controller()
 
 =head2 run
 
-run the server, whose behavior is like
->>> while receive(x):
-...     if is_command x: controller(x)
-...     else if is_key_value x: updater(x)
+    run the server, whose behavior is like
+    >>> while receive(x):
+    ...     if is_command x: controller(x)
+    ...     else if is_key_value x: updater(x)
 =cut
 
 method run()

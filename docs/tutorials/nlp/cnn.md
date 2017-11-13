@@ -208,7 +208,7 @@ h_pool = mx.sym.Reshape(data=concat, target_shape=(batch_size, total_filters))
 
 Next, we add dropout regularization, which will randomly disable a fraction of neurons in the layer (set to 50% here) to ensure that that model does not overfit. This works by preventing neurons from co-adapting and forcing them to learn individually useful features.
 
-This is necessary for our model because the dataset has a vocabulary of size around 20k and only around 10k examples so since this data set is pretty small we’re likely to overfit with a powerful model (like this neural net).
+This is necessary for our model because the dataset has a vocabulary of size around 20k and only around 10k examples so since this data set is pretty small we're likely to overfit with a powerful model (like this neural net).
 
 
 ```python
@@ -413,7 +413,7 @@ for iteration in range(epoch):
 Now that we have gone through the trouble of training the model, we have stored the learned parameters in the .params file in our local directory. We can now load this file whenever we want and predict the sentiment of new sentences by running them through a forward pass of the trained model.
 
 ## References
-- [“Implementing a CNN for Text Classification in TensorFlow” blog post](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/)
+- ["Implementing a CNN for Text Classification in TensorFlow" blog post](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/)
 - [Convolutional Neural Networks for Sentence Classification](https://arxiv.org/abs/1408.5882)
 
 ## Next Steps

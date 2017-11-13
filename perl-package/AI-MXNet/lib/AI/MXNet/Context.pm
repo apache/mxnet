@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 package AI::MXNet::Context;
 use strict;
 use warnings;
@@ -48,44 +65,45 @@ use overload
     '""' => sub {
         my ($self) = @_;
         return sprintf("%s(%s)", $self->device_type, $self->device_id);
-    };
+    },
+    fallback => 1;
 =head1 NAME
 
-AI::MXNet::Context - A device context.
+    AI::MXNet::Context - A device context.
 =cut
 
 =head1 DESCRIPTION
 
-This class governs the device context of AI::MXNet::NDArray objects.
+    This class governs the device context of AI::MXNet::NDArray objects.
 =cut
 
 =head2
 
-Constructing a context.
+    Constructing a context.
 
-Parameters
-----------
-device_type : {'cpu', 'gpu'} or Context.
-    String representing the device type
+    Parameters
+    ----------
+    device_type : {'cpu', 'gpu'} or Context.
+        String representing the device type
 
-device_id : int (default=0)
-    The device id of the device, needed for GPU
+    device_id : int (default=0)
+        The device id of the device, needed for GPU
 =cut
 
 =head2 cpu
 
-Returns a CPU context.
+    Returns a CPU context.
 
-Parameters
-----------
-device_id : int, optional
-The device id of the device. device_id is not needed for CPU.
-This is included to make interface compatible with GPU.
+    Parameters
+    ----------
+    device_id : int, optional
+        The device id of the device. device_id is not needed for CPU.
+        This is included to make interface compatible with GPU.
 
-Returns
--------
-context : AI::MXNet::Context
-    The corresponding CPU context.
+    Returns
+    -------
+    context : AI::MXNet::Context
+        The corresponding CPU context.
 =cut
 
 method cpu(Int $device_id=0)
@@ -95,16 +113,16 @@ method cpu(Int $device_id=0)
 
 =head2 gpu
 
-Returns a GPU context.
+    Returns a GPU context.
 
-Parameters
-----------
-device_id : int, optional
+    Parameters
+    ----------
+    device_id : int, optional
 
-Returns
--------
-context : AI::MXNet::Context
-    The corresponding GPU context.
+    Returns
+    -------
+    context : AI::MXNet::Context
+        The corresponding GPU context.
 =cut
 
 method gpu(Int $device_id=0)
@@ -114,17 +132,24 @@ method gpu(Int $device_id=0)
 
 =head2 current_context
 
-Returns the current context.
+    Returns the current context.
 
-Returns
--------
-$default_ctx : AI::MXNet::Context
+    Returns
+    -------
+    $default_ctx : AI::MXNet::Context
 =cut
 
 method current_ctx()
 {
     return $AI::MXNet::current_ctx;
 }
+
+method set_current(AI::MXNet::Context $current)
+{
+    $AI::MXNet::current_ctx = $current;
+}
+
+*current_context = \&current_ctx;
 
 method deepcopy()
 {

@@ -22,8 +22,31 @@ import java.io.IOException
 import ml.dmlc.mxnet.optimizer.SGD
 import ml.dmlc.mxnet._
 import org.slf4j.LoggerFactory
-
+import org.slf4j.Logger
 import scala.collection.mutable.ArrayBuffer
+
+object BaseModule {
+  /**
+   * Check that all input names are in symbol's arguments.
+   */
+  @throws(classOf[IllegalArgumentException])
+  private[module] def _checkInputNames(symbol: Symbol, names: IndexedSeq[String],
+    typeName: String, throws: Boolean, logger: Logger): Unit = {
+    val args = symbol.listArguments()
+    for (name <- names) {
+      if (!args.contains(name)) {
+        val candidates = args.filter ( arg =>
+          !arg.endsWith("_weight") && !arg.endsWith("_bias")
+          && !arg.endsWith("_gamma") && !arg.endsWith("_beta"))
+        val msg = s"You created Module with Module(..., ${typeName}_names=${names.mkString})" +
+          s" but input with name \'${name}\' is not found in symbol.listArguments(). " +
+          s"Did you mean one of:\n${candidates.mkString("\n\t")}"
+        if (throws) throw new IllegalArgumentException(msg)
+        else logger.warn(msg)
+      }
+    }
+  }
+}
 
 /**
  * The base class of a modules. A module represents a computation component. The design
@@ -121,6 +144,7 @@ abstract class BaseModule {
   private[module] var auxParams: Map[String, NDArray] = null
 
   // High Level API
+  def getSymbol: Symbol = this.symbol
 
   // A convenient function that calls both `forward` and `backward`.
   def forwardBackward(dataBatch: DataBatch): Unit = {
@@ -259,7 +283,7 @@ abstract class BaseModule {
   /**
    * Get parameters, those are potentially copies of the the actual parameters used
    * to do computation on the device.
-   * @return `(arg_params, aux_params)`, a pair of dictionary of name to value mapping.
+   * @return `(argParams, auxParams)`, a pair of dictionary of name to value mapping.
    */
   def getParams: (Map[String, NDArray], Map[String, NDArray])
 
@@ -267,41 +291,52 @@ abstract class BaseModule {
    * Initialize the parameters and auxiliary states.
    * @param initializer : Initializer
    *         Called to initialize parameters if needed.
-   *     arg_params : dict
+   *     argParams : dict
    *         If not None, should be a dictionary of existing arg_params. Initialization
    *         will be copied from that.
-   *     aux_params : dict
+   *     auxParams : dict
    *         If not None, should be a dictionary of existing aux_params. Initialization
    *         will be copied from that.
-   *     allow_missing : bool
+   *     allowMissing : bool
    *         If true, params could contain missing values, and the initializer will be
    *         called to fill those missing params.
-   *     force_init : bool
+   *     forceInit : bool
    *         If true, will force re-initialize even if already initialized.
+   *     allowExtra : bool
+   *         Whether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
    */
   def initParams(initializer: Initializer = new Uniform(0.01f),
                  argParams: Map[String, NDArray] = null,
                  auxParams: Map[String, NDArray] = null,
-                 allowMissing: Boolean = false, forceInit: Boolean = false): Unit
+                 allowMissing: Boolean = false,
+                 forceInit: Boolean = false,
+                 allowExtra: Boolean = false): Unit
 
   /**
    * Assign parameter and aux state values.
-   *     arg_params : dict
+   *     argParams : dict
    *         Dictionary of name to value (`NDArray`) mapping.
-   *     aux_params : dict
+   *     auxParams : dict
    *         Dictionary of name to value (`NDArray`) mapping.
-   *     allow_missing : bool
+   *     allowMissing : bool
    *         If true, params could contain missing values, and the initializer will be
    *         called to fill those missing params.
-   *     force_init : bool
+   *     forceInit : bool
    *         If true, will force re-initialize even if already initialized.
+   *     allowExtra : bool
+   *         Whether allow extra parameters that are not needed by symbol.
+   *         If this is True, no error will be thrown when argParams or auxParams
+   *         contain extra parameters that is not needed by the executor.
    */
   def setParams(argParams: Map[String, NDArray],
                 auxParams: Map[String, NDArray],
                 allowMissing: Boolean = false,
-                forceInit: Boolean = true): Unit = {
-    initParams(initializer = null, argParams = argParams, auxParams = auxParams,
-      allowMissing = allowMissing, forceInit = forceInit)
+                forceInit: Boolean = true,
+                allowExtra: Boolean = false): Unit = {
+    initParams(initializer = null, argParams, auxParams,
+      allowMissing, forceInit, allowExtra)
   }
 
   /**
@@ -385,7 +420,7 @@ abstract class BaseModule {
 
       // one epoch of training is finished
       val (name, value) = fitParams.evalMetric.get
-      logger.info(s"Epoch[$epoch] Train-$name=$value")
+      logger.info(s"Epoch[$epoch] Train-${name.head}=${value.head}")
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
@@ -403,7 +438,7 @@ abstract class BaseModule {
           scoreEndCallback = fitParams.evalEndCallback,
           batchEndCallback = fitParams.evalBatchEndCallback, epoch = epoch)
         val (name, value) = res.get
-        logger.info(s"Epoch[$epoch] Validation-$name=$value")
+        logger.info(s"Epoch[$epoch] Validation-${name.head}=${value.head}")
       })
 
       // end of 1 epoch, reset the data-iter for another epoch
