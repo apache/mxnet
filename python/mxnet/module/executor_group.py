@@ -168,7 +168,7 @@ class DataParallelExecutorGroup(object):
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
-    group2ctxs : dict of str to context or list of context
+    group2ctxs : dict of str to context or list of context,
                  or list of dict of str to context
         Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     """
