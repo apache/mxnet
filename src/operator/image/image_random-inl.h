@@ -35,16 +35,40 @@
 
 namespace mxnet {
 namespace op {
+
+
+enum ImageRandomResource { kRandom };
+
+template<typename xpu>
+static void RandomFlip(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+template<typename xpu>
+static void ToTensor(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+template<typename xpu>
+static void Normalize(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
   float max_brightness;
   DMLC_DECLARE_PARAMETER(RandomBrightnessParam) {
     DMLC_DECLARE_FIELD(max_brightness)
-    .set_default(0.0)
-    .describe("Max Contrast.");
+      .set_default(0.0)
+      .describe("Max Brightness.");
   }
 };
-
-enum ImageRandomResource { kRandom };
 
 template<typename xpu>
 static void RandomBrightness(const nnvm::NodeAttrs &attrs,
@@ -72,6 +96,14 @@ static void RandomBrightness(const nnvm::NodeAttrs &attrs,
 
 }
 
+struct RandomContrastParam : public dmlc::Parameter<RandomContrastParam> {
+  float max_contrast;
+  DMLC_DECLARE_PARAMETER(RandomContrastParam) {
+    DMLC_DECLARE_FIELD(max_contrast)
+      .set_default(0.0)
+      .describe("Max Contrast.");
+  }
+};
 
 /*! \brief mul_add operator */
 struct mul_add {
@@ -81,7 +113,6 @@ struct mul_add {
     return a * b + c;
   }
 };
-
 
 template<typename xpu>
 static void RandomContrast(const nnvm::NodeAttrs &attrs,
@@ -99,8 +130,8 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
   Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu, real_t>(s);
 
 
-  const RandomBrightnessParam &param = nnvm::get<RandomBrightnessParam>(attrs.parsed);
-  float alpha_c = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(prnd->GetRndEngine());
+  const RandomContrastParam &param = nnvm::get<RandomContrastParam>(attrs.parsed);
+  float alpha_c = 1.0 + std::uniform_real_distribution<float>(-param.max_contrast, param.max_contrast)(prnd->GetRndEngine());
 
   const float R2YF = 0.299f;
   const float G2YF = 0.587f;
@@ -128,6 +159,40 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
   });
 
 }
+
+template<typename xpu>
+static void RandomSaturation(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+
+template<typename xpu>
+static void RandomHue(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+
+template<typename xpu>
+static void RandomColorJitter(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+
+template<typename xpu>
+static void RandomLighting(const nnvm::NodeAttrs &attrs,
+  const OpContext &ctx,
+  const std::vector<TBlob> &inputs,
+  const std::vector<OpReqType> &req,
+  const std::vector<TBlob> &outputs) {
+}
+
+
 
 
 } // namespace op
