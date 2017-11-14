@@ -6,7 +6,7 @@
 - [ ] Passed code style checking (`make lint`)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
 - [ ] All changes have test coverage
-- [ ] For user-facing API changes, API doc string has been updated.
+- [ ] For user-facing API changes, API doc string has been updated. For new C++ functions in header files, their functionalities and arguments are well-documented. 
 - [ ] To my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
 
 ### Changes ###
@@ -15,4 +15,4 @@
 
 ## Comments ##
 - If this change is a backward incompatible change, why must this change be made.
-- Intersting edge cases to note here
+- Interesting edge cases to note here

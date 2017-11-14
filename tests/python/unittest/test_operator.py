@@ -1614,12 +1614,13 @@ def test_transpose():
 
 def test_expand_dims():
     for ndim in range(1, 6):
-        for t in range(5):
-            dims = list(np.random.randint(1, 10, size=ndim))
-            axis = np.random.randint(1, ndim+1)
-            x = mx.nd.array(np.random.normal(size=dims))
-            y = mx.nd.expand_dims(x, axis=axis)
-            assert_allclose(np.expand_dims(x.asnumpy(), axis=axis), y.asnumpy())
+        for axis in range(-ndim + 1, ndim):
+            x = np.random.normal(size=list(np.random.randint(1, 10, size=ndim)))
+            y = mx.nd.array(x)
+            x1 = np.expand_dims(x, axis=axis)
+            y1 = mx.nd.expand_dims(y, axis=axis)
+            assert_allclose(x1, y1.asnumpy())
+            assert_allclose(x1.shape, y1.shape)
 
 
 def test_crop():
@@ -4608,6 +4609,43 @@ def test_softmax():
     check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
     check_softmax_grad(default_context())
     check_smoothed_softmax_grad(default_context())
+
+
+def test_slice():
+    def test_slice_forward_backward(a, index):
+        a_np = a.asnumpy()
+        begin = []
+        end = []
+        step = []
+        for slice_i in index:
+            begin.append(slice_i.start)
+            end.append(slice_i.stop)
+            step.append(slice_i.step)
+        b = mx.nd.slice(a, begin=begin, end=end, step=step)
+        b_np = a_np[index]
+        assert same(b.asnumpy(), b_np)
+
+        data = mx.sym.Variable('data')
+        slice_sym = mx.sym.slice(data, begin=begin, end=end, step=step)
+        expected_in_grad = np.zeros_like(a_np)
+        expected_in_grad[index] = b_np
+        check_symbolic_backward(slice_sym, [a_np], [b_np], [expected_in_grad])
+
+    shape = (16, 14, 17, 20)
+    arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
+    index_list = [(slice(None),), (slice(None), slice(None)), (slice(1, 10),), (slice(1, 10), slice(3, 9)),
+                  (slice(1, 10), slice(2, 5), slice(3, 6), slice(7, 10)),
+                  (slice(1, 10, 2), slice(2, 9, 3), slice(3, 6, 5), slice(7, 10, 2)),
+                  (slice(None, None, -1), slice(None, None, -1), slice(None, None, -1)),
+                  (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4))]
+    for index in index_list:
+        test_slice_forward_backward(arr, index)
+
+    # check numeric gradient
+    in_data = np.arange(36).reshape(2, 2, 3, 3)
+    data = mx.sym.Variable('data')
+    slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
+    check_numeric_gradient(slice_sym, [in_data])
 
 
 if __name__ == '__main__':

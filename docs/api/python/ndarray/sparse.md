@@ -124,6 +124,7 @@ We summarize the interface for each class in the following sections.
     CSRNDArray.copyto
     CSRNDArray.as_in_context
     CSRNDArray.asnumpy
+    CSRNDArray.asscipy
     CSRNDArray.asscalar
     CSRNDArray.astype
     CSRNDArray.tostype

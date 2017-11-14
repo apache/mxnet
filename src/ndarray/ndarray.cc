@@ -65,10 +65,10 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 NDArray NDArray::Reshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
+  auto stype = storage_type();
+  // reshape is not supported for non-default ndarray with dismatching shapes
+  CHECK((shape_ == shape) || stype == kDefaultStorage)
+    << "Reshape for storage type " << stype << " is not implemented yet";
   CHECK_GE(shape_.Size(), shape.Size())
     << "NDArray.Reshape: target shape size is larger current shape";
   NDArray ret = this->Detach();
