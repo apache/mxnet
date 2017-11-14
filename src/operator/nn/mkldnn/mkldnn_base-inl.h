@@ -195,28 +195,26 @@ static inline void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) 
 inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
     const mkldnn::memory::primitive_desc &target_pd, int num_groups) {
   mkldnn_mem_const_ptr mem;
+  mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   auto engine = CpuEngine::Instance().get_engine();
   if (arr.shape().ndim() == 2) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
       (int) arr.shape()[1]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
-      mkldnn::memory::format::oi};
+    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
   }
   else if (arr.shape().ndim() == 4 && num_groups == 1) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
       (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
-      mkldnn::memory::format::oihw};
+    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
   }
   else if (arr.shape().ndim() == 4) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{num_groups, (int) arr.shape()[0] / num_groups,
       (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
-      mkldnn::memory::format::goihw};
+    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
   }
@@ -234,27 +232,25 @@ inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
 
 inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
     const mkldnn::engine &engine, int num_groups = 1) {
+  mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   if (arr.shape().ndim() == 2) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
       (int) arr.shape()[1]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
-      mkldnn::memory::format::oi};
+    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
   }
   else if (arr.shape().ndim() == 4 && num_groups == 1) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
       (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
-      mkldnn::memory::format::oihw};
+    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
   }
   else if (arr.shape().ndim() == 4) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{num_groups, (int) arr.shape()[0] / num_groups,
       (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, mkldnn::memory::data_type::f32,
-      mkldnn::memory::format::goihw};
+    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
     mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
   }
