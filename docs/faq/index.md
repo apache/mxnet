@@ -40,6 +40,9 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
 
+## Security
+* [How to run MXNet securely?](http://mxnet.io/how_to/security.md)
+
 ## Extend and Contribute to MXNet
 
 * [How do I join the MXNet development discussion?](http://mxnet.io/community/mxnet_channels.html)
@@ -62,3 +65,4 @@ We track bugs and new feature requests in the MXNet Github repo in the issues fo
 
 ## Roadmap
 MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://github.com/dmlc/mxnet/labels/Roadmap).
+I
