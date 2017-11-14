@@ -1310,7 +1310,8 @@ def array(source_array, ctx=None, dtype=None):
         raise ValueError("Unexpected source_array type: ", type(source_array))
 
 #pylint: disable= too-many-arguments, no-member, protected-access
-def _ufunc_helper(lhs, rhs, fn_elemwise_arr, fn_broadcast_arr, fn_scalar, lfn_scalar, rfn_scalar=None):
+def _ufunc_helper(lhs, rhs, fn_elemwise_arr, fn_broadcast_arr, fn_scalar,
+                  lfn_scalar, rfn_scalar=None):
     """ Helper function for element-wise operation.
     The function will perform numpy-like broadcasting if needed and call different functions.
 
@@ -1326,7 +1327,8 @@ def _ufunc_helper(lhs, rhs, fn_elemwise_arr, fn_broadcast_arr, fn_scalar, lfn_sc
         Function to be called if both lhs and rhs are of ``NDArray`` type and the shape matches.
 
     fn_broadcast_arr : function
-        Function to be called if both lhs and rhs are of ``NDArray`` type and the shape doesn't match.
+        Function to be called if both lhs and rhs are of ``NDArray`` type and \
+        the shape doesn't match.
 
     fn_scalar : function
         Function to be called if both lhs and rhs are numeric values.
