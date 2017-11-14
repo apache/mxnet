@@ -138,6 +138,25 @@ We summarize the interface for each class in the following sections.
     CSRNDArray.zeros_like
 ```
 
+### Array reduction
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.sum
+    CSRNDArray.mean
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.square
+```
+
 ### Indexing
 
 ```eval_rst
@@ -212,6 +231,52 @@ We summarize the interface for each class in the following sections.
     RowSparseNDArray.trunc
 ```
 
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.sin
+    RowSparseNDArray.tan
+    RowSparseNDArray.arcsin
+    RowSparseNDArray.arctan
+    RowSparseNDArray.degrees
+    RowSparseNDArray.radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.sinh
+    RowSparseNDArray.tanh
+    RowSparseNDArray.arcsinh
+    RowSparseNDArray.arctanh
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.expm1
+    RowSparseNDArray.log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.sqrt
+    RowSparseNDArray.square
+```
+
 ### Indexing
 
 ```eval_rst
@@ -220,6 +285,7 @@ We summarize the interface for each class in the following sections.
 
     RowSparseNDArray.__getitem__
     RowSparseNDArray.__setitem__
+    RowSparseNDArray.retain
 ```
 
 ### Lazy evaluation
@@ -229,6 +295,16 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.wait_to_read
+```
+
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.clip
+    RowSparseNDArray.sign
 ```
 
 ## Array creation routines
@@ -279,6 +355,7 @@ We summarize the interface for each class in the following sections.
     elemwise_add
     elemwise_sub
     elemwise_mul
+    elemwise_div
     negative
     dot
     add_n
@@ -308,6 +385,16 @@ We summarize the interface for each class in the following sections.
     tanh
     arcsinh
     arctanh
+```
+
+### Reduce functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sum
+    mean
 ```
 
 ### Rounding
@@ -362,6 +449,7 @@ We summarize the interface for each class in the following sections.
 
     make_loss
     stop_gradient
+    mx.ndarray.contrib.SparseEmbedding
 ```
 
 ## API Reference
