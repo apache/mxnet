@@ -39,6 +39,9 @@ NNVM_REGISTER_OP(_image_random_brightness)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RandomBrightnessParam>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) { 
+  return std::vector<ResourceRequest>{ResourceRequest::kRandom}; 
+})
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", RandomBrightness<cpu>)
