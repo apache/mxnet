@@ -524,16 +524,17 @@ std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
   if (storage_type() != kMKLDNNStorage && required_format != def_format)
     return nullptr;
 
-  if (required_format == def_format) {
-    ptr_->SetMKLMem(shape_, dtype_);
-    CHECK(ptr_->Mkl_mem_->get_primitive_desc() == desc);
-    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
-    return ptr_->Mkl_mem_;
-  }
-
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
+  }
+
+  // If the required format is a default format, we don't need to worry about the shape.
+  // If the shape isn't the same, it actually implicitly reshapes data.
+  if (required_format == def_format) {
+    ptr_->SetMKLMem(shape_, dtype_);
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
+    return ptr_->Mkl_mem_;
   }
 
   if (ptr_->Mkl_mem_ && ptr_->Mkl_mem_->get_primitive_desc() == desc) {
