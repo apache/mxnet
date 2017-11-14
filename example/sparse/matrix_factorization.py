@@ -22,6 +22,8 @@ import mxnet as mx
 import numpy as np
 from get_data import get_movielens_iter, get_movielens_data
 from matrix_fact_model import matrix_fact_net
+
+
 logging.basicConfig(level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="Run matrix factorization with sparse embedding",
@@ -77,7 +79,6 @@ if __name__ == '__main__':
 
     # construct the model
     net = matrix_fact_net(factor_size, factor_size, max_user, max_movies, sparse_embed=use_sparse)
-    a = time.time()
 
     # initialize the module
     mod = mx.module.Module(symbol=net, context=ctx, data_names=['user', 'item'],

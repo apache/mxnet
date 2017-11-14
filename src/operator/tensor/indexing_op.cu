@@ -24,6 +24,8 @@
 */
 
 #include "./indexing_op.h"
+#include "./util/tensor_util-inl.cuh"
+
 namespace mxnet {
 namespace op {
 
@@ -35,6 +37,27 @@ struct is_valid_check {
   MSHADOW_XINLINE static void Map(int i, int32_t* out, const DType* data,
                                   const DType min, const DType max) {
     if (data[i] < min || data[i] > max) *out = 1;
+  }
+};
+
+
+struct AddTakeGradRspGPUKernel {
+
+  template<typename DType, typename IType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             DType* out,
+                                             const nnvm::dim_t* prefix_sum,
+                                             const IType* data,
+                                             const DType* ograd,
+                                             const nnvm::dim_t row_length) {
+    using nnvm::dim_t;
+    const dim_t data_i = tid / row_length;
+    const dim_t grad_i = tid % row_length;
+    
+    const dim_t irow = static_cast<dim_t>(data[data_i]);
+    const dim_t rsp_row = prefix_sum[irow]-1;
+    const DType val = ograd[data_i * row_length + grad_i];
+    atomicAdd(static_cast<DType *>(&(out[rsp_row*row_length+grad_i])), val);
   }
 };
 
@@ -103,8 +126,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
   dim_t num_threads;
 
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
-    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+    MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
         dim_t* prefix_sum = NULL;
         void* d_temp_storage = NULL;
         size_t temp_storage_bytes = 0;
@@ -132,7 +155,7 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
                                       mshadow::Stream<gpu>::GetStream(s));
         dim_t nnr = 0;
         CUDA_CALL(cudaMemcpy(&nnr, &prefix_sum[num_rows-1], sizeof(dim_t),
-                  cudaMemcpyDeviceToHost));
+            cudaMemcpyDeviceToHost));
 
         if (nnr == 0) {
           FillZerosRspImpl(s, output);
@@ -147,12 +170,9 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Kernel<set_zero, gpu>::Launch(s, nnr * row_length, grad_data);
         // add the final gradients
-        const int num_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-        dim_t segment_len = (nnr + num_threads - 1) / num_threads;
-        Kernel<AddTakeGradRspKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
-                                                  ograd.dptr<DType>(), row_length,
-                                                  data.dptr<IType>(), data_size, segment_len,
-                                                  num_rows);
+        num_threads = row_length * data_size;
+        Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
+            data.dptr<IType>(), ograd.dptr<DType>(), row_length);
       });
     });
   });
