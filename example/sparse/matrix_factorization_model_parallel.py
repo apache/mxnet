@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     # initialize the module
     mod = mx.module.Module(symbol=net, context=[mx.cpu()]*num_gpus, data_names=['user', 'item'],
-        label_names=['score'], group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.cpu(i) for i in range(num_gpus)]})
+        label_names=['score'], group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.gpu(i) for i in range(num_gpus)]})
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
     mod.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
     optim = mx.optimizer.create(optimizer, learning_rate=learning_rate, momentum=momentum,
