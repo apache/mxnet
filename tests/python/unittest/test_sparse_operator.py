@@ -1551,8 +1551,8 @@ def test_sparse_embedding():
         # update weight based on density
         weight[:] = rand_ndarray(weight.shape, 'row_sparse', density=density)
         # check forward
-        exe_test.forward(is_train=True)
-        assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(data_onehot, weight.asnumpy()))
+        executor.forward(is_train=True)
+        assert_almost_equal(executor.outputs[0].asnumpy(), np.dot(data_onehot, weight.asnumpy()))
         # check backward
         executor.backward([grad])
         assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(data_onehot.T, grad.asnumpy()))
