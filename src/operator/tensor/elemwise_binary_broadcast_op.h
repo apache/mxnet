@@ -249,8 +249,9 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
                                   const std::vector<OpReqType>& req,
                                   const std::vector<TBlob>& outputs) {
   TShape new_lshape, new_rshape, new_oshape;
-  bool need_bc = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
-                                             &new_lshape, &new_rshape, &new_oshape);
+  const bool need_bc = BinaryBroadcastShapeCompact(outputs[0].shape_,
+                                                   outputs[1].shape_, inputs[0].shape_,
+                                                   &new_lshape, &new_rshape, &new_oshape) != 0;
   if (!need_bc) {
     ElemwiseBinaryOp::BackwardUseIn<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
