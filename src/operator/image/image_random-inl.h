@@ -29,7 +29,7 @@
 #include <mxnet/base.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/mat.hpp>
-#include "mxnet/op_attr_types.h"
+#include "../mxnet_op.h"
 #include "image_common.h"
 
 
@@ -44,6 +44,7 @@ struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
   }
 };
 
+enum ImageRandomResource { kRandom };
 
 template<typename xpu>
 static void RandomBrightness(const nnvm::NodeAttrs &attrs,
@@ -51,44 +52,80 @@ static void RandomBrightness(const nnvm::NodeAttrs &attrs,
                              const std::vector<TBlob> &inputs,
                              const std::vector<OpReqType> &req,
                              const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
   auto input = inputs[0];
   auto output = outputs[0];
-  int hight = input.shape_[0];
-  int weight = input.shape_[1];
-  int channel = input.shape_[2];
+  int channel = input.shape_[0];
+  int hight = input.shape_[1];
+  int weight = input.shape_[2];
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu, real_t>(s);
 
-  auto input_mat = mat_convert(input, hight, weight, channel);
-  auto output_mat = mat_convert(output, hight, weight, channel);
-  //input_mat.convertTo(output_mat, -1, 1/255.0, 0);
-  std::default_random_engine generator;
   const RandomBrightnessParam &param = nnvm::get<RandomBrightnessParam>(attrs.parsed);
-  float alpha_b = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(generator);
-  output_mat.convertTo(output_mat, -1, alpha_b, 0);
+  float alpha_b = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(prnd->GetRndEngine());
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req,{
+      mxnet_op::Kernel<mxnet_op::op_with_req<mshadow::op::mul, Req>, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha_b));
+    });
+  });
+
 }
+
+
+/*! \brief mul_add operator */
+struct mul_add {
+  /*! \brief map a, b, c to result using defined operation */
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b, DType c) {
+    return a * b + c;
+  }
+};
 
 
 template<typename xpu>
 static void RandomContrast(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                           const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
   auto input = inputs[0];
   auto output = outputs[0];
-  int hight = input.shape_[0];
-  int weight = input.shape_[1];
-  int channel = input.shape_[2];
+  int channel = input.shape_[0];
+  int hight = input.shape_[1];
+  int weight = input.shape_[2];
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu, real_t>(s);
 
-  auto input_mat = mat_convert(input, hight, weight, channel);
-  auto output_mat = mat_convert(output, hight, weight, channel);
-  //input_mat.convertTo(output_mat, -1, 1/255.0, 0);
-  std::default_random_engine generator;
+
   const RandomBrightnessParam &param = nnvm::get<RandomBrightnessParam>(attrs.parsed);
-  float alpha_c = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(generator);
-  cv::Mat temp_;
-  cv::cvtColor(input_mat, temp_,  CV_RGB2GRAY);
-  float gray_mean = cv::mean(temp_)[0];
-  input_mat.convertTo(output_mat, -1, alpha_c, (1 - alpha_c) * gray_mean);
+  float alpha_c = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(prnd->GetRndEngine());
+
+  const float R2YF = 0.299f;
+  const float G2YF = 0.587f;
+  const float B2YF = 0.114f;
+  static const float coeffs0[] = { R2YF, G2YF, B2YF };
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    auto input_3d = input.FlatTo3D<xpu, DType>(s);
+    DType sum = (DType)0.0;
+    for (int c = 0; c < channel; ++c) {
+      for (int h = 0; h < hight; ++h) {
+        for (int w = 0; w < weight; ++w) {
+          sum += input_3d[c][h][w] * coeffs0[c];
+        }
+      }
+    }
+    float gray_mean = sum / (float)(hight * weight);
+    float beta = (1 - alpha_c) * gray_mean;
+
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<mul_add, Req>, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha_c), DType(beta));
+    });
+
+  });
 
 }
 
