@@ -234,18 +234,19 @@ def test_sparse_nd_binary():
             oshape = np.random.randint(1, 6, size=(ndim,))
             bdim = 2
             lshape = list(oshape)
-            rshape = list(oshape[ndim-bdim:])
-            for i in range(bdim):
-                sep = np.random.uniform(0, 1)
-                if sep < 0.33:
-                    lshape[ndim-i-1] = 1
-                elif sep < 0.66:
-                    rshape[bdim-i-1] = 1
-            lhs = np.random.uniform(0, 1, size=lshape)
-            rhs = np.random.uniform(0, 1, size=rshape)
-            lhs_nd = mx.nd.array(lhs).tostype(stype)
-            rhs_nd = mx.nd.array(rhs).tostype(stype)
-            assert_allclose(fn(lhs, rhs), fn(lhs_nd, rhs_nd).asnumpy(), rtol=1e-4, atol=1e-4)
+            rshapes = [list(oshape[ndim-bdim:]), lshape]
+            for rshape in rshapes:
+                for i in range(bdim):
+                    sep = np.random.uniform(0, 1)
+                    if sep < 0.33:
+                        lshape[ndim-i-1] = 1
+                    elif sep < 0.66:
+                        rshape[bdim-i-1] = 1
+                lhs = np.random.uniform(0, 1, size=lshape)
+                rhs = np.random.uniform(0, 1, size=rshape)
+                lhs_nd = mx.nd.array(lhs).tostype(stype)
+                rhs_nd = mx.nd.array(rhs).tostype(stype)
+                assert_allclose(fn(lhs, rhs), fn(lhs_nd, rhs_nd).asnumpy(), rtol=1e-4, atol=1e-4)
 
     stypes = ['row_sparse', 'csr']
     for stype in stypes:
