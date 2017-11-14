@@ -553,7 +553,7 @@ struct AddTakeGradRspKernel {
                                   const nnvm::dim_t nnr) {
     using nnvm::dim_t;
     dim_t segment_start = tid * segment_length;
-    dim_t segment_end = std::min(nnr, segment_start + segment_length);;
+    dim_t segment_end = std::min(nnr, segment_start + segment_length);
     // scan all data
     for (dim_t data_i = 0; data_i < data_size; data_i++) {
       dim_t data = static_cast<dim_t>(data_val[data_i]);
