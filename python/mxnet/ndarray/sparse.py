@@ -1474,7 +1474,8 @@ def subtract(lhs, rhs):
 def multiply(lhs, rhs):
     """Returns element-wise product of the input arrays with broadcasting.
 
-    Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``.
+    Equivalent to ``lhs * rhs``, ``mx.nd.elemwise_mul(lhs, rhs)`` \
+    and ``mx.nd.broadcast_mul(lhs, rhs)``.
 
     .. note::
 
@@ -1526,7 +1527,8 @@ def multiply(lhs, rhs):
 def divide(lhs, rhs):
     """Returns element-wise division of the input arrays with broadcasting.
 
-    Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``.
+    Equivalent to ``lhs / rhs``, ``mx.nd.elemwise_div(lhs, rhs)`` \
+    and ``mx.nd.broadcast_div(lhs, rhs)``.
 
     .. note::
 

@@ -473,6 +473,8 @@ We summarize the interface for each class in the following sections.
     sign
 ```
 
+## Neural network
+
 ### More
 
 ```eval_rst
@@ -502,7 +504,7 @@ We summarize the interface for each class in the following sections.
     :exclude-members: BaseSparseNDArray, RowSparseNDArray, CSRNDArray
 
 .. automodule:: mxnet.ndarray.sparse
-    :members: array, zeros, empty
+    :members: array, zeros, empty, add, subtract, multiply, divide
 
 .. automodule:: mxnet.ndarray
     :members: load, save

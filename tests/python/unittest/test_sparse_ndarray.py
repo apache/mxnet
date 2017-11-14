@@ -234,6 +234,7 @@ def test_sparse_nd_binary():
             oshape = np.random.randint(1, 6, size=(ndim,))
             bdim = 2
             lshape = list(oshape)
+            # one for broadcast op, another for elemwise op
             rshapes = [list(oshape[ndim-bdim:]), lshape]
             for rshape in rshapes:
                 for i in range(bdim):
