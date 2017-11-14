@@ -184,6 +184,18 @@ In the rest of this document, we list sparse related routines provided by the
     sign
 ```
 
+## Neural network
+
+### More
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    make_loss
+    stop_gradient
+    mxnet.symbol.contrib.SparseEmbedding
+```
 
 ## API Reference
 
