@@ -15,20 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NDArray API of MXNet."""
-
-from . import _internal, contrib, linalg, op, random, sparse, utils, image
-# pylint: disable=wildcard-import, redefined-builtin
+# coding: utf-8
+# pylint: disable=wildcard-import, unused-wildcard-import
+"""Image NDArray API of MXNet."""
 try:
-    from .gen_op import * # pylint: disable=unused-wildcard-import
+    from .gen_iamge import *
 except ImportError:
     pass
-from . import register
-from .op import *
-from .ndarray import *
-# pylint: enable=wildcard-import
-from .utils import load, save, zeros, empty, array
-from .sparse import _ndarray_cls
-from .ndarray import _GRAD_REQ_MAP
 
-__all__ = op.__all__ + ndarray.__all__ + utils.__all__ + ['contrib', 'linalg', 'random', 'sparse', 'image']
+__all__ = []
