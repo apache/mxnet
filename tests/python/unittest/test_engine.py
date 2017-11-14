@@ -18,7 +18,6 @@
 import nose
 import mxnet as mx
 
-
 def test_bulk():
     with mx.engine.bulk(10):
         x = mx.nd.ones((10,))
