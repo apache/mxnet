@@ -29,7 +29,7 @@ except ImportError:
     h5py = None
 import numpy as np
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, py_str
+from .base import c_str_array, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
@@ -919,11 +919,11 @@ def _make_io_iterator(handle):
         param_vals = []
 
         for k, val in kwargs.items():
-            param_keys.append(c_str(k))
-            param_vals.append(c_str(str(val)))
+            param_keys.append(k)
+            param_vals.append(str(val))
         # create atomic symbol
-        param_keys = c_array(ctypes.c_char_p, param_keys)
-        param_vals = c_array(ctypes.c_char_p, param_vals)
+        param_keys = c_str_array(param_keys)
+        param_vals = c_str_array(param_vals)
         iter_handle = DataIterHandle()
         check_call(_LIB.MXDataIterCreateIter(
             handle,
