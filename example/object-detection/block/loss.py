@@ -145,8 +145,6 @@ class FocalLoss(loss.Loss):
         self._size_average = size_average
 
     def hybrid_forward(self, F, output, label, sample_weight=None):
-        # find_inf(output, 'output')
-        # backup = output.asnumpy()
         if not self._from_logits:
             output = F.sigmoid(output)
         if self._sparse_label:
@@ -154,39 +152,9 @@ class FocalLoss(loss.Loss):
         else:
             one_hot = label > 0
         pt = F.where(one_hot, output, 1 - output)
-        # print('pt', pt)
-        # find_inf(pt, 'pt')
         t = F.ones_like(one_hot)
         alpha = F.where(one_hot, self._alpha * t, (1 - self._alpha) * t)
-        # find_inf(alpha, 'alpha')
-        # tmp1 = (1-pt) ** self._gamma
-        # print('tmp1',tmp1)
-        # find_inf(tmp1, 'tmp1')
-        # tmp2 = F.log(pt)
-        # find_inf(tmp2, 'tmp2')
-        # tmp3 = -alpha * tmp1
-        # find_inf(tmp3, 'tmp3')
-        # tmp4 = tmp1 * tmp2
-        # find_inf(tmp4, 'tmp4')
         loss = -alpha * ((1 - pt) ** self._gamma) * F.log(F.minimum(pt + self._eps, 1))
-        # print('pt again', pt)
-        # find_inf(loss, 'loss')
-        # import numpy as np
-        # np.set_printoptions(threshold=np.inf)
-        # temp = loss.asnumpy()
-        # pos = np.where(temp.flat == np.inf)[0]
-        # print(temp.dtype)
-        # print(alpha.asnumpy().flat[pos], 'alpha pos')
-        # print(tmp2.asnumpy().flat[pos], 'log results pos')
-        # print(tmp1.asnumpy().flat[pos], 'power')
-        # print(pt.asnumpy().flat[pos], 'in pt')
-        # print(output.asnumpy().flat[pos], 'in output')
-        # print(backup.flat[pos], 'in backup')
-        # print(pos)
-        # print(temp.flat[pos])
-        # print(np.sum(temp))
-        # print(F.sum(loss,axis=self._batch_axis, exclude=True))
-        # raise
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         if self._size_average:
             return F.mean(loss, axis=self._batch_axis, exclude=True)
