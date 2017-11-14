@@ -85,14 +85,12 @@ Most of the convenient functions like `size`, `length`, `ndims`,
 `eltype` on array objects should work out-of-the-box. Although indexing
 is not supported, it is possible to take *slices*:
 
-```julia
+```@repl
+using MXNet
 a = mx.ones(2,3)
 b = mx.slice(a, 1:2)
 b[:] = 2
-println(copy(a))
-# =>
-# Float32[2.0 2.0 1.0
-#         2.0 2.0 1.0]
+a
 ```
 
 A slice is a sub-region sharing the same memory with the original
@@ -226,18 +224,19 @@ push.
 The following example shows how to create a local `KVStore`, initialize
 a value and then pull it back.
 
-```julia
+```@setup kv
+using MXNet
+```
+
+```@example kv
 kv    = mx.KVStore(:local)
-shape = (2,3)
+shape = (2, 3)
 key   = 3
 
-mx.init!(kv, key, mx.ones(shape)*2)
+mx.init!(kv, key, mx.ones(shape) * 2)
 a = mx.empty(shape)
 mx.pull!(kv, key, a) # pull value into a
-println(copy(a))
-# =>
-# Float32[2.0 2.0 2.0
-#        2.0 2.0 2.0]
+a
 ```
 
 ## Intermediate Level Interface
@@ -256,26 +255,34 @@ design and trade-off of the MXNet symbolic composition system.
 The basic type is `mx.SymbolicNode`. The following is a trivial example of
 composing two symbols with the `+` operation.
 
-```@repl
+```@setup sym1
 using MXNet
+```
+
+```@example sym1
 A = mx.Variable(:A)
 B = mx.Variable(:B)
 C = A + B
+print(C)  # debug printing
 ```
 
-We get a new *symbol* by composing existing *symbols* by some
+We get a new `SymbolicNode` by composing existing `SymbolicNode`s by some
 *operations*. A hierarchical architecture of a deep neural network could
 be realized by recursive composition. For example, the following code
 snippet shows a simple 2-layer MLP construction, using a hidden layer of
-128 units and a ReLU activation function.
+128 units and a `ReLU` activation function.
 
-```@repl fcnet
+```@setup fcnet
 using MXNet
+```
+
+```@example fcnet
 net = mx.Variable(:data)
 net = mx.FullyConnected(net, name=:fc1, num_hidden=128)
 net = mx.Activation(net, name=:relu1, act_type=:relu)
 net = mx.FullyConnected(net, name=:fc2, num_hidden=64)
 net = mx.SoftmaxOutput(net, name=:out)
+print(net)  # debug printing
 ```
 
 Each time we take the previous symbol, and compose with an operation.
@@ -301,7 +308,7 @@ the networks, while *parameters* are typically trainable *weights*,
 When composing symbols, their arguments accumulates. We can list all the
 arguments by
 
-```@repl fcnet
+```@example fcnet
 mx.list_arguments(net)
 ```
 
@@ -312,7 +319,7 @@ name for each layer. We can also specify those names explicitly:
 using MXNet
 net = mx.Variable(:data)
 w   = mx.Variable(:myweight)
-net = mx.FullyConnected(data, weight=w, name=:fc1, num_hidden=128)
+net = mx.FullyConnected(net, weight=w, name=:fc1, num_hidden=128)
 mx.list_arguments(net)
 ```
 
