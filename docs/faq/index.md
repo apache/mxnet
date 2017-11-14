@@ -65,4 +65,3 @@ We track bugs and new feature requests in the MXNet Github repo in the issues fo
 
 ## Roadmap
 MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://github.com/dmlc/mxnet/labels/Roadmap).
-I
