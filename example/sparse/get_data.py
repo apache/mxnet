@@ -18,6 +18,8 @@
 import os, gzip
 import sys
 import mxnet as mx
+from collections import OrderedDict
+
 
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always return the same batch, used for speed testing"
@@ -83,8 +85,8 @@ def get_movielens_iter(filename, batch_size, dummy_iter):
     item = mx.nd.array(item)
     score = mx.nd.array(score)
     # prepare data iters
-    data_train = {'user':user, 'item':item}
-    label_train = {'score':score}
+    data_train = OrderedDict([('user', user), ('item', item)])
+    label_train = OrderedDict([('score', score)])
     iter_train = mx.io.NDArrayIter(data=data_train,label=label_train,
                                    batch_size=batch_size, shuffle=True)
     iter_train = DummyIter(iter_train) if dummy_iter else iter_train
