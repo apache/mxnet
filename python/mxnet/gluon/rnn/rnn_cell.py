@@ -27,11 +27,11 @@ __all__ = ['RecurrentCell', 'HybridRecurrentCell',
            'BidirectionalCell']
 
 from ... import symbol, ndarray
-from ...base import numeric_types, _as_list
+from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from .. import tensor_types
-from ..nn import Dense, HybridLambda
+from ..nn import Dense
 
 
 def _cells_state_info(cells, batch_size):
@@ -221,6 +221,16 @@ class RecurrentCell(Block):
 
         return outputs, states
 
+    #pylint: disable=no-self-use
+    def _get_activation(self, F, inputs, activation, **kwargs):
+        """Get activation function. Convert if is string"""
+        if isinstance(activation, string_types):
+            return F.Activation(inputs, act_type=activation, **kwargs)
+        elif isinstance(activation, LeakyReLU):
+            return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
+        else:
+            return activation(inputs, **kwargs)
+
     def forward(self, inputs, states):
         """Unrolls the recurrent cell for one time step.
 
@@ -349,8 +359,7 @@ class RNNCell(_GatedRecurrentCell):
                                       i2h_weight_initializer, h2h_weight_initializer,
                                       i2h_bias_initializer, h2h_bias_initializer,
                                       input_size, 1, 1, 'rnn', prefix, params)
-        with self.name_scope():
-            self.activation = HybridLambda(activation, prefix='')
+        self._activation = activation
 
     def __repr__(self):
         s = '{name}({mapping}'
@@ -364,11 +373,10 @@ class RNNCell(_GatedRecurrentCell):
                         **self.__dict__)
 
     def hybrid_forward(self, F, inputs, states):
-        if F is symbol:
-            prefix = 't%d_out'%self._counter
-            output = self.activation(self.gate_forward(inputs, states), prefix)
-        else:
-            output = self.activation(self.gate_forward(inputs, states))
+        prefix = 't%d_'%self._counter
+        output = self._get_activation(F, self.gate_forward(inputs, states),
+                                      self._activation,
+                                      name=prefix+'out')
 
         return output, [output]
 
