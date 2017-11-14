@@ -25,8 +25,8 @@
 
 #include <mxnet/base.h>
 #include "./image_random-inl.h"
-#include "../../operator/operator_common.h"
-#include "../../operator/elemwise_op_common.h"
+#include "../operator_common.h"
+#include "../elemwise_op_common.h"
 
 
 
