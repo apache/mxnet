@@ -181,14 +181,17 @@ def fit(args, network, data_loader, **kwargs):
 
     if args.network == 'alexnet':
         # AlexNet will not converge using Xavier
-        initializer = mx.init.Normal()
+        initializer = mx.init.Mixed(['conv2_bias', 'conv4_bias','conv5_bias',
+                                     'conv1_bias', 'conv3_bias','.*'],
+                                    [mx.init.Constant(0.1), mx.init.Constant(0.1), mx.init.Constant(0.1),
+                                     mx.init.Zero(), mx.init.Zero(), mx.init.Normal()])
     else:
         initializer = mx.init.Xavier(
             rnd_type='gaussian', factor_type="in", magnitude=2)
     # initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34),
 
     # evaluation metrices
-    eval_metrics = ['accuracy']
+    eval_metrics = ['accuracy','ce']
     if args.top_k > 0:
         eval_metrics.append(mx.metric.create('top_k_accuracy', top_k=args.top_k))
 
