@@ -30,7 +30,6 @@ except ImportError:
 
 import ctypes
 import warnings
-import operator
 
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
            "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
