@@ -1223,24 +1223,37 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
+    def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
+        """Test for nnr_out = 0. Before the fix, the test would fail."""
+        lhs = mx.nd.zeros(lhs_shape)
+        irow = np.random.randint(0, lhs_shape[0])
+        icol = np.random.randint(0, lhs_shape[1])
+        lhs[irow, icol] = 1.0
+        if trans_lhs:
+            rhs = rand_ndarray(shape=(lhs_shape[0], rhs_num_cols), stype='default')
+            rhs[irow, :] = 0
+        else:
+            rhs = rand_ndarray(shape=(lhs_shape[1], rhs_num_cols), stype='default')
+            rhs[icol, :] = 0
+        dns_out = mx.nd.dot(lhs, rhs, transpose_a=trans_lhs)
+        assert mx.nd.sum(dns_out).asscalar() == 0
+        sps_out = mx.nd.sparse.dot(lhs.tostype('csr'), rhs.tostype('row_sparse'), transpose_a=trans_lhs)
+        assert same(dns_out.asnumpy(), sps_out.asnumpy())
+
     density = [1.00, 0.50, 0.01]
     for lhs_d in density:
         lhs_shape = rand_shape_2d(50, 200)
         rhs_d = 1
-        test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False, lhs_d, rhs_d) # test gpu SpMV
-        test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True , lhs_d, rhs_d) # (vector kernel)
-        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d) # test gpu SpMM
-        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True , lhs_d, rhs_d) # (scalar kernel)
+        test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False, lhs_d, rhs_d)  # test gpu SpMV
+        test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True,  lhs_d, rhs_d)  # (vector kernel)
+        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d)  # test gpu SpMM
+        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True, lhs_d, rhs_d)  # (scalar kernel)
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
 
-
-def test_sparse_dot_twice():
-    """Test for nnr_out = 0. Before the fix, the test would fail."""
-    np.random.seed(1412448615)
-    test_sparse_dot()
-    test_sparse_dot()
+    test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
+    test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
 
 def test_sparse_slice():
