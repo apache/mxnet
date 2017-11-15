@@ -97,7 +97,6 @@ In the rest of this document, we list sparse related routines provided by the
     elemwise_add
     elemwise_sub
     elemwise_mul
-    elemwise_div
     negative
     dot
     add_n

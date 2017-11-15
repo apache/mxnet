@@ -356,7 +356,6 @@ We summarize the interface for each class in the following sections.
     elemwise_add
     elemwise_sub
     elemwise_mul
-    elemwise_div
     negative
     dot
     add_n
