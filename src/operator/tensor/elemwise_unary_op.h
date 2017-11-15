@@ -416,10 +416,6 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     })                                                              \
   .add_argument("data", "NDArray-or-Symbol", "The input array.")
 
-/*! \brief Register scalar op name as an alias */
-#define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
-  .add_alias("_sparse_" #__name$)
-
 /*! \brief Unary compute, with FComputeEx for csr and rsp available  */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)                     \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                           \

@@ -777,7 +777,7 @@ def test_sparse_nd_exception():
     assertRaises(mx.base.MXNetError, mx.nd.sparse.retain, a, invalid_arg="garbage_value")
     assertRaises(ValueError, mx.nd.sparse.csr_matrix, a, shape=(3,2))
     assertRaises(ValueError, mx.nd.sparse.csr_matrix, (2,2), shape=(3,2))
-    assertraises(ValueError, mx.nd.sparse.row_sparse_array, (2,2), shape=(3,2))
+    assertRaises(ValueError, mx.nd.sparse.row_sparse_array, (2,2), shape=(3,2))
     assertRaises(ValueError, mx.nd.sparse.zeros, "invalid_stype", (2,2))
 
 
