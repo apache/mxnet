@@ -335,7 +335,10 @@ class NDArray {
      * Push an empty mutable function to flush all preceding reads to the
      * variable.
      */
-    Engine::Get()->PushSync([](RunContext) {}, Context{}, {}, {ptr_->var});
+    Engine::Get()->PushAsync(
+      [](RunContext, Engine::CallbackOnComplete on_complete) {
+        on_complete();
+      }, Context{}, {}, {ptr_->var});
     Engine::Get()->WaitForVar(ptr_->var);
   }
   /*! \return the associated variable of the ndarray.*/

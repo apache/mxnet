@@ -186,9 +186,11 @@ class ResourceManagerImpl : public ResourceManager {
     inline void Seed(uint32_t global_seed) {
       uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
       mshadow::Random<xpu> *r = prnd;
-      Engine::Get()->PushSync([r, seed](RunContext rctx) {
+      Engine::Get()->PushAsync(
+        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
+          on_complete();
         }, ctx, {}, {resource.var},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }

@@ -233,6 +233,13 @@ MXNET_DLL int MXDumpProfile();
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 
 /*!
+ * \brief set bulk execution limit
+ * \param bulk_size new bulk_size
+ * \param prev_bulk_size previous bulk_size
+ */
+MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
+
+/*!
  * \brief get the MXNet library version as an integer
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens
