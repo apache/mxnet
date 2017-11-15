@@ -1450,6 +1450,5 @@ def test_cross_device_autograd():
     assert_almost_equal(dx, x.grad.asnumpy())
 
 if __name__ == '__main__':
-    #import nose
-    #nose.runmodule()
-    test_sparse_embedding()
+    import nose
+    nose.runmodule()
