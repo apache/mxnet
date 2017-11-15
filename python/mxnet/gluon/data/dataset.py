@@ -18,11 +18,13 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
-__all__ = ['Dataset', 'ArrayDataset', 'RecordFileDataset']
+__all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset', 'LabeledDataset',
+           'RecordFileDataset']
 
 import os
 
 from ... import recordio, ndarray
+
 
 class Dataset(object):
     """Abstract dataset class. All datasets should have this interface.
@@ -37,6 +39,45 @@ class Dataset(object):
 
     def __len__(self):
         raise NotImplementedError
+
+    def transform(self, fn, lazy=True):
+        trans = _LazyTransformDataset(self, fn)
+        if lazy:
+            return trans
+        return SimpleDataset([i for i in trans])
+
+    def transform_first(self, fn, lazy=True):
+        def base_fn(x, *args):
+            if args:
+                return (fn(x),) + args
+            return fn(x)
+        return self.transform(base_fn, lazy)
+
+
+class SimpleDataset(Dataset):
+    def __init__(self, data):
+        self._data = data
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, idx):
+        return self._data[idx]
+
+
+class _LazyTransformDataset(Dataset):
+    def __init__(self, data, fn):
+        self._data = data
+        self._fn = fn
+
+    def __len__(self):
+        return len(self._data)
+
+    def __getitem__(self, idx):
+        item = self._data[idx]
+        if isinstance(item, tuple):
+            return self._fn(*item)
+        return self._fn(item)
 
 
 class ArrayDataset(Dataset):
