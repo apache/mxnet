@@ -19,7 +19,7 @@ import mxnet as mx
 
 def matrix_fact_model_parallel_net(factor_size, num_hidden, max_user, max_item):
     # set ctx_group attribute to 'dev1' for the symbols created in this scope,
-    # the symbols will be binded to the context that 'dev1' map to in group2ctxs
+    # the symbols will be bound to the context that 'dev1' map to in group2ctxs
     with mx.AttrScope(ctx_group='dev1'):
         # input
         user = mx.symbol.Variable('user')
@@ -39,7 +39,7 @@ def matrix_fact_model_parallel_net(factor_size, num_hidden, max_user, max_item):
         item = mx.symbol.Activation(data=item, act_type='relu')
         item = mx.symbol.FullyConnected(data=item, num_hidden=num_hidden)
     # set ctx_group attribute to 'dev2' for the symbols created in this scope,
-    # the symbols will be binded to the context that 'dev2' map to in group2ctxs
+    # the symbols will be bound to the context that 'dev2' map to in group2ctxs
     with mx.AttrScope(ctx_group='dev2'):
         # predict by the inner product, which is elementwise product and then sum
         pred = user * item
