@@ -42,32 +42,32 @@ enum ImageRandomResource { kRandom };
 
 template<typename xpu>
 static void RandomFlip(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
 }
 template<typename xpu>
 static void ToTensor(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                     const OpContext &ctx,
+                     const std::vector<TBlob> &inputs,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<TBlob> &outputs) {
 }
 template<typename xpu>
 static void Normalize(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
 }
 
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
   float max_brightness;
   DMLC_DECLARE_PARAMETER(RandomBrightnessParam) {
     DMLC_DECLARE_FIELD(max_brightness)
-      .set_default(0.0)
-      .describe("Max Brightness.");
+    .set_default(0.0)
+    .describe("Max Brightness.");
   }
 };
 
@@ -89,7 +89,7 @@ static void RandomBrightness(const nnvm::NodeAttrs &attrs,
   const RandomBrightnessParam &param = nnvm::get<RandomBrightnessParam>(attrs.parsed);
   float alpha_b = 1.0 + std::uniform_real_distribution<float>(-param.max_brightness, param.max_brightness)(prnd->GetRndEngine());
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], Req,{
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow::op::mul, Req>, xpu>::Launch(
         s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha_b));
     });
@@ -101,8 +101,8 @@ struct RandomContrastParam : public dmlc::Parameter<RandomContrastParam> {
   float max_contrast;
   DMLC_DECLARE_PARAMETER(RandomContrastParam) {
     DMLC_DECLARE_FIELD(max_contrast)
-      .set_default(0.0)
-      .describe("Max Contrast.");
+    .set_default(0.0)
+    .describe("Max Contrast.");
   }
 };
 
@@ -117,10 +117,10 @@ struct mul_add {
 
 template<typename xpu>
 static void RandomContrast(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                           const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   auto input = inputs[0];
   auto output = outputs[0];
@@ -141,21 +141,21 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     auto input_3d = input.get<xpu, 3, DType>(s);
-  DType sum = (DType)0.0;
-  for (int c = 0; c < channel; ++c) {
-    for (int h = 0; h < hight; ++h) {
-      for (int w = 0; w < weight; ++w) {
-        sum += input_3d[c][h][w] * coeffs0[c];
+    DType sum = (DType)0.0;
+    for (int c = 0; c < channel; ++c) {
+      for (int h = 0; h < hight; ++h) {
+        for (int w = 0; w < weight; ++w) {
+          sum += input_3d[c][h][w] * coeffs0[c];
+        }
       }
     }
-  }
-  float gray_mean = sum / (float)(hight * weight);
-  float beta = (1 - alpha_c) * gray_mean;
+    float gray_mean = sum / (float)(hight * weight);
+    float beta = (1 - alpha_c) * gray_mean;
 
-  MXNET_ASSIGN_REQ_SWITCH(req[0], Req,{
-    mxnet_op::Kernel<mxnet_op::op_with_req<mul_add, Req>, xpu>::Launch(
-      s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha_c), DType(beta));
-  });
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<mul_add, Req>, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha_c), DType(beta));
+    });
 
   });
 
@@ -165,8 +165,8 @@ struct RandomSaturationParam : public dmlc::Parameter<RandomSaturationParam> {
   float max_saturation;
   DMLC_DECLARE_PARAMETER(RandomSaturationParam) {
     DMLC_DECLARE_FIELD(max_saturation)
-      .set_default(0.0)
-      .describe("Max Saturation.");
+    .set_default(0.0)
+    .describe("Max Saturation.");
   }
 };
 
@@ -198,19 +198,19 @@ static void RandomSaturation(const nnvm::NodeAttrs &attrs,
       auto input_3d =  input.get<xpu, 3, DType>(s);
       auto output_3d = output.get<xpu, 3, DType>(s);
       switch (channel) {
-      case 1:
-        Assign(output_3d, Req, input_3d)
+        case 1:
+          Assign(output_3d, Req, input_3d)
           break;
-      case 3:
-        for (int h = 0; h < hight; ++h) {
-          for (int w = 0; w < weight; ++w) {
-            float gray = input_3d[0][h][w] * R2YF + input_3d[1][h][w] * G2YF + input_3d[2][h][w] * B2YF;
-            Assign(output_3d[0][h][w], Req, DType(gray * alpha_s + input_3d[0][h][w] * alpha_o))
+        case 3:
+          for (int h = 0; h < hight; ++h) {
+            for (int w = 0; w < weight; ++w) {
+              float gray = input_3d[0][h][w] * R2YF + input_3d[1][h][w] * G2YF + input_3d[2][h][w] * B2YF;
+              Assign(output_3d[0][h][w], Req, DType(gray * alpha_s + input_3d[0][h][w] * alpha_o))
+            }
           }
-        }
-        break;
-      default:
-        LOG(FATAL) << "not support channel" << channel;
+          break;
+        default:
+          LOG(FATAL) << "not support channel" << channel;
 
       }
     });
@@ -220,26 +220,26 @@ static void RandomSaturation(const nnvm::NodeAttrs &attrs,
 
 template<typename xpu>
 static void RandomHue(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
 }
 
 template<typename xpu>
 static void RandomColorJitter(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
 }
 
 template<typename xpu>
 static void RandomLighting(const nnvm::NodeAttrs &attrs,
-  const OpContext &ctx,
-  const std::vector<TBlob> &inputs,
-  const std::vector<OpReqType> &req,
-  const std::vector<TBlob> &outputs) {
+                           const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs) {
 }
 
 
