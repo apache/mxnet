@@ -366,6 +366,12 @@ struct op_with_req {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 
+  /*! \brief input is tensor and two scalar value */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value_1, const DType value_2) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value_1, value_2));
+  }
+
   /*! \brief No inputs (ie fill to constant value) */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out) {
