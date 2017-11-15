@@ -30,7 +30,7 @@
 #include <tuple>
 #include <thread>
 #include "mxnet/ndarray.h"
-#include <mxnet/gc.h>
+#include "mxnet/gc.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
 namespace mxnet {
@@ -491,7 +491,8 @@ class CommDevice : public Comm {
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
 
-    if (gc_->get_type() != GC_NONE && gc_->is_active()) {
+    if (gc_->get_type() != GC_NONE) {
+      CHECK(gc_->is_active());
       return ReduceCompressed(key, src, priority);
     }
 
@@ -516,6 +517,7 @@ class CommDevice : public Comm {
     std::vector<NDArray> reduce(src.size());
     CopyFromTo(src[0], &(buf.merged), priority);
     reduce[0] = buf.merged;
+
     if (buf.copy_buf.empty()) {
       // TODO(mli) this results in large device memory usage for huge ndarray,
       // such as the largest fullc in VGG. consider to do segment reduce with
@@ -531,6 +533,7 @@ class CommDevice : public Comm {
       CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
       reduce[i+1] = buf.copy_buf[i];
     }
+
     ElementwiseSum(reduce, &buf.merged);
     return buf.merged;
   }
@@ -698,7 +701,7 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
-    /// \brief the residual buffer
+    /// \brief the residual buffer for gradient compression
     std::vector<NDArray> residual;
     /// \brief the small buffer for compressed data in sender
     std::vector<NDArray> small_send_buf;

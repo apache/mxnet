@@ -64,7 +64,6 @@ class Module(BaseModule):
         on the type of compression being used. For example, 2bit compression requires a threshold.
         Arguments would then be {'compression':'2bit', 'threshold':0.5}
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
-
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
                  logger=logging, context=ctx.cpu(), work_load_list=None,

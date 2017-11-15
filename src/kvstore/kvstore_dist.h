@@ -88,9 +88,9 @@ class KVStoreDist : public KVStoreLocal {
   void SetGradientCompression(const std::string& compression_type, const float threshold) override {
     KVStoreLocal::SetGradientCompression(compression_type, threshold);
     if (get_rank() == 0) {
+      // only rank 0 because init happens by rank 0 only
       SendCommandToServers(kSetGradientCompression, gc_->EncodeParams());
     }
-    //TODO barrier?
   }
 
   void Barrier() override {
@@ -223,6 +223,8 @@ class KVStoreDist : public KVStoreLocal {
           RunContext rctx, Engine::CallbackOnComplete cb) {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
+
+        // even if inactive should use compressed_pskv for pull when type is not none
         PSKV& pskv = (gc_->get_type() == GC_NONE) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
@@ -305,6 +307,7 @@ class KVStoreDist : public KVStoreLocal {
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
 
     // set active for non init pushes
+    // do_merge is proxy for non-init push
     if (do_merge && !gc_->is_active()) gc_->set_active(true);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
@@ -339,8 +342,7 @@ class KVStoreDist : public KVStoreLocal {
           PushDefault(key, comm_buf, pskv, priority);
         } else {
           // returns push_pskv if active, else pull_pskv
-          // we want inactive gc to send uncompressed gradients, but sharded same as active gc
-          // but calculates both push and pull pskv
+          // we want inactive gc to send uncompressed gradients, but sharded in the same way as active gc
           PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), gc_->is_active());
           if (gc_->is_active()) {
             PushCompressed(key, comm_buf, pskv, priority);
@@ -373,7 +375,7 @@ class KVStoreDist : public KVStoreLocal {
     }
     gc_->Quantize(comm_buf, &small_buf, &res_buf, priority);
     auto push_to_servers =
-      [this, key, pskv, comm_buf, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
+      [this, key, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size();
         real_t* data = small_buf.data().dptr<real_t>();
 #if MKL_EXPERIMENTAL == 1

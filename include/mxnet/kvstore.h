@@ -68,7 +68,7 @@ class KVStore {
   /**
    * \brief Set parameters to use low-bit compressed gradients
    * \param compression_type type of compression
-   * \param threshold set the threshold for 2bit compression
+   * \param threshold threshold for 2bit compression
    */
   virtual void SetGradientCompression(const std::string& compression_type,
                                       const float threshold) = 0;
@@ -396,9 +396,9 @@ class KVStore {
    */
   std::string type_;
 
-  /** \brief gradient compression
-   * starts with none, used after SetGradientCompression sets the type
-   * currently there is no support for unsetting gradient compression
+  /** \brief Gradient compression object starts with GC_NONE mode
+   * Used if SetGradientCompression sets the type.
+   * Currently there is no support for un-setting gradient compression
    */
   kvstore::Gc* gc_;
 

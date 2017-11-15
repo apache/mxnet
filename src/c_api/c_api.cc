@@ -734,9 +734,9 @@ int MXKVStoreCreate(const char *type,
 }
 
 int MXKVStoreSetGradientCompression(KVStoreHandle handle,
-                                    const char *compress, const float threshold) {
+                                    const char *compression, const float threshold) {
   API_BEGIN();
-  static_cast<KVStore*>(handle)->SetGradientCompression(compress, threshold);
+  static_cast<KVStore*>(handle)->SetGradientCompression(compression, threshold);
   API_END();
 }
 

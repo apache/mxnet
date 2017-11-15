@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file gc.cu
+ * \file gc-inl.h
  * \author Rahul Huilgol
  * \brief Declares and defines functions used to quantize and dequantize data
  */
@@ -47,8 +47,8 @@ struct quantize_2bit {
     // init to 0
     *compr_block = 0;
     // start and end are indices in original grad array
-    int start = out_block_id << 4;
-    int end = (start + 16 <= original_size) ? start + 16 : original_size;
+    const int start = out_block_id << 4;
+    const int end = (start + 16 <= original_size) ? start + 16 : original_size;
     // cast as char* to manipulate bits of float addresses
     char *block_ptr = reinterpret_cast < char * > (compr_block);
     // masks to set bits when value meets pos_threshold
@@ -105,10 +105,10 @@ struct dequantize_2bit {
     const uint8_t negbits[] = {0x80, 0x20, 0x08, 0x02};
     // col denotes which two bits of a byte are set for this value
     // col=0 implies first two bits, col=3 implies last two bits,...
-    int col = i & 3;
-    uint8_t mask = posbits[col];
-    uint8_t negmask = negbits[col];
-    uint8_t masked = *ch_ptr & mask;
+    const int col = i & 3;
+    const uint8_t mask = posbits[col];
+    const uint8_t negmask = negbits[col];
+    const uint8_t masked = *ch_ptr & mask;
     if (masked == mask) {
       *outval = pos_threshold;
     } else if (masked == negmask) {

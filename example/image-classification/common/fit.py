@@ -119,7 +119,10 @@ def fit(args, network, data_loader, **kwargs):
     """
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
-    kv.set_gradient_compression({'compression':args.gc_type, 'threshold':args.gc_threshold})
+    if args.gc_type != 'none':
+        kv.set_gradient_compression({'compression': args.gc_type,
+                                     'threshold': args.gc_threshold})
+
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
@@ -167,10 +170,10 @@ def fit(args, network, data_loader, **kwargs):
 
     lr_scheduler  = lr_scheduler
     optimizer_params = {
-            'learning_rate': lr,
-            'wd' : args.wd,
-            'lr_scheduler': lr_scheduler,
-            'multi_precision': True}
+        'learning_rate': lr,
+        'wd' : args.wd,
+        'lr_scheduler': lr_scheduler,
+        'multi_precision': True}
 
     # Only a limited number of optimizers have 'momentum' property
     has_momentum = {'sgd', 'dcasgd', 'nag'}
@@ -181,17 +184,14 @@ def fit(args, network, data_loader, **kwargs):
 
     if args.network == 'alexnet':
         # AlexNet will not converge using Xavier
-        initializer = mx.init.Mixed(['conv2_bias', 'conv4_bias','conv5_bias',
-                                     'conv1_bias', 'conv3_bias','.*'],
-                                    [mx.init.Constant(0.1), mx.init.Constant(0.1), mx.init.Constant(0.1),
-                                     mx.init.Zero(), mx.init.Zero(), mx.init.Normal()])
+        initializer = mx.init.Normal()
     else:
         initializer = mx.init.Xavier(
             rnd_type='gaussian', factor_type="in", magnitude=2)
     # initializer   = mx.init.Xavier(factor_type="in", magnitude=2.34),
 
     # evaluation metrices
-    eval_metrics = ['accuracy','ce']
+    eval_metrics = ['accuracy']
     if args.top_k > 0:
         eval_metrics.append(mx.metric.create('top_k_accuracy', top_k=args.top_k))
 
@@ -203,17 +203,17 @@ def fit(args, network, data_loader, **kwargs):
 
     # run
     model.fit(train,
-        begin_epoch        = args.load_epoch if args.load_epoch else 0,
-        num_epoch          = args.num_epochs,
-        eval_data          = val,
-        eval_metric        = eval_metrics,
-        kvstore            = kv,
-        optimizer          = args.optimizer,
-        optimizer_params   = optimizer_params,
-        initializer        = initializer,
-        arg_params         = arg_params,
-        aux_params         = aux_params,
-        batch_end_callback = batch_end_callbacks,
-        epoch_end_callback = checkpoint,
-        allow_missing      = True,
-        monitor            = monitor)
+              begin_epoch        = args.load_epoch if args.load_epoch else 0,
+              num_epoch          = args.num_epochs,
+              eval_data          = val,
+              eval_metric        = eval_metrics,
+              kvstore            = kv,
+              optimizer          = args.optimizer,
+              optimizer_params   = optimizer_params,
+              initializer        = initializer,
+              arg_params         = arg_params,
+              aux_params         = aux_params,
+              batch_end_callback = batch_end_callbacks,
+              epoch_end_callback = checkpoint,
+              allow_missing      = True,
+              monitor            = monitor)

@@ -31,14 +31,14 @@ def get_symbol(num_classes, dtype='float32', **kwargs):
     conv1 = mx.sym.Convolution(name='conv1',
         data=input_data, kernel=(11, 11), stride=(4, 4), num_filter=96)
     relu1 = mx.sym.Activation(data=conv1, act_type="relu")
-    lrn1 = mx.sym.LRN(data=relu1, alpha=0.0001, beta=0.75, knorm=1, nsize=4)
+    lrn1 = mx.sym.LRN(data=relu1, alpha=0.0001, beta=0.75, knorm=2, nsize=5)
     pool1 = mx.sym.Pooling(
         data=lrn1, pool_type="max", kernel=(3, 3), stride=(2,2))
     # stage 2
     conv2 = mx.sym.Convolution(name='conv2',
-        data=pool1, kernel=(5, 5), pad=(2, 2), num_filter=192)
+        data=pool1, kernel=(5, 5), pad=(2, 2), num_filter=256)
     relu2 = mx.sym.Activation(data=conv2, act_type="relu")
-    lrn2 = mx.sym.LRN(data=relu2, alpha=0.0001, beta=0.75, knorm=1, nsize=4)
+    lrn2 = mx.sym.LRN(data=relu2, alpha=0.0001, beta=0.75, knorm=2, nsize=5)
     pool2 = mx.sym.Pooling(data=lrn2, kernel=(3, 3), stride=(2, 2), pool_type="max")
     # stage 3
     conv3 = mx.sym.Convolution(name='conv3',

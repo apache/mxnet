@@ -22,11 +22,10 @@
  * \brief Gradient compression for kvstore
  * \author Rahul Huilgol
  */
+
 #include <mxnet/gc.h>
 #include <sstream>
 #include <vector>
-// for get_rank
-#include <ps/ps.h>
 #include "./gc-inl.h"
 
 namespace mxnet {
@@ -63,7 +62,8 @@ void Gc::SetParams(const std::string &compression_type, const float threshold) {
 void Gc::set_active(bool active) {
   active_ = active;
 }
-// can be active when type is none
+
+// note that this can be active when type is none, it denotes init is done for now
 bool Gc::is_active() {
   return active_;
 }
@@ -114,9 +114,11 @@ int64_t Gc::GetCompressedSize(const int64_t original_size) {
 
 void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                   mxnet::NDArray *residual, const int priority) {
-  CHECK(from.shape().ndim() != 0) << "source operands have zero dimension shape";
-  int a = from.ctx().dev_mask();
-  int b = to->ctx().dev_mask();
+  CHECK(from.shape().ndim() != 0) << "source operand has zero dimension shape";
+  CHECK(to->shape().ndim() != 0) << "destination operand has zero dimension shape";
+  CHECK(residual->shape().ndim() != 0) << "residual operand has zero dimension shape";
+  const int a = from.ctx().dev_mask();
+  const int b = to->ctx().dev_mask();
   const float threshold = threshold_;
   if (type_ == GC_TWO_BIT) {
     if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
@@ -148,7 +150,8 @@ void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
 }
 
 void Gc::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority) {
-  CHECK(from.shape().ndim() != 0) << "source operands have zero dimension shape";
+  CHECK(from.shape().ndim() != 0) << "source operands has zero dimension shape";
+  CHECK(to->shape().ndim() != 0) << "destination operand has zero dimension shape";
   const int a = from.ctx().dev_mask();
   const int b = to->ctx().dev_mask();
   const float threshold = threshold_;

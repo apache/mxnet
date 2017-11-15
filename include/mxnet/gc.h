@@ -51,7 +51,7 @@ public:
   /*!
    * \brief sets gradient compression to given mode
    * Active mode is when gradients are compressed
-   * Gc is in inactive mode during init of parameters
+   * Compression is in inactive mode during init of parameters
    */
   void set_active(bool active);
 
@@ -65,6 +65,10 @@ public:
    */
   CompressionType get_type();
 
+  /*!
+   * \brief sets two bit gradient compression
+   * \param threshold float value used for thresholding gradients
+   */
   void SetTwoBitCompression(const float threshold);
 
   /*!

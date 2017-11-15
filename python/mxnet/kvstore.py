@@ -361,9 +361,8 @@ class KVStore(object):
             and specifies the type of gradient compression. Other keys in this
             dictionary are optional and specific to the type of gradient compression.
 
-            2bit Gradient Compression:
-
-            2bit gradient compression takes a threshold. This needs to be a positive float.
+            2bit Gradient Compression
+            2bit gradient compression takes a threshold. This must be a positive float.
             The technique works by limiting values such that the absolute values of the gradient
             communicated is less than the threshold. Values which don't meet the threshold
             are set to 0.
@@ -394,7 +393,7 @@ class KVStore(object):
             Only specifying `compression` would use default value for the threshold.
             To completely specify the arguments for 2bit compression, we would need to pass
             a dictionary which includes `threshold` like:
-            {'compression':'2bit', 'threshold':0.5}
+            {'compression': '2bit', 'threshold': 0.5}
 
             compression: str
                 type of low-bit quantization to be used for gradient compression

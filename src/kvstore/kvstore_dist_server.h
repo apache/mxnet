@@ -492,9 +492,9 @@ class KVStoreDistServer {
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-        exec_.Exec([this, key, &recved, &stored]() {
-          CHECK(updater_);
-          updater_(key, recved, &stored);
+        exec_.Exec([this, key, &recved, &stored](){
+            CHECK(updater_);
+            updater_(key, recved, &stored);
           });
         server->Response(req_meta);
         stored.WaitToRead();

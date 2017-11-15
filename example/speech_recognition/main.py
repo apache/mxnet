@@ -286,6 +286,7 @@ if __name__ == '__main__':
             'train or predict or load can be the candidate for the mode.')
 
     # get meta file where character to number conversions are defined
+
     contexts = parse_contexts(args)
     num_gpu = len(contexts)
     batch_size = args.config.getint('common', 'batch_size')
