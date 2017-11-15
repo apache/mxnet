@@ -22,11 +22,14 @@
  * \author Rahul Huilgol
  * \brief Declares and defines functions used to quantize and dequantize data
  */
+#ifndef MXNET_KVSTORE_GC_INL_H_
+#define MXNET_KVSTORE_GC_INL_H_
 
+#include <vector>
 #include "../operator/mxnet_op.h"
 
 namespace mxnet {
-namespace kvstore{
+namespace kvstore {
 
 // these gpu functions are defined in gc.cu
 void Quantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
@@ -42,7 +45,8 @@ struct quantize_2bit {
                                   float *residual,
                                   const float neg_threshold,
                                   const float pos_threshold) {
-    // this block contains the compressed representation of upto 16 values starting from out_block_id*16
+    // this block contains the compressed representation of
+    // upto 16 values starting from out_block_id*16
     float *compr_block = out + out_block_id;
     // init to 0
     *compr_block = 0;
@@ -79,14 +83,15 @@ struct quantize_2bit {
 template<typename xpu>
 void Quantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob> &inputs,
                               const float threshold) {
-  mxnet::op::mxnet_op::Kernel<quantize_2bit, xpu>::Launch(s,
-                                                          inputs[2].Size(),        // compressed array size
-                                                          inputs[0].Size(),        // original size
-                                                          inputs[2].dptr<float>(), // compressed array
-                                                          inputs[0].dptr<float>(), // original array
-                                                          inputs[1].dptr<float>(), // residual array
-                                                          -1 *threshold,           // negative threshold
-                                                          threshold);              // positive threshold
+  mxnet::op::mxnet_op::Kernel<quantize_2bit, xpu>
+    ::Launch(s,
+            inputs[2].Size(),         // compressed array size
+            inputs[0].Size(),         // original size
+            inputs[2].dptr<float>(),  // compressed array
+            inputs[0].dptr<float>(),  // original array
+            inputs[1].dptr<float>(),  // residual array
+            -1 *threshold,            // negative threshold
+            threshold);               // positive threshold
 }
 
 struct dequantize_2bit {
@@ -124,12 +129,13 @@ struct dequantize_2bit {
 template<typename xpu>
 void Dequantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet::TBlob> &inputs,
                                 const float threshold) {
-  mxnet::op::mxnet_op::Kernel<dequantize_2bit, xpu>::Launch(s,
-                                                            inputs[1].Size(),        // original size
-                                                            inputs[1].dptr<float>(), // out array
-                                                            inputs[0].dptr<float>(), // compressed array
-                                                            -1 *threshold,           // negative threshold
-                                                            threshold);              // positive threshold
+  mxnet::op::mxnet_op::Kernel<dequantize_2bit, xpu>
+  ::Launch(s,
+          inputs[1].Size(),         // original size
+          inputs[1].dptr<float>(),  // out array
+          inputs[0].dptr<float>(),  // compressed array
+          -1 *threshold,            // negative threshold
+          threshold);               // positive threshold
 }
 
 inline void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
@@ -143,3 +149,5 @@ inline void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vect
 }
 } // namespace kvstore
 } // namespace mxnet
+
+#endif  // MXNET_KVSTORE_GC_INL_H_

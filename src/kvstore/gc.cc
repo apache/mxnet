@@ -123,10 +123,10 @@ void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
   if (type_ == GC_TWO_BIT) {
     if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
       mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
-                                       std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-                                       Quantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
-                                     }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-                                     mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
+        std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
+        Quantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+      }, from.ctx(), {from.var()}, {to->var(), residual->var()},
+      mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeCPU"));
     } else {
 #if MXNET_USE_CUDA
       if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
@@ -158,10 +158,10 @@ void Gc::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int pr
   if (type_ == GC_TWO_BIT) {
     if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
       mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
-                                       std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-                                       Dequantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
-                                     }, from.ctx(), {from.var()}, {to->var()},
-                                     mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
+        std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
+        Dequantize2BitImpl(ctx.get_stream<mshadow::cpu>(), inputs, threshold);
+      }, from.ctx(), {from.var()}, {to->var()},
+      mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeCPU"));
     } else {
 #if MXNET_USE_CUDA
       if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
@@ -184,6 +184,6 @@ void Gc::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int pr
   }
 }
 
-} // namespace kvstore
-} // namespace mxnet
+}  // namespace kvstore
+}  // namespace mxnet
 

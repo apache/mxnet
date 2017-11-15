@@ -92,7 +92,6 @@ class Comm {
   Context pinned_ctx_;
 
   Gc* gc_;
-
 };
 
 /**
@@ -490,7 +489,6 @@ class CommDevice : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
-
     if (gc_->get_type() != GC_NONE) {
       CHECK(gc_->is_active());
       return ReduceCompressed(key, src, priority);

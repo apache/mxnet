@@ -366,7 +366,7 @@ class KVStoreDistServer {
     }
   }
 
-  void DefaultStorageResponse(int key, NDArray& stored,
+  void DefaultStorageResponse(int key, const NDArray& stored,
                               const ps::KVMeta& req_meta,
                               const ps::KVPairs<real_t> &req_data,
                               ps::KVServer<real_t>* server) {

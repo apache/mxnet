@@ -23,8 +23,8 @@
  * \author Rahul Huilgol
  */
 
-#ifndef MXNET_KVSTORE_GC_H
-#define MXNET_KVSTORE_GC_H
+#ifndef MXNET_GC_H
+#define MXNET_GC_H
 #include <string>
 #include"./ndarray.h"
 
@@ -36,7 +36,7 @@ enum CompressionType {
 };
 
 class Gc {
-public:
+ public:
   Gc();
 
   virtual ~Gc() {}
@@ -113,7 +113,7 @@ public:
   */
   void Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority);
 
-private:
+ private:
   /*!
    * \brief denotes the type of gradient compression which has been set
    */
@@ -133,6 +133,6 @@ private:
    */
   float threshold_ = 0;
 };
-} // namespace kvstore
-} // namespace mxnet
-#endif // MXNET_KVSTORE_GC_H
+}  // namespace kvstore
+}  // namespace mxnet
+#endif  // MXNET_GC_H

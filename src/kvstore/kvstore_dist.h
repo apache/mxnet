@@ -342,7 +342,8 @@ class KVStoreDist : public KVStoreLocal {
           PushDefault(key, comm_buf, pskv, priority);
         } else {
           // returns push_pskv if active, else pull_pskv
-          // we want inactive gc to send uncompressed gradients, but sharded in the same way as active gc
+          // we want inactive gc to send uncompressed gradients,
+          // but sharded in the same way as active gc
           PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), gc_->is_active());
           if (gc_->is_active()) {
             PushCompressed(key, comm_buf, pskv, priority);
@@ -361,7 +362,7 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void PushCompressed(int key, const NDArray& comm_buf, PSKV& pskv, int priority) {
+  void PushCompressed(int key, const NDArray& comm_buf, const PSKV& pskv, int priority) {
     auto &small_buf = compr_buf_[key];
     auto &res_buf = residual_[key];
     size_t original_size = comm_buf.shape().Size();
@@ -605,12 +606,13 @@ class KVStoreDist : public KVStoreLocal {
 
         for (int i = 0; i < num_servers; ++i) {
           size_t part_compr, part_orig;
-          if(i==num_servers-1){
+          if (i == num_servers-1) {
             part_compr = compr_size - push_pskv.size;
             part_orig = original_size - pull_pskv.size;
           } else {
-            part_compr = static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i+1))) -
-            static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i)));
+            part_compr =
+              static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i+1))) -
+              static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i)));
             part_orig = part_compr * gc_->GetCompressionFactor();
           }
 

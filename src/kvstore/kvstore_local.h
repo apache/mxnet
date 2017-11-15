@@ -141,7 +141,7 @@ class KVStoreLocal : public KVStore {
     gc_->SetParams(compression_type, threshold);
   }
 
-private:
+ private:
   virtual void InitImpl(const std::vector<int>& keys,
                         const std::vector<NDArray>& values) {
     for (size_t i = 0; i < keys.size(); ++i) {
