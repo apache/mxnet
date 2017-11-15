@@ -161,9 +161,9 @@ void KVStore::Update(int index, const NDArray& grad, NDArray *weight) {
 }
 
 
-Rcpp::RObject KVStore::Create(const char *type) {
+Rcpp::RObject KVStore::Create(const char *type, const char *data_type) {
   KVStoreHandle handle;
-  MX_CALL(MXKVStoreCreate(type, &handle));
+  MX_CALL(MXKVStoreCreate(type, data_type, &handle));
   return Rcpp::internal::make_new_object(new KVStore(handle));
 }
 

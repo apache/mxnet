@@ -73,8 +73,8 @@ inline KVStore*& KVStore::get_kvstore() {
 
 inline KVStore::KVStore() {}
 
-inline void KVStore::SetType(const std::string& type) {
-  CHECK_EQ(MXKVStoreCreate(type.c_str(), &(get_kvstore()->get_handle())), 0);
+inline void KVStore::SetType(const std::string& type, const std::string& data_type) {
+  CHECK_EQ(MXKVStoreCreate(type.c_str(), data_type.c_str(), &(get_kvstore()->get_handle())), 0);
 }
 
 inline void KVStore::RunServer() {

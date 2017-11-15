@@ -734,9 +734,10 @@ int MXDataIterGetPadNum(DataIterHandle handle, int *pad) {
 }
 
 int MXKVStoreCreate(const char *type,
+                    const char *data_type,
                     KVStoreHandle *out) {
   API_BEGIN();
-  *out = KVStore::Create(type);
+  *out = KVStore::Create(type, data_type);
   API_END();
 }
 

@@ -57,7 +57,7 @@ class KVStore {
    *   - 'dist_*' : multi-machines
    * \return a new created KVStore.
    */
-  static KVStore *Create(const char *type = "local");
+  static KVStore *Create(const char *type = "local", const char *data_type = "float32");
 
   /**
    * \brief return the type

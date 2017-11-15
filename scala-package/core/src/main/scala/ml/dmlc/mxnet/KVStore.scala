@@ -46,9 +46,9 @@ object KVStore {
    *     - dist works for multi-machines (multiple processes)
    * @return The created KVStore
    */
-  def create(name: String = "local"): KVStore = {
+  def create(name: String = "local", data_type: String = "float32"): KVStore = {
     val handle = new KVStoreHandleRef
-    checkCall(_LIB.mxKVStoreCreate(name, handle))
+    checkCall(_LIB.mxKVStoreCreate(name, data_type, handle))
     new KVStore(handle.value)
   }
 }

@@ -65,7 +65,7 @@ class KVStore {
    * \brief create a KVStore
    * \return the created KVStore
    */
-  static Rcpp::RObject Create(const char *type);
+  static Rcpp::RObject Create(const char *type, const char *data_type = "float32");
   /*! \brief initialize the R cpp Module */
   static void InitRcppModule();
   // destructor
