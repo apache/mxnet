@@ -58,7 +58,7 @@ static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& a
                                      kDefaultStorage,
                                      dispatch_mode,
                                      DispatchMode::kFCompute);
-  } else if (dev_mask == kCPU) {
+  } else if (dev_mask == Context::kCPU) {
     dispatched = storage_type_assign(&out_attrs[0],
                                      kDefaultStorage,
                                      dispatch_mode,
