@@ -20,7 +20,7 @@ from weighted_softmax_ce import *
 
 
 def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, 
-                    input_dims, hidden_units, positive_cls_weight):
+                    input_dims, hidden_units):
     csr_data = mx.symbol.Variable("csr_data", stype='csr')
     label = mx.symbol.Variable("softmax_label")
 
@@ -54,6 +54,6 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
     hideen = mx.symbol.Activation(data=hidden, act_type='relu')
     deep_out = mx.symbol.FullyConnected(data=hidden, num_hidden=2)
 
-    out = mx.symbol.Custom(linear_out+deep_out, label, op_type='weighted_softmax_ce_loss',
-                           positive_cls_weight=positive_cls_weight, name='model')
-    return mx.symbol.MakeLoss(out)
+    out = mx.symbol.SoftmaxOutput(linear_out + deep_out, label, name='model')
+    
+    return out

@@ -19,3 +19,9 @@ The example demonstrates the basic usage of the SparseEmbedding operator in MXNe
 
 - `python matrix_factorization.py`
 - To compare the train speed with (dense) Embedding, run `python matrix_factorization.py --use-dense`
+
+## Wide and Deep Learning
+
+The example demonstrates how to jointly train wide linear models and deep neural networks.
+
+- `python wide_deep_classification`

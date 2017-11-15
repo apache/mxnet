@@ -50,7 +50,6 @@ ADULT = {
     'num_cont_features': 38,
     'embed_input_dims': [1000, 1000],
     'hidden_units': [8, 50, 100],
-    'positive_class_weight': 2.0,
 }
 
 
@@ -77,7 +76,7 @@ if __name__ == '__main__':
     val_csr, val_dns, val_label = get_uci_adult(data_dir, ADULT['test'], ADULT['url'])
 
     model = wide_deep_model(ADULT['num_linear_features'], ADULT['num_embed_features'], ADULT['num_cont_features'],
-                            ADULT['embed_input_dims'], ADULT['hidden_units'], ADULT['positive_class_weight'])
+                            ADULT['embed_input_dims'], ADULT['hidden_units'])
 
     # data iterator
     train_data = mx.io.NDArrayIter({'csr_data': train_csr, 'dns_data': train_dns},

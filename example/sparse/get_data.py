@@ -71,7 +71,10 @@ def get_uci_adult(data_dir, data_name, url):
 
 
 def preprocess_uci_adult(data_name):
-    # Some tricks of feature engineering are adapted from tensorflow's wide and deep tutorial
+    """Some tricks of feature engineering are adapted from tensorflow's wide and deep tutorial.
+    A bucket column of age, and a crossed column of age_bucket, education, occupation
+    are not included in the features
+    """
     csv_columns = [
         "age", "workclass", "fnlwgt", "education", "education_num",
         "marital_status", "occupation", "relationship", "race", "gender",
@@ -102,22 +105,22 @@ def preprocess_uci_adult(data_name):
             "Local-gov", "?", "Self-emp-inc", "Without-pay", "Never-worked"
         ]
     }
-
+    # wide columns
     crossed_columns = [
         ["education", "occupation"],
         ["native_country", "occupation"]
     ]
-
+    # deep columns
     indicator_columns = ['workclass', 'education', 'gender', 'relationship']
-
+    
     embedding_columns = ['native_country', 'occupation']
 
     continuous_columns = ['age', 'education_num', 'capital_gain', 'capital_loss', 'hours_per_week']
-
+    # income_bracket column is the label
     labels = ["<", ">"]
 
     hash_bucket_size = 1000
-
+    
     csr_ncols = len(crossed_columns) * hash_bucket_size
     dns_ncols = len(continuous_columns) + len(embedding_columns)
     for col in indicator_columns:
@@ -154,6 +157,7 @@ def preprocess_uci_adult(data_name):
     data_list = [item[1] for item in csr_list]
     indices_list = [item[0] for item in csr_list]
     indptr_list = range(0, len(indices_list) + 1, 2)
+    # convert to ndarrays
     csr = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list),
                                   shape=(len(label_list), hash_bucket_size * len(crossed_columns)))
     dns = np.array(dns_list)
