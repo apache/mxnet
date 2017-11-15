@@ -62,6 +62,15 @@ enum NDArrayStorageType {
   kCSRStorage,             // csr
 };
 
+enum NDArrayFormatErr {
+  kNormalErr,     // normal
+  kCSRShapeErr,   // shape mismatch for csr
+  kCSRIndPtrErr,  // indptr error for csr
+  kCSRIdxErr,     // idx error for csr
+  kRSPShapeErr,   // shape mismatch for row sparse
+  kRSPIdxErr,     // indices error for row sparse
+};
+
 
 /*!
  * \brief ndarray interface
@@ -446,6 +455,12 @@ class NDArray {
    * \param size the memory size we want to copy into, in sizeof(DType) not raw btyes.
    */
   void SyncCopyToCPU(void *data, size_t size) const;
+  /*!
+  * \brief check whether the NDArray format is valid
+  * \param full_check if `True`, rigorous check, O(N) operations
+  *    Otherwise basic check, O(1) operations
+  */
+  void SyncCheckFormat(const bool full_check) const;
   /*!
    * \brief Slice a NDArray
    * \param begin begin index in first dim (inclusive)
