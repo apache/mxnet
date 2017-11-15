@@ -4,9 +4,10 @@
 [![Windows Build](https://ci.appveyor.com/api/projects/status/re90njols2th2ide?svg=true)](https://ci.appveyor.com/project/pluskid/mxnet-jl)
 [![codecov.io](https://codecov.io/github/dmlc/MXNet.jl/coverage.svg?branch=master)](https://codecov.io/github/dmlc/MXNet.jl?branch=master)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://dmlc.github.io/MXNet.jl/latest)
-[![MXNet](http://pkg.julialang.org/badges/MXNet_0.4.svg)](http://pkg.julialang.org/?pkg=MXNet)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://dmlc.github.io/MXNet.jl/stable)
+[![MXNet](http://pkg.julialang.org/badges/MXNet_0.6.svg)](http://pkg.julialang.org/?pkg=MXNet)
 [![License](http://dmlc.github.io/img/apache2.svg)](LICENSE.md)
-[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet)
 
 
 MXNet.jl is the [dmlc/mxnet](https://github.com/dmlc/mxnet) [Julia](http://julialang.org/) package. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of its features include:
