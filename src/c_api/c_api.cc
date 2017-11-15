@@ -136,6 +136,12 @@ int MXSetNumOMPThreads(int thread_num) {
   API_END();
 }
 
+int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size) {
+  API_BEGIN();
+  *prev_bulk_size = Engine::Get()->set_bulk_size(bulk_size);
+  API_END();
+}
+
 int MXGetVersion(int *out) {
   API_BEGIN();
   *out = static_cast<int>(MXNET_VERSION);
@@ -268,6 +274,13 @@ int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
   NDArray* dst = static_cast<NDArray*>(handle_dst);
   NDArray* src = static_cast<NDArray*>(handle_src);
   dst->SyncCopyFromNDArray(*src, -1, i);
+  API_END();
+}
+
+int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  arr->SyncCheckFormat(full_check);
   API_END();
 }
 

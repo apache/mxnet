@@ -221,6 +221,17 @@ class BaseSparseNDArray(NDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def check_format(self, full_check=True):
+        """Check whether the NDArray format is valid.
+
+        Parameters
+        ----------
+        full_check : bool, optional
+            If `True`, rigorous check, O(N) operations. Otherwise
+            basic check, O(1) operations (default True).
+        """
+        check_call(_LIB.MXNDArraySyncCheckFormat(self.handle, ctypes.c_bool(full_check)))
+
     def _data(self):
         """A deep copy NDArray of the data array associated with the BaseSparseNDArray.
 
