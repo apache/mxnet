@@ -82,7 +82,6 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     DType min = 0;
     DType max = static_cast<DType>(weight.shape()[0] - 1);
-    // check with single thread is faster since data is small
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
     int32_t* is_valid_ptr = NULL;
