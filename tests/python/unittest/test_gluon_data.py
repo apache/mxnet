@@ -99,7 +99,6 @@ class Dataset(gluon.data.Dataset):
     def __getitem__(self, key):
         return mx.nd.full((10,), key)
 
-
 @unittest.skip("Somehow fails with MKL. Cannot reproduce locally")
 def test_multi_worker():
     data = Dataset()
