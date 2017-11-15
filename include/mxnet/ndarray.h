@@ -62,6 +62,15 @@ enum NDArrayStorageType {
   kCSRStorage,             // csr
 };
 
+enum NDArrayFormatErr {
+  kNormalErr,     // normal
+  kCSRShapeErr,   // shape mismatch for csr
+  kCSRIndPtrErr,  // indptr error for csr
+  kCSRIdxErr,     // idx error for csr
+  kRSPShapeErr,   // shape mismatch for row sparse
+  kRSPIdxErr,     // indices error for row sparse
+};
+
 
 /*!
  * \brief ndarray interface
@@ -326,7 +335,10 @@ class NDArray {
      * Push an empty mutable function to flush all preceding reads to the
      * variable.
      */
-    Engine::Get()->PushSync([](RunContext) {}, Context{}, {}, {ptr_->var});
+    Engine::Get()->PushAsync(
+      [](RunContext, Engine::CallbackOnComplete on_complete) {
+        on_complete();
+      }, Context{}, {}, {ptr_->var});
     Engine::Get()->WaitForVar(ptr_->var);
   }
   /*! \return the associated variable of the ndarray.*/
@@ -446,6 +458,12 @@ class NDArray {
    * \param size the memory size we want to copy into, in sizeof(DType) not raw btyes.
    */
   void SyncCopyToCPU(void *data, size_t size) const;
+  /*!
+  * \brief check whether the NDArray format is valid
+  * \param full_check if `True`, rigorous check, O(N) operations
+  *    Otherwise basic check, O(1) operations
+  */
+  void SyncCheckFormat(const bool full_check) const;
   /*!
    * \brief Slice a NDArray
    * \param begin begin index in first dim (inclusive)

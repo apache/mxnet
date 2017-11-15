@@ -221,12 +221,12 @@ class MXNET_API Engine {
    * \param opr_name The operator name.
    * \tparam SyncFn the synchronous function to be pushed.
    */
-  inline void PushSync(SyncFn exec_fn, Context exec_ctx,
-                       std::vector<VarHandle> const& const_vars,
-                       std::vector<VarHandle> const& mutable_vars,
-                       FnProperty prop = FnProperty::kNormal,
-                       int priority = 0,
-                       const char* opr_name = nullptr) {
+  virtual void PushSync(SyncFn exec_fn, Context exec_ctx,
+                        std::vector<VarHandle> const& const_vars,
+                        std::vector<VarHandle> const& mutable_vars,
+                        FnProperty prop = FnProperty::kNormal,
+                        int priority = 0,
+                        const char* opr_name = nullptr) {
     this->PushAsync([exec_fn](RunContext ctx, CallbackOnComplete on_complete) {
         exec_fn(ctx);
         on_complete();
@@ -266,6 +266,14 @@ class MXNET_API Engine {
       }
     }
     read_vars->resize(rtop - read_vars->begin());
+  }
+  /*! \brief query current limit for bulk size */
+  virtual int bulk_size() const {
+    return 0;
+  }
+  /*! \brief set maximum limit for bulk size */
+  virtual int set_bulk_size(int) {
+    return 0;
   }
 };  // class Engine
 #endif  // DMLC_USE_CXX11

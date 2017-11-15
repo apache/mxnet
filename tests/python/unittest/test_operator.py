@@ -3571,9 +3571,11 @@ def test_custom_op():
     class Sqr(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
             self.assign(out_data[0], req[0], in_data[0]*in_data[0])
+            aux[0][:] = 1
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
+            assert (aux[0].asnumpy() == 1).all()
 
     @mx.operator.register("sqr")
     class SqrProp(mx.operator.CustomOpProp):
@@ -3586,31 +3588,34 @@ def test_custom_op():
         def list_outputs(self):
             return ['output']
 
+        def list_auxiliary_states(self):
+            return ['aux']
+
         def infer_shape(self, in_shape):
-            return in_shape, [in_shape[0]], []
+            return in_shape, [in_shape[0]], [in_shape[0]]
 
         def infer_type(self, in_type):
-            return in_type, [in_type[0]], []
+            return in_type, [in_type[0]], [in_type[0]]
 
         def create_operator(self, ctx, shapes, dtypes):
             return Sqr()
 
     data = mx.symbol.Variable('data')
-    op = mx.symbol.Custom(data=data, name='sqr', op_type='sqr')
+    aux = mx.symbol.Variable('aux')
+    op = mx.symbol.Custom(data=data, aux=aux, name='sqr', op_type='sqr')
     x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
-    check_numeric_gradient(op, [x])
+    aux = mx.nd.zeros_like(x)
+    check_numeric_gradient(op, [x], [aux])
 
-    data = mx.symbol.Variable('data')
     data = mx.symbol.cast(data, dtype='float64')
-    op = mx.symbol.Custom(data=data, name='sqr', op_type='sqr')
     op = mx.symbol.cast(op, dtype='float32')
     x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
-    check_numeric_gradient(op, [x])
+    aux = mx.nd.zeros_like(x)
+    check_numeric_gradient(op, [x], [aux])
 
-    dx = mx.nd.zeros_like(x)
-    mx.contrib.autograd.mark_variables([x], [dx])
+    x.attach_grad()
     with mx.contrib.autograd.train_section():
-        y = mx.nd.Custom(x, op_type='sqr')
+        y = mx.nd.Custom(x, aux, op_type='sqr')
         y.backward()
 
 
