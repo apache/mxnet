@@ -131,6 +131,10 @@ ifeq ($(USE_MKL2017), 1)
 	LDFLAGS +=  -liomp5
 endif
 
+ifeq ($(USE_OPERATOR_TUNING), 1)
+	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
+endif
+
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this

@@ -27,6 +27,7 @@
 
 namespace mxnet {
 namespace op {
+
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
 .add_alias("broadcast_plus")
 .describe(R"code(Returns element-wise sum of the input arrays with broadcasting.
