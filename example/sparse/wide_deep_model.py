@@ -16,7 +16,6 @@
 # under the License.
 
 import mxnet as mx
-from weighted_softmax_ce import *
 
 
 def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, 
