@@ -701,7 +701,7 @@ class CommNCCL : public Comm {
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
     std::vector<const NDArray*> merged_ptrs;
-    Reduce(std::vector<int> {key}, {src}, priority, merged_ptrs);
+    Reduce(std::vector<int> {key}, {src}, priority, &merged_ptrs);
     return *(merged_ptrs[0]);
   }
 
