@@ -24,6 +24,7 @@ from numpy.testing import assert_allclose
 import numpy.random as rnd
 
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
+from common import assertRaises
 
 
 def sparse_nd_ones(shape, stype):
@@ -749,6 +750,52 @@ def test_sparse_nd_exception():
                      (2,2), shape=(3,2))
     assert_exception(mx.nd.sparse.zeros, ValueError,
                      "invalid_stype", (2,2))
+    
+def test_sparse_nd_check_format():
+    """ test check_format for sparse ndarray """
+    shape = rand_shape_2d()
+    stypes = ["csr", "row_sparse"]
+    for stype in stypes:
+        arr, _ = rand_sparse_ndarray(shape, stype)
+        arr.check_format()
+        arr = mx.nd.sparse.zeros(stype, shape)
+        arr.check_format()
+    # CSR format index pointer array should be less than the number of rows
+    shape = (3, 4)
+    data_list = [7, 8, 9]
+    indices_list = [0, 2, 1]
+    indptr_list = [0, 5, 2, 3]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format indices should be in ascending order per row
+    indices_list = [2, 1, 1]
+    indptr_list = [0, 2, 2, 3]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format indptr should end with value equal with size of indices
+    indices_list = [1, 2, 1]
+    indptr_list = [0, 2, 2, 4]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format indices should not be negative
+    indices_list = [0, 2, 1]
+    indptr_list = [0, -2, 2, 3]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # Row Sparse format indices should be less than the number of rows
+    shape = (3, 2)
+    data_list = [[1, 2], [3, 4]]
+    indices_list = [1, 4]
+    a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # Row Sparse format indices should be in ascending order
+    indices_list = [1, 0]
+    a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # Row Sparse format indices should not be negative
+    indices_list = [1, -2]
+    a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
 
 
 if __name__ == '__main__':

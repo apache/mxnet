@@ -1214,6 +1214,40 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   }
 }
 
+void NDArray::SyncCheckFormat(const bool full_check) const {
+  int32_t err = kNormalErr;
+  TBlob err_cpu(&err, mshadow::Shape1(1), cpu::kDevMask, 0);
+  if (this->ctx().dev_mask() == cpu::kDevMask) {
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        common::CheckFormatWrapper<cpu>(rctx, *this, err_cpu, full_check);
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+  } else {
+#if MXNET_USE_CUDA
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
+        rctx.get_stream<gpu>()->Wait();
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+#else
+    LOG(FATAL) << "GPU is not enabled";
+#endif
+  }
+  this->WaitToWrite();
+  CHECK_NE(err, kCSRShapeErr) << "Shape mismatch of this csr NDArray";
+  CHECK_NE(err, kCSRIndPtrErr)
+           << "IndPtr of csr NDArray should be non-negative, in non-decreasing order, "
+           << "start with 0, and end with value equal with size of indices.";
+  CHECK_NE(err, kCSRIdxErr)
+           << "Indices of csr NDArray should be non-negative, in ascending order per row "
+           << " and less than the number of columns.";
+  CHECK_NE(err, kRSPShapeErr) << "Shape mismatch of this row_sparse NDArray";
+  CHECK_NE(err, kRSPIdxErr)
+          << "Indices of row_sparse NDArray should be non-negative, "
+          << "less than the size of first dimension and in ascending order";
+  CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
+}
+
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
