@@ -1729,5 +1729,6 @@ def test_scatter_ops():
                           rhs_is_scalar=True, verbose=False, density=0.5)
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    #import nose
+    #nose.runmodule()
+    test_sparse_embedding()

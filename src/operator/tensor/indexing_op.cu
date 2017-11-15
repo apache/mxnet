@@ -72,7 +72,8 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
   if (req == kWriteTo && !weight.storage_initialized()) {
     size_t out_size = output.shape_.Size();
     MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
-      Kernel<set_zero, gpu>::Launch(s, out_size, output.dptr<DType>());
+      Fill<false>(s, TBlob(output.dptr<DType>(), mshadow::Shape1(out_size),
+          gpu::kDevMask), kWriteTo, 0);
     })
     return;
   }
@@ -134,15 +135,14 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
                                       prefix_sum,
                                       prefix_sum,
                                       num_rows,
-                                      mshadow::Stream<gpu>::GetStream(s));
-        mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+                                      Stream<gpu>::GetStream(s));
+        Tensor<gpu, 1, char> workspace = ctx.requested[0]
             .get_space_typed<gpu, 1, char>(Shape1(num_rows * sizeof(dim_t) +
                                            temp_storage_bytes), s);
         prefix_sum = reinterpret_cast<dim_t*>(workspace.dptr_);
         d_temp_storage = workspace.dptr_ + num_rows*sizeof(dim_t);
         num_threads = num_rows;
-        Kernel<set_zero, gpu>::Launch(s, num_threads, prefix_sum);
-
+        Fill<false>(s, TBlob(prefix_sum, Shape1(num_threads), gpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, gpu>::Launch(s, data_size, prefix_sum, data.dptr<IType>());
 
         cub::DeviceScan::InclusiveSum(d_temp_storage,
@@ -166,7 +166,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
             grad_row_idx, prefix_sum, num_rows);
         // prefill with zeros
         DType* grad_data = output.data().dptr<DType>();
-        Kernel<set_zero, gpu>::Launch(s, nnr * row_length, grad_data);
+        Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length), gpu::kDevMask),
+            kWriteTo, 0);
         // add the final gradients
         num_threads = row_length * data_size;
         Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,

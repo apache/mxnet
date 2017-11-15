@@ -40,7 +40,8 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
   if (req == kWriteTo && !weight.storage_initialized()) {
     size_t out_size = output.shape_.Size();
     MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
-      Kernel<set_zero, cpu>::Launch(s, out_size, output.dptr<DType>());
+      Fill<false>(s, TBlob(output.dptr<DType>(), mshadow::Shape1(out_size),
+          cpu::kDevMask), kWriteTo, 0);
     })
     return;
   }
@@ -95,10 +96,10 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
   dim_t data_size = static_cast<dim_t>(data.shape_.Size());
 
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
-    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+    MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
         // mark row flags
-        Fill<false>(s, TBlob(row_flg, mshadow::Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
+        Fill<false>(s, TBlob(row_flg, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
         // calculate inclusive prefix sum
         // TODO(haibin) ideally this is should be done in parallel
@@ -116,10 +117,11 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
         RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
         // fill row_idx array of output matrix, using the row_flg values
         Kernel<FillRspRowIdxKernel, cpu>::Launch(s, num_rows,
-               grad_row_idx, prefix_sum, num_rows);
+            grad_row_idx, prefix_sum, num_rows);
         // prefill with zeros
         DType* grad_data = output.data().dptr<DType>();
-        Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
+        Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length),
+            cpu::kDevMask), kWriteTo, 0);
         // add the final gradients
         const int num_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
         dim_t segment_len = (nnr + num_threads - 1) / num_threads;
@@ -223,8 +225,7 @@ The storage type of weight must be `row_sparse`, and the gradient of the weight 
 .. Note::
 
     `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
-    The `row_sparse` weight cannot be used in a `BucketingModule`.
-    The operator is only available on CPU.
+    The operator is available on both CPU and GPU.
 
 Examples::
 
