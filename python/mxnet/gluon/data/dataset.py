@@ -79,6 +79,7 @@ class _LazyTransformDataset(Dataset):
             return self._fn(*item)
         return self._fn(item)
 
+
 class ArrayDataset(Dataset):
     """A dataset of multiple arrays.
 
