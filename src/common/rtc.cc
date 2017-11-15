@@ -124,7 +124,7 @@ void CudaModule::Kernel::Launch(
     uint32_t grid_dim_x, uint32_t grid_dim_y, uint32_t grid_dim_z,
     uint32_t block_dim_x, uint32_t block_dim_y, uint32_t block_dim_z,
     uint32_t shared_mem) {
-  CHECK_EQ(ctx.dev_mask(), gpu::kDevMask)
+  CHECK_EQ(ctx.dev_mask(), Context::kGPU)
       << "CUDA Runtime compilation only supports Nvidia GPU.";
 
   auto mod = mod_;
