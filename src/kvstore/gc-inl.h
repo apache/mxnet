@@ -138,16 +138,18 @@ void Dequantize2BitKernelLaunch(mshadow::Stream<xpu> *s, const std::vector<mxnet
           threshold);               // positive threshold
 }
 
-inline void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                      const float threshold) {
+inline void Quantize2BitImpl(mshadow::Stream<mshadow::cpu> *s,
+                             const std::vector<mxnet::TBlob> &inputs,
+                             const float threshold) {
   Quantize2BitKernelLaunch(s, inputs, threshold);
 }
 
-inline void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s, const std::vector<mxnet::TBlob> &inputs,
-                        const float threshold) {
+inline void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s,
+                               const std::vector<mxnet::TBlob> &inputs,
+                               const float threshold) {
   Dequantize2BitKernelLaunch(s, inputs, threshold);
 }
-} // namespace kvstore
-} // namespace mxnet
+}  // namespace kvstore
+}  // namespace mxnet
 
 #endif  // MXNET_KVSTORE_GC_INL_H_

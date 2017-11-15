@@ -23,8 +23,8 @@
  * \author Rahul Huilgol
  */
 
-#ifndef MXNET_GC_H
-#define MXNET_GC_H
+#ifndef MXNET_GC_H_
+#define MXNET_GC_H_
 #include <string>
 #include"./ndarray.h"
 
@@ -135,4 +135,4 @@ class Gc {
 };
 }  // namespace kvstore
 }  // namespace mxnet
-#endif  // MXNET_GC_H
+#endif  // MXNET_GC_H_
