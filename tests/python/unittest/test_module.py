@@ -71,7 +71,7 @@ def test_module_input_grads():
 
 
 def test_module_ctx_group():
-    def test_module_ctx_group_impl(ctxs, group2ctxs):
+    def check_module_ctx_group(ctxs, group2ctxs):
         with mx.AttrScope(ctx_group='dev1'):
             a = mx.symbol.Variable('a')
             a = a * 2
@@ -97,13 +97,13 @@ def test_module_ctx_group():
         assert np.all(mod1_input_grads[0].asnumpy() == mod2_input_grads[0].asnumpy())
         assert np.all(mod1_input_grads[1].asnumpy() == mod2_input_grads[1].asnumpy())
 
-    test_module_ctx_group_impl([mx.cpu(0)], {'dev1': mx.cpu(1), 'dev2': mx.cpu(2)})
-    test_module_ctx_group_impl([mx.cpu(0), mx.cpu(1)],
+    check_module_ctx_group([mx.cpu(0)], {'dev1': mx.cpu(1), 'dev2': mx.cpu(2)})
+    check_module_ctx_group([mx.cpu(0), mx.cpu(1)],
         [{'dev1': mx.cpu(2), 'dev2': mx.cpu(3)}, {'dev1': mx.cpu(4), 'dev2': mx.cpu(5)}])
-    test_module_ctx_group_impl([mx.cpu(0), mx.cpu(1)], {'dev1': mx.cpu(2), 'dev2': mx.cpu(3)})
-    test_module_ctx_group_impl([mx.cpu(0), mx.cpu(1)], {'dev1': mx.cpu(2), 'dev2': [mx.cpu(3)]})
-    test_module_ctx_group_impl([mx.cpu(0), mx.cpu(1)], {'dev1':mx.cpu(2), 'dev2':[mx.cpu(3), mx.cpu(3)]})
-    test_module_ctx_group_impl([mx.cpu(0), mx.cpu(1)],
+    check_module_ctx_group([mx.cpu(0), mx.cpu(1)], {'dev1': mx.cpu(2), 'dev2': mx.cpu(3)})
+    check_module_ctx_group([mx.cpu(0), mx.cpu(1)], {'dev1': mx.cpu(2), 'dev2': [mx.cpu(3)]})
+    check_module_ctx_group([mx.cpu(0), mx.cpu(1)], {'dev1':mx.cpu(2), 'dev2':[mx.cpu(3), mx.cpu(3)]})
+    check_module_ctx_group([mx.cpu(0), mx.cpu(1)],
         {'dev1':[mx.cpu(2), mx.cpu(2)], 'dev2':[mx.cpu(3), mx.cpu(3)]})
 
 def test_bucket_module_ctx_group():

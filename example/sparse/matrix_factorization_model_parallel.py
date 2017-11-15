@@ -34,7 +34,7 @@ parser.add_argument('--num-epoch', type=int, default=3,
 parser.add_argument('--batch-size', type=int, default=1024,
                     help='number of examples per batch')
 parser.add_argument('--print-every', type=int, default=100,
-                    help='logging frequency')
+                    help='logging interval')
 parser.add_argument('--factor-size', type=int, default=128,
                     help="the factor size of the embedding operation")
 parser.add_argument('--num-gpus', type=int, default=2,
@@ -77,14 +77,15 @@ if __name__ == '__main__':
 
     # construct the model
     net = matrix_fact_model_parallel_net(factor_size, factor_size, max_user, max_movies)
-    a = time.time()
 
     # create kvstore
     kv = mx.kvstore.create('local') if num_gpus > 1 else None
 
     # initialize the module
+    # map the ctx_group attribute to the context assignment
+    group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.cpu(i) for i in range(num_gpus)]}
     mod = mx.module.Module(symbol=net, context=[mx.cpu()]*num_gpus, data_names=['user', 'item'],
-        label_names=['score'], group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.cpu(i) for i in range(num_gpus)]})
+        label_names=['score'], group2ctxs=group2ctxs)
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
     mod.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
     optim = mx.optimizer.create(optimizer, learning_rate=learning_rate, momentum=momentum,

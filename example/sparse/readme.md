@@ -22,6 +22,6 @@ The example demonstrates the basic usage of the SparseEmbedding operator in MXNe
 
 ## Model Parallel
 
-The example demonstrates the basic usage of `group2ctxs` in `Module`, which allows part of model on cpu and another part of model on gpu.
+The example demonstrates the basic usage of `group2ctxs` in `Module`, which allows one part of the model trained on cpu and the other on gpu..
 
 - `python matrix_factorization_model_parallel.py --num-gpus 2`
