@@ -490,8 +490,8 @@ class Lambda(Block):
     Output:
         - ** *outputs **: one or more output data. Their shapes depend on the function.
     """
-    def __init__(self, function):
-        super(Lambda, self).__init__()
+    def __init__(self, function, prefix=None):
+        super(Lambda, self).__init__(prefix=prefix)
         if isinstance(function, str):
             assert hasattr(nd, function), \
                    "Function name %s is not found in ndarray." % function
@@ -534,14 +534,17 @@ class HybridLambda(HybridBlock):
     Output:
         - ** *outputs **: one or more output data. Their shapes depend on the function.
     """
-    def __init__(self, function):
-        super(HybridLambda, self).__init__()
+    def __init__(self, function, prefix=None):
+        super(HybridLambda, self).__init__(prefix=prefix)
         if isinstance(function, str):
             assert hasattr(nd, function) and hasattr(sym, function), \
                    "Function name %s is not found in symbol/ndarray." % function
-            self._func = lambda F, *args: getattr(F, function)(*args)
+            func_dict = {sym: getattr(sym, function), nd: getattr(nd, function)}
+            self._func = lambda F, *args: func_dict[F](*args)
+            self._func_name = function
         elif callable(function):
             self._func = function
+            self._func_name = function.__name__
         else:
             raise ValueError(
                 "Unrecognized function in lambda: {} of type {}"
@@ -552,4 +555,4 @@ class HybridLambda(HybridBlock):
 
     def __repr__(self):
         return '{name}({function})'.format(name=self.__class__.__name__,
-                                           function=self._func_impl.__name__)
+                                           function=self._func_name)
