@@ -438,6 +438,35 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_scatter_set_nd)
+.describe(R"code(This operator has the same functionality as scatter_nd
+except that it does not reset the elements not indexed by the input
+index `NDArray` in the input data `NDArray`.
+
+.. note:: This operator is for internal use only.
+
+Examples::
+
+  data = [2, 3, 0]
+  indices = [[1, 1, 0], [0, 1, 0]]
+  out = [[1, 1], [1, 1]]
+  scatter_nd(data=data, indices=indices, out=out)
+  out = [[0, 1], [2, 3]]
+
+)code")
+.set_num_outputs(1)
+.set_num_inputs(2)
+.set_attr_parser(ParamParser<ScatterNDParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
+.set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
+.set_attr<FCompute>("FCompute<cpu>", ScatterSetNDForward<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "data")
+.add_argument("indices", "NDArray-or-Symbol", "indices")
+.add_arguments(ScatterNDParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

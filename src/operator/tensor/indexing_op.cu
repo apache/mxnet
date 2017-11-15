@@ -49,5 +49,8 @@ NNVM_REGISTER_OP(gather_nd)
 
 NNVM_REGISTER_OP(scatter_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);
+
+NNVM_REGISTER_OP(_scatter_set_nd)
+.set_attr<FCompute>("FCompute<gpu>", ScatterSetNDForward<gpu>);
 }  // namespace op
 }  // namespace mxnet
