@@ -145,10 +145,22 @@ class OperatorRunner {
     std::stringstream ss;
     ss << "Timing: " << COUNT << " iterations of " << count << " calls";
     if (timing_shapes[0].ndim()) {
-      // TODO(cjolivier01): Print all shapes (if they differ)
-      ss << ", shape = " << timing_shapes[0] << std::endl << std::flush;
+      size_t lhs_total = 0;
+      ss << ", shape = ";
+      for (size_t i = 0, n = timing_shapes.size(); i < n; ++i) {
+        if (i) {
+          ss << ", ";
+        }
+        ss << timing_shapes[i];
+        if (!i) {
+          lhs_total = timing_shapes[i].Size();
+        }
+      }
+      ss << " = " << test::pretty_num(lhs_total) << " items " << std::endl << std::flush;
     }
-    std::cout << ss.str();
+    if (!mxnet::test::csv) {
+      std::cout << ss.str();
+    }
 
     for (size_t i = 0; i < COUNT; ++i) {
       index_t batchSize = 1;
@@ -217,11 +229,10 @@ class OperatorRunner {
       }
     }
 
-    if (verbose_) {
+    if (verbose_ && !mxnet::test::csv) {
       timing.print(&std::cout, label);
       std::cout << std::endl << std::flush;
     }
-
     return timing.data();
   }
 

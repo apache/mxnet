@@ -271,6 +271,7 @@ struct PopulateFullIdxRspKernel {
     KERNEL_ASSIGN(out[i], kWriteTo, i);
   }
 };
+MXNET_TUNABLE_MXNET_OP_FWD(PopulateFullIdxRspKernel);
 
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
 // instead of the usual compact representation.
