@@ -27,9 +27,56 @@ def check_diff_to_scalar(A, x, rank=None):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x)
 
+def compute_expected_2bit_quantization(arr, curr_residual, threshold):
+    from struct import pack,unpack
+    def bits2int(bits):
+        bits = [int(x) for x in bits[::-1]]
+        x = 0
+        for i in range(len(bits)):
+            x += bits[i]*2**i
+        return x
+
+    def as_float32(s):
+        return unpack("f",pack("I", bits2int(s)))[0]
+
+    # str_quant stores the quantized representation as a sequence of bits
+    str_quant = ''
+    new_residual = []
+    decompr = []
+
+    arr_npy = arr.asnumpy()
+    for i, a in np.ndenumerate(arr_npy):
+        a += curr_residual[i]
+        if a >= threshold:
+            str_quant += '11'
+            new_residual.append(a - threshold)
+            decompr.append(threshold)
+        elif a <= (-1*threshold):
+            str_quant += '10'
+            new_residual.append(a + threshold)
+            decompr.append(-1*threshold)
+        else:
+            str_quant += '00'
+            new_residual.append(a)
+            decompr.append(0)
+    # append extra bits when size of array not a factor of 16
+    if len(str_quant)%16 != 0:
+        str_quant += '0'*(16 - len(str_quant)%16)
+
+    compr = []
+    # converts the string generated into integers 32chars at a time
+    i = 0
+    while i<len(str_quant):
+        cur_float = str_quant[i+24:i+32] + str_quant[i+16:i+24] + str_quant[i+8:i+16] + str_quant[i:i+8]
+        compr.append(as_float32(cur_float))
+        i+=32
+    return np.array(compr), np.array(new_residual).reshape(arr.shape), np.array(decompr).reshape(arr.shape)
+
 keys = [3, 5, 7]
 # let the last shape exceed MXNET_KVSTORE_BIGARRAY_BOUND
 shapes = [(4, 4), (100, 100), (2000, 2000)]
+
+gc_inactive_key = 9
 
 lr = .1
 nworker = 4
@@ -68,51 +115,15 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
+    kv.init(gc_inactive_key, mx.nd.ones(shapes[0]))
 
-    def compute_expected(arr, curr_residual, threshold):
-        from struct import pack,unpack
-        def bits2int(bits):
-            bits = [int(x) for x in bits[::-1]]
-            x = 0
-            for i in range(len(bits)):
-                x += bits[i]*2**i
-            return x
-
-        def as_float32(s):
-            return unpack("f",pack("I", bits2int(s)))[0]
-
-        # str_quant stores the quantized representation as a sequence of bits
-        str_quant = ''
-        new_residual = []
-        decompr = []
-        arr_npy = arr.asnumpy()
-        curr_res_npy = curr_residual.asnumpy()
-        for i, a in np.ndenumerate(arr_npy):
-            a += curr_res_npy[i]
-            if a >= threshold:
-                str_quant += '11'
-                new_residual.append(a - threshold)
-                decompr.append(threshold)
-            elif a <= (-1*threshold):
-                str_quant += '10'
-                new_residual.append(a + threshold)
-                decompr.append(-1*threshold)
-            else:
-                str_quant += '00'
-                new_residual.append(a)
-                decompr.append(0)
-        # append extra bits when size of array not a factor of 16
-        if len(str_quant)%16 != 0:
-            str_quant += '0'*(16 - len(str_quant)%16)
-
-        compr = []
-        # converts the string generated into integers 32chars at a time
-        i = 0
-        while i<len(str_quant):
-            cur_float = str_quant[i+24:i+32] + str_quant[i+16:i+24] + str_quant[i+8:i+16] + str_quant[i:i+8]
-            compr.append(as_float32(cur_float))
-            i+=32
-        return compr, new_residual, decompr
+    def pull_inactive(kv):
+        for i in range(nrepeat):
+            out = [mx.nd.zeros(shapes[0], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(gc_inactive_key, out=out)
+            exp = np.ones_like(out[0].asnumpy())
+            for o in out:
+                assert_almost_equal(o.asnumpy(), exp)
 
     def pull_before_push(kv):
         for i in range(nrepeat):
@@ -185,8 +196,9 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 orig_val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
                 kv.pull(keys[j], out=orig_val)
 
-                grads = [mx.nd.random_uniform(-0.6,0.6, shape=shapes[j], ctx=mx.gpu(g)) for g in range(nworker)]
+                grads = [mx.nd.random_uniform(-0.6, 0.6, shape=shapes[j], ctx=mx.gpu(g)) for g in range(nworker)]
                 kv.push(keys[j], grads)
+
                 val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
                 kv.pull(keys[j], out=val)
 
@@ -195,12 +207,13 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 # on cpu
                 sum_dequantized_vals = np.zeros(shapes[j])
                 for g in range(nworker):
-                    compr, curr_residual, decompr = compute_expected(grads[g], curr_residual, threshold)
-                    sum_dequantized_vals += ((decompr*rate).asnumpy())
+                    compr, curr_residual, decompr = compute_expected_2bit_quantization(
+                                                        grads[g], curr_residual, threshold)
+                    sum_dequantized_vals += decompr*rate
 
                 for g in range(nworker):
                     assert_almost_equal(diffs[g].asnumpy(), sum_dequantized_vals)
-
+    pull_inactive(kv)
     pull_before_push(kv)
     push_zeros(kv)
     curval = verify_residual(kv, threshold, rate)

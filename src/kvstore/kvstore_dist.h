@@ -156,10 +156,12 @@ class KVStoreDist : public KVStoreLocal {
   /**
    * \brief cache all key partitions
    *
-   * `ps_kv_` is used for row sparse
-   *
-   * `push_ps_kv_` and `pull_ps_kv_`, used for default type gradients, are same
-   * when there is no gradient compression
+   * `ps_kv_` is used for pushes and pulls without gradient compression
+   * `compr_ps_kv_` is used for gradient compression. It contains different
+   * pskv for push and pull because sizes would be different in both cases.
+   * Note: `ps_kv_[k]` for some key k may not be the same as `compr_ps_kv_[k].pull`
+   * This is because sharding may cause slightly different divisions when size is
+   * not perfectly divisible.
    */
   std::unordered_map<int, PSKV> ps_kv_;
   std::unordered_map<int, ComprPSKV> compr_ps_kv_;

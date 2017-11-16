@@ -540,7 +540,7 @@ class CommDevice : public Comm {
   }
 
   const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src,
-                        int priority) {
+                                  int priority) {
 
     InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];

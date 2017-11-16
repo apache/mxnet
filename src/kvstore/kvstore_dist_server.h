@@ -381,8 +381,8 @@ class KVStoreDistServer {
   }
 
   void DataHandleCompressed(const ps::KVMeta& req_meta,
-                         const ps::KVPairs<real_t> &req_data,
-                         ps::KVServer<real_t>* server) {
+                            const ps::KVPairs<real_t> &req_data,
+                            ps::KVServer<real_t>* server) {
     CHECK_EQ(req_meta.cmd, kCompressedPushPull);
     if (req_meta.push) {
       // there used several WaitToRead, this is because \a recved's memory
