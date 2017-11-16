@@ -188,7 +188,11 @@ static inline void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) 
   else if (res.first == AddBack) {
     // TODO I might need to reorder.
     mkldnn_mem_const_ptr mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
-    op::Sum(*res.second, *mem, *mem);
+    // We have to allocate new memory for the sum result.
+    mkldnn_mem_ptr sum_res(new mkldnn::memory(res.second->get_primitive_desc()));
+    MKLDNNStream::Instance().RegisterMem(sum_res);
+    op::Sum(*res.second, *mem, *sum_res);
+    const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
 
