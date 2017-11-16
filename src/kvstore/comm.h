@@ -504,7 +504,9 @@ class CommDevice : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
-    if (gc_set_) {
+    // when this reduce is called from kvstore_dist, gc is not set
+    // we don't do compression twice in dist_sync_device
+    if (gc_set_ && gc_->get_type() != GC_NONE) {
       return ReduceCompressed(key, src, priority);
     }
 
