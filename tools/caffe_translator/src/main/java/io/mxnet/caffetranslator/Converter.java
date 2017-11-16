@@ -390,8 +390,8 @@ public class Converter {
         prototxt = "'" + prototxt + "'";
         prototxt = Utils.indent(prototxt, 1, true, 4);
 
-        st.add(Constants.ITER_NAME, iteratorName);
-        st.add(Constants.PROTOTXT, prototxt);
+        st.add("iter_name", iteratorName);
+        st.add("prototxt", prototxt);
 
         String dataName = "???";
         if (layer.getTops().size() >= 1)

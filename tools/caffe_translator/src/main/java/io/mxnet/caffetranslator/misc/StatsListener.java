@@ -2,7 +2,6 @@ package io.mxnet.caffetranslator.misc;
 
 import io.mxnet.caffetranslator.CaffePrototxtBaseListener;
 import io.mxnet.caffetranslator.CaffePrototxtParser;
-import io.mxnet.caffetranslator.Constants;
 import io.mxnet.caffetranslator.ParserHelper;
 import lombok.Getter;
 
@@ -46,7 +45,7 @@ public class StatsListener extends CaffePrototxtBaseListener {
     }
 
     private void processKeyValue(String key, String value) {
-        if (key.equals(Constants.TYPE)) {
+        if (key.equals("type")) {
             layerType = value;
         } else {
             curAttr.add(key);

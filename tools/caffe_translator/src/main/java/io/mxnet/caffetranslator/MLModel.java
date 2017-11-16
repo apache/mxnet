@@ -45,9 +45,9 @@ public class MLModel {
             layerLookup.put(name, map);
         }
 
-        String type = layer.getAttr(Constants.TYPE);
+        String type = layer.getAttr("type");
         Config config = Config.getInstance();
-        if (type.equals(Constants.DATA) || config.getCustomDataLayers().contains(type)) {
+        if (type.equals("data") || config.getCustomDataLayers().contains(type)) {
             layer.setKind(Layer.Kind.DATA);
         } else if (type.toLowerCase().endsWith("loss")) {
             layer.setKind(Layer.Kind.LOSS);

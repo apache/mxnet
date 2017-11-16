@@ -100,7 +100,7 @@ public class Layer {
     }
 
     public String getType() {
-        return attr.get(Constants.TYPE).get(0);
+        return attr.get("type").get(0);
     }
 
     public String getTop() {

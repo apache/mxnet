@@ -47,11 +47,11 @@ public class CreateModelListener extends CaffePrototxtBaseListener {
         String prototxt = getPrototxt(tokens, ctx.getStart().getTokenIndex(), ctx.getStop().getTokenIndex());
 
         if (currentLayer.getTops().size() == 1) {
-            currentLayer.addAttr(Constants.TOP, currentLayer.getTops().get(0));
+            currentLayer.addAttr("top", currentLayer.getTops().get(0));
         }
 
         if (currentLayer.getBottoms().size() == 1) {
-            currentLayer.addAttr(Constants.BOTTOM, currentLayer.getBottoms().get(0));
+            currentLayer.addAttr("bottom", currentLayer.getBottoms().get(0));
         }
 
         currentLayer.setPrototxt(prototxt);
@@ -94,13 +94,13 @@ public class CreateModelListener extends CaffePrototxtBaseListener {
 
     protected void processKeyValue(String key, String value) {
         switch (key) {
-            case Constants.NAME:
+            case "name":
                 currentLayer.setName(value);
                 break;
-            case Constants.TOP:
+            case "top":
                 currentLayer.addTop(value);
                 return;
-            case Constants.BOTTOM:
+            case "bottom":
                 currentLayer.addBottom(value);
                 return;
         }
