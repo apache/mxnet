@@ -23,10 +23,10 @@
  * \author Rahul Huilgol
  */
 
-#include <mxnet/gc.h>
 #include <sstream>
 #include <vector>
-#include "./gc-inl.h"
+#include "gc.h"
+#include "gc-inl.h"
 
 namespace mxnet {
 namespace kvstore {

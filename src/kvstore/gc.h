@@ -26,7 +26,7 @@
 #ifndef MXNET_GC_H_
 #define MXNET_GC_H_
 #include <string>
-#include"./ndarray.h"
+#include"mxnet/ndarray.h"
 
 namespace mxnet {
 namespace kvstore {

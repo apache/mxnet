@@ -30,7 +30,7 @@
 #include <string>
 #include <functional>
 #include <atomic>
-#include "./gc.h"
+#include "kvstore/gc.h"
 #include "./ndarray.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "ps/ps.h"

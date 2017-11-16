@@ -30,7 +30,7 @@
 #include <tuple>
 #include <thread>
 #include "mxnet/ndarray.h"
-#include "mxnet/gc.h"
+#include "gc.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
 namespace mxnet {
