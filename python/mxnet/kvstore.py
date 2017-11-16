@@ -406,7 +406,7 @@ class KVStore(object):
                 raise ValueError('compression_params requires `compression` to be set')
             elif not isinstance(compression_params['compression'], string_types):
                 raise TypeError('compression must be a string')
-            elif compression_params['compression'] not in ['none','2bit']:
+            elif compression_params['compression'] not in ['none', '2bit']:
                 raise ValueError('Unsupported type of compression')
 
             if compression_params['compression'] == '2bit':
@@ -418,9 +418,9 @@ class KVStore(object):
                 else:
                     compression_params['threshold'] = 0.5
 
-                check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
-                                                     c_str(compression_params['compression']),
-                                                     mx_float(compression_params['threshold'])))
+                check_call(_LIB.MXKVStoreSetGradientCompression(
+                    self.handle, c_str(compression_params['compression']),
+                    mx_float(compression_params['threshold'])))
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
