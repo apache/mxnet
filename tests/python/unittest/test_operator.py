@@ -3570,7 +3570,6 @@ def test_rcbrt_op():
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
-            #self.assign(out_data[0], req[0], in_data[0]*in_data[0])
             if in_data[0].stype == 'default':
                 aux[0][:] = 1
                 self.assign(out_data[0], req[0], in_data[0]*in_data[0])
@@ -3626,10 +3625,8 @@ def test_custom_op():
 
     data = mx.symbol.cast(data, dtype='float64')
     op = mx.symbol.cast(op, dtype='float32')
-    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
     check_numeric_gradient(op, [x], [aux])
 
-    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
     x = x.tostype('csr')
     aux = mx.nd.zeros_like(x)
     x.attach_grad()
