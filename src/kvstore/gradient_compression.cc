@@ -18,15 +18,15 @@
  */
 
 /*!
- * \file gc.cc
+ * \file gradient_compression.cc
  * \brief Gradient compression for kvstore
  * \author Rahul Huilgol
  */
 
 #include <sstream>
 #include <vector>
-#include "gc.h"
-#include "gc-inl.h"
+#include "gradient_compression.h"
+#include "gradient_compression-inl.h"
 
 namespace mxnet {
 namespace kvstore {

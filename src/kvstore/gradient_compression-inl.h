@@ -18,12 +18,12 @@
  */
 
 /*!
- * \file gc-inl.h
+ * \file gradient_compression-inl.h
  * \author Rahul Huilgol
  * \brief Declares and defines functions used to quantize and dequantize data
  */
-#ifndef MXNET_KVSTORE_GC_INL_H_
-#define MXNET_KVSTORE_GC_INL_H_
+#ifndef MXNET_KVSTORE_GRADIENT_COMPRESSION_INL_H_
+#define MXNET_KVSTORE_GRADIENT_COMPRESSION_INL_H_
 
 #include <vector>
 #include "../operator/mxnet_op.h"
@@ -152,4 +152,4 @@ inline void Dequantize2BitImpl(mshadow::Stream<mshadow::cpu> *s,
 }  // namespace kvstore
 }  // namespace mxnet
 
-#endif  // MXNET_KVSTORE_GC_INL_H_
+#endif  // MXNET_KVSTORE_GRADIENT_COMPRESSION_INL_H_

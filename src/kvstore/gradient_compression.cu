@@ -18,12 +18,12 @@
  */
 
 /*!
- * \file gc.cu
+ * \file gradient_compression.cu
  * \author Rahul Huilgol
  * \brief Implementation for gpu version of code
  */
 
-#include "./gc-inl.h"
+#include "gradient_compression-inl.h"
 
 namespace mxnet {
 namespace kvstore {

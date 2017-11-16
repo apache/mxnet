@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file gc.h
+ * \file gradient_compression.h
  * \brief Gradient compression for kvstore
  * \author Rahul Huilgol
  */
 
-#ifndef MXNET_KVSTORE_GC_H_
-#define MXNET_KVSTORE_GC_H_
+#ifndef MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
+#define MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
 #include <string>
 #include"mxnet/ndarray.h"
 
@@ -135,4 +135,4 @@ class Gc {
 };
 }  // namespace kvstore
 }  // namespace mxnet
-#endif  // MXNET_KVSTORE_GC_H_
+#endif  // MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
