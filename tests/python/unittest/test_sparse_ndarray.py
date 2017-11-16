@@ -234,7 +234,7 @@ def test_sparse_nd_binary():
             bdim = 2
             lshape = list(oshape)
             # one for broadcast op, another for elemwise op
-            rshapes = list(oshape[ndim-bdim:])
+            rshape = list(oshape[ndim-bdim:])
             for i in range(bdim):
                 sep = np.random.uniform(0, 1)
                 if sep < 0.33:
