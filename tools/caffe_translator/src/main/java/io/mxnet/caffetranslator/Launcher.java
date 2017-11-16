@@ -131,7 +131,6 @@ public class Launcher {
             }
         }
 
-
     }
 
     private String getOption(CommandLine line, String argName) {

@@ -56,9 +56,6 @@ public class MLModel {
         }
     }
 
-    private Map<String, Layer> producers;
-    private Map<String, Layer> consumers;
-
     public List<Layer> getDataLayers() {
         List<Layer> ret = new ArrayList<>();
 

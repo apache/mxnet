@@ -97,7 +97,6 @@ public class GenHelper {
     }
 
     public String getVarname(String name) {
-        //ToDo: Make this robust
         StringBuilder sb = new StringBuilder(name);
         for (int i = 0; i < sb.length(); i++) {
             char ch = sb.charAt(i);
