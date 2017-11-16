@@ -18,13 +18,13 @@
  */
 
 /*!
- * \file mkldnn_relu-inl.h
+ * \file mkldnn_act-inl.h
  * \brief
  * \author Da Zheng
 */
 
-#ifndef MXNET_OPERATOR_MKL_MKLDNN_RELU_INL_H_
-#define MXNET_OPERATOR_MKL_MKLDNN_RELU_INL_H_
+#ifndef MXNET_OPERATOR_MKL_MKLDNN_ACT_INL_H_
+#define MXNET_OPERATOR_MKL_MKLDNN_ACT_INL_H_
 
 
 #include <dmlc/logging.h>
@@ -45,20 +45,37 @@
 namespace mxnet {
 namespace op {
 
+static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
+  switch (param.act_type) {
+    case activation::kReLU:
+      return mkldnn::algorithm::eltwise_relu;
+    case activation::kSigmoid:
+      return mkldnn::algorithm::eltwise_logistic;
+    case activation::kTanh:
+      return mkldnn::algorithm::eltwise_tanh;
+    case activation::kSoftReLU:
+      return mkldnn::algorithm::eltwise_soft_relu;
+    default:
+      LOG(FATAL) << "unknown activation type";
+      return mkldnn::algorithm::eltwise_relu;
+  }
+}
+
 template<typename Dtype>
-void MKLDNNRelu_Forward(const OpContext &ctx, const NDArray &in_data,
-    const OpReqType &req, const NDArray &out_data) {
+void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
+    const NDArray &in_data, const OpReqType &req, const NDArray &out_data) {
   std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
   Dtype alpha = 0;
 
+  auto alg = GetMKLDNNActAlgo(param);
   mkldnn::eltwise_forward::desc desc = ctx.is_train
     ? mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_training,
-        mkldnn::eltwise_relu, data_md, alpha)
+        alg, data_md, alpha)
     : mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
-        mkldnn::eltwise_relu, data_md, alpha);
+	alg, data_md, alpha);
   mkldnn::eltwise_forward::primitive_desc pdesc(desc, cpu_engine);
 
   std::shared_ptr<const mkldnn::memory> output_memory
@@ -69,9 +86,9 @@ void MKLDNNRelu_Forward(const OpContext &ctx, const NDArray &in_data,
 }
 
 template<typename Dtype>
-void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
-                const NDArray &in_data, const OpReqType &req,
-                const NDArray &in_grad) {
+void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
+    const NDArray &out_grad, const NDArray &in_data, const OpReqType &req,
+    const NDArray &in_grad) {
   if (req == kNullOp) {
     return;
   }
@@ -84,10 +101,11 @@ void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
   auto cpu_engine = data_mpd.get_engine();
   Dtype alpha = 0;
 
+  auto alg = GetMKLDNNActAlgo(param);
   mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
-      mkldnn::eltwise_relu, data_md, alpha);
+      alg, data_md, alpha);
   mkldnn::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);
-  mkldnn::eltwise_backward::desc bw_desc(mkldnn::eltwise_relu, diff_md, data_md, alpha);
+  mkldnn::eltwise_backward::desc bw_desc(alg, diff_md, data_md, alpha);
   mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine, fw_pdesc);
 
   auto diff_src_memory = CreateMKLDNNMem(in_grad, bw_pdesc.diff_src_primitive_desc(), req);
@@ -102,4 +120,4 @@ void MKLDNNRelu_Backward(const OpContext &ctx, const NDArray &out_grad,
 }  // namespace mxnet
 
 #endif
-#endif  // MXNET_OPERATOR_MKL_MKLDNN_RELU_INL_H_
+#endif  // MXNET_OPERATOR_MKL_MKLDNN_ACT_INL_H_

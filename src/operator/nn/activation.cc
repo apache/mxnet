@@ -27,7 +27,7 @@
 #include "../mshadow_op.h"
 #include "../tensor/elemwise_unary_op.h"
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn/mkldnn_relu-inl.h"
+#include "./mkldnn/mkldnn_act-inl.h"
 #endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
@@ -58,14 +58,12 @@ static void ActivationComputeEx_CPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (param.act_type == activation::kReLU) {
-    switch (inputs[0].dtype()) {
-      case mshadow::kFloat32:
-        MKLDNNRelu_Forward<float>(ctx, inputs[0], req[0], outputs[0]);
-        return;
-      default:
-        break;
-    }
+  switch (inputs[0].dtype()) {
+    case mshadow::kFloat32:
+      MKLDNNAct_Forward<float>(ctx, param, inputs[0], req[0], outputs[0]);
+      return;
+    default:
+      break;
   }
 #endif
   _ActivationCompute<cpu>(param, ctx, inputs[0].data(), req[0],
@@ -84,15 +82,13 @@ void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
 #endif
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (param.act_type == activation::kReLU) {
-    switch (inputs[0].dtype()) {
-      case mshadow::kFloat32:
-        MKLDNNRelu_Backward<float>(ctx, inputs[0], inputs[1], req[0],
-            outputs[0]);
-        return;
-      default:
-        break;
-    }
+  switch (inputs[0].dtype()) {
+    case mshadow::kFloat32:
+      MKLDNNAct_Backward<float>(ctx, param, inputs[0], inputs[1], req[0],
+	  outputs[0]);
+      return;
+    default:
+      break;
   }
 #endif
   _ActivationGradCompute<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
@@ -108,9 +104,7 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (param.act_type == activation::kReLU
-      && dev_mask == mshadow::cpu::kDevMask) {
-    // TODO we don't know the type.
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -133,9 +127,7 @@ inline static bool backward_ActStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (param.act_type == activation::kReLU
-      && dev_mask == mshadow::cpu::kDevMask) {
-    // TODO we don't know the type.
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
