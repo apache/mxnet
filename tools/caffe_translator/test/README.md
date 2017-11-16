@@ -43,7 +43,7 @@ where,
 
 `snapshot` is an optional folder where snapshots will be written if the solver prototxt is configured to do so.
 
-Please check the [sample](https://github.com/indhub/mxnet/tree/caffe_translator/tools/caffe_translator/test/sample_test_dir) test directory for an example.
+Please check the [sample](https://github.com/apache/incubator-mxnet/tree/caffe_translator/tools/caffe_translator/test/sample_test_dir) test directory for an example.
 
 ### Where does the test results go?
 The test script writes the test report, translated files and training logs to `<test_dir>/output/`
