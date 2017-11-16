@@ -1434,7 +1434,7 @@ def test_sparse_square_sum():
         dim1 = 30
         axes = [0, 1]
         keepdims = [False, True]
-        densities = [0, 0.01, 0.1, 0.2, 0.5]
+        densities = [0, 0.01, 0.2, 0.5, 1.0]
         for density in densities:
             shape = rand_shape_2d(dim0, dim1)
             rsp = rand_ndarray(shape, 'row_sparse', density)
@@ -1453,20 +1453,26 @@ def test_sparse_square_sum():
                     rsp_data = mx.sym.Variable('data', stype='row_sparse')
                     test = mx.symbol._internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
 
-                    # check symbolic backward since ograd can be a rsp
+                    # check symbolic backward since ograd can be an rsp
                     # and cannot be checked through check_numeric_gradient
                     # because it will add a loss layer as the output layer
                     # which makes ograd of the square_sum dense
-                    if axis == 1 and keepdims:
+                    if axis == 1 and keepdim:
                         dns_data = mx.sym.Variable('data')
                         baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
                         igrad_expected = mx.nd.empty(dns.shape)
                         baseline_exec = baseline.bind(default_context(), args=[dns],
                                                       args_grad=[igrad_expected])
                         baseline_exec.forward(is_train=True)
+                        # make ograd from ret_expected and set one row to zero
+                        ret_expected[np.random.randint(0, ret_expected.shape[0]), :] = 0
                         baseline_exec.backward([ret_expected])
-                        check_symbolic_backward(test, [rsp], [ret], [igrad_expected.asnumpy()],
+                        # check backward when ograd is dense
+                        check_symbolic_backward(test, [rsp], [ret_expected], [igrad_expected.asnumpy()],
                                                 grad_stypes={'data': 'row_sparse'})
+                        # check backward when ograd is row sparse
+                        check_symbolic_backward(test, [rsp], [ret_expected.tostype('row_sparse')],
+                                                [igrad_expected.asnumpy()], grad_stypes={'data': 'row_sparse'})
 
                     # check numeric gradient
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
