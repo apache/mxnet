@@ -1,19 +1,31 @@
 # v0.3.0 (TBD)
 
-* Drop 0.5 support. (#TBD)
+* Update `libmxnet` to v0.12.0.
+  (See https://github.com/apache/incubator-mxnet/releases/tag/0.12.0)
+
+* Drop 0.5 support. ([#300][300])
 
 ## New API
 
-* `deepcopy` for NDArray (#273)
-* `scalar ./ NDArray` is available now. (#292)
-* `fill` and `fill!` for NDArray (#TBD)
+### `SymbolicNode`
+
+* Debugging print support. ([#276][276])
+
+### `NDArray`
+
+* `deepcopy` for `NDArray` ([#273][273])
+
+* `scalar ./ NDArray` is available now. ([#292][292])
+
+* `fill` and `fill!` for `NDArray`. ([#297][297], [#311][311])
+
   An API correspond to Python's `mx.nd.full()`
 
     * `fill(x, dims, ctx=cpu())`
     * `fill(x, dims...)`
     * `fill!(arr::NDArray, x)`
 
-* Matrix (2D NDArray) multiplication is available now. (#TBD)
+* Matrix (2D `NDArray`) multiplication is available now. ([#300][300])
 
     ```julia
     julia> x
@@ -26,7 +38,8 @@
      2.0  4.0
     ```
 
-* `NDArray` `getindex`/`setindex!` linear indexing support and `first` for extracting scalar value. (#TBD)
+* `NDArray` `getindex`/`setindex!` linear indexing support and `first` for
+  extracting scalar value. ([#294][294])
 
   ```julia
   julia> x = mx.zeros(2, 5)
@@ -45,60 +58,98 @@
   julia> y[]  # this is available, also
   42.0f0
   ```
-* Elementwise power of `NDArray`. (#293)
+* Elementwise power of `NDArray`. ([#293][293])
+
     * `x.^2`
     * `2.^x`
     * `x.^y`
     * where `x` and `y` are `NDArray`s.
 
-* Elementwise power of irrational and `NDArray` (#TBD)
+* Elementwise power of irrational and `NDArray`. ([#310][310])
+
     * `e.^x`
     * `x.^e`
     * `π.^x`
 
 ## API Changes
 
-* `reshape` of NDArray shares the same interface with Base (#272).
-    * `reshape(NDArray, dim; reverse=false)`
-    * `reshape(NDArray, dim...; reverse=false)`
-    * `Reshape` deprecated.
+### `SymbolicNode`
 
-* `reshape` of SymbolicNode shares the same interface with Base
-  and additional keyword argument (#279).
+* `reshape` of `SymbolicNode` shares the same interface with Base
+  and additional keyword argument. ([#279][279])
 
     * `reshape(SymbolicNode, dim; reverse=false, name)`
     * `reshape(SymbolicNode, dim...; reverse=false, name)`
-    * `Reshape` deprecated.
+    * `Reshape` is deprecated.
 
-* `srand!` deprecated, please use `srand` (#282)
+* `mx.forward(x)` will return `x.outputs` now. ([#312][312])
 
-* `mean` and `sum` of NDArray share the same interface with Base
-  and fix the `axis` indexing (#TBD).
+### `NDArray`
+
+* `reshape` of `NDArray` shares the same interface with Base. ([#272][272])
+
+    * `reshape(NDArray, dim; reverse=false)`
+    * `reshape(NDArray, dim...; reverse=false)`
+    * `Reshape` is deprecated.
+
+* `srand!` deprecated, please use `srand`. ([#282][282])
+
+* `mean` and `sum` of `NDArray` share the same interface with Base
+  and fix the `axis` indexing. ([#303][303])
 
     * This is a breaking change; no deprecated warning.
     * Before: `mean(arr, axis=0)`
     * After: `mean(arr, 1)`
 
-* `max` and `min` of NDArray renamed to `maximum` and `minimum` and share the
-  same interface with Base. The `axis` indexing is fixed, also. (#TBD)
+* `max` and `min` of `NDArray` renamed to `maximum` and `minimum` and share the
+  same interface with Base. The `axis` indexing is fixed, also. ([#303][303])
 
     * This is a breaking change; no deprecated warning.
     * Before: `mx.max(arr, axis=0)` or `mx.max_axis(arr, axis=0)`
     * After: `maximum(arr, 1)`
 
-* `mx.transpose` for high dimension NDArray has been renamed to `permutedims`
-  and shares the same interface with Base. (#TBD)
+* `mx.transpose` for high dimension `NDArray` has been renamed to `permutedims`
+  and shares the same interface with Base. ([#303][303])
 
     * This is a breaking changes; no deprecated warning.
     * Before: `mx.transpose(A, axis=[2, 1, 3])`
     * After: `permutedims(A, [2, 1, 3])`
 
-* `prod` of `NDArray` shares the same interface with Base and fix
-  the `axis` indexing. (#TBD).
+* `prod` of `NDArray` shares the same interface with Base and fix the `axis`
+  indexing. ([#303][303])
 
     * This is a breaking change; no deprecated warning.
     * Before: `prod(arr, axis=-1)`
     * After: `prod(arr, 1)`
+
+## Bugfix
+
+* Broadcasting operation on same variable is back. ([#300][300], [#314][314])
+  ```julia
+  x = mx.NDArray(...)
+  x .* x
+  ```
+
+  ```julia
+  y = mx.Variable(:y)
+  y .* y
+  ```
+
+[272]: https://github.com/dmlc/MXNet.jl/pull/272
+[273]: https://github.com/dmlc/MXNet.jl/pull/273
+[276]: https://github.com/dmlc/MXNet.jl/pull/276
+[279]: https://github.com/dmlc/MXNet.jl/pull/279
+[282]: https://github.com/dmlc/MXNet.jl/pull/282
+[292]: https://github.com/dmlc/MXNet.jl/pull/292
+[293]: https://github.com/dmlc/MXNet.jl/pull/293
+[294]: https://github.com/dmlc/MXNet.jl/pull/294
+[297]: https://github.com/dmlc/MXNet.jl/pull/297
+[300]: https://github.com/dmlc/MXNet.jl/pull/300
+[303]: https://github.com/dmlc/MXNet.jl/pull/303
+[310]: https://github.com/dmlc/MXNet.jl/pull/310
+[311]: https://github.com/dmlc/MXNet.jl/pull/311
+[312]: https://github.com/dmlc/MXNet.jl/pull/312
+[314]: https://github.com/dmlc/MXNet.jl/pull/314
 
 # v0.2.2 (2017.05.14)
 * Updated supported version of MXNet to 0.9.4.
