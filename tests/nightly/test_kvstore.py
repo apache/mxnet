@@ -75,19 +75,6 @@ def compute_expected_2bit_quantization(arr, curr_residual, threshold):
         i+=32
     return np.array(compr), np.array(new_residual).reshape(arr.shape), np.array(decompr).reshape(arr.shape)
 
-keys = [3, 5, 7]
-# let the last shape exceed MXNET_KVSTORE_BIGARRAY_BOUND
-shapes = [(4, 4), (100, 100), (2000, 2000)]
-
-gc_init_test_key = 9
-
-lr = .1
-nworker = 4
-nrepeat = 10
-
-## generate data
-data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for j in range(nrepeat)]
-
 ## individual key interface
 def test_kvstore(kv_type):
     print(kv_type)
@@ -118,9 +105,8 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
-
+    # init one key with 1s so we can check if it was compressed during init
     kv.init(gc_init_test_key, mx.nd.ones(shapes[0]))
-
     # use different keys for random tests so that
     # we can track residual from start
     random_keys = [13, 15, 17]
@@ -196,8 +182,6 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
             # residual would be 0 again
 
     def check_compr_random(kv, threshold):
-        mx.random.seed(123)
-        rnd.seed(123)
         for k, s in zip(random_keys, shapes):
             curr_residual = [np.zeros(s) for g in range(nworker)]
             orig_val = [mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)]
@@ -226,13 +210,6 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
     check_neg(kv, -1*threshold, rate, curval)
     check_compr_random(kv, threshold)
 
-test_kvstore('local_update_cpu')
-test_kvstore('local_allreduce_cpu')
-test_kvstore('local_allreduce_device')
-
-# compression for local kvstore happens only when reduce is on device
-test_compress_kvstore('local_allreduce_device')
-
 ## group keys interface
 def test_group_kvstore(kv_type):
     print(kv_type)
@@ -253,6 +230,27 @@ def test_group_kvstore(kv_type):
             err = sum(err) / np.sum(np.abs(a))
             assert(err < 1e-6), (err, a.shape)
 
-test_group_kvstore('local_update_cpu')
-test_group_kvstore('local_allreduce_cpu')
-test_group_kvstore('local_allreduce_device')
+if __name__ == "__main__":
+    keys = [3, 5, 7]
+    # let the last shape exceed MXNET_KVSTORE_BIGARRAY_BOUND
+    shapes = [(4, 4), (100, 100), (2000, 2000)]
+
+    gc_init_test_key = 9
+
+    lr = .1
+    nworker = 4
+    nrepeat = 10
+
+    ## generate data
+    data = [[[np.random.random(s)*2-1 for i in range(nworker)] for s in shapes] for j in range(nrepeat)]
+
+    test_kvstore('local_update_cpu')
+    test_kvstore('local_allreduce_cpu')
+    test_kvstore('local_allreduce_device')
+
+    # compression for local kvstore happens only when reduce is on device
+    test_compress_kvstore('local_allreduce_device')
+
+    test_group_kvstore('local_update_cpu')
+    test_group_kvstore('local_allreduce_cpu')
+    test_group_kvstore('local_allreduce_device')
