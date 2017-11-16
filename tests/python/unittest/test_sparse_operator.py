@@ -1447,6 +1447,7 @@ def test_sparse_square_sum():
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                            atol=1e-2, rtol=0.1)
 
+                    
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1551,39 +1552,38 @@ def test_sparse_embedding():
         # update weight based on density
         weight[:] = rand_ndarray(weight.shape, 'row_sparse', density=density)
         # check forward
-        exe_test.forward(is_train=True)
-        assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(data_onehot, weight.asnumpy()))
+        executor.forward(is_train=True)
+        assert_almost_equal(executor.outputs[0].asnumpy(), np.dot(data_onehot, weight.asnumpy()))
         # check backward
         executor.backward([grad])
         assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(data_onehot.T, grad.asnumpy()))
 
-    if default_context().device_type == 'cpu':
-        densities = [0, 0.5, 1]
-        in_dim = 50
-        out_dim = 3
-        batch = 8
-        # init executor
-        data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype='row_sparse')
-        embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
-                                               output_dim=out_dim, name="embed")
-        grad_req = {'data': 'null', 'embed_weight': 'write'}
-        exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
-        arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
-        grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
-        # init data
-        np_data = np.random.randint(low=0, high=in_dim, size=batch)
-        np_onehot = np.zeros((batch, in_dim))
-        np_onehot[np.arange(batch), np_data] = 1.0
-        arg_map["data"][:] = np_data
-        # init grad
-        np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
-        grad = mx.nd.sparse.zeros('row_sparse', np_grad.shape)
-        grad[:] = np_grad
-        # weight
-        weight = arg_map["embed_weight"]
-        for density in densities:
-            check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
+    densities = [0, 0.5, 1]
+    in_dim = 50
+    out_dim = 3
+    batch = 8
+    # init executor
+    data = mx.sym.Variable("data")
+    weight = mx.sym.Variable("embed_weight", stype='row_sparse')
+    embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
+                                           output_dim=out_dim, name="embed")
+    grad_req = {'data': 'null', 'embed_weight': 'write'}
+    exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
+    arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
+    grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
+    # init data
+    np_data = np.random.randint(low=0, high=in_dim, size=batch)
+    np_onehot = np.zeros((batch, in_dim))
+    np_onehot[np.arange(batch), np_data] = 1.0
+    arg_map["data"][:] = np_data
+    # init grad
+    np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+    grad = mx.nd.sparse.zeros('row_sparse', np_grad.shape)
+    grad[:] = np_grad
+    # weight
+    weight = arg_map["embed_weight"]
+    for density in densities:
+        check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
 
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
