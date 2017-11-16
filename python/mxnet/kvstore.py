@@ -24,7 +24,7 @@ import pickle
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 from .base import _LIB
-from .base import check_call, c_array, c_str, string_types, numeric_types, mx_uint, mx_float, py_str
+from .base import check_call, c_array, c_str, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
 

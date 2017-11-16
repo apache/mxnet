@@ -47,7 +47,7 @@ class Trainer(object):
     compression_params : dict
         Specifies type of gradient compression and additional arguments depending
         on the type of compression being used. For example, 2bit compression requires a threshold.
-        Arguments would then be {'compression':'2bit', 'threshold':0.5}
+        Arguments would then be {'type':'2bit', 'threshold':0.5}
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
 
     Properties

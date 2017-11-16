@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace kvstore {
 
-// these gpu functions are defined in gc.cu
+// these gpu functions are defined in gradient_compression.cu
 void Quantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,
                       const float threshold);
 void Dequantize2BitImpl(mshadow::Stream<mshadow::gpu> *s, const std::vector<mxnet::TBlob> &inputs,

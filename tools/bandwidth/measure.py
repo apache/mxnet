@@ -78,7 +78,8 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
     # create kvstore and optimizer
     devs = [mx.gpu(int(i)) for i in gpus.split(',')]
     kv = mx.kv.create(kv_store)
-    kv.set_gradient_compression({'compression': gc_type})
+    if gc_type != 'none':
+        kv.set_gradient_compression({'type': gc_type})
     if optimizer is None or optimizer == 'None':
         opt = None
     else:

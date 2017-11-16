@@ -130,11 +130,6 @@ class GradientCompression {
    * all negative gradients will be thresholded to -1*`threshold_`
    */
   float threshold_ = 0;
-
-  /*!
-   * \brief parameters for gradient compression are sent in this form to backend
-   */
-  GradientCompressionParam params;
 };
 }  // namespace kvstore
 }  // namespace mxnet
