@@ -32,12 +32,6 @@ def matrix_fact_model_parallel_net(factor_size, num_hidden, max_user, max_item):
         item_weight = mx.symbol.Variable('item_weight', stype='row_sparse')
         item = mx.symbol.contrib.SparseEmbedding(data=item, weight=item_weight,
                                                  input_dim=max_item, output_dim=factor_size)
-        # non-linear transformation of user features
-        user = mx.symbol.Activation(data=user, act_type='relu')
-        user = mx.symbol.FullyConnected(data=user, num_hidden=num_hidden)
-        # non-linear transformation of item features
-        item = mx.symbol.Activation(data=item, act_type='relu')
-        item = mx.symbol.FullyConnected(data=item, num_hidden=num_hidden)
     # set ctx_group attribute to 'dev2' for the symbols created in this scope,
     # the symbols will be bound to the context that 'dev2' map to in group2ctxs
     with mx.AttrScope(ctx_group='dev2'):
