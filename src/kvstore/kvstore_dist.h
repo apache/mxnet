@@ -352,9 +352,8 @@ class KVStoreDist : public KVStoreLocal {
           }
         }
       } else if (storage_type == kRowSparseStorage) {
-        if (gc_->get_type() != GC_NONE) {
-          LOG(FATAL) << "Gradient compression for row sparse storage type is not supported";
-        }
+        CHECK_EQ(gc_->get_type(), GC_NONE)
+          << "Gradient compression for row sparse storage type is not supported";
         PushRowSparse(key, comm_buf, priority);
       } else {
         LOG(FATAL) << "unknown storage type";

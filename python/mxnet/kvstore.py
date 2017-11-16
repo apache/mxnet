@@ -349,7 +349,7 @@ class KVStore(object):
             check_call(_LIB.MXKVStorePullRowSparse(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 
-    def set_gradient_compression(self, compression_params=None):
+    def set_gradient_compression(self, compression_params=(('compression', '2bit'),)):
         """ Specifies type of low-bit quantization for gradient compression if any,
          and additional arguments depending on the type of compression being used.
 
@@ -357,19 +357,22 @@ class KVStore(object):
         ----------
         compression_params : dict
             `compression_params` is a dictionary specifying the type and parameters
-            for gradient compression. The key `compression` in this dictionary is a required argument
-            and specifies the type of gradient compression. Other keys in this
-            dictionary are optional and specific to the type of gradient compression.
+            for gradient compression. The key `compression` in this dictionary is a
+            required string argument and specifies the type of gradient compression.
+            Other keys in this dictionary are optional and specific to the type
+            of gradient compression. Defaults to (('compression', '2bit'),).
+            The default value is not a dict,
+            just to avoid pylint warning on dangerous default values.
 
-            2bit Gradient Compression
-            2bit gradient compression takes a threshold. This must be a positive float.
-            The technique works by limiting values such that the absolute values of the gradient
-            communicated is less than the threshold. Values which don't meet the threshold
-            are set to 0.
+            2bit Gradient Compression takes a positive float `threshold`.
+            The technique works by thresholding values such that positive values in the
+            gradient above threshold will be set to threshold. Negative values whose absolute
+            values are higher than threshold, will be set to the negative of threshold.
+            Values whose absolute values are less than threshold will be set to 0.
             By doing so, each value in the gradient is in one of three states. 2bits are
             used to represent these states, and every 16 float values in the original
             gradient can be represented using one float. This compressed representation
-            can reduce communication costs. The difference between these values and
+            can reduce communication costs. The difference between these thresholded values and
             original values is stored at the sender's end as residual and added to the
             gradient in the next iteration.
 
@@ -395,19 +398,6 @@ class KVStore(object):
             a dictionary which includes `threshold` like:
             {'compression': '2bit', 'threshold': 0.5}
 
-            compression: str
-                type of low-bit quantization to be used for gradient compression
-                Can only be '2bit' or `none` for now.
-                2bit gradient compression uses 2bit quantization with residual to compress
-                gradients. It works by converts each value in the original gradient to use
-                2 bits, causing size of gradient to be 1/16th of the original gradient
-            threshold: float
-                must be greater than 0
-                threshold used for 2bit quantization of gradients
-                Positive values in gradient above threshold will be set to
-                threshold. Negative values whose absolute values are higher than threshold,
-                will be set to the negative of threshold. Values whose absolute values are
-                less than threshold will be set to 0.
         """
         if compression_params:
             if not isinstance(compression_params, dict):

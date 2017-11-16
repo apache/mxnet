@@ -58,12 +58,11 @@ class KVStoreLocal : public KVStore {
       comm_ = new CommCPU();
     }
     pinned_ctx_ = comm_->pinned_ctx();
-    gc_ = new Gc();
+    gc_ = std::make_shared<Gc>();
   }
 
   virtual ~KVStoreLocal() {
     delete comm_;
-    delete gc_;
   }
 
   void Init(const std::vector<int>& keys,

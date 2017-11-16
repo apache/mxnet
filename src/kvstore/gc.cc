@@ -130,18 +130,18 @@ void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
     } else {
 #if MXNET_USE_CUDA
       if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
-    mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
-      std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
-      Quantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-      // Wait GPU kernel to complete
-      ctx.get_stream<mshadow::gpu>()->Wait();
-    }, from.ctx(), {from.var()}, {to->var(), residual->var()},
-    mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
-  } else {
-    LOG(FATAL) << "unknown device mask";
-  }
+        mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
+          std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
+          Quantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+          // Wait GPU kernel to complete
+          ctx.get_stream<mshadow::gpu>()->Wait();
+        }, from.ctx(), {from.var()}, {to->var(), residual->var()},
+        mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("QuantizeGPU"));
+      } else {
+        LOG(FATAL) << "unknown device mask";
+      }
 #else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
     }
   } else {
@@ -165,16 +165,16 @@ void Gc::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int pr
     } else {
 #if MXNET_USE_CUDA
       if (a == mshadow::gpu::kDevMask && b == mshadow::gpu::kDevMask) {
-      mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
-        std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
-        Dequantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
-        // Wait GPU kernel to complete
-        ctx.get_stream<mshadow::gpu>()->Wait();
-      }, from.ctx(), {from.var()}, {to->var()},
-      mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
-    } else {
-      LOG(FATAL) << "unknown device mask";
-    }
+        mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
+          std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
+          Dequantize2BitImpl(ctx.get_stream<mshadow::gpu>(), inputs, threshold);
+          // Wait GPU kernel to complete
+          ctx.get_stream<mshadow::gpu>()->Wait();
+        }, from.ctx(), {from.var()}, {to->var()},
+        mxnet::FnProperty::kNormal, priority, PROFILER_MESSAGE("DequantizeGPU"));
+      } else {
+        LOG(FATAL) << "unknown device mask";
+      }
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
