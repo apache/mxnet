@@ -1236,7 +1236,7 @@ def test_sparse_dot():
             rhs = rand_ndarray(shape=(lhs_shape[1], rhs_num_cols), stype='default')
             rhs[icol, :] = 0
         dns_out = mx.nd.dot(lhs, rhs, transpose_a=trans_lhs)
-        assert mx.nd.sum(dns_out).asscalar() == 0
+        assert mx.nd.sum(mx.nd.abs(dns_out)).asscalar() == 0
         sps_out = mx.nd.sparse.dot(lhs.tostype('csr'), rhs.tostype('row_sparse'), transpose_a=trans_lhs)
         assert same(dns_out.asnumpy(), sps_out.asnumpy())
 
@@ -1374,6 +1374,7 @@ def test_sparse_unary_with_numerics():
                           lambda output, outg: outg * assign_each(output, lambda x: x * (1.0 - x)),
                           backward_is_use_output=True)
 
+
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1385,6 +1386,7 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('csr', shape)
     check_sparse_nd_zeros('default', shape)
 
+
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1394,6 +1396,7 @@ def test_sparse_nd_zeros_like():
     shape = rand_shape_2d()
     check_sparse_nd_zeros_like('row_sparse', shape)
     check_sparse_nd_zeros_like('csr', shape)
+
 
 def test_sparse_axis_operations():
     def test_variations(func_name):
@@ -1423,6 +1426,7 @@ def test_sparse_axis_operations():
     test_fallback(mx.nd.sum, axis=0, keepdims=True, exclude=True)
     test_variations(mx.nd.mean)
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
+
 
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':
@@ -1468,7 +1472,7 @@ def test_sparse_square_sum():
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                            atol=1e-2, rtol=0.1)
 
-                    
+
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1537,6 +1541,7 @@ def test_sparse_storage_fallback():
             check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
             check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
+
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
         # forward
@@ -1566,6 +1571,7 @@ def test_sparse_elementwise_sum():
     for dim in range(2, 4):
         shape = tuple(np.random.randint(5, 10, size=dim))
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
+
 
 def test_sparse_embedding():
     ''' test sparse embedding op on cpu '''
@@ -1605,6 +1611,7 @@ def test_sparse_embedding():
     weight = arg_map["embed_weight"]
     for density in densities:
         check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
+
 
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
@@ -1749,6 +1756,7 @@ def test_scatter_ops():
                           lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
+
 
 if __name__ == '__main__':
     import nose

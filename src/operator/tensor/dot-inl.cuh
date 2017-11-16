@@ -454,13 +454,16 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
                              TBlob* ret) {
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
-  if (!lhs.storage_initialized()) return;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  if (!lhs.storage_initialized()) {
+    Fill(s, *ret, req, 0);
+    return;
+  }
 
   using mshadow::cuda::kBaseThreadNum;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
-  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const dim_t num_rows_l = lhs.shape()[0];
   const dim_t num_cols_r = rhs.shape_[1];

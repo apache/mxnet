@@ -536,11 +536,14 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
                              TBlob* ret) {
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
-  if (!lhs.storage_initialized()) return;
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (!lhs.storage_initialized()) {
+    Fill(s, *ret, req, 0);
+    return;
+  }
 
   using nnvm::dim_t;
 
-  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -629,6 +632,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
               FillZerosRspImpl(s, *ret);
               return;
             }
+            ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             dim_t idx = 0;
             for (index_t i = 0; i < ret->shape()[0]; ++i) {
@@ -777,6 +781,7 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
               FillZerosRspImpl(s, *ret);
               return;
             }
+            ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             dim_t idx = 0;
             for (index_t i = 0; i < ret->shape()[0]; ++i) {
