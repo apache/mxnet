@@ -2013,6 +2013,26 @@ MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** ar
                                   mx_uint grid_dim_z, mx_uint block_dim_x,
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
+/*!
+ * \brief Get shared memory handle from NDArray
+ * \param handle NDArray handle.
+ * \param shared_pid output PID
+ * \param shared_id output shared memory id.
+ */
+MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
+                                          int* shared_id);
+/*!
+ * \brief Reconstruct NDArray from shared memory handle
+ * \param shared_pid shared PID
+ * \param shared_id shared memory id
+ * \param shape pointer to NDArray dimensions
+ * \param ndim number of NDArray dimensions
+ * \param dtype data type of NDArray
+ * \param out constructed NDArray
+ */
+MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                           mx_uint ndim, int dtype, NDArrayHandle *out);
+
 
 #ifdef __cplusplus
 }

@@ -66,9 +66,9 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
   } else {
     ctx = default_ctx;
   }
-  // Pinned context doesn't propagate
-  if (ctx.dev_type == Context::kCPUPinned) {
-    ctx = Context::CPU();
+  // Non-default context (pinned, shared) does not propagate
+  if (ctx.dev_mask() != ctx.dev_type) {
+    ctx = Context::Create(ctx.dev_mask(), ctx.dev_id);
   }
 #if !MXNET_USE_CUDA
   if (ctx.dev_mask() == gpu::kDevMask) {
@@ -659,9 +659,12 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
       vctx[j.node_id] = vctx[i];
     }
   }
+  // check all context initialized
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
     CHECK_NE(vctx[i].dev_type, -1)
         << "Cannot decide context for node " << idx[i].source->attrs.name;
+    // Non-default context do not propagate.
+    vctx[i].dev_type = vctx[i].dev_mask();
   }
 
   return vctx;

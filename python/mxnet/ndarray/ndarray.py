@@ -139,6 +139,18 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     return hdl
 
 
+def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
+    hdl = NDArrayHandle()
+    check_call(_LIB.MXNDArrayCreateFromSharedMem(
+        ctypes.c_int(shared_pid),
+        ctypes.c_int(shared_id),
+        c_array(mx_uint, shape),
+        mx_uint(len(shape)),
+        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.byref(hdl)))
+    return hdl
+
+
 def waitall():
     """Wait for all async operations to finish in MXNet.
 
@@ -172,6 +184,13 @@ fixed-size items.
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
+
+    def _to_shared_mem(self):
+        shared_pid = ctypes.c_int()
+        shared_id = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetSharedMemHandle(
+            self.handle, ctypes.byref(shared_pid), ctypes.byref(shared_id)))
+        return shared_pid.value, shared_id.value, self.shape, self.dtype
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
