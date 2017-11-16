@@ -31,6 +31,7 @@ from .base import c_array, c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArra
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
+from .ndarray import _ndarray_cls
 
 
 c_int_p = POINTER(c_int)
@@ -892,11 +893,11 @@ def register(reg_name):
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 if tags[i] == 1 or tags[i] == 4:
-                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
+                                    tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                          NDArrayHandle),
                                                                     writable=True))
                                 else:
-                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
+                                    tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
@@ -916,11 +917,11 @@ def register(reg_name):
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 if tags[i] == 2 or tags[i] == 4:
-                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
+                                    tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                          NDArrayHandle),
                                                                     writable=True))
                                 else:
-                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
+                                    tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                          NDArrayHandle),
                                                                     writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]
