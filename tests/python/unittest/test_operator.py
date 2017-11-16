@@ -3576,6 +3576,8 @@ def test_custom_op():
                 self.assign(out_data[0], req[0], in_data[0]*in_data[0])
             else:
                 self.assign(out_data[0], req[0], mx.nd.sparse.square(in_data[0]))
+                if in_data[0].stype == 'csr':
+                    assert(isinstance(in_data[0], mx.nd.sparse.CSRNDArray))
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
