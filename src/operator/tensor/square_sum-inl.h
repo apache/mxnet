@@ -388,13 +388,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
   }
 
   using namespace mxnet_op;
-  // TODO(junwu) change the input of CheckAndAlloc
-  // if we want to support differen row idx arrays
-  // for ograd and input when they are both row-sparse ndarrays
-  // igrad->CheckAndAlloc({input.aux_shape(rowsparse::kIdx)});
   const int64_t num_cols = input.storage_shape()[1];
-  // const TBlob& igrad_data = igrad->data();
-  // const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
   const TBlob& ograd_data = ograd.data();
   const TBlob& in_data = input.data();
   const TBlob in_row_idx = input.aux_data(rowsparse::kIdx);
