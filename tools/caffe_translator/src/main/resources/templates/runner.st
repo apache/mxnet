@@ -53,7 +53,5 @@ while batch_num \<= max_iter:
     epoch += 1
 
 
-
-# ToDo: Write snapshot
 logger.info("Training done. Saving model to <snapshot_prefix>")
 module.save_checkpoint(prefix="<snapshot_prefix>", epoch=batch_num, save_optimizer_states=True)
