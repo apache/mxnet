@@ -100,17 +100,27 @@ class OperatorDataInitializer {
    * \param blob Blob which to fill with random values
    */
   void FillRandom(const TBlob& blob) const {
-    std::uniform_real_distribution<DType> distribution(-1.0, 1.0);
-    test::patternFill<DType>(&blob, [this, &distribution]() -> DType {
-      return distribution(this->generator());
+    std::uniform_real_distribution<> dis_real(-5.0, 5.0);
+    std::uniform_int_distribution<> dis_int(-128, 127);
+    test::patternFill<DType>(&blob, [this, &dis_real, &dis_int]() -> DType {
+      if (!std::is_integral<DType>::value) {
+        DType val;
+        do {
+          val = static_cast<DType>(dis_real(this->generator()));
+        } while (fabs(val) < 1e-5);  // If too close to zero, try again
+        return val;
+      } else {
+        DType val;
+        do {
+          val = static_cast<DType>(dis_int(this->generator()));
+        } while (!val);  // If zero, try again
+        return val;
+      }
     });
   }
 
   void FillZero(const TBlob& blob) const {
-    std::uniform_real_distribution<DType> distribution(-1.0, 1.0);
-    test::patternFill<DType>(&blob, [this, &distribution]() -> DType {
-      return DType(0);
-    });
+    test::patternFill<DType>(&blob, []() -> DType { return DType(0); });
   }
 
  private:
@@ -271,7 +281,7 @@ inline std::vector<TShape> ShapesOf(const std::vector<NDArray>& arrays) {
   std::vector<TShape> res;
   res.reserve(arrays.size());
   for (const NDArray& ar : arrays) {
-    res.push_back(ar.shape());
+    res.emplace_back(ar.shape());
   }
   return std::move(res);
 }

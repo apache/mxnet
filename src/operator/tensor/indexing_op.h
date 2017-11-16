@@ -44,6 +44,7 @@
 #include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
+#include "../../engine/openmp.h"
 
 namespace mxnet {
 namespace op {
@@ -657,7 +658,7 @@ inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
         DType* grad_data = output.data().dptr<DType>();
         Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
         // add the final gradients
-        int num_threads = Engine::Get()->num_omp_threads_per_worker();
+        const int num_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
         dim_t segment_len = (nnr + num_threads - 1) / num_threads;
         Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
                                                   ograd.dptr<DType>(), row_length,
@@ -1207,10 +1208,10 @@ struct scatter_nd {
 
 template<typename xpu>
 void ScatterNDForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -1224,13 +1225,28 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   mshadow::Shape<10> strides;
   for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    Fill<true>(s, outputs[0], req[0], 0);
+    if (kWriteTo == req[0]) {
+      Fill<true>(s, outputs[0], req[0], 0);
+    }
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
+}
+
+/*!
+ * This is for internal use only.
+ * DO NOT call this function unless you have to.
+ */
+template<typename xpu>
+void ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  ScatterNDForward<xpu>(attrs, ctx, inputs, {kWriteInplace}, outputs);
 }
 
 }  // namespace op

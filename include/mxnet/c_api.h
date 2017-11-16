@@ -405,6 +405,12 @@ MXNET_DLL int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                            const int i);
 
 /*!
+ * \brief check whether the NDArray format is valid
+ * \param full_check if `True`, rigorous check, O(N) operations
+ *    Otherwise basic check, O(1) operations
+ */
+MXNET_DLL int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check);
+/*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
  *  Always call this before read data out synchronizely.
  * \param handle the NDArray handle
