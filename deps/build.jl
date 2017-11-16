@@ -5,7 +5,7 @@ import JSON
 # First try to detect and load existing libmxnet
 ################################################################################
 libmxnet_detected = false
-libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "0.12.0")
+libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "0.12.1")
 curr_win = "20171019"  # v0.12.0
 
 if haskey(ENV, "MXNET_HOME")
@@ -139,6 +139,7 @@ if !libmxnet_detected
     USE_JULIA_BLAS = true
     FORCE_LAPACK = true
   end
+  info("USE_JULIA_BLAS -> $USE_JULIA_BLAS")
 
   blas_name = blas_vendor == :openblas64 ? "openblas" : string(blas_vendor)
   MSHADOW_LDFLAGS = "MSHADOW_LDFLAGS=-lm $blas_path"

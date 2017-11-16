@@ -1,7 +1,11 @@
-# v0.3.0 (TBD)
+# v0.3.0 (2017.11.16)
 
-* Update `libmxnet` to v0.12.0.
-  (See https://github.com/apache/incubator-mxnet/releases/tag/0.12.0)
+* Update `libmxnet` to
+    * On Windows: v0.12.0.
+    (See https://github.com/apache/incubator-mxnet/releases/tag/0.12.0)
+
+    * On Linux/macOS: v0.12.1.
+    (See https://github.com/apache/incubator-mxnet/releases/tag/0.12.1)
 
 * Drop 0.5 support. ([#300][300])
 
