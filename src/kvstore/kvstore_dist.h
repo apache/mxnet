@@ -223,7 +223,6 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
 
-        // even if inactive should use compressed_pskv for pull when type is not none
         PSKV& pskv = (gradient_compression_->get_type() == GC_NONE) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
