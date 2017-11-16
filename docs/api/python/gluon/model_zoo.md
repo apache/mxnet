@@ -18,10 +18,6 @@ This document lists the model APIs in Gluon:
 The `Gluon Model Zoo` API, defined in the `gluon.model_zoo` package, provides pre-defined
 and pre-trained models to help bootstrap machine learning applications.
 
-```eval_rst
-.. warning:: This package contains experimental APIs and may change in the near future.
-```
-
 In the rest of this document, we list routines provided by the `gluon.model_zoo` package.
 
 ### Vision

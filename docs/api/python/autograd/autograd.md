@@ -5,10 +5,6 @@
 .. currentmodule:: mxnet.autograd
 ```
 
-```eval_rst
-.. warning:: This package is currently experimental and may change in the near future.
-```
-
 ## Overview
 
 The `autograd` package enables automatic
