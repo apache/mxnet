@@ -28,7 +28,7 @@ def squash(data, squash_axis, name=''):
     return squashed_net
 
 
-def PrimaryCaps(data, dim_vector, n_channels, kernel, strides, name=''):
+def primary_caps(data, dim_vector, n_channels, kernel, strides, name=''):
     out = mx.sym.Convolution(data=data,
                              num_filter=dim_vector * n_channels,
                              kernel=kernel,
@@ -88,7 +88,8 @@ class CapsuleLayer:
                            axis=1, keepdims=True,
                            name='sum_' + str(i)), name='output_' + str(i), squash_axis=4)
             if i != self.num_routing - 1:
-                bias = bias + mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat, name='bias_broadcast_mul' + str(i)), axis=4,
+                bias = bias + mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat, name='bias_broadcast_mul' + str(i)),
+                                         axis=4,
                                          keepdims=True, name='bias_' + str(i))
 
         outputs = mx.sym.Reshape(data=outputs, shape=(-1, self.num_capsule, self.dim_vector))

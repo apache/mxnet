@@ -22,36 +22,36 @@ import re
 import urllib
 import gzip
 import struct
-from capsulelayers import PrimaryCaps, CapsuleLayer
+from capsulelayers import primary_caps, CapsuleLayer
 
 
 def margin_loss(y_true, y_pred):
-    L = y_true * mx.sym.square(mx.sym.maximum(0., 0.9 - y_pred)) +\
+    loss = y_true * mx.sym.square(mx.sym.maximum(0., 0.9 - y_pred)) +\
         0.5 * (1 - y_true) * mx.sym.square(mx.sym.maximum(0., y_pred - 0.1))
-    return mx.sym.mean(data=mx.sym.sum(L, 1))
+    return mx.sym.mean(data=mx.sym.sum(loss, 1))
 
 
 def capsnet(batch_size, n_class, num_routing):
     # data.shape = [batch_size, 1, 28, 28]
     data = mx.sym.Variable('data')
 
-    input_shape =(1, 28, 28)
-    #Conv2D layer
+    input_shape = (1, 28, 28)
+    # Conv2D layer
     # net.shape = [batch_size, 256, 20, 20]
     conv1 = mx.sym.Convolution(data=data,
                                num_filter=256,
-                               kernel=(9,9),
+                               kernel=(9, 9),
                                layout='NCHW',
                                name='conv1')
     conv1 = mx.sym.Activation(data=conv1, act_type='relu', name='conv1_act')
     # net.shape = [batch_size, 256, 6, 6]
 
-    primarycaps = PrimaryCaps(data=conv1,
-                              dim_vector=8,
-                              n_channels=32,
-                              kernel=(9, 9),
-                              strides=[2,2],
-                              name='primarycaps')
+    primarycaps = primary_caps(data=conv1,
+                               dim_vector=8,
+                               n_channels=32,
+                               kernel=(9, 9),
+                               strides=[2, 2],
+                               name='primarycaps')
     primarycaps.infer_shape(data=(batch_size, 1, 28, 28))
     # CapsuleLayer
     kernel_initializer = mx.init.Xavier(rnd_type='uniform', factor_type='avg', magnitude=3)
@@ -101,12 +101,12 @@ def download_data(url, force_download=False):
 
 def read_data(label_url, image_url):
     with gzip.open(download_data(label_url)) as flbl:
-        magic, num = struct.unpack(">II", flbl.read(8))
+        # magic, num = struct.unpack(">II", flbl.read(8))
         label = np.fromstring(flbl.read(), dtype=np.int8)
     with gzip.open(download_data(image_url), 'rb') as fimg:
         magic, num, rows, cols = struct.unpack(">IIII", fimg.read(16))
         image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
-    return (label, image)
+    return label, image
 
 
 def to4d(img):
@@ -229,11 +229,10 @@ if __name__ == "__main__":
             contexts[i] = mx.context.gpu(int(ctx[3:]))
         else:
             contexts[i] = mx.context.cpu()
-    num_gpu = len(contexts)
+            num_gpu = len(contexts)
 
     if args.batch_size % num_gpu != 0:
         raise Exception('num_gpu should be positive divisor of batch_size')
-
 
     # generate train_iter, val_iter
     train_iter = mx.io.NDArrayIter(data=to4d(train_img), label=train_lbl, batch_size=args.batch_size, shuffle=True)
@@ -251,5 +250,3 @@ if __name__ == "__main__":
                 label_shapes=val_iter.provide_label,
                 for_training=True)
     do_training(num_epoch=args.num_epoch, optimizer='adam', kvstore='device', learning_rate=args.lr)
-
-
