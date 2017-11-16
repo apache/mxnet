@@ -330,7 +330,7 @@ class BucketingModule(BaseModule):
                         context=self._context, work_load_list=self._work_load_list,
                         fixed_param_names=self._fixed_param_names,
                         state_names=self._state_names,
-                        group2ctxs=self._group2ctxs
+                        group2ctxs=self._group2ctxs,
                         compression_params=self._compression_params)
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
                     force_rebind=False, shared_module=None, grad_req=grad_req)
