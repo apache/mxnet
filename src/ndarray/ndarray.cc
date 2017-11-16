@@ -437,17 +437,28 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
   }
-  if (ptr_->Mkl_mem_) {
-    CHECK(ptr_->Mkl_mem_->get_primitive_desc() == desc);
+  if (ptr_->storage_type == kDefaultStorage) {
+    ptr_->SetMKLMem(shape_, dtype_);
+  }
+  CHECK(ptr_->Mkl_mem_ != nullptr);
+  mkldnn::memory::primitive_desc _desc = desc;
+  auto desc1 = ptr_->Mkl_mem_->get_primitive_desc().desc();
+  auto desc2 = _desc.desc();
+  // The MKL memory has the same format and shape as required,
+  // or both use the default format, we can return the MKL memory.
+  if (ptr_->Mkl_mem_->get_primitive_desc() == desc) {
     MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     return ptr_->Mkl_mem_;
   }
-  // If we are getting data from the NDArray, it has to use the default storage
-  // if Mkl_mem_ is null.
-  CHECK_EQ(ptr_->storage_type, kDefaultStorage);
-  mkldnn_mem_const_ptr ret(new mkldnn::memory(desc, ptr_->shandle.dptr));
-  MKLDNNStream::Instance().RegisterMem(ret);
-  return ret;
+  else if (desc1.data.format == GetDefaultFormat(desc1)
+      && desc2.data.format == GetDefaultFormat(desc2)) {
+    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
+    mkldnn_mem_ptr ret(new mkldnn::memory(desc, ptr_->Mkl_mem_->get_data_handle()));
+    MKLDNNStream::Instance().RegisterMem(ret);
+    return ret;
+  }
+  else
+    return nullptr;
 }
 
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
