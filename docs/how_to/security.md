@@ -9,7 +9,7 @@ In particular the following threat-vectors exist when training using MXNet:
 * Using `kvstore.set_optimizer` one can use a custom optimizer to combine gradients. This optimizer code is sent to the server nodes as a pickle file. A server does not perform any further validation of the pickle file and simply executes the code trusting the sender (worker).
 * Since there is no authentication between nodes, a malicious actor running on the same network can launch a Denial of Service (DoS) attack by sending data that can overwhelm/crash a scheduler or other server nodes.
 
-For security conscious users it is highly recommended that the following best practices be followed when using MXNet:
+It is highly recommended that the following best practices be followed when using MXNet:
 
 * Run MXNet with least privilege, i.e. not as root.
 * Run MXNet training jobs inside a secure and isolated environment. If you are using a cloud provider like Amazon AWS, running your training job inside a [private VPC] (https://aws.amazon.com/vpc/) is a good way to accomplish this. Additionally, configure your network security settings so as to only allow connections that the cluster nodes require.
