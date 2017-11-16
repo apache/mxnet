@@ -19,7 +19,8 @@
 """Utility functions for NDArray and BaseSparseNDArray."""
 import ctypes
 
-from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle, c_array
+from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle
+from ..base import c_array, c_handle_array, c_str_array
 from .ndarray import NDArray
 from .ndarray import array as _array
 from .ndarray import empty as _empty_ndarray
@@ -212,27 +213,24 @@ def save(fname, data):
     """
     if isinstance(data, NDArray):
         data = [data]
-    handles = []
+        handles = c_array(NDArrayHandle, [])
     if isinstance(data, dict):
-        keys = []
-        for key, val in data.items():
-            if not isinstance(key, string_types):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            if not isinstance(val, NDArray):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            keys.append(c_str(key))
-            handles.append(val.handle)
-        keys = c_array(ctypes.c_char_p, keys)
+        str_keys = data.keys()
+        nd_vals = data.values()
+        if any(not isinstance(k, string_types) for k in str_keys) or \
+           any(not isinstance(v, NDArray) for v in nd_vals):
+            raise TypeError('save only accept dict str->NDArray or list of NDArray')
+        keys = c_str_array(str_keys)
+        handles = c_handle_array(nd_vals)
     elif isinstance(data, list):
-        for val in data:
-            if not isinstance(val, NDArray):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            handles.append(val.handle)
+        if any(not isinstance(v, NDArray) for v in data):
+            raise TypeError('save only accept dict str->NDArray or list of NDArray')
         keys = None
+        handles = c_handle_array(data)
     else:
         raise ValueError("data needs to either be a NDArray, dict of str, NDArray pairs "
                          "or a list of NDarrays.")
     check_call(_LIB.MXNDArraySave(c_str(fname),
                                   mx_uint(len(handles)),
-                                  c_array(NDArrayHandle, handles),
+                                  handles,
                                   keys))

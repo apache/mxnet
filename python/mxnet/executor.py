@@ -25,7 +25,7 @@ import copy
 import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle
-from .base import check_call, c_array, py_str
+from .base import check_call, c_handle_array, py_str
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 from . import ndarray as nd
@@ -226,7 +226,7 @@ class Executor(object):
         for obj in out_grads:
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
-        ndarray = c_array(NDArrayHandle, [item.handle for item in out_grads])
+        ndarray = c_handle_array(out_grads)
         check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),
