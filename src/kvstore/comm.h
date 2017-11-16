@@ -571,12 +571,14 @@ class CommDevice : public Comm {
       // this is done even if the data is on same context as copy_buf because
       // we don't want the training to be biased towards data on this GPU
       gc_->Quantize(src[i], &(buf.compressed_send_buf[i]), &(buf.residual[i]), priority);
+
       if (buf.compressed_send_buf[i].ctx() != buf.compressed_recv_buf[i].ctx()) {
         CopyFromTo(buf.compressed_send_buf[i], &(buf.compressed_recv_buf[i]), priority);
       } else {
         // avoid memory copy when they are on same context
         buf.compressed_recv_buf[i] = buf.compressed_send_buf[i];
       }
+
       gc_->Dequantize(buf.compressed_recv_buf[i], &(buf.copy_buf[i]), priority);
       reduce[i] = buf.copy_buf[i];
     }
