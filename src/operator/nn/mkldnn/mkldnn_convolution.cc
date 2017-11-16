@@ -49,38 +49,38 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwd(
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
   }
-  if (/*param.dilate.ndim() == 0 &&*/ bias == nullptr) {
+  if (param.dilate.ndim() == 0 && bias == nullptr) {
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
   }
-  else /*if (param.dilate.ndim() == 0)*/ {
+  else if (param.dilate.ndim() == 0) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
         data_md, weight_md, bias_md, out_md, strides, padding, padding,
         mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
   }
-//  else {
-//    // TODO I should test the case with dilate.
-//    mkldnn::memory::dims dilates{0, 0};
-//    if (param.dilate.ndim() == 2) {
-//      dilates[0] = param.dilate[0];
-//      dilates[1] = param.dilate[1];
-//    }
-//    if (bias_mem == nullptr) {
-//      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-//          data_md, weights_md, out_md, strides, dilates, padding, padding,
-//          mkldnn::padding_kind::zero);
-//      return mkldnn::convolution_forward::primitive_desc(desc, engine);
-//    }
-//    else {
-//      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-//          data_md, weights_md, bias_mem->get_primitive_desc().desc(), out_md,
-//          strides, dilates, padding, padding, mkldnn::padding_kind::zero);
-//      return mkldnn::convolution_forward::primitive_desc(desc, engine);
-//    }
-//  }
+  else {
+    mkldnn::memory::dims dilates{0, 0};
+    if (param.dilate.ndim() == 2) {
+      dilates[0] = param.dilate[0] - 1;
+      dilates[1] = param.dilate[1] - 1;
+    }
+    if (bias == nullptr) {
+      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
+          data_md, weight_md, out_md, strides, dilates, padding, padding,
+          mkldnn::padding_kind::zero);
+      return mkldnn::convolution_forward::primitive_desc(desc, engine);
+    }
+    else {
+      auto bias_md = GetMemDesc(*bias);
+      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
+	  data_md, weight_md, bias_md, out_md, strides, dilates, padding, padding,
+	  mkldnn::padding_kind::zero);
+      return mkldnn::convolution_forward::primitive_desc(desc, engine);
+    }
+  }
 }
 
 static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
@@ -100,23 +100,22 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
   }
-//  if (param.dilate.ndim() == 0) {
+  if (param.dilate.ndim() == 0) {
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
-//  }
-//  else {
-//    // TODO I should test the case with dilate.
-//    mkldnn::memory::dims dilates{0, 0};
-//    if (param.dilate.ndim() == 2) {
-//      dilates[0] = param.dilate[0];
-//      dilates[1] = param.dilate[1];
-//    }
-//    mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
-//        data_md, weights_md, out_md, strides, dilates, padding, padding,
-//        mkldnn::padding_kind::zero);
-//    return mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
-//  }
+  }
+  else {
+    mkldnn::memory::dims dilates{0, 0};
+    if (param.dilate.ndim() == 2) {
+      dilates[0] = param.dilate[0] - 1;
+      dilates[1] = param.dilate[1] - 1;
+    }
+    mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
+        data_md, weight_md, out_md, strides, dilates, padding, padding,
+        mkldnn::padding_kind::zero);
+    return mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
+  }
 }
 
 static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
@@ -137,38 +136,38 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
   }
-  if (/*param.dilate.ndim() == 0 &&*/ bias == nullptr) {
+  if (param.dilate.ndim() == 0 && bias == nullptr) {
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
   }
-  else /*if (param.dilate.ndim() == 0)*/ {
+  else if (param.dilate.ndim() == 0) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, bias_md, out_md, strides, padding, padding,
         mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
   }
-//  else {
-//    // TODO I should test the case with dilate.
-//    mkldnn::memory::dims dilates{0, 0};
-//    if (param.dilate.ndim() == 2) {
-//      dilates[0] = param.dilate[0];
-//      dilates[1] = param.dilate[1];
-//    }
-//    if (bias_mem == nullptr) {
-//      mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
-//          data_md, weights_md, out_md, strides, dilates, padding, padding,
-//          mkldnn::padding_kind::zero);
-//      return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
-//    }
-//    else {
-//      mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
-//          data_md, weights_md, bias_mem->get_primitive_desc().desc(), out_md,
-//          strides, dilates, padding, padding, mkldnn::padding_kind::zero);
-//      return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
-//    }
-//  }
+  else {
+    mkldnn::memory::dims dilates{0, 0};
+    if (param.dilate.ndim() == 2) {
+      dilates[0] = param.dilate[0] - 1;
+      dilates[1] = param.dilate[1] - 1;
+    }
+    if (bias == nullptr) {
+      mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
+          data_md, weight_md, out_md, strides, dilates, padding, padding,
+          mkldnn::padding_kind::zero);
+      return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    }
+    else {
+      auto bias_md = GetMemDesc(*bias);
+      mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
+          data_md, weight_md, bias_md, out_md, strides, dilates, padding, padding,
+	  mkldnn::padding_kind::zero);
+      return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    }
+  }
 }
 
 void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
