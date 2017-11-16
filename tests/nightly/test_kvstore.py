@@ -101,7 +101,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
     print(kv_type + ' with ' + compression + ' compression')
     rate = 2
     kv = mx.kv.create(kv_type)
-    kv.set_gradient_compression({'compression':compression, 'threshold':threshold})
+    kv.set_gradient_compression({'type':compression, 'threshold':threshold})
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))

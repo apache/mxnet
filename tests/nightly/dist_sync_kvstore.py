@@ -61,7 +61,7 @@ def init_kv():
 
 def init_kv_compressed(kv):
     threshold = 0.5
-    kv.set_gradient_compression({'compression': '2bit', 'threshold':threshold})
+    kv.set_gradient_compression({'type': '2bit', 'threshold':threshold})
     # init kv compression keys
     kv.init('11221', mx.nd.zeros(big_shape))
     kv.init('112221', mx.nd.zeros(irregular_shape))
