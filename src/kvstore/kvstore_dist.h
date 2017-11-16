@@ -85,7 +85,8 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void SetGradientCompression(std::vector<std::pair<std::string, std::string> >& kwargs) override {
+  void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                              & kwargs) override {
     KVStoreLocal::SetGradientCompression(kwargs);
     if (get_rank() == 0) {
       SendCommandToServers(static_cast<int>(CommandType::kSetGradientCompression),

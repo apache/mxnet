@@ -25,9 +25,11 @@
 
 #ifndef MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
 #define MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
-#include <string>
-#include <mxnet/ndarray.h>
 #include <dmlc/parameter.h>
+#include <string>
+#include <utility>
+#include <vector>
+#include "mxnet/ndarray.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -58,7 +60,7 @@ class GradientCompression {
    * \param kwargs a vector of pair of strings. A pair represents key and value
    * of the parameter. Will be parsed by GradientCompressionParam
    */
-  void SetParams(std::vector<std::pair<std::string, std::string> >& kwargs);
+  void SetParams(const std::vector<std::pair<std::string, std::string> >& kwargs);
 
   /*!
    * \brief returns type of compression if any

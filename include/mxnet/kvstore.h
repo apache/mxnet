@@ -70,7 +70,8 @@ class KVStore {
    * \param compression_type type of compression
    * \param threshold threshold for 2bit compression
    */
-  virtual void SetGradientCompression(std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+  virtual void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                                      & kwargs) = 0;
 
   /*!
    * \brief Initialize a list of key-value pair to the store.

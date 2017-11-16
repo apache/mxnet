@@ -54,7 +54,8 @@ GradientCompression::GradientCompression() {
   type_ = CompressionType::kNone;
 }
 
-void GradientCompression::SetParams(std::vector<std::pair<std::string, std::string> >& kwargs) {
+void GradientCompression::SetParams(const std::vector<std::pair<std::string, std::string> >
+                                    & kwargs) {
   GradientCompressionParam params;
   params.InitAllowUnknown(kwargs);
   CHECK_GT(params.threshold, 0) << "threshold must be greater than 0";
@@ -79,7 +80,7 @@ void GradientCompression::SetTwoBitCompression(const float threshold) {
 }
 
 std::string GradientCompression::EncodeParams() {
-  using namespace std; // to reduce length of next line
+  using namespace std;  // to reduce length of next line
   string rval = get_type_str();
   if (type_ == CompressionType::kTwoBit) {
     rval += "," + to_string(threshold_);
@@ -151,7 +152,8 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
   }
 }
 
-void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority) {
+void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to,
+                                     const int priority) {
   CHECK(from.shape().ndim() != 0) << "source operands has zero dimension shape";
   CHECK(to->shape().ndim() != 0) << "destination operand has zero dimension shape";
   const int a = from.ctx().dev_mask();

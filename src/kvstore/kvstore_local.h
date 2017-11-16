@@ -136,7 +136,8 @@ class KVStoreLocal : public KVStore {
     PullRowSparseImpl(keys, val_rowids, priority);
   }
 
-  void SetGradientCompression(std::vector<std::pair<std::string, std::string> >& kwargs) override {
+  void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                              & kwargs) override {
     gradient_compression_->SetParams(kwargs);
   }
 
