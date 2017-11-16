@@ -215,7 +215,7 @@ int main(int argc, char const *argv[]) {
   args_map["label"] = NDArray(Shape(batch_size), ctx);
 
   /*with data and label, executor can be generated automatically*/
-  auto *exec = Net.SimpleBind(ctx, args_map);
+  auto exec = Net.SimpleBind(ctx, args_map);
   auto arg_names = Net.ListArguments();
   aux_map = exec->aux_dict();
   args_map = exec->arg_dict();
@@ -321,7 +321,6 @@ int main(int argc, char const *argv[]) {
     NDArray::Save(save_path_param, save_args);
   }
   /*don't foget to release the executor*/
-  delete exec;
   MXNotifyShutdown();
   return 0;
 }

@@ -106,7 +106,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("wd", weight_decay);
 
 
-  auto *exec = lenet.SimpleBind(Context::gpu(), args_map);
+  auto exec = lenet.SimpleBind(Context::gpu(), args_map);
   auto arg_names = lenet.ListArguments();
 
   // Create metrics
@@ -167,7 +167,6 @@ int main(int argc, char const *argv[]) {
     LG << "Epoch[" << iter << "] Val-Accuracy=" << val_acc.Get();
   }
 
-  delete exec;
   MXNotifyShutdown();
   return 0;
 }

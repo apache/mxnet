@@ -33,13 +33,13 @@
 
 #include "dmlc/logging.h"
 #include "mxnet-cpp/symbol.h"
-
 #include "mxnet-cpp/op_suppl.h"
+#include "mxnet-cpp/utils.h"
 
 namespace mxnet {
 namespace cpp {
-inline OpMap*& Symbol::op_map() {
-  static OpMap* op_map_ = new OpMap();
+inline std::unique_ptr<OpMap>& Symbol::op_map() {
+  static std::unique_ptr<OpMap> op_map_(new OpMap());
   return op_map_;
 }
 inline Symbol::Symbol(SymbolHandle handle) {
@@ -324,7 +324,7 @@ inline void Symbol::InferArgsMap(
   }
 }
 
-inline Executor *Symbol::SimpleBind(
+inline std::unique_ptr<Executor> Symbol::SimpleBind(
     const Context &context, const std::map<std::string, NDArray> &args_map,
     const std::map<std::string, NDArray> &arg_grad_store,
     const std::map<std::string, OpReqType> &grad_req_type,
@@ -338,18 +338,18 @@ inline Executor *Symbol::SimpleBind(
                       &aux_arrays, args_map, arg_grad_store, grad_req_type,
                       aux_map);
 
-  return new Executor(*this, context, arg_arrays, grad_arrays, grad_reqs,
+  return std::make_unique<Executor>(*this, context, arg_arrays, grad_arrays, grad_reqs,
                       aux_arrays);
 }
 
-inline Executor *Symbol::Bind(const Context &context,
+inline std::unique_ptr<Executor> Symbol::Bind(const Context &context,
                        const std::vector<NDArray> &arg_arrays,
                        const std::vector<NDArray> &grad_arrays,
                        const std::vector<OpReqType> &grad_reqs,
                        const std::vector<NDArray> &aux_arrays,
                        const std::map<std::string, Context> &group_to_ctx,
                        Executor *shared_exec) {
-  return new Executor(*this, context, arg_arrays, grad_arrays, grad_reqs,
+  return std::make_unique<Executor>(*this, context, arg_arrays, grad_arrays, grad_reqs,
                       aux_arrays, group_to_ctx, shared_exec);
 }
 inline Symbol operator+(mx_float lhs, const Symbol &rhs) { return rhs + lhs; }

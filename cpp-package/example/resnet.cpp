@@ -187,7 +187,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10);
 
-  auto *exec = resnet.SimpleBind(Context::gpu(), args_map);
+  auto exec = resnet.SimpleBind(Context::gpu(), args_map);
   auto arg_names = resnet.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
@@ -222,7 +222,6 @@ int main(int argc, char const *argv[]) {
     }
     LG << "Accuracy: " << acu.Get();
   }
-  delete exec;
   MXNotifyShutdown();
   return 0;
 }
