@@ -26,13 +26,25 @@
 #ifndef MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
 #define MXNET_KVSTORE_GRADIENT_COMPRESSION_H_
 #include <string>
-#include"mxnet/ndarray.h"
+#include <mxnet/ndarray.h>
+#include <dmlc/parameter.h>
 
 namespace mxnet {
 namespace kvstore {
 
-enum CompressionType {
-  GC_NONE, GC_TWO_BIT
+enum class CompressionType {
+  kNone, kTwoBit
+};
+
+struct GradientCompressionParam : public dmlc::Parameter<GradientCompressionParam> {
+  std::string type;
+  float threshold;
+  DMLC_DECLARE_PARAMETER(GradientCompressionParam) {
+    DMLC_DECLARE_FIELD(type)
+      .describe("Type of gradient compression to use, like `2bit` for example");
+    DMLC_DECLARE_FIELD(threshold).set_default(0.5)
+      .describe("Threshold to use for 2bit gradient compression");
+  }
 };
 
 class GradientCompression {
@@ -43,15 +55,20 @@ class GradientCompression {
 
   /*!
    * \brief sets parameters for gradient compression
-   * \param compression_type str representing types like 2bit
-   * \param threshold float value used for thresholding gradients
+   * \param kwargs a vector of pair of strings. A pair represents key and value
+   * of the parameter. Will be parsed by GradientCompressionParam
    */
-  void SetParams(const std::string &compression_type, const float threshold);
+  void SetParams(std::vector<std::pair<std::string, std::string> >& kwargs);
 
   /*!
    * \brief returns type of compression if any
    */
   CompressionType get_type();
+
+  /*!
+   * \brief returns as string the enum value of compression type
+   */
+  std::string get_type_str();
 
   /*!
    * \brief sets two bit gradient compression
@@ -113,6 +130,11 @@ class GradientCompression {
    * all negative gradients will be thresholded to -1*`threshold_`
    */
   float threshold_ = 0;
+
+  /*!
+   * \brief parameters for gradient compression are sent in this form to backend
+   */
+  GradientCompressionParam params;
 };
 }  // namespace kvstore
 }  // namespace mxnet

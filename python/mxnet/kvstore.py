@@ -63,6 +63,16 @@ def _ctype_key_value(keys, vals):
                  else c_array(ctypes.c_int, [keys] * len(vals))
         return (c_keys, c_array(NDArrayHandle, [value.handle for value in vals]), use_str_keys)
 
+def _ctype_dict(param_dict):
+    """
+    Returns ctype arrays for keys and values(converted to strings) in a dictionary
+    """
+    assert(isinstance(param_dict, dict)), \
+        "unexpected type for param_dict: " + str(type(param_dict))
+    c_keys = c_array(ctypes.c_char_p, [c_str(k) for k in param_dict.keys()])
+    c_vals = c_array(ctypes.c_char_p, [c_str(str(v)) for v in param_dict.values()])
+    return (c_keys, c_vals)
+
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
     def updater_handle(key, lhs_handle, rhs_handle, _):
@@ -349,8 +359,8 @@ class KVStore(object):
             check_call(_LIB.MXKVStorePullRowSparse(
                 self.handle, mx_uint(len(ckeys)), ckeys, cvals, crow_ids, ctypes.c_int(priority)))
 
-    def set_gradient_compression(self, compression_params=(('compression', '2bit'),)):
-        """ Specifies type of low-bit quantization for gradient compression if any, \
+    def set_gradient_compression(self, compression_params):
+        """ Specifies type of low-bit quantization for gradient compression \
          and additional arguments depending on the type of compression being used.
 
         2bit Gradient Compression takes a positive float `threshold`.
@@ -377,49 +387,30 @@ class KVStore(object):
         this data and merges the gradients from each worker. Note that this
         increases CPU memory usage on each worker because of the residual array stored.
         Only worker to server communication is compressed in this setting.
-        If each machine has multiple GPUs, currently this GPU to GPU communication is
-        not compressed. Server to worker communication (in the case of pull) is also not
-        compressed.
+        If each machine has multiple GPUs, currently this GPU to GPU or GPU to CPU communication
+        is not compressed. Server to worker communication (in the case of pull)
+        is also not compressed.
 
-        To use 2bit compression, we need to specify `compression` as `2bit`.
-        Only specifying `compression` would use default value for the threshold.
+        To use 2bit compression, we need to specify `type` as `2bit`.
+        Only specifying `type` would use default value for the threshold.
         To completely specify the arguments for 2bit compression, we would need to pass
         a dictionary which includes `threshold` like:
-        {'compression': '2bit', 'threshold': 0.5}
+        {'type': '2bit', 'threshold': 0.5}
 
         Parameters
         ----------
         compression_params : dict
             A dictionary specifying the type and parameters for gradient compression.
-            The key `compression` in this dictionary is a
+            The key `type` in this dictionary is a
             required string argument and specifies the type of gradient compression.
+            Currently `type` can be only `2bit`
             Other keys in this dictionary are optional and specific to the type
-            of gradient compression. Defaults to (('compression', '2bit'),).
-            The default value is not a dict,
-            just to avoid pylint warning on dangerous default values.
+            of gradient compression.
         """
-        if compression_params:
-            if not isinstance(compression_params, dict):
-                raise ValueError("compression_params needs to be a dictionary")
-            if 'compression' not in compression_params:
-                raise ValueError('compression_params requires `compression` to be set')
-            elif not isinstance(compression_params['compression'], string_types):
-                raise TypeError('compression must be a string')
-            elif compression_params['compression'] not in ['none', '2bit']:
-                raise ValueError('Unsupported type of compression')
-
-            if compression_params['compression'] == '2bit':
-                if 'threshold' in compression_params:
-                    if not isinstance(compression_params['threshold'], numeric_types):
-                        raise TypeError('threshold must be a numeric type')
-                    if compression_params['threshold'] <= 0:
-                        raise ValueError('threshold must be greater than 0')
-                else:
-                    compression_params['threshold'] = 0.5
-
-                check_call(_LIB.MXKVStoreSetGradientCompression(
-                    self.handle, c_str(compression_params['compression']),
-                    mx_float(compression_params['threshold'])))
+        ckeys, cvals = _ctype_dict(compression_params)
+        check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
+                                                        mx_uint(len(compression_params)),
+                                                        ckeys, cvals))
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.

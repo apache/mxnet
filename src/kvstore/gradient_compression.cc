@@ -48,13 +48,20 @@ void split(const std::string &s, const char delim, Out result) {
   }
 }
 
+DMLC_REGISTER_PARAMETER(GradientCompressionParam);
+
 GradientCompression::GradientCompression() {
-  type_ = GC_NONE;
+  type_ = CompressionType::kNone;
 }
 
-void GradientCompression::SetParams(const std::string &compression_type, const float threshold) {
-  if (compression_type == "2bit") {
-    SetTwoBitCompression(threshold);
+void GradientCompression::SetParams(std::vector<std::pair<std::string, std::string> >& kwargs) {
+  GradientCompressionParam params;
+  params.InitAllowUnknown(kwargs);
+  CHECK_GT(params.threshold, 0) << "threshold must be greater than 0";
+  if (params.type == "2bit") {
+    SetTwoBitCompression(params.threshold);
+  } else {
+    LOG(FATAL) << "Unknown type for gradient compression " << params.type;
   }
 }
 
@@ -62,15 +69,20 @@ CompressionType GradientCompression::get_type() {
   return type_;
 }
 
+std::string GradientCompression::get_type_str() {
+  return std::to_string(static_cast<int>(type_));
+}
+
 void GradientCompression::SetTwoBitCompression(const float threshold) {
-  type_ = GC_TWO_BIT;
+  type_ = CompressionType::kTwoBit;
   threshold_ = threshold;
 }
 
 std::string GradientCompression::EncodeParams() {
-  std::string rval = std::to_string(type_);
-  if (type_ == GC_TWO_BIT) {
-    rval += "," + std::to_string(threshold_);
+  using namespace std; // to reduce length of next line
+  string rval = get_type_str();
+  if (type_ == CompressionType::kTwoBit) {
+    rval += "," + to_string(threshold_);
   }
   return rval;
 }
@@ -87,10 +99,10 @@ void GradientCompression::DecodeParams(const std::string &s) {
 }
 
 int GradientCompression::GetCompressionFactor() {
-  if (type_ == GC_TWO_BIT) {
+  if (type_ == CompressionType::kTwoBit) {
     return 16;
   } else {
-    LOG(FATAL) << "Unsupported compression type: " << type_;
+    LOG(FATAL) << "Unsupported compression type: " << get_type_str();
     return 0;
   }
 }
@@ -110,7 +122,7 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
   const int a = from.ctx().dev_mask();
   const int b = to->ctx().dev_mask();
   const float threshold = threshold_;
-  if (type_ == GC_TWO_BIT) {
+  if (type_ == CompressionType::kTwoBit) {
     if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
       mxnet::Engine::Get()->PushSync([from, to, residual, threshold](mxnet::RunContext ctx) {
         std::vector<mxnet::TBlob> inputs = {from.data(), residual->data(), to->data()};
@@ -135,7 +147,7 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
 #endif
     }
   } else {
-    LOG(FATAL) << "Unsupported quantization of type " << type_;
+    LOG(FATAL) << "Unsupported quantization of type " << get_type_str();
   }
 }
 
@@ -145,7 +157,7 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
   const int a = from.ctx().dev_mask();
   const int b = to->ctx().dev_mask();
   const float threshold = threshold_;
-  if (type_ == GC_TWO_BIT) {
+  if (type_ == CompressionType::kTwoBit) {
     if (a == mshadow::cpu::kDevMask && b == mshadow::cpu::kDevMask) {
       mxnet::Engine::Get()->PushSync([from, to, threshold](mxnet::RunContext ctx) {
         std::vector<mxnet::TBlob> inputs = {from.data(), to->data()};
@@ -170,7 +182,7 @@ void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray 
 #endif
     }
   } else {
-    LOG(FATAL) << "Unsupported dequantization of type " << type_;
+    LOG(FATAL) << "Unsupported dequantization of type " << get_type_str();
   }
 }
 

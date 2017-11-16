@@ -39,12 +39,13 @@
 namespace mxnet {
 namespace kvstore {
 
-static const int kRowSparsePushPull = 1;
-static const int kDefaultPushPull = 0;
-static const int kCompressedPushPull = 3;
-static const int kStopServer = -1;
-static const int kSyncMode = -2;
-static const int kSetGradientCompression = 2;
+enum class CommandType {
+  kStopServer, kSyncMode, kSetGradientCompression
+};
+
+enum class DataHandleType {
+  kDefaultPushPull, kCompressedPushPull, kRowSparsePushPull
+};
 
 /**
  * \brief executor runs a function using the thread called \ref Start
@@ -118,13 +119,12 @@ class KVStoreDistServer {
     ps_server_->set_request_handle(
         std::bind(&KVStoreDistServer::DataHandleEx, this, _1, _2, _3));
     sync_mode_ = false;
-    gradient_compression_ = new GradientCompression();
+    gradient_compression_ = std::make_shared<GradientCompression>();
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
   }
 
   ~KVStoreDistServer() {
     delete ps_server_;
-    delete gradient_compression_;
   }
 
   void set_controller(const KVStore::Controller& controller) {
@@ -151,11 +151,12 @@ class KVStoreDistServer {
   };
 
   void CommandHandle(const ps::SimpleData& recved, ps::SimpleApp* app) {
-    if (recved.head == kStopServer) {
+    CommandType recved_type = static_cast<CommandType>(recved.head);
+    if (recved_type == CommandType::kStopServer) {
       exec_.Stop();
-    } else if (recved.head == kSyncMode) {
+    } else if (recved_type == CommandType::kSyncMode) {
       sync_mode_ = true;
-    } else if (recved.head == kSetGradientCompression) {
+    } else if (recved_type == CommandType::kSetGradientCompression) {
       gradient_compression_->DecodeParams(recved.body);
     } else {
       // let the main thread to execute ctrl, which is necessary for python
@@ -170,9 +171,10 @@ class KVStoreDistServer {
   void DataHandleEx(const ps::KVMeta& req_meta,
                     const ps::KVPairs<real_t>& req_data,
                     ps::KVServer<real_t>* server) {
-    if (req_meta.cmd == kRowSparsePushPull) {
+    DataHandleType recved_type = static_cast<DataHandleType>(req_meta.cmd);
+    if (recved_type == DataHandleType::kRowSparsePushPull) {
       DataHandleRowSparse(req_meta, req_data, server);
-    } else if (req_meta.cmd == kCompressedPushPull) {
+    } else if (recved_type == DataHandleType::kCompressedPushPull) {
       DataHandleCompressed(req_meta, req_data, server);
     } else {
       DataHandleDefault(req_meta, req_data, server);
@@ -383,7 +385,6 @@ class KVStoreDistServer {
   void DataHandleCompressed(const ps::KVMeta& req_meta,
                             const ps::KVPairs<real_t> &req_data,
                             ps::KVServer<real_t>* server) {
-    CHECK_EQ(req_meta.cmd, kCompressedPushPull);
     if (req_meta.push) {
       // there used several WaitToRead, this is because \a recved's memory
       // could be deallocated when this function returns. so we need to make sure
@@ -451,7 +452,7 @@ class KVStoreDistServer {
   void DataHandleDefault(const ps::KVMeta& req_meta,
                          const ps::KVPairs<real_t> &req_data,
                          ps::KVServer<real_t>* server) {
-    CHECK_EQ(req_meta.cmd, kDefaultPushPull);
+    CHECK_EQ(req_meta.cmd, static_cast<int>(DataHandleType::kDefaultPushPull));
     // do some check
     CHECK_EQ(req_data.keys.size(), (size_t)1);
     if (req_meta.push) {
@@ -546,7 +547,7 @@ class KVStoreDistServer {
    * starts with none, used after SetGradientCompression sets the type
    * currently there is no support for unsetting gradient compression
    */
-  GradientCompression* gradient_compression_;
+  std::shared_ptr<kvstore::GradientCompression> gradient_compression_;
 };
 
 }  // namespace kvstore

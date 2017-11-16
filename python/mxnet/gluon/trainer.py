@@ -110,7 +110,8 @@ class Trainer(object):
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
         if kvstore:
-            kvstore.set_gradient_compression(self._compression_params)
+            if self._compression_params:
+                kvstore.set_gradient_compression(self._compression_params)
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
             for i, param in enumerate(self._params):

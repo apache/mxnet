@@ -120,7 +120,7 @@ def fit(args, network, data_loader, **kwargs):
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
     if args.gc_type != 'none':
-        kv.set_gradient_compression({'compression': args.gc_type,
+        kv.set_gradient_compression({'type': args.gc_type,
                                      'threshold': args.gc_threshold})
 
     # logging

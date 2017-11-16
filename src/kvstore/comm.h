@@ -86,14 +86,12 @@ class Comm {
    */
   void SetGradientCompression(std::shared_ptr<GradientCompression> gc) {
     gc_ = gc;
-    gc_set_ = true;
   }
 
  protected:
   Context pinned_ctx_;
 
   std::shared_ptr<GradientCompression> gc_;
-  bool gc_set_ = false;
 };
 
 /**
@@ -506,7 +504,7 @@ class CommDevice : public Comm {
                         int priority) override {
     // when this reduce is called from kvstore_dist, gc is not set
     // we don't do compression twice in dist_sync_device
-    if (gc_set_ && gc_->get_type() != GC_NONE) {
+    if ((gc_ != nullptr) && (gc_->get_type() != CompressionType::kNone)) {
       return ReduceCompressed(key, src, priority);
     }
 

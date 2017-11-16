@@ -527,7 +527,8 @@ class Module(BaseModule):
         self._updater = None
 
         if kvstore:
-            kvstore.set_gradient_compression(self._compression_params)
+            if self._compression_params:
+                kvstore.set_gradient_compression(self._compression_params)
             # copy initialized local parameters to kvstore
             _initialize_kvstore(kvstore=kvstore,
                                 param_arrays=self._exec_group.param_arrays,

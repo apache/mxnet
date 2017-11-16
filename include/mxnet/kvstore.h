@@ -70,8 +70,7 @@ class KVStore {
    * \param compression_type type of compression
    * \param threshold threshold for 2bit compression
    */
-  virtual void SetGradientCompression(const std::string& compression_type,
-                                      const float threshold) = 0;
+  virtual void SetGradientCompression(std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -401,7 +400,6 @@ class KVStore {
    * Currently there is no support for un-setting gradient compression
    */
   std::shared_ptr<kvstore::GradientCompression> gradient_compression_;
-
 
   /**
    * \brief whether to do barrier when finalize

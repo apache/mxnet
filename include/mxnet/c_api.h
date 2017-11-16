@@ -1534,13 +1534,14 @@ MXNET_DLL int MXKVStoreCreate(const char *type,
 /*!
  * \brief Set parameters to use low-bit compressed gradients
  * \param handle handle to the kvstore
- * \param compression type of compression
- * \param threshold set the threshold for 2bit compression
+ * \param keys keys for compression parameters
+ * \param vals values for compression parameters
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreSetGradientCompression(KVStoreHandle handle,
-                                   const char *compression,
-                                   const float threshold);
+                                              mx_uint num_params,
+                                              const char** keys,
+                                              const char** vals);
 
 /*!
  * \brief Delete a KVStore handle.

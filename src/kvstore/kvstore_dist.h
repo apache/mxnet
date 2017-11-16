@@ -68,7 +68,7 @@ class KVStoreDist : public KVStoreLocal {
         Barrier();
         if (get_rank() == 0) {
           // stop the executor at servers
-          SendCommandToServers(kStopServer, "");
+          SendCommandToServers(static_cast<int>(CommandType::kStopServer), "");
         }
       }
       ps::Finalize(barrier_before_exit_);
@@ -85,11 +85,11 @@ class KVStoreDist : public KVStoreLocal {
     }
   }
 
-  void SetGradientCompression(const std::string& compression_type, const float threshold) override {
-    KVStoreLocal::SetGradientCompression(compression_type, threshold);
+  void SetGradientCompression(std::vector<std::pair<std::string, std::string> >& kwargs) override {
+    KVStoreLocal::SetGradientCompression(kwargs);
     if (get_rank() == 0) {
-      // only rank 0 because init happens by rank 0 only
-      SendCommandToServers(kSetGradientCompression, gradient_compression_->EncodeParams());
+      SendCommandToServers(static_cast<int>(CommandType::kSetGradientCompression),
+                           gradient_compression_->EncodeParams());
     }
   }
 
@@ -223,7 +223,7 @@ class KVStoreDist : public KVStoreLocal {
         // convert to ps keys
         size_t size = recv_buf.shape().Size();
 
-        PSKV& pskv = (gradient_compression_->get_type() == GC_NONE) ?
+        PSKV& pskv = (gradient_compression_->get_type() == CompressionType::kNone) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
 #if MKL_EXPERIMENTAL == 1
@@ -233,7 +233,9 @@ class KVStoreDist : public KVStoreLocal {
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
-        int cmd = (gradient_compression_->get_type() != GC_NONE) ? kCompressedPushPull : kDefaultPushPull;
+        int cmd = (gradient_compression_->get_type() != CompressionType::kNone) ?
+                  static_cast<int>(DataHandleType::kCompressedPushPull) :
+                  static_cast<int>(DataHandleType::kDefaultPushPull);
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
       };
@@ -331,7 +333,7 @@ class KVStoreDist : public KVStoreLocal {
 
       // push to servers
       if (storage_type == kDefaultStorage) {
-        if (gradient_compression_->get_type() == GC_NONE) {
+        if (gradient_compression_->get_type() == CompressionType::kNone) {
           PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), true);
           PushDefault(key, comm_buf, pskv, priority);
         } else {
@@ -350,7 +352,7 @@ class KVStoreDist : public KVStoreLocal {
           }
         }
       } else if (storage_type == kRowSparseStorage) {
-        CHECK_EQ(gradient_compression_->get_type(), GC_NONE)
+        CHECK(gradient_compression_->get_type() == CompressionType::kNone)
           << "Gradient compression for row sparse storage type is not supported";
         PushRowSparse(key, comm_buf, priority);
       } else {
@@ -382,7 +384,8 @@ class KVStoreDist : public KVStoreLocal {
         // do push. false means no delete
         ps::SArray<real_t> vals(data, size, false);
         CHECK_NOTNULL(ps_worker_)->ZPush(
-          pskv.keys, vals, pskv.lens, kCompressedPushPull, [cb]() { cb(); });
+          pskv.keys, vals, pskv.lens,
+          static_cast<int>(DataHandleType::kCompressedPushPull), [cb]() { cb(); });
       };
     // acquire locks on both comm_buf and small_buf so that
     // pull (which uses comm_buf) for the same key waits till push finishes
@@ -408,7 +411,8 @@ class KVStoreDist : public KVStoreLocal {
           // do push. false means no delete
           ps::SArray<real_t> vals(data, size, false);
           CHECK_NOTNULL(ps_worker_)->ZPush(
-              pskv.keys, vals, pskv.lens, kDefaultPushPull, [cb]() { cb(); });
+              pskv.keys, vals, pskv.lens,
+              static_cast<int>(DataHandleType::kDefaultPushPull), [cb]() { cb(); });
         };
     Engine::Get()->PushAsync(
         push_to_servers,
@@ -442,9 +446,9 @@ class KVStoreDist : public KVStoreLocal {
                   << pskv.keys << " size: " << size;
       }
       ps::SArray<real_t> vals(data, size, false);
-      CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens, kRowSparsePushPull, [cb]() {
-        cb();
-      });
+      CHECK_NOTNULL(ps_worker_)->ZPush(pskv.keys, vals, pskv.lens,
+                                       static_cast<int>(DataHandleType::kRowSparsePushPull),
+                                       [cb]() { cb(); });
     };
     Engine::Get()->PushAsync(
         push_to_servers,
@@ -486,7 +490,8 @@ class KVStoreDist : public KVStoreLocal {
       // at this point, later functions may access the indices variable while copy happens
       mshadow::Copy(recv_buf.aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
                     indices.data().FlatTo1D<cpu, int64_t>());
-      CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull,
+      CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens,
+                                       static_cast<int>(DataHandleType::kRowSparsePushPull),
                                        [vals, cb]() { delete vals; cb(); });
     };
     CHECK_NOTNULL(Engine::Get())->PushAsync(
