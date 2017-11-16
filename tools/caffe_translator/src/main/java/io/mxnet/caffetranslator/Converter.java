@@ -109,9 +109,10 @@ public class Converter {
             code.append(System.lineSeparator());
         }
 
-        // Convert data layerList
+        // Convert data layers
         code.append(generateIterators());
 
+        // Generate variables for data and label
         code.append(generateInputVars());
 
         // Convert non data layers
@@ -120,6 +121,9 @@ public class Converter {
         for (int layerIndex = 0; layerIndex < layers.size(); ) {
             Layer layer = layers.get(layerIndex);
             SymbolGenerator generator = generators.getGenerator(layer.getType());
+
+            // If the translator cannot translate this layer to an MXNet layer,
+            // use CaffeOp or CaffeLoss instead.
             if (generator == null) {
                 if (layer.getType().toLowerCase().endsWith("loss")) {
                     generator = generators.getGenerator("CaffePluginLossLayer");
