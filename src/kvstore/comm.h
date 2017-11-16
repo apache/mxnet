@@ -84,14 +84,16 @@ class Comm {
    * \brief Sets gradient compression parameters to be able to
    * perform reduce with compressed gradients
    */
-  void SetGradientCompression(std::shared_ptr<Gc> gc) {
+  void SetGradientCompression(std::shared_ptr<GradientCompression> gc) {
     gc_ = gc;
+    gc_set_ = true;
   }
 
  protected:
   Context pinned_ctx_;
 
-  std::shared_ptr<Gc> gc_;
+  std::shared_ptr<GradientCompression> gc_;
+  bool gc_set_ = false;
 };
 
 /**
@@ -502,8 +504,7 @@ class CommDevice : public Comm {
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
-    if (gc_->get_type() != GC_NONE) {
-      CHECK(gc_->is_active());
+    if (gc_set_) {
       return ReduceCompressed(key, src, priority);
     }
 

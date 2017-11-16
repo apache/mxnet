@@ -118,13 +118,13 @@ class KVStoreDistServer {
     ps_server_->set_request_handle(
         std::bind(&KVStoreDistServer::DataHandleEx, this, _1, _2, _3));
     sync_mode_ = false;
-    gc_ = new Gc();
+    gradient_compression_ = new GradientCompression();
     log_verbose_ = dmlc::GetEnv("MXNET_KVSTORE_DIST_ROW_SPARSE_VERBOSE", false);
   }
 
   ~KVStoreDistServer() {
     delete ps_server_;
-    delete gc_;
+    delete gradient_compression_;
   }
 
   void set_controller(const KVStore::Controller& controller) {
@@ -156,7 +156,7 @@ class KVStoreDistServer {
     } else if (recved.head == kSyncMode) {
       sync_mode_ = true;
     } else if (recved.head == kSetGradientCompression) {
-      gc_->DecodeParams(recved.body);
+      gradient_compression_->DecodeParams(recved.body);
     } else {
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
@@ -413,7 +413,7 @@ class KVStoreDistServer {
 
       if (stored.is_none()) {
         stored = NDArray(dshape, Context());
-        gc_->Dequantize(recved, &stored, 0);
+        gradient_compression_->Dequantize(recved, &stored, 0);
         server->Response(req_meta);
         stored.WaitToRead();
       } else if (sync_mode_) {
@@ -423,16 +423,16 @@ class KVStoreDistServer {
           merged.array = NDArray(dshape, Context());
         }
         if (merged.request.size() == 0) {
-          gc_->Dequantize(recved, &merged.array, 0);
+          gradient_compression_->Dequantize(recved, &merged.array, 0);
         } else {
-          gc_->Dequantize(recved, &decomp_buf, 0);
+          gradient_compression_->Dequantize(recved, &decomp_buf, 0);
           merged.array += decomp_buf;
         }
         merged.request.push_back(req_meta);
         ApplyUpdates(key, &merged, &stored, server);
       } else {
         // async push
-        gc_->Dequantize(recved, &decomp_buf, 0);
+        gradient_compression_->Dequantize(recved, &decomp_buf, 0);
         exec_.Exec([this, key, &decomp_buf, &stored]() {
           CHECK(updater_);
           updater_(key, decomp_buf, &stored);
@@ -546,7 +546,7 @@ class KVStoreDistServer {
    * starts with none, used after SetGradientCompression sets the type
    * currently there is no support for unsetting gradient compression
    */
-  Gc* gc_;
+  GradientCompression* gradient_compression_;
 };
 
 }  // namespace kvstore

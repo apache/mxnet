@@ -48,36 +48,26 @@ void split(const std::string &s, const char delim, Out result) {
   }
 }
 
-Gc::Gc() {
+GradientCompression::GradientCompression() {
   type_ = GC_NONE;
-  active_ = false;
 }
 
-void Gc::SetParams(const std::string &compression_type, const float threshold) {
+void GradientCompression::SetParams(const std::string &compression_type, const float threshold) {
   if (compression_type == "2bit") {
     SetTwoBitCompression(threshold);
   }
 }
 
-void Gc::set_active(bool active) {
-  active_ = active;
-}
-
-// note that this can be active when type is none, it denotes init is done for now
-bool Gc::is_active() {
-  return active_;
-}
-
-CompressionType Gc::get_type() {
+CompressionType GradientCompression::get_type() {
   return type_;
 }
 
-void Gc::SetTwoBitCompression(const float threshold) {
+void GradientCompression::SetTwoBitCompression(const float threshold) {
   type_ = GC_TWO_BIT;
   threshold_ = threshold;
 }
 
-std::string Gc::EncodeParams() {
+std::string GradientCompression::EncodeParams() {
   std::string rval = std::to_string(type_);
   if (type_ == GC_TWO_BIT) {
     rval += "," + std::to_string(threshold_);
@@ -85,7 +75,7 @@ std::string Gc::EncodeParams() {
   return rval;
 }
 
-void Gc::DecodeParams(const std::string &s) {
+void GradientCompression::DecodeParams(const std::string &s) {
   std::vector<std::string> elems;
   split(s, ',', std::back_inserter(elems));
   type_ = static_cast<CompressionType>(stoi(elems[0]));
@@ -96,7 +86,7 @@ void Gc::DecodeParams(const std::string &s) {
   }
 }
 
-int Gc::GetCompressionFactor() {
+int GradientCompression::GetCompressionFactor() {
   if (type_ == GC_TWO_BIT) {
     return 16;
   } else {
@@ -105,14 +95,14 @@ int Gc::GetCompressionFactor() {
   }
 }
 
-int64_t Gc::GetCompressedSize(const int64_t original_size) {
+int64_t GradientCompression::GetCompressedSize(const int64_t original_size) {
   const int bits = GetCompressionFactor();
   return ((original_size % bits == 0) ?
           original_size / bits :
           original_size / bits + 1);
 }
 
-void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
+void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                   mxnet::NDArray *residual, const int priority) {
   CHECK(from.shape().ndim() != 0) << "source operand has zero dimension shape";
   CHECK(to->shape().ndim() != 0) << "destination operand has zero dimension shape";
@@ -149,7 +139,7 @@ void Gc::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
   }
 }
 
-void Gc::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority) {
+void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to, const int priority) {
   CHECK(from.shape().ndim() != 0) << "source operands has zero dimension shape";
   CHECK(to->shape().ndim() != 0) << "destination operand has zero dimension shape";
   const int a = from.ctx().dev_mask();

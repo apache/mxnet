@@ -21,6 +21,9 @@ import sys
 sys.path.insert(0, "../../python/")
 import mxnet as mx
 import numpy as np
+import numpy.random as rnd
+import copy
+
 from mxnet.test_utils import assert_almost_equal
 
 def check_diff_to_scalar(A, x, rank=None):
@@ -76,7 +79,7 @@ keys = [3, 5, 7]
 # let the last shape exceed MXNET_KVSTORE_BIGARRAY_BOUND
 shapes = [(4, 4), (100, 100), (2000, 2000)]
 
-gc_inactive_key = 9
+gc_init_test_key = 9
 
 lr = .1
 nworker = 4
@@ -115,15 +118,22 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     for k, s in zip(keys, shapes):
         kv.init(k, mx.nd.zeros(s))
-    kv.init(gc_inactive_key, mx.nd.ones(shapes[0]))
 
-    def pull_inactive(kv):
-        for i in range(nrepeat):
-            out = [mx.nd.zeros(shapes[0], mx.gpu(g)) for g in range(nworker)]
-            kv.pull(gc_inactive_key, out=out)
-            exp = np.ones_like(out[0].asnumpy())
-            for o in out:
-                assert_almost_equal(o.asnumpy(), exp)
+    kv.init(gc_init_test_key, mx.nd.ones(shapes[0]))
+
+    # use different keys for random tests so that
+    # we can track residual from start
+    random_keys = [13, 15, 17]
+    for k, s in zip(random_keys, shapes):
+        kv.init(k, mx.nd.zeros(s))
+
+    def pull_init_test(kv):
+        # checks that compression is not applied to init of key
+        out = [mx.nd.zeros(shapes[0], mx.gpu(g)) for g in range(nworker)]
+        kv.pull(gc_init_test_key, out=out)
+        exp = np.ones_like(out[0].asnumpy())
+        for o in out:
+            assert_almost_equal(o.asnumpy(), exp)
 
     def pull_before_push(kv):
         for i in range(nrepeat):
@@ -186,34 +196,30 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
             # residual would be 0 again
 
     def check_compr_random(kv, threshold):
-        # use new keys so we can track residual
-        random_keys = [13, 15, 17]
+        mx.random.seed(123)
+        rnd.seed(123)
         for k, s in zip(random_keys, shapes):
-            kv.init(k, mx.nd.zeros(s))
-        for j in range(len(random_keys)):
-            curr_residual = np.zeros(shapes[j])
-            for l in range(nrepeat):
-                orig_val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
-                kv.pull(keys[j], out=orig_val)
+            curr_residual = [np.zeros(s) for g in range(nworker)]
+            orig_val = [mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)]
+            kv.pull(k, out=orig_val)
+            grads = [mx.nd.random_uniform(-0.6, 0.6, shape=s, ctx=mx.gpu(g)) for g in range(nworker)]
+            grads_cpy = copy.deepcopy(grads)
+            kv.push(k, grads)
+            val = [mx.nd.zeros(s, mx.gpu(g)) for g in range(nworker)]
+            kv.pull(k, out=val)
+            diffs = [val[g] - orig_val[g] for g in range(nworker)]
+            # compute expected by using simulation of operator
+            # on cpu
+            sum_dequantized_vals = np.zeros(s)
+            for g in range(nworker):
+                compr, curr_residual[g], decompr = compute_expected_2bit_quantization(
+                                                    grads_cpy[g], curr_residual[g], threshold)
+                sum_dequantized_vals += (decompr * rate)
 
-                grads = [mx.nd.random_uniform(-0.6, 0.6, shape=shapes[j], ctx=mx.gpu(g)) for g in range(nworker)]
-                kv.push(keys[j], grads)
+            for g in range(nworker):
+                assert_almost_equal(diffs[g].asnumpy(), sum_dequantized_vals)
 
-                val = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
-                kv.pull(keys[j], out=val)
-
-                diffs = [val[g] - orig_val[g] for g in range(nworker)]
-                # compute expected by using simulation of operator
-                # on cpu
-                sum_dequantized_vals = np.zeros(shapes[j])
-                for g in range(nworker):
-                    compr, curr_residual, decompr = compute_expected_2bit_quantization(
-                                                        grads[g], curr_residual, threshold)
-                    sum_dequantized_vals += decompr*rate
-
-                for g in range(nworker):
-                    assert_almost_equal(diffs[g].asnumpy(), sum_dequantized_vals)
-    pull_inactive(kv)
+    pull_init_test(kv)
     pull_before_push(kv)
     push_zeros(kv)
     curval = verify_residual(kv, threshold, rate)

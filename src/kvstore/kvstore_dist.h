@@ -89,7 +89,7 @@ class KVStoreDist : public KVStoreLocal {
     KVStoreLocal::SetGradientCompression(compression_type, threshold);
     if (get_rank() == 0) {
       // only rank 0 because init happens by rank 0 only
-      SendCommandToServers(kSetGradientCompression, gc_->EncodeParams());
+      SendCommandToServers(kSetGradientCompression, gradient_compression_->EncodeParams());
     }
   }
 
@@ -178,9 +178,6 @@ class KVStoreDist : public KVStoreLocal {
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
     if (get_rank() == 0) {
-      // set inactive for inits
-      if (gc_->is_active()) gc_->set_active(false);
-
       Push_(keys, values, 0, false);
       // wait until the push is finished
       for (const int key : keys) {
@@ -227,7 +224,7 @@ class KVStoreDist : public KVStoreLocal {
         size_t size = recv_buf.shape().Size();
 
         // even if inactive should use compressed_pskv for pull when type is not none
-        PSKV& pskv = (gc_->get_type() == GC_NONE) ?
+        PSKV& pskv = (gradient_compression_->get_type() == GC_NONE) ?
                       EncodeDefaultKey(key, size, false) :
                       EncodeCompressedKey(key, size, false);
 #if MKL_EXPERIMENTAL == 1
@@ -237,7 +234,7 @@ class KVStoreDist : public KVStoreLocal {
         // false means not to delete data when SArray is deleted
         auto vals = new ps::SArray<real_t>(data, size, false);
         // issue pull
-        int cmd = (gc_->get_type() != GC_NONE) ? kCompressedPushPull : kDefaultPushPull;
+        int cmd = (gradient_compression_->get_type() != GC_NONE) ? kCompressedPushPull : kDefaultPushPull;
         CHECK_NOTNULL(ps_worker_)->ZPull(
           pskv.keys, vals, &pskv.lens, cmd, [vals, cb](){ delete vals; cb(); });
       };
@@ -308,10 +305,6 @@ class KVStoreDist : public KVStoreLocal {
     std::vector<std::vector<NDArray> > grouped_vals;
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
 
-    // set active for non init pushes
-    // do_merge is proxy for non-init push
-    if (do_merge && !gc_->is_active()) gc_->set_active(true);
-
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // merge over devices
       int key = uniq_keys[i];
@@ -339,22 +332,26 @@ class KVStoreDist : public KVStoreLocal {
 
       // push to servers
       if (storage_type == kDefaultStorage) {
-        if (gc_->get_type() == GC_NONE) {
+        if (gradient_compression_->get_type() == GC_NONE) {
           PSKV& pskv = EncodeDefaultKey(key, comm_buf.shape().Size(), true);
           PushDefault(key, comm_buf, pskv, priority);
         } else {
-          // returns push_pskv if active, else pull_pskv
+          // Note: gradient compression uses `do_merge` as proxy to
+          // detect whether the push is initialization of a key or not.
+          // is_active is false when push is initialization of key
+          bool is_active = do_merge;
+          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), is_active);
+          // Returns push_pskv if active, else pull_pskv
           // we want inactive gc to send uncompressed gradients,
-          // but sharded in the same way as active gc
-          PSKV &pskv = EncodeCompressedKey(key, comm_buf.shape().Size(), gc_->is_active());
-          if (gc_->is_active()) {
+          // but sharded in the same way as later pushes would when gc becomes active
+          if (is_active) {
             PushCompressed(key, comm_buf, pskv, priority);
           } else {
             PushDefault(key, comm_buf, pskv, priority);
           }
         }
       } else if (storage_type == kRowSparseStorage) {
-        CHECK_EQ(gc_->get_type(), GC_NONE)
+        CHECK_EQ(gradient_compression_->get_type(), GC_NONE)
           << "Gradient compression for row sparse storage type is not supported";
         PushRowSparse(key, comm_buf, priority);
       } else {
@@ -375,7 +372,7 @@ class KVStoreDist : public KVStoreLocal {
                         false, comm_buf.dtype());
       res_buf = 0;
     }
-    gc_->Quantize(comm_buf, &small_buf, &res_buf, priority);
+    gradient_compression_->Quantize(comm_buf, &small_buf, &res_buf, priority);
     auto push_to_servers =
       [this, key, pskv, small_buf](RunContext rctx, Engine::CallbackOnComplete cb) {
         size_t size = small_buf.shape().Size();
@@ -566,7 +563,7 @@ class KVStoreDist : public KVStoreLocal {
     CHECK_GT(num_servers, 0);
 
     // represents size of data to be sent
-    size_t compr_size = gc_->GetCompressedSize(original_size);
+    size_t compr_size = gradient_compression_->GetCompressedSize(original_size);
 
     mu_.lock();
     PSKV& pskv = (is_push) ? compr_ps_kv_[key].push : compr_ps_kv_[key].pull;
@@ -614,7 +611,7 @@ class KVStoreDist : public KVStoreLocal {
             part_compr =
               static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i+1))) -
               static_cast<size_t> (round(static_cast<double>(compr_size)/num_servers*(i)));
-            part_orig = part_compr * gc_->GetCompressionFactor();
+            part_orig = part_compr * gradient_compression_->GetCompressionFactor();
           }
 
           // meta info

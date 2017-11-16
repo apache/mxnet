@@ -58,7 +58,7 @@ class KVStoreLocal : public KVStore {
       comm_ = new CommCPU();
     }
     pinned_ctx_ = comm_->pinned_ctx();
-    gc_ = std::make_shared<Gc>();
+    gradient_compression_ = std::make_shared<GradientCompression>();
   }
 
   virtual ~KVStoreLocal() {
@@ -137,7 +137,7 @@ class KVStoreLocal : public KVStore {
   }
 
   void SetGradientCompression(const std::string& compression_type, const float threshold) override {
-    gc_->SetParams(compression_type, threshold);
+    gradient_compression_->SetParams(compression_type, threshold);
   }
 
  private:
@@ -149,8 +149,7 @@ class KVStoreLocal : public KVStore {
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
-    comm_->SetGradientCompression(gc_);
-    gc_->set_active(true);
+    comm_->SetGradientCompression(gradient_compression_);
   }
 
   virtual void PushImpl(const std::vector<int>& keys,

@@ -35,11 +35,11 @@ enum CompressionType {
   GC_NONE, GC_TWO_BIT
 };
 
-class Gc {
+class GradientCompression {
  public:
-  Gc();
+  GradientCompression();
 
-  virtual ~Gc() {}
+  virtual ~GradientCompression() {}
 
   /*!
    * \brief sets parameters for gradient compression
@@ -47,18 +47,6 @@ class Gc {
    * \param threshold float value used for thresholding gradients
    */
   void SetParams(const std::string &compression_type, const float threshold);
-
-  /*!
-   * \brief sets gradient compression to given mode
-   * Active mode is when gradients are compressed
-   * Compression is in inactive mode during init of parameters
-   */
-  void set_active(bool active);
-
-  /*!
-   * \brief returns boolean whether or not gc is in active mode
-   */
-  bool is_active();
 
   /*!
    * \brief returns type of compression if any
@@ -118,13 +106,6 @@ class Gc {
    * \brief denotes the type of gradient compression which has been set
    */
   CompressionType type_;
-
-  /*!
-   * \brief denotes whether gradient compression is active
-   * Value starts with false because we don't want initialization of parameters to be compressed.
-   * That would lead to bad convergence results. Currently after initialization, gc becomes active.
-   */
-  bool active_;
 
   /*!
    * \brief denotes threshold used for quantization and dequantization

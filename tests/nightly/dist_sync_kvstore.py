@@ -231,7 +231,7 @@ def test_sync_push_pull():
         for k,s in [('1121', shape),('112221',irregular_shape),
                     ('11221', big_shape), ('1122',shape)]:
             if k=='1122':
-                # tests inactive status of GC during init
+                # tests that GC is not used for init of a key
                 val = mx.nd.zeros(s)
                 kv.pull(k, val)
                 check_diff_to_scalar(val, 1)

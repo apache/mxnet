@@ -400,7 +400,7 @@ class KVStore {
    * Used if SetGradientCompression sets the type.
    * Currently there is no support for un-setting gradient compression
    */
-  std::shared_ptr<kvstore::Gc> gc_;
+  std::shared_ptr<kvstore::GradientCompression> gradient_compression_;
 
 
   /**
