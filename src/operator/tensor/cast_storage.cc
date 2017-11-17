@@ -31,14 +31,6 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_MKLDNN == 1
-static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
-  switch(dtype) {
-    case mshadow::kFloat32:
-      return mkldnn::memory::data_type::f32;
-    default:
-      return mkldnn::memory::data_type::data_undef;
-  }
-}
 
 static inline int get_type_size(int dtype) {
   MSHADOW_TYPE_SWITCH(dtype, DType, {return sizeof(DType);});
