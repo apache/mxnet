@@ -6,7 +6,7 @@
 Many real world datasets deal with high dimensional sparse feature vectors. When learning
 the weights of models with sparse datasets, the derived gradients of the weights could be sparse.
 
-Let's say we perform a matrix multiplication of ``X``  and ``W``, where ``X`` is a 2x2 matrix, and ``W`` is a 2x1 matrix. Let ``Y`` be the matrix multiplication of the two matrices:
+Let's say we perform a matrix multiplication of ``X``  and ``W``, where ``X`` is a 1x2 matrix, and ``W`` is a 2x3 matrix. Let ``Y`` be the matrix multiplication of the two matrices:
 
 ```python
 import mxnet as mx
