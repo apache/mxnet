@@ -430,12 +430,18 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
     const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
     MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
       if (std::is_same<xpu, cpu>::value) {
-        const IType* first1 = ograd_row_idx.dptr<IType>();
-        const IType* last1 = first1 + ograd_row_idx.Size();
-        const IType* first2 = in_row_idx.dptr<IType>();
         // when ograd_row_idx and in_row_idx have the same size and input is not a full rsp
         // ograd_row_idx and in_row_idx are expected to have the same elements
-        if (ograd_row_idx.Size() == in_row_idx.Size() && in_row_idx.Size() != in_data.shape_[0]) {
+        if (in_row_idx.Size() != input.shape()[0]) {  // if input data is not a full rsp
+          CHECK_EQ(ograd_row_idx.Size(), in_row_idx.Size()) << "SquareSumRspGradImpl only supports"
+                                                               " equal ograd_row_idx and"
+                                                               " input_row_idx when ograd and"
+                                                               " input are both row-sparse and"
+                                                               " input data is not a full"
+                                                               " row-sparse matrix";
+          const IType* first1 = ograd_row_idx.dptr<IType>();
+          const IType* last1 = first1 + ograd_row_idx.Size();
+          const IType* first2 = in_row_idx.dptr<IType>();
           CHECK(std::equal(first1, last1, first2)) << "SquareSumRspGradImpl only supports"
                                                       " equal ograd_row_idx and input_row_idx"
                                                       " when ograd and input are both"

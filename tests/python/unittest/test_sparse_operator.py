@@ -1464,15 +1464,24 @@ def test_sparse_square_sum():
                         baseline_exec = baseline.bind(default_context(), args=[dns],
                                                       args_grad=[igrad_expected])
                         baseline_exec.forward(is_train=True)
-                        # make ograd from ret_expected and set one row to zero
-                        ret_expected[np.random.randint(0, ret_expected.shape[0]), :] = 0
                         baseline_exec.backward([ret_expected])
-                        # check backward when ograd is dense
-                        check_symbolic_backward(test, [rsp], [ret_expected], [igrad_expected.asnumpy()],
-                                                grad_stypes={'data': 'row_sparse'})
                         # check backward when ograd is row sparse
                         check_symbolic_backward(test, [rsp], [ret_expected.tostype('row_sparse')],
                                                 [igrad_expected.asnumpy()], grad_stypes={'data': 'row_sparse'})
+
+                        # check backward when ograd is dense
+                        # the stype of output of the square_sum is deteremined in symbol binding stage.
+                        # The ograd stype of the last layer is the same as the output stype of the last layer.
+                        # Need to add one more layer after square_sum to trigger the kernel for ograd
+                        # with default stype in square_sum op.
+                        baseline1 = baseline + 1
+                        baseline_exec1 = baseline1.bind(default_context(), args=[dns],
+                                                        args_grad=[igrad_expected])
+                        baseline_exec1.forward(is_train=True)
+                        baseline_exec1.backward([ret_expected])
+                        test1 = test + 1
+                        check_symbolic_backward(test1, [rsp], [ret_expected], [igrad_expected.asnumpy()],
+                                                grad_stypes={'data': 'row_sparse'})
 
                     # check numeric gradient
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
