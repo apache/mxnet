@@ -81,8 +81,9 @@ static cv::Mat mat_convert(TBlob input, int hight, int weight, int channel) {
   }
   return m;
 }
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
 
-#endif // MXNET_OPERATOR_IMAGE_IMAGE_COMMON_H_
+#endif  // MXNET_OPERATOR_IMAGE_IMAGE_COMMON_H_
+

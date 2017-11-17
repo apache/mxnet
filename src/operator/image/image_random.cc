@@ -33,14 +33,27 @@
 namespace mxnet {
 namespace op {
 
+NNVM_REGISTER_OP(_image_to_tensor)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest>{ResourceRequest::kRandom};
+})
+.set_attr<nnvm::FInferShape>("FInferShape", ToTensorShape)
+.set_attr<nnvm::FInferType>("FInferType", ToTensorType)
+.set_attr<FCompute>("FCompute<cpu>", ToTensor<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.add_argument("data", "NDArray-or-Symbol", "The input.");
+
 DMLC_REGISTER_PARAMETER(RandomBrightnessParam);
 NNVM_REGISTER_OP(_image_random_brightness)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RandomBrightnessParam>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) { 
-  return std::vector<ResourceRequest>{ResourceRequest::kRandom}; 
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest>{ResourceRequest::kRandom};
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
@@ -81,5 +94,5 @@ NNVM_REGISTER_OP(_image_random_saturation)
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(RandomSaturationParam::__FIELDS__());
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
