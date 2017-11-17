@@ -11,7 +11,7 @@ prefix explicitly:
 ```julia
 julia> using MXNet
 
-julia> x = mx.zeros(2,3)              # MXNet NDArray
+julia> x = mx.zeros(2, 3)             # MXNet NDArray
 2×3 mx.NDArray{Float32} @ CPU0:
  0.0  0.0  0.0
  0.0  0.0  0.0
@@ -51,20 +51,20 @@ functions, including `size` and `copy!` as shown in the last line.
 MXNet. It is like a Julia `Array` object, with some important
 differences listed here:
 
--   The actual data could live on different `Context` (e.g. GPUs). For
-    some contexts, iterating into the elements one by one is very slow,
-    thus indexing into NDArray is not recommanded in general. The easiest
-    way to inspect the contents of an NDArray is to use the `copy`
-    function to copy the contents as a Julia `Array`.
--   Operations on `NDArray` (including basic arithmetics and neural
-    network related operators) are executed in parallel with automatic
-    dependency tracking to ensure correctness.
--   There is no generics in `NDArray`, the `eltype` is always
-    `mx.MX_float`. Because for applications in machine learning, single
-    precision floating point numbers are typical a best choice balancing
-    between precision, speed and portability. Also since libmxnet is
-    designed to support multiple languages as front-ends, it is much
-    simpler to implement with a fixed data type.
+- The actual data could live on different `Context` (e.g. GPUs). For
+  some contexts, iterating into the elements one by one is very slow,
+  thus indexing into NDArray is not recommanded in general. The easiest
+  way to inspect the contents of an NDArray is to use the `copy`
+  function to copy the contents as a Julia `Array`.
+- Operations on `NDArray` (including basic arithmetics and neural
+  network related operators) are executed in parallel with automatic
+  dependency tracking to ensure correctness.
+- There is no generics in `NDArray`, the `eltype` is always
+  `mx.MX_float`. Because for applications in machine learning, single
+  precision floating point numbers are typical a best choice balancing
+  between precision, speed and portability. Also since libmxnet is
+  designed to support multiple languages as front-ends, it is much
+  simpler to implement with a fixed data type.
 
 While most of the computation is hidden in libmxnet by operators
 corresponding to various neural network layers. Getting familiar with
@@ -73,13 +73,13 @@ operators in Julia directly.
 
 The followings are common ways to create `NDArray` objects:
 
--   `mx.empty(shape[, context])`: create on uninitialized array of a
-    given shape on a specific device. For example,
-    `mx.empty(2,3)`, `mx.((2,3), mx.gpu(2))`.
--   `mx.zeros(shape[, context])` and `mx.ones(shape[, context])`:
-    similar to the Julia's built-in `zeros` and `ones`.
--   `mx.copy(jl_arr, context)`: copy the contents of a Julia `Array` to
-    a specific device.
+- `mx.empty(shape[, context])`: create on uninitialized array of a
+  given shape on a specific device. For example,
+  `mx.empty(2, 3)`, `mx.((2, 3), mx.gpu(2))`.
+- `mx.zeros(shape[, context])` and `mx.ones(shape[, context])`:
+  similar to the Julia's built-in `zeros` and `ones`.
+- `mx.copy(jl_arr, context)`: copy the contents of a Julia `Array` to
+  a specific device.
 
 Most of the convenient functions like `size`, `length`, `ndims`,
 `eltype` on array objects should work out-of-the-box. Although indexing
@@ -87,7 +87,7 @@ is not supported, it is possible to take *slices*:
 
 ```@repl
 using MXNet
-a = mx.ones(2,3)
+a = mx.ones(2, 3)
 b = mx.slice(a, 1:2)
 b[:] = 2
 a
@@ -101,7 +101,7 @@ shows a way to set the contents of an `NDArray`.
 ```@repl
 using MXNet
 mx.srand(42)
-a = mx.empty(2,3)
+a = mx.empty(2, 3)
 a[:] = 0.5              # set all elements to a scalar
 a[:] = rand(size(a))    # set contents with a Julia Array
 copy!(a, rand(size(a))) # set value by copying a Julia Array
@@ -248,9 +248,8 @@ symbolic composition system. It is like
 [Theano](http://deeplearning.net/software/theano/), except that we
 avoided long expression compilation time by providing *larger* neural
 network related building blocks to guarantee computation performance.
-See also [this
-note](http://mxnet.readthedocs.org/en/latest/program_model.html) for the
-design and trade-off of the MXNet symbolic composition system.
+See also [this note](http://mxnet.readthedocs.org/en/latest/program_model.html)
+for the design and trade-off of the MXNet symbolic composition system.
 
 The basic type is `mx.SymbolicNode`. The following is a trivial example of
 composing two symbols with the `+` operation.
@@ -305,8 +304,8 @@ categories: *inputs* and *parameters*. *inputs* are data and labels for
 the networks, while *parameters* are typically trainable *weights*,
 *bias*, *filters*.
 
-When composing symbols, their arguments accumulates. We can list all the
-arguments by
+When composing symbols, their arguments accumulates.
+We can list all the arguments by
 
 ```@example fcnet
 mx.list_arguments(net)
