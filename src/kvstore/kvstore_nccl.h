@@ -183,10 +183,10 @@ class KVStoreNCCL : public KVStoreLocal {
    * \brief group values on keys
    */
   template <typename T>
-  virtual void GroupKVPairsHelper(const std::vector<int>& keys,
-                                      const std::vector<T>& values,
-                                      std::vector<int> *uniq_keys,
-                                      std::vector<std::vector<T>> *grouped_vals) {
+  void GroupKVPairsHelper(const std::vector<int>& keys,
+                          const std::vector<T>& values,
+                          std::vector<int> *uniq_keys,
+                          std::vector<std::vector<T>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const T nd) -> bool {
       auto stype = ptr(nd)->storage_type();
@@ -413,7 +413,7 @@ class KVStoreNCCL : public KVStoreLocal {
 
   // Function that waits for NCCL collective to complete
   template <typename T>
-  virtual void CommSync(const std::vector<const T>& dst, int priority) {
+  void CommSync(const std::vector<T>& dst, int priority) {
     std::vector<Engine::VarHandle> mutate_vars;
     for (size_t i = 0; i < dst.size(); ++i) {
         mutate_vars.push_back(ptr(dst[i])->var());
