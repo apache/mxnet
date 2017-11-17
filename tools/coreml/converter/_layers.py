@@ -39,6 +39,22 @@ def _get_node_shape(net, node_id):
     return net['nodes'][node_id]['shape']
 
 def _get_attrs(node):
+    """get attribute dict from node
+
+    This functions keeps backward compatibility
+    for both attr and attrs key in the json field.
+
+    Parameters
+    ----------
+    node : dict
+       The json graph Node
+
+    Returns
+    -------
+    attrs : dict
+       The attr dict, returns empty dict if
+       the field do not exist.
+    """
     if 'attrs' in node:
         return node['attrs']
     elif 'attr' in node:
