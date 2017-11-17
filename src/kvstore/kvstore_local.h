@@ -256,7 +256,13 @@ class KVStoreLocal : public KVStore {
     auto validator = [this](const int key, const NDArray& nd) -> bool {
       auto stype = nd.storage_type();
       // valid NDArray
-      if (stype == kDefaultStorage || stype == kRowSparseStorage) return true;
+      if (stype == kDefaultStorage || stype == kRowSparseStorage
+          // When it's kMKLDNNStorage, it'll be converted to a data layout
+          // compatible to the default storage.
+#if MXNET_USE_MKLDNN == 1
+          || stype == kMKLDNNStorage
+#endif
+          ) return true;
       // invalid NDArray, abort
       LOG(FATAL) << "Unexpected storage type detected during kvstore push: " << stype;
       return false;
@@ -272,8 +278,15 @@ class KVStoreLocal : public KVStore {
                                 std::vector<std::vector<NDArray*>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const NDArray* nd) -> bool {
+      auto stype = nd->storage_type();
       // valid
-      if (nd->storage_type() == kDefaultStorage) return true;
+      if (stype == kDefaultStorage
+          // When it's kMKLDNNStorage, it'll be converted to a data layout
+          // compatible to the default storage.
+#if MXNET_USE_MKLDNN == 1
+          || stype == kMKLDNNStorage
+#endif
+          ) return true;
       // invalid, print warning messages once
       if (this->warnings_printed_.find(key) == this->warnings_printed_.end()) {
         LOG(INFO) << "Warning: non-default weights detected during kvstore pull. "
