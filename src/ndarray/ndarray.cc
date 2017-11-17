@@ -399,15 +399,27 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
     return;
   }
 
-  mkldnn::memory::dims dims(shape.ndim());
-  for (size_t i = 0; i < dims.size(); i++)
-    dims[i] = shape[i];
+  mkldnn::memory::dims dims;
+  // These are shapes supprted by MKLDNN.
+  if (shape.ndim() == 1 || shape.ndim() == 2 || shape.ndim() == 4) {
+    dims.resize(shape.ndim());
+    for (size_t i = 0; i < dims.size(); i++)
+      dims[i] = shape[i];
+  }
+  // If there are 3 dimensions, we'll force it to 4 dimensions.
+  else if (shape.ndim() == 3) {
+    dims.resize(shape.ndim() + 1);
+    dims[0] = 1;
+    for (size_t i = 0; i < shape.ndim(); i++)
+      dims[i + 1] = shape[i];
+  }
+  else
+    LOG(FATAL) << "Unsupported number of dimensions for MKLDNN";
   mkldnn::memory::format layout = mkldnn::memory::format::format_undef;
-  switch (shape.ndim()) {
+  switch (dims.size()) {
     case 1: layout = mkldnn::memory::format::x; break;
     case 2: layout = mkldnn::memory::format::nc; break;
     case 4: layout = mkldnn::memory::format::nchw; break;
-    default: LOG(FATAL) << "Unsupported number of dimensions for MKLDNN";
   }
   mkldnn::memory::desc data_md{dims, get_mkldnn_type(dtype), layout};
   auto cpu_engine = CpuEngine::Instance().get_engine();
