@@ -119,7 +119,7 @@ class ResourceManagerImpl : public ResourceManager {
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
-      CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
+      CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
       switch (req.type) {
         case ResourceRequest::kRandom: {

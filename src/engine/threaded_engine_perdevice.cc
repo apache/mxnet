@@ -129,7 +129,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           }
         }
       } else {
-        CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
+        CHECK_EQ(ctx.dev_mask(), Context::kGPU);
         // GPU execution.
         FnProperty prop = opr_block->opr->prop;
         bool is_copy = (prop == FnProperty::kCopyFromGPU ||
