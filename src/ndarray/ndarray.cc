@@ -48,10 +48,22 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-NDArray::NDArray(const NDArrayStorageType stype, const TShape &shape, Context ctx,
+static inline NDArrayStorageType DetermineSType(NDArrayStorageType stype, int dtype) {
+#if MXNET_USE_MKLDNN == 1
+  // We can't always generate a MKLDNN storage. If MKLDNN can't support the data type,
+  // we'll have to fall back to the default storage.
+  if (stype == kMKLDNNStorage && !SupportMKLDNN(dtype))
+    return kDefaultStorage;
+  else
+#endif
+    return stype;
+}
+
+NDArray::NDArray(const NDArrayStorageType _stype, const TShape &shape, Context ctx,
     bool delay_alloc, int dtype, std::vector<int> aux_types,
     std::vector<TShape> aux_shapes, TShape storage_shape) : shape_(shape),
-  dtype_(dtype), storage_type_(stype), entry_({nullptr, 0, 0}) {
+  dtype_(dtype), storage_type_(DetermineSType(_stype, dtype)), entry_({nullptr, 0, 0}) {
+  NDArrayStorageType stype = DetermineSType(_stype, dtype);
   // Assign default aux types if not given
   if (aux_types.size() == 0
 #if MXNET_USE_MKLDNN == 1
@@ -96,8 +108,11 @@ NDArray::NDArray(const NDArrayStorageType stype, const TShape &shape, Context ct
       LOG(FATAL) << "Unknown storage type " << stype;
     }
   }
-  ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
-      dtype, aux_types, aux_shapes);
+  if (stype == kDefaultStorage)
+    ptr_ = std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype);
+  else
+    ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
+        dtype, aux_types, aux_shapes);
 }
 
 void NDArray::Chunk::CheckAndAllocData(const TShape &shape, int dtype) {
