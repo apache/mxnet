@@ -567,6 +567,17 @@ def test_fill_shape_deferred():
     assert net[2].weight.shape[1] == 3072, net[2].weight.shape[1]
 
 
+def test_dtype():
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
+
 def test_fill_shape_load():
     ctx = mx.context.current_context()
     net1 = nn.HybridSequential()

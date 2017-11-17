@@ -24,6 +24,7 @@ from numpy.testing import assert_allclose
 import numpy.random as rnd
 
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
+from common import assertRaises
 
 
 def sparse_nd_ones(shape, stype):
@@ -105,31 +106,45 @@ def test_sparse_nd_setitem():
 
 
 def test_sparse_nd_slice():
-    def check_sparse_nd_csr_slice(shape):
-        stype = 'csr'
-        A, _ = rand_sparse_ndarray(shape, stype)
-        A2 = A.asnumpy()
-        start = rnd.randint(0, shape[0] - 1)
-        end = rnd.randint(start + 1, shape[0])
-        assert same(A[start:end].asnumpy(), A2[start:end])
-        assert same(A[start - shape[0]:end].asnumpy(), A2[start:end])
-        assert same(A[start:].asnumpy(), A2[start:])
-        assert same(A[:end].asnumpy(), A2[:end])
-        ind = rnd.randint(-shape[0], shape[0] - 1)
-        assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
+    shape = (rnd.randint(2, 10), rnd.randint(2, 10))    
+    stype = 'csr'
+    A, _ = rand_sparse_ndarray(shape, stype)
+    A2 = A.asnumpy()
+    start = rnd.randint(0, shape[0] - 1)
+    end = rnd.randint(start + 1, shape[0])
+    assert same(A[start:end].asnumpy(), A2[start:end])
+    assert same(A[start - shape[0]:end].asnumpy(), A2[start:end])
+    assert same(A[start:].asnumpy(), A2[start:])
+    assert same(A[:end].asnumpy(), A2[:end])
+    ind = rnd.randint(-shape[0], shape[0] - 1)
+    assert same(A[ind].asnumpy(), A2[ind][np.newaxis, :])
+        
+    start_col = rnd.randint(0, shape[1] - 1)
+    end_col = rnd.randint(start_col + 1, shape[1])
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
     
+    A = mx.nd.sparse.zeros('csr', shape)
+    A2 = A.asnumpy()
+    assert same(A[start:end].asnumpy(), A2[start:end])
+    result = mx.nd.slice(A, begin=(start, start_col), end=(end, end_col))
+    result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, start_col), end=(end, end_col))
+    assert same(result_dense.asnumpy(), result.asnumpy())
+
     def check_slice_nd_csr_fallback(shape):
         stype = 'csr'
         A, _ = rand_sparse_ndarray(shape, stype)
         A2 = A.asnumpy()
         start = rnd.randint(0, shape[0] - 1)
         end = rnd.randint(start + 1, shape[0])
-        result = mx.nd.sparse.slice(A, begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
-        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start, shape[1] - 1), end=(end + 1, shape[1]))
+
+        # non-trivial step should fallback to dense slice op
+        result = mx.nd.sparse.slice(A, begin=(start,), end=(end + 1,), step=(2,))
+        result_dense = mx.nd.slice(mx.nd.array(A2), begin=(start,), end=(end + 1,), step=(2,))
         assert same(result_dense.asnumpy(), result.asnumpy())
 
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
-    check_sparse_nd_csr_slice(shape)
     check_slice_nd_csr_fallback(shape)
 
 
@@ -246,7 +261,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
-def test_sparse_nd_binary_rop():
+def test_sparse_nd_binary_scalar_op():
     N = 3
     def check(fn, stype):
         for _ in range(N):
@@ -269,6 +284,7 @@ def test_sparse_nd_binary_rop():
         check(lambda x: 0.5 >= x, stype)
         check(lambda x: 0.5 <= x, stype)
         check(lambda x: 0.5 == x, stype)
+        check(lambda x: x / 2, stype)
 
 def test_sparse_nd_binary_iop():
     N = 3
@@ -734,6 +750,52 @@ def test_sparse_nd_exception():
                      (2,2), shape=(3,2))
     assert_exception(mx.nd.sparse.zeros, ValueError,
                      "invalid_stype", (2,2))
+    
+def test_sparse_nd_check_format():
+    """ test check_format for sparse ndarray """
+    shape = rand_shape_2d()
+    stypes = ["csr", "row_sparse"]
+    for stype in stypes:
+        arr, _ = rand_sparse_ndarray(shape, stype)
+        arr.check_format()
+        arr = mx.nd.sparse.zeros(stype, shape)
+        arr.check_format()
+    # CSR format index pointer array should be less than the number of rows
+    shape = (3, 4)
+    data_list = [7, 8, 9]
+    indices_list = [0, 2, 1]
+    indptr_list = [0, 5, 2, 3]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format indices should be in ascending order per row
+    indices_list = [2, 1, 1]
+    indptr_list = [0, 2, 2, 3]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format indptr should end with value equal with size of indices
+    indices_list = [1, 2, 1]
+    indptr_list = [0, 2, 2, 4]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format indices should not be negative
+    indices_list = [0, 2, 1]
+    indptr_list = [0, -2, 2, 3]
+    a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # Row Sparse format indices should be less than the number of rows
+    shape = (3, 2)
+    data_list = [[1, 2], [3, 4]]
+    indices_list = [1, 4]
+    a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # Row Sparse format indices should be in ascending order
+    indices_list = [1, 0]
+    a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
+    # Row Sparse format indices should not be negative
+    indices_list = [1, -2]
+    a = mx.nd.sparse.row_sparse_array((data_list, indices_list), shape=shape)
+    assertRaises(mx.base.MXNetError, a.check_format)
 
 
 if __name__ == '__main__':

@@ -195,32 +195,6 @@ struct IndexRspRowFlgKernel {
 };
 
 /*!
- * \brief GPU kernel for filling the row index array of an rsp tensor.
- * Parallelized by tensor rows: 1 thread/row
- */
-struct FillRspRowIdxKernel {
-  /*!
-   * \brief
-   * \param tid          global thread id
-   * \param row_idx      row index array to store indices of non-zero rows
-   * \param row_flg_sum  inclusive prefix sum array over 0/1 marked row flag array
-   * \param num_rows     rsp tensor number of rows (shape)
-   */
-  template<typename RType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             RType* row_idx,
-                                             const nnvm::dim_t* row_flg_sum,
-                                             const nnvm::dim_t num_rows) {
-    if (tid < num_rows) {
-      nnvm::dim_t prev = (tid == 0)? 0 : row_flg_sum[tid-1];
-      if (row_flg_sum[tid] > prev) {
-        row_idx[prev] = static_cast<RType>(tid);
-      }
-    }
-  }
-};
-
-/*!
  * \brief GPU kernel for marking non-zero columns of a csr matrix.
  * Parallelized by matrix rows: 1 warp/row
  */

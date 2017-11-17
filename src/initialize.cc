@@ -77,5 +77,10 @@ LibraryInitializer* LibraryInitializer::Get() {
   return &inst;
 }
 
+#ifdef __GNUC__
+// Don't print an unused variable message since this is intentional
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
+
 static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet

@@ -35,6 +35,7 @@
 #include <algorithm>
 #include "./operator_common.h"
 #include "./mshadow_op.h"
+#include "../engine/openmp.h"
 
 #if defined(USE_MKL) && defined(_OPENMP)
 #include <omp.h>
@@ -55,8 +56,8 @@ namespace op {
 
 #if defined(USE_MKL) && defined(_OPENMP)
 static void bernoulli_generate(int n, double p, int* r) {
-  int seed = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  int nthr = omp_get_max_threads();
+  const int seed = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
+  const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 # pragma omp parallel num_threads(nthr)
   {
     const int ithr = omp_get_thread_num();
@@ -117,12 +118,13 @@ class DropoutOp : public Operator {
 #if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
       DType* outptr = out.dptr_;
       DType* dataptr = data.dptr_;
-      int* maskptr = reinterpret_cast<int*>(mask.dptr_);
+      auto maskptr = reinterpret_cast<int*>(mask.dptr_);
       int count = mask.shape_[0]*mask.shape_[1];
       bernoulli_generate(count, this->pkeep_, maskptr);
-  #pragma omp parallel for
+      const float pk_1 = 1.0f / pkeep_;
+      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
       for (int i = 0; i < count; ++i) {
-        outptr[i] = dataptr[i] * maskptr[i] * (1.0f / pkeep_);
+        outptr[i] = dataptr[i] * maskptr[i] * pk_1;
       }
 #else
       Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
@@ -154,15 +156,15 @@ class DropoutOp : public Operator {
 #if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
       DType* ingradptr = gdata.dptr_;
       DType* outgradptr = grad.dptr_;
-      int* maskptr = reinterpret_cast<int*>(mask.dptr_);
-
+      auto maskptr = reinterpret_cast<int*>(mask.dptr_);
       int count = mask.shape_[0]*mask.shape_[1];
-
-      #pragma omp parallel for
+      const float pk_1 = 1.0f / pkeep_;
+      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
       for (int i = 0; i < count; ++i) {
-        ingradptr[i] = outgradptr[i] * maskptr[i] * (1.0f / pkeep_);
+        ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
       }
 #else  // USE_MKL && _OPENMP
+      CHECK_EQ(grad.shape_.Size(), mask.shape_.Size());
       Assign(gdata, req[dropout::kData], grad * mask);
 #endif  // USE_MKL && _OPENMP
     } else {

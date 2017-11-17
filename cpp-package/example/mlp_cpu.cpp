@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
       samples += batch_size;
       auto data_batch = train_iter.GetDataBatch();
       // Set data and label
-      args["X"] = data_batch.data;
-      args["label"] = data_batch.label;
+      data_batch.data.CopyTo(&args["X"]);
+      data_batch.label.CopyTo(&args["label"]);
 
       // Compute gradients
       exec->Forward(true);
@@ -124,8 +124,8 @@ int main(int argc, char** argv) {
     val_iter.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      args["X"] = data_batch.data;
-      args["label"] = data_batch.label;
+      data_batch.data.CopyTo(&args["X"]);
+      data_batch.label.CopyTo(&args["label"]);
       // Forward pass is enough as no gradient is needed when evaluating
       exec->Forward(false);
       acc.Update(data_batch.label, exec->outputs[0]);

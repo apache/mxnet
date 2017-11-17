@@ -288,6 +288,8 @@ void Imperative::RunGraph(
   DTypeVector arg_dtypes;
   std::vector<OpReqType> req;
 
+  int prev_bulk_size = Engine::Get()->set_bulk_size(10);
+
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) continue;
@@ -351,6 +353,8 @@ void Imperative::RunGraph(
       if (ref_count[eid] == 0) arrays[eid]->ptr_.reset();
     }
   }
+
+  Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
 

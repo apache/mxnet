@@ -50,6 +50,38 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   static auto constexpr kWorkerQueue = kFIFO;
 
   ThreadedEnginePerDevice() noexcept(false) {
+    this->Start();
+#ifndef _WIN32
+    pthread_atfork(
+      []() {
+        Engine::Get()->WaitForAll();
+        Engine::Get()->Stop();
+      },
+      []() {
+        Engine::Get()->Start();
+      },
+      []() {
+        // Make children single threaded since they are typically workers
+        dmlc::SetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
+        dmlc::SetEnv("OMP_NUM_THREADS", 1);
+        OpenMP::Get()->set_enabled(false);
+        Engine::Get()->Start();
+      });
+#endif
+  }
+  ~ThreadedEnginePerDevice() noexcept(false) {
+    this->Stop();
+  }
+
+  void Stop() override {
+    SignalQueuesForKill();
+    gpu_normal_workers_.Clear();
+    gpu_copy_workers_.Clear();
+    cpu_normal_workers_.Clear();
+    cpu_priority_worker_.reset(nullptr);
+  }
+
+  void Start() override {
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     // create CPU task
@@ -60,13 +92,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           this->CPUWorker(Context(), cpu_priority_worker_.get());
         }));
     // GPU tasks will be created lazily
-  }
-  ~ThreadedEnginePerDevice() noexcept(false) {
-    SignalQueuesForKill();
-    gpu_normal_workers_.Clear();
-    gpu_copy_workers_.Clear();
-    cpu_normal_workers_.Clear();
-    cpu_priority_worker_.reset(nullptr);
   }
 
  protected:
@@ -113,8 +138,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         if (is_copy) {
           auto ptr =
           gpu_copy_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
-            OpenMP::Get()->set_enabled(false);
+            // Signify to kernel that GPU is being used, so reserve cores as necessary
+            OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
             auto blk = new ThreadWorkerBlock<kCopyQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -133,8 +158,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           }
         } else {
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-            // Signify to kernel that GPU is being used,  no Kernel Launch OMP (temporary behavior)
-            OpenMP::Get()->set_enabled(false);
+            // Signify to kernel that GPU is being used, so reserve cores as necessary
+            OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
               blk->pool.reset(new ThreadPool(
                 nthread,
@@ -232,6 +257,27 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
+  }
+
+  /*!
+   * \brief Get number of cores this engine should reserve for its own use
+   * \param using_gpu Whether there is GPU usage
+   * \return number of cores that this engine wishes to be reserved
+   * \note Testing found no degradation of performance using these values
+   *       running cifar10 with resnet50 on various GPU systems,
+   *       including AWS p2.16xlarge, which has 16 GPU's
+   */
+  int GetReserveCoreCount(const bool using_gpu) const {
+    int reserve = 0;
+    if (using_gpu) {
+      // Save at least one for GPU tasks
+      ++reserve;
+      // If we have 8 or more real cores, reserve another core for GPU tasks
+      if (OpenMP::Get()->GetRecommendedOMPThreadCount(true) >= 8) {
+        ++reserve;
+      }
+    }
+    return reserve;
   }
 
   /*! \brief Signal a single queue for shutdown */

@@ -70,6 +70,63 @@ def test_module_input_grads():
     assert np.all(c_grad == 3), c_grad
 
 
+def test_module_ctx_group():
+    with mx.AttrScope(ctx_group='dev1'):
+        a = mx.symbol.Variable('a')
+        a = a * 2
+    with mx.AttrScope(ctx_group='dev2'):
+        b = mx.symbol.Variable('b')
+        c = a + b
+    shape = (2, 5)
+    mod1 = mx.mod.Module(c, context=[mx.cpu(0)], data_names=['a', 'b'], label_names=None,
+                         group2ctxs=[{'dev1':mx.cpu(1),'dev2':mx.cpu(2)}])
+    mod1.bind(data_shapes=[['a', shape], ['b', shape]], inputs_need_grad=True)
+    mod1.init_params()
+    mod1.forward(data_batch=mx.io.DataBatch(data=[mx.nd.ones(shape), mx.nd.ones(shape)]), is_train=True)
+    mod1.backward([mx.nd.ones(shape)])
+    mod1_input_grads = mod1.get_input_grads()
+
+    mod2 = mx.mod.Module(c, data_names=['a', 'b'], label_names=None)
+    mod2.bind(data_shapes=[['a', shape], ['b', shape]], inputs_need_grad=True)
+    mod2.init_params()
+    mod2.forward(data_batch=mx.io.DataBatch(data=[mx.nd.ones(shape), mx.nd.ones(shape)]), is_train=True)
+    mod2.backward([mx.nd.ones(shape)])
+    mod2_input_grads = mod2.get_input_grads()
+
+    assert np.all(mod1_input_grads[0].asnumpy() == mod2_input_grads[0].asnumpy())
+    assert np.all(mod1_input_grads[1].asnumpy() == mod2_input_grads[1].asnumpy())
+
+
+def test_bucket_module_ctx_group():
+    num_hidden = 10
+    batch_size = 5
+    def sym_gen(seq_len):
+        with mx.AttrScope(ctx_group='dev1'):
+            data = mx.symbol.Variable('data')
+            weight = mx.symbol.Variable('dev1_weight')
+            bias = mx.symbol.Variable('dev1_bias')
+            fc = data
+            for i in range(seq_len):
+                fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
+                                               name='dev1_fc_%d' % i, num_hidden=num_hidden)
+        with mx.AttrScope(ctx_group='dev2'):
+            label = mx.symbol.Variable('label')
+            weight = mx.symbol.Variable('dev2_weight')
+            bias = mx.symbol.Variable('dev2_bias')
+            for i in range(seq_len):
+                fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
+                                               name='dev2_fc_%d' % i, num_hidden=num_hidden)
+            sym = mx.symbol.SoftmaxOutput(fc, label, name='softmax')
+        
+        return sym, ('data',), ('label',)
+
+    mod = mx.mod.BucketingModule(sym_gen=sym_gen, default_bucket_key=10, context=[mx.cpu(0)],
+                                 group2ctxs=[{'dev1':mx.cpu(1), 'dev2':mx.cpu(2)}])
+    mod.bind(data_shapes=[['data', (batch_size, num_hidden)]],
+             label_shapes=[['label', (batch_size,)]],
+             for_training=True, inputs_need_grad=True)
+    assert(mod.binded)
+
 def test_module_layout():
     sym = mx.sym.Variable('data')
     sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
@@ -349,14 +406,20 @@ def test_monitor():
     assert(mon_result_counts == [2, 2, 1, 6, 6, 4])
 
 def test_executor_group():
-    def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len):
+    def get_rnn_sym(num_layers, num_words, num_hidden, num_embed, seq_len, sparse_embedding):
         stack = mx.rnn.SequentialRNNCell()
         for i in range(num_layers):
             stack.add(mx.rnn.LSTMCell(num_hidden=num_hidden, prefix='lstm_l%d_' % i))
         data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
-        embed = mx.sym.Embedding(data=data, input_dim=num_words,
-                                 output_dim=num_embed, name='embed')
+        if sparse_embedding:
+            embed_weight = mx.sym.Variable('embed_weight', stype='row_sparse')
+            embed = mx.sym.contrib.SparseEmbedding(data=data, input_dim=num_words,
+                                                   weight=embed_weight, output_dim=num_embed,
+                                                   name='embed')
+        else:
+            embed = mx.sym.Embedding(data=data, input_dim=num_words,
+                                     output_dim=num_embed, name='embed')
 
         stack.reset()
         outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
@@ -368,7 +431,8 @@ def test_executor_group():
         pred = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
         return pred
 
-    def test_shared_exec_group(exec_grp_shared, exec_grp_created, shared_arg_names=None, extra_args=None):
+    def test_shared_exec_group(exec_grp_shared, exec_grp_created, shared_arg_names=None,
+                               extra_args=None, check_shared_grad=True):
         # Test shared data arrays
         for i in range(len(exec_grp_shared.execs)):
             # test same shared_data_arrays for two exec groups
@@ -404,18 +468,57 @@ def test_executor_group():
                     assert mx.test_utils.same_array(exec_shared.arg_dict[arg_name], exec_created.arg_dict[arg_name]), \
                         "Shared argument '%s' does not share memory." % (arg_name)
                 # test shared argument gradients
-                for arg_name in shared_arg_names:
-                    assert arg_name in exec_created.grad_dict, \
-                        "Shared argument gradient '%s' is not in " \
-                        "grad_dict of created executor group." % (arg_name)
-                    assert mx.test_utils.same_array(exec_shared.grad_dict[arg_name], exec_created.grad_dict[arg_name]), \
-                        "Shared argument gradient '%s' does not sharing memory." % (arg_name)
+                if check_shared_grad:
+                    for arg_name in shared_arg_names:
+                        assert arg_name in exec_created.grad_dict, \
+                            "Shared argument gradient '%s' is not in " \
+                            "grad_dict of created executor group." % (arg_name)
+                        assert mx.test_utils.same_array(exec_shared.grad_dict[arg_name], \
+                                                        exec_created.grad_dict[arg_name]), \
+                            "Shared argument gradient '%s' does not share memory." % (arg_name)
 
             for arg_name, grad in exec_grp_shared.grad_req.items():
                 assert grad == exec_grp_created.grad_req[arg_name], \
                     "Gradient requirements for shared argument '%s' are inconsistent. " \
                     "Shared executor group requires '%s' while created executor group requires '%s'" \
                     %(arg_name, grad, exec_grp_created.grad_req[arg_name])
+
+    def check_shared_exec_group(sparse_embedding):
+        # generate an rnn sym with #layers=5
+        sym = get_rnn_sym(num_layers=3, num_words=num_words, num_hidden=num_hidden,
+                          num_embed=num_embed, seq_len=max_bucket_size,
+                          sparse_embedding=sparse_embedding)
+        arg_names1 = sym.list_arguments()
+        input_names = [name[0] for name in data_shapes] + [name[0] for name in label_shapes]
+        shared_arg_names = [name for name in arg_names1 if name not in input_names]
+        exec_group1 = DataParallelExecutorGroup(symbol=sym, contexts=contexts,
+                                                workload=workload, data_shapes=data_shapes,
+                                                label_shapes=label_shapes, param_names=shared_arg_names,
+                                                for_training=True, inputs_need_grad=False)
+
+        # shared_data_arrays should only have input "data" and "softmax_label" arrays
+        for i in range(len(contexts)):
+            assert len(exec_group1.shared_data_arrays[i]) == len(input_names),\
+                "exec_group1.shared_data_arrays[%d] should have the same number of names as in input_names" % i
+            for name in input_names:
+                assert name in exec_group1.shared_data_arrays[i],\
+                    "arg %s should be in exec_group1.shared_data_arrays[%d]" % (name, i)
+
+        # generate an rnn sym with #layers=5
+        sym = get_rnn_sym(num_layers=5, num_words=num_words, num_hidden=num_hidden,
+                          num_embed=num_embed, seq_len=max_bucket_size,
+                          sparse_embedding=sparse_embedding)
+        arg_names2 = sym.list_arguments()
+        exec_group2 = DataParallelExecutorGroup(symbol=sym, contexts=contexts,
+                                                workload=workload, data_shapes=data_shapes,
+                                                label_shapes=label_shapes, param_names=shared_arg_names,
+                                                for_training=True, inputs_need_grad=False,
+                                                shared_group=exec_group1)
+        extra_args = [name for name in arg_names2 if name not in shared_arg_names]
+        check_shared_grad = not sparse_embedding
+        test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
+                               shared_arg_names=shared_arg_names, extra_args=extra_args,
+                               check_shared_grad=check_shared_grad)
 
     contexts = [mx.cpu(0), mx.cpu(1)]
     workload = [1] * len(contexts)
@@ -426,38 +529,9 @@ def test_executor_group():
     num_embed = 200
     data_shapes = [('data', (batch_size, max_bucket_size))]
     label_shapes = [('softmax_label', (batch_size, max_bucket_size))]
-
-    # generate an rnn sym with #layers=5
-    sym = get_rnn_sym(num_layers=3, num_words=num_words, num_hidden=num_hidden,
-                      num_embed=num_embed, seq_len=max_bucket_size)
-    arg_names1 = sym.list_arguments()
-    input_names = [name[0] for name in data_shapes] + [name[0] for name in label_shapes]
-    shared_arg_names = [name for name in arg_names1 if name not in input_names]
-    exec_group1 = DataParallelExecutorGroup(symbol=sym, contexts=contexts,
-                                            workload=workload, data_shapes=data_shapes,
-                                            label_shapes=label_shapes, param_names=shared_arg_names,
-                                            for_training=True, inputs_need_grad=False)
-
-    # shared_data_arrays should only have input "data" and "softmax_label" arrays
-    for i in range(len(contexts)):
-        assert len(exec_group1.shared_data_arrays[i]) == len(input_names),\
-            "exec_group1.shared_data_arrays[%d] should have the same number of names as in input_names" % i
-        for name in input_names:
-            assert name in exec_group1.shared_data_arrays[i],\
-                "arg %s should be in exec_group1.shared_data_arrays[%d]" % (name, i)
-
-    # generate an rnn sym with #layers=5
-    sym = get_rnn_sym(num_layers=5, num_words=num_words, num_hidden=num_hidden,
-                      num_embed=num_embed, seq_len=max_bucket_size)
-    arg_names2 = sym.list_arguments()
-    exec_group2 = DataParallelExecutorGroup(symbol=sym, contexts=contexts,
-                                            workload=workload, data_shapes=data_shapes,
-                                            label_shapes=label_shapes, param_names=shared_arg_names,
-                                            for_training=True, inputs_need_grad=False,
-                                            shared_group=exec_group1)
-    extra_args = [name for name in arg_names2 if name not in shared_arg_names]
-    test_shared_exec_group(exec_grp_shared=exec_group1, exec_grp_created=exec_group2,
-                           shared_arg_names=shared_arg_names, extra_args=extra_args)
+    sparse_embedding_opt = [True, False]
+    for opt in sparse_embedding_opt:
+        check_shared_exec_group(opt)
 
 
 def test_factorization_machine_module(verbose=False):

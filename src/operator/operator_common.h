@@ -129,7 +129,7 @@ inline std::string shape_string(const TShape& x) {
   return os.str();
 }
 
-/*! \brief get string representation of shape */
+/*! \brief get string representation of data type */
 inline std::string type_string(const int& x) {
   switch (x) {
     case mshadow::kFloat32:
@@ -138,10 +138,14 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kInt8:
+      return "int8";
     case mshadow::kUint8:
       return "uint8";
     case mshadow::kInt32:
       return "int32";
+    case mshadow::kInt64:
+      return "int64";
   }
   return "unknown";
 }

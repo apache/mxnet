@@ -23,8 +23,8 @@ from __future__ import absolute_import
 import ctypes
 import sys
 from .base import _LIB
-from .base import c_array, py_str, build_param_doc as _build_param_doc
-from .base import mx_uint, mx_float, NDArrayHandle, FunctionHandle
+from .base import c_array, c_str_array, c_handle_array, py_str, build_param_doc as _build_param_doc
+from .base import mx_uint, mx_float, FunctionHandle
 from .base import check_call
 from .ndarray import NDArray, _new_empty_handle
 
@@ -144,12 +144,12 @@ def _make_torch_function(handle):
 
         check_call(_LIB.MXFuncInvokeEx( \
                    handle, \
-                   c_array(NDArrayHandle, [x.handle for x in ndargs[n_mutate_vars:]]), \
+                   c_handle_array(ndargs[n_mutate_vars:]), \
                    c_array(mx_float, []), \
-                   c_array(NDArrayHandle, [x.handle for x in ndargs[:n_mutate_vars]]),
+                   c_handle_array(ndargs[:n_mutate_vars]),
                    ctypes.c_int(len(kwargs)),
-                   c_array(ctypes.c_char_p, kwargs.keys()),
-                   c_array(ctypes.c_char_p, kwargs.values()),))
+                   c_str_array(kwargs.keys()),
+                   c_str_array(kwargs.values())))
         if n_mutate_vars == 1:
             return ndargs[0]
         else:
