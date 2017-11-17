@@ -1273,7 +1273,7 @@ def test_broadcast_binary_op():
         is no gradient definition at those sigularities."""
         x_max = np.max(x)
         y = x_max + 2 * delta + np.random.random(y.shape)
-        check_numeric_gradient(test_sym, [x, y], rtol=rtol, atol=atol)
+        check_numeric_gradient(test_sym, [x, y], numeric_eps=delta, rtol=rtol, atol=atol)
 
         x_min = np.min(x)
         y = x_min - 2 * delta - np.random.random(y.shape)
