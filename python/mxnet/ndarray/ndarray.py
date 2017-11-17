@@ -27,13 +27,14 @@ try:
 except ImportError:
     from builtins import slice as py_slice
 
+from array import array as native_array
 import ctypes
 import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
-from ..base import c_array, mx_real_t
+from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..base import ctypes2buffer
 from ..context import Context
@@ -129,11 +130,23 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(
-        c_array(mx_uint, shape),
+        c_array_buf(mx_uint, native_array('I', shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
+        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.byref(hdl)))
+    return hdl
+
+
+def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
+    hdl = NDArrayHandle()
+    check_call(_LIB.MXNDArrayCreateFromSharedMem(
+        ctypes.c_int(shared_pid),
+        ctypes.c_int(shared_id),
+        c_array(mx_uint, shape),
+        mx_uint(len(shape)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         ctypes.byref(hdl)))
     return hdl
@@ -172,6 +185,13 @@ fixed-size items.
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
+
+    def _to_shared_mem(self):
+        shared_pid = ctypes.c_int()
+        shared_id = ctypes.c_int()
+        check_call(_LIB.MXNDArrayGetSharedMemHandle(
+            self.handle, ctypes.byref(shared_pid), ctypes.byref(shared_id)))
+        return shared_pid.value, shared_id.value, self.shape, self.dtype
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
@@ -939,7 +959,7 @@ fixed-size items.
         # Actual reshape
         check_call(_LIB.MXNDArrayReshape(self.handle,
                                          len(shape),
-                                         c_array(ctypes.c_int, shape),
+                                         c_array_buf(ctypes.c_int, native_array('i', shape)),
                                          ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
@@ -1957,7 +1977,7 @@ fixed-size items.
             ograd_handles = [out_grad.handle]
 
         check_call(_LIB.MXAutogradBackwardEx(
-            1, c_array(NDArrayHandle, [self.handle]),
+            1, c_handle_array([self]),
             c_array(NDArrayHandle, ograd_handles),
             0,
             ctypes.c_void_p(0),

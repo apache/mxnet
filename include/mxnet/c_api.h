@@ -146,7 +146,9 @@ enum CustomOpPropCallbacks {
   kCustomOpPropInferShape,
   kCustomOpPropDeclareBackwardDependency,
   kCustomOpPropCreateOperator,
-  kCustomOpPropInferType
+  kCustomOpPropInferType,
+  kCustomOpPropInferStorageType,
+  kCustomOpPropBackwardInferStorageType
 };
 
 
@@ -158,6 +160,10 @@ typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
                                       unsigned** /*shapes*/, void* /*state*/);
 typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*state*/);
+typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
+typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
+                                                    int * /*stypes*/,
+                                                    void * /*state*/);
 typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
                                   const int* /*out_data*/, int* /*num_deps*/,
                                   int** /*rdeps*/, void* /*state*/);
@@ -2007,6 +2013,26 @@ MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** ar
                                   mx_uint grid_dim_z, mx_uint block_dim_x,
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
+/*!
+ * \brief Get shared memory handle from NDArray
+ * \param handle NDArray handle.
+ * \param shared_pid output PID
+ * \param shared_id output shared memory id.
+ */
+MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
+                                          int* shared_id);
+/*!
+ * \brief Reconstruct NDArray from shared memory handle
+ * \param shared_pid shared PID
+ * \param shared_id shared memory id
+ * \param shape pointer to NDArray dimensions
+ * \param ndim number of NDArray dimensions
+ * \param dtype data type of NDArray
+ * \param out constructed NDArray
+ */
+MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                           mx_uint ndim, int dtype, NDArrayHandle *out);
+
 
 #ifdef __cplusplus
 }
