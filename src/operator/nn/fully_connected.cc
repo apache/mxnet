@@ -226,6 +226,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .add_arguments(FullyConnectedParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_FullyConnected)
+.set_num_inputs(3)
 .set_num_outputs([](const NodeAttrs& attrs) {
   const FullyConnectedParam& params = nnvm::get<FullyConnectedParam>(attrs.parsed);
   return params.no_bias ? 2 : 3;
