@@ -85,6 +85,10 @@ struct data_type_enum<uint8_t> {
     enum { type = mkldnn::memory::data_type::u8 };
 };
 
+static inline bool SupportMKLDNN(int dtype) {
+  return dtype == mshadow::kFloat32;
+}
+
 static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   switch(dtype) {
     case mshadow::kFloat32:
