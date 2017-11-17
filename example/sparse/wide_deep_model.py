@@ -54,5 +54,4 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
     deep_out = mx.symbol.FullyConnected(data=hidden, num_hidden=2)
 
     out = mx.symbol.SoftmaxOutput(linear_out + deep_out, label, name='model')
-    
     return out
