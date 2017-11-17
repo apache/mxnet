@@ -145,8 +145,14 @@ class OperatorRunner {
     std::stringstream ss;
     ss << "Timing: " << COUNT << " iterations of " << count << " calls";
     if (timing_shapes[0].ndim()) {
-      // TODO(cjolivier01): Print all shapes (if they differ)
-      ss << ", shape = " << timing_shapes[0] << std::endl << std::flush;
+      ss << ", shape = ";
+      for (size_t i = 0, n = timing_shapes.size(); i < n; ++i) {
+        if (i) {
+          ss << ", ";
+        }
+        ss << timing_shapes[i];
+      }
+      ss << std::endl << std::flush;
     }
     std::cout << ss.str();
 
