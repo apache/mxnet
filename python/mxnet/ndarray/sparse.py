@@ -49,7 +49,6 @@ except ImportError:
     pass
 from ._internal import _set_ndarray_class
 from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .mkldnn import MKLNDArray
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR, _STORAGE_TYPE_MKLDNN
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
@@ -1140,7 +1139,7 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
     if stype == _STORAGE_TYPE_DEFAULT:
         return NDArray(handle, writable=writable)
     elif stype == _STORAGE_TYPE_MKLDNN:
-        return MKLNDArray(handle, writable=False)
+        return NDArray(handle, writable=writable)
     elif stype == _STORAGE_TYPE_CSR:
         return CSRNDArray(handle, writable=writable)
     elif stype == _STORAGE_TYPE_ROW_SPARSE:
