@@ -90,9 +90,9 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   const TShape& ishape = in_data[fullc::kData].shape();
   NDArray weight = in_data[fullc::kWeight];
   NDArray data = in_data[fullc::kData];
-  if (data.shape().ndim() > 2 && !param.flatten)
+  if (data.shape().ndim() != 2 && !param.flatten)
     data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]));
-  else if (data.shape().ndim() > 2)
+  else if (data.shape().ndim() != 2)
     data = data.Reshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
 
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
@@ -123,14 +123,14 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
   NDArray weight = inputs[fullc::kWeight + 1];
   NDArray data = inputs[fullc::kData + 1];
-  if (data.shape().ndim() > 2 && !param.flatten)
+  if (data.shape().ndim() != 2 && !param.flatten)
     data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]));
-  else if (data.shape().ndim() > 2)
+  else if (data.shape().ndim() != 2)
     data = data.Reshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
   NDArray out_grad = inputs[fullc::kOut];
-  if (out_grad.shape().ndim() > 2 && !param.flatten)
+  if (out_grad.shape().ndim() != 2 && !param.flatten)
     out_grad = out_grad.Reshape(Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]));
-  else if (out_grad.shape().ndim() > 2)
+  else if (out_grad.shape().ndim() != 2)
     out_grad = out_grad.Reshape(Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())));
 
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
