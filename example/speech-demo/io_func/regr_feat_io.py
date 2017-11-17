@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import os
 import sys
 import random
@@ -36,7 +53,7 @@ class RegrDataReadStream(object):
     def make_shared(self):
         self.input.make_shared()
         self.output.make_shared()
-        
+
     def get_shared(self):
         iret = self.input.get_shared()
         oret = self.output.get_shared()
@@ -56,13 +73,13 @@ class RegrDataReadStream(object):
 
     def load_next_block(self):
         a = self.input.load_next_block()
-        b = self.output.load_next_block()        
+        b = self.output.load_next_block()
         assert(a == b)
         return a
 
     def get_state(self):
         a = self.input.get_state()
-        b = self.output.get_state()   
+        b = self.output.get_state()
         assert(a[0] == b[0])
         assert(a[2] == b[2])
         assert(a[3] == b[3])
@@ -72,4 +89,4 @@ class RegrDataReadStream(object):
 
     def set_state(self, state):
         self.input.set_state(state)
-        self.output.set_state(state)        
+        self.output.set_state(state)

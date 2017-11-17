@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint:skip-file
 import mxnet as mx
 import numpy as np
@@ -17,7 +34,7 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0., nu
     """LSTM Cell symbol"""
     if dropout > 0.:
         indata = mx.sym.Dropout(data=indata, p=dropout)
-    
+
     i2h = mx.sym.FullyConnected(data=indata,
                                 weight=param.i2h_weight,
                                 bias=param.i2h_bias,
@@ -115,7 +132,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
     pred = mx.sym.Reshape(pred, shape=(-1, num_label))
     label = mx.sym.Reshape(label, shape=(-1,))
     if take_softmax:
-        sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0, 
+        sm = mx.sym.SoftmaxOutput(data=pred, label=label, ignore_label=0,
                                   use_ignore=True, name='softmax')
     else:
         sm = pred

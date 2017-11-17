@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import mxnet as mx
 import numpy as np
@@ -76,7 +93,7 @@ def train():
 
     if args.kv_store == 'dist_sync':
         epoch_size /= kv.num_workers
-    
+
     # disable kvstore for single device
     if 'local' in kv.type and (
             args.gpus is None or len(args.gpus.split(',')) is 1):
@@ -164,7 +181,7 @@ def train():
                 print('h', h[0].asnumpy())
                 err += (adv**2).mean()
                 score += r[i]
-                final_score *= (1-D[i]) 
+                final_score *= (1-D[i])
                 final_score += score * D[i]
                 score *= 1-D[i]
                 T += D[i].sum()

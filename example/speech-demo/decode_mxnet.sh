@@ -1,14 +1,32 @@
 #!/bin/bash
 
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+
 # Copyright 2012-2013 Karel Vesely, Daniel Povey
 # 	    2015 Yu Zhang
 # Apache 2.0
 
-# Begin configuration section.  
+# Begin configuration section.
 nnet= # Optionally pre-select network to use for getting state-likelihoods
 feature_transform= # Optionally pre-select feature transform (in front of nnet)
 model= # Optionally pre-select transition model
-class_frame_counts= # Optionally pre-select class-counts used to compute PDF priors 
+class_frame_counts= # Optionally pre-select class-counts used to compute PDF priors
 
 stage=0 # stage=1 skips lattice generation
 nj=4
@@ -44,7 +62,7 @@ mkdir -p $dir/log
 echo $nj > $dir/num_jobs
 
 if [ -z "$model" ]; then # if --model <mdl> was not specified on the command line...
-  if [ -z $iter ]; then model=$srcdir/final.mdl; 
+  if [ -z $iter ]; then model=$srcdir/final.mdl;
   else model=$srcdir/$iter.mdl; fi
 fi
 

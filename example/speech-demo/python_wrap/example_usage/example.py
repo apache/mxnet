@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 from __future__ import print_function
 import ctypes
 import numpy
@@ -53,7 +70,7 @@ if __name__ == "__main__":
     print("-------- Kaldi SBFMReader and MatrixF class example --------")
 
     reader = kaldi.SBFMReader_new_char("scp:data.scp")
-    
+
     # data.scp has exactly one utterance, assert it's there
     assert(not kaldi.SBFMReader_Done(reader))
 
@@ -63,7 +80,7 @@ if __name__ == "__main__":
     feat_rows = kaldi.MatrixF_NumRows(feat_value)
     feat_cols = kaldi.MatrixF_NumCols(feat_value)
     feat_data = kaldi.MatrixF_Data(feat_value)
-    
+
     # never use numpy.ndarray(buf=) or numpy.ctypeslib.as_array
     # because you don't know if Python or C owns buffer
     # (even if you numpy.copy() resulting array)

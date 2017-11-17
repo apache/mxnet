@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 from __future__ import print_function
@@ -58,7 +75,7 @@ def default_gen_buckets(sentences, batch_size, the_vocab):
 
     tl = 0
     buckets = []
-    for l, n in len_dict.items(): # TODO: There are better heuristic ways to do this    
+    for l, n in len_dict.items(): # TODO: There are better heuristic ways to do this
         if n + tl >= batch_size:
             buckets.append(l)
             tl = 0
@@ -210,7 +227,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 self.data_buffer.append(data)
 
         if self.model_parallel:
-            # Transpose data if model parallel 
+            # Transpose data if model parallel
             for i in range(len(self.data)):
                 bucket_data = self.data[i]
                 self.data[i] = np.transpose(bucket_data)
@@ -222,8 +239,8 @@ class BucketSentenceIter(mx.io.DataIter):
             i_idx = self.bucket_curr_idx[i_bucket]
             idx = self.bucket_idx_all[i_bucket][i_idx:i_idx+self.batch_size]
             self.bucket_curr_idx[i_bucket] += self.batch_size
-            
-            # Model parallelism 
+
+            # Model parallelism
             if self.model_parallel:
                 if self.data[i_bucket][:, idx].shape[1] == 0:
                     print("WARNING: detected shape " + str(self.data[i_bucket][:, idx].shape))
@@ -231,7 +248,7 @@ class BucketSentenceIter(mx.io.DataIter):
                 data[:] = self.data[i_bucket][:, idx]
                 data_batch = ModelParallelBatch(data, self.buckets[i_bucket])
                 yield data_batch
-            
+
             # Data parallelism
             else:
                 init_state_names = [x[0] for x in self.init_states]
@@ -239,7 +256,7 @@ class BucketSentenceIter(mx.io.DataIter):
 
                 for sentence in data:
                     assert len(sentence) == self.buckets[i_bucket]
-                
+
                 label = self.label_buffer[i_bucket]
                 label[:, :-1] = data[:, 1:]
                 label[:, -1] = 0
