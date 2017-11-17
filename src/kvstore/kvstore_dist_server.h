@@ -40,7 +40,7 @@ namespace mxnet {
 namespace kvstore {
 
 enum class CommandType {
-  kStopServer, kSyncMode, kSetGradientCompression
+  kController, kStopServer, kSyncMode, kSetGradientCompression
 };
 
 enum class DataHandleType {
@@ -159,6 +159,7 @@ class KVStoreDistServer {
     } else if (recved_type == CommandType::kSetGradientCompression) {
       gradient_compression_->DecodeParams(recved.body);
     } else {
+      // this uses value 0 for message id from frontend
       // let the main thread to execute ctrl, which is necessary for python
       exec_.Exec([this, recved]() {
           CHECK(controller_);

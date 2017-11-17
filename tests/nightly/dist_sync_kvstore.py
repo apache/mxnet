@@ -278,7 +278,7 @@ def test_sync_push_pull():
                 decompr *= nworker * rate
                 assert_almost_equal(diff.asnumpy(), decompr)
 
-    print ('worker '+str(my_rank)+' started')
+    print ('worker '+str(my_rank)+' started with non compression tests')
     check_default_keys(kv, my_rank, nworker)
     check_row_sparse_keys(kv, my_rank, nworker)
     check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
@@ -286,6 +286,7 @@ def test_sync_push_pull():
     print('worker ' + str(my_rank) + ' is done with non compression tests')
 
     # don't run non compressed keys after this as kvstore now is set to compressed
+    print ('worker '+str(my_rank)+' started with compression tests')
     kv, threshold = init_kv_compressed(kv)
     check_compr_pull_before_push(kv)
     check_compr_zero(kv)
