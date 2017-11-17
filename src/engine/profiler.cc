@@ -31,7 +31,9 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <thread>
 #include "./profiler.h"
+#include "../common/cuda_utils.h"
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #include <Windows.h>
@@ -45,12 +47,11 @@ Profiler::Profiler()
   : state_(kNotRunning), enable_output_(false), filename_("profile.json") {
   this->init_time_ = NowInUsec();
 
-  // TODO(ziheng) get device number during execution
-  int kMaxNumCpus = 64;
-  this->cpu_num_ = kMaxNumCpus;
+  this->cpu_num_ = std::thread::hardware_concurrency();
 #if MXNET_USE_CUDA
-  int kMaxNumGpus = 32;
-  this->gpu_num_ = kMaxNumGpus;
+  int gpu_num = 0;
+  CUDA_CALL(cudaGetDeviceCount(&gpu_num));
+  this->gpu_num_ = (unsigned int)gpu_num;
 #else
   this->gpu_num_ = 0;
 #endif
