@@ -105,7 +105,12 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
-    size = len(grad_arrays)
+    valid_indices = [index for index, grad_list in
+                     enumerate(grad_arrays) if grad_list[0] is not None]
+    valid_grad_arrays = [grad_arrays[i] for i in valid_indices]
+    valid_param_arrays = [param_arrays[i] for i in valid_indices]
+    valid_param_names = [param_names[i] for i in valid_indices]
+    size = len(valid_grad_arrays)
     start = 0
     # Use aggregation by default only with NCCL
     default_batch = 16 if 'nccl' in kvstore.type else 1
@@ -113,9 +118,9 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     while start < size:
         end = start + batch if start + batch < size else size
         # push gradient, priority is negative index
-        kvstore.push(param_names[start:end], grad_arrays[start:end], priority=-start)
+        kvstore.push(valid_param_names[start:end], valid_grad_arrays[start:end], priority=-start)
         # pull back the weights
-        kvstore.pull(param_names[start:end], param_arrays[start:end], priority=-start)
+        kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
         start = end
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
