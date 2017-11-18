@@ -22,6 +22,8 @@ import mxnet as mx
 import numpy as np
 from get_data import get_movielens_iter, get_movielens_data
 from matrix_fact_model import matrix_fact_net
+
+
 logging.basicConfig(level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="Run matrix factorization with sparse embedding",
@@ -36,6 +38,8 @@ parser.add_argument('--factor-size', type=int, default=128,
                     help="the factor size of the embedding operation")
 parser.add_argument('--use-dense', action='store_true',
                     help="use the dense embedding operator")
+parser.add_argument('--use-gpu', action='store_true',
+                    help="use gpu")
 parser.add_argument('--dummy-iter', action='store_true',
                     help="use the dummy data iterator for speed test")
 
@@ -63,7 +67,7 @@ if __name__ == '__main__':
     print_every = args.print_every
 
     momentum = 0.9
-    ctx = mx.cpu(0)
+    ctx = mx.gpu(0) if args.use_gpu else mx.cpu(0)
     learning_rate = 0.1
 
     # prepare dataset and iterators
@@ -75,7 +79,6 @@ if __name__ == '__main__':
 
     # construct the model
     net = matrix_fact_net(factor_size, factor_size, max_user, max_movies, sparse_embed=use_sparse)
-    a = time.time()
 
     # initialize the module
     mod = mx.module.Module(symbol=net, context=ctx, data_names=['user', 'item'],

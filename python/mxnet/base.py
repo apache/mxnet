@@ -145,6 +145,7 @@ def check_call(ret):
     if ret != 0:
         raise MXNetError(py_str(_LIB.MXGetLastError()))
 
+
 if sys.version_info[0] < 3:
     def c_str(string):
         """Create ctypes char * from a Python string.
@@ -166,6 +167,24 @@ if sys.version_info[0] < 3:
         Hello, World
         """
         return ctypes.c_char_p(string)
+
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of string
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = strings
+        return arr
+
 else:
     def c_str(string):
         """Create ctypes char * from a Python string.
@@ -183,11 +202,27 @@ else:
         Examples
         --------
         >>> x = mx.base.c_str("Hello, World")
-        >>> print x.value
-        Hello, World
+        >>> print(x.value)
+        b"Hello, World"
         """
         return ctypes.c_char_p(string.encode('utf-8'))
 
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of string
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = [s.encode('utf-8') for s in strings]
+        return arr
 
 def c_array(ctype, values):
     """Create ctypes array from a Python array.
@@ -213,7 +248,55 @@ def c_array(ctype, values):
     >>> x[1]
     2.0
     """
-    return (ctype * len(values))(*values)
+    out = (ctype * len(values))()
+    out[:] = values
+    return out
+
+
+def c_array_buf(ctype, buf):
+    """Create ctypes array from a Python buffer.
+    For primitive types, using the buffer created with array.array is faster
+    than a c_array call.
+
+    Parameters
+    ----------
+    ctype : ctypes data type
+        Data type of the array we want to convert to, such as mx_float.
+
+    buf : buffer type
+        Data content.
+
+    Returns
+    -------
+    out : ctypes array
+        Created ctypes array.
+
+    Examples
+    --------
+    >>> x = mx.base.c_array_buf(mx.base.mx_float, array.array('i', [1, 2, 3]))
+    >>> print len(x)
+    3
+    >>> x[1]
+    2.0
+    """
+    return (ctype * len(buf)).from_buffer(buf)
+
+def c_handle_array(objs):
+    """Create ctypes const void ** from a list of MXNet objects with handles.
+
+    Parameters
+    ----------
+    objs : list of NDArray/Symbol.
+        MXNet objects.
+
+    Returns
+    -------
+    (ctypes.c_void_p * len(objs))
+        A void ** pointer that can be passed to C API.
+    """
+    arr = (ctypes.c_void_p * len(objs))()
+    arr[:] = [o.handle for o in objs]
+    return arr
 
 def ctypes2buffer(cptr, length):
     """Convert ctypes pointer to buffer type.

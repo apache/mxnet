@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <utility>
 #include <type_traits>
+#include "./init_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -535,11 +536,14 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
                              TBlob* ret) {
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
-  if (!lhs.storage_initialized()) return;
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (!lhs.storage_initialized()) {
+    Fill(s, *ret, req, 0);
+    return;
+  }
 
   using nnvm::dim_t;
 
-  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -586,13 +590,16 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
   if (kNullOp == req) return;
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
-  if (!lhs.storage_initialized()) return;
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (!lhs.storage_initialized()) {
+    FillZerosRspImpl(s, *ret);
+    return;
+  }
   CHECK_EQ(req, kWriteTo);
 
   using mxnet_op::set_zero;
   using nnvm::dim_t;
 
-  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -621,8 +628,11 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
                 seg_len, lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
             dim_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
+            if (0 == nnr) {
+              FillZerosRspImpl(s, *ret);
+              return;
+            }
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             dim_t idx = 0;
             for (index_t i = 0; i < ret->shape()[0]; ++i) {
@@ -725,13 +735,16 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
   CHECK_EQ(lhs.storage_type(), kCSRStorage);
   CHECK_EQ(rhs.storage_type(), kRowSparseStorage);
   CHECK_EQ(ret->storage_type(), kRowSparseStorage);
-  if (!lhs.storage_initialized() || !rhs.storage_initialized()) return;
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (!lhs.storage_initialized() || !rhs.storage_initialized()) {
+    FillZerosRspImpl(s, *ret);
+    return;
+  }
   CHECK_EQ(req, kWriteTo);
 
   using mxnet_op::set_zero;
   using nnvm::dim_t;
 
-  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
@@ -764,8 +777,11 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
                 ret->shape()[0], ret->shape()[1], seg_len);
             dim_t nnr = 0;
             nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
+            if (0 == nnr) {
+              FillZerosRspImpl(s, *ret);
+              return;
+            }
             ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            if (0 == nnr) return;
             mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
             dim_t idx = 0;
             for (index_t i = 0; i < ret->shape()[0]; ++i) {

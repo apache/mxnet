@@ -53,7 +53,7 @@ OpenMP::OpenMP()
       omp_set_num_threads(omp_thread_max_);
     } else {
       omp_thread_max_ = omp_get_max_threads();
-  }
+    }
   }
   omp_set_nested(dmlc::GetEnv("OMP_NESTED", false));
   omp_set_dynamic(dmlc::GetEnv("OMP_DYNAMIC", false));
