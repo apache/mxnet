@@ -136,7 +136,7 @@ std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
     const std::vector<nnvm::NodeEntry>& ograds) {
   using namespace nnvm;
   static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
-  static const auto _CachedOp_NoGrad = Op::Get("_CachedOp_NoGrad");
+  static const auto _NoGrad = Op::Get("_NoGradient");
 
   auto p = Node::Create();
   p->attrs.op = _backward_CachedOp;
@@ -152,13 +152,12 @@ std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
   const auto& auxs = mutable_input_nodes();
   if (auxs.size()) {
     auto nop = Node::Create();
-    nop->attrs.op = _CachedOp_NoGrad;
-    nop->attrs.parsed = static_cast<uint32_t>(auxs.size());
-    nop->control_deps.push_back(node);
+    nop->attrs.op = _NoGrad;
+    nop->attrs.name = "NoGradient";
     uint32_t j = 0, k = 0;
     for (const auto& i : fwd_graph_.indexed_graph().input_nodes()) {
       if (auxs.count(i)) {
-        ret.emplace_back(NodeEntry{nop, j++, 0});
+        ret.emplace_back(NodeEntry{nop, 0, 0});
       } else {
         ret.emplace_back(NodeEntry{p, k++, 0});
       }
@@ -381,6 +380,7 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
                  mem_plan, arrays, &array_reqs);
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+
   Imperative::Get()->RunGraph(
       false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
       std::move(ref_count), &states, dispatch_modes);
@@ -451,6 +451,7 @@ void Imperative::CachedOp::Backward(
                  mem_plan, arrays, &array_reqs);
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+
   Imperative::Get()->RunGraph(
       retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
       std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
@@ -490,12 +491,5 @@ NNVM_REGISTER_OP(_backward_CachedOp)
   })
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
-
-NNVM_REGISTER_OP(_CachedOp_NoGrad)
-.set_num_inputs(0)
-.set_num_outputs([](const NodeAttrs& attrs) {
-    const uint32_t& nout = nnvm::get<uint32_t>(attrs.parsed);
-    return nout;
-  });
 
 }  // namespace mxnet

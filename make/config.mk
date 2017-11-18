@@ -105,6 +105,12 @@ USE_LAPACK = 1
 # path to lapack library in case of a non-standard installation
 USE_LAPACK_PATH =
 
+# by default, disable lapack when using MKL
+# switch on when there is a full installation of MKL available (not just MKL2017/MKL_ML)
+ifeq ($(USE_BLAS), mkl)
+USE_LAPACK = 0
+endif
+
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
 USE_INTEL_PATH = NONE

@@ -264,7 +264,7 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
       grad.dptr_, static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
       static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.rescale_grad), req[0]);
-  });
+    });
 }
 
 template<int n_in, int n_out, int total_in>
