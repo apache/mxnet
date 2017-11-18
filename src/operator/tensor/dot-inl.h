@@ -580,7 +580,6 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   });
 }
 
-
 /*!
  * \brief CPU Impl of dot(csr.T, dns) = rsp
  */
