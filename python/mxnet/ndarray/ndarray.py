@@ -432,13 +432,14 @@ fixed-size items.
             raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
 
+    # pylint: disable=line-too-long
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
         Returns a sliced view of this array if the elements fetched are contiguous in memory;
         otherwise, returns a newly created NDArray.
         This functions supports advanced indexing defined in the following reference with
         some limitations.
-        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing  # pylint: disable=line-too-long
+        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
         The following features/functionality are not supported for now:
         1. If key is a list type, only a list of integers is supported,
            i.e. key=[1, 2] is okay, while not for key=[[1]].
@@ -489,6 +490,7 @@ fixed-size items.
         else:
             raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
+    # pylint: enable=line-too-long
 
     def _get_index_nd(self, key):
         """Returns an index array for use in scatter_nd and gather_nd."""
