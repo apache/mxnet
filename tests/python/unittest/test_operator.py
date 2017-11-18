@@ -1267,6 +1267,18 @@ def test_binary_op():
 
 
 def test_broadcast_binary_op():
+    def check_bmaxmin_gradient(test_sym, x, y, delta, rtol, atol):
+        """This function ensures that checking the numerical gradient of
+        broadcast_max/min is not crossing the boundary y=x where there
+        is no gradient definition at those sigularities."""
+        x_max = np.max(x)
+        y = x_max + 2 * delta + np.random.random(y.shape)
+        check_numeric_gradient(test_sym, [x, y], numeric_eps=delta, rtol=rtol, atol=atol)
+
+        x_min = np.min(x)
+        y = x_min - 2 * delta - np.random.random(y.shape)
+        check_numeric_gradient(test_sym, [x, y], numeric_eps=delta, rtol=rtol, atol=atol)
+
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
 
@@ -1316,13 +1328,15 @@ def test_broadcast_binary_op():
         c = mx.sym.broadcast_maximum(a, b)
         check_binary_op_forward(c, lambda x, y: np.maximum(x, y), gen_broadcast_data, mx_nd_func=mx.nd.maximum)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
-        check_numeric_gradient(c, gen_broadcast_data(idx=200), rtol=1e-2, atol=1e-3)
+        data = gen_broadcast_data(idx=200)
+        check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
     def test_bmin(a, b):
         c = mx.sym.broadcast_minimum(a, b)
         check_binary_op_forward(c, lambda x, y: np.minimum(x, y), gen_broadcast_data, mx_nd_func=mx.nd.minimum)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
-        check_numeric_gradient(c, gen_broadcast_data(idx=200), rtol=1e-2, atol=1e-3)
+        data = gen_broadcast_data(idx=200)
+        check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
     test_bplus(a, b)
     test_bminus(a, b)
