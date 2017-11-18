@@ -652,31 +652,9 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
 
           if (trans_lhs) {
             mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, cpu>::Launch(s, num_threads,
-<<<<<<< HEAD
               data_out.dptr<DType>(), prefix_sum, row_idx_out, data_l.dptr<DType>(),
               indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
               seg_len, lhs.shape()[0], nnr, ret->shape()[1]);
-=======
-                data_out.dptr<DType>(), row_idx, data_l.dptr<DType>(),
-                indptr_l.dptr<IType>(), col_idx_l.dptr<CType>(), data_r.dptr<DType>(),
-                seg_len, lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
-            dim_t nnr = 0;
-            nnr = mxnet::common::ParallelAccumulate(row_idx, ret->shape()[0], nnr);
-            if (0 == nnr) {
-              FillZerosRspImpl(s, *ret);
-              return;
-            }
-            ret->set_aux_shape(rowsparse::kIdx, mshadow::Shape1(nnr));
-            mshadow::Tensor<cpu, 2, DType> rsp_data = data_out.FlatTo2D<cpu, DType>(s);
-            dim_t idx = 0;
-            for (index_t i = 0; i < ret->shape()[0]; ++i) {
-              if (row_idx[i] > 0) {
-                row_idx[idx] = i;
-                mshadow::Copy(rsp_data[idx], rsp_data[i], s);
-                ++idx;
-              }
-            }
->>>>>>> upstream/master
           } else {
             LOG(FATAL) << "DotCsrDnsRspImpl has not implemented dot(csr, dns)=rsp yet.";
           }
