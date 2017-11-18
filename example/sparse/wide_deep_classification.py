@@ -23,8 +23,7 @@ import argparse
 import os
 
 
-parser = argparse.ArgumentParser(description="Run sparse wide and deep classification " \
-                                             "with distributed kvstore",
+parser = argparse.ArgumentParser(description="Run sparse wide and deep classification ",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-epoch', type=int, default=10,
                     help='number of epochs to train')
