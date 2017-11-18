@@ -33,6 +33,7 @@
 #include <functional>
 #include <condition_variable>
 #include <atomic>
+#include <utility>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -272,6 +273,12 @@ class ThreadedEngine : public Engine {
                  FnProperty prop = FnProperty::kNormal,
                  int priority = 0,
                  const char* opr_name = nullptr) override;
+  void PushSync(SyncFn exec_fn, Context exec_ctx,
+                std::vector<VarHandle> const& const_vars,
+                std::vector<VarHandle> const& mutable_vars,
+                FnProperty prop = FnProperty::kNormal,
+                int priority = 0,
+                const char* opr_name = nullptr) override;
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
@@ -364,7 +371,35 @@ class ThreadedEngine : public Engine {
     }
   }
 
+  int bulk_size() const override {
+    return BulkStatusStore::Get()->bulk_size;
+  }
+
+  int set_bulk_size(int bulk_size) override {
+    BulkStatus& bulk_status = *BulkStatusStore::Get();
+    std::swap(bulk_status.bulk_size, bulk_size);
+    if (bulk_status.count >= bulk_status.bulk_size) BulkFlush();
+    return bulk_size;
+  }
+
  private:
+  /*! \brief structure for holding bulk execution status */
+  struct BulkStatus {
+    /*! \brief maximum number of ops per bulk */
+    int bulk_size = 0;
+    /*! \brief current number of ops in bulk */
+    int count = 0;
+    /*! \brief context of current ops */
+    Context ctx;
+    /*! \brief current op functions */
+    SyncFn fn;
+    /*! \brief constant variables */
+    std::vector<VarHandle> const_vars;
+    /*! \brief mutable variables */
+    std::vector<VarHandle> mutable_vars;
+  };
+  /*! thread local store for bulk */
+  typedef dmlc::ThreadLocalStore<BulkStatus> BulkStatusStore;
   /*!
    * \brief check if thee is duplication in const_vars and mutable_vars.
    * \param const_vars the variables to read from.
@@ -380,6 +415,46 @@ class ThreadedEngine : public Engine {
   inline void OnComplete(ThreadedOpr* threaded_opr);
   // callback to the threaded engine
   static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  /*! \brief append an operator to bulk */
+  inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
+                         std::vector<VarHandle> const& const_vars,
+                         std::vector<VarHandle> const& mutable_vars) {
+    BulkStatus& bulk_status = *BulkStatusStore::Get();
+    if (!bulk_status.count) {
+      bulk_status.ctx = exec_ctx;
+      bulk_status.fn = std::move(exec_fn);
+    } else {
+      auto prev_fn = std::move(bulk_status.fn);
+      bulk_status.fn = [exec_fn, prev_fn](RunContext rctx) {
+          prev_fn(rctx);
+          exec_fn(rctx);
+        };
+    }
+
+    ++bulk_status.count;
+    bulk_status.const_vars.insert(
+        bulk_status.const_vars.end(), const_vars.begin(), const_vars.end());
+    bulk_status.mutable_vars.insert(
+        bulk_status.mutable_vars.end(), mutable_vars.begin(), mutable_vars.end());
+
+    if (bulk_status.count >= bulk_status.bulk_size) BulkFlush();
+  }
+  /*! \brief flush current bulk to execution */
+  inline void BulkFlush() {
+    BulkStatus& bulk_status = *BulkStatusStore::Get();
+    if (!bulk_status.count) return;
+    bulk_status.count = 0;
+    DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
+    auto fn = std::move(bulk_status.fn);
+    this->PushAsync([fn](RunContext ctx, CallbackOnComplete on_complete) {
+        fn(ctx);
+        on_complete();
+      }, bulk_status.ctx, bulk_status.const_vars, bulk_status.mutable_vars,
+      FnProperty::kNormal, 0, "ImperativeBulk");
+
+    bulk_status.const_vars.clear();
+    bulk_status.mutable_vars.clear();
+  }
   /*!
    * \brief Number of pending operations.
    */

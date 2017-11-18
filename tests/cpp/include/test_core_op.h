@@ -611,6 +611,50 @@ class CoreOpProp {
 template<typename DType>
 using CoreOperatorRunner = test::OperatorRunner<CoreOpProp, CoreOpExecutor<DType>>;
 
+
+/*!
+ * \brief Rune a core op forward and backward
+ * \tparam DType Data type
+ * \param isGPU true if operation is to be run on the GPU
+ * \param op_kwargs Operator parameters
+ * \param op_name Operator name as registered with nnvm
+ * \param backward_op_name Backwards operator name as registered with nnvm
+ *        If blank, the runner will attempt to determine the backwards operator. If it fails,
+ *        an exception will be thrown.
+ *        If the string is [none], then no backward operator will be created or executed
+ */
+template<typename DType = float>
+inline void BasicRunCoreOpBidirectional(const bool isGPU,
+                                        bool verbose,
+                                        const kwargs_t& op_kwargs,
+                                        const std::vector<TShape>& shapes,
+                                        const char *op_name,
+                                        const char *backward_op_name = "") {
+  test::op::CoreOpExecutor<DType> op(isGPU, shapes);
+  op.set_verbose(false);
+
+  op.Init(op.ArgsWithOpName(op_kwargs, op_name, backward_op_name));
+
+  if (verbose) {
+    PRINT_NDARRAYS(op.ctx().run_ctx, op.inputs());
+    PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
+  }
+  op.Execute();
+  if (verbose) {
+    PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
+  }
+  if (op.HasBackward()) {
+    if (verbose) {
+      PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_inputs());
+      PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
+    }
+    op.ExecuteBackward();
+    if (verbose) {
+      PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
+    }
+  }
+}
+
 }  // namespace op
 }  // namespace test
 }  // namespace mxnet
