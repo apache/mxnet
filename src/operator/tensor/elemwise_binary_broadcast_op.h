@@ -25,16 +25,19 @@
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
 
+#include <nnvm/node.h>
 #include <mxnet/operator_util.h>
 #include <algorithm>
 #include <vector>
 #include <string>
 #include <utility>
+#include <set>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_op.h"
 #include "../operator_common.h"
 #include "broadcast_reduce-inl.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -135,24 +138,122 @@ inline int BinaryBroadcastShapeCompact(const TShape& lshape, const TShape& rshap
 }
 
 namespace mxnet_op {
-template<int ndim, typename DType, typename OP>
-struct binary_broadcast_kernel {
+
+/*!
+ * \brief Type-level specialization base class for binary_broadcast_kernel
+ * \tparam DType
+ */
+template <typename DType> struct tunable_binary_broadcast_kernel;
+
+template<int ndim, typename DType, typename OP, bool is_tuning = false>
+struct binary_broadcast_kernel : public tunable_binary_broadcast_kernel<DType> {
+  /*! \brief Map function for binary_broadcast_kernel */
   MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
                                   const Shape<ndim>& lstride, const Shape<ndim>& rstride,
                                   const Shape<ndim>& oshape, DType* lhs, DType* rhs,
-                                  DType* out, int lsize, int rsize) {
-    Shape<ndim> coord = unravel(base, oshape);
-    index_t lidx = dot(coord, lstride);
-    index_t ridx = dot(coord, rstride);
-    KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
-    // starts from 1 to avoid extra inc at end of loop
-    for (int i = 1; i < length; ++i) {
-      inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
-      KERNEL_ASSIGN(out[base+i], req, OP::Map(lhs[lidx], rhs[ridx]));
+                                  DType* out) {
+    if (req != kNullOp) {
+      Shape <ndim> coord = unravel(base, oshape);
+      auto lidx = static_cast<index_t>(dot(coord, lstride));
+      auto ridx = static_cast<index_t>(dot(coord, rstride));
+      if (!is_tuning) {
+        KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
+      }
+      // starts from 1 to avoid extra inc at end of loop
+      for (int i = 1; i < length; ++i) {
+        inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
+        // When tuning, don't actually run the op, since it's not going to be tuned against
+        // the actual op we'll eventually be using
+        if (!is_tuning) {
+          KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
+        }
+      }
     }
+  }
+
+  /*!
+   * \brief Decide whether to use OpenMP parallelization
+   * \tparam Args Variable number and types of arguments (passed same args as Map())
+   * \param N Number of iterations
+   * \param thread_count Number of OMP threads available
+   * \param req Req type (i.e. kNullOp, kWriteTo, kAddTo, etc)
+   * \param args remaining (unused) arguments
+   * \return true if OMP parallelization should be used for the N iterations
+   */
+  template<typename ...Args>
+  static bool UseOMP(const size_t N, const size_t thread_count, OpReqType req, Args... args) {
+    if (req != kNullOp) {
+      switch (OperatorTuneByType<DType>::tuning_mode()) {
+        case tune::kAuto: {
+          CHECK_GT(thread_count, 0) << "Invalid thread count: " << thread_count;
+          const uint64_t length = (N + thread_count - 1) / thread_count;
+
+          float wl = tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[0]
+                     + tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[1]
+                       * length;
+          // OP::Map() is called 'length' times for each map call
+          // Get actual price per OP by removing overhead, such as subtracting workload of
+          // a trivial operation such as set_zero
+          int64_t subop_actual_workload =
+            tuned_op<OP, DType>::workload_ - tuned_op<mxnet_op::set_zero, DType>::workload_;
+          if (subop_actual_workload < 0) {
+            subop_actual_workload = 1;
+          }
+          wl += 0.75f * subop_actual_workload * length;
+          return OperatorTuneByType<DType>::IsOMPFaster(N, thread_count, static_cast<uint64_t>(wl));
+        }
+        case tune::kAlwaysOMP:
+          return true;
+        case tune::kNeverOMP:
+        default:
+          return false;
+      }
+    }
+    return false;
   }
 };
 
+/*!
+ * \brief Type-specific tuning
+ * \tparam DType
+ */
+template<typename DType>
+struct tunable_binary_broadcast_kernel {
+  /*! \brief Allows LaunchEx to know the data type for tuning_op<> selection */
+  typedef DType DataType;
+  /*!
+   * \brief Run-time tuning of sub-op-independent binary_broadcast_kernel
+   */
+  static void Tune() {
+    constexpr int dim = 2;  // Have to pick one to represent all
+    Shape<dim> oshape, lstride, rstride;
+    for (index_t i = 0; i < dim; ++i) {
+      oshape[i]  = 28U * (i + 1);
+      lstride[i] = 2U * (i + 1);
+      rstride[i] = 3U * (i + 1);
+    }
+    const int base = 28;
+    const size_t data_size = lstride.Size() * rstride.Size() * oshape.Size();
+    std::unique_ptr<DType> data(new DType[data_size]);
+    memset(data.get(), 0, data_size);  // get into cache
+    tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_.push_back(
+      get_workload([&]() { binary_broadcast_kernel<2, DType, mshadow_op::left, true>::Map(
+        base, 1, kWriteTo, lstride, rstride, oshape, data.get(), data.get(), nullptr);
+      }));
+    tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_.push_back(
+      get_workload([&]() { binary_broadcast_kernel<2, DType, mshadow_op::left, true>::Map(
+        base, 1000, kWriteTo, lstride, rstride, oshape, data.get(), data.get(), nullptr);
+      }));
+    // Record base time for function
+    tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[1] -=
+      tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[0];
+    // Record per-length item adder
+    tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[1] /= 1000;
+    if (tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[1] <= 0) {
+      tuned_op<tunable_binary_broadcast_kernel<DType>, DType>::workload_ex_[1] = 1;
+    }
+  }
+};
 }  // namespace mxnet_op
 
 template<typename xpu, typename OP>
@@ -161,7 +262,6 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                             const std::vector<TBlob>& inputs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
@@ -171,13 +271,12 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        Shape<NDim> oshape = new_oshape.get<NDim>();
-        Shape<NDim> lstride = calc_stride(new_lshape.get<NDim>());
-        Shape<NDim> rstride = calc_stride(new_rshape.get<NDim>());
-        Kernel<binary_broadcast_kernel<NDim, DType, OP>, xpu>::LaunchEx(
-            s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-            inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>(),
-            inputs[0].Size(), inputs[1].Size());
+        mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+        mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+        mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+        mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, OP>, xpu>::
+        template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+        inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
       });
     });
   }

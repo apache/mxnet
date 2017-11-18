@@ -153,6 +153,12 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
 
+#----------------------------
+# performance settings
+#----------------------------
+# Use operator tuning
+USE_OPERATOR_TUNING = 1
+
 # Use gperftools if found
 USE_GPERFTOOLS = 1
 
