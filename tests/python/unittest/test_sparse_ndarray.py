@@ -22,9 +22,8 @@ from mxnet.test_utils import *
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
-
-from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 from common import assertRaises
+from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
 
 def sparse_nd_ones(shape, stype):
@@ -234,6 +233,7 @@ def test_sparse_nd_binary():
             oshape = np.random.randint(1, 6, size=(ndim,))
             bdim = 2
             lshape = list(oshape)
+            # one for broadcast op, another for elemwise op
             rshape = list(oshape[ndim-bdim:])
             for i in range(bdim):
                 sep = np.random.uniform(0, 1)
@@ -737,20 +737,47 @@ def test_synthetic_dataset_generator():
     test_powerlaw_generator(csr_arr_big, final_row=4)
     test_powerlaw_generator(csr_arr_square, final_row=6)
 
+def test_sparse_nd_fluent():
+    def check_fluent_regular(stype, func, kwargs, shape=(5, 17), equal_nan=False):
+        with mx.name.NameManager():
+            data = mx.nd.random_uniform(shape=shape, ctx=default_context()).tostype(stype)
+            regular = getattr(mx.ndarray, func)(data, **kwargs)
+            fluent = getattr(data, func)(**kwargs)
+            if isinstance(regular, list):
+                for r, f in zip(regular, fluent):
+                    assert almost_equal(r.asnumpy(), f.asnumpy(), equal_nan=equal_nan)
+            else:
+                assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
+
+    common_func = ['zeros_like', 'square']
+    rsp_func = ['round', 'rint', 'fix', 'floor', 'ceil', 'trunc',
+                'abs', 'sign', 'sin', 'degrees', 'radians', 'expm1']
+    for func in common_func:
+        check_fluent_regular('csr', func, {})
+    for func in common_func + rsp_func:
+        check_fluent_regular('row_sparse', func, {})
+
+    rsp_func = ['arcsin', 'arctan', 'tan', 'sinh', 'tanh',
+                'arcsinh', 'arctanh', 'log1p', 'sqrt', 'relu']
+    for func in rsp_func:
+        check_fluent_regular('row_sparse', func, {}, equal_nan=True)
+
+    check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))
+    check_fluent_regular('row_sparse', 'clip', {'a_min': -0.25, 'a_max': 0.75})
+
+    for func in ['sum', 'mean']:
+        check_fluent_regular('csr', func, {'axis': 0})
+
+
 def test_sparse_nd_exception():
     """ test invalid sparse operator will throw a exception """
     a = mx.nd.ones((2,2))
-    assert_exception(mx.nd.sparse.retain, mx.base.MXNetError,
-                     a, invalid_arg="garbage_value")
-    assert_exception(mx.nd.sparse.csr_matrix, ValueError,
-                     a, shape=(3,2))
-    assert_exception(mx.nd.sparse.csr_matrix, ValueError,
-                     (2,2), shape=(3,2))
-    assert_exception(mx.nd.sparse.row_sparse_array, ValueError,
-                     (2,2), shape=(3,2))
-    assert_exception(mx.nd.sparse.zeros, ValueError,
-                     "invalid_stype", (2,2))
-    
+    assertRaises(mx.base.MXNetError, mx.nd.sparse.retain, a, invalid_arg="garbage_value")
+    assertRaises(ValueError, mx.nd.sparse.csr_matrix, a, shape=(3,2))
+    assertRaises(ValueError, mx.nd.sparse.csr_matrix, (2,2), shape=(3,2))
+    assertRaises(ValueError, mx.nd.sparse.row_sparse_array, (2,2), shape=(3,2))
+    assertRaises(ValueError, mx.nd.sparse.zeros, "invalid_stype", (2,2))
+
 def test_sparse_nd_check_format():
     """ test check_format for sparse ndarray """
     shape = rand_shape_2d()
