@@ -178,7 +178,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_OPENCV
   const auto& param = nnvm::get<ImdecodeParam>(attrs.parsed);
 
-  CHECK_EQ(inputs[0].ctx().dev_mask(), cpu::kDevMask) << "Only supports cpu input";
+  CHECK_EQ(inputs[0].ctx().dev_mask(), Context::kCPU) << "Only supports cpu input";
   CHECK_EQ(inputs[0].dtype(), mshadow::kUint8) << "Input needs to be uint8 buffer";
   inputs[0].WaitToRead();
 
