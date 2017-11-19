@@ -558,13 +558,13 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
-    sample_uniform
-    sample_normal
-    sample_gamma
-    sample_exponential
-    sample_poisson
-    sample_negative_binomial
-    sample_generalized_negative_binomial
+    mxnet.sym.random.uniform
+    mxnet.sym.random.normal
+    mxnet.sym.random.gamma
+    mxnet.sym.random.exponential
+    mxnet.sym.random.poisson
+    mxnet.sym.random.negative_binomial
+    mxnet.sym.random.generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -579,7 +579,6 @@ Composite multiple symbols into a new one by an operator.
     argsort
     argmax
     argmin
-    argmax_channel
 ```
 
 ### Sequence operation

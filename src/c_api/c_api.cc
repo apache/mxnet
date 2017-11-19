@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api.cc
  * \brief C API of mxnet
  */
@@ -744,6 +745,20 @@ int MXKVStoreCreate(const char *type,
                     KVStoreHandle *out) {
   API_BEGIN();
   *out = KVStore::Create(type);
+  API_END();
+}
+
+int MXKVStoreSetGradientCompression(KVStoreHandle handle, mx_uint num_params,
+                                    const char** keys, const char** vals) {
+  API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > params;
+  for (mx_uint i = 0; i < num_params; ++i) {
+    std::pair<std::string, std::string> p;
+    p.first = keys[i];
+    p.second = vals[i];
+    params.push_back(p);
+  }
+  static_cast<KVStore*>(handle)->SetGradientCompression(params);
   API_END();
 }
 

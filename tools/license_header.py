@@ -119,13 +119,6 @@ def process_file(fname, action, verbose=True):
     elif action == 'check':
         return False
     _, ext = os.path.splitext(fname)
-    # remove old license
-    if ext == '.h' or ext == '.cc' or ext == '.cu' or ext == '.cpp' \
-        or ext == '.hpp':
-        for i, l in enumerate(lines):
-            if _OLD_LICENSE.match(l.decode('utf-8')):
-                del lines[i]
-                break
     with open(fname, 'wb') as f:
         # shebang line
         if lines[0].startswith(b'#!'):

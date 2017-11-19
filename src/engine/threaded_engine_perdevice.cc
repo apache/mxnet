@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file threaded_engine_perdevice.cc
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */
@@ -99,14 +100,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     const Context& ctx = opr_block->ctx;
     if ((opr_block->opr->prop == FnProperty::kAsync ||
          opr_block->opr->prop == FnProperty::kDeleteVar) && pusher_thread) {
-      if (ctx.dev_mask() == gpu::kDevMask) {
+      if (ctx.dev_mask() == Context::kGPU) {
         #if MXNET_USE_CUDA
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
         #endif
       }
       this->ExecuteOprBlock(RunContext{ctx, nullptr}, opr_block);
     } else {
-      if (ctx.dev_mask() == cpu::kDevMask) {
+      if (ctx.dev_mask() == Context::kCPU) {
         if (opr_block->opr->prop == FnProperty::kCPUPrioritized) {
           cpu_priority_worker_->task_queue.Push(opr_block, opr_block->priority);
         } else {
@@ -129,7 +130,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           }
         }
       } else {
-        CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
+        CHECK_EQ(ctx.dev_mask(), Context::kGPU);
         // GPU execution.
         FnProperty prop = opr_block->opr->prop;
         bool is_copy = (prop == FnProperty::kCopyFromGPU ||

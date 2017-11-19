@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file sample_op.cu
  * \brief GPU Implementation of sample op
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file exec_pass.h
  * \brief All the execution related pass and data structures.
  */

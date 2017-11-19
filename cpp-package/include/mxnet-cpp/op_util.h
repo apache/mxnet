@@ -18,6 +18,7 @@
  */
 
 /*!
+*  Copyright (c) 2017 by Contributors
 * \file op_util.h
 * \brief operator helper functions
 * \author Chris Olivier

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ndarray.h
  * \brief NDArray interface that handles array arithematics.
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file pooled_storage_manager.h
  * \brief Storage manager with a memory pool.
  */

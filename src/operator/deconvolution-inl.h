@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file deconvolution-inl.h
  * \brief
  * \author Wei Wu

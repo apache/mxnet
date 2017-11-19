@@ -17,6 +17,12 @@
  * under the License.
  */
 
+/*!
+ * Copyright (c) 2015 by Contributors
+ * \file storage_manager.h
+ * \brief Storage manager.
+ */
+
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_H_
 

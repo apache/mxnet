@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file jni_helper_func.h
  * \brief Helper functions for operating JVM objects
  */

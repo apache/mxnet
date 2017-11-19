@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file elementwise_unary_op-inl.h
  * \brief Function definition of elementwise unary operators
  */
