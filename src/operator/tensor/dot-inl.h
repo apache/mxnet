@@ -648,7 +648,6 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
 
           num_threads = mxnet_op::get_num_threads<cpu>(nnr);
           dim_t seg_len = (nnr + num_threads - 1) / num_threads;
-
           if (trans_lhs) {
             mxnet_op::Kernel<DotCsrTransDnsRspByRowBlocks, cpu>::Launch(s, num_threads,
               data_out.dptr<DType>(), prefix_sum, row_idx_out, data_l.dptr<DType>(),
