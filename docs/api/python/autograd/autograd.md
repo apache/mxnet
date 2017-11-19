@@ -1,6 +1,5 @@
 # Autograd Package
 
-
 ```eval_rst
 .. currentmodule:: mxnet.autograd
 ```
