@@ -5,7 +5,10 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 
 ## Gluon
 
-Selected Gluon tutorials. For the complete and comprehensive set of Gluon tutorials, please see [gluon.mxnet.io](http://gluon.mxnet.io).
+Gluon is the high-level interface for MXNet. It is more intuitive and easier to use than the lower level interface.
+Gluon supports dynamic (define-by-run) graphs with JIT-compilation to achieve both flexibility and efficiency.
+This is a selected subset of Gluon tutorials. For the comprehensive tutorial on Gluon,
+please see [gluon.mxnet.io](http://gluon.mxnet.io).
 
 ### Basics
 
