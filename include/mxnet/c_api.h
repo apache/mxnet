@@ -1550,19 +1550,6 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
-
-/*!
- * \brief Set parameters to use low-bit compressed gradients
- * \param handle handle to the kvstore
- * \param keys keys for compression parameters
- * \param vals values for compression parameters
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXKVStoreSetGradientCompression(KVStoreHandle handle,
-                                              mx_uint num_params,
-                                              const char** keys,
-                                              const char** vals);
-
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
