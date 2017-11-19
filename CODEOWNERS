@@ -1,0 +1,14 @@
+# Owners of Apache MXNet
+
+# Global owners
+*			@apache/mxnet-committers
+
+# Owners of language bindings
+R-package/*		@thirdwing
+scala-package/*		@javelinjs
+perl-package/*		@sergeykolychev
+
+# CMake owners
+CMakeLists.txt		@cjolivier01
+cmake/*			@cjolivier01
+

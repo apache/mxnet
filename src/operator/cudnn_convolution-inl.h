@@ -586,7 +586,7 @@ class CuDNNConvolutionOp : public Operator {
                                        &back_algo_w_)) {
       // Not in algo registry, must determine via *Get*() or *Find*()
       Engine::VarHandle var = Engine::Get()->NewVariable();
-      Engine::Get()->PushSync([=](RunContext rctx) {
+      Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
         CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
         size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
@@ -776,6 +776,7 @@ class CuDNNConvolutionOp : public Operator {
                                           cudnn_backward_compute_type,
                                           SMArch(ctx.dev_id), this->forward_algo_,
                                           this->back_algo_, this->back_algo_w_);
+        on_complete();
       }, ctx, {}, {var});
       Engine::Get()->WaitForVar(var);
       Engine::Get()->DeleteVariable([](RunContext s) {}, ctx, var);

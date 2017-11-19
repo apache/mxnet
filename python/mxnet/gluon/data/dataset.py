@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
+__all__ = ['Dataset', 'ArrayDataset', 'RecordFileDataset']
+
 import os
 
 from ... import recordio, ndarray
@@ -38,30 +40,35 @@ class Dataset(object):
 
 
 class ArrayDataset(Dataset):
-    """A dataset with a data array and a label array.
+    """A dataset of multiple arrays.
 
-    The i-th sample is `(data[i], lable[i])`.
+    The i-th sample is `(x1[i], x2[i], ...)`.
 
     Parameters
     ----------
-    data : array-like object
-        The data array. Can be mxnet or numpy array.
-    label : array-like object
-        The label array. Can be mxnet or numpy array.
+    *args : one or more arrays
+        The data arrays.
     """
-    def __init__(self, data, label):
-        assert len(data) == len(label)
-        self._data = data
-        if isinstance(label, ndarray.NDArray) and len(label.shape) == 1:
-            self._label = label.asnumpy()
-        else:
-            self._label = label
+    def __init__(self, *args):
+        assert len(args) > 0, "Needs at least 1 arrays"
+        self._length = len(args[0])
+        self._data = []
+        for i, data in enumerate(args):
+            assert len(data) == self._length, \
+                "All arrays must have the same length. But the first has %s " \
+                "while the %d-th has %d."%(length, i+1, len(data))
+            if isinstance(data, ndarray.NDArray) and len(data.shape) == 1:
+                data = data.asnumpy()
+            self._data.append(data)
 
     def __getitem__(self, idx):
-        return self._data[idx], self._label[idx]
+        if len(self._data) == 1:
+            return self._data[0][idx]
+        else:
+            return tuple(data[idx] for data in self._data)
 
     def __len__(self):
-        return len(self._data)
+        return self._length
 
 
 class RecordFileDataset(Dataset):
@@ -79,7 +86,7 @@ class RecordFileDataset(Dataset):
         self._record = recordio.MXIndexedRecordIO(idx_file, filename, 'r')
 
     def __getitem__(self, idx):
-        return self._record.read_idx(idx)
+        return self._record.read_idx(self._record.keys[idx])
 
     def __len__(self):
         return len(self._record.keys)

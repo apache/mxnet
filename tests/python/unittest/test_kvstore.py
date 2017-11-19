@@ -18,19 +18,13 @@
 # pylint: skip-file
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from mxnet.base import py_str
+import unittest
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, assert_exception
+from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
-
-def assert_exception(f, *args, **kwargs):
-    try:
-        f(*args, **kwargs)
-        assert(False)
-    except:
-        return
 
 def init_kv(stype='default'):
     """init kv """
@@ -49,6 +43,7 @@ def init_kv_with_str(stype='default'):
     # list
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
+
 
 def check_diff_to_scalar(A, x):
     """ assert A == x"""
@@ -258,29 +253,30 @@ def test_invalid_pull():
 
     def check_invalid_rsp_pull_single(kv, key):
         dns_val = mx.nd.ones(shape) * 2
-        assert_exception(kv.row_sparse_pull, key, out=dns_val, row_ids=mx.nd.array([1]))
+        assert_exception(kv.row_sparse_pull, MXNetError,
+                         key, out=dns_val, row_ids=mx.nd.array([1]))
 
     def check_invalid_rsp_pull_list(kv, key):
         dns_val = [mx.nd.ones(shape) * 2] * len(key)
-        assert_exception(kv.row_sparse_pull, key, out=dns_val,
+        assert_exception(kv.row_sparse_pull, MXNetError, key, out=dns_val,
                          row_ids=[mx.nd.array([1])] * len(key))
 
     def check_invalid_key_types_single(kv, key):
         dns_val = mx.nd.ones(shape) * 2
         rsp_val = dns_val.tostype('row_sparse')
-        assert_exception(kv.init, key, dns_val)
-        assert_exception(kv.push, key, dns_val)
-        assert_exception(kv.pull, key, dns_val)
-        assert_exception(kv.row_sparse_pull, key, rsp_val,
+        assert_exception(kv.init, MXNetError, key, dns_val)
+        assert_exception(kv.push, MXNetError, key, dns_val)
+        assert_exception(kv.pull, MXNetError, key, dns_val)
+        assert_exception(kv.row_sparse_pull, MXNetError, key, rsp_val,
                          row_ids=mx.nd.array([1]))
 
     def check_invalid_key_types_list(kv, key):
         dns_val = [mx.nd.ones(shape) * 2] * len(key)
         rsp_val = [val.tostype('row_sparse') for val in dns_val]
-        assert_exception(kv.init, key, dns_val)
-        assert_exception(kv.push, key, dns_val)
-        assert_exception(kv.pull, key, dns_val)
-        assert_exception(kv.row_sparse_pull, key, rsp_val,
+        assert_exception(kv.init, MXNetError, key, dns_val)
+        assert_exception(kv.push, MXNetError, key, dns_val)
+        assert_exception(kv.pull, MXNetError, key, dns_val)
+        assert_exception(kv.row_sparse_pull, MXNetError, key, rsp_val,
                          row_ids=[mx.nd.array([1])] * len(key))
 
     int_kv = init_kv()
@@ -303,3 +299,5 @@ def test_invalid_pull():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
+
+    

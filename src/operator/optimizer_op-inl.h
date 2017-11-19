@@ -165,69 +165,6 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
   });
 }
 
-/*! \brief kernel for sparse sgd
- */
-template<int req>
-struct SGDRspDnsKernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const index_t num_cols, DType* out, const DType* weight,
-                                  const DType *grad, const DType clip_gradient, const DType lr,
-                                  const DType wd, const DType rescale_grad) {
-    bool contains_non_zeros = false;
-    index_t j = 0;
-    index_t offset = i * num_cols;
-    for (; j < num_cols; ++j) {
-      if (grad[offset + j] != 0) {
-        contains_non_zeros = true;
-        break;
-      }
-    }
-    if (!contains_non_zeros) return;
-    const DType rate = 1.f - lr * wd;
-    for (index_t j = 0; j < num_cols; j++) {
-      auto index = offset + j;
-      if (clip_gradient >= 0.0f) {
-        KERNEL_ASSIGN(out[index], req, rate * weight[index] -
-                      lr * mshadow_op::clip::Map(rescale_grad * grad[index], clip_gradient));
-      } else {
-        KERNEL_ASSIGN(out[index], req, rate * weight[index] -
-                      lr * rescale_grad * grad[index]);
-      }
-    }
-  }
-};
-
-template<typename xpu>
-inline void SGDUpdateRspDnsImpl(const SGDParam& param,
-                                const OpContext &ctx,
-                                const NDArray& weight,
-                                const TBlob& grad,
-                                const OpReqType req,
-                                NDArray *out) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace rowsparse;
-  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SGDUpdate", "weights");
-  CHECK_EQ(weight.storage_type(), kRowSparseStorage);
-  if (req == kNullOp) return;
-  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_update";
-  CHECK(weight.storage_initialized());
-  Stream<xpu>* s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(weight.dtype(), DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      DType* weight_data = weight.data().dptr<DType>();
-      DType* grad_data = grad.dptr<DType>();
-      index_t num_rows = weight.aux_shape(kIdx)[0];
-      auto num_cols = weight.shape().ProdShape(1, weight.shape().ndim());
-      Kernel<SGDRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, num_cols,
-        out->data().dptr<DType>(), weight_data, grad_data,
-        static_cast<DType>(param.clip_gradient),
-        static_cast<DType>(param.lr), static_cast<DType>(param.wd),
-        static_cast<DType>(param.rescale_grad));
-    });
-  });
-}
-
 template<typename xpu>
 inline void SGDUpdateRspRspImpl(const SGDParam& param,
                                 const OpContext& ctx,
@@ -251,16 +188,13 @@ inline void SGDUpdateEx(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   using namespace mshadow_op;
   const SGDParam& param = nnvm::get<SGDParam>(attrs.parsed);
-  auto weight_stype = inputs[0].storage_type();
-  auto grad_stype = inputs[1].storage_type();
-  if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage) {
+  auto out_stype = outputs[0].storage_type();
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
+      out_stype == kRowSparseStorage) {
     NDArray out = outputs[0];
     SGDUpdateRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], &out);
-  } else if (weight_stype == kRowSparseStorage && grad_stype == kDefaultStorage) {
-    NDArray out = outputs[0];
-    SGDUpdateRspDnsImpl<xpu>(param, ctx, inputs[0], inputs[1].data(), req[0], &out);
   } else {
-    FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs, SGDUpdate<xpu>, "SGDUpdate");
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -330,7 +264,7 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
       grad.dptr_, static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
       static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.rescale_grad), req[0]);
-  });
+    });
 }
 
 template<int n_in, int n_out, int total_in>
@@ -500,77 +434,6 @@ inline void SGDMomUpdateDnsRspDnsImpl(const SGDMomParam& param,
   });
 }
 
-template<int req>
-struct SGDMomRspDnsKernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, index_t num_cols, DType* out, DType* mom,
-                                  const DType* weight, const DType *grad,
-                                  const DType clip_gradient, const DType momentum,
-                                  const DType lr, const DType wd, const DType rescale_grad) {
-    bool contains_non_zeros = false;
-    index_t j = 0;
-    index_t offset = i * num_cols;
-    for (; j < num_cols; ++j) {
-      if (grad[offset + j] != 0) {
-        contains_non_zeros = true;
-        break;
-      }
-    }
-    if (!contains_non_zeros) return;
-    const DType rate = lr * wd;
-    for (index_t j = 0; j < num_cols; j++) {
-      auto index = offset + j;
-      if (clip_gradient >= 0.0f) {
-        mom[index] = momentum * mom[index] - rate * weight[index]
-                   - lr * mshadow_op::clip::Map(rescale_grad * grad[index], clip_gradient);
-      } else {
-        mom[index] = momentum * mom[index] - rate * weight[index]
-                   - lr * rescale_grad * grad[index];
-      }
-      KERNEL_ASSIGN(out[index], req, weight[index] + mom[index]);
-    }
-  }
-};
-
-template<typename xpu>
-inline void SGDMomUpdateRspDnsImpl(const SGDMomParam& param,
-                                   const OpContext &ctx,
-                                   const NDArray& weight,
-                                   const TBlob& grad,
-                                   const NDArray& mom,
-                                   const OpReqType req,
-                                   NDArray *out) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace rowsparse;
-  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "SGDMomUpdate", "weights");
-  Stream<xpu>* s = ctx.get_stream<xpu>();
-  CHECK_EQ(weight.storage_type(), kRowSparseStorage);
-  if (req == kNullOp) return;
-  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse sgd_mom_update";
-  CHECK(weight.storage_initialized());
-  // fill mom with zero values if not initialized yet
-  if (!mom.storage_initialized()) {
-    NDArray mom_zeros = mom;
-    FillDnsZerosRspImpl(s, &mom_zeros);
-  }
-  MSHADOW_REAL_TYPE_SWITCH(weight.dtype(), DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-      DType* weight_data = weight.data().dptr<DType>();
-      DType* grad_data = grad.dptr<DType>();
-      DType* mom_data = mom.data().dptr<DType>();
-      index_t num_rows = weight.aux_shape(kIdx)[0];
-      auto num_cols = weight.shape().ProdShape(1, weight.shape().ndim());
-      Kernel<SGDMomRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, num_cols,
-        out->data().dptr<DType>(), mom_data, weight_data, grad_data,
-        static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
-        static_cast<DType>(param.lr), static_cast<DType>(param.wd),
-        static_cast<DType>(param.rescale_grad));
-    });
-  });
-}
-
-
 template<typename xpu>
 inline void SGDMomUpdateRspRspRspImpl(const SGDMomParam& param,
                                       const OpContext& ctx,
@@ -607,23 +470,17 @@ inline void SGDMomUpdateEx(const nnvm::NodeAttrs& attrs,
   auto &weight = inputs[0];
   auto &grad = inputs[1];
   auto &mom = inputs[2];
-  auto weight_stype = weight.storage_type();
-  auto grad_stype = grad.storage_type();
-  auto mom_stype = mom.storage_type();
+  const auto weight_stype = weight.storage_type();
+  const auto mom_stype = mom.storage_type();
+  const auto out_stype = outputs[0].storage_type();
   CHECK_EQ(weight_stype, mom_stype) << "Inconsistent storage type detected between mom.stype = "
            << mom_stype << " and weight.stype = " << weight_stype;
-  if (weight_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
-      mom_stype == kRowSparseStorage) {
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
+      out_stype == kRowSparseStorage) {
      NDArray out = outputs[0];
      SGDMomUpdateRspRspRspImpl<xpu>(param, ctx, weight, grad, mom, req[0], &out);
-  } else if (weight_stype == kRowSparseStorage && grad_stype == kDefaultStorage &&
-      mom_stype == kRowSparseStorage) {
-     NDArray out = outputs[0];
-     SGDMomUpdateRspDnsImpl<xpu>(param, ctx, weight, grad.data(), mom, req[0], &out);
   } else {
-    // inputs[2] is a mutable input
-    FCompExFallback<xpu>(attrs, ctx, inputs, req, outputs,
-                         SGDMomUpdate<xpu>, "SGDMomUpdate", {2});
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -817,27 +674,21 @@ inline void AdamUpdateEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
   const AdamParam& param = nnvm::get<AdamParam>(attrs.parsed);
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const auto weight_stype = inputs[0].storage_type();
-  const auto grad_stype = inputs[1].storage_type();
   const auto mean_stype = inputs[2].storage_type();
   const auto var_stype = inputs[3].storage_type();
-
   const auto out_stype = outputs[0].storage_type();
   CHECK_EQ(mean_stype, weight_stype) << "Inconsistent storage type detected between "
            << " mean.stype = " << mean_stype << " and weight.stype = " << weight_stype;
   CHECK_EQ(var_stype, weight_stype) << "Inconsistent storage type detected between "
            << " var.stype = " << var_stype << " and weight.stype = " << weight_stype;
-  if (weight_stype == kRowSparseStorage && mean_stype == kRowSparseStorage &&
-      var_stype == kRowSparseStorage && grad_stype == kRowSparseStorage &&
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
       out_stype == kRowSparseStorage) {
      NDArray out = outputs[0];
      AdamUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
                                   inputs[3], req[0], &out);
   } else {
-    LOG(FATAL) << "Unexpected storage types: weight.stype = " << weight_stype
-               << ", var.stype = " << var_stype << ", mean.stype = " << mean_stype
-               << ", grad.stype = " << grad_stype;
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
 }
 
@@ -1033,6 +884,207 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       }
     }
   });
+}
+
+struct FtrlParam : public dmlc::Parameter<FtrlParam> {
+  float lr;
+  float lamda1;
+  float beta;
+  float wd;
+  float rescale_grad;
+  float clip_gradient;
+  DMLC_DECLARE_PARAMETER(FtrlParam) {
+    DMLC_DECLARE_FIELD(lr)
+    .describe("Learning rate");
+    DMLC_DECLARE_FIELD(lamda1)
+    .set_default(0.01f)
+    .describe("The L1 regularization coefficient.");
+    DMLC_DECLARE_FIELD(beta)
+    .set_default(1.0f)
+    .describe("Per-Coordinate Learning Rate beta.");
+    DMLC_DECLARE_FIELD(wd)
+    .set_default(0.0f)
+    .describe("Weight decay augments the objective function with a "
+              "regularization term that penalizes large weights. "
+              "The penalty scales with the square of the magnitude of each weight.");
+    DMLC_DECLARE_FIELD(rescale_grad)
+    .set_default(1.0f)
+    .describe("Rescale gradient to grad = rescale_grad*grad.");
+    DMLC_DECLARE_FIELD(clip_gradient)
+    .set_default(-1.0f)
+    .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+              "If clip_gradient <= 0, gradient clipping is turned off. "
+              "grad = max(min(grad, clip_gradient), -clip_gradient).");
+  }
+};
+
+template<typename xpu>
+inline void FtrlUpdate(const nnvm::NodeAttrs& attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mshadow_op;
+  const FtrlParam& param = nnvm::get<FtrlParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> z = inputs[2].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> n = inputs[3].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+
+    grad = scalar<DType>(param.rescale_grad) * grad;
+
+    if (param.clip_gradient >= 0.0f) {
+      z += F<clip>(grad, DType(param.clip_gradient)) - (F<square_root>(n +
+           F<square>(F<clip>(grad, DType(param.clip_gradient)))) - F<square_root>(n)) *
+           weight / scalar<DType>(param.lr);
+      n += F<square>(F<clip>(grad, DType(param.clip_gradient)));
+    } else {
+      z += grad - (F<square_root>(n + F<square>(grad)) - F<square_root>(n)) *
+           weight / scalar<DType>(param.lr);
+      n += F<square>(grad);
+    }
+    Assign(out, req[0],
+           (F<sign>(z) * scalar<DType>(param.lamda1) - z) /
+           ((scalar<DType>(param.beta) + F<square_root>(n)) /
+           scalar<DType>(param.lr) + scalar<DType>(param.wd)) *
+           F<gt>(F<abs>(z), scalar<DType>(param.lamda1)));
+  });
+}
+
+template<int req>
+struct FtrlDnsRspDnsKernel {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+    DType* z_data, DType* n_data, const DType* weight_data, const IType* grad_idx,
+    const DType* grad_data, const DType clip_gradient, const DType lamda1, const DType beta,
+    const DType lr, const DType wd, const DType rescale_grad) {
+    using nnvm::dim_t;
+    using namespace mshadow_op;
+    const dim_t row_offset = grad_idx[i] * row_length;
+    for (dim_t j = 0; j < row_length; j++) {
+      // index in data/z/n
+      const dim_t data_i = row_offset + j;
+      // index in grad
+      const dim_t grad_i = i * row_length + j;
+      const DType grad_rescaled = grad_data[grad_i] * rescale_grad;
+      if (clip_gradient >= 0.0f) {
+        z_data[data_i] += clip::Map(grad_rescaled, clip_gradient) -
+                          (square_root::Map(n_data[data_i] +
+                          square::Map(clip::Map(grad_rescaled, clip_gradient))) -
+                          square_root::Map(n_data[data_i])) * weight_data[data_i] / lr;
+        n_data[data_i] += square::Map(clip::Map(grad_rescaled, clip_gradient));
+      } else {
+        z_data[data_i] += grad_rescaled - (square_root::Map(n_data[data_i] +
+                          square::Map(grad_rescaled)) - square_root::Map(n_data[data_i])) *
+                          weight_data[data_i] / lr;
+        n_data[data_i] += square::Map(grad_rescaled);
+      }
+      KERNEL_ASSIGN(out_data[data_i], req,
+                    (sign::Map(z_data[data_i]) * lamda1 - z_data[data_i]) /
+                    ((beta + square_root::Map(n_data[data_i])) / lr + wd) *
+                    gt::Map(abs::Map(z_data[data_i]), lamda1));
+    }
+  }
+};
+
+
+template<typename xpu>
+inline void FtrlUpdateDnsRspDnsImpl(const FtrlParam& param,
+                                    const OpContext& ctx,
+                                    const TBlob& weight,
+                                    const NDArray& grad,
+                                    const TBlob& z,
+                                    const TBlob& n,
+                                    const OpReqType& req,
+                                    TBlob *out) {
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (!grad.storage_initialized() || req == kNullOp) return;
+  CHECK_EQ(req, kWriteInplace) << "kWriteInplace is expected for sparse ftrl_update";
+  CHECK_GT(weight.shape_.Size(), 0);
+  CHECK_GT(z.shape_.Size(), 0);
+  CHECK_GT(n.shape_.Size(), 0);
+
+  MSHADOW_REAL_TYPE_SWITCH(weight.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(grad.aux_type(kIdx), IType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+        const DType* weight_data = weight.dptr<DType>();
+        const IType* grad_idx = grad.aux_data(kIdx).dptr<IType>();
+        const DType* grad_val = grad.data().dptr<DType>();
+        DType* z_data = z.dptr<DType>();
+        DType* n_data = n.dptr<DType>();
+        DType* out_data = out->dptr<DType>();
+        nnvm::dim_t num_rows = grad.aux_shape(kIdx)[0];
+        const auto row_length = weight.shape_.ProdShape(1, weight.ndim());
+        Kernel<FtrlDnsRspDnsKernel<req_type>, xpu>::Launch(s, num_rows, row_length,
+          out_data, z_data, n_data, weight_data, grad_idx, grad_val,
+          static_cast<DType>(param.clip_gradient), static_cast<DType>(param.lamda1),
+          static_cast<DType>(param.beta), static_cast<DType>(param.lr),
+          static_cast<DType>(param.wd), static_cast<DType>(param.rescale_grad));
+      });
+    });
+  });
+}
+
+template<typename xpu>
+inline void FtrlUpdateRspRspRspImpl(const FtrlParam& param,
+                                    const OpContext& ctx,
+                                    const NDArray& weight,
+                                    const NDArray& grad,
+                                    const NDArray& z,
+                                    const NDArray& n,
+                                    const OpReqType& req,
+                                    NDArray *out) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  using namespace rowsparse;
+  CHECK_RSP_ALL_ROWS_NON_ZERO(weight, "FtrlUpdate", "weights");
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  // fill z and n with zero values in order to reuse the sgd mom dns impl
+  if (!z.storage_initialized()) {
+    NDArray z_zeros = z;
+    FillDnsZerosRspImpl(s, &z_zeros);
+  }
+  if (!n.storage_initialized()) {
+    NDArray n_zeros = n;
+    FillDnsZerosRspImpl(s, &n_zeros);
+  }
+  TBlob out_blob = out->data();
+  // reuse dns rsp implementation when storage_shape == shape
+  FtrlUpdateDnsRspDnsImpl<xpu>(param, ctx, weight.data(), grad, z.data(),
+                               n.data(), req, &out_blob);
+}
+
+template<typename xpu>
+inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
+                         const OpContext &ctx,
+                         const std::vector<NDArray> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<NDArray> &outputs) {
+  const FtrlParam& param = nnvm::get<FtrlParam>(attrs.parsed);
+  const auto weight_stype = inputs[0].storage_type();
+  const auto z_stype = inputs[2].storage_type();
+  const auto n_stype = inputs[3].storage_type();
+
+  const auto out_stype = outputs[0].storage_type();
+  CHECK_EQ(z_stype, weight_stype) << "Inconsistent storage type detected between "
+           << " z.stype = " << z_stype << " and weight.stype = " << weight_stype;
+  CHECK_EQ(n_stype, weight_stype) << "Inconsistent storage type detected between "
+           << " n.stype = " << n_stype << " and weight.stype = " << weight_stype;
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) && out_stype == kRowSparseStorage) {
+     NDArray out = outputs[0];
+     FtrlUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
+                                  inputs[3], req[0], &out);
+  } else {
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 }  // namespace op

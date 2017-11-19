@@ -1,5 +1,6 @@
-[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
-[![Documentation Status](https://readthedocs.org/projects/mxnet/badge/?version=latest)](http://mxnet.io/api/perl/index.html)
+[![Build Status](https://builds.apache.org/job/incubator-mxnet/job/master/badge/icon)](https://builds.apache.org/job/incubator-mxnet/job/master/)
+[![Documentation Status](https://builds.apache.org/job/incubator-mxnet-build-site/badge/icon)](https://mxnet.incubator.apache.org/api/perl/index.html)
+[![GitHub license](http://dmlc.github.io/img/apache2.svg)](../LICENSE)
 
 You have found MXNet Perl Package! The MXNet Perl packages brings flexible and efficient GPU
 computing and state-of-art deep learning to Perl.
@@ -10,7 +11,7 @@ computing and state-of-art deep learning to Perl.
 
 Installation
 ---------
-* [MXNet Setup Document](http://mxnet.io/get_started/ubuntu_setup.html)
+* [MXNet Setup Document](https://mxnet.incubator.apache.org/get_started/ubuntu_setup.html)
   - Check this out for detailed documents, examples and installation guides.
 
 License

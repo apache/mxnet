@@ -32,17 +32,17 @@ template <typename DType>
 ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              DType *costs, DType *grads, int *labels,
                              int *label_lengths, int *data_lengths,
-                             void *workspace, int train) {
+                             void *workspace, int train, int blank_label) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
-  int blank_label = 0;
   mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
-  if (train)
+  if (train) {
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
                              label_lengths, data_lengths);
-  else
+  } else {
     return ctc.score_forward(activations.dptr_, costs, labels, label_lengths,
                              data_lengths);
+  }
 }
 
 }  // namespace mshadow
@@ -72,29 +72,44 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_CTCLoss, CTCLossProp)
 
 The shapes of the inputs and outputs:
 
-- **data**: *(sequence_length, batch_size, alphabet_size + 1)*
-- **label**: *(batch_size, label_sequence_length)*
-- **out**: *(batch_size)*.
+- **data**: `(sequence_length, batch_size, alphabet_size)`
+- **label**: `(batch_size, label_sequence_length)`
+- **out**: `(batch_size)`
 
-``label`` is a tensor of integers between 1 and *alphabet_size*. If a
-sequence of labels is shorter than *label_sequence_length*, use the special
-padding character 0 at the end of the sequence to conform it to the correct
-length. For example, if *label_sequence_length* = 4, and one has two sequences
-of labels [2, 1] and [3, 2, 2], the resulting ```label``` tensor should be
-padded to be::
+The `data` tensor consists of sequences of activation vectors (without applying softmax),
+with i-th channel in the last dimension corresponding to i-th label
+for i between 0 and alphabet_size-1 (i.e always 0-indexed).
+Alphabet size should include one additional value reserved for blank label.
+When `blank_label` is ``"first"``, the ``0``-th channel is be reserved for
+activation of blank label, or otherwise if it is "last", ``(alphabet_size-1)``-th channel should be
+reserved for blank label.
 
-  [[2, 1, 0, 0], [3, 2, 2, 0]]
+``label`` is an index matrix of integers. When `blank_label` is ``"first"``,
+the value 0 is then reserved for blank label, and should not be passed in this matrix. Otherwise,
+when `blank_label` is ``"last"``, the value `(alphabet_size-1)` is reserved for blank label.
 
-The ``data`` tensor consists of sequences of activation vectors. The layer
-applies a softmax to each vector, which then becomes a vector of probabilities
-over the alphabet. Note that the 0th element of this vector is reserved for the
-special blank character.
+If a sequence of labels is shorter than *label_sequence_length*, use the special
+padding value at the end of the sequence to conform it to the correct
+length. The padding value is `0` when `blank_label` is ``"first"``, and `-1` otherwise.
+
+For example, suppose the vocabulary is `[a, b, c]`, and in one batch we have three sequences
+'ba', 'cbb', and 'abac'. When `blank_label` is ``"first"``, we can index the labels as
+`{'a': 1, 'b': 2, 'c': 3}`, and we reserve the 0-th channel for blank label in data tensor.
+The resulting `label` tensor should be padded to be::
+
+  [[2, 1, 0, 0], [3, 2, 2, 0], [1, 2, 1, 3]]
+
+When `blank_label` is ``"last"``, we can index the labels as
+`{'a': 0, 'b': 1, 'c': 2}`, and we reserve the channel index 3 for blank label in data tensor.
+The resulting `label` tensor should be padded to be::
+
+  [[1, 0, -1, -1], [2, 1, 1, -1], [0, 1, 0, 2]]
 
 ``out`` is a list of CTC loss values, one per example in the batch.
 
 See *Connectionist Temporal Classification: Labelling Unsegmented
 Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more
-information.
+information on the definition and the algorithm.
 
 )code" ADD_FILELINE)
     .add_argument("data", "NDArray-or-Symbol", "Input data to the ctc_loss op.")

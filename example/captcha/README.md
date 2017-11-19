@@ -2,4 +2,4 @@ This is the R version of [captcha recognition](http://blog.xlvector.net/2016-05/
 
 ![](captcha_example.png)
 
-You can download the images and `.rec` files from [here](https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/captcha_example.zip). Since each image has 4 labels, please remember to use `label_width=4` when generating the `.rec` files.
+You can download the images and `.rec` files from [here](https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/captcha_example.zip). Since each image has 4 labels, please remember to use `label_width=4` when generating the `.rec` files.

@@ -23,6 +23,7 @@
  */
 #include "../dmlc-core/src/io/line_split.cc"
 #include "../dmlc-core/src/io/recordio_split.cc"
+#include "../dmlc-core/src/io/indexed_recordio_split.cc"
 #include "../dmlc-core/src/io/input_split_base.cc"
 #include "../dmlc-core/src/io/local_filesys.cc"
 #include "../dmlc-core/src/data.cc"

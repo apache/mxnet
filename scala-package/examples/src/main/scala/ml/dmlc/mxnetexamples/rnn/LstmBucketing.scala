@@ -26,6 +26,8 @@ import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
+import ml.dmlc.mxnet.module.BucketingModule
+import ml.dmlc.mxnet.module.FitParams
 
 /**
  * Bucketing LSTM examples
@@ -50,6 +52,7 @@ object LstmBucketing {
   private val logger: Logger = LoggerFactory.getLogger(classOf[LstmBucketing])
 
   def perplexity(label: NDArray, pred: NDArray): Float = {
+    pred.waitToRead()
     val labelArr = label.T.toArray.map(_.toInt)
     var loss = .0
     (0 until pred.shape(0)).foreach(i =>
@@ -74,25 +77,22 @@ object LstmBucketing {
       val numEmbed = 200
       val numLstmLayer = 2
 
-      val learningRate = 0.01f
-      val momentum = 0.0f
-
       logger.info("Building vocab ...")
       val vocab = BucketIo.defaultBuildVocab(inst.dataTrain)
 
-      class BucketSymGen extends SymbolGenerator {
-        override def generate(key: AnyRef): Symbol = {
-          val seqLen = key.asInstanceOf[Int]
-          Lstm.lstmUnroll(numLstmLayer, seqLen, vocab.size,
-            numHidden = numHidden, numEmbed = numEmbed, numLabel = vocab.size)
-        }
+      def BucketSymGen(key: AnyRef):
+        (Symbol, IndexedSeq[String], IndexedSeq[String]) = {
+        val seqLen = key.asInstanceOf[Int]
+        val sym = Lstm.lstmUnroll(numLstmLayer, seqLen, vocab.size,
+          numHidden = numHidden, numEmbed = numEmbed, numLabel = vocab.size)
+        (sym, IndexedSeq("data"), IndexedSeq("softmax_label"))
       }
 
       val initC = (0 until numLstmLayer).map(l =>
-        (s"l${l}_init_c", (batchSize, numHidden))
+        (s"l${l}_init_c_beta", (batchSize, numHidden))
       )
       val initH = (0 until numLstmLayer).map(l =>
-        (s"l${l}_init_h", (batchSize, numHidden))
+        (s"l${l}_init_h_beta", (batchSize, numHidden))
       )
       val initStates = initC ++ initH
 
@@ -101,18 +101,26 @@ object LstmBucketing {
       val dataVal = new BucketSentenceIter(inst.dataVal, vocab,
         buckets, batchSize, initStates)
 
+      val model = new BucketingModule(
+        symGen = BucketSymGen,
+        defaultBucketKey = dataTrain.defaultBucketKey,
+        contexts = contexts)
+
+      val fitParams = new FitParams()
+      fitParams.setEvalMetric(
+        new CustomMetric(perplexity, name = "perplexity"))
+      fitParams.setKVStore("device")
+      fitParams.setOptimizer(
+        new SGD(learningRate = 0.01f, momentum = 0f, wd = 0.00001f))
+      fitParams.setInitializer(new Xavier(factorType = "in", magnitude = 2.34f))
+      fitParams.setBatchEndCallback(new Speedometer(batchSize, 50))
+
       logger.info("Start training ...")
-      val model = FeedForward.newBuilder(new BucketSymGen())
-        .setContext(contexts)
-        .setNumEpoch(inst.numEpoch)
-        .setOptimizer(new SGD(learningRate = learningRate, momentum = momentum, wd = 0.00001f))
-        .setInitializer(new Xavier(factorType = "in", magnitude = 2.34f))
-        .setTrainData(dataTrain)
-        .setEvalData(dataVal)
-        .setEvalMetric(new CustomMetric(perplexity, name = "perplexity"))
-        .setBatchEndCallback(new Speedometer(batchSize, 50))
-        .build()
-      model.save(inst.saveModelPath)
+      model.fit(
+        trainData = dataTrain,
+        evalData = Some(dataVal),
+        numEpoch = inst.numEpoch, fitParams)
+      logger.info("Finished training...")
     } catch {
       case ex: Exception =>
         logger.error(ex.getMessage, ex)

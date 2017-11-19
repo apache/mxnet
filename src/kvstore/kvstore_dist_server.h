@@ -33,7 +33,7 @@
 #include <vector>
 #include "ps/ps.h"
 #include "mxnet/kvstore.h"
-#include "../operator/tensor/elemwise_binary_op.h"
+#include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
 
 namespace mxnet {
@@ -230,13 +230,15 @@ class KVStoreDistServer {
         TBlob recv_blob(data, dshape, cpu::kDevMask);  // NOLINT(*)
         NDArray recved = NDArray(recv_blob, 0);
         stored = NDArray(kRowSparseStorage, dshape, Context());
-        Engine::Get()->PushSync([recved, stored](RunContext ctx) {
+        Engine::Get()->PushAsync(
+          [recved, stored](RunContext ctx, Engine::CallbackOnComplete on_complete) {
             NDArray rsp = stored;
             stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
             mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
             op::PopulateFullIdxRspImpl(s, &rsp);
             mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
                           recved.data().FlatTo1D<cpu, float>(), s);
+            on_complete();
           }, recved.ctx(), {recved.var()}, {stored.var()},
           FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
         stored.WaitToRead();
@@ -285,12 +287,11 @@ class KVStoreDistServer {
           // TODO(haibin) override + operator for row_sparse NDArray
           // instead of calling BinaryComputeRspRsp directly
           using namespace mshadow;
-          Engine::Get()->PushSync([recved, merged, out](RunContext ctx) {
-              std::vector<NDArray> inputs, outputs;
-              inputs.push_back(recved);
-              inputs.push_back(merged.array);
-              outputs.push_back(out);
-              op::BinaryComputeRspRspImpl<cpu, cpu>({}, {}, inputs, {kWriteTo}, outputs);
+          Engine::Get()->PushAsync(
+            [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+              op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
+                {}, {}, {recved, merged.array}, {kWriteTo}, {out});
+              on_complete();
             }, recved.ctx(), const_vars, {out.var()},
             FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
           CopyFromTo(out, &merged.array, 0);
@@ -339,6 +340,7 @@ class KVStoreDistServer {
       auto len = unit_len * num_rows;
       // concat values
       response.vals.resize(len);
+      #pragma omp parallel for
       for (size_t i = 1; i <= num_rows; i++) {
         int key = DecodeKey(req_data.keys[i]);
         int64_t row_id = key - master_key;

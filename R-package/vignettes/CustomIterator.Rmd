@@ -10,7 +10,7 @@ The data we are going to use is the [MNIST dataset](http://yann.lecun.com/exdb/m
 To download the data:
 
 ```{r}
-download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/mnist_csv.zip',
+download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/mnist_csv.zip',
               destfile = 'mnist_csv.zip')
 unzip('mnist_csv.zip', exdir = '.')
 ```

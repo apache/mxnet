@@ -26,9 +26,9 @@ import scipy.sparse as sp
 import mxnet as mx
 import numpy as np
 import numpy.random as rnd
-from mxnet.test_utils import rand_ndarray, set_default_context, assert_almost_equal
+from mxnet.test_utils import rand_ndarray, set_default_context, assert_almost_equal, get_bz2_data
 from mxnet.base import check_call, _LIB
-from util import get_data, estimate_density
+from util import estimate_density
 
 PARSER = argparse.ArgumentParser(description="Benchmark sparse operators",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -204,7 +204,7 @@ def test_dot_real(data_dict):
 
     path = os.path.join(data_dir, data_dict['data_name'])
     if not os.path.exists(path):
-        get_data(
+        get_bz2_data(
             data_dir,
             data_dict['data_name'],
             data_dict['url'],

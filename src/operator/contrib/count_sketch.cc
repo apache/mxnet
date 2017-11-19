@@ -55,12 +55,13 @@ Then the operator computs:
    out[h[i]] += data[i] * s[i]
 
 Example::
+
    out_dim = 5
    x = [[1.2, 2.5, 3.4],[3.2, 5.7, 6.6]]
-   h = [0, 3, 4]
-   s = [1, -1, 1]
+   h = [[0, 3, 4]]
+   s = [[1, -1, 1]]
    mx.contrib.ndarray.count_sketch(data=x, h=h, s=s, out_dim = 5) = [[1.2, 0, 0, -2.5, 3.4],
-                                                                    [3.2, 0, 0, -5.7, 6.6]]
+                                                                     [3.2, 0, 0, -5.7, 6.6]]
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to the CountSketchOp.")

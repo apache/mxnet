@@ -244,7 +244,7 @@ method pull(
 method set_optimizer(AI::MXNet::Optimizer $optimizer)
 {
     my $is_worker = check_call(AI::MXNetCAPI::KVStoreIsWorkerNode());
-    if($self->type eq 'dist' and $is_worker)
+    if($self->type =~ /dist/ and $is_worker)
     {
         my $optim_str = MIME::Base64::encode_base64(Storable::freeze($optimizer), "");
         $self->_send_command_to_servers(0, $optim_str);
@@ -252,7 +252,7 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
     else
     {
         $self->_updater(AI::MXNet::Optimizer->get_updater($optimizer));
-        $self->_set_updater(sub { &{$self->_updater}(@_) });
+        $self->_set_updater($self->_updater);
     }
 }
 
@@ -309,14 +309,17 @@ method num_workers()
     ----------
     fname : str
         Path to output states file.
+    dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
 =cut
 
-method save_optimizer_states(Str $fname)
+method save_optimizer_states(Str $fname, Bool :$dump_optimizer=0)
 {
     confess("Cannot save states for distributed training")
         unless defined $self->_updater;
     open(F, ">:raw", "$fname") or confess("can't open $fname for writing: $!");
-    print F $self->_updater->get_states();
+    print F $self->_updater->get_states($dump_optimizer);
     close(F);
 }
 
@@ -371,7 +374,7 @@ method load_optimizer_states(Str $fname)
         [ 6.  6.  6.]]
 =cut
 
-method _set_updater(CodeRef $updater_func)
+method _set_updater(Updater $updater_func)
 {
     $self->_updater_func(
         sub {
@@ -478,12 +481,12 @@ sub _key_value
         assert(not blessed($vals) and @$keys == @$vals);
         my @c_keys;
         my @c_vals;
-        zip(sub {
-            my ($key, $val) = @_;
+        for(zip($keys, $vals)) {
+            my ($key, $val) = @$_;
             my ($c_key, $c_val) = _key_value($key, $val);
             push @c_keys, @$c_key;
             push @c_vals, @$c_val;
-        }, $keys, $vals);
+        }
         return (\@c_keys, \@c_vals);
     }
 }

@@ -20,8 +20,8 @@ use strict;
 use warnings;
 use PDL;
 use PDL::Types qw();
-use AI::MXNetCAPI 1.0102;
-use AI::NNVMCAPI 1.01;
+use AI::MXNetCAPI 1.1;
+use AI::NNVMCAPI 1.1;
 use AI::MXNet::Types;
 use Time::HiRes;
 use Carp;
@@ -30,23 +30,28 @@ use base qw(Exporter);
 use List::Util qw(shuffle);
 
 @AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
-                              pdl cat dog svd bisect_left pdl_shuffle
+                              pdl cat dog svd bisect_left pdl_shuffle as_array
                               DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
                               DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP);
 @AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
+
 use constant DTYPE_STR_TO_MX => {
     float32 => 0,
     float64 => 1,
     float16 => 2,
     uint8   => 3,
-    int32   => 4
+    int32   => 4,
+    int8    => 5,
+    int64   => 6
 };
 use constant DTYPE_MX_TO_STR => {
     0 => 'float32',
     1 => 'float64',
     2 => 'float16',
     3 => 'uint8',
-    4 => 'int32'
+    4 => 'int32',
+    5 => 'int8',
+    6 => 'int64'
 };
 use constant DTYPE_MX_TO_PDL => {
     0 => 6,
@@ -54,17 +59,22 @@ use constant DTYPE_MX_TO_PDL => {
     2 => 6,
     3 => 0,
     4 => 3,
+    5 => 0,
+    6 => 5,
     float32 => 6,
     float64 => 7,
     float16 => 6,
     uint8   => 0,
-    int32   => 3
+    int32   => 3,
+    int8    => 0,
+    int64   => 5
 };
 use constant DTYPE_PDL_TO_MX => {
     6 => 0,
     7 => 1,
     0 => 3,
     3 => 4,
+    5 => 6
 };
 use constant DTYPE_MX_TO_PERL => {
     0 => 'f',
@@ -72,11 +82,15 @@ use constant DTYPE_MX_TO_PERL => {
     2 => 'S',
     3 => 'C',
     4 => 'l',
+    5 => 'c',
+    6 => 'q',
     float32 => 'f',
     float64 => 'd',
     float16 => 'S',
     uint8   => 'C',
-    int32   => 'l'
+    int32   => 'l',
+    int8    => 'c',
+    int64   => 'q'
 };
 use constant GRAD_REQ_MAP => {
     null  => 0,
@@ -106,12 +120,17 @@ use constant GRAD_REQ_MAP => {
 
 sub zip
 {
-    my ($sub, @arrays) = @_;
-    my $len = @{ $arrays[0] };
-    for (my $i = 0; $i < $len; $i++)
+    if('CODE' eq ref $_[0])
     {
-        $sub->(map { $_->[$i] } @arrays);
+        # continue supporting the callback style
+        my $code = shift;
+        $code->(@$_) for AI::MXNetCAPI::py_zip(map { \@$_ } @_);
+        return;
     }
+    # the map() here may seem like a no-op, but triggers overloading or
+    # whatever else is needed to make array-ish things actually arrays
+    # before entering the low level list builder.
+    return AI::MXNetCAPI::py_zip(map { \@$_ } @_);
 }
 
 =head2 enumerate
@@ -256,16 +275,14 @@ sub build_param_doc
     $remove_dup //= 1;
     my %param_keys;
     my @param_str;
-    zip(sub {
-            my ($key, $type_info, $desc) = @_;
-            return if exists $param_keys{$key} and $remove_dup;
+    for(zip($arg_names, $arg_types, $arg_descs)) {
+            my ($key, $type_info, $desc) = @$_;
+            next if exists $param_keys{$key} and $remove_dup;
             $param_keys{$key} = 1;
             my $ret = sprintf("%s : %s", $key, $type_info);
             $ret .= "\n    ".$desc if length($desc);
             push @param_str,  $ret;
-        },
-        $arg_names, $arg_types, $arg_descs
-    );
+    }
     return sprintf("Parameters\n----------\n%s\n", join("\n", @param_str));
 }
 
@@ -279,6 +296,52 @@ sub _notify_shutdown
     check_call(AI::MXNetCAPI::NotifyShutdown());
 }
 
+sub _indent
+{
+    my ($s_, $numSpaces) = @_;
+    my @s = split(/\n/, $s_);
+    if (@s == 1)
+    {
+        return $s_;
+    }
+    my $first = shift(@s);
+    @s = ($first, map { (' 'x$numSpaces) . $_ } @s);
+    return join("\n", @s);
+}
+
+sub as_array
+{
+    return ref $_[0] eq 'ARRAY' ? $_[0] : [$_[0]];
+}
+
+my %internal_arguments = (prefix => 1, params => 1, shared => 1);
+my %attributes_per_class;
+sub process_arguments
+{
+    my $orig  = shift;
+    my $class = shift;
+    if($class->can('python_constructor_arguments'))
+    {
+        if(not exists $attributes_per_class{$class})
+        {
+            %{ $attributes_per_class{$class} } = map { $_->name => 1 } $class->meta->get_all_attributes;
+        }
+        my %kwargs;
+        while(@_ >= 2 and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
+        {
+            my $v = pop(@_);
+            my $k = pop(@_);
+            $kwargs{ $k } = $v;
+        }
+        if(@_)
+        {
+            @kwargs{ @{ $class->python_constructor_arguments }[0..@_-1] } = @_;
+        }
+        return $class->$orig(%kwargs);
+    }
+    return $class->$orig(@_);
+}
+
 END {
     _notify_shutdown();
     Time::HiRes::sleep(0.01);
@@ -288,5 +351,18 @@ END {
 *pceil  = \&ceil;
 ## making sure that we can stringify arbitrarily large piddles
 $PDL::toolongtoprint = 1000_000_000;
+## convenience subs
+{
+    my $orig_at = PDL->can('at');
+    no warnings 'redefine';
+    *PDL::at = sub {
+        my ($self, @args) = @_;
+        return $orig_at->($self, @args) if @args != 1;
+        return $orig_at->($self, @args) if $self->ndims == 1;
+        return $self->slice(('X')x($self->ndims-1), $args[0])->squeeze;
+    };
+    *PDL::len    = sub { shift->dim(-1) };
+    *PDL::dtype  = sub { DTYPE_MX_TO_STR->{ DTYPE_PDL_TO_MX->{ shift->type->numval } } };
+}
 
 1;

@@ -102,7 +102,7 @@ class CuDNNAlgoReg {
     ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
                  cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch};
     std::lock_guard<std::mutex> guard(lock_);
-    if (reg_.size() % 50 == 0) {
+    if (param.cudnn_tune.value() && reg_.size() % 50 == 0) {
       LOG(INFO) << "Running performance tests to find the best convolution "
                    "algorithm, "
                    "this can take a while... (setting env variable "
@@ -155,7 +155,6 @@ class CuDNNAlgoReg {
       ret = dmlc::HashCombine(ret, key.data_shape);
       ret = dmlc::HashCombine(ret, key.weight_shape);
       ret = dmlc::HashCombine(ret, key.out_shape);
-      for (const auto& i : key.out_shape) ret = dmlc::HashCombine(ret, i);
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_data_type));
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_forward_compute_type));
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_backward_compute_type));

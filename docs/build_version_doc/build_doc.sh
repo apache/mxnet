@@ -64,6 +64,7 @@ then
     cp -a "$web_folder/versions/." "$local_build/versions"
     mkdir "$local_build/versions/${tag_list[0]}"
     cp -a "$web_folder/." "$local_build/versions/${tag_list[0]}" || exit 1
+    cp "$web_folder/README.md" "$local_build"
     rm -rf "$local_build/versions/${tag_list[0]}/versions"
     rm -rf "$web_folder/*"
     cp -a "$local_build/." "$web_folder"

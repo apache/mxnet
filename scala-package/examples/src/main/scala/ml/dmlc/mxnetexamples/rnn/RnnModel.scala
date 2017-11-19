@@ -35,9 +35,9 @@ object RnnModel {
                                                dropout)
     private val batchSize = 1
     private val initC = (for (l <- 0 until numLstmLayer)
-                          yield (s"l${l}_init_c" -> Shape(batchSize, numHidden))).toMap
+                          yield (s"l${l}_init_c_beta" -> Shape(batchSize, numHidden))).toMap
     private val initH = (for (l <- 0 until numLstmLayer)
-                          yield (s"l${l}_init_h" -> Shape(batchSize, numHidden))).toMap
+                          yield (s"l${l}_init_h_beta" -> Shape(batchSize, numHidden))).toMap
     private val dataShape = Map("data" -> Shape(batchSize))
     private val inputShape = initC ++ initH ++ dataShape
     private val executor = sym.simpleBind(ctx = ctx, shapeDict = inputShape)
@@ -49,7 +49,7 @@ object RnnModel {
     }
 
     private var stateName = (Array[String]() /: (0 until numLstmLayer)) { (acc, i) =>
-      acc :+ s"l${i}_init_c"  :+ s"l${i}_init_h"
+      acc :+ s"l${i}_init_c_beta"  :+ s"l${i}_init_h_beta"
     }
 
     private val statesDict = stateName.zip(this.executor.outputs.drop(1)).toMap

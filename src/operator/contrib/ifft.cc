@@ -50,6 +50,7 @@ Last dimension must be an even number.
 The output data has shape: (N, d/2) or (N1, N2, N3, d/2). It is only the real part of the result.
 
 Example::
+
    data = np.random.normal(0,1,(3,4))
    out = mx.contrib.ndarray.ifft(data = mx.nd.array(data,ctx = mx.gpu(0)))
 

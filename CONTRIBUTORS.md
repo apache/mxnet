@@ -1,5 +1,5 @@
-Contributors of DMLC/MXNet
-==========================
+Contributors of Apache MXNet (incubating)
+=========================================
 MXNet has been developed by a community of people who are interested in large-scale machine learning and deep learning.
 Everyone is more than welcomed to is a great way to make the project better and more accessible to more users.
 
@@ -50,7 +50,7 @@ New committers will be proposed by current committers, with support from more th
 
 List of Contributors
 --------------------
-* [Full List of Contributors](https://github.com/dmlc/mxnet/graphs/contributors)
+* [Full List of Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
 * [Feng Wang](https://github.com/happynear)
   - Feng makes mxnet compatible with Windows Visual Studio.
@@ -146,3 +146,4 @@ List of Contributors
 * [Xizhou Zhu](https://github.com/einsiedler0408/)
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
 * [Kenta Kubo](https://github.com/kkk669/)
+* [Manu Seth](https://github.com/mseth10/)

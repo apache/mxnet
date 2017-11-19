@@ -170,7 +170,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
       val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
       val range = NDArray.arange(start = start, stop = Some(stop), step = step,
         repeat = repeat, ctx = Context.cpu(), dType = DType.Float32)
-      assert(CheckUtils.reldiff(result.toArray, range.toArray) <= 1e-5f)
+      assert(CheckUtils.reldiff(result.toArray, range.toArray) <= 1e-4f)
     }
   }
 

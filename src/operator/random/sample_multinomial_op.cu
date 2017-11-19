@@ -26,7 +26,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(sample_multinomial)
+NNVM_REGISTER_OP(_sample_multinomial)
 .set_attr<FCompute>("FCompute<gpu>", SampleMultinomialForward<gpu>);
 
 

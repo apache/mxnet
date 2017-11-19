@@ -38,7 +38,7 @@ has [qw/_arg_dict
         _aux_dict
         _output_dict
         outputs
-        _output_dirty/] => (is => 'rw', init_arg => undef);
+    /]                  => (is => 'rw', init_arg => undef);
 =head1 NAME
 
     AI::MXNet::Executor - The actual executing object of MXNet.
@@ -191,14 +191,6 @@ method forward(Int $is_train=0, %kwargs)
             $is_train
         )
     );
-    if($self->_output_dirty)
-    {
-        AI::MXNet::Logging->warning(
-            "Calling forward the second time after forward(is_train=1) "
-            ."without calling backward first. Is this intended?"
-        );
-    }
-    $self->_output_dirty($is_train);
     return $self->outputs;
 }
 
@@ -212,9 +204,17 @@ method forward(Int $is_train=0, %kwargs)
         The gradient on the outputs to be propagated back.
         This parameter is only needed when bind is called
         on outputs that are not a loss function.
+
+    is_train : bool, default 1
+        Whether this backward is for training or inference. Note that in rare
+        cases you want to call backward with is_train=0 to get gradient
+        during inference.
 =cut
 
-method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|HashRef[AI::MXNet::NDArray]] $out_grads=)
+method backward(
+    Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|HashRef[AI::MXNet::NDArray]] $out_grads=,
+    Bool $is_train=1
+)
 {
     $out_grads //= [];
     if(blessed $out_grads)
@@ -226,20 +226,13 @@ method backward(Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|HashRef[AI
         $out_grads = [ @{ $out_grads }{ @{ $self->symbol->list_outputs() } } ];
     }
     check_call(
-        AI::MXNetCAPI::ExecutorBackward(
+        AI::MXNetCAPI::ExecutorBackwardEx(
             $self->handle,
             scalar(@{ $out_grads }),
-            [map { $_->handle } @{ $out_grads }]
+            [map { $_->handle } @{ $out_grads }],
+            $is_train
         )
     );
-    if(not $self->_output_dirty)
-    {
-        AI::MXNet::Logging->warning(
-            "Calling backward without calling forward(is_train=True) "
-            ."first. Behavior is undefined."
-        );
-    }
-    $self->_output_dirty(0);
 }
 
 =head2 set_monitor_callback

@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Custom neural network layers in model_zoo."""
+__all__ = ['HybridConcurrent', 'Identity']
 
 from ..block import Block, HybridBlock
 from ..utils import _indent

@@ -149,16 +149,39 @@ struct MarkRspRowBlockKernel {
 };
 
 /*!
- * \brief GPU kernel to flag non-zero rows of an rsp tensor with indices.
- * Parallelized by matrix rows: 1 thread/row
+ * \brief GPU kernel to flag non-zero rows of an rsp tensor with 1.
+ * Parallelized by tensor rows: 1 thread/row
  */
-struct SetRspRowFlgKernel {
+struct MarkRspRowFlgKernel {
   /*!
    * \brief
    * \param tid      global thread id
    * \param row_flg  array to flag storage indices of non-zero rows
-   * \param row_idx  rsp matrix row index array storing indices of non-zero rows
-   * \param nnr      rsp matrix number of non-zero rows (storage shape)
+   * \param row_idx  rsp tensor row index array storing indices of non-zero rows
+   * \param nnr      rsp tensor number of non-zero rows (storage shape)
+   */
+  template<typename IType>
+  __device__ __forceinline__ static void Map(int tid,
+                                             IType* row_flg,
+                                             const IType* row_idx,
+                                             const nnvm::dim_t nnr) {
+    if (tid < nnr) {
+      row_flg[row_idx[tid]] = 1;
+    }
+  }
+};
+
+/*!
+ * \brief GPU kernel to flag non-zero rows of an rsp tensor with indices.
+ * Parallelized by matrix rows: 1 thread/row
+ */
+struct IndexRspRowFlgKernel {
+  /*!
+   * \brief
+   * \param tid      global thread id
+   * \param row_flg  array to flag storage indices of non-zero rows
+   * \param row_idx  rsp tensor row index array storing indices of non-zero rows
+   * \param nnr      rsp tensor number of non-zero rows (storage shape)
    */
   template<typename RType>
   __device__ __forceinline__ static void Map(int tid,
@@ -167,32 +190,6 @@ struct SetRspRowFlgKernel {
                                              const nnvm::dim_t nnr) {
     if (tid < nnr) {
       row_flg[row_idx[tid]] = tid+1;
-    }
-  }
-};
-
-/*!
- * \brief GPU kernel for filling the row index array of an rsp tensor.
- * Parallelized by tensor rows: 1 thread/row
- */
-struct FillRspRowIdxKernel {
-  /*!
-   * \brief
-   * \param tid          global thread id
-   * \param row_idx      row index array to store indices of non-zero rows
-   * \param row_flg_sum  inclusive prefix sum array over 0/1 marked row flag array
-   * \param num_rows     rsp tensor number of rows (shape)
-   */
-  template<typename RType>
-  __device__ __forceinline__ static void Map(int tid,
-                                             RType* row_idx,
-                                             const nnvm::dim_t* row_flg_sum,
-                                             const nnvm::dim_t num_rows) {
-    if (tid < num_rows) {
-      nnvm::dim_t prev = (tid == 0)? 0 : row_flg_sum[tid-1];
-      if (row_flg_sum[tid] > prev) {
-        row_idx[prev] = static_cast<RType>(tid);
-      }
     }
   }
 };

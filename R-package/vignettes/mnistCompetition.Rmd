@@ -10,7 +10,7 @@ First, let us download the data from [here](https://www.kaggle.com/c/digit-recog
 Then we can read them in R and convert to matrices.
 
 ```{r, echo=FALSE}
-download.file('https://s3-us-west-2.amazonaws.com/apache-mxnet/R/data/mnist_csv.zip', destfile = 'mnist_csv.zip')
+download.file('https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/mnist_csv.zip', destfile = 'mnist_csv.zip')
 unzip('mnist_csv.zip', exdir = '.')
 ```
 

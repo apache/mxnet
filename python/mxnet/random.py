@@ -17,18 +17,14 @@
 
 # coding: utf-8
 # pylint: disable=no-member, protected-access, unused-import, no-name-in-module
+# pylint: disable=wildcard-import, unused-wildcard-import
 """Random number interface of MXNet."""
 from __future__ import absolute_import
 
 import ctypes
 from .base import _LIB, check_call
-from .ndarray._internal import _sample_uniform as uniform
-from .ndarray._internal import _sample_normal as normal
-from .ndarray._internal import _sample_gamma as gamma
-from .ndarray._internal import _sample_exponential as exponential
-from .ndarray._internal import _sample_poisson as poisson
-from .ndarray._internal import _sample_negbinomial as negative_binomial
-from .ndarray._internal import _sample_gennegbinomial as generalized_negative_binomial
+from .ndarray.random import *
+
 
 def seed(seed_state):
     """Seeds the random number generators in MXNet.

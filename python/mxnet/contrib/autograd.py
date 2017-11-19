@@ -20,10 +20,11 @@
 from __future__ import absolute_import
 from __future__ import division
 
+from array import array
 import ctypes
 import functools
 from ..base import _LIB, check_call, string_types
-from ..base import mx_uint, NDArrayHandle, c_array
+from ..base import mx_uint, NDArrayHandle, c_array, c_array_buf, c_handle_array
 # pylint: disable= unused-import
 from ..ndarray import NDArray, zeros_like, _GRAD_REQ_MAP
 
@@ -107,21 +108,16 @@ def mark_variables(variables, gradients, grad_reqs='write'):
     gradients: list of NDArray
     grad_reqs: list of string
     """
-    variable_handles = []
-    gradient_handles = []
-    for var, gradvar in zip(variables, gradients):
-        variable_handles.append(var.handle)
-        gradient_handles.append(gradvar.handle)
     if isinstance(grad_reqs, string_types):
         grad_reqs = [_GRAD_REQ_MAP[grad_reqs]]*len(variables)
     else:
         grad_reqs = [_GRAD_REQ_MAP[i] for i in grad_reqs]
 
     check_call(_LIB.MXAutogradMarkVariables(
-        len(variable_handles),
-        c_array(NDArrayHandle, variable_handles),
-        c_array(mx_uint, grad_reqs),
-        c_array(NDArrayHandle, gradient_handles)))
+        len(variables),
+        c_handle_array(variables),
+        c_array_buf(mx_uint, array('I', grad_reqs)),
+        c_handle_array(gradients)))
 
 
 def backward(outputs, out_grads=None, retain_graph=False):
@@ -134,14 +130,11 @@ def backward(outputs, out_grads=None, retain_graph=False):
     """
     assert isinstance(outputs, (list, tuple)), \
         "outputs must be a list or tuple of NDArrays"
-    output_handles = []
-    for arr in outputs:
-        output_handles.append(arr.handle)
 
     if out_grads is None:
         check_call(_LIB.MXAutogradBackward(
-            len(output_handles),
-            c_array(NDArrayHandle, output_handles),
+            len(outputs),
+            c_handle_array(outputs),
             ctypes.c_void_p(0),
             ctypes.c_int(retain_graph)))
         return
@@ -152,12 +145,12 @@ def backward(outputs, out_grads=None, retain_graph=False):
             ograd_handles.append(arr.handle)
         else:
             ograd_handles.append(NDArrayHandle(0))
-    assert len(ograd_handles) == len(output_handles), \
+    assert len(ograd_handles) == len(outputs), \
         "outputs and out_grads must have the same length"
 
     check_call(_LIB.MXAutogradBackward(
-        len(output_handles),
-        c_array(NDArrayHandle, output_handles),
+        len(outputs),
+        c_handle_array(outputs),
         c_array(NDArrayHandle, ograd_handles),
         ctypes.c_int(retain_graph)))
 

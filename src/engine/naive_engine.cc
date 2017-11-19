@@ -26,6 +26,7 @@
 #include <thread>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "./openmp.h"
 
 namespace mxnet {
 namespace engine {

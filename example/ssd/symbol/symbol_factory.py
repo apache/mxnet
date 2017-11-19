@@ -17,7 +17,7 @@
 
 """Presets for various network configurations"""
 import logging
-import symbol_builder
+from symbol import symbol_builder
 
 def get_config(network, data_shape, **kwargs):
     """Configuration factory for various networks

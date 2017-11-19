@@ -129,7 +129,7 @@ class ConcatOp : public Operator {
 };  // class ConcatOp
 
 template<typename xpu>
-Operator *CreateOp(ConcatParam param, int dtype);
+Operator *CreateOp(ConcatParam param, int dtype, std::vector<TShape> *in_shape);
 
 #if DMLC_USE_CXX11
 class ConcatProp : public OperatorProperty {

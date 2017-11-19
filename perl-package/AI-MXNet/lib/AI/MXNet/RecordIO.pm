@@ -25,7 +25,7 @@ use Mouse;
 
 =head1 NAME
 
-    AI::MXNet::Function::Parameters - Read/write RecordIO format data
+    AI::MXNet::RecordIO - Read/write RecordIO format data
 =cut
 
 =head2 new

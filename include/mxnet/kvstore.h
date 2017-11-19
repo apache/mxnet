@@ -184,7 +184,7 @@ class KVStore {
    */
   virtual void PullRowSparse(const std::vector<int>& str_keys,
                              const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                             const int priority = 0) = 0;
+                             int priority = 0) = 0;
 
   /*!
    * \brief pull a list of key-value pairs from the store, where each key is a string.
@@ -196,7 +196,7 @@ class KVStore {
    */
   virtual void PullRowSparse(const std::vector<std::string>& str_keys,
                              const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
-                             const int priority = 0) = 0;
+                             int priority = 0) = 0;
 
   /**
    * \brief the prototype of user-defined updater

@@ -143,7 +143,7 @@ if __name__ == '__main__':
     class_names = parse_class_names(args.class_names)
     data_shape = parse_data_shape(args.data_shape)
     if args.prefix.endswith('_'):
-        prefix = args.prefix + args.network + '_' + str(args.data_shape[0])
+        prefix = args.prefix + args.network + '_' + str(data_shape[0])
     else:
         prefix = args.prefix
     detector = get_detector(network, prefix, args.epoch,

@@ -40,13 +40,13 @@ class GpuCTC {
     private:
 
         template<int NT, int VT>
-        ctcStatus_t launch_alpha_beta_kernels(const ProbT* const probs,
+        ctcStatus_t launch_alpha_beta_kernels(const ProbT* const log_probs,
                                               ProbT *grads,
                                               bool compute_alpha,
                                               bool compute_beta);
 
         ctcStatus_t
-        launch_gpu_kernels(const ProbT* const probs,
+        launch_gpu_kernels(const ProbT* const log_probs,
                            ProbT *grads,
                            size_t config,
                            bool launch_alpha,
@@ -64,7 +64,7 @@ class GpuCTC {
                                           size_t& best_config);
 
         ctcStatus_t
-        compute_probs(const ProbT* const activations);
+        compute_log_probs(const ProbT* const activations);
 
         ctcStatus_t
         compute_cost_and_score(const ProbT* const activations,
@@ -99,7 +99,7 @@ class GpuCTC {
         ProbT *nll_forward_;
         ProbT *nll_backward_;
         ProbT *denoms_; // Temporary storage for denoms for softmax
-        ProbT *probs_; // Temporary storage for probabilities (softmax output)
+        ProbT *log_probs_; // Temporary storage for probabilities (log softmax output)
 };
 
 template<typename ProbT>
@@ -249,7 +249,7 @@ GpuCTC<ProbT>::setup_gpu_metadata(const int* const flat_labels,
                                   gpu_bytes_used);
     gpu_bytes_used += activation_cols_ * sizeof(ProbT);
 
-    probs_ =
+    log_probs_ =
         reinterpret_cast<ProbT *>(static_cast<char*>(gpu_workspace_) +
                                   gpu_bytes_used);
     gpu_bytes_used += out_dim_ * activation_cols_ * sizeof(ProbT);
@@ -259,7 +259,7 @@ GpuCTC<ProbT>::setup_gpu_metadata(const int* const flat_labels,
 
 template<typename ProbT>
 template<int NT, int VT>
-ctcStatus_t GpuCTC<ProbT>::launch_alpha_beta_kernels(const ProbT* const probs,
+ctcStatus_t GpuCTC<ProbT>::launch_alpha_beta_kernels(const ProbT* const log_probs,
                                                      ProbT* grads,
                                                      bool compute_alpha,
                                                      bool compute_beta ) {
@@ -273,7 +273,7 @@ ctcStatus_t GpuCTC<ProbT>::launch_alpha_beta_kernels(const ProbT* const probs,
 
     if (compute_alpha)
         compute_alpha_kernel<ProbT, NT, VT><<<grid_size, NT, 0, stream_>>>
-            (probs, label_sizes_, utt_length_,
+            (log_probs, label_sizes_, utt_length_,
              repeats_, labels_without_blanks_, label_offsets_,
              labels_with_blanks_, alphas_, nll_forward_,
              stride, out_dim_, S_, T_, blank_label_);
@@ -281,7 +281,7 @@ ctcStatus_t GpuCTC<ProbT>::launch_alpha_beta_kernels(const ProbT* const probs,
 
     if (compute_beta) {
         compute_betas_and_grad_kernel<ProbT, NT, VT><<<grid_size, NT, 0, stream_>>>
-            (probs, label_sizes_, utt_length_, repeats_,
+            (log_probs, label_sizes_, utt_length_, repeats_,
              labels_with_blanks_, alphas_, nll_forward_, nll_backward_,
              grads, stride, out_dim_, S_, T_, blank_label_);
 
@@ -331,25 +331,25 @@ GpuCTC<ProbT>::create_metadata_and_choose_config(const int* const flat_labels,
 
 template<typename ProbT>
 ctcStatus_t
-GpuCTC<ProbT>::launch_gpu_kernels(const ProbT* const probs,
+GpuCTC<ProbT>::launch_gpu_kernels(const ProbT* const log_probs,
                                   ProbT* grads,
                                   size_t config,
                                   bool l_a,
                                   bool l_b) {
 
     switch(config) {
-        case 0:   {return launch_alpha_beta_kernels<32,   1>(probs, grads, l_a, l_b);}
-        case 1:   {return launch_alpha_beta_kernels<64,   1>(probs, grads, l_a, l_b);}
-        case 2:   {return launch_alpha_beta_kernels<128,  1>(probs, grads, l_a, l_b);}
-        case 3:   {return launch_alpha_beta_kernels<64,   3>(probs, grads, l_a, l_b);}
-        case 4:   {return launch_alpha_beta_kernels<128,  2>(probs, grads, l_a, l_b);}
-        case 5:   {return launch_alpha_beta_kernels<32,   9>(probs, grads, l_a, l_b);}
-        case 6:   {return launch_alpha_beta_kernels<64,   6>(probs, grads, l_a, l_b);}
-        case 7:   {return launch_alpha_beta_kernels<128,  4>(probs, grads, l_a, l_b);}
-        case 8:   {return launch_alpha_beta_kernels<64,   9>(probs, grads, l_a, l_b);}
-        case 9:   {return launch_alpha_beta_kernels<128,  6>(probs, grads, l_a, l_b);}
-        case 10:  {return launch_alpha_beta_kernels<128,  9>(probs, grads, l_a, l_b);}
-        case 11:  {return launch_alpha_beta_kernels<128, 10>(probs, grads, l_a, l_b);}
+        case 0:   {return launch_alpha_beta_kernels<32,   1>(log_probs, grads, l_a, l_b);}
+        case 1:   {return launch_alpha_beta_kernels<64,   1>(log_probs, grads, l_a, l_b);}
+        case 2:   {return launch_alpha_beta_kernels<128,  1>(log_probs, grads, l_a, l_b);}
+        case 3:   {return launch_alpha_beta_kernels<64,   3>(log_probs, grads, l_a, l_b);}
+        case 4:   {return launch_alpha_beta_kernels<128,  2>(log_probs, grads, l_a, l_b);}
+        case 5:   {return launch_alpha_beta_kernels<32,   9>(log_probs, grads, l_a, l_b);}
+        case 6:   {return launch_alpha_beta_kernels<64,   6>(log_probs, grads, l_a, l_b);}
+        case 7:   {return launch_alpha_beta_kernels<128,  4>(log_probs, grads, l_a, l_b);}
+        case 8:   {return launch_alpha_beta_kernels<64,   9>(log_probs, grads, l_a, l_b);}
+        case 9:   {return launch_alpha_beta_kernels<128,  6>(log_probs, grads, l_a, l_b);}
+        case 10:  {return launch_alpha_beta_kernels<128,  9>(log_probs, grads, l_a, l_b);}
+        case 11:  {return launch_alpha_beta_kernels<128, 10>(log_probs, grads, l_a, l_b);}
     }
 
     return CTC_STATUS_EXECUTION_FAILED;
@@ -357,11 +357,11 @@ GpuCTC<ProbT>::launch_gpu_kernels(const ProbT* const probs,
 
 template<typename ProbT>
 ctcStatus_t
-GpuCTC<ProbT>::compute_probs(const ProbT* const activations) {
+GpuCTC<ProbT>::compute_log_probs(const ProbT* const activations) {
 
     cudaError_t cuda_status;
     cuda_status =
-        cudaMemcpyAsync(probs_, activations,
+        cudaMemcpyAsync(log_probs_, activations,
                         activation_cols_ * out_dim_ *sizeof(ProbT),
                         cudaMemcpyDeviceToDevice, stream_);
     if (cuda_status != cudaSuccess)
@@ -374,9 +374,9 @@ GpuCTC<ProbT>::compute_probs(const ProbT* const activations) {
     using namespace mshadow::expr;
     Stream<mxnet::gpu> mxstream;
     mxstream.stream_ = stream_;
-    Tensor<mxnet::gpu, 2, ProbT> probs_handle(probs_, mshadow::Shape2(activation_cols_, out_dim_), &mxstream);
+    Tensor<mxnet::gpu, 2, ProbT> log_probs_handle(log_probs_, mshadow::Shape2(activation_cols_, out_dim_), &mxstream);
     Tensor<mxnet::gpu, 1, ProbT> denoms_handle(denoms_, mshadow::Shape1(activation_cols_), &mxstream);
-    denoms_handle = reduce_with_axis<red::maximum, false>(probs_handle, 1);
+    denoms_handle = reduce_with_axis<red::maximum, false>(log_probs_handle, 1);
 
 
 
@@ -387,21 +387,21 @@ GpuCTC<ProbT>::compute_probs(const ProbT* const activations) {
     const int num_elements = out_dim_ * activation_cols_;
     const int grid_size = ctc_helper::div_up(num_elements, NV);
 
-    prepare_stable_SM_kernel<ProbT, VT> <<< grid_size, NT, 0, stream_>>>
-       (ctc_helper::identity<ProbT>(), probs_,
+    prepare_stable_LSM_kernel<ProbT, VT> <<< grid_size, NT, 0, stream_>>>
+       (ctc_helper::identity<ProbT>(), log_probs_,
         denoms_, out_dim_, num_elements);
 
     // compute denominators for softmax
     denoms_handle = reduce_with_axis<red::sum, false>(
         F<mxnet::op::mshadow_op::exp>(
-            probs_handle -
-            broadcast<0>(reduce_with_axis<red::maximum, false>(probs_handle, 1),
-                         probs_handle.shape_)),
+            log_probs_handle -
+            broadcast<0>(reduce_with_axis<red::maximum, false>(log_probs_handle, 1),
+                         log_probs_handle.shape_)),
         1);
 
     // Kernel launch to calculate probabilities
-    compute_probs_kernel<ProbT, VT><<<grid_size, NT, 0, stream_>>>
-        (ctc_helper::exponential<ProbT>(), probs_,
+    compute_log_probs_kernel<ProbT, VT><<<grid_size, NT, 0, stream_>>>
+        (ctc_helper::identity<ProbT>(), log_probs_,
          denoms_, out_dim_, num_elements);
 
     return CTC_STATUS_SUCCESS;
@@ -426,11 +426,11 @@ GpuCTC<ProbT>::compute_cost_and_score(const ProbT* const activations,
     if (status != CTC_STATUS_SUCCESS)
         return status;
 
-    status = compute_probs(activations);
+    status = compute_log_probs(activations);
     if (status != CTC_STATUS_SUCCESS)
         return status;
 
-    launch_gpu_kernels(probs_, grads, best_config,
+    launch_gpu_kernels(log_probs_, grads, best_config,
                        compute_alpha, compute_betas_and_grad);
 
     cudaError_t cuda_status_mem, cuda_status_sync;

@@ -7,35 +7,41 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
-max_time = 120
+max_time = 1440
 // assign any caught errors here
 err = null
 
 // initialize source codes
 def init_git() {
+  deleteDir()
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
+        sh 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
-      error "Failed to fetch source codes"
+      error "Failed to fetch source codes with ${exc}"
+      sleep 2
     }
   }
 }
 
 def init_git_win() {
+  deleteDir()
   retry(5) {
     try {
       timeout(time: 2, unit: 'MINUTES') {
         checkout scm
         bat 'git submodule update --init'
+        bat 'git clean -d -f'        
       }
     } catch (exc) {
       deleteDir()
-      error "Failed to fetch source codes"
+      error "Failed to fetch source codes with ${exc}"
+      sleep 2
     }
   }
 }
@@ -48,7 +54,7 @@ def make(docker_type, make_flag) {
     try {
       sh "${docker_run} ${docker_type} make ${make_flag}"
     } catch (exc) {
-      echo 'Incremental compilation failed. Fall back to build from scratch'
+      echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
       sh "${docker_run} ${docker_type} sudo make clean"
       sh "${docker_run} ${docker_type} sudo make -C amalgamation/ clean"
       sh "${docker_run} ${docker_type} make ${make_flag}"
@@ -80,8 +86,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 def python2_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/unittest"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/train"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/unittest"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/train"
   }
 }
 
@@ -99,7 +105,7 @@ def python3_ut(docker_type) {
 def python2_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
-    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests --with-timer --verbose tests/python/gpu"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/gpu"
   }
 }
 
@@ -207,6 +213,7 @@ try {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
               init_git_win()
               bat """mkdir build_vc14_cpu
+    call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
     cd build_vc14_cpu
     cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}"""
               bat 'C:\\mxnet\\build_vc14_cpu.bat'
@@ -518,7 +525,7 @@ try {
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {
     node("mxnetlinux") {
-        sh "echo caught error"
+        sh "echo caught ${caughtError}"
         err = caughtError
         currentBuild.result = "FAILURE"
     }

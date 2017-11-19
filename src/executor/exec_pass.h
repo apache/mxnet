@@ -96,6 +96,12 @@ using OpExecVector = std::vector<std::shared_ptr<OpExecutor> >;
 using ContextVector = std::vector<Context>;
 
 /*!
+ * \brief per node device mask vector
+ * \node stored under "dev_mask"
+ */
+using DevMaskVector = std::vector<int>;
+
+/*!
  * \brief Attach OpExecutor to the graph attributes.
  *
  * \param g input graph
@@ -141,8 +147,8 @@ Graph DetectInplaceAddTo(Graph g);
  * \return A graph with new attribute "shape" containing inferred shape of each NodeEntry.
  *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
  */
-Graph InferShape(Graph graph,
-                 nnvm::ShapeVector shape_inputs,
+Graph InferShape(Graph&& graph,
+                 nnvm::ShapeVector&& shape_inputs = nnvm::ShapeVector(),
                  const std::string& shape_attr_key = "");
 
 /*!
@@ -154,8 +160,8 @@ Graph InferShape(Graph graph,
  * \return A graph with new attribute "dtype" containing inferred type of each NodeEntry.
  *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
  */
-Graph InferType(Graph graph,
-                nnvm::DTypeVector dtype_inputs,
+Graph InferType(Graph&& graph,
+                nnvm::DTypeVector&& dtype_inputs = nnvm::DTypeVector(),
                 const std::string& dtype_attr_key = "");
 
 /*!
@@ -167,9 +173,20 @@ Graph InferType(Graph graph,
  * \return A graph with new attribute "storage_type" containing inferred type of each NodeEntry.
  *         The index of StorageTypeVector is given by graph.indexed_graph().entry_id.
  */
-Graph InferStorageType(Graph graph,
-                       StorageTypeVector storage_type_inputs,
+Graph InferStorageType(Graph&& graph,
+                       StorageTypeVector&& storage_type_inputs = StorageTypeVector(),
                        const std::string& storage_type_attr_key = "");
+
+/*! \brief The default storage type inference function, which assigns all undefined
+ *         storage types to kDefaultStorage. If all of input and output storage types
+ *         are kDefaultStorage, DispatchMode::kFCompute is assigned to dispatch_mode. Otherwise,
+ *         DispatchMode::kFComputeFallback is assigned to dispatch_mode.
+ */
+bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
+                        const int dev_mask,
+                        DispatchMode* dispatch_mode,
+                        std::vector<int> *iattr,
+                        std::vector<int> *oattr);
 
 }  // namespace exec
 }  // namespace mxnet
