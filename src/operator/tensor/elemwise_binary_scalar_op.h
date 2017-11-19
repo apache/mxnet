@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op.h
  * \brief Function definition of elementwise binary scalar operators
  */

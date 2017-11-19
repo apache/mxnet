@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * Copyright (c) 2017 Microsoft
  * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file psroi_pooling.cc

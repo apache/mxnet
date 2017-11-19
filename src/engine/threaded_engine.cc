@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file threaded_engine.cc
  * \brief implements base threaded engine.
  * \author Yutian Li

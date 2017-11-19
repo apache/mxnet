@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file l2_normalization_op-inl.h
  * \brief instance l2 Normalization op
 */

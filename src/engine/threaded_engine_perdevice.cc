@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file threaded_engine_perdevice.cc
  * \brief ThreadedEngine that uses fix amount of thread for each device.
  */

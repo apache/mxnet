@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ml_dmlc_mxnet_native_c_api.cc
  * \brief JNI function implementations
  */

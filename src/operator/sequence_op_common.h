@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file sequence_op_common.h
  * \brief common function used for sequence layers
  * \author Sebastian Bodenstein

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file loss_binary_op.cc
  * \brief loss function that takes a data and label
 */

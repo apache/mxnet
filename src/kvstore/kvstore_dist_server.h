@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file mxnet_node.h
  * \brief implement mxnet nodes
  */

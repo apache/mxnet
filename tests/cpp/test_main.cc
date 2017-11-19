@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file test_main.cc
  * \brief operator unit test utility functions
  * \author Chris Olivier
