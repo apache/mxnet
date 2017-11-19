@@ -396,7 +396,6 @@ mx.opt.adadelta <- function(rho=0.90,
 #'
 #' @export
 mx.opt.create <- function(name, ...) {
-  
   switch(name,
          "sgd" = mx.opt.sgd(...),
          "rmsprop" = mx.opt.rmsprop(...),
@@ -415,7 +414,6 @@ mx.opt.create <- function(name, ...) {
 #'
 #' @export
 mx.opt.get.updater <- function(optimizer, weights) {
-  
   # This is the list to keep track of internal states of optimzer
   state.list <- lapply(seq_along(weights), function(i) {
     if (is.null(weights[[i]])) return(NULL)

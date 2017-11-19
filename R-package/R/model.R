@@ -352,16 +352,13 @@ mx.model.select.layout.predict <- function(X, model) {
     if (any(vapply(seq_along(names),
                    function(i) any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]])),
                    logical(1)))) rowmajor <- 0
-    
   }
   # try col major
   ret <- mx.symbol.infer.shape(model$symbol, data=c(dimX[[1]], 1))
   if (!is.null(ret)) {
-    
     if (any(vapply(seq_along(names),
                    function(i) any(ret$arg.shapes[[names[i]]] != dim(model$arg.params[[i]])),
                    logical(1)))) colmajor <- 0
-    
   }
   if (rowmajor + colmajor != 1) {
     stop("Cannot auto select array.layout, please specify this parameter")

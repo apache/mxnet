@@ -1,9 +1,9 @@
 
-BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "batch.size",
-                                                   "data.mask.element", "shuffle", "bucket.plan", "bucketID", "epoch", "batch", "batch.per.bucket",
-                                                   "last.batch.pad", "batch.per.epoch", "seed"),
+BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "batch.size", 
+                                                   "data.mask.element", "shuffle", "bucket.plan", "bucketID", "epoch", "batch", "batch.per.bucket", 
+                                                   "last.batch.pad", "batch.per.epoch", "seed"), 
                           methods = list(
-                            initialize = function(buckets,
+                            initialize = function(buckets, 
                                                   batch.size, data.mask.element = 0, shuffle = FALSE, seed = 123) {
                               .self$buckets <- buckets
                               .self$bucket.names <- names(.self$buckets)
@@ -27,22 +27,22 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                               .self$batch.per.bucket <- ceiling(buckets.size/.self$batch.size)
                               .self$last.batch.pad <- .self$batch.size - buckets.size %% .self$batch.size
                               .self$last.batch.pad[.self$last.batch.pad == .self$batch.size] <- 0
-
+                              
                               .self$batch.per.epoch <- sum(.self$batch.per.bucket)
                               # Number of batches per epoch given the batch.size
                               .self$batch.per.epoch <- sum(.self$batch.per.bucket)
                               .self$epoch <- .self$epoch + 1
                               .self$batch <- 0
-
+                              
                               if (.self$shuffle) {
                                 set.seed(.self$seed)
                                 bucket_plan_names <- sample(rep.int(names(.self$batch.per.bucket), times = .self$batch.per.bucket))
-                                .self$bucket.plan <- ave(bucket_plan_names == bucket_plan_names, bucket_plan_names,
+                                .self$bucket.plan <- ave(bucket_plan_names == bucket_plan_names, bucket_plan_names, 
                                                          FUN = cumsum)
                                 names(.self$bucket.plan) <- bucket_plan_names
                                 ### Return first BucketID at reset for initialization of the model
                                 .self$bucketID <- .self$bucket.plan[1]
-
+                                
                                 .self$buckets <- lapply(.self$buckets, function(x) {
                                   shuffle_id <- sample.int(dim(x$data)[length(dim(x$data)) - 1])
                                   if (length(dim(x$label)) == 0) {
@@ -53,7 +53,7 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                                 })
                               } else {
                                 bucket_plan_names <- rep.int(names(.self$batch.per.bucket), times = .self$batch.per.bucket)
-                                .self$bucket.plan <- ave(bucket_plan_names == bucket_plan_names, bucket_plan_names,
+                                .self$bucket.plan <- ave(bucket_plan_names == bucket_plan_names, bucket_plan_names, 
                                                          FUN = cumsum)
                                 names(.self$bucket.plan) <- bucket_plan_names
                               }
@@ -67,12 +67,12 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                               # character containing the sequence length of the bucket (used to unroll the rnn
                               # to appropriate sequence length)
                               idx <- (.self$bucketID - 1) * (.self$batch.size) + seq_len(batch.size)
-
+                              
                               ### reuse first idx for padding
                               if (bucketID == .self$batch.per.bucket[names(.self$bucketID)] & !.self$last.batch.pad[names(.self$bucketID)] == 0) {
                                 idx <- c(idx[seq_len(.self$batch.size - .self$last.batch.pad[names(.self$bucketID)])], seq_len(.self$last.batch.pad[names(.self$bucketID)]))
                               }
-
+                              
                               data <- .self$buckets[[names(.self$bucketID)]]$data[idx, , drop = FALSE]
                               seq.mask <- as.integer(names(bucketID)) - apply(data==.self$data.mask.element, 1, sum)
                               if (length(dim(.self$buckets[[names(.self$bucketID)]]$label)) == 0) {
@@ -80,7 +80,7 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                               } else {
                                 label <- .self$buckets[[names(.self$bucketID)]]$label[idx, , drop = FALSE]
                               }
-                              return(list(data = mx.nd.array(data), seq.mask = mx.nd.array(seq.mask),
+                              return(list(data = mx.nd.array(data), seq.mask = mx.nd.array(seq.mask), 
                                           label = mx.nd.array(label)))
                             }, num.pad = function() {
                               if (bucketID == .self$batch.per.bucket[names(.self$bucketID)] & !.self$last.batch.pad[names(.self$bucketID)] == 0){
@@ -89,7 +89,7 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                             }, finalize = function() {
                             }))
 
-#
+# 
 #' Create Bucket Iter
 #'
 #' @param buckets The data array.
@@ -99,8 +99,8 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
 #' @param seed The random seed
 #'
 #' @export
-mx.io.bucket.iter <- function(buckets, batch.size, data.mask.element = 0, shuffle = FALSE,
+mx.io.bucket.iter <- function(buckets, batch.size, data.mask.element = 0, shuffle = FALSE, 
                               seed = 123) {
-  return(BucketIter$new(buckets = buckets, batch.size = batch.size, data.mask.element = data.mask.element,
+  return(BucketIter$new(buckets = buckets, batch.size = batch.size, data.mask.element = data.mask.element, 
                         shuffle = shuffle, seed = seed))
 }

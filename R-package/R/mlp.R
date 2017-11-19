@@ -55,7 +55,6 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
     }
   }
   fc <- mx.symbol.FullyConnected(act, num_hidden=out_node)
-  
   out <- switch(out_activation,
                 "rmse" = mx.symbol.LinearRegressionOutput(fc),
                 "softmax" = mx.symbol.SoftmaxOutput(fc),

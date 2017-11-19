@@ -58,10 +58,9 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
     if (!endsWith(name, "weight")) {
       return (mx.init.internal.default(name = name, shape = shape, allow.unknown = allow.unknown))
     }
-
+    
     fan_out = shape[length(shape)]
     fan_in  = prod(shape[-length(shape)])
-
     factor_val <- switch(factor_type,
                          "avg" = (fan_in + fan_out) / 2,
                          "in" = fan_in,
@@ -69,7 +68,7 @@ mx.init.Xavier <- function(rnd_type = "uniform", factor_type = "avg",
                          stop("Not supported factor type. See usage of function mx.init.Xavier"))
 
     scale = sqrt(magnitude / factor_val)
-
+    
     if (rnd_type == "uniform"){
       return(mx.nd.random.uniform(low = -scale, high = scale, shape = shape))
     } else if (rnd_type == "gaussian"){
