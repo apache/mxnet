@@ -16,6 +16,10 @@ many useful experimental APIs for new features.
 This is a place for the community to try out the new features,
 so that feature contributors can receive feedback.
 
+```eval_rst
+.. warning:: This package contains experimental APIs and may change in the near future.
+```
+
 In the rest of this document, we list routines provided by the `gluon.contrib` package.
 
 ## Contrib
