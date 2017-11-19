@@ -172,7 +172,7 @@ class OpBase {
                                const OpReqType req,
                                DType *out) {
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      SerialLaunchCPU<OpBase::set_to_scalar<Req>>(s, size, out, val);
+      mxnet_op::Kernel<OpBase::set_to_scalar<Req>, cpu>::Launch(s, size, out, val);
     });
   }
 };  // OpBase
