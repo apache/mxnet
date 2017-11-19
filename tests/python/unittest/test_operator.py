@@ -1043,6 +1043,7 @@ def test_convolution_grouping():
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
 def test_depthwise_convolution():
     for num_base in [1, 4, 16, 32, 64]:
         for kernel in [(3,3), (5,5)]:
