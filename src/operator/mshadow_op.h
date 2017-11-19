@@ -30,7 +30,6 @@
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
-#include "./mxnet_op.h"
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
@@ -40,24 +39,6 @@ namespace mxnet {
 namespace op {
 namespace mshadow_op {
 
-/*!
- * \brief Use the 'MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD' macro outside of the mshadow_op namespace
- *        See mxnet_op.h for a description of 'MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD'
- *
- * \note An entry for the operator must also be added in operator_tune.cc, which will register it
- *       for auto-tuning and also hold its workload weight
- */
-#define MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(__op$) \
-  } MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow_op::__op$) namespace mshadow_op {  // NOLINT(*)
-/*!
- * \brief Use the 'MXNET_TUNABLE_MSHADOW_OP_BACKWARD' macro outside of the mshadow_op namespace
- *        See mxnet_op.h for a description of 'MXNET_TUNABLE_MSHADOW_OP_BACKWARD'
- *
- * \note An entry for the operator must also be added in operator_tune.cc, which will register it
- *       for auto-tuning and also hold its workload weight
- */
-#define MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(__op$) \
-  }  MXNET_TUNABLE_MSHADOW_OP_BACKWARD(mshadow_op::__op$) namespace mshadow_op {  // NOLINT(*)
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
 #else
@@ -73,9 +54,7 @@ using std::is_unsigned;
     MSHADOW_XINLINE static DType Map(DType a) { \
       return DType(expr); \
     } \
-  }; \
-  MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(name)
-
+  }
 
 #define MXNET_UNARY_MATH_OP_NC(name, expr) \
   struct name { \
@@ -83,8 +62,7 @@ using std::is_unsigned;
     MSHADOW_XINLINE static DType Map(DType a) { \
       return (expr); \
     } \
-  }; \
-  MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(name)
+  }
 
 #define MXNET_BINARY_MATH_OP(name, expr) \
   struct name { \
@@ -92,8 +70,7 @@ using std::is_unsigned;
     MSHADOW_XINLINE static DType Map(DType a, DType b) { \
       return DType(expr); \
     } \
-  }; \
-  MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(name)
+  }
 
 #define MXNET_BINARY_MATH_OP_NC(name, expr) \
   struct name { \
@@ -101,8 +78,7 @@ using std::is_unsigned;
     MSHADOW_XINLINE static DType Map(DType a, DType b) { \
       return (expr); \
     } \
-  }; \
-  MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(name)
+  }
 
 #define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
@@ -158,7 +134,6 @@ struct softrelu {
     }
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(softrelu)
 
 MXNET_UNARY_MATH_OP(softrelu_grad, -math::expm1(-a));
 
@@ -179,7 +154,6 @@ struct log10_grad {
     return DType(0.4342944819f / static_cast<float>(a));
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(log10_grad)
 
 template<>
 MSHADOW_XINLINE double log10_grad::Map<double>(double a) {
@@ -195,7 +169,6 @@ struct log2_grad {
     return DType(1.442695041f / static_cast<float>(a));
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(log2_grad)
 
 template<>
 MSHADOW_XINLINE double log2_grad::Map<double>(double a) {
@@ -290,7 +263,6 @@ struct sign {
     return DType(0);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(sign)
 
 MXNET_UNARY_MATH_OP_NC(sign_grad, DType(0));
 
@@ -361,7 +333,6 @@ struct rint {
     return DType((af - floor) <= (ceil - af) ? floor : ceil);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(rint)
 
 /*! \brief used to round number to integer nearest to 0 */
 struct fix {
@@ -372,7 +343,6 @@ struct fix {
     return DType((floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(fix)
 
 /*! \brief used for generate gradient of MAE loss*/
 MXNET_BINARY_MATH_OP_NC(minus_sign, a - b > DType(0) ? DType(1) : -DType(1));
@@ -435,7 +405,6 @@ struct mod {
     }
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(mod)
 
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
@@ -450,8 +419,6 @@ struct mod_grad {
     return DType(0);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(mod_grad)
-
 template<>
 MSHADOW_XINLINE double mod_grad::Map<double>(double a, double b) {
   return 1.0;
@@ -487,8 +454,6 @@ struct mod_rgrad {
     return DType(0);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(mod_rgrad)
-
 template<>
 MSHADOW_XINLINE double mod_rgrad::Map<double>(double a, double b) {
   return -::floor(a/b);
@@ -552,7 +517,6 @@ struct rmod {
     }
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(rmod)
 
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
@@ -567,8 +531,6 @@ struct rmod_grad {
     return DType(0);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(rmod_grad)
-
 template<>
 MSHADOW_XINLINE double rmod_grad::Map<double>(double a, double b) {
   return -::floor(b/a);
@@ -610,7 +572,6 @@ struct clip {
     }
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(clip)
 
 /***** gamma ******/
 
@@ -624,7 +585,6 @@ struct gamma_grad {
     return DType(math::tgamma(af) * special_functions::cephes::psi<float>(af));
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(gamma_grad)
 
 template<>
 MSHADOW_XINLINE double gamma_grad::Map<double>(double a) {
@@ -642,7 +602,6 @@ struct gammaln_grad {
     return DType(special_functions::cephes::psi<float>(a));
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(gammaln_grad)
 
 template<>
 MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
@@ -674,7 +633,6 @@ struct smooth_l1_loss {
     }
   }
 };  // struct smooth_l1_loss
-MSHADOW_OP_DECLARE_TUNABLE_FWD_AND_BWD(smooth_l1_loss)
 
 /* The derivative of smooth l1 loss is
  * f'(x) = sigma^2 * x, |x| < 1 / sigma^2
@@ -696,7 +654,6 @@ struct smooth_l1_gradient {
     }
   }
 };  // struct smooth_l1_derivative
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(smooth_l1_gradient)
 
 /*! \brief product reducer */
 struct product {
@@ -798,7 +755,6 @@ struct nansum_grad {
     return isnan_typed::IsNan(a) ? DType(0) : DType(1);
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(nansum_grad)
 
 /*! \brief product reducer that ignores NaN values in the input */
 struct nanprod {
@@ -835,7 +791,7 @@ struct nanprod_grad {
     return isnan_typed::IsNan(a) ? DType(0) : b / a;
   }
 };
-MSHADOW_OP_DECLARE_TUNABLE_BACKWARD(nanprod_grad)
+
 }  // namespace mshadow_op
 }  // namespace op
 }  // namespace mxnet

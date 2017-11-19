@@ -266,13 +266,12 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
-struct PopulateFullIdxRspKernel {
+struct PopulateFullIdxRspKernel : public mxnet_op::tunable {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, IType* out) {
     KERNEL_ASSIGN(out[i], kWriteTo, i);
   }
 };
-MXNET_TUNABLE_MXNET_OP_FWD(PopulateFullIdxRspKernel);
 
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
 // instead of the usual compact representation.

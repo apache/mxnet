@@ -277,6 +277,9 @@ MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob&
   })
 }
 
+struct tunable {};
+struct tunable_wrapper {};
+
 /*! \brief Binary op backward gradient OP wrapper */
 template<typename GRAD_OP>
 struct backward_grad {
@@ -295,7 +298,7 @@ struct backward_grad {
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
  */
 template<typename OP, int req>
-struct op_with_req {
+struct op_with_req : public tunable_wrapper {
   typedef OP Operation;
 
   /*! \brief input is one tensor */
@@ -364,7 +367,7 @@ struct Kernel<OP, cpu> {
    * \param args Varargs to eventually pass to the OP::Map() functoion
    */
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
+  inline static bool Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
@@ -382,6 +385,35 @@ struct Kernel<OP, cpu> {
       OP::Map(i, args...);
     }
 #endif
+    return true;
+  }
+
+  template<typename DType, typename T = OP, typename ...Args>
+  inline static typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    LaunchTuned<OP, DType>(s, N, args...);
+    return true;
+  }
+
+  template<typename DType, typename T = OP, typename ...Args>
+  inline static typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+    LaunchTuned<OP, DType>(s, N, dest, args...);
+    return true;
+  }
+
+  template<typename DType, typename T = OP, typename ...Args>
+  inline static typename std::enable_if<std::is_base_of<tunable_wrapper, T>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    LaunchTuned<typename OP::Operation, DType>(s, N, args...);
+    return true;
+  }
+
+  template<typename DType, typename T = OP, typename ...Args>
+  inline static typename std::enable_if<std::is_base_of<tunable_wrapper, T>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+    LaunchTuned<typename OP::Operation, DType>(s, N, dest, args...);
+    return true;
   }
 
   /*!
@@ -443,6 +475,8 @@ struct Kernel<OP, cpu> {
   }
 };
 
+
+
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
 __global__ void mxnet_generic_kernel(int N, Args... args) {
@@ -482,48 +516,11 @@ struct Kernel<OP, gpu> {
 #endif  // __CUDACC__
 
 /*!
- * \brief Wrap Kernel<OP, xpu>::Launch* with some special-case helpers
- */
-template<typename OP, typename xpu>
-struct KernelWrapper {
-  /*!
-   * \brief Launch 'mshadow_op-type' op (i.e. DType (*)( ... ) { return <operation> }
-   * \tparam Args Varargs type to eventually pass to the OP::Map() function
-   * \param s Stream object pointer (unused)
-   * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
-   */
-  template<typename DType, typename ...Args>
-  MSHADOW_CINLINE static void LaunchMShadowOpEx(mshadow::Stream<xpu> *s,
-                                                const int N,
-                                                DType *dest,
-                                                Args... args) {
-    mxnet::op::mxnet_op::Kernel<OP, xpu>::template LaunchTuned<
-      typename OP::Operation, DType>(s, N, dest, args...);
-  }
-
-  /*!
-   * \brief Launch 'mxnet_op-type' op (i.e. void (*)(int N, DType *out, ... )
-   * \tparam Args Varargs type to eventually pass to the OP::Map() function
-   * \param s Stream object pointer (unused)
-   * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
-   */
-  template<typename DType, typename ...Args>
-  MSHADOW_CINLINE static void LaunchMXNetOpEx(mshadow::Stream<xpu> *s,
-                                              const int N,
-                                              DType *dest,
-                                              Args... args) {
-    mxnet::op::mxnet_op::Kernel<OP, xpu>::template LaunchTuned<OP, DType>(s, N, dest, args...);
-  }
-};
-
-/*!
  * \brief Set to immediate scalar value kernel
  * \tparam val Scalar immediate
  */
 template<int val>
-struct set_to_int {
+struct set_to_int : public tunable {
   // mxnet_op version (when used directly with Kernel<>::Launch()) */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out) {
@@ -540,22 +537,7 @@ struct set_to_int {
  */
 using set_zero = set_to_int<0>;
 using set_one  = set_to_int<1>;
-_MXNET_TUNABLE_MXNET_OP_FWD(set_zero);  // _ prefix denotes "already in mxnet_op namespace"
-_MXNET_TUNABLE_MXNET_OP_FWD(set_one);
 }  // namespace mxnet_op
-
-/*!
- * \brief Tuning specializations for the simple ops in <mshadow/base.h>
- *        Basically, this overrides mxnet::op::mxnet_op::Kernel<OP, cpu>::Launch() and
- *        redirects to mxnet::op::mxnet_op::KernelWrapper<OP, cpu>::Launch????OpEx(),
- *        which eventually leads back to mxnet::op::mxnet_op::Kernel<OP, cpu>::LaunchTuned()
- */
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::identity)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::plus)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::minus)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::mul)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::div)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::right)
 
 }  // namespace op
 }  // namespace mxnet
