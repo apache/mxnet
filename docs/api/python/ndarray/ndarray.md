@@ -559,13 +559,13 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
-    sample_uniform
-    sample_normal
-    sample_gamma
-    sample_exponential
-    sample_poisson
-    sample_negative_binomial
-    sample_generalized_negative_binomial
+    mxnet.nd.random.uniform
+    mxnet.nd.random.normal
+    mxnet.nd.random.gamma
+    mxnet.nd.random.exponential
+    mxnet.nd.random.poisson
+    mxnet.nd.random.negative_binomial
+    mxnet.nd.random.generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -580,7 +580,6 @@ The `ndarray` package provides several classes:
     argsort
     argmax
     argmin
-    argmax_channel
 ```
 
 ### Sequence operation

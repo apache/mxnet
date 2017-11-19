@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file pooling.cc
  * \brief
  * \author Bing Xu, Jun Wu

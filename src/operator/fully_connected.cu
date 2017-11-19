@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file fully_connected.cu
  * \brief fully connect operator
 */

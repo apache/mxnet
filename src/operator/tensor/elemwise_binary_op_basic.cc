@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op.cc
  * \brief CPU Implementation of unary function.
  */
@@ -35,6 +36,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 The storage type of ``elemwise_add`` output depends on storage types of inputs
 
    - elemwise_add(row_sparse, row_sparse) = row_sparse
+   - elemwise_add(csr, csr) = csr
    - otherwise, ``elemwise_add`` generates output with default storage
 
 )code")
@@ -69,7 +71,8 @@ MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
 The storage type of ``elemwise_sub`` output depends on storage types of inputs
 
    - elemwise_sub(row_sparse, row_sparse) = row_sparse
-   - otherwise, ``elemwise_add`` generates output with default storage
+   - elemwise_sub(csr, csr) = csr
+   - otherwise, ``elemwise_sub`` generates output with default storage
 
 )code")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sub"});
@@ -100,6 +103,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
    - elemwise_mul(row_sparse, row_sparse) = row_sparse
    - elemwise_mul(default, row_sparse) = default
    - elemwise_mul(row_sparse, default) = default
+   - elemwise_mul(csr, csr) = csr
    - otherwise, ``elemwise_mul`` generates output with default storage
 
 )code")
@@ -138,7 +142,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(elemwise_div, mshadow::op::div
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_div)
 .describe(R"code(Divides arguments element-wise.
 
-The storage type of ``elemwise_dev`` output is always dense
+The storage type of ``elemwise_div`` output is always dense
 
 )code")
 .add_alias("_div").add_alias("_Div")

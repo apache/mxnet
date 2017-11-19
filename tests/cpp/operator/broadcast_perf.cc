@@ -31,34 +31,35 @@ using namespace mxnet;
 
 using kwargs_t = test::op::kwargs_t;
 
-template<typename DType = float>
-static void RunCoreOpBidirectional(const bool isGPU,
-                                   const kwargs_t& op_kwargs,
-                                   const char *op_name,
-                                   const char *backward_op_name = "") {
-  const std::vector<TShape> shapes = { {2, 3}, {2, 1} };
-  test::op::CoreOpExecutor<DType> op(isGPU, shapes);
-  op.set_verbose(false);
-
-  op.Init(op.ArgsWithOpName(op_kwargs, op_name, backward_op_name));
-
-  PRINT_NDARRAYS(op.ctx().run_ctx, op.inputs());
-  PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
-  op.Execute();
-  PRINT_NDARRAYS(op.ctx().run_ctx, op.outputs());
-  if (op.HasBackward()) {
-    PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_inputs());
-    PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
-    op.ExecuteBackward();
-    PRINT_NDARRAYS(op.ctx().run_ctx, op.bwd_outputs());
-  }
-}
-
 /*!
  * \brief Generic bidirectional sanity test
  */
 TEST(BROADCAST_PERF, ExecuteBidirectional) {
-  RunCoreOpBidirectional(false, {}, "broadcast_add", "_backward_broadcast_add");
+  test::op::BasicRunCoreOpBidirectional(false, true, {},
+                                        { {2, 3}, {2, 1} },
+                                        "broadcast_add", "_backward_broadcast_add");
+}
+
+static const std::vector<std::vector<TShape>> broadcast_shapes() {
+  std::vector<std::vector<TShape>> shapes;
+  if (test::performance_run) {
+    shapes = {
+      { {28,  28},  {28, 1} },
+      { {64,  28},  {1, 28} },
+      { {28,  28, 28},  {28, 28, 1} },
+      { {128, 128}, {1, 128} },
+      { {1024, 12, 256}, {1024, 1, 1} },
+      { {2560, 1280}, {2560, 1} }
+    };
+  } else {
+    shapes = {
+      // Non-performance dataset acts as a sanity test
+      { {28,  28},  {28, 1} },
+      { {128, 128}, {128, 1} },
+      { {28,  28, 28},  {28, 28, 1} }
+    };
+  }
+  return std::move(shapes);
 }
 
 template<typename DType = float>
@@ -74,20 +75,7 @@ static void RunCoreOpTimingTest(const bool isGPU,
   runner.RunBidirectional(false, { {2, 3}, {2, 1} }, kwargs, 1);
 
   // Do the performance runs
-  std::vector<std::vector<TShape>> shapes;
-  if (test::performance_run) {
-    shapes = {
-      { {28,  28},  {28, 1} },
-      { {18,  32} , {18, 1} },
-      { {128, 128}, {128, 1} },
-      { {2560, 1280}, {2560, 1} }
-    };
-  } else {
-    shapes = {
-      { {28,  28},  {28, 1} },
-      { {128, 128}, {128, 1} }
-    };
-  }
+  std::vector<std::vector<TShape>> shapes = broadcast_shapes();
   const char *pu = isGPU ? "GPU" : "CPU";
   for (const std::vector<TShape> &shape : shapes) {
     runner.TimingTest(std::string(op_name) + " Operator " + pu, isGPU, false, kwargs,

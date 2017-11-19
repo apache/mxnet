@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file make_loss.cc
  * \brief special layer for propagating loss
 */

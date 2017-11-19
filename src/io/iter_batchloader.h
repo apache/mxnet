@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file iter_batchloader.h
  * \brief define a batch adapter to create tblob batch
  */

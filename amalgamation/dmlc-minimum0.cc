@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright 2015 by Contributors.
  * \brief Mininum DMLC library Amalgamation, used for easy plugin of dmlc lib.
  *  Normally this is not needed.
  */

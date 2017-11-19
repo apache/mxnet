@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2017 by Contributors
  * \file sort_op.h
  * \brief SortByKey function
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_predict_api.h
  * \brief C predict API of mxnet, contains a minimum API to run prediction.
  *  This file is self-contained, and do not dependent on any other files.

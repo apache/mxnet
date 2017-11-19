@@ -1195,6 +1195,7 @@ def test_cast_storage_ex():
             check_cast_storage((dim0, rnd.randint(512, 1024)), d, 'default', 'row_sparse',
                                check_numeric_grad=False)
 
+
 def test_sparse_dot():
     def test_dot_csr(lhs_shape, rhs_shape, rhs_stype, trans_lhs, lhs_density, rhs_density):
         lhs_nd = rand_ndarray(lhs_shape, 'csr', density=lhs_density, shuffle_csr_indices=False)
@@ -1222,17 +1223,37 @@ def test_sparse_dot():
                                 grad_req={'lhs': 'null', 'rhs': 'write'},
                                 rtol=1e-3, atol=1e-4)
 
+    def test_sparse_dot_zero_output(lhs_shape, trans_lhs, rhs_num_cols):
+        """Test for nnr_out = 0. Before the fix, the test would fail."""
+        lhs = mx.nd.zeros(lhs_shape)
+        irow = np.random.randint(0, lhs_shape[0])
+        icol = np.random.randint(0, lhs_shape[1])
+        lhs[irow, icol] = 1.0
+        if trans_lhs:
+            rhs = rand_ndarray(shape=(lhs_shape[0], rhs_num_cols), stype='default')
+            rhs[irow, :] = 0
+        else:
+            rhs = rand_ndarray(shape=(lhs_shape[1], rhs_num_cols), stype='default')
+            rhs[icol, :] = 0
+        dns_out = mx.nd.dot(lhs, rhs, transpose_a=trans_lhs)
+        assert mx.nd.sum(mx.nd.abs(dns_out)).asscalar() == 0
+        sps_out = mx.nd.sparse.dot(lhs.tostype('csr'), rhs.tostype('row_sparse'), transpose_a=trans_lhs)
+        assert same(dns_out.asnumpy(), sps_out.asnumpy())
+
     density = [1.00, 0.50, 0.01]
     for lhs_d in density:
         lhs_shape = rand_shape_2d(50, 200)
         rhs_d = 1
-        test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False, lhs_d, rhs_d) # test gpu SpMV
-        test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True , lhs_d, rhs_d) # (vector kernel)
-        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d) # test gpu SpMM
-        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True , lhs_d, rhs_d) # (scalar kernel)
+        test_dot_csr(lhs_shape, (lhs_shape[1], 1), 'default', False, lhs_d, rhs_d)  # test gpu SpMV
+        test_dot_csr(lhs_shape, (lhs_shape[0], 1), 'default', True,  lhs_d, rhs_d)  # (vector kernel)
+        test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(5, 10)), 'default', False, lhs_d, rhs_d)  # test gpu SpMM
+        test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(5, 10)), 'default', True, lhs_d, rhs_d)  # (scalar kernel)
         for rhs_d in density:
             test_dot_csr(lhs_shape, (lhs_shape[1], rnd.randint(1, 10)), 'row_sparse', False, lhs_d, rhs_d)
             test_dot_csr(lhs_shape, (lhs_shape[0], rnd.randint(1, 10)), 'row_sparse', True, lhs_d, rhs_d)
+
+    test_sparse_dot_zero_output(rand_shape_2d(50, 200), False, 40)
+    test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
 
 def test_sparse_slice():
@@ -1353,6 +1374,7 @@ def test_sparse_unary_with_numerics():
                           lambda output, outg: outg * assign_each(output, lambda x: x * (1.0 - x)),
                           backward_is_use_output=True)
 
+
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1364,6 +1386,7 @@ def test_sparse_nd_zeros():
     check_sparse_nd_zeros('csr', shape)
     check_sparse_nd_zeros('default', shape)
 
+
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1373,6 +1396,7 @@ def test_sparse_nd_zeros_like():
     shape = rand_shape_2d()
     check_sparse_nd_zeros_like('row_sparse', shape)
     check_sparse_nd_zeros_like('csr', shape)
+
 
 def test_sparse_axis_operations():
     def test_variations(func_name):
@@ -1403,13 +1427,14 @@ def test_sparse_axis_operations():
     test_variations(mx.nd.mean)
     test_fallback(mx.nd.mean, axis=0, keepdims=True, exclude=True)
 
+
 def test_sparse_square_sum():
     if default_context().device_type == 'cpu':
         dim0 = 30
         dim1 = 30
         axes = [0, 1]
         keepdims = [False, True]
-        densities = [0, 0.01, 0.1, 0.2, 0.5]
+        densities = [0, 0.01, 0.2, 0.5, 1.0]
         for density in densities:
             shape = rand_shape_2d(dim0, dim1)
             rsp = rand_ndarray(shape, 'row_sparse', density)
@@ -1428,11 +1453,11 @@ def test_sparse_square_sum():
                     rsp_data = mx.sym.Variable('data', stype='row_sparse')
                     test = mx.symbol._internal._square_sum(rsp_data, axis=axis, keepdims=keepdim)
 
-                    # check symbolic backward since ograd can be a rsp
+                    # check symbolic backward since ograd can be an rsp
                     # and cannot be checked through check_numeric_gradient
                     # because it will add a loss layer as the output layer
                     # which makes ograd of the square_sum dense
-                    if axis == 1 and keepdims:
+                    if axis == 1 and keepdim:
                         dns_data = mx.sym.Variable('data')
                         baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
                         igrad_expected = mx.nd.empty(dns.shape)
@@ -1440,12 +1465,28 @@ def test_sparse_square_sum():
                                                       args_grad=[igrad_expected])
                         baseline_exec.forward(is_train=True)
                         baseline_exec.backward([ret_expected])
-                        check_symbolic_backward(test, [rsp], [ret], [igrad_expected.asnumpy()],
+                        # check backward when ograd is row sparse
+                        check_symbolic_backward(test, [rsp], [ret_expected.tostype('row_sparse')],
+                                                [igrad_expected.asnumpy()], grad_stypes={'data': 'row_sparse'})
+
+                        # check backward when ograd is dense
+                        # the stype of output of the square_sum is deteremined in symbol binding stage.
+                        # The ograd stype of the last layer is the same as the output stype of the last layer.
+                        # Need to add one more layer after square_sum to trigger the kernel for ograd
+                        # with default stype in square_sum op.
+                        baseline1 = baseline + 1
+                        baseline_exec1 = baseline1.bind(default_context(), args=[dns],
+                                                        args_grad=[igrad_expected])
+                        baseline_exec1.forward(is_train=True)
+                        baseline_exec1.backward([ret_expected])
+                        test1 = test + 1
+                        check_symbolic_backward(test1, [rsp], [ret_expected], [igrad_expected.asnumpy()],
                                                 grad_stypes={'data': 'row_sparse'})
 
                     # check numeric gradient
                     check_numeric_gradient(test, [rsp], grad_stype_dict={'data': 'row_sparse'},
                                            atol=1e-2, rtol=0.1)
+
 
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
@@ -1515,6 +1556,7 @@ def test_sparse_storage_fallback():
             check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
             check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
+
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stype, shape, n):
         # forward
@@ -1545,45 +1587,46 @@ def test_sparse_elementwise_sum():
         shape = tuple(np.random.randint(5, 10, size=dim))
         check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
 
+
 def test_sparse_embedding():
     ''' test sparse embedding op on cpu '''
     def check_sparse_embedding(executor, weight_ref, data_onehot, grad, density):
         # update weight based on density
         weight[:] = rand_ndarray(weight.shape, 'row_sparse', density=density)
         # check forward
-        exe_test.forward(is_train=True)
-        assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(data_onehot, weight.asnumpy()))
+        executor.forward(is_train=True)
+        assert_almost_equal(executor.outputs[0].asnumpy(), np.dot(data_onehot, weight.asnumpy()))
         # check backward
         executor.backward([grad])
         assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(data_onehot.T, grad.asnumpy()))
 
-    if default_context().device_type == 'cpu':
-        densities = [0, 0.5, 1]
-        in_dim = 50
-        out_dim = 3
-        batch = 8
-        # init executor
-        data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype='row_sparse')
-        embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
-                                               output_dim=out_dim, name="embed")
-        grad_req = {'data': 'null', 'embed_weight': 'write'}
-        exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
-        arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
-        grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
-        # init data
-        np_data = np.random.randint(low=0, high=in_dim, size=batch)
-        np_onehot = np.zeros((batch, in_dim))
-        np_onehot[np.arange(batch), np_data] = 1.0
-        arg_map["data"][:] = np_data
-        # init grad
-        np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
-        grad = mx.nd.sparse.zeros('row_sparse', np_grad.shape)
-        grad[:] = np_grad
-        # weight
-        weight = arg_map["embed_weight"]
-        for density in densities:
-            check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
+    densities = [0, 0.5, 1]
+    in_dim = 50
+    out_dim = 3
+    batch = 8
+    # init executor
+    data = mx.sym.Variable("data")
+    weight = mx.sym.Variable("embed_weight", stype='row_sparse')
+    embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=in_dim,
+                                           output_dim=out_dim, name="embed")
+    grad_req = {'data': 'null', 'embed_weight': 'write'}
+    exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
+    arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
+    grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
+    # init data
+    np_data = np.random.randint(low=0, high=in_dim, size=batch)
+    np_onehot = np.zeros((batch, in_dim))
+    np_onehot[np.arange(batch), np_data] = 1.0
+    arg_map["data"][:] = np_data
+    # init grad
+    np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+    grad = mx.nd.sparse.zeros('row_sparse', np_grad.shape)
+    grad[:] = np_grad
+    # weight
+    weight = arg_map["embed_weight"]
+    for density in densities:
+        check_sparse_embedding(exe_test, weight, np_onehot, grad, density)
+
 
 def test_scatter_ops():
     def csr_get_seen_points(name, csr_array, verbose=False):
@@ -1728,6 +1771,7 @@ def test_scatter_ops():
                           lambda l, r: mx.sym._internal._scatter_minus_scalar(l, r),
                           lambda l, r: l + r,
                           rhs_is_scalar=True, verbose=False, density=0.5)
+
 
 if __name__ == '__main__':
     import nose

@@ -126,8 +126,8 @@ if __name__ == '__main__':
         # evaluate metric on validation dataset
         score = mod.score(eval_data, ['nll_loss'])
         logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
-        save_optimizer_states = 'dist' not in kv.type
-        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=False)
+        save_optimizer_states = 'dist' not in kv.type if kv else True
+        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=save_optimizer_states)
         # reset the iterator for next pass of data
         data_iter.reset()
     logging.info('Training completed.')

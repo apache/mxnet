@@ -117,7 +117,7 @@ def test_bucket_module_ctx_group():
                 fc  = mx.symbol.FullyConnected(data=fc, weight=weight, bias=bias,
                                                name='dev2_fc_%d' % i, num_hidden=num_hidden)
             sym = mx.symbol.SoftmaxOutput(fc, label, name='softmax')
-        
+
         return sym, ('data',), ('label',)
 
     mod = mx.mod.BucketingModule(sym_gen=sym_gen, default_bucket_key=10, context=[mx.cpu(0)],
