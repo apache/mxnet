@@ -149,9 +149,9 @@ class Parameter(object):
             return
 
         assert len(self._shape) == len(new_shape) and \
-            all(i == j for i, j in zip(new_shape, self._shape)), \
+            all(j == 0 or i == j for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
-            str(new_shape), str(self._shape)))
+            str(new_shape), str(self._shape))
 
         self._shape = new_shape
 
@@ -164,9 +164,12 @@ class Parameter(object):
                     return arr_list[0]
                 else:
                     ctx = context.current_context()
-            idx = self._ctx_map[ctx.device_typeid][ctx.device_id]
-            if idx is not None:
-                return arr_list[idx]
+            if ctx.device_typeid < len(self._ctx_map):
+                ctx_list = self._ctx_map[ctx.device_typeid]
+                if ctx.device_id < len(ctx_list):
+                    idx = ctx_list[ctx.device_id]
+                    if idx is not None:
+                        return arr_list[idx]
             raise RuntimeError(
                 "Parameter %s was not initialized on context %s. "
                 "It was only initialized on %s."%(

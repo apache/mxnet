@@ -22,6 +22,7 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
            'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
            'Lambda', 'HybridLambda']
 import warnings
+import numpy as np
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
@@ -353,6 +354,11 @@ class BatchNorm(HybridBlock):
                                            init=running_variance_initializer,
                                            allow_deferred_init=True,
                                            differentiable=False)
+
+    def cast(self, dtype):
+        if np.dtype(dtype).name == 'float16':
+            dtype = 'float32'
+        super(BatchNorm, self).cast(dtype)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,

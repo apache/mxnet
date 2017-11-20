@@ -441,6 +441,10 @@ class HybridBlock(Block):
         self._active = active
         super(HybridBlock, self).hybridize(active)
 
+    def cast(self, dtype):
+        self._clear_cached_op()
+        super(HybridBlock, self).cast(dtype)
+
     def _infer_attrs(self, infer_fn, attr, *args):
         """Generic infer attributes."""
         inputs, out = self._get_graph(*args)
