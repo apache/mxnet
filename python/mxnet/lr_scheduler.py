@@ -105,7 +105,7 @@ class MultiFactorScheduler(LRScheduler):
     When warmup_step>1, warmup the learning rate by a const value for first warmup_step steps.
     It returns a new learning rate by::
 
-        begin_lr + (num_update - 1) * const_update
+        warmup_start_lr + (num_update - 1) * const_update
 
     Parameters
     ----------
@@ -113,14 +113,14 @@ class MultiFactorScheduler(LRScheduler):
         The list of steps to schedule a change.
     factor: float
         The factor to change the learning rate.
-    warmup_step : int
-        Changes the learning rate for first 'warmup_step' updates.
-    begin_lr : float, optional
-        The learning rate at begin.
-    stop_lr : float, optional
-        Stop updating the learning rate if it is less than this value.
+    warmup_step : int, optional
+        Increment the learning rate by a constant amount in the first 'warmup_step' updates.
+    warmup_start_lr : float, optional
+        The warmup will update the learning rate start from warmup_start_lr.
+    warmup_stop_lr : float, optional
+        After the first 'warmup_step' updates, the learning rate will reach warmup_stop_lr.
     """
-    def __init__(self, step, factor=1, warmup_step=0, begin_lr=0, stop_lr=0):
+    def __init__(self, step, factor=1, warmup_step=0, warmup_start_lr=0, warmup_stop_lr=0):
         super(MultiFactorScheduler, self).__init__()
         assert isinstance(step, list) and len(step) >= 1
         for i, _step in enumerate(step):
@@ -142,11 +142,11 @@ class MultiFactorScheduler(LRScheduler):
         if warmup_step > 1:
             if step[0] <= warmup_step:
                 raise ValueError("Schedule step must be greater than warmup_step")
-            if stop_lr <= begin_lr:
+            if warmup_stop_lr <= warmup_start_lr:
                 raise ValueError("Stop lr must be greater than begin lr")
-            self.begin_lr = begin_lr
-            self.stop_lr = stop_lr
-            self.const_update = (self.stop_lr - self.begin_lr) / (self.warmup_step - 1)
+            self.warmup_start_lr = warmup_start_lr
+            self.warmup_stop_lr = warmup_stop_lr
+            self.const_update = (self.warmup_stop_lr - self.warmup_start_lr) / (self.warmup_step - 1)
             self.cur_step = 0
 
     def __call__(self, num_update):
@@ -159,10 +159,10 @@ class MultiFactorScheduler(LRScheduler):
         """
         if self.warmup_step > 1 and num_update <= self.warmup_step:
             if num_update > self.cur_step:
-                self.base_lr = (num_update - 1) * self.const_update + self.begin_lr
+                self.base_lr = (num_update - 1) * self.const_update + self.warmup_start_lr
                 self.cur_step = num_update
-                if num_update == self.warmup_step or self.base_lr >= self.stop_lr:
-                    self.base_lr = self.stop_lr
+                if num_update == self.warmup_step or self.base_lr >= self.warmup_stop_lr:
+                    self.base_lr = self.warmup_stop_lr
                     logging.info("Update[%d]: now learning rate arrived at %0.5e, will not "
                                  "warm up in the future", num_update, self.base_lr)
             else:
