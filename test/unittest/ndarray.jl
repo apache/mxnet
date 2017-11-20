@@ -15,6 +15,20 @@ function rand_tensors(::Type{T}, dims::NTuple{N, Int}) where {N, T}
   return (tensor, array)
 end
 
+function test_constructor()
+  info("NDArray::NDArray(x::AbstractArray)")
+  function check_absarray(x)
+    y = mx.NDArray(x)
+    @test ndims(x)  == ndims(y)
+    @test eltype(x) == eltype(y)
+    @test x[3]      == y[3][]
+  end
+
+  check_absarray(1:10)
+  check_absarray(1.0:10)
+end  # function test_constructor
+
+
 function test_copy()
   dims    = rand_dims()
   tensor  = rand(mx.MX_float, dims)
@@ -87,7 +101,7 @@ end
 
 function test_linear_idx()
   info("NDArray::getindex::linear indexing")
-  let A = reshape(collect(1:30), 3, 10)
+  let A = reshape(1:30, 3, 10)
     x = mx.NDArray(A)
 
     @test copy(x) == A
@@ -104,7 +118,7 @@ function test_linear_idx()
     @test_throws BoundsError x[42]
   end
 
-  let A = reshape(collect(1:24), 3, 2, 4)
+  let A = reshape(1:24, 3, 2, 4)
     x = mx.NDArray(A)
 
     @test copy(x) == A
@@ -118,7 +132,7 @@ function test_linear_idx()
   end
 
   info("NDArray::setindex!::linear indexing")
-  let A = reshape(collect(1:24), 3, 2, 4)
+  let A = reshape(1:24, 3, 2, 4)
     x = mx.NDArray(A)
 
     @test copy(x) == A
@@ -136,7 +150,7 @@ end  # function test_linear_idx
 
 function test_first()
   info("NDArray::first")
-  let A = reshape(collect(1:30), 3, 10)
+  let A = reshape(1:30, 3, 10)
     x = mx.NDArray(A)
 
     @test x[]    == 1
@@ -613,7 +627,7 @@ end
 function test_sum()
   info("NDArray::sum")
 
-  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+  let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
     @test copy(sum(X))[]       == sum(A)
     @test copy(sum(X, 1))      == sum(A, 1)
     @test copy(sum(X, 2))      == sum(A, 2)
@@ -626,7 +640,7 @@ end
 function test_mean()
   info("NDArray::mean")
 
-  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+  let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
     @test copy(mean(X))[]       == mean(A)
     @test copy(mean(X, 1))      == mean(A, 1)
     @test copy(mean(X, 2))      == mean(A, 2)
@@ -639,7 +653,7 @@ end
 function test_maximum()
   info("NDArray::maximum")
 
-  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+  let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
     @test copy(maximum(X))[]       == maximum(A)
     @test copy(maximum(X, 1))      == maximum(A, 1)
     @test copy(maximum(X, 2))      == maximum(A, 2)
@@ -652,7 +666,7 @@ end
 function test_minimum()
   info("NDArray::minimum")
 
-  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+  let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
     @test copy(minimum(X))[]       == minimum(A)
     @test copy(minimum(X, 1))      == minimum(A, 1)
     @test copy(minimum(X, 2))      == minimum(A, 2)
@@ -665,7 +679,7 @@ end
 function test_prod()
   info("NDArray::prod")
 
-  let A = reshape(1.0:8, 2, 2, 2) |> collect, X = mx.NDArray(A)
+  let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
     @test copy(prod(X))[]       == prod(A)
     @test copy(prod(X, 1))      == prod(A, 1)
     @test copy(prod(X, 2))      == prod(A, 2)
@@ -740,6 +754,7 @@ end
 # Run tests
 ################################################################################
 @testset "NDArray Test" begin
+  test_constructor()
   test_assign()
   test_copy()
   test_slice()

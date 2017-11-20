@@ -98,6 +98,9 @@ mutable struct NDArray
   end
 end
 
+NDArray(x::AbstractArray{T}) where {T<:DType} = copy(collect(x), cpu())
+NDArray(x::Array{T}) where {T<:DType} = copy(x, cpu())
+
 const NDArrayOrReal = Union{NDArray, Real}
 
 @unfuse NDArray
@@ -105,10 +108,6 @@ const NDArrayOrReal = Union{NDArray, Real}
 function Base.show(io :: IO, arr :: NDArray)
   println(io, "$(join(size(arr), "×")) mx.NDArray{$(eltype(arr))} @ $(context(arr)):")
   Base.showarray(io, try_get_shared(arr, sync=:read), false, header=false)
-end
-
-function NDArray(data :: Array{T}) where T<:Real
-  copy(data, cpu())
 end
 
 function Base.unsafe_convert(::Type{MX_handle}, obj::NDArray)
