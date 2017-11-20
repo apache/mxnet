@@ -35,6 +35,7 @@ try:
 except ImportError:
     multiprocessing = None
 
+
 def list_image(root, recursive, exts):
     i = 0
     if recursive:
@@ -64,6 +65,7 @@ def list_image(root, recursive, exts):
                 yield (i, os.path.relpath(fpath, root), 0)
                 i += 1
 
+
 def write_list(path_out, image_list):
     with open(path_out, 'w') as fout:
         for i, item in enumerate(image_list):
@@ -72,6 +74,7 @@ def write_list(path_out, image_list):
                 line += '%f\t' % j
             line += '%s\n' % item[1]
             fout.write(line)
+
 
 def make_list(args):
     image_list = list_image(args.root, args.recursive, args.exts)
@@ -98,6 +101,7 @@ def make_list(args):
                 write_list(args.prefix + str_chunk + '_val.lst', chunk[sep_test + sep:])
             write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
 
+
 def read_list(path_in):
     with open(path_in) as fin:
         while True:
@@ -107,14 +111,15 @@ def read_list(path_in):
             line = [i.strip() for i in line.strip().split('\t')]
             line_len = len(line)
             if line_len < 3:
-                print('lst should at least has three parts, but only has %s parts for %s' %(line_len, line))
+                print('lst should at least has three parts, but only has %s parts for %s' % (line_len, line))
                 continue
             try:
                 item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
             except Exception as e:
-                print('Parsing lst met error for %s, detail: %s' %(line, e))
+                print('Parsing lst met error for %s, detail: %s' % (line, e))
                 continue
             yield item
+
 
 def image_encode(args, i, item, q_out):
     fullpath = os.path.join(args.root, item[1])
@@ -149,10 +154,10 @@ def image_encode(args, i, item, q_out):
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
-            margin = (img.shape[0] - img.shape[1]) // 2;
+            margin = (img.shape[0] - img.shape[1]) // 2
             img = img[margin:margin + img.shape[1], :]
         else:
-            margin = (img.shape[1] - img.shape[0]) // 2;
+            margin = (img.shape[1] - img.shape[0]) // 2
             img = img[:, margin:margin + img.shape[0]]
     if args.resize:
         if img.shape[0] > img.shape[1]:
@@ -170,6 +175,7 @@ def image_encode(args, i, item, q_out):
         q_out.put((i, None, item))
         return
 
+
 def read_worker(args, q_in, q_out):
     while True:
         deq = q_in.get()
@@ -177,6 +183,7 @@ def read_worker(args, q_in, q_out):
             break
         i, item = deq
         image_encode(args, i, item, q_out)
+
 
 def write_worker(q_out, fname, working_dir):
     pre_time = time.time()
@@ -206,6 +213,7 @@ def write_worker(q_out, fname, working_dir):
                 print('time:', cur_time - pre_time, ' count:', count)
                 pre_time = cur_time
             count += 1
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -256,11 +264,12 @@ def parse_args():
     rgroup.add_argument('--encoding', type=str, default='.jpg', choices=['.jpg', '.png'],
                         help='specify the encoding of the images.')
     rgroup.add_argument('--pack-label', type=bool, default=False,
-        help='Whether to also pack multi dimensional label in the record file')
+                        help='Whether to also pack multi dimensional label in the record file')
     args = parser.parse_args()
     args.prefix = os.path.abspath(args.prefix)
     args.root = os.path.abspath(args.root)
     return args
+
 
 if __name__ == '__main__':
     args = parse_args()
@@ -272,7 +281,7 @@ if __name__ == '__main__':
         else:
             working_dir = os.path.dirname(args.prefix)
         files = [os.path.join(working_dir, fname) for fname in os.listdir(working_dir)
-                    if os.path.isfile(os.path.join(working_dir, fname))]
+                 if os.path.isfile(os.path.join(working_dir, fname))]
         count = 0
         for fname in files:
             if fname.startswith(args.prefix) and fname.endswith('.lst'):
@@ -283,7 +292,7 @@ if __name__ == '__main__':
                 if args.num_thread > 1 and multiprocessing is not None:
                     q_in = [multiprocessing.Queue(1024) for i in range(args.num_thread)]
                     q_out = multiprocessing.Queue(1024)
-                    read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
+                    read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out))
                                     for i in range(args.num_thread)]
                     for p in read_process:
                         p.start()
@@ -325,4 +334,4 @@ if __name__ == '__main__':
                             pre_time = cur_time
                         cnt += 1
         if not count:
-            print('Did not find and list file with prefix %s'%args.prefix)
+            print('Did not find and list file with prefix %s' % args.prefix)
