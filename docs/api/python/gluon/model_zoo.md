@@ -13,6 +13,7 @@ This document lists the model APIs in Gluon:
     :nosignatures:
 
     mxnet.gluon.model_zoo
+    mxnet.gluon.model_zoo.vision
 ```
 
 The `Gluon Model Zoo` API, defined in the `gluon.model_zoo` package, provides pre-defined
@@ -181,6 +182,8 @@ In the rest of this document, we list routines provided by the `gluon.model_zoo`
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
+
+.. automodule:: mxnet.gluon.model_zoo
 
 .. automodule:: mxnet.gluon.model_zoo.vision
     :members:
