@@ -22,17 +22,13 @@ from fm_model import *
 import argparse
 import os
 
-parser = argparse.ArgumentParser(description="Run sparse linear classification " \
-                                             "with distributed kvstore",
+parser = argparse.ArgumentParser(description="Run factorization machine",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--num-epoch', type=int, default=5,
+parser.add_argument('--num-epoch', type=int, default=1,
                     help='number of epochs to train')
 parser.add_argument('--batch-size', type=int, default=8192,
                     help='number of examples per batch')
-parser.add_argument('--kvstore', type=str, default=None,
-                    help='what kvstore to use',
-                    choices=["dist_async", "local"])
-parser.add_argument('--optimizer', type=str, default='ftrl',
+parser.add_argument('--optimizer', type=str, default='adam',
                     help='what optimizer to use',
                     choices=["ftrl", "sgd", "adam"])
 
@@ -53,15 +49,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.info(args)
     num_epoch = args.num_epoch
-    kvstore = args.kvstore
     batch_size = args.batch_size
     optimizer = args.optimizer
     factor_size = 4
-
-    # create kvstore
-    kv = mx.kvstore.create(kvstore) if kvstore else None
-    rank = kv.rank if kv else 0
-    num_worker = kv.num_workers if kv else 1
 
     # dataset
     num_features = AVAZU['num_features']
@@ -73,8 +63,7 @@ if __name__ == '__main__':
 
     # data iterator
     train_data = mx.io.LibSVMIter(data_libsvm=train_data, data_shape=(num_features,),
-                                  batch_size=batch_size, num_parts=num_worker,
-                                  part_index=rank)
+                                  batch_size=batch_size)
     eval_data = mx.io.LibSVMIter(data_libsvm=val_data, data_shape=(num_features,),
                                  batch_size=batch_size)
 
@@ -86,17 +75,10 @@ if __name__ == '__main__':
     mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
-    optim = mx.optimizer.create(optimizer, learning_rate=0.01, rescale_grad=1.0/batch_size/num_worker)
-    mod.init_optimizer(optimizer=optim, kvstore=kv)
+    optim = mx.optimizer.create(optimizer, learning_rate=0.01, rescale_grad=1.0/batch_size)
+    mod.init_optimizer(optimizer=optim)
     # use accuracy as the metric
     metric = mx.metric.create(['mse'])
-
-    # get the sparse weight parameter
-    w1_weight_index = mod._exec_group.param_names.index('w1_weight')
-    w1_weight_param = mod._exec_group.param_arrays[w1_weight_index]
-    v_index = mod._exec_group.param_names.index('v')
-    v_param = mod._exec_group.param_arrays[v_index]
-    all_row_ids = mx.nd.arange(0, num_features)
     speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
@@ -106,11 +88,6 @@ if __name__ == '__main__':
         metric.reset()
         for batch in data_iter:
             nbatch += 1
-            # for distributed training, we need to manually pull sparse weights from kvstore
-            if kv:
-                row_ids = batch.data[0].indices
-                kv.row_sparse_pull('w1_weight', w1_weight, row_ids=[row_ids], priority=-w1_weight_index)
-                kv.row_sparse_pull('v', v, row_ids=[row_ids], priority=-v_index)
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
@@ -119,14 +96,9 @@ if __name__ == '__main__':
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=metric, locals=locals())
             speedometer(speedometer_param)
-        #if kv:
-        #    kv.row_sparse_pull('w1_weight', w1_weight, row_ids=[all_row_ids])
-        #    kv.row_sparse_pull('v', v, row_ids=[all_row_ids])
         ## evaluate metric on validation dataset
         #score = mod.score(eval_data, ['nll_loss'])
         #logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
-        #save_optimizer_states = True
-        #mod.save_checkpoint(".", epoch, save_optimizer_states=save_optimizer_states)
         # reset the iterator for next pass of data
         data_iter.reset()
     logging.info('Training completed.')
