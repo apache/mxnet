@@ -67,6 +67,8 @@ class CapsuleLayer:
         bias = mx.sym.Variable('Bias',
                                shape=(self.batch_size, input_num_capsule, self.num_capsule, 1, 1),
                                init=self.bias_initializer)
+        bias = mx.sym.BlockGrad(bias)
+        bias_ = bias
 
         # input : (batch_size, input_num_capsule, input_dim_vector)
         # inputs_expand : (batch_size, input_num_capsule, 1, input_dim_vector, 1)
@@ -79,18 +81,26 @@ class CapsuleLayer:
 
         # inputs_hat : [(1L, input_num_capsule, num_capsule, 1, dim_vector)]
         inputs_hat = mx.sym.linalg_gemm2(w_tiled, inputs_tiled, transpose_a=True)
+
         inputs_hat = mx.sym.swapaxes(data=inputs_hat, dim1=3, dim2=4)
+        inputs_hat_stopped = inputs_hat
+        inputs_hat_stopped = mx.sym.BlockGrad(inputs_hat_stopped)
 
         for i in range(0, self.num_routing):
-            c = mx.sym.softmax(bias, axis=2, name='c' + str(i))
-            outputs = squash(
-                mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat, name='broadcast_mul_' + str(i)),
-                           axis=1, keepdims=True,
-                           name='sum_' + str(i)), name='output_' + str(i), squash_axis=4)
-            if i != self.num_routing - 1:
-                bias = bias + mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat, name='bias_broadcast_mul' + str(i)),
-                                         axis=4,
-                                         keepdims=True, name='bias_' + str(i))
+            c = mx.sym.softmax(bias_, axis=2, name='c' + str(i))
+            if i == self.num_routing - 1:
+                outputs = squash(
+                    mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat, name='broadcast_mul_' + str(i)),
+                               axis=1, keepdims=True,
+                               name='sum_' + str(i)), name='output_' + str(i), squash_axis=4)
+            else:
+                outputs = squash(
+                    mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat_stopped, name='broadcast_mul_' + str(i)),
+                               axis=1, keepdims=True,
+                               name='sum_' + str(i)), name='output_' + str(i), squash_axis=4)
+                bias_ = bias_ + mx.sym.sum(mx.sym.broadcast_mul(c, inputs_hat_stopped, name='bias_broadcast_mul' + str(i)),
+                                           axis=4,
+                                           keepdims=True, name='bias_' + str(i))
 
         outputs = mx.sym.Reshape(data=outputs, shape=(-1, self.num_capsule, self.dim_vector))
         return outputs

@@ -22,6 +22,7 @@ import re
 import urllib
 import gzip
 import struct
+import scipy.ndimage as ndi
 from capsulelayers import primary_caps, CapsuleLayer
 
 
@@ -173,7 +174,7 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
         return self.learning_rate
 
 
-def do_training(num_epoch, optimizer, kvstore, learning_rate):
+def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix):
     lr_scheduler = SimpleLRScheduler(learning_rate)
     optimizer_params = {'lr_scheduler': lr_scheduler}
     module.init_params()
@@ -199,13 +200,56 @@ def do_training(num_epoch, optimizer, kvstore, learning_rate):
             module.update_metric(loss_metric, data_batch.label)
             loss_metric.get_batch_log(n_batch)
         val_acc, val_loss = loss_metric.get_name_value()
-        print('Epoch[' + str(n_epoch) + '] train acc:' + str(train_acc) + ' loss:' + str(train_loss))
-        print('Epoch[' + str(n_epoch) + '] val acc:' + str(val_acc) + ' loss:' + str(val_loss))
+        print('Epoch[%d] train acc: %.4f loss: %.6f' % (n_epoch, train_acc, train_loss))
+        print('Epoch[%d] val acc: %.4f loss: %.6f' % (n_epoch, val_acc, val_loss))
         print('SAVE CHECKPOINT')
 
-        module.save_checkpoint(prefix='capsnet', epoch=n_epoch)
+        module.save_checkpoint(prefix=model_prefix, epoch=n_epoch)
         n_epoch += 1
         lr_scheduler.learning_rate = learning_rate * (0.9 ** n_epoch)
+
+
+def apply_transform(x,
+                    transform_matrix,
+                    fill_mode='nearest',
+                    cval=0.):
+    x = np.rollaxis(x, 0, 0)
+    final_affine_matrix = transform_matrix[:2, :2]
+    final_offset = transform_matrix[:2, 2]
+    channel_images = [ndi.interpolation.affine_transform(
+        x_channel,
+        final_affine_matrix,
+        final_offset,
+        order=0,
+        mode=fill_mode,
+        cval=cval) for x_channel in x]
+    x = np.stack(channel_images, axis=0)
+    x = np.rollaxis(x, 0, 0 + 1)
+    return x
+
+
+def random_shift(x, width_shift_fraction, height_shift_fraction):
+    tx = np.random.uniform(-height_shift_fraction, height_shift_fraction) * x.shape[2]
+    ty = np.random.uniform(-width_shift_fraction, width_shift_fraction) * x.shape[1]
+    shift_matrix = np.array([[1, 0, tx],
+                             [0, 1, ty],
+                             [0, 0, 1]])
+    x = apply_transform(x, shift_matrix, 'nearest')
+    return x
+
+
+class MNISTCustomIter(mx.io.NDArrayIter):
+    def next(self):
+        if self.iter_next():
+            data_raw_list = self.getdata()
+            data_shifted = []
+            for data_raw in data_raw_list[0]:
+                data_shifted.append(random_shift(data_raw.asnumpy(), 0.1, 0.1))
+            return mx.io.DataBatch(data=[mx.nd.array(data_shifted)], label=self.getlabel(),
+                                   pad=self.getpad(), index=None)
+        else:
+            raise StopIteration
+
 
 if __name__ == "__main__":
     # Read mnist data set
@@ -217,11 +261,12 @@ if __name__ == "__main__":
     # set batch size
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=10, type=int)
+    parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--devices', default='gpu0', type=str)
-    parser.add_argument('--num_epoch', default=30, type=int)
-    parser.add_argument('--lr', default=0.0001, type=float)
+    parser.add_argument('--num_epoch', default=100, type=int)
+    parser.add_argument('--lr', default=0.001, type=float)
     parser.add_argument('--num_routing', default=3, type=int)
+    parser.add_argument('--model_prefix', default='capsnet', type=str)
     args = parser.parse_args()
     contexts = re.split(r'\W+', args.devices)
     for i, ctx in enumerate(contexts):
@@ -235,8 +280,8 @@ if __name__ == "__main__":
         raise Exception('num_gpu should be positive divisor of batch_size')
 
     # generate train_iter, val_iter
-    train_iter = mx.io.NDArrayIter(data=to4d(train_img), label=train_lbl, batch_size=args.batch_size, shuffle=True)
-    val_iter = mx.io.NDArrayIter(data=to4d(val_img), label=val_lbl, batch_size=args.batch_size,)
+    train_iter = MNISTCustomIter(data=to4d(train_img), label=train_lbl, batch_size=args.batch_size, shuffle=True)
+    val_iter = MNISTCustomIter(data=to4d(val_img), label=val_lbl, batch_size=args.batch_size,)
 
     # define capsnet
     final_net = capsnet(batch_size=args.batch_size/num_gpu, n_class=10, num_routing=args.num_routing)
@@ -249,4 +294,5 @@ if __name__ == "__main__":
     module.bind(data_shapes=train_iter.provide_data,
                 label_shapes=val_iter.provide_label,
                 for_training=True)
-    do_training(num_epoch=args.num_epoch, optimizer='adam', kvstore='device', learning_rate=args.lr)
+    do_training(num_epoch=args.num_epoch, optimizer='adam', kvstore='device', learning_rate=args.lr,
+                model_prefix=args.model_prefix)
