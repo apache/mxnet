@@ -56,6 +56,15 @@ export MXNET_GPU_WORKER_NTHREADS=3
     - NaiveEngine: A very simple engine that uses the master thread to do the computation synchronously. Setting this engine disables multi-threading. You can use this type for debugging in case of any error. Backtrace will give you the series of calls that lead to the error. Remember to set MXNET_ENGINE_TYPE back to empty after debugging.
     - ThreadedEngine: A threaded engine that uses a global thread pool to schedule jobs.
     - ThreadedEnginePerDevice: A threaded engine that allocates thread per GPU and executes jobs asynchronously.
+  - Note: `ThreadedEngine` and `ThreadedEnginePerDevice` are not thread-safe. Switch to using `NaiveEngine`
+          if you want to have multiple client threads interacting with a single MXNet model at the same time.
+          For example, if you use MXNet from a Gunicorn HTTP server, set the `MXNET_ENGINE_TYPE` to `NaiveEngine`.
+          The Gunicorn HTTP server uses a pre-fork worker model, i.e. it (pre) forks and keeps a group of processes
+          running to handle various incoming HTTP requests and then forks additional processes if the load goes up.
+          Since the fork of a process replicates the complete process address space including threads,
+          keeping MXNet single-threaded via the use of `NaiveEngine` makes it safe.
+          The `NaiveEngine` executes the requests sequentially in the order received per process.
+          This allows you to fork and run multiple processes from the same process using MXNet.
 
 ## Execution Options
 
