@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_op.cc
  * \brief CPU Implementation of broadcast and reduce functions.
  */
@@ -72,7 +73,7 @@ Example::
   data = [[1,2,0],
           [3,0,1],
           [4,1,0]]
- 
+
   csr = cast_storage(data, 'csr')
 
   sum(csr, axis=0)

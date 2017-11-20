@@ -30,6 +30,7 @@ except ImportError:
 
 import ctypes
 import warnings
+from array import array as native_array
 
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
            "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
@@ -37,7 +38,7 @@ __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
-from ..base import c_array, mx_real_t, integer_types
+from ..base import c_array_buf, mx_real_t, integer_types
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
@@ -86,16 +87,16 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     num_aux = mx_uint(len(aux_types))
     check_call(_LIB.MXNDArrayCreateSparseEx(
         ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
-        c_array(mx_uint, shape),
+        c_array_buf(mx_uint, native_array('I', shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         num_aux,
-        c_array(ctypes.c_int, aux_type_ids),
-        c_array(mx_uint, aux_shape_lens),
-        c_array(mx_uint, aux_shapes),
+        c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
+        c_array_buf(mx_uint, native_array('I', aux_shape_lens)),
+        c_array_buf(mx_uint, native_array('I', aux_shapes)),
         ctypes.byref(hdl)))
     return hdl
 
@@ -220,6 +221,17 @@ class BaseSparseNDArray(NDArray):
             return _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
+
+    def check_format(self, full_check=True):
+        """Check whether the NDArray format is valid.
+
+        Parameters
+        ----------
+        full_check : bool, optional
+            If `True`, rigorous check, O(N) operations. Otherwise
+            basic check, O(1) operations (default True).
+        """
+        check_call(_LIB.MXNDArraySyncCheckFormat(self.handle, ctypes.c_bool(full_check)))
 
     def _data(self):
         """A deep copy NDArray of the data array associated with the BaseSparseNDArray.
@@ -735,6 +747,13 @@ class RowSparseNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def retain(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`retain`.
+
+        The arguments are the same as for :py:func:`retain`, with
+        this array as data.
+        """
+        return retain(self, *args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file inplace_addto_detect_pass.cc
  * \brief Detect whether inplace addto operation is possible for certain op.
  */

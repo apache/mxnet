@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file optimizer_op.cc
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -36,6 +37,7 @@ DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 DMLC_REGISTER_PARAMETER(FtrlParam);
 
 NNVM_REGISTER_OP(sgd_update)
+MXNET_ADD_SPARSE_OP_ALIAS(sgd_update)
 .describe(R"code(Update function for Stochastic Gradient Descent (SDG) optimizer.
 
 It updates the weights using::
@@ -62,6 +64,7 @@ only the row slices whose indices appear in grad.indices are updated::
 .add_arguments(SGDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(sgd_mom_update)
+MXNET_ADD_SPARSE_OP_ALIAS(sgd_mom_update)
 .describe(R"code(Momentum update function for Stochastic Gradient Descent (SDG) optimizer.
 
 Momentum update has better convergence rates on neural networks. Mathematically it looks
@@ -141,6 +144,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .add_arguments(SGDMomParam::__FIELDS__());
 
 NNVM_REGISTER_OP(adam_update)
+MXNET_ADD_SPARSE_OP_ALIAS(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization
 of AdaGrad.
 
@@ -280,6 +284,7 @@ to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 .add_arguments(RMSPropAlexParam::__FIELDS__());
 
 NNVM_REGISTER_OP(ftrl_update)
+MXNET_ADD_SPARSE_OP_ALIAS(ftrl_update)
 .describe(R"code(Update function for Ftrl optimizer.
 Referenced from *Ad Click Prediction: a View from the Trenches*, available at
 http://dl.acm.org/citation.cfm?id=2488200.

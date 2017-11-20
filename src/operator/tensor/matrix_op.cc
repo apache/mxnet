@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cc
  * \brief CPU Implementation of matrix operations
  */
@@ -31,7 +32,7 @@ DMLC_REGISTER_PARAMETER(ReshapeParam);
 DMLC_REGISTER_PARAMETER(TransposeParam);
 DMLC_REGISTER_PARAMETER(ExpandDimParam);
 DMLC_REGISTER_PARAMETER(ClipParam);
-DMLC_REGISTER_PARAMETER(SimpleCropAssignScalarParam);
+DMLC_REGISTER_PARAMETER(SliceAssignScalarParam);
 DMLC_REGISTER_PARAMETER(SliceParam);
 DMLC_REGISTER_PARAMETER(SliceAxisParam);
 DMLC_REGISTER_PARAMETER(RepeatParam);
@@ -247,7 +248,7 @@ will return a new array with shape ``(2,1,3,4)``.
 .add_arguments(ExpandDimParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice)
-.add_alias("_sparse_slice")
+MXNET_ADD_SPARSE_OP_ALIAS(slice)
 .add_alias("crop")
 .describe(R"code(Slices a region of the array.
 
@@ -323,18 +324,19 @@ NNVM_REGISTER_OP(_slice_assign)
     return std::vector<std::string>{"lhs", "rhs"};
   })
 .set_attr_parser(ParamParser<SliceParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignShape)
+.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", SliceAssign<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SliceAssignOpForward<cpu>)
 .add_argument("lhs", "NDArray-or-Symbol", "Source input")
 .add_argument("rhs", "NDArray-or-Symbol", "value to assign")
 .add_arguments(SliceParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_crop_assign_scalar)
+NNVM_REGISTER_OP(_slice_assign_scalar)
+.add_alias("_crop_assign_scalar")
 .MXNET_DESCRIBE("(Assign the scalar to a cropped subset of the input.\n\n"
 "Requirements\n"
 "------------\n"
@@ -342,16 +344,16 @@ NNVM_REGISTER_OP(_crop_assign_scalar)
 ")")
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<SimpleCropAssignScalarParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", CropAssignScalarShape)
+.set_attr_parser(ParamParser<SliceAssignScalarParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignScalarOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", CropAssignScalar<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SliceAssignScalarOpForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
-.add_arguments(SimpleCropAssignScalarParam::__FIELDS__());
+.add_arguments(SliceAssignScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(slice_axis)
 .describe(R"code(Slices along a given axis.
@@ -394,6 +396,7 @@ NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxisGrad_<cpu>);
 
 NNVM_REGISTER_OP(clip)
+MXNET_ADD_SPARSE_OP_ALIAS(clip)
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.

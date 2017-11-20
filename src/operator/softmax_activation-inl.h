@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file softmax_activation-inl.h
  * \brief SoftmaxActivation operator
  * \author Junyuan Xie

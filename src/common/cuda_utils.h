@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cuda_utils.h
  * \brief CUDA debugging utilities.
  */

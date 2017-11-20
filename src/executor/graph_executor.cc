@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file graph_executor.cc
  * \brief graph executor
  */
@@ -1297,8 +1298,10 @@ void GraphExecutor::InitCachedOps() {
     std::copy(mutate_vars.begin(), mutate_vars.end(),
               std::inserter(all_vars, all_vars.end()));
     // setup exec vars
-    Engine::Get()->PushSync([exec](RunContext rctx) {
+    Engine::Get()->PushAsync(
+      [exec](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         exec->Setup();
+        on_complete();
       }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
       PROFILER_MESSAGE("SetupExec"));
     auto exec_fun = [exec, is_async, is_gpu] (

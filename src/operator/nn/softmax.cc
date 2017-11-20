@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file softmax.cc
  * \brief CPU Implementation of softmax
  */

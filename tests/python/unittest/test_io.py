@@ -162,10 +162,10 @@ def test_NDArrayIter_csr():
     csr, _ = rand_sparse_ndarray(shape, 'csr')
     dns = csr.asnumpy()
 
-    # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError 
+    # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError
     assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size,
                  last_batch_handle='pad')
-    
+
     # CSRNDArray with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
                     shuffle=True, last_batch_handle='discard'))
@@ -247,7 +247,7 @@ def test_LibSVMIter():
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
-    
+
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
 def test_CSVIter():
     def check_CSVIter_synthetic():

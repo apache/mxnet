@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file ndarray_op.cc
  * \brief
  * \author Junyuan Xie
@@ -84,9 +85,11 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
   }
 
   CHECK(param_.pinfo->forward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_forward));
-  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx) {ctx.async_on_complete(); },
-                          ndctx, ndvar, {}, FnProperty::kNormal, 0,
-                          PROFILER_MESSAGE("NDArrayOpForward"));
+  Engine::Get()->PushAsync(
+      [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        ctx.async_on_complete();
+        on_complete();
+      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, PROFILER_MESSAGE("NDArrayOpForward"));
 }
 
 template<typename xpu>
@@ -131,9 +134,11 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
   }
 
   CHECK(param_.pinfo->backward(ptrs.size(), ptrs.data(), tags.data(), param_.pinfo->p_backward));
-  Engine::Get()->PushSync([ndcpy, ctx](RunContext rctx){ ctx.async_on_complete(); },
-                          ndctx, ndvar, {}, FnProperty::kNormal, 0,
-                          PROFILER_MESSAGE("NDArrayOpBackward"));
+  Engine::Get()->PushAsync(
+      [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete){
+        ctx.async_on_complete();
+        on_complete();
+      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, PROFILER_MESSAGE("NDArrayOpBackward"));
 }
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {
