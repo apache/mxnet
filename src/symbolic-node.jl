@@ -250,7 +250,13 @@ function get_name(self :: mx.SymbolicNode)
     success = Ref(0)
     @mxcall(:MXSymbolGetName, (MX_handle, Ref{char_p}, Ref{Int}), self.handle.value, name, success)
     @assert success[] != -1
-    return Symbol(unsafe_string(name[]))
+
+    str = name[]
+    if str == C_NULL  # e.g. the symbol returned via get_internals
+        string(self.handle.value)
+    else
+        Symbol(unsafe_string(str))
+    end
 end
 
 Base.show(io::IO, sym::SymbolicNode) =

@@ -468,7 +468,7 @@ function test_power()
     end
   end
 
-  info("NDArray::power::e.^x::x.^e")
+  info("SymbolicNode::power::e.^x::x.^e")
   let x = mx.Variable(:x), A = [0 0 0; 0 0 0]
     y = exec(e.^x; :x => A)[]
     @test copy(y) ≈ ones(A)
@@ -486,7 +486,7 @@ function test_power()
     end
   end
 
-  info("NDArray::power::π.^x::x.^π")
+  info("SymbolicNode::power::π.^x::x.^π")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = π.^x
       z = exec(y; :x => A)[]
@@ -499,6 +499,12 @@ function test_power()
     end
   end
 end  # function test_power
+
+function test_get_name()
+  info("SymbolicNode::get_name::with get_internals")
+  name = mx.get_name(mx.get_internals(mlp2()))  # no error
+  @test contains(name, "Ptr")
+end  # function test_get_name
 
 ################################################################################
 # Run tests
@@ -522,6 +528,7 @@ end  # function test_power
   test_mul()
   test_div()
   test_power()
+  test_get_name()
 end
 
 end
