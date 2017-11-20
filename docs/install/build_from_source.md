@@ -436,7 +436,7 @@ Run the following command from the MXNet source root directory to build the MXNe
 
 ```bash
     sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
-    cpanm -q -L "${HOME}/perl5" Function::Parameters
+    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered
 
     MXNET_HOME=${PWD}
     export LD_LIBRARY_PATH=${MXNET_HOME}/lib

@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
+__all__ = ['MNIST', 'FashionMNIST', 'CIFAR10', 'CIFAR100',
+           'ImageRecordDataset', 'ImageFolderDataset']
 
 import os
 import gzip
@@ -69,7 +71,7 @@ class _DownloadedDataset(dataset.Dataset):
 
 
 class MNIST(_DownloadedDataset):
-    """MNIST handwritten digits dataset from `http://yann.lecun.com/exdb/mnist`_.
+    """MNIST handwritten digits dataset from http://yann.lecun.com/exdb/mnist
 
     Each sample is an image (in 3D NDArray) with shape (28, 28, 1).
 
@@ -80,9 +82,11 @@ class MNIST(_DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each instance. For example::
+        A user defined callback that transforms each sample. For example:
+    ::
 
-            transform=lambda data, label: (data.astype(np.float32)/255, label)
+        transform=lambda data, label: (data.astype(np.float32)/255, label)
+
     """
     def __init__(self, root='~/.mxnet/datasets/mnist', train=True,
                  transform=None):
@@ -125,7 +129,7 @@ class MNIST(_DownloadedDataset):
 class FashionMNIST(MNIST):
     """A dataset of Zalando's article images consisting of fashion products,
     a drop-in replacement of the original MNIST dataset from
-    `https://github.com/zalandoresearch/fashion-mnist`_.
+    https://github.com/zalandoresearch/fashion-mnist
 
     Each sample is an image (in 3D NDArray) with shape (28, 28, 1).
 
@@ -136,9 +140,11 @@ class FashionMNIST(MNIST):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each instance. For example::
+        A user defined callback that transforms each sample. For example:
+    ::
 
-            transform=lambda data, label: (data.astype(np.float32)/255, label)
+        transform=lambda data, label: (data.astype(np.float32)/255, label)
+
     """
     def __init__(self, root='~/.mxnet/datasets/fashion-mnist', train=True,
                  transform=None):
@@ -154,7 +160,7 @@ class FashionMNIST(MNIST):
 
 
 class CIFAR10(_DownloadedDataset):
-    """CIFAR10 image classification dataset from `https://www.cs.toronto.edu/~kriz/cifar.html`_.
+    """CIFAR10 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
     Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
 
@@ -165,9 +171,11 @@ class CIFAR10(_DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each instance. For example::
+        A user defined callback that transforms each sample. For example:
+    ::
 
-            transform=lambda data, label: (data.astype(np.float32)/255, label)
+        transform=lambda data, label: (data.astype(np.float32)/255, label)
+
     """
     def __init__(self, root='~/.mxnet/datasets/cifar10', train=True,
                  transform=None):
@@ -212,7 +220,7 @@ class CIFAR10(_DownloadedDataset):
 
 
 class CIFAR100(CIFAR10):
-    """CIFAR100 image classification dataset from `https://www.cs.toronto.edu/~kriz/cifar.html`_.
+    """CIFAR100 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
     Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
 
@@ -225,9 +233,11 @@ class CIFAR100(CIFAR10):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each instance. For example::
+        A user defined callback that transforms each sample. For example:
+    ::
 
-            transform=lambda data, label: (data.astype(np.float32)/255, label)
+        transform=lambda data, label: (data.astype(np.float32)/255, label)
+
     """
     def __init__(self, root='~/.mxnet/datasets/cifar100', fine_label=False, train=True,
                  transform=None):
@@ -259,9 +269,11 @@ class ImageRecordDataset(dataset.RecordFileDataset):
 
         If 1, always convert images to colored (RGB).
     transform : function, default None
-        A user defined callback that transforms each instance. For example::
+        A user defined callback that transforms each sample. For example:
+    ::
 
-            transform=lambda data, label: (data.astype(np.float32)/255, label)
+        transform=lambda data, label: (data.astype(np.float32)/255, label)
+
     """
     def __init__(self, filename, flag=1, transform=None):
         super(ImageRecordDataset, self).__init__(filename)
@@ -294,9 +306,10 @@ class ImageFolderDataset(dataset.Dataset):
         If 0, always convert loaded images to greyscale (1 channel).
         If 1, always convert loaded images to colored (3 channels).
     transform : callable, default None
-        A function that takes data and label and transforms them::
+        A function that takes data and label and transforms them:
+    ::
 
-            transform = lambda data, label: (data.astype(np.float32)/255, label)
+        transform = lambda data, label: (data.astype(np.float32)/255, label)
 
     Attributes
     ----------

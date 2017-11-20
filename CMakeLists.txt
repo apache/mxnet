@@ -1,24 +1,42 @@
 cmake_minimum_required(VERSION 3.0.2)
 
-project(mxnet C CXX)
+if((${CMAKE_VERSION} VERSION_GREATER "3.9.0") OR (${CMAKE_VERSION} VERSION_EQUAL "3.9.0"))
+  set(FIRST_CUDA TRUE)
+else()
+  set(FIRST_CUDA FALSE)
+endif()
+include(cmake/Utils.cmake)
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+#Some things have order. This must be put in front alone
+mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
+mxnet_option(USE_OLDCMAKECUDA           "Build with old cmake cuda" OFF)
+if(USE_CUDA)
+  add_definitions(-DMSHADOW_USE_CUDA=1)
+  IF(FIRST_CUDA AND (NOT USE_OLDCMAKECUDA))
+    set(__cuda_toolset "7.5" "8.0" "9.0")
+    set(CUDA_TOOLSET "8.0" CACHE STRING "Select CUDA Version.")
+    set_property( CACHE CUDA_TOOLSET PROPERTY STRINGS "" ${__cuda_toolset} )
+    set(CMAKE_GENERATOR_TOOLSET "cuda=${CUDA_TOOLSET},host=x64")
+    project(mxnet C CXX CUDA)
+  else()
+    project(mxnet C CXX)
+    set(FIRST_CUDA FALSE)
+  endif()
+else()
+  project(mxnet C CXX)
+  add_definitions(-DMSHADOW_USE_CUDA=0)
 endif()
 
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
-
-include(cmake/Utils.cmake)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
-mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLML variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND UNIX AND (NOT APPLE))
 mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and found)" OFF)
-mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   OFF)
+mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
+mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
 mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
@@ -29,12 +47,24 @@ mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 
+
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
+endif()
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
+
+
+
+
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
 if("$ENV{VERBOSE}" STREQUAL "1")
   message(STATUS " Verbose Makefile ACTIVATED")
   set(CMAKE_VERBOISE_MAKEFILE ON)
 endif()
+
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -89,6 +119,9 @@ if(USE_VTUNE)
   if(NOT VTUNE_ROOT)
     set(VTUNE_ROOT /opt/intel/vtune_amplifier_xe_2017)
   endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -g -pg")
+  set(CMAKE_LINK_LIBRARY_FILE_FLAG "${CMAKE_LINK_LIBRARY_FILE_FLAG} -g -pg")
   add_definitions(-DMXNET_USE_VTUNE=1)
   include_directories(${VTUNE_ROOT}/include)
   list(APPEND mxnet_LINKER_LIBS ${VTUNE_ROOT}/lib64/libittnotify.a)
@@ -124,14 +157,20 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
-  include(mshadow/cmake/mshadow.cmake)
+if(FIRST_CUDA)
+  include(cmake/ChooseBlas.cmake)
   include(mshadow/cmake/Utils.cmake)
-  include(mshadow/cmake/Cuda.cmake)
+  include(cmake/FirstClassLangCuda.cmake)
 else()
-  include(mshadowUtils)
-  include(Cuda)
-  include(mshadow)
+  if(EXISTS ${PROJECT_SOURCE_DIR}/mshadow/cmake)
+    include(mshadow/cmake/mshadow.cmake)
+    include(mshadow/cmake/Utils.cmake)
+    include(mshadow/cmake/Cuda.cmake)
+  else()
+    include(mshadowUtils)
+    include(Cuda)
+    include(mshadow)
+  endif()
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
@@ -152,7 +191,7 @@ include_directories("dlpack/include")
 #  add_subdirectory(dlpack)
 #endif()
 
-if(NOT MSVC)
+if(NOT MSVC AND NOT APPLE)
   set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
   set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
 endif()
@@ -164,16 +203,38 @@ if(UNIX)
   endif()
 endif()
 
+set(ALT_MALLOC_FLAGS "-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free")
+
+# ---[ gperftools
+if(USE_GPERFTOOLS)
+  find_package(Gperftools)
+  if(GPERFTOOLS_FOUND)
+    message(STATUS "Using Gperftools malloc (tcmalloc)")
+    include_directories(${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${GPERFTOOLS_LIBRARIES})
+    set(USE_JEMALLOC 0)
+  endif()
+endif()
+
 # ---[ jemalloc
 if(USE_JEMALLOC)
+  if(USE_GPERFTOOLS)
+    message(ERROR "Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
+  endif()
   find_package(JeMalloc)
   if(JEMALLOC_FOUND)
+    message(STATUS "Using JEMalloc malloc")
     add_definitions(-DUSE_JEMALLOC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
     include_directories(${JEMALLOC_INCLUDE_DIRS})
     set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
   endif()
 endif()
 
+# ---[ OpenCV
 if(USE_OPENCV)
   find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
   if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
@@ -196,6 +257,7 @@ else(USE_OPENCV)
   add_definitions(-DMXNET_USE_OPENCV=0)
 endif()
 
+# ---[ OpenMP
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   if(OPENMP_FOUND)
@@ -208,21 +270,14 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
+# ---[ LAPack
 if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
 else(USE_LAPACK)
   # Workaround for Windows until using new Jenkinsfile.
-  if(USE_BLAS STREQUAL "open")
+  if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
     add_definitions(-DMXNET_USE_LAPACK=1)
-  endif()
-endif()
-
-
-if(UNIX)
-  find_library(RTLIB rt)
-  if(RTLIB)
-    list(APPEND mxnet_LINKER_LIBS ${RTLIB})
   endif()
 endif()
 
@@ -256,11 +311,18 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/mshadow/cmake)
   add_subdirectory("mshadow")
 endif()
-FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h")
+FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
-FILE(GLOB_RECURSE NNVMSOURCE "nnvm/src/*.cc" "nnvm/src/*.h" "nnvm/include/*.h")
+FILE(GLOB_RECURSE NNVMSOURCE
+  nnvm/src/c_api/*.cc
+  nnvm/src/core/*.cc
+  nnvm/src/pass/*.cc
+  nnvm/src/c_api/*.h
+  nnvm/src/core/*.h
+  nnvm/src/pass/*.h
+  nnvm/include/*.h)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
@@ -345,37 +407,46 @@ if(MSVC)
 endif()
 
 if(USE_CUDA)
-  list(APPEND CUDA_INCLUDE_DIRS ${INCLUDE_DIRECTORIES})
-  # define preprocessor macro so that we will not include the generated forcelink header
-  mshadow_cuda_compile(cuda_objs ${CUDA})
-  if(MSVC)
-    FIND_LIBRARY(CUDA_nvrtc_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
-    list(APPEND mxnet_LINKER_LIBS ${CUDA_nvrtc_LIBRARY})
-    set(CUDA_cuda_LIBRARY "${CUDA_nvrtc_LIBRARY}/../cuda.lib")
-    list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
-    FIND_LIBRARY(CUDA_cufft_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
-    list(APPEND mxnet_LINKER_LIBS "${CUDA_cufft_LIBRARY}/../cufft.lib") # For fft operator
-    FIND_LIBRARY(CUDA_cusolver_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
-    list(APPEND mxnet_LINKER_LIBS "${CUDA_cusolver_LIBRARY}/../cusolver.lib") # For cusolver
-  else(MSVC)
-    list(APPEND mxnet_LINKER_LIBS nvrtc cuda cufft cusolver)
-    link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
-  endif()
-  list(APPEND SOURCE ${cuda_objs} ${CUDA})
-  add_definitions(-DMXNET_USE_CUDA=1)
-  add_definitions(-DMXNET_USE_NVRTC=1)
-  if(CUDA_LIBRARY_PATH)
-    if(IS_CONTAINER_BUILD)
-      # In case of building on a production-like build container which may not have Cuda installed
-      if(NOT CMAKE_SYSTEM_HAS_CUDA)
-        # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
-        # so use the stub cuda driver shared library
-        if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
-          link_directories(${CUDA_LIBRARY_PATH}/stubs)
-        endif()
-      endif()
+  if(FIRST_CUDA)
+    mshadow_select_nvcc_arch_flags(NVCC_FLAGS_ARCH)
+    string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
+    set(CMAKE_CUDA_FLAGS "${NVCC_FLAGS_ARCH}")
+    set(CMAKE_CUDA_FLAGS_RELEASE "${NVCC_FLAGS_ARCH} -use_fast_math")
+    list(APPEND mxnet_LINKER_LIBS nvrtc cuda cublas cufft cusolver curand)
+    list(APPEND SOURCE ${CUDA})
+    add_definitions(-DMXNET_USE_CUDA=1)
+  else()
+    list(APPEND CUDA_INCLUDE_DIRS ${INCLUDE_DIRECTORIES})
+    # define preprocessor macro so that we will not include the generated forcelink header
+    mshadow_cuda_compile(cuda_objs ${CUDA})
+    if(MSVC)
+        FIND_LIBRARY(CUDA_nvrtc_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
+        list(APPEND mxnet_LINKER_LIBS ${CUDA_nvrtc_LIBRARY})
+        set(CUDA_cuda_LIBRARY "${CUDA_nvrtc_LIBRARY}/../cuda.lib")
+        list(APPEND mxnet_LINKER_LIBS ${CUDA_cuda_LIBRARY})
+        FIND_LIBRARY(CUDA_cufft_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
+        list(APPEND mxnet_LINKER_LIBS "${CUDA_cufft_LIBRARY}/../cufft.lib") # For fft operator
+        FIND_LIBRARY(CUDA_cusolver_LIBRARY nvrtc "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64"  "${CUDA_TOOLKIT_ROOT_DIR}/lib/win32")
+        list(APPEND mxnet_LINKER_LIBS "${CUDA_cusolver_LIBRARY}/../cusolver.lib") # For cusolver
+    else(MSVC)
+        list(APPEND mxnet_LINKER_LIBS nvrtc cuda cufft cusolver)
+        link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
     endif()
-  endif()
+    list(APPEND SOURCE ${cuda_objs} ${CUDA})
+    add_definitions(-DMXNET_USE_CUDA=1)
+    if(CUDA_LIBRARY_PATH)
+        if(IS_CONTAINER_BUILD)
+        # In case of building on a production-like build container which may not have Cuda installed
+        if(NOT CMAKE_SYSTEM_HAS_CUDA)
+            # Assuming building in a container that doesn't have CUDA installed (ie CPU-only build machine)
+            # so use the stub cuda driver shared library
+            if(EXISTS ${CUDA_LIBRARY_PATH}/stubs/libcuda.so)
+            link_directories(${CUDA_LIBRARY_PATH}/stubs)
+            endif()
+        endif()
+        endif()
+    endif()
+ endif()
 endif()
 
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
@@ -403,6 +474,7 @@ endif()
 set(MXNET_INSTALL_TARGETS mxnet)
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" AND USE_MXNET_LIB_NAMING)
   add_library(mxnet MODULE ${SOURCE})
+  add_library(mxnet_static STATIC ${SOURCE})
 else()
   if(UNIX)
     list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
@@ -417,6 +489,12 @@ else()
   endif()
 endif()
 
+if(USE_CUDA)
+  if(FIRST_CUDA)
+    target_compile_options(mxnet PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler=-MTd>")
+    target_compile_options(mxnet PUBLIC "$<$<CONFIG:RELEASE>:-Xcompiler=-MT>")
+  endif()
+endif()
 if(USE_DIST_KVSTORE)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps-lite/CMakeLists.txt)
     add_subdirectory("ps-lite")
@@ -512,4 +590,3 @@ if(MSVC)
 endif()
 set(LINT_DIRS include src scripts python tests cpp-package)
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -P ${CMAKE_CURRENT_SOURCE_DIR}/dmlc-core/cmake/lint.cmake)
-

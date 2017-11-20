@@ -27,6 +27,7 @@
 #include <dmlc/logging.h>
 #include "../operator/mxnet_op.h"
 #include "../operator/tensor/init_op.h"
+#include "../operator/tensor/util/tensor_util-inl.h"
 #include "../operator/tensor/util/tensor_util-inl.cuh"
 #include "../common/cuda_utils.h"
 #include "./ndarray_function.h"
@@ -115,7 +116,7 @@ void ElementwiseSumRspImpl(mshadow::Stream<gpu>* s,
     }
   }
   if (init == 0) {
-    FillZerosRspImpl<gpu>(s, out);
+    FillZerosRspImpl(s, *out);
     return;
   }
   const dim_t num_rows = out->shape()[0];

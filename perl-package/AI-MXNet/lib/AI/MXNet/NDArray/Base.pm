@@ -60,33 +60,66 @@ func _make_ndarray_function($handle, $func_name)
                             $key_var_num_args,
                             $ret_type
     );
+    my %ndarguments;
     my @arguments;
+    my %arguments = (out => 1, name => 1, ctx => 1, shape => 1);
+    my $j = 0;
     for my $i (0..(@$arg_names-1))
     {
         if(not $arg_types->[$i] =~ /^(?:NDArray|Symbol|ndarray\-or\-symbol)/)
         {
             push @arguments, $arg_names->[$i];
+            $arguments{ $arg_names->[$i] } = 1;
+        }
+        else
+        {
+            $ndarguments{ $arg_names->[$i] } = $j++;
         }
     }
     my $generic_ndarray_function = sub
     {
         my $class = shift;
-        my (@args, %kwargs);
+        my (@args, %kwargs, %ndkwargs, @tmp);
         if(@_ and ref $_[-1] eq 'HASH')
         {
             %kwargs = %{ pop(@_) };
         }
-        @args = @_;
-        if(ref $class)
+        else
         {
-            @args = ($class) if not @args;
-            $class = ref $class;
+            while(@_ >= 2 and not ref $_[-2])
+            {
+                if(exists $arguments{ $_[-2] })
+                {
+                    my $v = pop(@_);
+                    my $k = pop(@_);
+                    $kwargs{ $k } = $v;
+                }
+                elsif(exists $ndarguments{ $_[-2] })
+                {
+                    my $v = pop(@_);
+                    my $k = pop(@_);
+                    $ndkwargs{ $k } = $v;
+                }
+                else
+                {
+                    unshift(@tmp, pop(@_));
+                    unshift(@tmp, pop(@_));
+                }
+            }
+        }
+        @args = (@_, @tmp);
+        if(%ndkwargs)
+        {
+            for my $k (keys %ndkwargs)
+            {
+                $args[$ndarguments{$k}] = $ndkwargs{$k};
+            }
         }
         my @ndargs;
         my @pos_args;
         for my $i (@args)
         {
-            if(blessed($i) and $i->isa($class))
+            if(blessed($i) and $i->isa(__PACKAGE__))
             {
                 push @ndargs, $i->handle;
             }
@@ -96,12 +129,13 @@ func _make_ndarray_function($handle, $func_name)
             }
             if(@pos_args > @arguments)
             {
-                die "Too many positional arguments";
+                confess("Too many positional arguments");
             }
         }
         @kwargs{ @arguments[0..$#pos_args] } = @pos_args;
         my $original_output;
         my $output_vars;
+        delete $kwargs{name};
         if(grep { $_ eq 'out' } keys %kwargs)
         {
             $output_vars = delete $kwargs{out};
@@ -114,6 +148,11 @@ func _make_ndarray_function($handle, $func_name)
         else
         {
             $output_vars = [];
+        }
+        if(blessed($class) and $class->isa(__PACKAGE__) and not @{ $output_vars })
+        {
+            @ndargs = ($class->handle) if not @ndargs;
+            $class = ref $class;
         }
         for my $key (keys %kwargs)
         {

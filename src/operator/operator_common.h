@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
@@ -28,6 +29,7 @@
 
 #include <dmlc/json.h>
 #include <dmlc/logging.h>
+#include <dmlc/thread_local.h>
 #include <mxnet/operator.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -36,6 +38,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
 
@@ -89,6 +92,17 @@ struct InferTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
+/*! \brief exception throwed by InferStorageType error */
+struct InferStorageTypeError : public dmlc::Error {
+  /*! \brief analyze message */
+  std::string msg;
+  /*! \brief corresponding input index */
+  int index;
+  // constructor
+  InferStorageTypeError(const std::string& msg_, int index)
+    : dmlc::Error(msg_), msg(msg_), index(index) {}
+};
+
 /*! \brief check if shape is empty or contains unknown (0) dim. */
 inline bool shape_is_none(const TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
@@ -96,6 +110,11 @@ inline bool shape_is_none(const TShape& x) {
 
 /*! \brief check if type is none (-1) */
 inline bool type_is_none(const int& x) {
+  return x == -1;
+}
+
+/*! \brief check if type is none (-1) */
+inline bool storage_type_is_none(const int& x) {
   return x == -1;
 }
 
@@ -111,7 +130,7 @@ inline std::string shape_string(const TShape& x) {
   return os.str();
 }
 
-/*! \brief get string representation of shape */
+/*! \brief get string representation of data type */
 inline std::string type_string(const int& x) {
   switch (x) {
     case mshadow::kFloat32:
@@ -120,10 +139,14 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kInt8:
+      return "int8";
     case mshadow::kUint8:
       return "uint8";
     case mshadow::kInt32:
       return "int32";
+    case mshadow::kInt64:
+      return "int64";
   }
   return "unknown";
 }
@@ -170,6 +193,26 @@ inline bool type_assign(int *y, const int& x) {
 }
 
 /*!
+ * \brief Assign x to y. Checks for compatiblity when y is not DispatchMode::kUndefined.
+ * \param y target mode.
+ * \param x source mode.
+ * \return whether x and y are compatible.
+ */
+inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
+  if (*y == DispatchMode::kUndefined) {
+    *y = x;
+    return true;
+  } else if (*y != x && x != DispatchMode::kUndefined) {
+    return false;
+  }
+  return true;
+}
+
+/*! \brief Register op name as an alias */
+#define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
+  .add_alias("_sparse_" #__name$)
+
+/*!
  * \brief macro assign shape to out if out is unknown otherwise check consistency
  *  Use macro so we can see the error file more clearly
  * \param shape_array the shape array to store the result
@@ -205,22 +248,9 @@ inline bool type_assign(int *y, const int& x) {
   }
 
 /*!
- * \brief macro check if type is the same as expected.
- * \param type the type to be checked
- * \param expected the expected type
- */
-#define UNIFORM_TYPE_CHECK(type, expected, arg)                         \
-  {                                                                     \
-    CHECK_EQ(type, expected) << "This layer requires uniform type. "    \
-                             << "Expected '" << type_string(expected)   \
-                             << "' v.s. given '" << type_string(type)   \
-                             << "' at '" << arg << "'";                 \
-  }
-
-/*!
- * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
+ * \brief macro assign storage type to out if out is unknown (-1) otherwise check consistency
  *  Use macro so we can see the error file more clearly
- * \param type_array the storage type array to store the result
+ * \param type_array the type array to store the result
  * \param index the index of in the array
  * \param type the inferred storage type
  */
@@ -231,8 +261,39 @@ inline bool type_assign(int *y, const int& x) {
       os << "Storage type inconsistent, Provided="                          \
          << common::stype_string((type_array)[index]) << ','                \
          << " inferred storage type=" << common::stype_string(type);        \
-      throw ::mxnet::op::InferTypeError(os.str(), index);                   \
+      throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
+  }
+
+/*!
+ * \brief macro assign type to out if out is unknown (-1) otherwise check consistency
+ *  Use macro so we can see the error file more clearly
+ * \param type_array the type array to store the result
+ * \param index the index of in the array
+ * \param type the inferred dispatch type
+ */
+#define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
+  {                                                                         \
+    if (!dispatch_mode_assign(&(type_array)[index], type)) {                         \
+      std::ostringstream os;                                                \
+      os << "Dispatch mode inconsistent, Provided="                         \
+         << common::dispatch_mode_string((type_array)[index]) << ','        \
+         << " inferred mode=" << common::dispatch_mode_string(type);        \
+      throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
+    }                                                                       \
+  }
+
+/*!
+ * \brief macro check if type is the same as expected.
+ * \param type the type to be checked
+ * \param expected the expected type
+ */
+#define UNIFORM_TYPE_CHECK(type, expected, arg)                         \
+  {                                                                     \
+    CHECK_EQ(type, expected) << "This layer requires uniform type. "    \
+                             << "Expected '" << type_string(expected)   \
+                             << "' v.s. given '" << type_string(type)   \
+                             << "' at '" << arg << "'";                 \
   }
 
 // helper macro to implement bind dispatch
@@ -253,6 +314,48 @@ inline bool type_assign(int *y, const int& x) {
   }
 #endif
 
+/*! \brief assign stype to target_stype, if successful,
+ *         assign dispatch_mode to target_dispatch
+ */
+inline bool storage_type_assign(int* stype,
+                                const NDArrayStorageType target_stype,
+                                DispatchMode* dispatch,
+                                const DispatchMode target_dispatch) {
+  if (type_assign(stype, target_stype)) {
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+    return true;
+  }
+  return false;
+}
+
+/*! \brief assign the stype vector to target_stype, if successful,
+ *         assign dispatch_mode to target_dispatch
+ */
+inline bool storage_type_assign(StorageTypeVector* stypes,
+                                const NDArrayStorageType target_stype,
+                                DispatchMode* dispatch,
+                                const DispatchMode target_dispatch) {
+  CHECK_GT(stypes->size(), 0);
+  bool success = true;
+  for (size_t i = 0; i < stypes->size(); i++) {
+    if (!type_assign(&(*stypes)[i], target_stype)) {
+      success = false;
+    }
+  }
+  if (success) {
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, target_dispatch);
+  }
+  return success;
+}
+
+/*! \brief update the stype vector to default storage and dispatch_mode to fallback
+ */
+inline void dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch) {
+  for (auto& stype : *stypes) {
+    type_assign(&stype, kDefaultStorage);
+  }
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch, 0, DispatchMode::kFComputeFallback);
+}
 
 // make a new node with operator op_name. Inputs are not filled.
 inline nnvm::NodePtr MakeNode(
@@ -318,8 +421,8 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 
 // check whether all output grads are zero.
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
-  const auto zero_op = nnvm::Op::Get("_zeros");
-  const auto zero_like_op = nnvm::Op::Get("zeros_like");
+  static const auto zero_op = nnvm::Op::Get("_zeros");
+  static const auto zero_like_op = nnvm::Op::Get("zeros_like");
   if (!ograds.size()) return false;
   for (const auto& grad : ograds) {
     if (!grad.node) return false;
@@ -367,44 +470,6 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param);
 }
 
-/*! \brief Perform storage fallback to invoke fcompute.
- *  \param attrs attributes of the operator
- *  \param ctx operator context
- *  \param inputs inputs of fcompute
- *  \param req req of fcompute
- *  \param outputs outputs of fcompute
- *  \param fcompute
- *  \param fname name of the operator
- *  \param mutate_idx the indices of mutable inputs
- */
-template <typename xpu>
-void FCompExFallback(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<NDArray>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<NDArray>& outputs,
-                     FCompute fcompute,
-                     const std::string& fname,
-                     std::vector<uint32_t> mutate_idx = {}) {
-  using namespace mxnet::common;
-  std::vector<TBlob> in_blobs, out_blobs;
-  std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
-  // mapping from index in input_blobs to index in pre_temp_dst
-  std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
-  SetupDefaultBlobs(inputs, &in_blobs, &pre_temp_src, &pre_temp_dst, &in_temp_idx_map);
-  SetupDefaultBlobs(outputs, &out_blobs, &post_temp_dst, &post_temp_src);
-  for (const auto idx : mutate_idx) {
-    auto map_iter = in_temp_idx_map.find(idx);
-    if (map_iter != in_temp_idx_map.end()) {
-      post_temp_src.push_back(pre_temp_dst[map_iter->second]);
-      post_temp_dst.push_back(inputs[idx]);
-    }
-  }
-  CastNonDefaultStorage<xpu>(pre_temp_src, pre_temp_dst, ctx, true);
-  fcompute(attrs, ctx, in_blobs, req, out_blobs);
-  CastNonDefaultStorage<xpu>(post_temp_src, post_temp_dst, ctx, true);
-}
-
 #define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \
   {                                                                                \
     CHECK(rsp.storage_shape()[0] == rsp.shape()[0]) << func                        \
@@ -414,53 +479,71 @@ void FCompExFallback(const nnvm::NodeAttrs& attrs,
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-/*! \brief Temporary storage for Alpha release of Sparse Tensors. Please do not use, as this
- * function will be removed
+/*! \brief get string representation of the operator stypes */
+inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         const std::vector<int>& in_attrs,
+                                         const std::vector<int>& out_attrs) {
+  std::string result = "";
+  result += "operator = " + attrs.op->name + "\n";
+  result += "input storage types = [";
+  for (const auto attr : in_attrs) {
+    result += common::stype_string(attr) + ", ";
+  }
+  result += "]\n";
+  result += "output storage types = [";
+  for (const auto attr : out_attrs) {
+    result += common::stype_string(attr) + ", ";
+  }
+  result += "]\n";
+  result += "params = {";
+  for (auto kv : attrs.dict) {
+    result += "\"" + kv.first + "\" : " + kv.second + ", ";
+  }
+  result += "}\n";
+  result += "context.dev_mask = " + std::to_string(dev_mask);
+  return result;
+}
+
+/*! \brief get string representation of the operator */
+inline std::string operator_string(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  std::string result = "";
+  std::vector<int> in_stypes;
+  std::vector<int> out_stypes;
+  auto xform = [](const NDArray arr) -> int { return arr.storage_type(); };
+  std::transform(inputs.begin(), inputs.end(), std::back_inserter(in_stypes), xform);
+  std::transform(outputs.begin(), outputs.end(), std::back_inserter(out_stypes), xform);
+  result += operator_stype_string(attrs, ctx.run_ctx.ctx.dev_mask(), in_stypes, out_stypes);
+  return result;
+}
+
+/*! \brief log storage fallback event
  */
-template<typename DType>
-class SparseTempStorage {
-  inline DType *Alloc(const size_t count) {
-    CHECK_GT(count, 0U);  // You've probably made a mistake
-    CHECK_EQ(handle_.dptr, static_cast<void *>(nullptr));
-    Storage *storage = mxnet::Storage::Get();
-    if (storage) {
-      handle_ = storage->Alloc(count * sizeof(DType), op_ctx_.run_ctx.ctx);
+inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
+                               const int dev_mask,
+                               const std::vector<int>* in_attrs,
+                               const std::vector<int>* out_attrs) {
+  using namespace op;
+  auto warning_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
+  static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  if (log_verbose) {
+    std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+    if (warning_printed->find(warning) == warning_printed->end()) {
+      LOG(INFO) << "\nStorage fallback detected:\n" << warning
+                << "\nThe operator with default storage type will be dispatched for execution. "
+                << "You're seeing this warning message because the operator above is unable to "
+                << "process the given ndarrays with specified storage types and parameter. "
+                << "Temporary dense ndarrays are generated in order to execute the operator. "
+                << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
+                << "to 0 to suppress the warnings.";
+      warning_printed->insert(warning);
     }
-    return static_cast<DType *>(handle_.dptr);
   }
-  inline void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      if (storage) {
-        storage->DirectFree(handle_);
-        handle_.dptr = nullptr;
-      }
-    }
-  }
-  inline DType *dptr() {
-    return static_cast<DType *>(handle_.dptr);
-  }
-
- public:
-  explicit inline SparseTempStorage(const OpContext& op_ctx)
-    : op_ctx_(op_ctx) {
-    handle_.dptr = nullptr;
-  }
-  inline ~SparseTempStorage() {
-    Free();
-  }
-  template<typename xpu, int ndim>
-  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(const mshadow::Shape<ndim>& shape) {
-    if (!dptr()) {
-      Alloc(shape.Size());
-    }
-    return mshadow::Tensor<xpu, ndim, DType>(dptr(), shape, op_ctx_.run_ctx.get_stream<xpu>());
-  }
-
- private:
-  const OpContext& op_ctx_;
-  Storage::Handle  handle_;
-};
+}
 
 }  // namespace op
 }  // namespace mxnet

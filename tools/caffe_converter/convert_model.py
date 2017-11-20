@@ -225,7 +225,7 @@ def main():
     args = parser.parse_args()
 
     convert_model(args.prototxt, args.caffemodel, args.save_model_name)
-    print ('Saved model successfully to {}'.format(args.save_model_name))
+    print('Saved model successfully to {}'.format(args.save_model_name))
 
 if __name__ == '__main__':
     main()

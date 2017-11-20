@@ -40,6 +40,7 @@ OpStatePtr Imperative::InvokeOp(
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs,
     const std::vector<OpReqType>& req,
+    const DispatchMode dispatch_mode,
     OpStatePtr state) {
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -52,26 +53,27 @@ OpStatePtr Imperative::InvokeOp(
   std::vector<Resource> requested;
   std::vector<uint32_t> mutate_idx;
   SetDependency(attrs, ctx, inputs, outputs,
-      &read_vars, &write_vars, &requested, &mutate_idx);
+      &read_vars, &write_vars, &requested, &mutate_idx, dispatch_mode);
 
   FCompute fn = common::GetFCompute<FCompute>(op, "FCompute", ctx);
   FComputeEx fn_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", ctx);
 
-  bool has_non_default = common::ContainsNonDefaultStorage(inputs) ||
-                         common::ContainsNonDefaultStorage(outputs);
-  if (fn && (!has_non_default || !fn_ex)) {
-    PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs, mutate_idx, req);
-  } else if (fn_ex) {
+  // FComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
+  CHECK(dispatch_mode != DispatchMode::kUndefined);
+  bool dispatch_fcompex = dispatch_mode == DispatchMode::kFComputeEx;
+  if (fn_ex && dispatch_fcompex) {
     PushFComputeEx(fn_ex, op, attrs, ctx, read_vars, write_vars,
         requested, inputs, outputs, req);
+  } else if (fn) {
+    PushFCompute(fn, op, attrs, ctx, read_vars, write_vars,
+        requested, inputs, outputs, mutate_idx, req);
   } else if (createop.count(op) || is_layer_backward.get(op, false)) {
     if (!state) {
       state = createop[op](attrs, ctx, ret->arg_shapes, ret->arg_types);
     }
     write_vars.push_back(state.get_var());
     PushOperator(state, op, attrs, ctx, read_vars, write_vars,
-        requested, inputs, outputs, mutate_idx, req);
+        requested, inputs, outputs, mutate_idx, req, dispatch_mode);
   } else {
     LOG(FATAL)
       << "Operator " << op->name << " is not implemented for "
@@ -98,12 +100,13 @@ OpStatePtr Imperative::Invoke(
   }
 
   // TODO(piiswrong): infer ctx
+  DispatchMode dispatch_mode = DispatchMode::kUndefined;
   Context ctx = GetContext(attrs, inputs, outputs, default_ctx);
-  SetShapeType(ctx, attrs, inputs, outputs);
+  SetShapeType(ctx, attrs, inputs, outputs, &dispatch_mode);
   std::vector<OpReqType> req;
   SetWriteInplaceReq(inputs, outputs, &req);
 
-  return InvokeOp(ctx, attrs, inputs, outputs, req);
+  return InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
 }
 
 void Imperative::MarkVariables(
@@ -119,11 +122,13 @@ void Imperative::MarkVariables(
     info.outputs.emplace_back(variables[i]->Detach());
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+    info.ctx = variables[i]->ctx();
 
     gradients[i]->entry_ = nnvm::NodeEntry{
         nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
     AGInfo& grad_info = AGInfo::Create(gradients[i]->entry_.node);
     grad_info.outputs.emplace_back(gradients[i]->Detach());
+    grad_info.ctx = gradients[i]->ctx();
   }
 }
 
@@ -204,6 +209,7 @@ void Imperative::RecordOp(
   node->attrs.name = "node_" + std::to_string(node_count_++);
   AGInfo& info = AGInfo::Create(node);
   info.state = state;
+  info.ctx = outputs[0]->ctx();
 
   if (p_save_inputs == nullptr) {
     p_save_inputs = &(local_buff->save_inputs);
@@ -222,6 +228,7 @@ void Imperative::RecordOp(
       nnvm::NodeEntry entry{nnvm::Symbol::CreateVariable(
           "null" + std::to_string(variable_count_++)).outputs[0].node, 0, 0};
       AGInfo& input_info = AGInfo::Create(entry.node);
+      input_info.ctx = inputs[i]->ctx();
       if (save_inputs[i]) {
         input_info.outputs.emplace_back(*inputs[i]);
       } else {
@@ -260,13 +267,13 @@ void Imperative::RecordOp(
 
 void Imperative::RunGraph(
     const bool retain_graph,
-    const Context& default_ctx,
     const nnvm::IndexedGraph& idx,
     const std::vector<NDArray*> arrays,
     size_t node_start, size_t node_end,
     std::vector<OpReqType>&& array_reqs,
     std::vector<uint32_t>&& ref_count,
-    std::vector<OpStatePtr> *p_states) {
+    std::vector<OpStatePtr> *p_states,
+    const DispatchModeVector &dispatch_modes) {
   using namespace nnvm;
   using namespace imperative;
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -281,9 +288,12 @@ void Imperative::RunGraph(
   DTypeVector arg_dtypes;
   std::vector<OpReqType> req;
 
+  int prev_bulk_size = Engine::Get()->set_bulk_size(10);
+
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) continue;
+    auto num_outputs = node.source->num_outputs();
     ndinputs.clear();
     ndinputs.reserve(node.inputs.size());
     for (const auto& j : node.inputs) {
@@ -291,16 +301,17 @@ void Imperative::RunGraph(
       CHECK(!ndinputs.back()->is_none()) << idx[j.node_id].source->attrs.name << " " << j.index;
     }
     ndoutputs.clear();
-    ndoutputs.reserve(node.source->num_outputs());
+    ndoutputs.reserve(num_outputs);
     req.clear();
-    req.reserve(node.source->num_outputs());
-    for (size_t j = 0; j < node.source->num_outputs(); ++j) {
+    req.reserve(num_outputs);
+    for (size_t j = 0; j < num_outputs; ++j) {
       size_t eid = idx.entry_id(i, j);
       ndoutputs.emplace_back(arrays[eid]);
       req.push_back(array_reqs[eid]);
       CHECK(!ndoutputs.back()->is_none());
     }
-
+    const Context& ctx = ndoutputs[0]->ctx();
+    const DispatchMode dispatch_mode = dispatch_modes[i];
     if (node.source->op() == bwd_cached_op) {
       const auto& cached_op = dmlc::get<CachedOpPtr>(node.source->attrs.parsed);
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
@@ -316,18 +327,19 @@ void Imperative::RunGraph(
         arg_dtypes.emplace_back(ndinputs[i]->dtype());
       }
       states[i] = createop[node.source->op()](
-          node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, states[i]);
+          node.source->attrs, ctx, arg_shapes, arg_dtypes);
+      InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode, states[i]);
       if (recording) RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, states[i]);
     } else if (is_layer_backward.get(node.source->op(), false)) {
       nnvm::Node* fwd_node = node.source->control_deps[0].get();
       auto fwd_node_id = idx.node_id(fwd_node);
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req, states[fwd_node_id]);
+      InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs,
+               req, dispatch_mode, states[fwd_node_id]);
       if (recording) {
         RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, states[fwd_node_id]);
       }
     } else {
-      InvokeOp(default_ctx, node.source->attrs, ndinputs, ndoutputs, req);
+      InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode);
       if (recording) RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs);
     }
 
@@ -341,6 +353,8 @@ void Imperative::RunGraph(
       if (ref_count[eid] == 0) arrays[eid]->ptr_.reset();
     }
   }
+
+  Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
 
@@ -373,6 +387,7 @@ std::vector<NDArray*> Imperative::Backward(
   for (size_t i = 0; i < outputs.size(); ++i) {
     ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
+    info.ctx = outputs[i]->ctx();
     if (ograds[i] != nullptr) {
       info.outputs.emplace_back(*ograds[i]);
     } else {
@@ -473,6 +488,7 @@ std::vector<NDArray*> Imperative::Backward(
       for (size_t j = 0; j < info.outputs.size(); ++j) {
         size_t eid = idx.entry_id(i, j);
         arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
+
         if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
       }
     }
@@ -489,7 +505,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
 
   // Assign context
-  Context default_ctx = outputs[0]->ctx();
+  auto vctx = PlaceDevice(idx);
 
   // Infer shape type
   {
@@ -512,9 +528,11 @@ std::vector<NDArray*> Imperative::Backward(
     StorageTypeVector stypes;
     stypes.reserve(idx.num_node_entries());
     for (const auto& i : arrays) stypes.emplace_back(i->storage_type());
-    CheckAndInferStorageType(
-        &graph, default_ctx, std::move(stypes), false,
-        node_range, entry_range);
+    exec::DevMaskVector dev_mask;
+    dev_mask.reserve(idx.num_nodes());
+    for (const auto& i : vctx) dev_mask.emplace_back(i.dev_mask());
+    CheckAndInferStorageType(&graph, std::move(dev_mask), std::move(stypes), false,
+                             node_range, entry_range);
   }
 
   // Calculate ref count
@@ -537,13 +555,19 @@ std::vector<NDArray*> Imperative::Backward(
   const auto& shapes = graph.GetAttr<ShapeVector>("shape");
   const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = num_forward_entries; i < arrays.size(); ++i) {
-    if (!arrays[i]->is_none()) continue;
-    if (stypes[i] == kDefaultStorage) {
-      *arrays[i] = NDArray(shapes[i], default_ctx, true, dtypes[i]);
-    } else {
-      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
+  const auto& dispatch_modes = graph.GetAttr<DispatchModeVector>("dispatch_mode");
+
+  for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
+    auto num_outputs = idx[i].source->num_outputs();
+    for (size_t j = 0; j < num_outputs; ++j) {
+      auto eid = idx.entry_id(i, j);
+      if (!arrays[eid]->is_none()) continue;
+      if (stypes[eid] == kDefaultStorage) {
+        *arrays[eid] = NDArray(shapes[eid], vctx[i], true, dtypes[eid]);
+      } else {
+        *arrays[eid] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                               shapes[eid], vctx[i], true, dtypes[eid]);
+      }
     }
   }
 
@@ -552,8 +576,8 @@ std::vector<NDArray*> Imperative::Backward(
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training = set_is_training(is_train);
 
-  RunGraph(retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
-           std::move(array_reqs), std::move(ref_count), &states);
+  RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
+           std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   set_is_recording(prev_recording);
   set_is_training(prev_training);

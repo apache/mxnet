@@ -18,6 +18,10 @@
 # pylint: disable=arguments-differ, too-many-lines
 # coding: utf-8
 """Definition of various recurrent neural network cells."""
+__all__ = ['Conv1DRNNCell', 'Conv2DRNNCell', 'Conv3DRNNCell',
+           'Conv1DLSTMCell', 'Conv2DLSTMCell', 'Conv3DLSTMCell',
+           'Conv1DGRUCell', 'Conv2DGRUCell', 'Conv3DGRUCell']
+
 
 from math import floor
 
@@ -127,8 +131,9 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         s += ', {_conv_layout}'
         s += ')'
         attrs = self.__dict__
-        mapping = ('{_in_channels} -> {_hidden_channels}'.format(**attrs) if self._in_channels
-                   else self._hidden_channels)
+        shape = self.i2h_weight.shape
+        in_channels = shape[1 if self._channel_axis == 1 else -1]
+        mapping = ('{0} -> {1}'.format(in_channels if in_channels else None, shape[0]))
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **attrs)
@@ -472,13 +477,14 @@ class Conv1DLSTMCell(_ConvLSTMCell):
     <https://arxiv.org/abs/1506.04214>`_ paper. Xingjian et al. NIPS2015
 
     .. math::
-
-        i_t = \sigma(W_i \ast x_t + R_i \ast h_{t-1} + b_i)
-        f_t = \sigma(W_f \ast x_t + R_f \ast h_{t-1} + b_f)
-        o_t = \sigma(W_o \ast x_t + R_o \ast h_{t-1} + b_o)
-        c^\prime_t = tanh(W_c \ast x_t + R_c \ast h_{t-1} + b_c)
-        c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t
-        h_t = o_t \circ tanh(c_t)
+        \begin{array}{ll}
+        i_t = \sigma(W_i \ast x_t + R_i \ast h_{t-1} + b_i) \\
+        f_t = \sigma(W_f \ast x_t + R_f \ast h_{t-1} + b_f) \\
+        o_t = \sigma(W_o \ast x_t + R_o \ast h_{t-1} + b_o) \\
+        c^\prime_t = tanh(W_c \ast x_t + R_c \ast h_{t-1} + b_c) \\
+        c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t \\
+        h_t = o_t \circ tanh(c_t) \\
+        \end{array}
 
     Parameters
     ----------
@@ -548,13 +554,14 @@ class Conv2DLSTMCell(_ConvLSTMCell):
     <https://arxiv.org/abs/1506.04214>`_ paper. Xingjian et al. NIPS2015
 
     .. math::
-
-        i_t = \sigma(W_i \ast x_t + R_i \ast h_{t-1} + b_i)
-        f_t = \sigma(W_f \ast x_t + R_f \ast h_{t-1} + b_f)
-        o_t = \sigma(W_o \ast x_t + R_o \ast h_{t-1} + b_o)
-        c^\prime_t = tanh(W_c \ast x_t + R_c \ast h_{t-1} + b_c)
-        c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t
-        h_t = o_t \circ tanh(c_t)
+        \begin{array}{ll}
+        i_t = \sigma(W_i \ast x_t + R_i \ast h_{t-1} + b_i) \\
+        f_t = \sigma(W_f \ast x_t + R_f \ast h_{t-1} + b_f) \\
+        o_t = \sigma(W_o \ast x_t + R_o \ast h_{t-1} + b_o) \\
+        c^\prime_t = tanh(W_c \ast x_t + R_c \ast h_{t-1} + b_c) \\
+        c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t \\
+        h_t = o_t \circ tanh(c_t) \\
+        \end{array}
 
     Parameters
     ----------
@@ -624,13 +631,14 @@ class Conv3DLSTMCell(_ConvLSTMCell):
     <https://arxiv.org/abs/1506.04214>`_ paper. Xingjian et al. NIPS2015
 
     .. math::
-
-        i_t = \sigma(W_i \ast x_t + R_i \ast h_{t-1} + b_i)
-        f_t = \sigma(W_f \ast x_t + R_f \ast h_{t-1} + b_f)
-        o_t = \sigma(W_o \ast x_t + R_o \ast h_{t-1} + b_o)
-        c^\prime_t = tanh(W_c \ast x_t + R_c \ast h_{t-1} + b_c)
-        c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t
-        h_t = o_t \circ tanh(c_t)
+        \begin{array}{ll}
+        i_t = \sigma(W_i \ast x_t + R_i \ast h_{t-1} + b_i) \\
+        f_t = \sigma(W_f \ast x_t + R_f \ast h_{t-1} + b_f) \\
+        o_t = \sigma(W_o \ast x_t + R_o \ast h_{t-1} + b_o) \\
+        c^\prime_t = tanh(W_c \ast x_t + R_c \ast h_{t-1} + b_c) \\
+        c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t \\
+        h_t = o_t \circ tanh(c_t) \\
+        \end{array}
 
     Parameters
     ----------
@@ -755,11 +763,12 @@ class Conv1DGRUCell(_ConvGRUCell):
     r"""1D Convolutional Gated Rectified Unit (GRU) network cell.
 
     .. math::
-
-        r_t = \sigma(W_r \ast x_t + R_r \ast h_{t-1} + b_r)
-        z_t = \sigma(W_z \ast x_t + R_z \ast h_{t-1} + b_z)
-        n_t = tanh(W_i \ast x_t + b_i + r_t \circ (R_n \ast h_{t-1} + b_n))
-        h^\prime_t = (1 - z_t) \circ n_t + z_t \circ h
+        \begin{array}{ll}
+        r_t = \sigma(W_r \ast x_t + R_r \ast h_{t-1} + b_r) \\
+        z_t = \sigma(W_z \ast x_t + R_z \ast h_{t-1} + b_z) \\
+        n_t = tanh(W_i \ast x_t + b_i + r_t \circ (R_n \ast h_{t-1} + b_n)) \\
+        h^\prime_t = (1 - z_t) \circ n_t + z_t \circ h \\
+        \end{array}
 
     Parameters
     ----------
@@ -826,11 +835,12 @@ class Conv2DGRUCell(_ConvGRUCell):
     r"""2D Convolutional Gated Rectified Unit (GRU) network cell.
 
     .. math::
-
-        r_t = \sigma(W_r \ast x_t + R_r \ast h_{t-1} + b_r)
-        z_t = \sigma(W_z \ast x_t + R_z \ast h_{t-1} + b_z)
-        n_t = tanh(W_i \ast x_t + b_i + r_t \circ (R_n \ast h_{t-1} + b_n))
-        h^\prime_t = (1 - z_t) \circ n_t + z_t \circ h
+        \begin{array}{ll}
+        r_t = \sigma(W_r \ast x_t + R_r \ast h_{t-1} + b_r) \\
+        z_t = \sigma(W_z \ast x_t + R_z \ast h_{t-1} + b_z) \\
+        n_t = tanh(W_i \ast x_t + b_i + r_t \circ (R_n \ast h_{t-1} + b_n)) \\
+        h^\prime_t = (1 - z_t) \circ n_t + z_t \circ h \\
+        \end{array}
 
     Parameters
     ----------
@@ -897,11 +907,12 @@ class Conv3DGRUCell(_ConvGRUCell):
     r"""3D Convolutional Gated Rectified Unit (GRU) network cell.
 
     .. math::
-
-        r_t = \sigma(W_r \ast x_t + R_r \ast h_{t-1} + b_r)
-        z_t = \sigma(W_z \ast x_t + R_z \ast h_{t-1} + b_z)
-        n_t = tanh(W_i \ast x_t + b_i + r_t \circ (R_n \ast h_{t-1} + b_n))
-        h^\prime_t = (1 - z_t) \circ n_t + z_t \circ h
+        \begin{array}{ll}
+        r_t = \sigma(W_r \ast x_t + R_r \ast h_{t-1} + b_r) \\
+        z_t = \sigma(W_z \ast x_t + R_z \ast h_{t-1} + b_z) \\
+        n_t = tanh(W_i \ast x_t + b_i + r_t \circ (R_n \ast h_{t-1} + b_n)) \\
+        h^\prime_t = (1 - z_t) \circ n_t + z_t \circ h \\
+        \end{array}
 
     Parameters
     ----------

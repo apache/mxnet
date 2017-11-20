@@ -62,11 +62,10 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
   }
 
   // construct backward graph
-  std::vector<NodeEntry> ograd_entries;
   {
-    ograd_entries.reserve(fwd_graph_.outputs.size());
+    ograd_entries_.reserve(fwd_graph_.outputs.size());
     for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i) {
-      ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+      ograd_entries_.emplace_back(NodeEntry{Node::Create(), 0, 0});
     }
 
     std::vector<NodeEntry> xs;
@@ -77,7 +76,7 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
         << "There are no inputs in computation graph that require gradients.";
 
     grad_graph_ = pass::Gradient(
-        fwd_graph_, fwd_graph_.outputs, xs, ograd_entries,
+        fwd_graph_, fwd_graph_.outputs, xs, ograd_entries_,
         exec::AggregateGradient, nullptr, nullptr,
         zero_ops, "_copy");
   }
@@ -105,12 +104,12 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
         std::make_shared<dmlc::any>(std::move(full_ref_count));
 
     size_t num_forward_inputs = num_inputs();
-    for (uint32_t i = 0; i < ograd_entries.size(); ++i) {
-      if (!idx.exist(ograd_entries[i].node.get())) continue;
-      auto eid = idx.entry_id(ograd_entries[i]);
+    size_t num_forward_outputs = num_outputs();
+    for (uint32_t i = 0; i < ograd_entries_.size(); ++i) {
+      if (!idx.exist(ograd_entries_[i].node.get())) continue;
+      auto eid = idx.entry_id(ograd_entries_[i]);
       if (ref_count[eid] > 0) {
         bwd_ograd_dep_.push_back(i);
-        bwd_input_eid_.push_back(eid);
       }
     }
     save_inputs_.resize(num_forward_inputs, false);
@@ -119,16 +118,14 @@ Imperative::CachedOp::CachedOp(const nnvm::Symbol& sym) {
       if (ref_count[eid] > 0) {
         save_inputs_[i] = true;
         bwd_in_dep_.push_back(i);
-        bwd_input_eid_.push_back(eid);
       }
     }
     save_outputs_.resize(idx.outputs().size(), false);
-    for (uint32_t i = 0; i < idx.outputs().size(); ++i) {
+    for (uint32_t i = 0; i < num_forward_outputs; ++i) {
       auto eid = idx.entry_id(idx.outputs()[i]);
       if (ref_count[eid] > 0) {
         save_outputs_[i] = true;
         bwd_out_dep_.push_back(i);
-        bwd_input_eid_.push_back(eid);
       }
     }
   }
@@ -139,7 +136,7 @@ std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
     const std::vector<nnvm::NodeEntry>& ograds) {
   using namespace nnvm;
   static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
-  static const auto _CachedOp_NoGrad = Op::Get("_CachedOp_NoGrad");
+  static const auto _NoGrad = Op::Get("_NoGradient");
 
   auto p = Node::Create();
   p->attrs.op = _backward_CachedOp;
@@ -155,13 +152,12 @@ std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
   const auto& auxs = mutable_input_nodes();
   if (auxs.size()) {
     auto nop = Node::Create();
-    nop->attrs.op = _CachedOp_NoGrad;
-    nop->attrs.parsed = static_cast<uint32_t>(auxs.size());
-    nop->control_deps.push_back(node);
+    nop->attrs.op = _NoGrad;
+    nop->attrs.name = "NoGradient";
     uint32_t j = 0, k = 0;
     for (const auto& i : fwd_graph_.indexed_graph().input_nodes()) {
       if (auxs.count(i)) {
-        ret.emplace_back(NodeEntry{nop, j++, 0});
+        ret.emplace_back(NodeEntry{nop, 0, 0});
       } else {
         ret.emplace_back(NodeEntry{p, k++, 0});
       }
@@ -195,7 +191,8 @@ nnvm::Graph Imperative::CachedOp::GetForwardGraph(
   bool match = true;
   match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx(),
+  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
+  match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
   if (!match) {
@@ -241,9 +238,28 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
     for (size_t i = 0; i < grad_graph_.outputs.size(); ++i) {
       if (curr_grad_req_[i]) g.outputs.emplace_back(grad_graph_.outputs[i]);
     }
+    bwd_input_eid_.clear();
   }
 
   const auto& idx = g.indexed_graph();
+
+  if (bwd_input_eid_.size() != inputs.size()) {
+    bwd_input_eid_.clear();
+    for (const auto& i : bwd_ograd_dep_) {
+      auto eid = idx.entry_id(ograd_entries_[i]);
+      bwd_input_eid_.push_back(eid);
+    }
+    for (const auto& i : bwd_in_dep_) {
+      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+      bwd_input_eid_.push_back(eid);
+    }
+    for (const auto& i : bwd_out_dep_) {
+      auto eid = idx.entry_id(idx.outputs()[i]);
+      bwd_input_eid_.push_back(eid);
+    }
+    CHECK_EQ(inputs.size(), bwd_input_eid_.size());
+  }
+
   size_t num_forward_nodes = fwd_graph_.indexed_graph().num_nodes();
   size_t num_forward_entries = fwd_graph_.indexed_graph().num_node_entries();
 
@@ -282,7 +298,8 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
                               node_range, entry_range);
   match &= CheckAndInferType(&g, std::move(dtypes), false,
                              node_range, entry_range);
-  match &= CheckAndInferStorageType(&g, inputs[0]->ctx(), std::move(stypes),
+  exec::DevMaskVector dev_mask(idx.num_nodes(), inputs[0]->ctx().dev_mask());
+  match &= CheckAndInferStorageType(&g, std::move(dev_mask), std::move(stypes),
                                     false, node_range, entry_range);
 
   if (!match) {
@@ -305,14 +322,27 @@ nnvm::Graph Imperative::CachedOp::GetBackwardGraph(
 }
 
 OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
-                                                const std::vector<NDArray*>& outputs) {
+                                         const std::vector<NDArray*>& outputs) {
   using namespace nnvm;
   using namespace imperative;
+
   bool recording = Imperative::Get()->set_is_recording(false);
   // Initialize
   nnvm::Graph g = GetForwardGraph(recording, inputs);
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
+
+  CHECK_EQ(num_inputs, inputs.size())
+      << "CachedOp requires " << num_inputs << " but got " << inputs.size();
+
+  Context default_ctx = inputs[0]->ctx();
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    CHECK_EQ(inputs[i]->ctx(), default_ctx)
+        << "CachedOp requires all inputs to live on the same context. But "
+        << idx[idx.input_nodes()[0]].source->attrs.name << " is on " << default_ctx
+        << " while " << idx[idx.input_nodes()[i]].source->attrs.name << " is on "
+        << inputs[i]->ctx();
+  }
 
   auto op_state_ptr = OpStatePtr::Create<CachedOpState>();
   auto& cached_op_state = op_state_ptr.get_state<CachedOpState>();
@@ -344,15 +374,16 @@ OpStatePtr Imperative::CachedOp::Forward(const std::vector<NDArray*>& inputs,
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
 
-  Context default_ctx = inputs[0]->ctx();
   const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
       recording ? "full_mem_plan" : "forward_mem_plan");
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
 
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+
   Imperative::Get()->RunGraph(
-      false, default_ctx, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
-      std::move(ref_count), &states);
+      false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
+      std::move(ref_count), &states, dispatch_modes);
 
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (arrays[i] == &buff[i]) continue;
@@ -419,9 +450,11 @@ void Imperative::CachedOp::Backward(
   AllocateMemory(g, idx, default_ctx, num_forward_entries, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
 
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+
   Imperative::Get()->RunGraph(
-      retain_graph, default_ctx, idx, arrays, num_forward_nodes, idx.num_nodes(),
-      std::move(array_reqs), std::move(ref_count), &states);
+      retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
+      std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
   if (retain_graph) {
     buff.resize(num_forward_entries);
@@ -458,12 +491,5 @@ NNVM_REGISTER_OP(_backward_CachedOp)
   })
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
-
-NNVM_REGISTER_OP(_CachedOp_NoGrad)
-.set_num_inputs(0)
-.set_num_outputs([](const NodeAttrs& attrs) {
-    const uint32_t& nout = nnvm::get<uint32_t>(attrs.parsed);
-    return nout;
-  });
 
 }  // namespace mxnet

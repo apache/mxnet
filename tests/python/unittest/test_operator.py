@@ -23,6 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+import unittest
 
 
 def np_softmax(x, axis=-1):
@@ -235,6 +236,53 @@ def test_regression():
                      lambda x, y : x - y)
 
 
+def check_softmax_grad(xpu):
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.zeros((1,4))
+    expected_grad_out[0, k] = -1
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
+def check_smoothed_softmax_grad(xpu):
+    alpha = 0.2
+    x = mx.sym.Variable('x')
+    label = mx.sym.Variable('label')
+    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
+    grad_x = mx.nd.zeros((1,4), ctx=xpu)
+    label_nd = mx.nd.array([1], ctx=xpu)
+
+    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False, smooth_alpha=alpha)
+    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
+
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
+    assert np.isclose(softmax_out, expected_softmax_out).all()
+
+    ex.backward(is_train=True)
+    grad_out = ex.grad_arrays[0].asnumpy()
+    k = int(label_nd[0].asscalar())
+    expected_grad_out = np.full((1,4), fill_value=-alpha/float(4-1))
+    expected_grad_out[0, k] = - (1 - alpha)
+    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
+
+
 def check_softmax_with_ignore_label(xpu):
     X = mx.symbol.Variable('X')
     L = mx.symbol.Variable('L')
@@ -283,12 +331,6 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
     exec1.backward()
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
-
-
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
 
 
 def test_python_op():
@@ -884,6 +926,7 @@ def test_nearest_upsampling():
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8044")
 def test_batchnorm_training():
     def check_batchnorm_training(stype):
         for shape in [(2, 3), (2, 3, 2, 2)]:
@@ -1000,6 +1043,7 @@ def test_convolution_grouping():
         np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8712")
 def test_depthwise_convolution():
     for num_base in [1, 4, 16, 32, 64]:
         for kernel in [(3,3), (5,5)]:
@@ -1224,6 +1268,18 @@ def test_binary_op():
 
 
 def test_broadcast_binary_op():
+    def check_bmaxmin_gradient(test_sym, x, y, delta, rtol, atol):
+        """This function ensures that checking the numerical gradient of
+        broadcast_max/min is not crossing the boundary y=x where there
+        is no gradient definition at those sigularities."""
+        x_max = np.max(x)
+        y = x_max + 2 * delta + np.random.random(y.shape)
+        check_numeric_gradient(test_sym, [x, y], numeric_eps=delta, rtol=rtol, atol=atol)
+
+        x_min = np.min(x)
+        y = x_min - 2 * delta - np.random.random(y.shape)
+        check_numeric_gradient(test_sym, [x, y], numeric_eps=delta, rtol=rtol, atol=atol)
+
     a = mx.sym.Variable('a')
     b = mx.sym.Variable('b')
 
@@ -1273,13 +1329,15 @@ def test_broadcast_binary_op():
         c = mx.sym.broadcast_maximum(a, b)
         check_binary_op_forward(c, lambda x, y: np.maximum(x, y), gen_broadcast_data, mx_nd_func=mx.nd.maximum)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
-        check_numeric_gradient(c, gen_broadcast_data(idx=200), rtol=1e-2, atol=1e-3)
+        data = gen_broadcast_data(idx=200)
+        check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
     def test_bmin(a, b):
         c = mx.sym.broadcast_minimum(a, b)
         check_binary_op_forward(c, lambda x, y: np.minimum(x, y), gen_broadcast_data, mx_nd_func=mx.nd.minimum)
         # pass idx=200 to gen_broadcast_data so that generated ndarrays' sizes are not too big
-        check_numeric_gradient(c, gen_broadcast_data(idx=200), rtol=1e-2, atol=1e-3)
+        data = gen_broadcast_data(idx=200)
+        check_bmaxmin_gradient(c, data[0], data[1], 0.001, 1e-2, 1e-3)
 
     test_bplus(a, b)
     test_bminus(a, b)
@@ -1571,12 +1629,13 @@ def test_transpose():
 
 def test_expand_dims():
     for ndim in range(1, 6):
-        for t in range(5):
-            dims = list(np.random.randint(1, 10, size=ndim))
-            axis = np.random.randint(1, ndim+1)
-            x = mx.nd.array(np.random.normal(size=dims))
-            y = mx.nd.expand_dims(x, axis=axis)
-            assert_allclose(np.expand_dims(x.asnumpy(), axis=axis), y.asnumpy())
+        for axis in range(-ndim + 1, ndim):
+            x = np.random.normal(size=list(np.random.randint(1, 10, size=ndim)))
+            y = mx.nd.array(x)
+            x1 = np.expand_dims(x, axis=axis)
+            y1 = mx.nd.expand_dims(y, axis=axis)
+            assert_allclose(x1, y1.asnumpy())
+            assert_allclose(x1.shape, y1.shape)
 
 
 def test_crop():
@@ -2458,11 +2517,11 @@ def test_mathematical():
 
     # log10
     mathematical_core("log10", lambda x: mx.sym.log10(x), lambda x: np.log10(x),
-                      lambda x: (1 / x))
+                      lambda x: 1. / (x * np.log(10.)))
 
     # log2
     mathematical_core("log2", lambda x: mx.sym.log2(x), lambda x: np.log2(x),
-                      lambda x: (1 / x))
+                      lambda x: 1. / (x * np.log(2.)))
 
     # rint
     rounding("rint", lambda x: mx.sym.rint(x), lambda x: np.rint(x))
@@ -2506,18 +2565,21 @@ def test_init():
         assert exe.outputs[0].asnumpy().dtype == dtype
 
     def test_arange():
-        for i in range(5):
-            start = np.random.rand() * 10
-            stop = start + np.random.rand() * 100
-            step = np.random.rand() * 4
-            repeat = int(np.random.rand() * 5) + 1
-            gt = np.arange(start=start, stop=stop, step=step)
-            gt = np.broadcast_to(gt.reshape((gt.shape[0], 1)), shape=(gt.shape[0], repeat)).ravel()
-            x = mx.sym.arange(start=start, stop=stop, step=step, repeat=repeat)
-            exe = x.simple_bind(ctx=default_context())
-            assert len(exe.grad_arrays) == 0
-            pred = exe.forward(is_train=False)[0].asnumpy()
-            assert_almost_equal(pred, gt)
+        # General Random Tests
+        dtype_list = [np.float32, np.float64, np.int32, np.uint8]
+        config_list = [(10,),
+                       (0, 10),
+                       (5, 100, 4),
+                       (50, -50, -2),
+                       (-100, 100, 1),
+                       (1.3, 456.6, 1.3)]
+        for dtype in dtype_list:
+            for config in config_list:
+                repeats = random.choice([1, 3])
+                np_out = np.repeat(np.arange(*config, dtype=dtype), repeats)
+                nd_out = mx.nd.arange(*config, repeat=repeats, dtype=dtype)
+                assert_almost_equal(np_out, nd_out.asnumpy())
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
@@ -3523,10 +3585,18 @@ def test_rcbrt_op():
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
-            self.assign(out_data[0], req[0], in_data[0]*in_data[0])
+            if in_data[0].stype == 'default':
+                aux[0][:] = 1
+                self.assign(out_data[0], req[0], in_data[0]*in_data[0])
+            else:
+                self.assign(out_data[0], req[0], mx.nd.sparse.square(in_data[0]))
+                if in_data[0].stype == 'csr':
+                    assert(isinstance(in_data[0], mx.nd.sparse.CSRNDArray))
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
+            if in_data[0].stype == 'default':
+                assert (aux[0].asnumpy() == 1).all()
 
     @mx.operator.register("sqr")
     class SqrProp(mx.operator.CustomOpProp):
@@ -3539,33 +3609,49 @@ def test_custom_op():
         def list_outputs(self):
             return ['output']
 
+        def list_auxiliary_states(self):
+            return ['aux']
+
         def infer_shape(self, in_shape):
-            return in_shape, [in_shape[0]], []
+            return in_shape, [in_shape[0]], [in_shape[0]]
 
         def infer_type(self, in_type):
-            return in_type, [in_type[0]], []
+            return in_type, [in_type[0]], [in_type[0]]
+
+        def infer_storage_type(self, in_stype):
+            if in_stype[0] == 'default':
+                return ['default'], ['default'], ['default']
+            return ['csr'], ['csr'], ['csr']
+
+        def infer_storage_type_backward(self, in_stype):
+            if in_stype[1] == 'default':
+                return ['default', 'default', 'default'], ['default'], ['default']
+            return ['default', 'csr', 'csr'], ['csr'], ['csr']
 
         def create_operator(self, ctx, shapes, dtypes):
             return Sqr()
 
     data = mx.symbol.Variable('data')
-    op = mx.symbol.Custom(data=data, name='sqr', op_type='sqr')
+    aux = mx.symbol.Variable('aux')
+    op = mx.symbol.Custom(data=data, aux=aux, name='sqr', op_type='sqr')
     x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
-    check_numeric_gradient(op, [x])
+    aux = mx.nd.zeros_like(x)
+    check_numeric_gradient(op, [x], [aux])
 
-    data = mx.symbol.Variable('data')
     data = mx.symbol.cast(data, dtype='float64')
-    op = mx.symbol.Custom(data=data, name='sqr', op_type='sqr')
     op = mx.symbol.cast(op, dtype='float32')
-    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
-    check_numeric_gradient(op, [x])
+    check_numeric_gradient(op, [x], [aux])
 
-    dx = mx.nd.zeros_like(x)
-    mx.contrib.autograd.mark_variables([x], [dx])
+    x = x.tostype('csr')
+    aux = mx.nd.zeros_like(x)
+    x.attach_grad()
     with mx.contrib.autograd.train_section():
-        y = mx.nd.Custom(x, op_type='sqr')
+        y = mx.nd.Custom(x, aux, op_type='sqr')
         y.backward()
-
+    mx.nd.waitall()
+    assert (x.grad.stype == 'csr')
+    assert (y.stype == 'csr')
+    assert (aux.stype == 'csr')
 
 def test_psroipooling():
     for num_rois in [1, 2]:
@@ -3725,24 +3811,24 @@ def test_laop():
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
     res_gemm = 4. * np.dot(data_in1, data_in2) + 7. * data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.)
     check_fw(test_gemm, [data_in1, data_in2, data_in4], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2, data_in4])
     res_gemm = 4. * np.dot(data_in1_t, data_in2_t) + 7. * data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.,
                                    transpose_a=True, transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in2, data_in3], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2, data_in3])
     res_gemm = 4. * np.dot(data_in1_t, data_in1) + 7. * data_in3
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.,
                                    transpose_a=True)
     check_fw(test_gemm, [data_in1, data_in1, data_in3], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in1, data_in3])
     res_gemm = 4. * np.dot(data_in1, data_in1_t) + 7. * data_in4
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.,
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.,
                                    transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in1, data_in4], [res_gemm])
     if grad_check == 1:
@@ -3754,30 +3840,30 @@ def test_laop():
     c = rep_3x(data_in4, 2, 2)
     r = 4. * np.dot(data_in1, data_in2) + 7. * data_in4
     r = rep_3x(r, 2, 2)
-    test_gemm = mx.sym.linalg_gemm(data1, data2, data3, alpha=4., beta=7.)
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7.)
     check_fw(test_gemm, [a, b, c], [r])
     if grad_check == 1:
         check_grad(test_gemm, [a, b, c])
 
     # Check gemm2 operator same way as gemm.
     res_gemm = 4. * np.dot(data_in1, data_in2)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4.)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4.)
     check_fw(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2])
     res_gemm = 4. * np.dot(data_in1_t, data_in2_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_a=True,
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., transpose_a=True,
                                     transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in2], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in2])
     res_gemm = 4. * np.dot(data_in1_t, data_in1)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_a=True)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., transpose_a=True)
     check_fw(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in1])
     res_gemm = 4. * np.dot(data_in1, data_in1_t)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4., transpose_b=True)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., transpose_b=True)
     check_fw(test_gemm, [data_in1, data_in1], [res_gemm])
     if grad_check == 1:
         check_grad(test_gemm, [data_in1, data_in1])
@@ -3786,7 +3872,7 @@ def test_laop():
     a = rep_3x(data_in1, 2, 3)
     b = rep_3x(data_in2, 3, 2)
     r = rep_3x(4. * np.dot(data_in1, data_in2), 2, 2)
-    test_gemm = mx.sym.linalg_gemm2(data1, data2, alpha=4.)
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4.)
     check_fw(test_gemm, [a, b], [r])
     if grad_check == 1:
         check_grad(test_gemm, [a, b])
@@ -3799,33 +3885,33 @@ def test_laop():
     # test potrf
     # Note: Have to symmetrize input, for gradient test to work
     res_potrf = np.sqrt(data_in)
-    test_potrf = mx.sym.linalg_potrf(data1)
+    test_potrf = mx.sym.linalg.potrf(data1)
     check_fw(test_potrf, [data_in], [res_potrf])
     if grad_check == 1:
         check_grad(test_potrf, [data_in])
     # test potri
     ones = mx.nd.ones(shape).asnumpy()
     res_potri = np.divide(ones, data_in * data_in)
-    test_potri = mx.sym.linalg_potri(data1)
+    test_potri = mx.sym.linalg.potri(data1)
     check_fw(test_potri, [data_in], [res_potri])
     if grad_check == 1:
         check_grad(test_potri, [data_in])
     # test trsm
     trian_in = data_in * 7.
-    test_trsm = mx.sym.linalg_trsm(data1, data2, alpha=7.)
+    test_trsm = mx.sym.linalg.trsm(data1, data2, alpha=7.)
     check_fw(test_trsm, [trian_in, data_in], [ones])
     if grad_check == 1:
         check_grad(test_trsm, [trian_in,data_in])
     # test trmm
     trian_in = np.divide(ones, trian_in)
-    test_trmm = mx.sym.linalg_trmm(data1, data2, alpha=7., transpose=True,
+    test_trmm = mx.sym.linalg.trmm(data1, data2, alpha=7., transpose=True,
                                    rightside=True)
     check_fw(test_trmm, [trian_in, data_in], [ones])
     if grad_check == 1:
         check_grad(test_trmm, [trian_in, data_in])
     # test sumlogdiag
     res_sumlogdiag = np.reshape(np.log(data_in), (4, 4))
-    test_sumlogdiag = mx.sym.linalg_sumlogdiag(data1)
+    test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
     check_fw(test_sumlogdiag, [data_in], [res_sumlogdiag])
     if grad_check == 1:
         check_grad(test_sumlogdiag, [data_in])
@@ -3850,7 +3936,7 @@ def test_laop():
     ident  = np.eye(4)
 
     # test potrf
-    test_potrf = mx.sym.linalg_potrf(_make_symm_symbol(data1, ndims=4))
+    test_potrf = mx.sym.linalg.potrf(_make_symm_symbol(data1, ndims=4))
     a = rep_3x(matrix, 4, 4)
     r = rep_3x(trian, 4, 4)
     check_fw(test_potrf, [a], [r])
@@ -3860,7 +3946,7 @@ def test_laop():
     #test potri
     data1_ltri = _make_lower_triangle_symm(
         data1, ndims=4, m=4, dtype=dtype)
-    test_potri = mx.sym.linalg_potri(data1_ltri)
+    test_potri = mx.sym.linalg.potri(data1_ltri)
     a = rep_3x(trian, 4, 4)
     r = rep_3x(inv, 4, 4)
     check_fw(test_potri, [a], [r])
@@ -3868,7 +3954,7 @@ def test_laop():
         check_grad(test_potri, [a])
 
     # test trsm
-    test_trsm = mx.sym.linalg_trsm(data1_ltri, data2, alpha=7.)
+    test_trsm = mx.sym.linalg.trsm(data1_ltri, data2, alpha=7.)
     a = rep_3x(trian, 4, 4)
     b = rep_3x(matrix, 4, 4)
     r = rep_3x(7. * np.transpose(trian), 4, 4)
@@ -3876,14 +3962,14 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_trsm, [a, b])
 
-    test_trsm2 = mx.sym.linalg_trsm(
+    test_trsm2 = mx.sym.linalg.trsm(
         data1_ltri, data2, alpha=-2., rightside=True, transpose=True)
     r = rep_3x(-2. * trian, 4, 4)
     check_fw(test_trsm2, [a, b], [r])
     if grad_check == 1:
         check_grad(test_trsm2, [a, b])
 
-    test_trsm3 = mx.sym.linalg_trsm(
+    test_trsm3 = mx.sym.linalg.trsm(
         data1_ltri, data2, alpha=0.5, transpose=True)
     b = rep_3x(np.transpose(trian), 4, 4)
     r = rep_3x(0.5 * ident, 4, 4)
@@ -3891,7 +3977,7 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_trsm3, [a, b])
 
-    test_trsm4 = mx.sym.linalg_trsm(
+    test_trsm4 = mx.sym.linalg.trsm(
         data1_ltri, data2, alpha=-0.5, rightside=True)
     b = rep_3x(trian, 4, 4)
     r = rep_3x(-0.5 * ident, 4, 4)
@@ -3900,7 +3986,7 @@ def test_laop():
         check_grad(test_trsm4, [a, b])
 
     # test trmm
-    test_trmm = mx.sym.linalg_trmm(
+    test_trmm = mx.sym.linalg.trmm(
         data1_ltri, data2, alpha=7., transpose=True, rightside=True)
     a = rep_3x(trian, 4, 4)
     b = rep_3x(matrix, 4, 4)
@@ -3909,19 +3995,19 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_trmm, [a, b])
 
-    test_trmm2 = mx.sym.linalg_trmm(data1_ltri, data2, alpha=-2.)
+    test_trmm2 = mx.sym.linalg.trmm(data1_ltri, data2, alpha=-2.)
     r = rep_3x(-2. * np.dot(trian, matrix), 4, 4)
     check_fw(test_trmm2, [a, b], [r])
     if grad_check == 1:
         check_grad(test_trmm2, [a, b])
 
-    test_trmm3 = mx.sym.linalg_trmm(data1_ltri, data2, rightside=True)
+    test_trmm3 = mx.sym.linalg.trmm(data1_ltri, data2, rightside=True)
     r = rep_3x(np.dot(matrix, trian), 4, 4)
     check_fw(test_trmm3, [a, b], [r])
     if grad_check == 1:
         check_grad(test_trmm3, [a, b])
 
-    test_trmm4 = mx.sym.linalg_trmm(
+    test_trmm4 = mx.sym.linalg.trmm(
         data1_ltri, data2, alpha=1.2, transpose=True)
     r = rep_3x(1.2 * np.dot(trian.T, matrix), 4, 4)
     check_fw(test_trmm4, [a, b], [r])
@@ -3936,26 +4022,34 @@ def test_laop():
         check_grad(test_sumlogdiag, [a])
 
 
-# Tests for new operators linalg_syrk, linalg_gelqf
+# Tests for operators linalg.syrk, linalg.gelqf
 
 def _gelqf_combined_symbol(a):
-    q, l = mx.sym.linalg_gelqf(a)
-    q_qt = mx.sym.linalg_syrk(q, transpose=False, alpha=1., name='Q_times_Qt')
-    l_q = mx.sym.linalg_trmm(l, q, alpha=1., name='L_times_Q')
+    q, l = mx.sym.linalg.gelqf(a)
+    q_qt = mx.sym.linalg.syrk(q, transpose=False, alpha=1., name='Q_times_Qt')
+    l_q = mx.sym.linalg.trmm(l, q, alpha=1., name='L_times_Q')
     return mx.sym.Group([q_qt, l_q])
 
 # NOTE: If we leave the unused output dangling, things break if dtype=np.float64. Namely, the
 # backward gradient for the unused output is of dtype np.float32 then.
 # ==> Very annoying!
 def _gelqf_first_output(a):
-    q, l = mx.sym.linalg_gelqf(a)
+    q, l = mx.sym.linalg.gelqf(a)
     bogus_scal = mx.sym.sum(mx.sym.BlockGrad(l), axis=(), keepdims=True) * 0.0
     return mx.sym.broadcast_add(q, bogus_scal)
 
 def _gelqf_second_output(a):
-    q, l = mx.sym.linalg_gelqf(a)
+    q, l = mx.sym.linalg.gelqf(a)
     bogus_scal = mx.sym.sum(mx.sym.BlockGrad(q), axis=(), keepdims=True) * 0.0
     return mx.sym.broadcast_add(l, bogus_scal)
+
+def _syevd_combined_symbol(a):
+    u, lam = mx.sym.linalg.syevd(a)
+    u_ut = mx.sym.linalg.syrk(u, transpose=False, alpha=1., name='U_times_Ut')
+    lam_u = mx.sym.broadcast_mul(mx.sym.reshape(lam, shape=(-2, 1)), u)
+    ut_lam_u = mx.sym.linalg.gemm2(u, lam_u, alpha=1., transpose_a=True,
+                                   transpose_b=False, name='Ut_L_U')
+    return mx.sym.Group([u_ut, ut_lam_u])
 
 def test_laop_2():
     np.random.seed(1896893923)
@@ -3979,18 +4073,18 @@ def test_laop_2():
     rep_3x = lambda a, m, n :\
         np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
 
-    # Tests for linalg_syrk
+    # Tests for linalg.syrk
     mnalpha_lst = [(2, 3, 1.), (5, 3, -2.), (1, 6, 5.), (3, 3, 0.5), (4, 1, 10.), (1, 1, 1.)]
     for m, n, alpha in mnalpha_lst:
-        #print('m={}, n={}, alpha={}'.format(m, n, alpha))
+        #print('syrk: m={}, n={}, alpha={}'.format(m, n, alpha))
         data_in1 = np.random.uniform(1, 10, (m, n))
         res_syrk1 = alpha * np.dot(data_in1, data_in1.T)
-        test_syrk1 = mx.sym.linalg_syrk(data1, transpose=False, alpha=alpha)
+        test_syrk1 = mx.sym.linalg.syrk(data1, transpose=False, alpha=alpha)
         check_fw(test_syrk1, [data_in1], [res_syrk1])
         if grad_check == 1:
             check_grad(test_syrk1, [data_in1])
         res_syrk2 = alpha * np.dot(data_in1.T, data_in1)
-        test_syrk2 = mx.sym.linalg_syrk(data1, transpose=True, alpha=alpha)
+        test_syrk2 = mx.sym.linalg.syrk(data1, transpose=True, alpha=alpha)
         check_fw(test_syrk2, [data_in1], [res_syrk2])
         if grad_check == 1:
             check_grad(test_syrk2, [data_in1])
@@ -4005,18 +4099,18 @@ def test_laop_2():
         if grad_check == 1:
             check_grad(test_syrk2, [a_batch])
 
-    # Tests for linalg_gelqf
+    # Tests for linalg.gelqf
     # Currently disabled on GPU as they need cuda8
     # and MxNet builds use cuda 7.5
-    if default_context() != mx.cpu():
+    if not (default_context() == mx.cpu()):
         return
- 
+
     test_gelqf2 = _gelqf_combined_symbol(data1)  # Outputs (dot(Q, Q.T), dot(L, Q))
     test_gelqf_q = _gelqf_first_output(data1)  # Output Q (L is not dangling)
     test_gelqf_l = _gelqf_second_output(data1)  # Output L (Q is not dangling)
     mn_lst = [(4, 4), (1, 1), (5, 20), (1, 10), (15, 50)]
     for m, n in mn_lst:
-        #print('m={}, n={}'.format(m, n))
+        #print('gelqf: m={}, n={}'.format(m, n))
         data_in1 = np.random.normal(0., 10., (m, n))
         res_eye = np.eye(m)
         res_a = data_in1
@@ -4036,6 +4130,144 @@ def test_laop_2():
             check_grad(test_gelqf_q, [a_batch])
             # A => L
             check_grad(test_gelqf_l, [a_batch])
+
+
+# Tests for operator linalg.syevd
+
+def _syevd_first_output(a):
+    u, lam = mx.sym.linalg.syevd(a)
+    bogus_scal = mx.sym.sum(mx.sym.BlockGrad(lam), axis=(), keepdims=True) * 0.0
+    return mx.sym.broadcast_add(u, bogus_scal)
+
+def _syevd_second_output(a):
+    u, lam = mx.sym.linalg.syevd(a)
+    bogus_scal = mx.sym.sum(mx.sym.BlockGrad(u), axis=(), keepdims=True) * 0.0
+    return mx.sym.broadcast_add(lam, bogus_scal)
+
+def _syevd_forward(a):
+    lam, ut = np.linalg.eig(a)
+    ind = np.argsort(lam)
+    lam = lam[ind]
+    u = ut[:, ind].T
+    for i in range(0, a.shape[0]):
+        _syevd_forw_eigvec_sign(u[i])
+    return u, lam
+
+def _syevd_forw_eigvec_sign(v):
+    ind = np.argmax(np.abs(v))
+    if v[ind] < 0.:
+        v[:] = -v
+
+def _syevd_backward(grad_u, grad_l, u, l):
+    n = l.size
+    assert grad_l.size == n
+    assert grad_u.shape == (n, n)
+    assert u.shape == (n, n)
+    temp = np.dot(grad_u, u.T)
+    temp2 = np.diag(grad_l)
+    for i in range(1, n):
+        for j in range(0, i):
+            denom = 2. * (l[i] - l[j])
+            elem = (temp[i, j] - temp[j, i])/denom
+            temp2[i, j] = elem
+            temp2[j, i] = elem
+    temp3 = np.dot(u.T, temp2)
+    return np.dot(temp3, u)
+
+def test_laop_3():
+    # Currently disabled on GPU as syevd needs cuda8
+    # and MxNet builds use cuda 7.5
+    if not (default_context() == mx.cpu()):
+        return
+
+    np.random.seed(1896893923)
+    dtype = np.float64
+    rtol_fw = 1e-6
+    atol_fw = 1e-6
+    num_eps = 1e-4
+    rtol_bw = 1e-2
+    atol_bw = 1e-2
+    # enable numerical checking of gradients
+    grad_check = 1
+
+    data1 = mx.symbol.Variable('data1')
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+    rep_3x = lambda a, m, n :\
+        np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
+    check_bw = lambda sym, location, out_grads, expected :\
+        check_symbolic_backward(sym, location, out_grads, expected,
+                                rtol=rtol_fw, atol=atol_fw, dtype=dtype)
+
+    # Tests for linalg.syevd
+    test_syevd2 = _syevd_combined_symbol(data1)  # Outputs (U U^T, U^T (diag L) U)
+    data1_s2 = _make_symm_symbol(data1, ndims=2)
+    test_syevd_u_2 = _syevd_first_output(data1_s2)
+    test_syevd_l_2 = _syevd_second_output(data1_s2)
+    data1_s4 = _make_symm_symbol(data1, ndims=4)
+    test_syevd_u_4 = _syevd_first_output(data1_s4)
+    test_syevd_l_4 = _syevd_second_output(data1_s4)
+    n_lst = [4, 1, 2, 10, 14]
+    for n in n_lst:
+        #print('\n** syevd: n={}'.format(n))
+        data_in1 = np.random.normal(0., 10., (n, n))
+        data_in1 = 0.5 * (data_in1 + data_in1.T)
+        res_eye = np.eye(n)
+        res_a = data_in1
+        check_fw(test_syevd2, [data_in1], [res_eye, res_a])
+        # Check backward
+        grad_u = np.random.normal(0., 2., (n, n))
+        grad_l = np.random.normal(0., 2., (n,))
+        bw_u, bw_l = _syevd_forward(data_in1)
+        grad_a = _syevd_backward(grad_u, grad_l, bw_u, bw_l)
+        check_bw(mx.sym.linalg.syevd(data1), [data_in1], [grad_u, grad_l], [grad_a])
+        if grad_check == 1:
+            # A => U
+            check_grad(test_syevd_u_2, [data_in1])
+            # A => L
+            check_grad(test_syevd_l_2, [data_in1])
+        # Batch mode (3x the same thing)
+        a_batch = rep_3x(data_in1, n, n)
+        reye_batch = rep_3x(res_eye, n, n)
+        ra_batch = a_batch
+        check_fw(test_syevd2, [a_batch], [reye_batch, ra_batch])
+        if grad_check == 1:
+            # A => U
+            check_grad(test_syevd_u_4, [a_batch])
+            # A => L
+            check_grad(test_syevd_l_4, [a_batch])
+
+
+def test_laop_4():
+    # Currently disabled on GPU as syevd needs cuda8
+    # and MxNet builds use cuda 7.5
+    if not (default_context() == mx.cpu()):
+        return
+
+    np.random.seed(1896893923)
+    rtol_fw = 1e-6
+    atol_fw = 1e-6
+
+    data1 = mx.symbol.Variable('data1')
+
+    check_fw = lambda sym, location, expected, dtype :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+
+    a_np = np.array([[1., 2.], [2., 4.]])
+    u_np = np.array([[0.89442718, -0.44721359], [0.44721359, 0.89442718]])
+    l_np = np.array([0., 5.])
+    test_syevd = mx.sym.linalg.syevd(data1)
+    # float64
+    #print('float64')
+    check_fw(test_syevd, [a_np], [u_np, l_np], np.float64)
+    # float32
+    #print('float32')
+    check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
 
 def test_stack():
@@ -4117,6 +4349,342 @@ def test_scatter_gather_nd():
     idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
 
     assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
+
+def compare_forw_backw_unary_op(
+        name, forward_mxnet_call, forward_numpy_call,
+        backward_numpy_call, shape, input_low, input_high, rtol, atol,
+        dtype=np.float32):
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    check_bw = lambda sym, location, out_grads, expected :\
+        check_symbolic_backward(sym, location, out_grads, expected,
+                                rtol=rtol, atol=atol, dtype=dtype)
+    op_name = 'unary_op={}, dtype={}'.format(name, dtype)
+    data = mx.symbol.Variable(op_name + '_data', dtype=dtype)
+    # Comparison: Forward expression
+    data_np = np.random.uniform(input_low, input_high, shape).astype(dtype)
+    res_np = forward_numpy_call(data_np)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data), mx.sym.zeros_like(data),
+        name=op_name)
+    check_fw(op_ex, [data_np], [res_np])
+    # Comparison: Backward expression
+    res_grad = np.random.uniform(-2.0, 2.0, shape).astype(dtype)
+    data_grad = backward_numpy_call(data_np) * res_grad
+    check_bw(op_ex, [data_np], [res_grad], [data_grad])
+
+def finite_diff_unary_op(
+        name, forward_mxnet_call, shape, input_low, input_high, rtol, atol,
+        num_eps):
+    # Finite difference tests are done in float64
+    dtype = np.float64
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    data_np = np.random.uniform(input_low, input_high, shape).astype(dtype)
+    data = mx.symbol.Variable('data', dtype=dtype)
+    op_name = 'unary_op={}, dtype={}'.format(name, dtype)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data), mx.sym.zeros_like(data),
+        name=op_name)
+    check_grad(op_ex, [data_np])
+
+def np_smooth_l1(x, sigma):
+    issq = 1. / sigma / sigma
+    absx = np.abs(x)
+    temp = x * sigma
+    return np.where(absx < issq, 0.5 * (temp ** 2), absx - 0.5 * issq)
+
+def np_smooth_l1_grad(x, sigma):
+    ssq = sigma * sigma
+    return np.where(np.abs(x) < 1. / ssq, x * ssq, np.sign(x))
+
+# Tests for unary operators (basic mathematical functions):
+# - Forward: Comparison to NumPy (several dtype)
+# - Backward: Comparison to NumPy (several dtype)
+# - Finite difference tests (only dtype = float64)
+def test_unary_math_operators():
+    np.random.seed(192837465)
+    have_scipy = True
+    try:
+        from scipy import special as scipy_special
+    except:
+        print("Could not import scipy. Skipping unit tests for special functions")
+        have_scipy = False
+    shape=(9, 10)
+    dtype_l = [np.float64, np.float32, np.float16]
+    rtol_l = [1e-7, 1e-6, 1e-2]
+    rtol_less_l = [1e-6, 1e-5, 1e-2]
+    atol_l = [1e-7, 1e-6, 1e-2]
+    atol_less_l = [1e-6, 1e-5, 1e-2]
+    rtol_fd = 1e-5
+    atol_fd = 1e-6
+    num_eps = 1e-6
+    unary_ops = {
+        'arccos' : [lambda x: mx.sym.arccos(x),
+                    lambda x: np.arccos(x),
+                    lambda x: -1. / np.sqrt(1. - x ** 2.),
+                    -0.95, 0.95],
+        'arccosh': [lambda x: mx.sym.arccosh(x),
+                    lambda x: np.arccosh(x),
+                    lambda x: 1. / np.sqrt(x ** 2 - 1.),
+                    1.05, 10.0],
+        'arcsin': [lambda x: mx.sym.arcsin(x),
+                   lambda x: np.arcsin(x),
+                   lambda x: 1. / np.sqrt(1. - x ** 2),
+                   -0.95, 0.95],
+        'arcsinh': [lambda x: mx.sym.arcsinh(x),
+                    lambda x: np.arcsinh(x),
+                    lambda x: 1. / np.sqrt(x**2 + 1.),
+                    -5.0, 5.0],
+        'arctan': [lambda x: mx.sym.arctan(x),
+                   lambda x: np.arctan(x),
+                   lambda x: 1. / (x ** 2. + 1.),
+                   -5.0, 5.0],
+        'arctanh': [lambda x: mx.sym.arctanh(x),
+                    lambda x: np.arctanh(x),
+                    lambda x: 1. / (1. - x ** 2),
+                    -0.95, 0.95],
+        'cbrt': [lambda x: mx.sym.cbrt(x),
+                 lambda x: np.cbrt(x),
+                 lambda x: 1. / (3. * np.cbrt(x) ** 2),
+                 -10.0, 10.0],
+        'cos': [lambda x: mx.sym.cos(x),
+                lambda x: np.cos(x),
+                lambda x: -np.sin(x),
+                -5.0, 5.0],
+        'cosh': [lambda x: mx.sym.cosh(x),
+                 lambda x: np.cosh(x),
+                 lambda x: np.sinh(x),
+                 -2.0, 2.0],
+        'exp': [lambda x: mx.sym.exp(x),
+                lambda x: np.exp(x),
+                lambda x: np.exp(x),
+                -4.0, 4.0],
+        'expm1': [lambda x: mx.sym.expm1(x),
+                  lambda x: np.expm1(x),
+                  lambda x: np.exp(x),
+                  -0.1, 0.1],
+        'log': [lambda x: mx.sym.log(x),
+                lambda x: np.log(x),
+                lambda x: 1. / x,
+                0.01, 100.0],
+        'log10': [lambda x: mx.sym.log10(x),
+                lambda x: np.log10(x),
+                lambda x: 1. / (x * np.log(10.)),
+                0.01, 100.0],
+        'log2': [lambda x: mx.sym.log2(x),
+                lambda x: np.log2(x),
+                lambda x: 1. / (x * np.log(2.)),
+                0.01, 100.0],
+        'log1p': [lambda x: mx.sym.log1p(x),
+                  lambda x: np.log1p(x),
+                  lambda x: 1. / (1. + x),
+                  -0.1, 0.1],
+        'rcbrt': [lambda x: mx.sym.rcbrt(x),
+                  lambda x: 1. / np.cbrt(x),
+                  lambda x: -1. / (3. * x * np.cbrt(x)),
+                  0.01, 100.0],
+        'reciprocal': [lambda x: mx.sym.reciprocal(x),
+                       lambda x: 1. / x,
+                       lambda x: -1. / (x ** 2),
+                       0.01, 100.0],
+        'relu': [lambda x: mx.sym.relu(x),
+                 lambda x: np.maximum(x, 0.),
+                 lambda x: 1. * (x > 0.),
+                 -5.0, 5.0],
+        'rsqrt': [lambda x: mx.sym.rsqrt(x),
+                  lambda x: 1. / np.sqrt(x),
+                  lambda x: -0.5 / (x * np.sqrt(x)),
+                  0.01, 100.0],
+        'sigmoid': [lambda x: mx.sym.sigmoid(x),
+                    lambda x: 1. / (np.exp(-x) + 1.),
+                    lambda x: 1. / (np.exp(-x) + 1.) / (np.exp(x) + 1.),
+                    -3.0, 3.0],
+        'sin': [lambda x: mx.sym.sin(x),
+                lambda x: np.sin(x),
+                lambda x: np.cos(x),
+                -5.0, 5.0],
+        'sinh': [lambda x: mx.sym.sinh(x),
+                 lambda x: np.sinh(x),
+                 lambda x: np.cosh(x),
+                 -2.0, 2.0],
+        'sqrt': [lambda x: mx.sym.sqrt(x),
+                 lambda x: np.sqrt(x),
+                 lambda x: 0.5 / np.sqrt(x),
+                 0.01, 100.0],
+        'tan': [lambda x: mx.sym.tan(x),
+                lambda x: np.tan(x),
+                lambda x: np.tan(x) ** 2 + 1.,
+                -1.5, 1.5],
+        'tanh': [lambda x: mx.sym.tanh(x),
+                 lambda x: np.tanh(x),
+                 lambda x: 1. - np.tanh(x) ** 2,
+                 -4.0, 4.0],
+        'smooth_l1_sig1': [lambda x: mx.sym.smooth_l1(x, scalar=1.),
+                           lambda x: np_smooth_l1(x, 1.),
+                           lambda x: np_smooth_l1_grad(x, 1.),
+                           -2.0, 2.0],
+        'smooth_l1_sig2': [lambda x: mx.sym.smooth_l1(x, scalar=2.),
+                           lambda x: np_smooth_l1(x, 2.),
+                           lambda x: np_smooth_l1_grad(x, 2.),
+                           -1.0, 1.0]
+    }
+    if have_scipy:
+        unary_ops['gamma'] = [lambda x: mx.sym.gamma(x),
+                              lambda x: scipy_special.gamma(x),
+                              lambda x: scipy_special.gamma(x) * scipy_special.psi(x),
+                              0.01, 5.0]
+        unary_ops['gammaln'] = [lambda x: mx.sym.gammaln(x),
+                                lambda x: scipy_special.gammaln(x),
+                                lambda x: scipy_special.psi(x),
+                                0.01, 20.0]
+    # Loop over operators
+    for name, op in unary_ops.items():
+        # Loop over dtype's
+        for ind in range(len(dtype_l)):
+            dtype = dtype_l[ind]
+            if name == 'gammaln' or name == 'gamma':
+                rtol = rtol_less_l[ind]
+                atol = atol_less_l[ind]
+            else:
+                rtol = rtol_l[ind]
+                atol = atol_l[ind]
+            compare_forw_backw_unary_op(
+                name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
+                dtype)
+        # Finite difference testing
+        finite_diff_unary_op(
+            name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
+
+def compare_forw_backw_binary_op(
+        name, forward_mxnet_call, forward_numpy_call,
+        backward1_numpy_call, backward2_numpy_call, shape, input1_low,
+        input1_high, input2_low, input2_high, rtol, atol, dtype=np.float32):
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    check_bw = lambda sym, location, out_grads, expected :\
+        check_symbolic_backward(sym, location, out_grads, expected,
+                                rtol=rtol, atol=atol, dtype=dtype)
+    op_name = 'binary_op={}, dtype={}'.format(name, dtype)
+    data1 = mx.symbol.Variable(op_name + '_data1', dtype=dtype)
+    data2 = mx.symbol.Variable(op_name + '_data2', dtype=dtype)
+    # Comparison: Forward expression
+    data1_np = np.random.uniform(input1_low, input1_high, shape).astype(dtype)
+    data2_np = np.random.uniform(input2_low, input2_high, shape).astype(dtype)
+    res_np = forward_numpy_call(data1_np, data2_np)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data1, data2), mx.sym.zeros_like(data1),
+        name=op_name)
+    check_fw(op_ex, [data1_np, data2_np], [res_np])
+    # Comparison: Backward expression
+    res_grad = np.random.uniform(-2.0, 2.0, shape).astype(dtype)
+    data1_grad = backward1_numpy_call(data1_np, data2_np) * res_grad
+    data2_grad = backward2_numpy_call(data1_np, data2_np) * res_grad
+    check_bw(op_ex, [data1_np, data2_np], [res_grad], [data1_grad, data2_grad])
+
+def finite_diff_binary_op(
+        name, forward_mxnet_call, shape, input1_low, input1_high, input2_low,
+        input2_high, rtol, atol, num_eps):
+    # Finite difference tests are done in float64
+    dtype = np.float64
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol,
+                               atol=atol, dtype=dtype)
+    data1_np = np.random.uniform(input1_low, input1_high, shape).astype(dtype)
+    data2_np = np.random.uniform(input2_low, input2_high, shape).astype(dtype)
+    data1 = mx.symbol.Variable('data1', dtype=dtype)
+    data2 = mx.symbol.Variable('data2', dtype=dtype)
+    op_name = 'binary_op={}, dtype={}'.format(name, dtype)
+    op_ex = mx.sym.broadcast_add(
+        forward_mxnet_call(data1, data2), mx.sym.zeros_like(data1),
+        name=op_name)
+    check_grad(op_ex, [data1_np, data2_np])
+
+# Tests for unary operators (basic mathematical functions):
+# - Forward: Comparison to NumPy (several dtype)
+# - Backward: Comparison to NumPy (several dtype)
+# - Finite difference tests (only dtype = float64)
+def test_binary_math_operators():
+    np.random.seed(192837465)
+    shape=(9, 10)
+    dtype_l = [np.float64, np.float32, np.float16]
+    rtol_l = [1e-7, 1e-6, 1e-2]
+    atol_l = [1e-7, 1e-6, 1e-2]
+    rtol_fd = 1e-5
+    atol_fd = 1e-6
+    num_eps = 1e-6
+    binary_ops = {
+        'hypot' : [lambda x, y: mx.sym.hypot(x, y),
+                   lambda x, y: np.hypot(x, y),
+                   lambda x, y: x / np.hypot(x, y),
+                   lambda x, y: y / np.hypot(x, y),
+                    -5.0, 5.0, -5.0, 5.0],
+        'pow': [lambda x, y: mx.sym.pow(x, y),
+                lambda x, y: np.power(x, y),
+                lambda x, y: np.power(x, y - 1.) * y,
+                lambda x, y: np.power(x, y) * np.log(x),
+                0.2, 5.0, -4.0, 4.0]
+    }
+    # Loop over operators
+    for name, op in binary_ops.items():
+        # Loop over dtype's
+        for ind in range(len(dtype_l)):
+            dtype = dtype_l[ind]
+            compare_forw_backw_binary_op(
+                name, op[0], op[1], op[2], op[3], shape, op[4], op[5], op[6],
+                op[7], rtol_l[ind], atol_l[ind], dtype)
+        # Finite difference testing
+        finite_diff_binary_op(
+            name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
+            num_eps)
+
+
+def test_softmax():
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
+    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
+    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
+    check_softmax_grad(default_context())
+    check_smoothed_softmax_grad(default_context())
+
+
+def test_slice():
+    def test_slice_forward_backward(a, index):
+        a_np = a.asnumpy()
+        begin = []
+        end = []
+        step = []
+        for slice_i in index:
+            begin.append(slice_i.start)
+            end.append(slice_i.stop)
+            step.append(slice_i.step)
+        b = mx.nd.slice(a, begin=begin, end=end, step=step)
+        b_np = a_np[index]
+        assert same(b.asnumpy(), b_np)
+
+        data = mx.sym.Variable('data')
+        slice_sym = mx.sym.slice(data, begin=begin, end=end, step=step)
+        expected_in_grad = np.zeros_like(a_np)
+        expected_in_grad[index] = b_np
+        check_symbolic_backward(slice_sym, [a_np], [b_np], [expected_in_grad])
+
+    shape = (16, 14, 17, 20)
+    arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
+    index_list = [(slice(None),), (slice(None), slice(None)), (slice(1, 10),), (slice(1, 10), slice(3, 9)),
+                  (slice(1, 10), slice(2, 5), slice(3, 6), slice(7, 10)),
+                  (slice(1, 10, 2), slice(2, 9, 3), slice(3, 6, 5), slice(7, 10, 2)),
+                  (slice(None, None, -1), slice(None, None, -1), slice(None, None, -1)),
+                  (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4))]
+    for index in index_list:
+        test_slice_forward_backward(arr, index)
+
+    # check numeric gradient
+    in_data = np.arange(36).reshape(2, 2, 3, 3)
+    data = mx.sym.Variable('data')
+    slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
+    check_numeric_gradient(slice_sym, [in_data])
 
 
 if __name__ == '__main__':

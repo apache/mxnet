@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Neural network parameter."""
+__all__ = ['DeferredInitializationError', 'Parameter', 'ParameterDict',
+           'tensor_types']
 
 from collections import OrderedDict
 import warnings
@@ -39,11 +41,11 @@ class DeferredInitializationError(MXNetError):
     pass
 
 class Parameter(object):
-    """A Container holding parameters (weights) of `Block`s.
+    """A Container holding parameters (weights) of Blocks.
 
-    `Parameter` holds a copy of the parameter on each `Context` after
-    it is initialized with `Parameter.initialize(...)`. If `grad_req` is
-    not `null`, it will also hold a gradient array on each `Context`::
+    :py:class:`Parameter` holds a copy of the parameter on each :py:class:`Context` after
+    it is initialized with ``Parameter.initialize(...)``. If :py:attr:`grad_req` is
+    not ``'null'``, it will also hold a gradient array on each :py:class:`Context`::
 
         ctx = mx.gpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
@@ -60,18 +62,18 @@ class Parameter(object):
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
 
-        - 'write' means everytime gradient is written to grad `NDArray`.
-        - 'add' means everytime gradient is added to the grad `NDArray`. You need
-          to manually call `zero_grad()` to clear the gradient buffer before each
+        - ``'write'`` means everytime gradient is written to grad :py:class:`NDArray`.
+        - ``'add'`` means everytime gradient is added to the grad :py:class:`NDArray`. You need
+          to manually call ``zero_grad()`` to clear the gradient buffer before each
           iteration when using this option.
         - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
     shape : tuple of int, default None
         Shape of this parameter. By default shape is not specified. Parameter with
-        unknown shape can be used for `Symbol` API, but `init` will throw an error
-        when using `NDArray` API.
+        unknown shape can be used for :py:class:`Symbol` API, but ``init`` will throw an error
+        when using :py:class:`NDArray` API.
     dtype : numpy.dtype or str, default 'float32'
-        Data type of this parameter. For example, numpy.float32 or 'float32'.
+        Data type of this parameter. For example, ``numpy.float32`` or ``'float32'``.
     lr_mult : float, default 1.0
         Learning rate multiplier. Learning rate will be multiplied by lr_mult
         when updating this parameter with optimizer.
@@ -83,13 +85,13 @@ class Parameter(object):
     Attributes
     ----------
     grad_req : {'write', 'add', 'null'}
-        This can be set before or after initialization. Setting grad_req to null
-        with `x.grad_req = 'null'` saves memory and computation when you don't
+        This can be set before or after initialization. Setting ``grad_req`` to ``'null'``
+        with ``x.grad_req = 'null'`` saves memory and computation when you don't
         need gradient w.r.t x.
     lr_mult : float
         Local learning rate multiplier for this Parameter. The actual learning rate
-        is calculated with `learning_rate * lr_mult`. You can set it with
-        `param.lr_mult = 2.0`
+        is calculated with ``learning_rate * lr_mult``. You can set it with
+        ``param.lr_mult = 2.0``
     wd_mult : float
         Local weight decay multiplier for this Parameter.
     """
@@ -169,11 +171,12 @@ class Parameter(object):
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self.shape:
-            for i, j in zip(self.shape, data.shape):
-                assert i == 0 or i == j, \
+            for self_dim, data_dim in zip(self.shape, data.shape):
+                assert self_dim == 0 or self_dim == data_dim, \
                     "Failed loading Parameter %s from saved params: " \
                     "shape incompatible expacted %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
+            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter %s from saved params: " \
@@ -248,20 +251,24 @@ class Parameter(object):
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
                    force_reinit=False):
-        """Initializes parameter and gradient arrays. Only used for `NDArray` API.
+        """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
         Parameters
         ----------
         init : Initializer
-            The initializer to use. Overrides `Parameter.init` and default_init.
-        ctx : Context or list of Context, defaults to `context.current_context()`.
+            The initializer to use. Overrides :py:meth:`Parameter.init` and default_init.
+        ctx : Context or list of Context, defaults to :py:meth:`context.current_context()`.
             Initialize Parameter on given context. If ctx is a list of Context, a
             copy will be made for each context.
 
-            .. note:: Copies are independent arrays. User is responsible for keeping
-            their values consistent when updating. Normally `gluon.Trainer` does this for you.
+            .. note::
+                Copies are independent arrays. User is responsible for keeping
+                their values consistent when updating.
+                Normally :py:class:`gluon.Trainer` does this for you.
+
         default_init : Initializer
-            Default initializer is used when both `init` and `Parameter.init` are `None`.
+            Default initializer is used when both :py:func:`init`
+            and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
 
@@ -299,7 +306,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if self.dtype is None or not self.shape or np.prod(self.shape) <= 0:
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init)
                 return
@@ -312,7 +319,7 @@ class Parameter(object):
     def reset_ctx(self, ctx):
         """Re-assign Parameter to other contexts.
 
-        ctx : Context or list of Context, default `context.current_context()`.
+        ctx : Context or list of Context, default ``context.current_context()``.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
         """
@@ -338,6 +345,8 @@ class Parameter(object):
             "Parameter %s has not been initialized"%self.name
         for arr in self.list_data():
             arr[:] = data
+        if not self.shape or np.prod(self.shape) <= 0:
+            self.shape = data.shape
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
@@ -375,7 +384,7 @@ class Parameter(object):
 
     def list_grad(self):
         """Returns gradient buffers on all contexts, in the same order
-        as `values`."""
+        as :py:meth:`values`."""
         if self._data is not None and self._grad is None:
             raise RuntimeError(
                 "Cannot get gradient array for Parameter %s " \
@@ -412,12 +421,12 @@ class ParameterDict(object):
 
     Parameters
     ----------
-    prefix : str, default ''
+    prefix : str, default ``''``
         The prefix to be prepended to all Parameters' names created by this dict.
     shared : ParameterDict or None
-        If not `None`, when this dict's `get` method creates a new parameter, will
-        first try to retrieve it from `shared` dict. Usually used for sharing
-        parameters with another `Block`.
+        If not ``None``, when this dict's :py:meth:`get` method creates a new parameter, will
+        first try to retrieve it from "shared" dict. Usually used for sharing
+        parameters with another Block.
     """
     def __init__(self, prefix='', shared=None):
         self._prefix = prefix
@@ -448,8 +457,8 @@ class ParameterDict(object):
 
     @property
     def prefix(self):
-        """Prefix of this dict. It will be prepended to Parameters' name created
-        with `get`."""
+        """Prefix of this dict. It will be prepended to :py:class:`Parameter`s' name created
+        with :py:func:`get`."""
         return self._prefix
 
     def _get_impl(self, name):
@@ -461,9 +470,9 @@ class ParameterDict(object):
         return None
 
     def get(self, name, **kwargs):
-        """Retrieves a `Parameter` with name `self.prefix+name`. If not found,
-        `get` will first try to retrieve it from `shared` dict. If still not
-        found, `get` will create a new `Parameter` with key-word arguments and
+        """Retrieves a :py:class:`Parameter` with name ``self.prefix+name``. If not found,
+        :py:func:`get` will first try to retrieve it from "shared" dict. If still not
+        found, :py:func:`get` will create a new :py:class:`Parameter` with key-word arguments and
         insert it to self.
 
         Parameters
@@ -472,12 +481,12 @@ class ParameterDict(object):
             Name of the desired Parameter. It will be prepended with this dictionary's
             prefix.
         **kwargs : dict
-            The rest of key-word arguments for the created `Parameter`.
+            The rest of key-word arguments for the created :py:class:`Parameter`.
 
         Returns
         -------
         Parameter
-            The created or retrieved `Parameter`.
+            The created or retrieved :py:class:`Parameter`.
         """
         name = self.prefix + name
         param = self._get_impl(name)
@@ -497,7 +506,7 @@ class ParameterDict(object):
         return param
 
     def update(self, other):
-        """Copies all Parameters in `other` to self."""
+        """Copies all Parameters in ``other`` to self."""
         for k, v in other.items():
             if k in self._params:
                 assert self._params[k] is v, \
@@ -508,14 +517,14 @@ class ParameterDict(object):
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
-        """Initializes all Parameters managed by this dictionary to be used for `NDArray`
-        API. It has no effect when using `Symbol` API.
+        """Initializes all Parameters managed by this dictionary to be used for :py:class:`NDArray`
+        API. It has no effect when using :py:class:`Symbol` API.
 
         Parameters
         ----------
         init : Initializer
-            Global default Initializer to be used when `Parameter.init` is `None`.
-            Otherwise, `Parameter.init` takes precedence.
+            Global default Initializer to be used when :py:meth:`Parameter.init` is ``None``.
+            Otherwise, :py:meth:`Parameter.init` takes precedence.
         ctx : Context or list of Context
             Keeps a copy of Parameters on one or many context(s).
         force_reinit : bool, default False
@@ -534,7 +543,7 @@ class ParameterDict(object):
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
 
-        ctx : Context or list of Context, default `context.current_context()`.
+        ctx : Context or list of Context, default :py:meth:`context.current_context()`.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
         """
@@ -579,7 +588,7 @@ class ParameterDict(object):
                     "Prefix %s is to be striped before saving, but Parameter " \
                     "%s does not start with %s. If you are using Block.save_params, " \
                     "This may be due to your Block shares parameters from other " \
-                    "Blocks or you forgot to use `with name_scope()`` during init. " \
+                    "Blocks or you forgot to use ``with name_scope()`` during init. " \
                     "Consider switching to Block.collect_params.save and " \
                     "Block.collect_params.load instead."%(
                         strip_prefix, param.name, strip_prefix))
@@ -608,7 +617,9 @@ class ParameterDict(object):
                     "restore_prefix is %s but Parameters name %s does not start " \
                     "with %s"%(restore_prefix, name, restore_prefix)
         lprefix = len(restore_prefix)
-        arg_dict = {restore_prefix+k: v for k, v in ndarray.load(filename).items()}
+        loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
+                  for k, v in ndarray.load(filename).items()]
+        arg_dict = {restore_prefix+k: v for k, v in loaded}
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \

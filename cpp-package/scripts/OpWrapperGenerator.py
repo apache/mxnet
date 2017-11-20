@@ -124,12 +124,15 @@ class Arg:
                 self.defaultString = self.enum.GetDefaultValueString(self.defaultString)
             elif self.defaultString == 'None':
                 self.defaultString = self.type + '()'
-            elif self.defaultString == 'False':
-                self.defaultString = 'false'
-            elif self.defaultString == 'True':
-                self.defaultString = 'true'
+            elif self.type == "bool":
+                if self.defaultString == "1" or self.defaultString == "True":
+                    self.defaultString = "true"
+                else:
+                    self.defaultString = "false"
             elif self.defaultString[0] == '(':
                 self.defaultString = 'Shape' + self.defaultString
+            elif self.defaultString[0] == '[':
+                self.defaultString = 'Shape(' + self.defaultString[1:-1] + ")"
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
             elif typeString.startswith('caffe-layer-parameter'):

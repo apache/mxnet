@@ -43,6 +43,7 @@ imported by running:
    symbol/linalg.md
    symbol/sparse.md
    symbol/contrib.md
+   symbol/rnn.md
 ```
 
 ## Module API
@@ -52,6 +53,7 @@ imported by running:
    :maxdepth: 1
 
    module/module.md
+   executor/executor.md
 ```
 
 ## Autograd API
@@ -70,15 +72,12 @@ imported by running:
    :maxdepth: 1
 
    gluon/gluon.md
-```
-
-## RNN API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   rnn/rnn.md
+   gluon/nn.md
+   gluon/rnn.md
+   gluon/loss.md
+   gluon/data.md
+   gluon/model_zoo.md
+   gluon/contrib.md
 ```
 
 ## KVStore API
@@ -133,4 +132,13 @@ imported by running:
    :maxdepth: 1
 
    metric/metric.md
+```
+
+## Run-Time Compilation API
+
+```eval_rst
+.. toctree::
+   :maxdepth 1
+
+   rtc/rtc.md
 ```

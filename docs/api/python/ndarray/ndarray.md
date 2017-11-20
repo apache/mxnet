@@ -125,6 +125,7 @@ The `ndarray` package provides several classes:
 
     NDArray.T
     NDArray.reshape
+    NDArray.reshape_like
     NDArray.flatten
     NDArray.expand_dims
     NDArray.split
@@ -194,6 +195,7 @@ The `ndarray` package provides several classes:
     NDArray.topk
     NDArray.argmax
     NDArray.argmin
+    NDArray.argmax_channel
 ```
 
 ### Arithmetic operations
@@ -212,6 +214,76 @@ The `ndarray` package provides several classes:
     NDArray.__mod__
     NDArray.__rmod__
     NDArray.__pow__
+```
+
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sin
+    NDArray.cos
+    NDArray.tan
+    NDArray.arcsin
+    NDArray.arccos
+    NDArray.arctan
+    NDArray.degrees
+    NDArray.radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sinh
+    NDArray.cosh
+    NDArray.tanh
+    NDArray.arcsinh
+    NDArray.arccosh
+    NDArray.arctanh
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.exp
+    NDArray.expm1
+    NDArray.log
+    NDArray.log10
+    NDArray.log2
+    NDArray.log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.sqrt
+    NDArray.rsqrt
+    NDArray.cbrt
+    NDArray.rcbrt
+    NDArray.square
+    NDArray.reciprocal
+```
+
+## Basic neural network functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    NDArray.relu
+    NDArray.sigmoid
+    NDArray.softmax
+    NDArray.log_softmax
 ```
 
 ### In-place arithmetic operations
@@ -303,6 +375,7 @@ The `ndarray` package provides several classes:
 
     cast
     reshape
+    reshape_like
     flatten
     expand_dims
 ```
@@ -339,6 +412,7 @@ The `ndarray` package provides several classes:
 
     concat
     split
+    stack
 ```
 
 ### Indexing routines
@@ -436,7 +510,6 @@ The `ndarray` package provides several classes:
     trunc
 ```
 
-
 ### Exponents and logarithms
 
 ```eval_rst
@@ -460,10 +533,13 @@ The `ndarray` package provides several classes:
     power
     sqrt
     rsqrt
+    cbrt
+    rcbrt
     square
+    reciprocal
 ```
 
-### Logic functions
+### Comparison
 
 ```eval_rst
 .. autosummary::
@@ -476,19 +552,20 @@ The `ndarray` package provides several classes:
     lesser
     lesser_equal
 ```
+
 ### Random sampling
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    sample_uniform
-    sample_normal
-    sample_gamma
-    sample_exponential
-    sample_poisson
-    sample_negative_binomial
-    sample_generalized_negative_binomial
+    mxnet.ndarray.random.uniform
+    mxnet.ndarray.random.normal
+    mxnet.ndarray.random.gamma
+    mxnet.ndarray.random.exponential
+    mxnet.ndarray.random.poisson
+    mxnet.ndarray.random.negative_binomial
+    mxnet.ndarray.random.generalized_negative_binomial
     mxnet.random.seed
 ```
 
@@ -503,6 +580,17 @@ The `ndarray` package provides several classes:
     argsort
     argmax
     argmin
+```
+
+### Sequence operation
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    SequenceLast
+    SequenceMask
+    SequenceReverse
 ```
 
 ### Miscellaneous
@@ -536,6 +624,8 @@ The `ndarray` package provides several classes:
     SoftmaxOutput
     softmax
     log_softmax
+    relu
+    sigmoid
 ```
 
 ### More

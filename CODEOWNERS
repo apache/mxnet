@@ -1,7 +1,7 @@
 # Owners of Apache MXNet
 
 # Global owners
-*			@piiswrong @mli
+*			@apache/mxnet-committers
 
 # Owners of language bindings
 R-package/*		@thirdwing

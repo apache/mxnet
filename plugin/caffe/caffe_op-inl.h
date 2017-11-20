@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file caffe_op-inl.h
  * \brief Caffe Operator
  * \author Haoran Wang

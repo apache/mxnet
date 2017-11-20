@@ -18,6 +18,7 @@
  */
 
 /**
+ * Copyright (c) 2015 by Contributors
  * @file   kvstore_dist.h
  * @brief  distributed implementation based on ps-lite
  */
@@ -41,10 +42,6 @@ namespace kvstore {
 
 /**
  * \brief distributed kvstore
- *
- * for a worker node, it always guarantees that all push and pull issued from
- * this worker on the same key are serialized. namely push(3) and then pull(3),
- * then the data pulled is always containing the modification from the push(3).
  *
  * it's the server node's job to control the data consistency among all
  * workers. see details on \ref ServerHandle::Start
@@ -144,8 +141,8 @@ class KVStoreDist : public KVStoreLocal {
     if (get_rank() == 0) {
       Push_(keys, values, 0, false);
       // wait until the push is finished
-      for (const auto& v : values) {
-        v.WaitToWrite();
+      for (const int key : keys) {
+        comm_buf_[key].WaitToWrite();
       }
     } else {
       // do nothing
@@ -237,7 +234,8 @@ class KVStoreDist : public KVStoreLocal {
       // TODO(haibin) refactor this for loop
       for (size_t i = 0; i < num_vals; i++) {
         auto &row_id = target_val_rowids[i].second;
-        NDArray indices = row_id.Copy(pinned_ctx_);
+        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
+        CopyFromTo(row_id, &indices, 0);
         Unique(&indices, priority);
         target_val_rowids[i].second = indices;
         num_rows += indices.shape().Size();
@@ -247,7 +245,7 @@ class KVStoreDist : public KVStoreLocal {
         LOG(FATAL) << "RowSparsePull with multiple values is not implemented yet";
       } else {
         auto& indices = target_val_rowids[0].second;
-        PullRowSparse_(key, &recv_buf, indices, priority);
+        PullRowSparse_(key, recv_buf, indices, priority);
         comm_->BroadcastRowSparse(key, recv_buf, grouped_val_rowid, num_vals == 1, priority);
       }
     }
@@ -271,8 +269,10 @@ class KVStoreDist : public KVStoreLocal {
       auto& send_buf = comm_buf_[key];
       const auto storage_type = merged.storage_type();
       if (merged.ctx().dev_mask() == cpu::kDevMask) {
-        // make sure the previous push/pull is completed
-        send_buf.WaitToWrite();
+        // Start of a push doesn't guarantee that the previous pushes are completed.
+        // This shouldn't affect training of networks though because training involves
+        // a sequence of push, pull, then push. This imposes ordering that the
+        // second push happens after the first pull, and the pull happens after first push.
         send_buf = merged;  // avoid memory copy
       } else {
         if (send_buf.is_none()) {
@@ -319,40 +319,42 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   // pull row sparse weight into `recv_buf` based on indices given by `indices`
-  void PullRowSparse_(const int key, NDArray *recv_buf, const NDArray& indices, int priority) {
+  void PullRowSparse_(const int key, const NDArray& recv_buf,
+                      const NDArray& indices, int priority) {
     using namespace rowsparse;
     auto pull_from_servers = [this, key, recv_buf, indices]
                              (RunContext rctx, Engine::CallbackOnComplete cb) {
       // allocate memory for the buffer
       size_t num_rows = indices.shape().Size();
-      recv_buf->CheckAndAlloc({mshadow::Shape1(num_rows)});
+      recv_buf.CheckAndAlloc({mshadow::Shape1(num_rows)});
 #if MKL_EXPERIMENTAL == 1
-      mkl_set_tblob_eager_mode(recv_buf->data());
+      mkl_set_tblob_eager_mode(recv_buf.data());
 #endif
-      real_t* data = recv_buf->data().dptr<real_t>();
-      auto indices_data = indices.data();
-      const auto offsets = indices_data.dptr<int64_t>();
-      const auto unit_len = recv_buf->shape().ProdShape(1, recv_buf->shape().ndim());
+      real_t* data = recv_buf.data().dptr<real_t>();
+      const auto offsets = indices.data().dptr<int64_t>();
+      const auto unit_len = recv_buf.shape().ProdShape(1, recv_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
        // convert to ps keys in row sparse format
       PSKV& pskv = EncodeRowSparseKey(key, size, num_rows, offsets,
-                                      unit_len, recv_buf->shape()[0]);
+                                      unit_len, recv_buf.shape()[0]);
       if (this->log_verbose_) {
         LOG(INFO) << "worker " << get_rank() << " pull lens: " << pskv.lens << " keys: "
                   << pskv.keys << " size: " << size;
       }
       auto vals = new ps::SArray<real_t>(data, size, false);
+      // copy indices to recv_buf. this needs to be done before ZPull
+      // because after pull is done, the callback function returns and locks are released.
+      // at this point, later functions may access the indices variable while copy happens
+      mshadow::Copy(recv_buf.aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
+                    indices.data().FlatTo1D<cpu, int64_t>());
       CHECK_NOTNULL(ps_worker_)->ZPull(pskv.keys, vals, &pskv.lens, kRowSparsePushPull,
         [vals, cb]() { delete vals; cb(); });
-      // copy indices to recv_buf
-      mshadow::Copy(recv_buf->aux_data(kIdx).FlatTo1D<cpu, int64_t>(),
-                    indices_data.FlatTo1D<cpu, int64_t>());
     };
     CHECK_NOTNULL(Engine::Get())->PushAsync(
         pull_from_servers,
         pinned_ctx_,
         {indices.var()},
-        {recv_buf->var()},
+        {recv_buf.var()},
         FnProperty::kNormal,
         priority,
         PROFILER_MESSAGE("KVStoreDistRowSparsePull"));
@@ -361,15 +363,14 @@ class KVStoreDist : public KVStoreLocal {
   // push row sparse gradient
   void PushRowSparse(int key, const NDArray &send_buf, int priority) {
     using namespace rowsparse;
-    auto push_to_servers = [this, key, &send_buf]
+    auto push_to_servers = [this, key, send_buf]
                            (RunContext rctx, Engine::CallbackOnComplete cb) {
 #if MKL_EXPERIMENTAL == 1
       mkl_set_tblob_eager_mode(send_buf.data());
 #endif
       real_t* data = send_buf.data().dptr<real_t>();
-      bool init = send_buf.storage_initialized();
-      const int64_t num_rows = init ? send_buf.aux_shape(kIdx)[0] : 0;
-      const auto offsets = init ? send_buf.aux_data(kIdx).dptr<int64_t>() : nullptr;
+      const int64_t num_rows = send_buf.aux_shape(kIdx)[0];
+      const auto offsets = send_buf.aux_data(kIdx).dptr<int64_t>();
       const auto unit_len = send_buf.shape().ProdShape(1, send_buf.shape().ndim());
       const int64_t size = num_rows * unit_len;
 
@@ -467,7 +468,7 @@ class KVStoreDist : public KVStoreLocal {
     return pskv;
   }
 
-  // TODO(haibin) this encoding method for row sparse keys doesn't allow cross-layer batching
+  // Note: this encoding method for row sparse keys doesn't allow cross-layer batching
   inline PSKV& EncodeRowSparseKey(const int key, const int64_t size, const int64_t num_rows,
                                   const int64_t *offsets, const size_t unit_len,
                                   const int64_t total_num_rows) {
@@ -487,24 +488,27 @@ class KVStoreDist : public KVStoreLocal {
       int64_t start_row = 0;
       // parition it to all servers
       for (int i = 0; i < num_servers; ++i) {
-        // calculate partition ranges
-        int64_t part_num_rows =
-            llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
-            llround(static_cast<double>(total_num_rows) / num_servers * i);
-        auto end_row = start_row + part_num_rows;
-        auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
-        auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
         ps::Key master_key = krs[i].begin() + key;
         pskv.keys.push_back(master_key);
         pskv.lens.push_back(0);
-        for (auto offset = lb; offset < ub; offset++) {
-          ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
-          CHECK_LT(ps_key, krs[i].end());
-          pskv.keys.push_back(ps_key);
-          pskv.lens.push_back(unit_len);
-          pskv.size += unit_len;
+        if (offsets && size > 0) {
+          // calculate partition ranges
+          int64_t part_num_rows =
+            llround(static_cast<double>(total_num_rows) / num_servers * (i + 1)) -
+            llround(static_cast<double>(total_num_rows) / num_servers * i);
+          auto end_row = start_row + part_num_rows;
+          // search for offsets in [start_row, end_row)
+          auto lb = std::lower_bound(offsets, offsets + num_rows, start_row);
+          auto ub = std::upper_bound(offsets, offsets + num_rows, end_row - 1);
+          for (auto offset = lb; offset < ub; offset++) {
+            ps::Key ps_key = krs[i].begin() + key + (*offset - start_row);
+            CHECK_LT(ps_key, krs[i].end());
+            pskv.keys.push_back(ps_key);
+            pskv.lens.push_back(unit_len);
+            pskv.size += unit_len;
+          }
+          start_row = end_row;
         }
-        start_row = end_row;
       }
       CHECK_EQ(static_cast<size_t>(pskv.size), size);
     } else {

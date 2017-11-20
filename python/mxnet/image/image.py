@@ -505,6 +505,29 @@ class Augmenter(object):
         raise NotImplementedError("Must override implementation.")
 
 
+class SequentialAug(Augmenter):
+    """Composing a sequential augmenter list.
+
+    Parameters
+    ----------
+    ts : list of augmenters
+        A series of augmenters to be applied in sequential order.
+    """
+    def __init__(self, ts):
+        super(SequentialAug, self).__init__()
+        self.ts = ts
+
+    def dumps(self):
+        """Override the default to avoid duplicate dump."""
+        return [self.__class__.__name__.lower(), [x.dumps() for x in self.ts]]
+
+    def __call__(self, src):
+        """Augmenter body"""
+        for aug in self.ts:
+            src = aug(src)
+        return src
+
+
 class ResizeAug(Augmenter):
     """Make resize shorter edge to size augmenter.
 
@@ -849,12 +872,13 @@ class HorizontalFlipAug(Augmenter):
 
 class CastAug(Augmenter):
     """Cast to float32"""
-    def __init__(self):
-        super(CastAug, self).__init__(type='float32')
+    def __init__(self, typ='float32'):
+        super(CastAug, self).__init__(type=typ)
+        self.typ = typ
 
     def __call__(self, src):
         """Augmenter body"""
-        src = src.astype(np.float32)
+        src = src.astype(self.typ)
         return src
 
 

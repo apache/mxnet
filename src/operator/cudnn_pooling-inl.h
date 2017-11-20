@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cudnn_pooling-inl.h
  * \brief
  * \author Bing Xu

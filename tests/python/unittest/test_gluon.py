@@ -130,7 +130,27 @@ def test_symbol_block():
     assert len(smodel(mx.nd.zeros((16, 10)))) == 14
 
     out = smodel(mx.sym.var('in'))
-    assert len(out.get_internals().list_outputs()) == len(outputs.list_outputs())
+    assert len(out) == len(outputs.list_outputs())
+
+    class Net(nn.HybridBlock):
+        def __init__(self, model):
+            super(Net, self).__init__()
+            self.model = model
+
+        def hybrid_forward(self, F, x):
+            out = self.model(x)
+            return F.add_n(*[i.sum() for i in out])
+
+    net = Net(smodel)
+    net.hybridize()
+    assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
+
+    inputs = mx.sym.var('data')
+    outputs = model(inputs)
+    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    net = Net(smodel)
+    net.hybridize()
+    assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
 
 def check_layer_forward(layer, dshape):
@@ -458,6 +478,129 @@ def test_embedding():
         y.backward()
     assert (layer.weight.grad()[:5] == 1).asnumpy().all()
     assert (layer.weight.grad()[5:] == 0).asnumpy().all()
+
+
+def test_export():
+    ctx = mx.context.current_context()
+    model = gluon.model_zoo.vision.resnet18_v1(
+        prefix='resnet', ctx=ctx, pretrained=True)
+    model.hybridize()
+    data = mx.nd.random.normal(shape=(1, 3, 224, 224))
+    out = model(data)
+
+    model.export('gluon')
+
+    module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
+    module.bind(data_shapes=[('data', data.shape)])
+    module.forward(mx.io.DataBatch([data], None), is_train=False)
+    mod_out, = module.get_outputs()
+
+    assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
+
+    model2 = gluon.model_zoo.vision.resnet18_v1(prefix='resnet', ctx=ctx)
+    model2.collect_params().load('gluon-0000.params', ctx)
+    out2 = model2(data)
+
+    assert_almost_equal(out.asnumpy(), out2.asnumpy())
+
+
+def test_hybrid_stale_cache():
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(mx.gluon.nn.Dense(10, weight_initializer='zeros', bias_initializer='ones', flatten=False))
+
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5)))
+
+    net.add(mx.gluon.nn.Flatten())
+    assert net(mx.nd.ones((2,3,5))).shape == (2, 30)
+
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.fc1 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=False)
+        net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                    bias_initializer='ones', flatten=False)
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5)))
+
+    net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                bias_initializer='ones', flatten=True)
+    net.initialize()
+    assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
+
+
+def test_lambda():
+    net1 = mx.gluon.nn.HybridSequential()
+    net1.add(nn.Activation('tanh'),
+             nn.LeakyReLU(0.1))
+
+    net2 = mx.gluon.nn.HybridSequential()
+    op3 = lambda F, x, *args: F.LeakyReLU(x, *args, slope=0.1)
+    net2.add(nn.HybridLambda('tanh'),
+             nn.HybridLambda(op3))
+
+    op4 = lambda x: mx.nd.LeakyReLU(x, slope=0.1)
+    net3 = mx.gluon.nn.Sequential()
+    net3.add(nn.Lambda('tanh'),
+             nn.Lambda(op4))
+
+    input_data = mx.nd.random.uniform(shape=(2, 3, 5, 7))
+    out1, out2, out3 = net1(input_data), net2(input_data), net3(input_data)
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+
+
+def test_fill_shape_deferred():
+    net = nn.HybridSequential()
+    with net.name_scope():
+        net.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                nn.BatchNorm(),
+                nn.Dense(10))
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5,7)))
+    assert net[0].weight.shape[1] == 3, net[0].weight.shape[1]
+    assert net[1].gamma.shape[0] == 64, net[1].gamma.shape[0]
+    assert net[2].weight.shape[1] == 3072, net[2].weight.shape[1]
+
+
+def test_dtype():
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
+
+def test_fill_shape_load():
+    ctx = mx.context.current_context()
+    net1 = nn.HybridSequential()
+    with net1.name_scope():
+        net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                 nn.BatchNorm(),
+                 nn.Dense(10))
+    net1.hybridize()
+    net1.initialize(ctx=ctx)
+    net1(mx.nd.ones((2,3,5,7), ctx))
+    net1.save_params('net_fill.params')
+
+    net2 = nn.HybridSequential()
+    with net2.name_scope():
+        net2.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                 nn.BatchNorm(),
+                 nn.Dense(10))
+    net2.hybridize()
+    net2.initialize()
+    net2.load_params('net_fill.params', ctx)
+    assert net2[0].weight.shape[1] == 3, net2[0].weight.shape[1]
+    assert net2[1].gamma.shape[0] == 64, net2[1].gamma.shape[0]
+    assert net2[2].weight.shape[1] == 3072, net2[2].weight.shape[1]
 
 
 if __name__ == '__main__':

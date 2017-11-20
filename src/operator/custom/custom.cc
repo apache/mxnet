@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file custom.cc
  * \brief
  * \author Junyuan Xie
@@ -212,8 +213,16 @@ std::vector<nnvm::NodeEntry> Gradient(
   }
 
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < g->num_outputs(); ++i) {
+  for (index_t i = 0; i < params.num_args; ++i) {
     ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+  }
+  if (params.num_auxs) {
+    nnvm::NodePtr ng = nnvm::Node::Create();
+    ng->attrs.op = nnvm::Op::Get("_NoGradient");
+    ng->attrs.name = "NoGradient";
+    for (index_t i = 0; i < params.num_auxs; ++i) {
+      ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
+    }
   }
 
   return ret;
@@ -225,8 +234,8 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
                        const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
-  std::vector<uint32_t*> shapes(params.num_args);
-  std::vector<int> ndims(params.num_args);
+  std::vector<uint32_t*> shapes(in_shape.size());
+  std::vector<int> ndims(in_shape.size());
   size_t buff_size = 0;
   for (const auto& i : in_shape) buff_size += i.ndim();
   std::vector<uint32_t> buff(buff_size);
@@ -245,7 +254,7 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   MXCallbackList *op_info = new MXCallbackList;
   CHECK(reinterpret_cast<CustomOpCreateFunc>(
       params.info->callbacks[kCustomOpPropCreateOperator])(
-          os.str().c_str(), params.num_args, shapes.data(), ndims.data(), in_type.data(),
+          os.str().c_str(), shapes.size(), shapes.data(), ndims.data(), in_type.data(),
           op_info, params.info->contexts[kCustomOpPropCreateOperator]));
 
   CustomParam state = params;
@@ -342,7 +351,102 @@ void Backward(const OpStatePtr& state,
   Imperative::Get()->set_is_recording(prev_recording);
 }
 
+inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int>* iattr,
+                                     std::vector<int>* oattr) {
+  const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
+  if (params.info->num_callbacks <= kCustomOpPropBackwardInferStorageType) {
+    for (size_t i = 0; i < iattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
+    }
+    for (size_t i = 0; i < oattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
+    }
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+    return true;
+  }
+
+  std::vector<int> stypes;
+  stypes.reserve(params.num_outs * 2 + params.num_args * 2 + params.num_auxs);
+  for (size_t i = 0; i < iattr->size(); ++i) {
+    stypes.push_back((*iattr)[i]);
+  }
+  for (size_t i = 0; i < oattr->size(); ++i) {
+    stypes.push_back((*oattr)[i]);
+  }
+
+  CHECK(reinterpret_cast<CustomOpBackwardInferStorageTypeFunc>(
+      params.info->callbacks[kCustomOpPropBackwardInferStorageType])(
+      stypes.size(), stypes.data(),
+      params.info->contexts[kCustomOpPropBackwardInferStorageType]));
+  for (size_t i = 0; i < 2 * params.num_outs + params.num_args; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, stypes[i]);
+  }
+  for (size_t i = 0; i < params.num_args; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(
+        *oattr, i, stypes[i + 2 * params.num_outs + params.num_args]);
+  }
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(
+        *iattr, i + 2 * params.num_outs + params.num_args,
+        stypes[i + 2 * params.num_outs + 2 * params.num_args]);
+  }
+
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
+
+// infer storage function for custom op, which assigns kDefaultStorage for
+// all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
+inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                             DispatchMode* dispatch_mode,
+                             std::vector<int>* iattr, std::vector<int>* oattr) {
+  const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
+
+  if (params.info->num_callbacks <= kCustomOpPropInferStorageType) {
+    for (size_t i = 0; i < iattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, kDefaultStorage);
+    }
+    for (size_t i = 0; i < oattr->size(); i++) {
+      STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, kDefaultStorage);
+    }
+    DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+    return true;
+  }
+
+  std::vector<int> stypes;
+  stypes.reserve(params.num_args + params.num_outs + params.num_auxs);
+  for (size_t i = 0; i < params.num_args; ++i) {
+    stypes.push_back((*iattr)[i]);
+  }
+  for (const auto& i : *oattr) {
+    stypes.push_back(i);
+  }
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    stypes.push_back((*iattr)[params.num_args + i]);
+  }
+
+  CHECK(reinterpret_cast<CustomOpInferStorageTypeFunc>(
+      params.info->callbacks[kCustomOpPropInferStorageType])(
+      stypes.size(), stypes.data(),
+      params.info->contexts[kCustomOpPropInferStorageType]));
+  for (size_t i = 0; i < params.num_args; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, stypes[i]);
+  }
+  for (size_t i = 0; i < params.num_outs; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, stypes[params.num_args + i]);
+  }
+  for (size_t i = 0; i < params.num_auxs; ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*iattr, params.num_args + i,
+                              stypes[params.num_args + params.num_outs + i]);
+  }
+
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
 
 NNVM_REGISTER_OP(Custom)
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
@@ -383,6 +487,7 @@ Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
+.set_attr<FInferStorageType>("FInferStorageType", InferStorageType)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
@@ -404,7 +509,8 @@ NNVM_REGISTER_OP(_backward_Custom)
     return ExecType::kLocal;
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardInferStorageType);
 
 }  // namespace custom
 }  // namespace op

@@ -18,6 +18,7 @@
 from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import contrib
+from mxnet.test_utils import almost_equal
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -91,6 +92,50 @@ def test_convgru():
 
     cell = contrib.rnn.Conv3DGRUCell((10, 20, 30, 50), 100, 3, 3, prefix='rnn_')
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+
+
+def test_conv_fill_shape():
+    cell = contrib.rnn.Conv1DLSTMCell((0, 7), 10, (3,), (3,))
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
+    assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
+
+
+def test_vardrop():
+    def check_vardrop(drop_inputs, drop_states, drop_outputs):
+        cell = contrib.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100, prefix='rnn_'),
+                                                  drop_outputs=drop_outputs,
+                                                  drop_states=drop_states,
+                                                  drop_inputs=drop_inputs)
+        cell.collect_params().initialize(init='xavier')
+        input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
+        with mx.autograd.record():
+            outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
+            mask1 = cell.drop_outputs_mask.asnumpy()
+            mx.nd.waitall()
+            outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
+            mask2 = cell.drop_outputs_mask.asnumpy()
+        assert not almost_equal(mask1, mask2)
+        assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
+
+        inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+        outputs, _ = cell.unroll(3, inputs, merge_outputs=False)
+        outputs = mx.sym.Group(outputs)
+
+        args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+        assert outs == [(10, 100), (10, 100), (10, 100)]
+
+        cell.reset()
+        cell.hybridize()
+        with mx.autograd.record():
+            outputs3, _ = cell.unroll(3, input_data, merge_outputs=True)
+            mx.nd.waitall()
+            outputs4, _ = cell.unroll(3, input_data, merge_outputs=True)
+        assert not almost_equal(outputs3.asnumpy(), outputs4.asnumpy())
+        assert not almost_equal(outputs1.asnumpy(), outputs3.asnumpy())
+
+    check_vardrop(0.5, 0.5, 0.5)
+    check_vardrop(0.5, 0, 0.5)
 
 
 if __name__ == '__main__':

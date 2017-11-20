@@ -37,6 +37,7 @@ In the rest of this document, we list routines provided by the `ndarray.linalg` 
     sumlogdiag
     syrk
     gelqf
+    syevd
 ```
 
 ## API Reference

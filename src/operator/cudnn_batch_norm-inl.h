@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cudnn_batch_norm-inl.h
  * \brief
  * \author Junyuan Xie

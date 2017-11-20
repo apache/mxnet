@@ -17,7 +17,6 @@
 # under the License.
 
 MXNET_HOME=${PWD}
-export LD_LIBRARY_PATH=${MXNET_HOME}/lib
 export PERL5LIB=${MXNET_HOME}/perl5/lib/perl5
 
 cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/

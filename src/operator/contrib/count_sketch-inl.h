@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file count_sketch-inl.h
  * \brief count_sketch operator and symbol
  * \author Chen Zhu

@@ -19,6 +19,8 @@ import mxnet as mx
 from mxnet import gluon
 import numpy as np
 from numpy.testing import assert_allclose
+import unittest
+from mxnet.test_utils import almost_equal
 
 
 def test_rnn():
@@ -205,7 +207,6 @@ def check_rnn_forward(layer, inputs, deterministic=True):
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 
-
 def test_rnn_cells():
     check_rnn_forward(gluon.rnn.LSTMCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
     check_rnn_forward(gluon.rnn.RNNCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
@@ -256,7 +257,6 @@ def check_rnn_layer_forward(layer, inputs, states=None):
     mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
     mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
-
 def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)), mx.nd.ones((2, 3, 10)))
@@ -273,6 +273,19 @@ def test_rnn_layers():
     net.collect_params().initialize()
     with mx.autograd.record():
         net(mx.nd.ones((2, 3, 10))).backward()
+
+def test_cell_fill_shape():
+    cell = gluon.rnn.LSTMCell(10)
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((2, 3, 7)))
+    assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
+
+def test_layer_fill_shape():
+    layer = gluon.rnn.LSTM(10)
+    layer.hybridize()
+    check_rnn_layer_forward(layer, mx.nd.ones((3, 2, 7)))
+    print(layer)
+    assert layer.i2h_weight[0].shape[1] == 7, layer.i2h_weight[0].shape[1]
 
 
 if __name__ == '__main__':

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file nnpack_util.h
  * \brief
  * \author Carwin

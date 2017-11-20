@@ -70,6 +70,9 @@
 
 using namespace mshadow;
 
+// Will cause clash with MKL fortran layer headers
+#if MSHADOW_USE_MKL == 0
+
 extern "C" {
 
   // Fortran signatures
@@ -109,16 +112,22 @@ extern "C" {
 
   MXNET_LAPACK_FSIG_ORGQR(sorgqr, float)
   MXNET_LAPACK_FSIG_ORGQR(dorgqr, double)
+
+  #define MXNET_LAPACK_FSIG_SYEVD(func, dtype) \
+    void func##_(char *jobz, char *uplo, int *n, dtype *a, int *lda, dtype *w, \
+                 dtype *work, int *lwork, int *iwork, int *liwork, int *info);
+
+  MXNET_LAPACK_FSIG_SYEVD(ssyevd, float)
+  MXNET_LAPACK_FSIG_SYEVD(dsyevd, double)
 }
 
-#define MXNET_LAPACK_ROW_MAJOR 101
-#define MXNET_LAPACK_COL_MAJOR 102
+#endif  // MSHADOW_USE_MKL == 0
+
 
 #define CHECK_LAPACK_UPLO(a) \
   CHECK(a == 'U' || a == 'L') << "neither L nor U specified as triangle in lapack call";
 
 inline char loup(char uplo, bool invert) { return invert ? (uplo == 'U' ? 'L' : 'U') : uplo; }
-
 
 /*!
  * \brief Transpose matrix data in memory
@@ -153,7 +162,75 @@ inline void flip<cpu, double>(int m, int n,
 }
 
 
-#if MXNET_USE_LAPACK
+#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+
+  // We interface with the C-interface of MKL
+  // as this is the preferred way.
+  #include <mkl_lapacke.h>
+
+  #define MXNET_LAPACK_ROW_MAJOR LAPACK_ROW_MAJOR
+  #define MXNET_LAPACK_COL_MAJOR LAPACK_COL_MAJOR
+
+  // These function have already matching signature.
+  #define MXNET_LAPACK_spotrf LAPACKE_spotrf
+  #define MXNET_LAPACK_dpotrf LAPACKE_dpotrf
+  #define MXNET_LAPACK_spotri LAPACKE_spotri
+  #define MXNET_LAPACK_dpotri LAPACKE_dpotri
+  #define mxnet_lapack_sposv  LAPACKE_sposv
+  #define mxnet_lapack_dposv  LAPACKE_dposv
+
+  // The following functions differ in signature from the
+  // MXNET_LAPACK-signature and have to be wrapped.
+  #define MXNET_LAPACK_CWRAP_GELQF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gelqf(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##gelqf(matrix_layout, m, n, a, lda, tau); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GELQF(s, float)
+  MXNET_LAPACK_CWRAP_GELQF(d, double)
+
+  #define MXNET_LAPACK_CWRAP_ORGLQ(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##orglq(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##orglq(matrix_layout, m, n, m, a, lda, tau); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_ORGLQ(s, float)
+  MXNET_LAPACK_CWRAP_ORGLQ(d, double)
+
+  // This has to be called internally in COL_MAJOR format even when matrix_layout
+  // is row-major as otherwise the eigenvectors would be returned as cols in a
+  // row-major matrix layout (see MKL documentation).
+  // We also have to allocate at least one DType element as workspace as the
+  // calling code assumes that the workspace has at least that size.
+  #define MXNET_LAPACK_CWRAP_SYEVD(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##syevd(int matrix_layout, char uplo, int n, dtype *a, \
+                                          int lda, dtype *w, dtype *work, int lwork, \
+                                          int *iwork, int liwork) { \
+    if (lwork != -1) { \
+      char o(loup(uplo, (matrix_layout == MXNET_LAPACK_ROW_MAJOR))); \
+      return LAPACKE_##prefix##syevd(LAPACK_COL_MAJOR, 'V', o, n, a, lda, w); \
+    } \
+    *work = 1; \
+    *iwork = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_SYEVD(s, float)
+  MXNET_LAPACK_CWRAP_SYEVD(d, double)
+
+#elif MXNET_USE_LAPACK
+
+  #define MXNET_LAPACK_ROW_MAJOR 101
+  #define MXNET_LAPACK_COL_MAJOR 102
 
   // These functions can be called with either row- or col-major format.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
@@ -237,12 +314,35 @@ inline void flip<cpu, double>(int m, int n,
   MXNET_LAPACK_CWRAP_ORGLQ(s, float)
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
 
+  // Note: Supports row-major format only. Internally, column-major is used, so all
+  // inputs/outputs are flipped (in particular, uplo is flipped).
+  #define MXNET_LAPACK_CWRAP_SYEVD(func, dtype) \
+  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, \
+                                 int lda, dtype *w, dtype *work, int lwork, \
+                                 int *iwork, int liwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      int info(0); \
+      char jobz('V'); \
+      char uplo_(loup(uplo, true)); \
+      func##_(&jobz, &uplo_, &n, a, &lda, w, work, &lwork, iwork, &liwork, &info); \
+      return info; \
+    } else { \
+      CHECK(false) << "MXNET_LAPACK_" << #func << " implemented for row-major layout only"; \
+      return 1; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_SYEVD(ssyevd, float)
+  MXNET_LAPACK_CWRAP_SYEVD(dsyevd, double)
+
 #else
 
   // use pragma message instead of warning
   #pragma message("Warning: lapack usage not enabled, linalg-operators will not be available." \
      " Ensure that lapack library is installed and build with USE_LAPACK=1 to get lapack" \
      " functionalities.")
+
+  #define MXNET_LAPACK_ROW_MAJOR 101
+  #define MXNET_LAPACK_COL_MAJOR 102
 
   // Define compilable stubs.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
@@ -254,6 +354,14 @@ inline void flip<cpu, double>(int m, int n,
   #define MXNET_LAPACK_CWRAPPER2(func, dtype) \
   inline int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
                                  int lda, dtype* tau, dtype* work, int lwork) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
+  #define MXNET_LAPACK_CWRAPPER3(func, dtype) \
+  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, \
+                                 int lda, dtype *w, dtype *work, int lwork, \
+                                 int *iwork, int liwork) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
@@ -276,6 +384,9 @@ inline void flip<cpu, double>(int m, int n,
   MXNET_LAPACK_CWRAPPER2(dgelqf, double)
   MXNET_LAPACK_CWRAPPER2(sorglq, float)
   MXNET_LAPACK_CWRAPPER2(dorglq, double)
+
+  MXNET_LAPACK_CWRAPPER3(ssyevd, float)
+  MXNET_LAPACK_CWRAPPER3(dsyevd, double)
 
 #endif
 

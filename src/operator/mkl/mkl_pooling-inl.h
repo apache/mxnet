@@ -181,8 +181,7 @@ class MKLPoolingOp : public Operator {
       algorithm = dnnAlgorithmPoolingMax;
       break;
     case pool_enum::kAvgPooling:
-      algorithm = (param_.pooling_convention == pool_enum::kValid) ?
-          dnnAlgorithmPoolingAvgIncludePadding : dnnAlgorithmPoolingAvg;
+      algorithm = dnnAlgorithmPoolingAvgIncludePadding;
 
       break;
     default:

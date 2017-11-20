@@ -261,11 +261,9 @@ class ResNetV1(HybridBlock):
                 stride = 1 if i == 0 else 2
                 self.features.add(self._make_layer(block, num_layer, channels[i+1],
                                                    stride, i+1, in_channels=channels[i]))
+            self.features.add(nn.GlobalAvgPool2D())
 
-            self.classifier = nn.HybridSequential(prefix='')
-            self.classifier.add(nn.GlobalAvgPool2D())
-            self.classifier.add(nn.Flatten())
-            self.classifier.add(nn.Dense(classes, in_units=channels[-1]))
+            self.output = nn.Dense(classes, in_units=channels[-1])
 
     def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
         layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
@@ -278,7 +276,7 @@ class ResNetV1(HybridBlock):
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
 
         return x
 
@@ -322,13 +320,12 @@ class ResNetV2(HybridBlock):
                 self.features.add(self._make_layer(block, num_layer, channels[i+1],
                                                    stride, i+1, in_channels=in_channels))
                 in_channels = channels[i+1]
+            self.features.add(nn.BatchNorm())
+            self.features.add(nn.Activation('relu'))
+            self.features.add(nn.GlobalAvgPool2D())
+            self.features.add(nn.Flatten())
 
-            self.classifier = nn.HybridSequential(prefix='')
-            self.classifier.add(nn.BatchNorm())
-            self.classifier.add(nn.Activation('relu'))
-            self.classifier.add(nn.GlobalAvgPool2D())
-            self.classifier.add(nn.Flatten())
-            self.classifier.add(nn.Dense(classes, in_units=in_channels))
+            self.output = nn.Dense(classes, in_units=in_channels)
 
     def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
         layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
@@ -341,7 +338,7 @@ class ResNetV2(HybridBlock):
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 

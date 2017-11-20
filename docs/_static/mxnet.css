@@ -339,6 +339,20 @@ img {
 
 .github-btn { border: 0; overflow: hidden }
 
+.boxed {
+    border: 1px solid rgb(57, 144, 211);
+    background: #0079b2;
+    color: white;
+    font-weight: bold
+}
+
+.boxed-bordered {
+    border: 3px solid rgba(0,0,0,.05);
+    background: #0079b2;
+    font-weight: bold;
+    color: white;
+}
+
 /*burger icon*/
 div .burgerIcon {
     font-size: 25px;
@@ -1156,6 +1170,8 @@ dl.last.docutils dt{
 
 dl.docutils dt {
     color: #555;
+    background-color: #f0f0f0;
+    border-bottom: solid #ccc;
 }
 
 /*----------------Model zoo page style------------------*/
