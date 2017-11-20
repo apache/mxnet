@@ -106,12 +106,105 @@ static void ToTensor(const nnvm::NodeAttrs &attrs,
   });
 }
 
+struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
+  nnvm::Tuple<float> mean;
+  nnvm::Tuple<float> std;
+  DMLC_DECLARE_PARAMETER(NormalizeParam) {
+    DMLC_DECLARE_FIELD(mean)
+    .describe("Sequence of mean for each channel.");
+    DMLC_DECLARE_FIELD(std)
+    .describe("Sequence of standard deviations for each channel.");
+  }
+};
+
+struct normalize {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+                                  const OpReqType req,
+                                  const int nchannel, const int size,
+                                  const float *mean, const float *std) {
+    int c = 0;
+    switch (nchannel) {
+      case 1:
+        break;
+      case 3:
+        if (i < size) {
+          c = 0;
+        } else if (i < (size << 1)) {
+          c = 1;
+        } else {
+          c = 2;
+        }
+        break;
+      default:
+        LOG(FATAL) << "not support channel" << nchannel;
+    }
+    float m = (mean ? mean[c] : 0);
+    KERNEL_ASSIGN(out[i], req, static_cast<DType>((in[i] - m) / std[c]));
+  }
+};
+
+static void NormalizeCheckParam(const nnvm::Tuple<float> &mean,
+                                const nnvm::Tuple<float> &std,
+                                const int nchannel) {
+  CHECK(mean.ndim() == 1 || mean.ndim() == 3)
+    << "Mean must be in dimension 1 or 3.";
+  CHECK(std.ndim() == 1 || std.ndim() == 3)
+    << "Standard deviations must be in dimension 1 or 3.";
+  CHECK(nchannel == 1 || nchannel == 3) << "Image channel must be 1 or 3.";
+  CHECK_EQ(mean.ndim(), nchannel)
+    << "Mean dimension does not agree with image channel.";
+  CHECK_EQ(std.ndim(), nchannel)
+    << "Standard deviations dimension does not agree with image channel.";
+  for (uint32_t c = 0; c < std.ndim(); ++c) {
+    CHECK(std[c] > 0) << "Invalid standard deviation " << std[c];
+  }
+}
+
 template<typename xpu>
 static void Normalize(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  auto mean = param.mean;
+  auto std = param.std;
+
+  int nchannel = inputs[0].shape_[0];
+  NormalizeCheckParam(mean, std, nchannel);
+
+  int size = inputs[0].Size() / nchannel;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      mxnet_op::Kernel<normalize, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(),
+        Req, nchannel, size, mean.begin(), std.begin());
+    });
+  });
+}
+
+template<typename xpu>
+static void NormalizeBackward(const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  int nchannel = inputs[0].shape_[0];
+
+  NormalizeCheckParam(param.mean, param.std, nchannel);
+
+  int size = inputs[0].Size() / nchannel;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      mxnet_op::Kernel<normalize, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(),
+        Req, nchannel, size, nullptr, param.std.begin());
+      });
+  });
 }
 
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
