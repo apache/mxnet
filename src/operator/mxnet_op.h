@@ -279,7 +279,7 @@ MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob&
 
 /*! \brief Binary op backward gradient OP wrapper */
 template<typename GRAD_OP>
-struct backward_grad : public tunable {
+struct backward_grad {
   /* \brief Backward calc with grad
    * \param a - output grad
    * \param args... - data to grad calculation op (what this is -- input, output, etc. -- varies)
@@ -291,11 +291,17 @@ struct backward_grad : public tunable {
   }
 };
 
+/*! \brief Binary op backward gradient OP wrapper (tuned) */
+template<typename GRAD_OP>
+struct backward_grad_tuned : public backward_grad<GRAD_OP>, public tunable {
+  using backward_grad<GRAD_OP>::Map;
+};
+
 /*! \brief Select assignment operation based upon the req value
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
  */
 template<typename OP, int req>
-struct op_with_req : public tunable_wrapper {
+struct op_with_req {
   typedef OP Operation;
 
   /*! \brief input is one tensor */
@@ -360,7 +366,6 @@ struct Kernel<OP, cpu> {
    * operator_tune.cc
    * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
    * \param N Number of iterations
-   * \param dest Destination pointer (used to infer DType)
    * \param args Varargs to eventually pass to the OP::Map() functoion
    */
   template<typename ...Args>
@@ -386,36 +391,74 @@ struct Kernel<OP, cpu> {
     return true;
   }
 
+  /*!
+   * \brief Launch a tunable OP with explicitly-supplied data type
+   * \tparam DType Data type
+   * \tparam OP type
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param s Stream (usually null for CPU)
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \return Always true
+   */
   template<typename DType, typename T = OP, typename ...Args>
-  inline static typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
-  Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+  static MSHADOW_CINLINE
+  typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
+  LaunchByType(mshadow::Stream<cpu> *s, const int N, Args... args) {
     LaunchTuned<T, DType>(s, N, args...);
     return true;
   }
 
+  /*!
+   * \brief Launch a tunable OP with implicitly-supplied data type
+   * \tparam DType Data type
+   * \tparam T OP type
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param s Stream (usually null for CPU)
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \return Always true
+   */
   template<typename DType, typename T = OP, typename ...Args>
-  inline static typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
+  static MSHADOW_CINLINE
+  typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    LaunchTuned<T, DType>(s, N, dest, args...);
-    return true;
+    return LaunchByType<DType, T>(s, N, dest, args...);
   }
 
-  // Where wrapper (ie op_with_req) OP type is derived from tuned
+  /*!
+   * \brief Launch a tunable OP wrapper with implicitly-supplied data type (ie op_with_req)
+   * \tparam DType Data type
+   * \tparam T Wrapper type
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param s Stream (usually null for CPU)
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \return Always true
+   */
   template<typename DType, typename T = OP, typename ...Args>
-  inline static
+  static MSHADOW_CINLINE
   typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
-  Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+  LaunchByType(mshadow::Stream<cpu> *s, const int N, Args... args) {
     LaunchTuned<typename T::Operation, DType>(s, N, args...);
     return true;
   }
 
-  // Where wrapper (ie op_with_req) OP type is derived from tuned
+  /*!
+   * \brief Launch a tunable OP wrapper with explicitly-supplied data type (ie op_with_req)
+   * \tparam DType Data type
+   * \tparam T Wrapper type
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param s Stream (usually null for CPU)
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \return Always true
+   */
   template<typename DType, typename T = OP, typename ...Args>
-  inline static
+  static MSHADOW_CINLINE
   typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
-    return true;
+    return LaunchByType<DType, T>(s, N, dest, args...);
   }
 
   /*!

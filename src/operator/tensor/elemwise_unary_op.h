@@ -360,7 +360,7 @@ class UnaryOp : public OpBase {
 
 /*! \brief Map legacy unary_bwd to backward_grad */
 template<typename GRAD_OP>
-using unary_bwd = ::mxnet::op::mxnet_op::backward_grad<GRAD_OP>;
+using unary_bwd = ::mxnet::op::mxnet_op::backward_grad_tuned<GRAD_OP>;
 
 struct CastParam : public dmlc::Parameter<CastParam> {
   // use int for enumeration

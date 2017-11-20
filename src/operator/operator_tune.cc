@@ -125,15 +125,15 @@ struct static_init_var {
  * \brief Implement tuning objects for a backward unary kernel operator
  */
 #define _IMPLEMENT_UNARY_WORKLOAD_BWD(__op$, __typ$) \
-  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad<__op$>, __typ$); \
+  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
   namespace mxnet_op { \
   template<> \
-  bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::UseOMP( \
-    size_t N, size_t omp_threads) { \
+  bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+    UseOMP(size_t N, size_t omp_threads) { \
     return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
-      mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>>(N, omp_threads); \
+      mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::init_ = \
+  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>::init_ = \
     mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
       mxnet::op::UnaryOpTune<__typ$>::TuneUnaryBackwardOperator<__op$>)
 
@@ -156,15 +156,16 @@ struct static_init_var {
  * \brief Implement tuning objects for a backward binary kernel operator
  */
 #define _IMPLEMENT_BINARY_WORKLOAD_BWD(__op$, __typ$) \
-  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad<__op$>, __typ$); \
+  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
   namespace mxnet_op { \
   template<> \
-    bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::UseOMP( \
-    size_t N, size_t omp_threads) { \
+    bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+      UseOMP(size_t N, size_t omp_threads) { \
     return mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
-      mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>>(N, omp_threads); \
+      mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::init_ = \
+  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, \
+    __typ$>::init_ = \
     mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>(  \
       mxnet::op::BinaryOpTune<__typ$>::TuneBinaryBackwardOperator<__op$>)
 

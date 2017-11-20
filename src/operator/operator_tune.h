@@ -26,7 +26,7 @@
 #include <atomic>
 #include <string>
 
-//#define MXNET_DEBUG_TUNING_LAUNCH
+#define MXNET_DEBUG_TUNING_LAUNCH
 
 #ifdef MXNET_DEBUG_TUNING_LAUNCH
 #include <cxxabi.h>
@@ -283,7 +283,6 @@ inline int64_t get_workload(Function function) {
 }
 
 struct tunable {};
-struct tunable_wrapper {};
 
 }  // namespace mxnet_op
 }  // namespace op

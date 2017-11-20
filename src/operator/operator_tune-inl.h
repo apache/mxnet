@@ -667,8 +667,8 @@ class UnaryOpTune : public OperatorTune<DType> {
    */
   template<typename OP>
   static void TuneUnaryBackwardOperator() {
-    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad<OP>, DType>::workload_ =
-      GetBinaryWorkload<mxnet::op::mxnet_op::backward_grad<OP>>();
+    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad_tuned<OP>, DType>::workload_ =
+      GetBinaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
     if (Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_UNARY_WORKLOAD_BWD("
                 << Super::template type_name<OP>()
@@ -739,8 +739,8 @@ class BinaryOpTune : public UnaryOpTune<DType> {
    */
   template<typename OP>
   static void TuneBinaryBackwardOperator() {
-    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad<OP>, DType>::workload_ =
-      Super::template GetTertiaryWorkload<mxnet::op::mxnet_op::backward_grad<OP>>();
+    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad_tuned<OP>, DType>::workload_ =
+      Super::template GetTertiaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
     if (Super::Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_BINARY_WORKLOAD_BWD("
                 << Super::template type_name<OP>()
