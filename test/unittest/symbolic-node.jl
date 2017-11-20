@@ -53,6 +53,23 @@ function test_internal()
   @test mx.list_arguments(fc1) == mx.list_arguments(oldfc)
 end
 
+function test_get_children()
+  info("SymbolicNode::get_children")
+
+  let x = mx.Variable(:x), y = mx.Variable(:y)
+    z = x + y
+    @test length(mx.list_outputs(z)) == 1
+    @test length(mx.list_outputs(mx.get_children(z))) == 2
+    @test mx.list_outputs(mx.get_children(z)) == [:x, :y]
+  end
+
+  info("SymbolicNode::get_children::on leaf")
+  let x = mx.Variable(:x)
+    @test mx.get_children(x) == nothing
+  end
+end  # test_get_children
+
+
 function test_compose()
   info("SymbolicNode::compose")
 

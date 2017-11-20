@@ -120,6 +120,35 @@ function get_internals(self :: SymbolicNode)
 end
 
 """
+    get_children(x::SymbolicNode)
+
+Gets a new grouped `SymbolicNode` whose output contains inputs to output
+nodes of the original symbol.
+
+```julia
+julia> x = mx.Variable(:x)
+MXNet.mx.SymbolicNode x
+
+julia> y = mx.Variable(:y)
+MXNet.mx.SymbolicNode y
+
+julia> z = x + y
+MXNet.mx.SymbolicNode _plus1
+
+julia> a |> mx.get_children |> mx.list_outputs
+2-element Array{Symbol,1}:
+ :x
+ :y
+```
+"""
+function get_children(x::SymbolicNode)
+  hdl = Ref{MX_handle}(C_NULL)
+  @mxcall(:MXSymbolGetChildren, (MX_handle, Ref{MX_handle}), x, hdl)
+  sym = hdl[] |> MX_SymbolHandle |> SymbolicNode
+  isempty(list_outputs(sym)) ? nothing : sym
+end
+
+"""
     get_attr(self :: SymbolicNode, key :: Symbol)
 
 Get attribute attached to this `SymbolicNode` belonging to key.

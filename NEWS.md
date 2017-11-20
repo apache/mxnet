@@ -1,3 +1,11 @@
+# v0.4.0 (#TBD)
+
+## New APIs
+
+### `SymbolicNode`
+
+* `mx.get_children` for exploring the graph programmatically. (#TBD)
+
 # v0.3.0 (2017.11.16)
 
 * Update `libmxnet` to
