@@ -24,6 +24,36 @@
 #include <vector>
 #include <set>
 #include <atomic>
+#include <string>
+
+//#define MXNET_DEBUG_TUNING_LAUNCH
+
+#ifdef MXNET_DEBUG_TUNING_LAUNCH
+#include <cxxabi.h>
+template<typename T> inline std::string type_name() {
+  const char *name = typeid(T).name();
+  int status = -4;  // some arbitrary value to eliminate the compiler warning
+  std::unique_ptr<char, void (*)(void *)> res {
+    abi::__cxa_demangle(name, nullptr, nullptr, &status),
+    &std::free
+  };
+  if (!status) {
+    return res.get();
+  }
+  return std::move(name);
+}
+#define MXNET_DEBUG_PRINT_UNIQUE_OP(__label$, __op$) \
+  { \
+    static std::mutex cs; \
+    static std::unordered_set<std::string> ops; \
+    const std::string name = type_name<__op$>(); \
+    if (ops.emplace(name).second) { \
+      std::cout << (__label$) << ": " << name << std::endl << std::flush; \
+    } \
+  }
+#else
+#define MXNET_DEBUG_PRINT_UNIQUE_OP(__label$, __op$) /* */
+#endif
 
 namespace mxnet {
 namespace op {
@@ -251,6 +281,9 @@ inline int64_t get_workload(Function function) {
   durations.insert(dd);
   return *++durations.begin();  // return median value
 }
+
+struct tunable {};
+struct tunable_wrapper {};
 
 }  // namespace mxnet_op
 }  // namespace op

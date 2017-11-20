@@ -185,7 +185,7 @@ class ElemwiseBinaryOp : public OpBase {
       });
       // lhs in-place
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, mshadow::op::mul>(
+        RspRspOp<DType, IType, op::mshadow_op::mul>(
           s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
           false, false, true, false);
       });
@@ -199,7 +199,7 @@ class ElemwiseBinaryOp : public OpBase {
       });
       // rhs in-place
       MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, mshadow::op::mul>(
+        RspRspOp<DType, IType, op::mshadow_op::mul>(
           s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
           false, false, true, false);
       });

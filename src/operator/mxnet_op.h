@@ -277,12 +277,9 @@ MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob&
   })
 }
 
-struct tunable {};
-struct tunable_wrapper {};
-
 /*! \brief Binary op backward gradient OP wrapper */
 template<typename GRAD_OP>
-struct backward_grad {
+struct backward_grad : public tunable {
   /* \brief Backward calc with grad
    * \param a - output grad
    * \param args... - data to grad calculation op (what this is -- input, output, etc. -- varies)
@@ -368,6 +365,7 @@ struct Kernel<OP, cpu> {
    */
   template<typename ...Args>
   inline static bool Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
+    MXNET_DEBUG_PRINT_UNIQUE_OP("Launch", OP);
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
@@ -402,17 +400,12 @@ struct Kernel<OP, cpu> {
     return true;
   }
 
+  // Where wrapper (ie op_with_req) OP type is derived from tuned
   template<typename DType, typename T = OP, typename ...Args>
-  inline static typename std::enable_if<std::is_base_of<tunable_wrapper, T>::value, bool>::type
+  inline static
+  typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
     LaunchTuned<typename T::Operation, DType>(s, N, args...);
-    return true;
-  }
-
-  template<typename DType, typename T = OP, typename ...Args>
-  inline static typename std::enable_if<std::is_base_of<tunable_wrapper, T>::value, bool>::type
-  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
     return true;
   }
 
@@ -420,8 +413,8 @@ struct Kernel<OP, cpu> {
   template<typename DType, typename T = OP, typename ...Args>
   inline static
   typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
-  Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
-    LaunchTuned<typename T::Operation, DType>(s, N, args...);
+  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+    LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
     return true;
   }
 
@@ -439,6 +432,7 @@ struct Kernel<OP, cpu> {
   template<typename PRIMITIVE_OP, typename DType, typename ...Args>
   static void LaunchTuned(mshadow::Stream<cpu> *, const int N, Args... args) {
 #ifdef _OPENMP
+    MXNET_DEBUG_PRINT_UNIQUE_OP("LaunchTuned", OP);
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2 || !tuned_op<PRIMITIVE_OP, DType>::UseOMP(
       static_cast<size_t>(N), static_cast<size_t>(omp_threads))) {
