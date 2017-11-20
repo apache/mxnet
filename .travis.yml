@@ -1,10 +1,13 @@
 # Documentation: http://docs.travis-ci.com/user/languages/julia/
 sudo: false
+
 language: julia
+
 os:
   - linux
   - osx
 osx_image: xcode8
+
 julia:
   - 0.6
 #  - nightly 0.6 supports depends on #170
@@ -14,6 +17,10 @@ branches:
     - master
     - stable
     - /^v\d+\.\d+(\.\d+)?(-\S*)?$/  # for tagging
+
+cache:
+  directories:
+    - $TRAVIS_BUILD_DIR/deps/src
 
 # dependent apt packages
 addons:
@@ -40,9 +47,6 @@ notifications:
   email: false
 
 script:
-  # bump the time limit of no ouput
-  # the `travis_wait` wrapper can be removed once this issue fixed:
-  # https://github.com/JuliaLang/julia/pull/23601
   - ${TRAVIS_DIR}/run_test.sh
 
 after_success:

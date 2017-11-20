@@ -70,7 +70,7 @@ end
 
 function get_cpucore()
     if haskey(ENV, "TRAVIS")  # on travis-ci
-        4
+        2
     else
         min(Sys.CPU_CORES, 8)
     end
@@ -166,17 +166,17 @@ if !libmxnet_detected
         end)
         @build_steps begin
           ChangeDirectory(_mxdir)
-          `git submodule deinit --force .`
           `git fetch`
           if libmxnet_curr_ver != "master"
             `git checkout $libmxnet_curr_ver`
           else
-            `git merge --ff origin/$libmxnet_curr_ver`
+            `git checkout origin/$libmxnet_curr_ver`
           end
           `git submodule update --init --recursive`
           `git -C mshadow checkout -- make/mshadow.mk`
-          `make clean`
-          `cp ../../cblas.h include/cblas.h`
+
+          # copying on changed, make travis caching happy
+          `../../cpcblas.sh`
 
           `sed -i -s "s/MSHADOW_CFLAGS = \(.*\)/MSHADOW_CFLAGS = \1 $ilp64/" mshadow/make/mshadow.mk`
 
