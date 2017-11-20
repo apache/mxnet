@@ -216,6 +216,13 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
 
 
 template<typename xpu>
+void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
+                                     const NDArray& input_nd,
+                                     const TBlob& idx_data,
+                                     const OpReqType req,
+                                     NDArray* output_nd);
+
+template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
 /*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.

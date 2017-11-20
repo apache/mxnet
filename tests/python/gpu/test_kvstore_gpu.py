@@ -26,9 +26,9 @@ keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
 
 
-def init_kv_with_str(stype='default'):
+def init_kv_with_str(stype='default', kv_type='local'):
     """init kv """
-    kv = mx.kv.create()
+    kv = mx.kv.create(kv_type)
     # single
     kv.init('a', mx.nd.zeros(shape, stype=stype))
     # list
@@ -37,10 +37,10 @@ def init_kv_with_str(stype='default'):
 
 
 @unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8262")
-def test_row_sparse_pull():
-    kv = init_kv_with_str('row_sparse')
-    kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
-
+def test_row_sparse_pull(kv_type='local'):
+    kv = init_kv_with_str('row_sparse', kv_type)
+    kv.init('e', mx.nd.zeros(shape).tostype('row_sparse'))
+    kv.push('e', [mx.nd.ones(shape, ctx=mx.gpu(i)).tostype('row_sparse') for i in range(2)])
     def check_row_sparse_pull(kv, count, ctx=default_context()):
         num_rows = shape[0]
         vals = []
@@ -59,7 +59,7 @@ def test_row_sparse_pull():
             excluded_row_ids = np.setdiff1d(all_row_ids, row_id.asnumpy())
             for row in range(num_rows):
                 expected_val = np.zeros_like(retained[row])
-                expected_val += 0 if row in excluded_row_ids else 1
+                expected_val += 0 if row in excluded_row_ids else 2
                 assert_almost_equal(retained[row], expected_val)
 
     check_row_sparse_pull(kv, 1, mx.gpu(0))
@@ -68,3 +68,4 @@ def test_row_sparse_pull():
 
 if __name__ == '__main__':
     test_row_sparse_pull()
+    test_row_sparse_pull('device')
