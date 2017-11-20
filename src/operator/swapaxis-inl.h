@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file swapaxis-inl.h
  * \brief
  * \author Ming Zhang

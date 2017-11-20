@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api.cc
  * \brief C API of mxnet
  */
@@ -34,6 +35,7 @@
 #include <mxnet/c_api.h>
 #include <mxnet/kvstore.h>
 #include <mxnet/rtc.h>
+#include <mxnet/storage.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -133,6 +135,12 @@ int MXSetProfilerState(int state) {
 int MXSetNumOMPThreads(int thread_num) {
   API_BEGIN();
   omp_set_num_threads(thread_num);
+  API_END();
+}
+
+int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size) {
+  API_BEGIN();
+  *prev_bulk_size = Engine::Get()->set_bulk_size(bulk_size);
   API_END();
 }
 
@@ -268,6 +276,13 @@ int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
   NDArray* dst = static_cast<NDArray*>(handle_dst);
   NDArray* src = static_cast<NDArray*>(handle_src);
   dst->SyncCopyFromNDArray(*src, -1, i);
+  API_END();
+}
+
+int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  arr->SyncCheckFormat(full_check);
   API_END();
 }
 
@@ -1226,5 +1241,33 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
 #else
   LOG(FATAL) << "Compile with USE_CUDA=1 to use GPU.";
 #endif
+  API_END();
+}
+
+
+int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shared_id) {
+  API_BEGIN();
+  NDArray* arr = reinterpret_cast<NDArray*>(handle);
+  Storage::Handle shandle;
+  if (arr->ctx().dev_type == Context::kCPUShared) {
+    arr->WaitToRead();
+    shandle = arr->storage_handle();
+    Storage::Get()->SharedIncrementRefCount(shandle);
+  } else {
+    NDArray new_arr(arr->shape(), Context::CPUShared(0), false, arr->dtype());
+    CopyFromTo(*arr, new_arr);
+    new_arr.WaitToRead();
+    shandle = new_arr.storage_handle();
+    Storage::Get()->SharedIncrementRefCount(shandle);
+  }
+  *shared_pid = shandle.shared_pid;
+  *shared_id = shandle.shared_id;
+  API_END();
+}
+
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                 mx_uint ndim, int dtype, NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(shared_pid, shared_id, TShape(shape, shape + ndim), dtype);
   API_END();
 }

@@ -1,6 +1,6 @@
-Note: Providing complete information in the most concise form is the best way to get help. This issue template serves as the checklist for essential information to most of the technical issues.
+Note: Providing complete information in the most concise form is the best way to get help. This issue template serves as the checklist for essential information to most of the technical issues and bug reports. For non-technical issues and feature requests, feel free to present the information in what you believe is the best form.
 
-If the issue is non-technical, feel free to present the information in what you believe is the best form.
+For Q & A and discussion, please start a discussion thread at https://discuss.mxnet.io 
 
 ## Description
 (Brief description of the problem in no more than 2 sentences.)

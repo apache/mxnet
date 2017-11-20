@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file rnn-inl.h
  * \brief
  * \author Sebastian Bodenstein

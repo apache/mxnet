@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file mxnet_op.h
  * \brief
  * \author Junyuan Xie
@@ -30,6 +31,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/op_attr_types.h>
 #include <algorithm>
+#include "../engine/openmp.h"
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -105,6 +107,28 @@ inline int get_num_threads<cpu>(const int N) {
     break;                                          \
   default:                                          \
     break;                                          \
+  }
+
+
+#define MXNET_NDIM_SWITCH(NDim, ndim, ...)         \
+  if (NDim == 0) {                                 \
+  } else if (NDim == 1) {                          \
+    const int ndim = 1;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 2) {                          \
+    const int ndim = 2;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 3) {                          \
+    const int ndim = 3;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 4) {                          \
+    const int ndim = 4;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 5) {                          \
+    const int ndim = 5;                            \
+    {__VA_ARGS__}                                  \
+  } else {                                         \
+    LOG(FATAL) << "ndim=" << NDim << "too large "; \
   }
 
 
@@ -200,6 +224,37 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   return stride;
 }
 
+/* Increment coordinates and modify index */
+template<int ndim>
+MSHADOW_XINLINE void inc(Shape<ndim>* coord, const Shape<ndim>& shape,
+                         index_t* idx, const Shape<ndim>& stride) {
+  ++(*coord)[ndim-1];
+  *idx += stride[ndim-1];
+  #pragma unroll
+  for (int i = ndim - 1; i > 0 && (*coord)[i] >= shape[i]; --i) {
+    (*coord)[i] -= shape[i];
+    ++(*coord)[i-1];
+    *idx = *idx + stride[i-1] - shape[i] * stride[i];
+  }
+}
+
+/* Increment coordinates and modify index */
+template<int ndim>
+MSHADOW_XINLINE void inc(Shape<ndim>* coord, const Shape<ndim>& shape,
+                         index_t* idx1, const Shape<ndim>& stride1,
+                         index_t* idx2, const Shape<ndim>& stride2) {
+  ++(*coord)[ndim-1];
+  *idx1 += stride1[ndim-1];
+  *idx2 += stride2[ndim-1];
+  #pragma unroll
+  for (int i = ndim - 1; i > 0 && (*coord)[i] >= shape[i]; --i) {
+    (*coord)[i] -= shape[i];
+    ++(*coord)[i-1];
+    *idx1 = *idx1 + stride1[i-1] - shape[i] * stride1[i];
+    *idx2 = *idx2 + stride2[i-1] - shape[i] * stride2[i];
+  }
+}
+
 /*!
  * \brief Simple copy data from one blob to another
  * \param to Destination blob
@@ -288,55 +343,52 @@ struct op_with_req {
   }
 };
 
-/*!
- * \brief Set to immediate scalar value kernel
- * \tparam val Scalar immediate
- */
-template<int val>
-struct set_to_int {
-  // mxnet_op version (when used directly with Kernel<>::Launch()) */
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out) {
-    out[i] = DType(val);
-  }
-  // mshadow_op version (when used with op_with_req<>)
-  MSHADOW_XINLINE static int Map() {
-    return val;
-  }
-};
-
-/*! \brief Special-case kernel shortcut for setting to zero */
-using set_zero = set_to_int<0>;
-
 template<typename OP, typename xpu>
 struct Kernel;
 
-
 template<typename OP>
 struct Kernel<OP, cpu> {
+  /*! \brief Launch CPU kernel */
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+  inline static void Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
 #ifdef _OPENMP
-    const int omp_cores = Engine::Get()->num_omp_threads_per_worker();
-    if (omp_cores <= 1) {
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
       // Zero means not to use OMP, but don't interfere with external OMP behavior
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     } else {
-      #pragma omp parallel for num_threads(omp_cores)
+      #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     }
 #else
     for (int i = 0; i < N; ++i) {
-        OP::Map(i, args...);
+      OP::Map(i, args...);
     }
 #endif
   }
-};
 
+  template<typename ...Args>
+  inline static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads <= 1) {
+      OP::Map(0, N, args...);
+    } else {
+      int length = (N + omp_threads - 1) / omp_threads;
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < N; i += length) {
+        OP::Map(i, i + length > N ? N - i : length, args...);
+      }
+    }
+#else
+    OP::Map(0, N, args...);
+#endif
+  }
+};
 
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
@@ -346,8 +398,16 @@ __global__ void mxnet_generic_kernel(int N, Args... args) {
   }
 }
 
+template<typename OP, typename ...Args>
+__global__ void mxnet_generic_kernel_ex(int N, Args... args) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
+    OP::Map(i, 1, args...);
+  }
+}
+
 template<typename OP>
 struct Kernel<OP, gpu> {
+  /*! \brief Launch GPU kernel */
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
     using namespace mshadow::cuda;
@@ -356,10 +416,42 @@ struct Kernel<OP, gpu> {
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
   }
+
+  template<typename ...Args>
+  inline static void LaunchEx(mshadow::Stream<gpu> *s, int N, Args... args) {
+    using namespace mshadow::cuda;
+    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+    mxnet_generic_kernel_ex<OP, Args...>
+      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        N, args...);
+  }
 };
 #endif  // __CUDACC__
 
+/*!
+ * \brief Set to immediate scalar value kernel
+ * \tparam val Scalar immediate
+ */
+template<int val>
+struct set_to_int {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*!
+ * \brief Special-case kernel shortcut for setting to zero and one
+ */
+using set_zero = set_to_int<0>;
+using set_one  = set_to_int<1>;
 }  // namespace mxnet_op
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_MXNET_OP_H_

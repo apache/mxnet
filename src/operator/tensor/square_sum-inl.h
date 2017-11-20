@@ -179,7 +179,7 @@ struct SquareSumRspKernel<req, 1, true> {
   }
 };
 
-template<int req, int axis, int ograd_stype = kDefaultStorage>
+template<int req, int axis, int ograd_stype = kDefaultStorage, bool is_data_full_rsp = false>
 struct SquareSumRspGradKernel;
 
 template<int req>
@@ -224,11 +224,10 @@ struct SquareSumRspGradKernel<req, 1> {
 
 /*!
  * Note: This kernel assumes that the ograd and in_data
- * are all rsp and have equal row_idx array, or
- * in_data is a full rsp.
+ * are all rsp and have equal row_idx array.
  */
 template<int req>
-struct SquareSumRspGradKernel<req, 1, kRowSparseStorage> {
+struct SquareSumRspGradKernel<req, 1, kRowSparseStorage, false> {
   /*!
    * \param i index of igrad.data()
    * \param in_grad_row_idx row_idx of the gradient of the op's input
@@ -243,9 +242,35 @@ struct SquareSumRspGradKernel<req, 1, kRowSparseStorage> {
                                   const DType* in_data, const int64_t num_cols) {
     const int64_t row = i / num_cols;
     in_grad_row_idx[row] = out_grad_row_idx[row];
-    KERNEL_ASSIGN(in_grad[i], req, 2*in_data[i]*out_grad[row]);
+    KERNEL_ASSIGN(in_grad[i], req, 2 * in_data[i] * out_grad[row]);
   }
 };
+
+/*!
+ * Note: This kernel assumes that the ograd and in_data
+ * are all rsp and in_data is a full rsp.
+ */
+template<int req>
+struct SquareSumRspGradKernel<req, 1, kRowSparseStorage, true> {
+  /*!
+   * \param i index of igrad.data()
+   * \param in_grad_row_idx row_idx of the gradient of the op's input
+   * \param in_grad gradient of the op's input
+   * \param out_grad_row_idx row_idx of the gradient of the op's output
+   * \param out_grad gradient of the op's output
+   * \param in_data op's input
+   */
+  template<typename IType, typename DType>
+  MSHADOW_XINLINE static void Map(int i, IType* in_grad_row_idx, DType* in_grad,
+                                  const IType* out_grad_row_idx, const DType* out_grad,
+                                  const DType* in_data, const int64_t num_cols) {
+    const int64_t row = i / num_cols;
+    const int64_t row_dns = out_grad_row_idx[row];
+    in_grad_row_idx[row] = row_dns;
+    KERNEL_ASSIGN(in_grad[i], req, 2 * in_data[row_dns*num_cols+i%num_cols] * out_grad[row]);
+  }
+};
+
 
 template<typename xpu>
 void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
@@ -334,6 +359,12 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
   }
 }
 
+/*!\brief
+ * This function only supports the following three situations:
+ * 1. ograd is a dns and input is an rsp
+ * 2. ograd and input are both rsp and have the same row_idx array
+ * 3. ograd and input are both rsp and input is a full rsp
+ */
 template<typename xpu>
 void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
                           mshadow::Stream<xpu>* s,
@@ -350,23 +381,21 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(input.storage_type(), kRowSparseStorage);
   CHECK_EQ(igrad->storage_type(), kRowSparseStorage);
   CHECK_EQ(req, kWriteTo);
-  if (!input.storage_initialized()) {
+  if (!input.storage_initialized()
+      || (ograd.storage_type() == kRowSparseStorage && !ograd.storage_initialized())) {
     FillZerosRspImpl(s, *igrad);
     return;
   }
 
   using namespace mxnet_op;
-  // TODO(junwu) change the input of CheckAndAlloc
-  // if we want to support differen row idx arrays
-  // for ograd and input when they are both row-sparse ndarrays
-  igrad->CheckAndAlloc({input.aux_shape(rowsparse::kIdx)});
   const int64_t num_cols = input.storage_shape()[1];
-  const TBlob& igrad_data = igrad->data();
-  const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
   const TBlob& ograd_data = ograd.data();
   const TBlob& in_data = input.data();
   const TBlob in_row_idx = input.aux_data(rowsparse::kIdx);
   if (ograd.storage_type() == kDefaultStorage) {
+    igrad->CheckAndAlloc({input.aux_shape(rowsparse::kIdx)});
+    const TBlob& igrad_data = igrad->data();
+    const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
     if (0 == param.axis[0]) {  // forward is sum per column
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
@@ -396,18 +425,28 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(ograd.shape().ndim(), 2U);
     const TBlob ograd_row_idx = ograd.aux_data(rowsparse::kIdx);
     CHECK(ograd_row_idx.Size() == in_row_idx.Size() || in_row_idx.Size() == in_data.shape_[0]);
+    igrad->CheckAndAlloc({ograd.aux_shape(rowsparse::kIdx)});
+    const TBlob& igrad_data = igrad->data();
+    const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
     MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
       if (std::is_same<xpu, cpu>::value) {
-        const IType* first1 = ograd_row_idx.dptr<IType>();
-        const IType* last1 = first1 + ograd_row_idx.Size();
-        const IType* first2 = in_row_idx.dptr<IType>();
         // when ograd_row_idx and in_row_idx have the same size and input is not a full rsp
         // ograd_row_idx and in_row_idx are expected to have the same elements
-        if (ograd_row_idx.Size() == in_row_idx.Size() && in_row_idx.Size() != in_data.shape_[0]) {
+        if (in_row_idx.Size() != input.shape()[0]) {  // if input data is not a full rsp
+          CHECK_EQ(ograd_row_idx.Size(), in_row_idx.Size()) << "SquareSumRspGradImpl only supports"
+                                                               " equal ograd_row_idx and"
+                                                               " input_row_idx when ograd and"
+                                                               " input are both row-sparse and"
+                                                               " input data is not a full"
+                                                               " row-sparse matrix";
+          const IType* first1 = ograd_row_idx.dptr<IType>();
+          const IType* last1 = first1 + ograd_row_idx.Size();
+          const IType* first2 = in_row_idx.dptr<IType>();
           CHECK(std::equal(first1, last1, first2)) << "SquareSumRspGradImpl only supports"
                                                       " equal ograd_row_idx and input_row_idx"
                                                       " when ograd and input are both"
-                                                      " row-sparse";
+                                                      " row-sparse and input data is not a full"
+                                                      " row-sparse matrix";
         }
       } else {
         LOG(FATAL) << "SquareSumRspGradImpl has not implemented GPU version when"
@@ -415,10 +454,17 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
       }
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          Kernel<SquareSumRspGradKernel<req_type, 1, kRowSparseStorage>, xpu>::Launch(
-              s, igrad_data.Size(), igrad_row_idx.dptr<IType>(),
-              igrad_data.dptr<DType>(), ograd_row_idx.dptr<IType>(),
-              ograd_data.dptr<DType>(), in_data.dptr<DType>(), num_cols);
+          if (in_row_idx.Size() != input.shape()[0]) {  // input data is not a full rsp
+            Kernel<SquareSumRspGradKernel<req_type, 1, kRowSparseStorage, false>, xpu>::Launch(
+                s, igrad_data.Size(), igrad_row_idx.dptr<IType>(),
+                igrad_data.dptr<DType>(), ograd_row_idx.dptr<IType>(),
+                ograd_data.dptr<DType>(), in_data.dptr<DType>(), num_cols);
+          } else {  // input data is a full rsp
+            Kernel<SquareSumRspGradKernel<req_type, 1, kRowSparseStorage, true>, xpu>::Launch(
+                s, igrad_data.Size(), igrad_row_idx.dptr<IType>(),
+                igrad_data.dptr<DType>(), ograd_row_idx.dptr<IType>(),
+                ograd_data.dptr<DType>(), in_data.dptr<DType>(), num_cols);
+          }
         })
       })
     })

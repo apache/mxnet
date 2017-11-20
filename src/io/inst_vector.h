@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file inst_vector.h
  * \brief holder of a sequence of DataInst in CPU
  *        that are not necessarily of same shape

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op.cc
  * \brief CPU Implementation of unary function.
  */
@@ -130,6 +131,15 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rminus_scalar)
 .add_alias("_RMinusScalar");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_mul_scalar)
+.describe(R"doc(Multiply an array with a scalar.
+
+``_mul_scalar`` only operates on data array of input if input is sparse.
+
+For example, if input of shape (100, 100) has only 2 non zero elements,
+i.e. input.data = [5, 6], scalar = nan,
+it will result output.data = [nan, nan] instead of 10000 nans.
+
+)doc" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", BinaryScalarStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::mul>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::mul>)
@@ -143,9 +153,27 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_backward_mul_scalar)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::mul>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_div_scalar)
+.describe(R"doc(Divide an array with a scalar.
+
+``_div_scalar`` only operates on data array of input if input is sparse.
+
+For example, if input of shape (100, 100) has only 2 non zero elements,
+i.e. input.data = [5, 6], scalar = nan,
+it will result output.data = [nan, nan] instead of 10000 nans.
+
+)doc" ADD_FILELINE)
+.set_attr<FInferStorageType>("FInferStorageType", BinaryScalarStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::div>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_div_scalar"})
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::div>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_div_scalar"})
 .add_alias("_DivScalar");
+
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_backward_div_scalar)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", BinaryScalarStorageType)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow::op::div>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, mshadow::op::div>);
+
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rdiv_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rdiv>)

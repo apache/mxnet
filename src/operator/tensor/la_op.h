@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file la_op.h
  * \brief Operators for advanced linear algebra.
  */

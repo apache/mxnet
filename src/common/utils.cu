@@ -29,6 +29,12 @@ namespace mxnet {
 namespace common {
 
 template<>
+void CheckFormatWrapper<gpu>(const RunContext &rctx, const NDArray &input,
+                             const TBlob &err_cpu,  const bool full_check) {
+  CheckFormatImpl<gpu>(rctx, input, err_cpu, full_check);
+}
+
+template<>
 void CastStorageDispatch<gpu>(const OpContext& ctx,
                               const NDArray& input,
                               const NDArray& output) {

@@ -24,6 +24,7 @@ from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
 import unittest
+import mxnet.autograd
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
@@ -86,14 +87,6 @@ def test_ndarray_setitem():
     x[1] = 1
     x_np = np.zeros(shape, dtype=x.dtype)
     x_np[1] = 1
-    assert same(x.asnumpy(), x_np)
-
-    # all-dim indexing
-    x = mx.nd.zeros(shape)
-    val = mx.nd.ones((3, 2, 1))
-    x[:, 1:3, 1] = val
-    x_np = np.zeros(shape, dtype=x.dtype)
-    x_np[:, 1:3, 1:2] = val.asnumpy()
     assert same(x.asnumpy(), x_np)
 
     # short all-dim indexing
@@ -593,7 +586,7 @@ def test_order(ctx=default_context()):
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
     gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
-    
+
     # test topk with a big shape
     a = mx.nd.arange(0, 54686454, step=1, repeat=1)
     assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
@@ -803,6 +796,135 @@ def test_bool():
     assert not bool(mx.nd.array([]))
     assert not bool(mx.nd.zeros((1,)))
     assert bool(mx.nd.ones((1,)))
+
+
+def test_ndarray_indexing():
+    def test_getitem(np_array, index, is_scalar=False):
+        """`is_scalar` indicates whether we should expect a scalar for the result.
+        If so, the indexed array of NDArray should call asscalar to compare
+        with numpy's indexed array."""
+        np_index = index
+        if isinstance(index, mx.nd.NDArray):
+            np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = []
+            for idx in index:
+                if isinstance(idx, mx.nd.NDArray):
+                    np_index.append(idx.asnumpy())
+                else:
+                    np_index.append(idx)
+            np_index = tuple(np_index)
+
+        np_indexed_array = np_array[np_index]
+        mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
+        mx_indexed_array = mx_array[index]
+        if is_scalar:
+            mx_indexed_array = mx_indexed_array.asscalar()
+        else:
+            mx_indexed_array = mx_indexed_array.asnumpy()
+        assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
+
+    def test_setitem(np_array, index, is_scalar):
+        def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
+            if np_value is not None:
+                np_array[np_index] = np_value
+            else:
+                np_array[np_index] = mx_value
+            mx_array[mx_index] = mx_value
+            assert same(np_array, mx_array.asnumpy())
+
+        np_index = index
+        if isinstance(index, mx.nd.NDArray):
+            np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = []
+            for idx in index:
+                if isinstance(idx, mx.nd.NDArray):
+                    np_index.append(idx.asnumpy())
+                else:
+                    np_index.append(idx)
+            np_index = tuple(np_index)
+
+        mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
+        np_array = mx_array.asnumpy()
+        if is_scalar:
+            # test value is a numeric type
+            assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
+            value_nd = [np.random.randint(low=-10000, high=0)]
+            assert_same(np_array, np_index, mx_array, index, value_nd, value_nd[0])
+        else:
+            indexed_array_shape = np_array[np_index].shape
+            np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
+            # test value is a numpy array without broadcast
+            assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+            # test value is an numeric_type
+            assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
+            if len(indexed_array_shape) > 1:
+                # test numpy array with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
+                # test list with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
+
+    def test_getitem_autograd(np_array, index):
+        x = mx.nd.array(np_array, dtype=np_array.dtype)
+        x.attach_grad()
+        with mx.autograd.record():
+            y = x[index]
+        y.backward()
+        value = mx.nd.ones_like(y)
+        x_grad = mx.nd.zeros_like(x)
+        x_grad[index] = value
+        assert same(x_grad.asnumpy(), x.grad.asnumpy())
+
+    shape = (8, 16, 9, 9)
+    np_array = np.arange(np.prod(shape), dtype='int32').reshape(shape)
+    # index_list is a list of tuples. The tuple's first element is the index, the second one is a boolean value
+    # indicating whether we should expect the result as a scalar compared to numpy.
+    index_list = [(0, False), (5, False), (-1, False),
+                  (slice(5), False), (slice(1, 5), False), (slice(1, 5, 2), False),
+                  (slice(7, 0, -1), False), (slice(None, 6), False), (slice(None, 6, 3), False),
+                  (slice(1, None), False), (slice(1, None, 3), False), (slice(None, None, 2), False),
+                  (slice(None, None, -1), False), (slice(None, None, -2), False),
+                  ((slice(None), slice(None), 1, 8), False),
+                  ((slice(None), 2, slice(1, 5), 1), False),
+                  ((1, 2, 3), False), ((1, 2, 3, 4), True),
+                  ((slice(None, None, -1), 2, slice(1, 5), 1), False),
+                  ((slice(None, None, -1), 2, slice(1, 7, 2), 1), False),
+                  ((slice(1, 8, 2), slice(14, 2, -2), slice(3, 8), slice(0, 7, 3)), False),
+                  ((slice(1, 8, 2), 1, slice(3, 8), 2), False),
+                  ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
+                  (np.array([6, 3], dtype=np.int32), False),
+                  (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
+                  (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
+                  (np.array([[2], [0], [1]], dtype=np.int32), False),
+                  (mx.nd.array([4, 7], dtype=np.int32), False),
+                  (mx.nd.array([[3, 6], [2, 1]], dtype=np.int32), False),
+                  (mx.nd.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
+                  ((1, [2, 3]), False), ((1, [2, 3], np.array([[3], [0]], dtype=np.int32)), False),
+                  ((1, [2], np.array([[5], [3]], dtype=np.int32), slice(None)), False),
+                  ((1, [2, 3], np.array([[6], [0]], dtype=np.int32), slice(2, 5)), False),
+                  ((1, [2, 3], np.array([[4], [7]], dtype=np.int32), slice(2, 5, 2)), False),
+                  ((1, [2], np.array([[3]], dtype=np.int32), slice(None, None, -1)), False),
+                  ((1, [2], np.array([[3]], dtype=np.int32), np.array([[5, 7], [2, 4]], dtype=np.int64)), False),
+                  ((1, [2], mx.nd.array([[4]], dtype=np.int32), mx.nd.array([[1, 3], [5, 7]], dtype='int64')),
+                   False),
+                  ([0], False), ([0, 1], False), ([1, 2, 3], False), ([2, 0, 5, 6], False),
+                  (([1, 1], [2, 3]), False), (([1], [4], [5]), False), (([1], [4], [5], [6]), False),
+                  (([[1]], [[2]]), False), (([[1]], [[2]], [[3]], [[4]]), False),
+                  ((slice(0, 2), [[1], [6]], slice(0, 2), slice(0, 5, 2)), False),
+                  (([[[[1]]]], [[1]], slice(0, 3), [1, 5]), False),
+                  (([[[[1]]]], 3, slice(0, 3), [1, 3]), False),
+                  (([[[[1]]]], 3, slice(0, 3), 0), False),
+                  (([[[[1]]]], [[2], [12]], slice(0, 3), slice(None)), False),
+                  (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
+                  (([1, 2], slice(3, 5), (2, 3), [3, 4]), False)]
+    for index in index_list:
+        test_getitem(np_array, index[0], index[1])
+        test_setitem(np_array, index[0], index[1])
+        test_getitem_autograd(np_array, index[0])
+
 
 if __name__ == '__main__':
     import nose

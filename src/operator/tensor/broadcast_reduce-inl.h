@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce_kernel.h
  * \brief Function definition of elementwise unary operators
  */
