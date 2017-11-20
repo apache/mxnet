@@ -39,21 +39,6 @@ namespace op {
 
 class OpBase {
  protected:
-  /*!
-   * \brief Launch CPU-only kernel without OMP (temporary solution until OMP-tuned kernels arrive)
-   * \tparam OP Kernel operation type
-   * \tparam Args Argument types to be passed to kernel
-   * \param s CPU stream
-   * \param N Number of iterations
-   * \param args Arguments to be passed to kernel
-   */
-  template <typename OP, typename ...Args>
-  static inline void SerialLaunchCPU(mshadow::Stream<cpu> *s, const int N, Args... args) {
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, args...);
-    }
-  }
-
   /*! \brief simple kernel to set to a scalar value of arbitrary type */
   template<int req>
   using set_to_scalar = mxnet_op::op_with_req<mshadow_op::identity, req>;

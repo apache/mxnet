@@ -48,6 +48,7 @@ class ElemwiseBinaryOp : public OpBase {
   /*! \brief For sparse, assume missing rvalue is 0 */
   template<typename OP, int Req>
   struct MissingRValueOp {
+    typedef OP Operation;
     template<typename DType>
     MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs) {
       KERNEL_ASSIGN(out[i], Req, OP::Map(lhs[i], DType(0)));
@@ -57,6 +58,7 @@ class ElemwiseBinaryOp : public OpBase {
   /*! \brief For sparse, assume missing lvalue is 0 */
   template<typename OP, int Req>
   struct MissingLValueOp {
+    typedef OP Operation;
     template<typename DType>
     MSHADOW_XINLINE static void Map(int i, DType *out, const DType *rhs) {
       KERNEL_ASSIGN(out[i], Req, OP::Map(DType(0), rhs[i]));

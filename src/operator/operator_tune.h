@@ -26,7 +26,7 @@
 #include <atomic>
 #include <string>
 
-#define MXNET_DEBUG_TUNING_LAUNCH
+// #define MXNET_DEBUG_TUNING_LAUNCH
 
 #ifdef MXNET_DEBUG_TUNING_LAUNCH
 #include <cxxabi.h>
