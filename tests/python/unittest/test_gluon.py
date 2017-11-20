@@ -571,15 +571,19 @@ def test_dtype():
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
     net.cast('float64')
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+    with mx.autograd.record():
+        y = net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+        y.backward()
 
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
     net.hybridize()
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float32')).wait_to_read()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float32'))
 
     net.cast('float64')
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+
+    mx.nd.waitall()
 
 
 def test_fill_shape_load():
