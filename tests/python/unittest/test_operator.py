@@ -3652,7 +3652,6 @@ def test_custom_op():
     assert (x.grad.stype == 'csr')
     assert (y.stype == 'csr')
     assert (aux.stype == 'csr')
-    
     # test for backward compatibility, i.e. the correctness of default implementation of 
     # infer storage in custom operator
     class Mult(mx.operator.CustomOp):
@@ -3688,6 +3687,8 @@ def test_custom_op():
         y = mx.nd.Custom(lhs, rhs, op_type='mult')
         y.backward()
     mx.nd.waitall()
+    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy())
+    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy())
 
 def test_psroipooling():
     for num_rois in [1, 2]:
