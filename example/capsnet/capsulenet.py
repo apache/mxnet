@@ -101,7 +101,7 @@ def download_data(url, force_download=False):
 
 def read_data(label_url, image_url):
     with gzip.open(download_data(label_url)) as flbl:
-        # magic, num = struct.unpack(">II", flbl.read(8))
+        magic, num = struct.unpack(">II", flbl.read(8))
         label = np.fromstring(flbl.read(), dtype=np.int8)
     with gzip.open(download_data(image_url), 'rb') as fimg:
         magic, num, rows, cols = struct.unpack(">IIII", fimg.read(16))
