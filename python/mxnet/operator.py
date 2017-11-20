@@ -563,7 +563,7 @@ class CustomOpProp(object):
             list of aux stypes calculated from in_stype,
             in the same order as declared in list_auxiliary_states.
         """
-        return in_stype, [in_stype[0]]*len(self.list_outputs()), \
+        return in_stype, [in_stype[0]]*len(self.list_arguments()), \
             [in_stype[0]]*len(self.list_auxiliary_states())
 
     def list_outputs(self):

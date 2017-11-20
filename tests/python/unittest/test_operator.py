@@ -3652,6 +3652,43 @@ def test_custom_op():
     assert (x.grad.stype == 'csr')
     assert (y.stype == 'csr')
     assert (aux.stype == 'csr')
+    # test for backward compatibility, i.e. the correctness of default implementation of 
+    # infer storage in custom operator
+    class Mult(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            self.assign(out_data[0], req[0], in_data[0]*in_data[1])
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], in_data[1]*out_grad[0])
+            self.assign(in_grad[1], req[1], in_data[0]*out_grad[0])
+
+    @mx.operator.register("mult")
+    class MultProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MultProp, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['lhs', 'rhs']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            return in_shape, [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return Mult()
+
+    lhs = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    rhs = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    lhs.attach_grad()
+    rhs.attach_grad()
+    with mx.contrib.autograd.train_section():
+        y = mx.nd.Custom(lhs, rhs, op_type='mult')
+        y.backward()
+    mx.nd.waitall()
+    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy())
+    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy())
 
 def test_psroipooling():
     for num_rois in [1, 2]:
