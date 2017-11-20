@@ -50,8 +50,12 @@ def list_image(root, recursive, exts):
                         cat[path] = len(cat)
                     yield (i, os.path.relpath(fpath, root), cat[path])
                     i += 1
-        for k, v in sorted(cat.items(), key=lambda x: x[1]):
-            print(os.path.relpath(k, root), v)
+
+        with open(args.prefix + '_labels.txt', 'w') as fout:
+            for k, v in sorted(cat.items(), key=lambda x: x[1]):
+                print(os.path.relpath(k, root), v)
+                fout.write('%s\n' % (os.path.relpath(k, root)))
+
     else:
         for fname in sorted(os.listdir(root)):
             fpath = os.path.join(root, fname)
