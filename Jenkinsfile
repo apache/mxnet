@@ -412,9 +412,7 @@ try {
             unpack_lib('cpu')
             withEnv(['MXNET_HOME=/workspace/ut-julia-cpu']) {
               timeout(time: max_time, unit: 'MINUTES') {
-                sh "${docker_run} cpu julia -e 'Pkg.clone(\"julia-package\", \"MXNet\")'"
-                sh "${docker_run} cpu julia -e 'Pkg.build(\"MXNet\")'"
-                sh "${docker_run} cpu julia -e 'Pkg.test(\"MXNet\")'"
+                sh "${docker_run} cpu tests/jenkins/run_julia_test.sh"
               }
             }
           }
