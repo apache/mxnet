@@ -18,6 +18,7 @@
  */
 
 /**
+ * Copyright (c) 2015 by Contributors
  * @file   kvstore_local.h
  * @brief  local implementation
  */
@@ -347,7 +348,8 @@ class KVStoreLocal : public KVStore {
   void Unique(NDArray *out, int priority = 0) {
     CHECK_EQ(out->ctx().dev_mask(), pinned_ctx_.dev_mask())
              << "Unique expects input with `pinned_ctx_`";
-    Engine::Get()->PushSync([out](RunContext rctx) {
+    Engine::Get()->PushAsync(
+      [out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         NDArray *output = out;
         CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
         const auto size = out->shape()[0];
@@ -358,6 +360,7 @@ class KVStoreLocal : public KVStore {
           auto num_unique_idx = std::unique(dptr, dptr + size) - dptr;
           *output = output->Reshape(mshadow::Shape1(num_unique_idx));
         });
+        on_complete();
       }, pinned_ctx_, {}, {out->var()},
       FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreUnique"));
     out->WaitToRead();

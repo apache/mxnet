@@ -78,7 +78,7 @@ shape = (3, 4)
 data_list = [7, 8, 9]
 indices_list = [0, 2, 1]
 indptr_list = [0, 2, 2, 3]
-a = mx.nd.sparse.csr_matrix(data_list, indptr_list, indices_list, shape)
+a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
 # Inspect the matrix
 a.asnumpy()
 ```
@@ -90,7 +90,7 @@ import numpy as np
 data_np = np.array([7, 8, 9])
 indptr_np = np.array([0, 2, 2, 3])
 indices_np = np.array([0, 2, 1])
-b = mx.nd.sparse.csr_matrix(data_np, indptr_np, indices_np, shape)
+b = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
 b.asnumpy()
 ```
 
@@ -256,7 +256,7 @@ shape = (3, 4)
 data = [7, 8, 9]
 indptr = [0, 2, 2, 3]
 indices = [0, 2, 1]
-a = mx.nd.sparse.csr_matrix(data, indptr, indices, shape) # a csr matrix as lhs
+a = mx.nd.sparse.csr_matrix((data, indices, indptr), shape=shape) # a csr matrix as lhs
 rhs = mx.nd.ones((4, 1))      # a dense vector as rhs
 out = mx.nd.sparse.dot(a, rhs)  # invoke sparse dot operator specialized for dot(csr, dense)
 {'out':out}

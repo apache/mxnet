@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file threaded_engine_test.cc
  * \brief threaded engine tests
 */

@@ -111,17 +111,6 @@ class RecurrentCell(Block):
         self._modified = False
         self.reset()
 
-    def __repr__(self):
-        s = '{name}({mapping}'
-        if hasattr(self, '_activation'):
-            s += ', {_activation}'
-        s += ')'
-        mapping = ('{_input_size} -> {_hidden_size}'.format(**self.__dict__) if self._input_size
-                   else self._hidden_size)
-        return s.format(name=self.__class__.__name__,
-                        mapping=mapping,
-                        **self.__dict__)
-
     def reset(self):
         """Reset before re-using the cell for another graph."""
         self._init_counter = -1
@@ -337,16 +326,16 @@ class RNNCell(HybridRecurrentCell):
         self._activation = activation
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
-                                          init=i2h_weight_initializer,
+                                          dtype=None, init=i2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
+                                          dtype=None, init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
-                                        init=i2h_bias_initializer,
+                                        dtype=None, init=i2h_bias_initializer,
                                         allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
-                                        init=h2h_bias_initializer,
+                                        dtype=None, init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
@@ -354,6 +343,17 @@ class RNNCell(HybridRecurrentCell):
 
     def _alias(self):
         return 'rnn'
+
+    def __repr__(self):
+        s = '{name}({mapping}'
+        if hasattr(self, '_activation'):
+            s += ', {_activation}'
+        s += ')'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
@@ -434,16 +434,16 @@ class LSTMCell(HybridRecurrentCell):
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          init=i2h_weight_initializer,
+                                          dtype=None, init=i2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
+                                          dtype=None, init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=i2h_bias_initializer,
+                                        dtype=None, init=i2h_bias_initializer,
                                         allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        init=h2h_bias_initializer,
+                                        dtype=None, init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
@@ -452,6 +452,14 @@ class LSTMCell(HybridRecurrentCell):
 
     def _alias(self):
         return 'lstm'
+
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
@@ -533,16 +541,16 @@ class GRUCell(HybridRecurrentCell):
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
-                                          init=i2h_weight_initializer,
+                                          dtype=None, init=i2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
+                                          dtype=None, init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
-                                        init=i2h_bias_initializer,
+                                        dtype=None, init=i2h_bias_initializer,
                                         allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
-                                        init=h2h_bias_initializer,
+                                        dtype=None, init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
@@ -550,6 +558,14 @@ class GRUCell(HybridRecurrentCell):
 
     def _alias(self):
         return 'gru'
+
+    def __repr__(self):
+        s = '{name}({mapping})'
+        shape = self.i2h_weight.shape
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        return s.format(name=self.__class__.__name__,
+                        mapping=mapping,
+                        **self.__dict__)
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):

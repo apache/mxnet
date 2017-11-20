@@ -230,6 +230,10 @@ $(document).ready(function () {
             $('div.sphinxsidebar').hide();
             $('.content').css('width', '100%');
         }
+        if (url.indexOf('/gluon/index.html') != -1) {
+            $('div.sphinxsidebar').hide();
+            $('.content').css('width', '100%');
+        }
         if (showRightToc) {
             $(window).scroll(function () {
                 scroll_righttoc();

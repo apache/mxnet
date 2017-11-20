@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file activation.cc
  * \brief softmax_activation op
  * \author Junyuan Xie

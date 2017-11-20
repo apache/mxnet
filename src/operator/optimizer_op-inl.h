@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file optimizer_op-inl.h
  * \brief Optimizer operators
  * \author Junyuan Xie
@@ -264,7 +265,7 @@ inline void SGDMomUpdate(const nnvm::NodeAttrs& attrs,
       grad.dptr_, static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
       static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.rescale_grad), req[0]);
-  });
+    });
 }
 
 template<int n_in, int n_out, int total_in>
@@ -1070,7 +1071,6 @@ inline void FtrlUpdateEx(const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray> &outputs) {
   const FtrlParam& param = nnvm::get<FtrlParam>(attrs.parsed);
   const auto weight_stype = inputs[0].storage_type();
-  const auto grad_stype = inputs[1].storage_type();
   const auto z_stype = inputs[2].storage_type();
   const auto n_stype = inputs[3].storage_type();
 

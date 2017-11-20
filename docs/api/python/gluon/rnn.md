@@ -21,7 +21,7 @@ with model.name_scope():
     model.add(mx.gluon.rnn.LSTM(20))
     model.add(mx.gluon.nn.Dense(5, flatten=False))
 model.initialize()
-model(mx.nd.ones((2,3,5)))
+model(mx.nd.ones((2,3)))
 ```
 
 ```eval_rst

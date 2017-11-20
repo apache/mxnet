@@ -99,7 +99,7 @@ f = mx.sym.sparse.elemwise_add(c, c)
 ### Storage Type Inference
 
 What will be the output storage types of sparse symbols? In MXNet, for any sparse symbol, the result storage types are inferred based on storage types of inputs.
-You can read the [Sparse Symbol API](https://mxnet.io/versions/master/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
+You can read the [Sparse Symbol API](http://mxnet.io/versions/master/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
 
 
 ```python

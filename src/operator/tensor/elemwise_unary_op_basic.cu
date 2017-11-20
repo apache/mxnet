@@ -26,18 +26,19 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(relu)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::KernelCompute<gpu, kernel_launch_op::relu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::KernelComputeEx<gpu, kernel_launch_op::relu>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::relu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::relu>);
 
 NNVM_REGISTER_OP(_backward_relu)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, kernel_launch_op::relu_grad>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::relu_grad>>);
 
 NNVM_REGISTER_OP(sigmoid)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::KernelCompute<gpu, kernel_launch_op::sigmoid>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sigmoid>);
 
 NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, kernel_launch_op::sigmoid_grad>);
+  gpu, unary_bwd<mshadow_op::sigmoid_grad>>);
 
 // copy
 NNVM_REGISTER_OP(_copy)
@@ -51,7 +52,8 @@ NNVM_REGISTER_OP(BlockGrad)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(make_loss)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>);
 
 // identity output as first input, but attributes are constrainted to be like rhs
 NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
@@ -193,6 +195,14 @@ NNVM_REGISTER_OP(log2)
 NNVM_REGISTER_OP(_backward_log)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::log_grad> >);
+
+NNVM_REGISTER_OP(_backward_log10)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::log10_grad> >);
+
+NNVM_REGISTER_OP(_backward_log2)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::log2_grad> >);
 
 // log1p
 NNVM_REGISTER_OP(log1p)

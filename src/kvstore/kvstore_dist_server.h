@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file mxnet_node.h
  * \brief implement mxnet nodes
  */
@@ -230,13 +231,15 @@ class KVStoreDistServer {
         TBlob recv_blob(data, dshape, cpu::kDevMask);  // NOLINT(*)
         NDArray recved = NDArray(recv_blob, 0);
         stored = NDArray(kRowSparseStorage, dshape, Context());
-        Engine::Get()->PushSync([recved, stored](RunContext ctx) {
+        Engine::Get()->PushAsync(
+          [recved, stored](RunContext ctx, Engine::CallbackOnComplete on_complete) {
             NDArray rsp = stored;
             stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
             mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
             op::PopulateFullIdxRspImpl(s, &rsp);
             mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
                           recved.data().FlatTo1D<cpu, float>(), s);
+            on_complete();
           }, recved.ctx(), {recved.var()}, {stored.var()},
           FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
         stored.WaitToRead();
@@ -285,15 +288,13 @@ class KVStoreDistServer {
           // TODO(haibin) override + operator for row_sparse NDArray
           // instead of calling BinaryComputeRspRsp directly
           using namespace mshadow;
-          Engine::Get()->PushSync([recved, merged, out](RunContext ctx) {
-                                    std::vector<NDArray> inputs, outputs;
-                                    inputs.push_back(recved);
-                                    inputs.push_back(merged.array);
-                                    outputs.push_back(out);
-                                    op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
-                                      {}, {}, inputs, {kWriteTo}, outputs);
-                                  }, recved.ctx(), const_vars, {out.var()},
-                                  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
+          Engine::Get()->PushAsync(
+            [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+              op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
+                {}, {}, {recved, merged.array}, {kWriteTo}, {out});
+              on_complete();
+            }, recved.ctx(), const_vars, {out.var()},
+            FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
           CopyFromTo(out, &merged.array, 0);
         }
         merged.request.push_back(req_meta);

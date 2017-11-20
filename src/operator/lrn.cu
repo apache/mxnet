@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file lrn.cu
  * \brief
  * \author Bing Xu

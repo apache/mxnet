@@ -55,12 +55,10 @@ method set(AcceptableInput $value, $reverse=)
 {
     confess("set value must be defined") unless defined $value;
     confess("${\ $self->parent } is not writable") unless $self->parent->writable;
-    my $shape = [];
-    zip(
-        sub { my ($begin, $end) = @_; push @$shape, ($end-$begin); },
-        $self->begin,
-        $self->end
-    );
+    my $shape = [ map {
+        my($begin, $end) = @$_;
+        ($end-$begin);
+    } zip($self->begin, $self->end) ];
     if(ref $value)
     {
         if(blessed($value) and $value->isa('AI::MXNet::NDArray'))
@@ -77,15 +75,11 @@ method set(AcceptableInput $value, $reverse=)
         }
         confess("value $value does not match slice dim sizes [@$shape]")
             if @{$value->shape} != @$shape;
-        zip(
-            sub {
-                my ($dsize, $vdsize) = @_;
+        for(zip($shape, $value->shape)) {
+                my ($dsize, $vdsize) = @$_;
                 confess("Slice [@$shape]  != $value given as value")
                     if $dsize != $vdsize;
-            },
-            $shape,
-            $value->shape
-        );
+        }
         AI::MXNet::NDArray->_crop_assign(
             $self->parent,
             $value,

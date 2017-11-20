@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file init_op.h
  * \brief Function definition of initialization op
  */
@@ -32,9 +33,10 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
-
+#include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -93,7 +95,34 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
     .describe("Target data type.");
+  }
+};
+
+/*! \brief Initialize and fill output with an arbitrary value */
+struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
+  TShape shape;
+  std::string ctx;
+  int dtype;
+  double value;
+  DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
+    DMLC_DECLARE_FIELD(shape)
+      .set_default(TShape())
+      .describe("The shape of the output");
+    DMLC_DECLARE_FIELD(ctx)
+      .set_default("")
+      .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+                  "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("float16", mshadow::kFloat16)
+      .add_enum("uint8", mshadow::kUint8)
+      .add_enum("int32", mshadow::kInt32)
+      .describe("Target data type.");
+    DMLC_DECLARE_FIELD(value)
+      .describe("Value with which to fill newly created tensor");
   }
 };
 
@@ -164,20 +193,85 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+/*!
+ * \brief General-purpose blob value-filling function
+ * \tparam xpu cpu or gpu
+ * \tparam ValueType Data type of supplied value
+ * \tparam is_integer Whether to optimize for an integer value
+ * \param s Stream
+ * \param b The blob to fill with a value
+ * \param req Request type (kNullOp, kWriteTo, etc)
+ * \param val The value to use for the filling operation
+ */
+template <bool is_integer = false, typename ValueType, typename xpu>
+void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
+  if (req != kNullOp) {
+    const size_t size = b.Size();
+    if (val == 0) {
+      if (req != kAddTo) {
+        if (b.dev_mask() == cpu::kDevMask) {
+          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+            memset(b.dptr_, 0, size * sizeof(DType));
+          });
+        } else {
+          // Optimize common use-case of filling with ones
+          MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+            MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+              mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<0>, Req>, xpu>::Launch(
+                s, b.Size(), b.dptr<DType>());
+            });
+          });
+        }
+      }
+    } else if (is_integer && val == 1) {
+      // Optimize common use-case of filling with ones
+      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
+            s, b.Size(), b.dptr<DType>());
+        });
+      });
+    } else {
+      // Generic fill kernel from variable
+      MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
+            s, b.Size(), b.dptr<DType>(), static_cast<DType>(val));
+        });
+      });
+    }
+  }
+}
+
+/*! \brief Fill output with a scalar integer value */
 template<typename xpu, int value>
 void FillCompute(const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx,
                  const std::vector<TBlob>& inputs,
                  const std::vector<OpReqType>& req,
                  const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-    ASSIGN_DISPATCH(out, req[0], scalar<DType>(value));
-  });
+  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], value);
 }
+
+/*! \brief Fill output with an arbitrary value */
+template<typename xpu>
+void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 0);
+  CHECK_EQ(outputs.size(), 1U);
+  const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
+  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
+}
+
+struct PopulateFullIdxRspKernel {
+  template<typename IType>
+  MSHADOW_XINLINE static void Map(int i, IType* out) {
+    KERNEL_ASSIGN(out[i], kWriteTo, i);
+  }
+};
 
 // Fill in the indices and values of a RowSparse NDArray to represent a zeros NDArray,
 // instead of the usual compact representation.
@@ -188,24 +282,14 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
   using namespace mshadow;
   using namespace mxnet_op;
   CHECK_EQ(dst->storage_type(), kRowSparseStorage);
-  MSHADOW_REAL_TYPE_SWITCH(dst->dtype(), DType, {
-    MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
-      auto num_rows = dst->shape()[0];
-      dst->CheckAndAlloc({Shape1(num_rows)});
-      auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
-      auto val = dst->data();
-      Kernel<set_zero, xpu>::Launch(s, val.Size(), val.dptr<DType>());
-      ASSIGN_DISPATCH(idx, kWriteTo, range<IType>(0, num_rows, 1, 1));
-    });
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
+    const index_t num_rows = dst->shape()[0];
+    dst->CheckAndAlloc({Shape1(num_rows)});
+    Fill<true>(s, dst->data(), kWriteTo, 0);
+    auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
+    Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr_);
   });
 }
-
-struct PopulateFullIdxRspKernel {
-  template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* out) {
-    KERNEL_ASSIGN(out[i], kWriteTo, i);
-  }
-};
 
 // Fill full indices NDArray with zeros by updating the aux shape.
 template<typename xpu>
@@ -243,10 +327,7 @@ inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, const NDArray& ds
   dst.set_aux_shape(csr::kIdx, mshadow::Shape1(0));
   dst.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst.shape()[0] + 1));
   TBlob indptr_data = dst.aux_data(csr::kIndPtr);
-  MSHADOW_IDX_TYPE_SWITCH(dst.aux_type(csr::kIndPtr), IType, {
-    mxnet_op::Kernel<mxnet_op::set_zero, mshadow::cpu>::Launch(
-      s, indptr_data.Size(), indptr_data.dptr<IType>());
-  });
+  Fill<true>(s, dst.aux_data(csr::kIndPtr), kWriteTo, 0);
 }
 void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst);
 
@@ -299,9 +380,17 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<range_fwd, xpu>::Launch(s, outputs[0].Size(),
-        static_cast<int>(param.repeat), static_cast<DType>(param.start),
-        static_cast<DType>(param.step), req[0], outputs[0].dptr<DType>());
+      // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
+      // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
+      auto step = std::is_signed<DType>() ? param.step : static_cast<int>(param.step);
+      auto start = std::is_signed<DType>() ? param.start : static_cast<int>(param.start);
+      Kernel<range_fwd, xpu>::Launch(s,
+                                     outputs[0].Size(),
+                                     static_cast<int>(param.repeat),
+                                     static_cast<DType>(start),
+                                     static_cast<DType>(step),
+                                     req[0],
+                                     outputs[0].dptr<DType>());
   });
 }
 
@@ -325,11 +414,9 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
       << "Invalid range (start, stop, step)= "
       << "(" << param.start << "," << param.stop.value() << "," << param.step << ")";
   }
-  MSHADOW_TYPE_SWITCH(param.dtype, DType, {
-    double out_size = std::ceil((param.stop.value() - param.start) / param.step)
-                      * param.repeat;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({static_cast<nnvm::dim_t>(out_size)}));
-  });
+  const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
+                          * param.repeat;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({static_cast<nnvm::dim_t>(out_size)}));
   return true;
 }
 

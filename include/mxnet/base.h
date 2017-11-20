@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file base.h
  * \brief configuation of mxnet as well as basic data structure.
  */
@@ -110,7 +111,7 @@
 /*! \brief major version */
 #define MXNET_MAJOR 0
 /*! \brief minor version */
-#define MXNET_MINOR 11
+#define MXNET_MINOR 12
 /*! \brief patch version */
 #define MXNET_PATCH 1
 /*! \brief mxnet version */
@@ -143,7 +144,8 @@ struct Context {
   enum DeviceType {
     kCPU = cpu::kDevMask,
     kGPU = gpu::kDevMask,
-    kCPUPinned = 3
+    kCPUPinned = 3,
+    kCPUShared = 5,
   };
   /*! \brief the device type we run the op on */
   DeviceType dev_type;
@@ -155,9 +157,16 @@ struct Context {
    * \brief Get corresponding device mask
    * \return cpu::kDevMask or gpu::kDevMask
    */
-  inline int dev_mask() const {
-    if (dev_type == kCPUPinned) return cpu::kDevMask;
+  inline DeviceType dev_mask() const {
+    if (dev_type == kCPUPinned || dev_type == kCPUShared) return kCPU;
     return dev_type;
+  }
+  /*!
+   * \brief Returns dev_id for kGPU, 0 otherwise
+   */
+  inline int real_dev_id() const {
+    if (dev_type == kGPU) return dev_id;
+    return 0;
   }
   /*!
    * \brief Comparator, used to enable Context as std::map key.
@@ -200,7 +209,7 @@ struct Context {
     return true;
   }
   /*! \brief the maximal device type */
-  static const int32_t kMaxDevType = 4;
+  static const int32_t kMaxDevType = 6;
   /*! \brief the maximal device index */
   static const int32_t kMaxDevID = 16;
   /*!
@@ -223,6 +232,12 @@ struct Context {
    * \return Pinned CPU context. -1 for current GPU.
    */
   inline static Context CPUPinned(int32_t dev_id = -1);
+  /*!
+   * Create a CPU shared memory context.
+   * \param dev_id dummy device id.
+   * \return CPU shared memory context.
+   */
+  inline static Context CPUShared(int32_t dev_id = 0);
   /*!
    * Create a context from string of the format [cpu|gpu|cpu_pinned](n)
    * \param str the string pattern
@@ -273,7 +288,7 @@ inline Context Context::Create(DeviceType dev_type, int32_t dev_id) {
   ctx.dev_type = dev_type;
   if (dev_id < 0) {
     ctx.dev_id = 0;
-    if (dev_type != kCPU) {
+    if (dev_type & kGPU) {
 #if MXNET_USE_CUDA
       CHECK_EQ(cudaGetDevice(&ctx.dev_id), cudaSuccess);
 #else
@@ -291,6 +306,10 @@ inline Context Context::CPU(int32_t dev_id) {
 
 inline Context Context::CPUPinned(int32_t dev_id) {
   return Create(kCPUPinned, dev_id);
+}
+
+inline Context Context::CPUShared(int32_t dev_id) {
+  return Create(kCPUShared, dev_id);
 }
 
 inline Context Context::GPU(int32_t dev_id) {
@@ -313,6 +332,8 @@ inline Context Context::FromString(std::string str) {
       ret = GPU(id);
     } else if (type == "cpu_pinned") {
       ret = CPUPinned(id);
+    } else if (type == "cpu_shared") {
+      ret = CPUShared(id);
     } else {
       LOG(FATAL) << "Invalid context string " << str;
     }
@@ -329,6 +350,8 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
     out << "gpu(";
   } else if (ctx.dev_type == Context::kCPUPinned) {
     out << "cpu_pinned(";
+  } else if (ctx.dev_type == Context::kCPUShared) {
+    out << "cpu_shared(";
   } else {
     out << "unknown(";
   }

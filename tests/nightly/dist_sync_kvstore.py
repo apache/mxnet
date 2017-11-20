@@ -39,7 +39,7 @@ init_test_keys_device_big = [str(i) for i in range(500,600)]
 
 rate = 2
 shape = (2, 3)
-big_shape = (1200, 1200)        # bigger than BIGARRAY_BOUND
+big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
 kv = mx.kv.create('dist_sync')
 
@@ -104,24 +104,27 @@ def test_sync_push_pull():
     def check_row_sparse_keys_with_zeros(kv, my_rank, nworker):
         nrepeat = 3
         # prepare gradient
-        v = mx.nd.zeros(shape)
-        big_v = mx.nd.zeros(big_shape)
+        v = mx.nd.sparse.zeros('row_sparse', shape)
+        big_v = mx.nd.sparse.zeros('row_sparse', big_shape)
         # push
         for i in range(nrepeat):
-            kv.push('11', v.tostype('row_sparse'))
-            kv.push('100', big_v.tostype('row_sparse'))
-
+            kv.push('11', v)
+            kv.push('100', big_v)
             # pull a subset of rows this worker is interested in
             all_row_ids = np.arange(shape[0])
-            val = mx.nd.ones(shape).tostype('row_sparse')
-            big_val = mx.nd.ones(big_shape).tostype('row_sparse')
-            kv.row_sparse_pull('11', out=val, row_ids=mx.nd.array(all_row_ids, dtype='int64'))
-            big_num_rows = shape[0]
+            val = mx.nd.sparse.zeros('row_sparse', shape)
+            big_val = mx.nd.sparse.zeros('row_sparse', big_shape)
+            kv.row_sparse_pull('11', out=val, row_ids=mx.nd.array(all_row_ids))
             big_all_row_ids = np.arange(big_shape[0])
-            kv.row_sparse_pull('100', out=big_val, row_ids=mx.nd.array(big_all_row_ids, dtype='int64'))
+            kv.row_sparse_pull('100', out=big_val, row_ids=mx.nd.array(big_all_row_ids))
             # verify results
-            check_diff_to_scalar(val, mx.nd.ones(shape))
-            check_diff_to_scalar(big_val, mx.nd.ones(big_shape))
+            check_diff_to_scalar(val, 1)
+            check_diff_to_scalar(big_val, 1)
+            # pull empty weights
+            kv.row_sparse_pull('11', out=val, row_ids=mx.nd.array([]))
+            kv.row_sparse_pull('100', out=big_val, row_ids=mx.nd.array([]))
+            check_diff_to_scalar(val, 0)
+            check_diff_to_scalar(big_val, 0)
 
     def check_big_row_sparse_keys(kv, my_rank, nworker):
         mx.random.seed(123)
@@ -154,7 +157,7 @@ def test_sync_push_pull():
             rnd.seed(my_rank)
             num_rows = big_shape[0]
             row_ids_np = np.random.randint(num_rows, size=num_rows)
-            row_ids = mx.nd.array(row_ids_np, dtype='int64')
+            row_ids = mx.nd.array(row_ids_np)
             # perform pull
             val = mx.nd.zeros(big_shape, stype='row_sparse')
             kv.row_sparse_pull('100', out=val, row_ids=row_ids)

@@ -169,7 +169,10 @@ private[mxnet] object SymbolImplMacros {
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
     val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
     // scalastyle:off println
-    println("Symbol function definition:\n" + docStr)
+    if (System.getenv("MXNET4J_PRINT_OP_DEF") != null
+          && System.getenv("MXNET4J_PRINT_OP_DEF").toLowerCase == "true") {
+      println("Symbol function definition:\n" + docStr)
+    }
     // scalastyle:on println
     (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
   }

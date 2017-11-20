@@ -27,7 +27,7 @@ try:
 except ImportError:
     h5py = None
 import sys
-from common import get_data
+from common import get_data, assertRaises
 import unittest
 
 
@@ -162,6 +162,19 @@ def test_NDArrayIter_csr():
     csr, _ = rand_sparse_ndarray(shape, 'csr')
     dns = csr.asnumpy()
 
+    # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError
+    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size,
+                 last_batch_handle='pad')
+
+    # CSRNDArray with shuffle
+    csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
+                    shuffle=True, last_batch_handle='discard'))
+    num_batch = 0
+    for batch in csr_iter:
+        num_batch += 1
+
+    assert(num_batch == num_rows // batch_size)
+
     # make iterators
     csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))
     begin = 0
@@ -234,7 +247,7 @@ def test_LibSVMIter():
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
-    
+
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
 def test_CSVIter():
     def check_CSVIter_synthetic():

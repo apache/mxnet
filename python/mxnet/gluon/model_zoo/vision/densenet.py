@@ -103,11 +103,11 @@ class DenseNet(HybridBlock):
             self.features.add(nn.AvgPool2D(pool_size=7))
             self.features.add(nn.Flatten())
 
-            self.classifier = nn.Dense(classes)
+            self.output = nn.Dense(classes)
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 

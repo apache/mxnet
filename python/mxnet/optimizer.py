@@ -26,7 +26,10 @@ import numpy
 from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
-                      mp_sgd_update, mp_sgd_mom_update, ftrl_update)
+                      mp_sgd_update, mp_sgd_mom_update, square, ftrl_update)
+from .ndarray import _internal
+from .ndarray import op
+from .ndarray import sparse
 from .random import normal
 
 
@@ -98,7 +101,7 @@ class Optimizer(object):
         assert isinstance(param_idx2name, dict), \
             'param_idx2name should be a dict of param indexes to names.'
         self.idx2name = param_idx2name.copy()
-        self.sym = sym
+        self.sym_info = (sym.attr_dict(), sym.list_arguments()) if sym is not None else ()
         self.param_dict = param_dict if param_dict else {}
 
         self.set_lr_mult({})
@@ -318,9 +321,9 @@ class Optimizer(object):
             compatibility, and we recommend to use the name instead.
         """
         self.lr_mult = {}
-        if self.sym is not None:
-            attr = self.sym.attr_dict()
-            for name in self.sym.list_arguments():
+        if self.sym_info:
+            attr, arg_names = self.sym_info
+            for name in arg_names:
                 if name in attr and '__lr_mult__' in attr[name]:
                     self.lr_mult[name] = float(attr[name]['__lr_mult__'])
         self.lr_mult.update(args_lr_mult)
@@ -355,9 +358,9 @@ class Optimizer(object):
         for n in self.idx2name.values():
             if not (n.endswith('_weight') or n.endswith('_gamma')):
                 self.wd_mult[n] = 0.0
-        if self.sym is not None:
-            attr = self.sym.attr_dict()
-            for name in self.sym.list_arguments():
+        if self.sym_info:
+            attr, arg_names = self.sym_info
+            for name in arg_names:
                 if name in attr and '__wd_mult__' in attr[name]:
                     self.wd_mult[name] = float(attr[name]['__wd_mult__'])
         self.wd_mult.update(args_wd_mult)
@@ -439,12 +442,19 @@ class SGD(Optimizer):
         weight = weight - state
 
     If the storage types of weight, state and grad are all ``row_sparse``, \
-    sparse updates are applied by::
+    **sparse updates** are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = lr * rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row]
             state[row] = momentum[row] * state[row] + rescaled_grad[row]
             weight[row] = weight[row] - state[row]
+
+    The sparse update only updates the momentum for the weights whose row_sparse
+    gradient indices appear in the current batch, rather than updating it for all
+    indices. Compared with the original update, it can provide large
+    improvements in model training throughput for some applications. However, it
+    provides slightly different semantics than the original update, and
+    may lead to different empirical results.
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.sgd_update` and :class:`~mxnet.ndarray.sgd_mom_update`.
@@ -664,13 +674,19 @@ class Adam(Optimizer):
         w = w - learning_rate * m / (sqrt(v) + epsilon)
 
     If the storage types of weight, state and grad are all ``row_sparse``, \
-    sparse updates are applied by::
+    **sparse updates** are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
             m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
             w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
+
+    The sparse update only updates the mean and var for the weights whose row_sparse
+    gradient indices appear in the current batch, rather than updating it for all indices.
+    Compared with the original update, it can provide large improvements in model training
+    throughput for some applications. However, it provides slightly different semantics than
+    the original update, and may lead to different empirical results.
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -735,13 +751,14 @@ class AdaGrad(Optimizer):
     ----------
     eps: float, optional
         Small value to avoid division by 0.
+
     """
     def __init__(self, eps=1e-7, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
 
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context)  # history
+        return zeros(weight.shape, weight.context, stype=weight.stype)  # history
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
@@ -750,12 +767,42 @@ class AdaGrad(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
+        is_sparse = True if weight.stype == 'row_sparse' and grad.stype == 'row_sparse' else False
+
+        if is_sparse is True:
+            grad_indices_count = len(grad.indices)
+
         grad = grad * self.rescale_grad
+
+        if is_sparse is True:
+            grad_indices = grad.indices
+            # Make sure that the scalar multiply still has a sparse result
+            assert grad_indices_count == len(grad_indices)
+
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
         history = state
-        history[:] += (grad * grad)
-        weight[:] += -lr * (grad / sqrt(history + self.float_stable_eps) + wd * weight)
+        save_history_stype = history.stype
+
+        if is_sparse:
+            history[:] = sparse.elemwise_add(sparse.square(grad),
+                                             sparse.retain(history, grad_indices))
+            history_indices = history.indices
+            assert len(history_indices) == grad_indices_count
+            adjusted_add = _internal._scatter_plus_scalar(history, self.float_stable_eps)
+            srt = op.sqrt(adjusted_add)
+            div = _internal._scatter_elemwise_div(grad, srt)
+            retained_weight = sparse.retain(weight, grad.indices)
+            to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, wd))
+            assert len(to_add.indices) == grad_indices_count
+            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, -lr))
+            state[:] = history
+            assert state.stype == save_history_stype
+            assert len(history_indices) == grad_indices_count
+        else:
+            history[:] += square(grad)
+            div = grad / sqrt(history + self.float_stable_eps)
+            weight[:] += (div + weight * wd) * -lr
 
 @register
 class RMSProp(Optimizer):
@@ -902,13 +949,20 @@ class Ftrl(Optimizer):
         w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
 
     If the storage types of weight, state and grad are all ``row_sparse``, \
-    sparse updates are applied by::
+    **sparse updates** are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
             z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
             n[row] += rescaled_grad[row]**2
             w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
+
+    The sparse update only updates the z and n for the weights whose row_sparse
+    gradient indices appear in the current batch, rather than updating it for all
+    indices. Compared with the original update, it can provide large
+    improvements in model training throughput for some applications. However, it
+    provides slightly different semantics than the original update, and
+    may lead to different empirical results.
 
     For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
 

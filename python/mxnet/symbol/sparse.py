@@ -15,5 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# coding: utf-8
+# pylint: disable=wildcard-import, unused-wildcard-import
 """Sparse Symbol API of MXNet."""
+try:
+    from .gen_sparse import * # pylint: disable=redefined-builtin
+except ImportError:
+    pass
+
 __all__ = []

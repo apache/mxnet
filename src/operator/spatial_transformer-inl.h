@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file spatial_transformer-inl.h
  * \brief
  *  Reproducing paper: aderberg M, Simonyan K, Zisserman A. "Spatial transformer networks"

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
@@ -129,7 +130,7 @@ inline std::string shape_string(const TShape& x) {
   return os.str();
 }
 
-/*! \brief get string representation of shape */
+/*! \brief get string representation of data type */
 inline std::string type_string(const int& x) {
   switch (x) {
     case mshadow::kFloat32:
@@ -138,10 +139,14 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kInt8:
+      return "int8";
     case mshadow::kUint8:
       return "uint8";
     case mshadow::kInt32:
       return "int32";
+    case mshadow::kInt64:
+      return "int64";
   }
   return "unknown";
 }
@@ -202,6 +207,10 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   }
   return true;
 }
+
+/*! \brief Register op name as an alias */
+#define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
+  .add_alias("_sparse_" #__name$)
 
 /*!
  * \brief macro assign shape to out if out is unknown otherwise check consistency
@@ -412,8 +421,8 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 
 // check whether all output grads are zero.
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
-  const auto zero_op = nnvm::Op::Get("_zeros");
-  const auto zero_like_op = nnvm::Op::Get("zeros_like");
+  static const auto zero_op = nnvm::Op::Get("_zeros");
+  static const auto zero_like_op = nnvm::Op::Get("zeros_like");
   if (!ograds.size()) return false;
   for (const auto& grad : ograds) {
     if (!grad.node) return false;
@@ -470,54 +479,6 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
           << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
   }
 
-/*! \brief Temporary storage for Alpha release of Sparse Tensors. Please do not use, as this
- * function will be removed
- */
-template<typename DType>
-class SparseTempStorage {
-  inline DType *Alloc(const size_t count) {
-    CHECK_GT(count, 0U);  // You've probably made a mistake
-    CHECK_EQ(handle_.dptr, static_cast<void *>(nullptr));
-    Storage *storage = mxnet::Storage::Get();
-    if (storage) {
-      handle_ = storage->Alloc(count * sizeof(DType), op_ctx_.run_ctx.ctx);
-    }
-    return static_cast<DType *>(handle_.dptr);
-  }
-  inline void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      if (storage) {
-        storage->DirectFree(handle_);
-        handle_.dptr = nullptr;
-      }
-    }
-  }
-  inline DType *dptr() {
-    return static_cast<DType *>(handle_.dptr);
-  }
-
- public:
-  explicit inline SparseTempStorage(const OpContext& op_ctx)
-    : op_ctx_(op_ctx) {
-    handle_.dptr = nullptr;
-  }
-  inline ~SparseTempStorage() {
-    Free();
-  }
-  template<typename xpu, int ndim>
-  inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(const mshadow::Shape<ndim>& shape) {
-    if (!dptr()) {
-      Alloc(shape.Size());
-    }
-    return mshadow::Tensor<xpu, ndim, DType>(dptr(), shape, op_ctx_.run_ctx.get_stream<xpu>());
-  }
-
- private:
-  const OpContext& op_ctx_;
-  Storage::Handle  handle_;
-};
-
 /*! \brief get string representation of the operator stypes */
 inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -568,7 +529,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
   auto warning_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
-  bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+  static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
   if (log_verbose) {
     std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
     if (warning_printed->find(warning) == warning_printed->end()) {

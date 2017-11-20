@@ -1,6 +1,6 @@
 TEST_SRC = $(shell find tests/cpp/ -name "*.cc")
 TEST_OBJ = $(patsubst %.cc, build/%.o, $(TEST_SRC))
-TEST = build/tests/cpp/mxnet_test
+TEST = build/tests/cpp/mxnet_unit_tests
 
 GTEST_LIB=$(GTEST_PATH)/lib/
 GTEST_INC=$(GTEST_PATH)/include/
