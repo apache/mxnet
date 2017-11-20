@@ -193,6 +193,9 @@ def fit(args, network, data_loader, **kwargs):
         cbs = kwargs['batch_end_callback']
         batch_end_callbacks += cbs if isinstance(cbs, list) else [cbs]
 
+    # tensorboard logs
+    eval_end_callbacks = kwargs['eval_end_callback']
+
     # run
     model.fit(train,
         begin_epoch        = args.load_epoch if args.load_epoch else 0,
@@ -206,6 +209,8 @@ def fit(args, network, data_loader, **kwargs):
         arg_params         = arg_params,
         aux_params         = aux_params,
         batch_end_callback = batch_end_callbacks,
+        eval_end_callback  = eval_end_callbacks,
         epoch_end_callback = checkpoint,
         allow_missing      = True,
         monitor            = monitor)
+

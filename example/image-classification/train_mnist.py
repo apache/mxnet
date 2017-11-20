@@ -92,5 +92,19 @@ if __name__ == '__main__':
     net = import_module('symbols.'+args.network)
     sym = net.get_symbol(**vars(args))
 
+    # tensorboard logs
+    train_log = 'logs/mnist/train'
+    eval_log = 'logs/mnist/eval'
+    batch_end_callbacks = []
+    eval_end_callbacks = []
+    try:
+        import tensorboard
+        batch_end_callbacks.append(mx.contrib.tensorboard.LogMetricsCallback(train_log))
+        eval_end_callbacks.append(mx.contrib.tensorboard.LogMetricsCallback(eval_log))
+    except:
+        print("warning: can't generate event files of tensorboard. You can install tensorboard using 'pip install tensorboard'.")
+
     # train
-    fit.fit(args, sym, get_mnist_iter)
+    fit.fit(args, sym, get_mnist_iter,\
+            batch_end_callback = batch_end_callbacks,\
+            eval_end_callback = eval_end_callbacks)
