@@ -32,10 +32,9 @@ namespace op {
 
 inline static mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const NDArray &output) {
+    const mkldnn::memory::desc &out_md) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
-  auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Instance().get_engine();
   if (bias) {
     auto bias_md = GetMemDesc(*bias);
@@ -88,15 +87,29 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &out_data) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const TShape& ishape = in_data[fullc::kData].shape();
+  const TShape& oshape = out_data[fullc::kOut].shape();
   NDArray weight = in_data[fullc::kWeight];
   NDArray data = in_data[fullc::kData];
-  if (data.shape().ndim() != 2 && !param.flatten)
-    data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]));
-  else if (data.shape().ndim() != 2)
+  auto out_md = GetMemDesc(out_data[fullc::kOut]);
+  if (data.shape().ndim() != 2 && !param.flatten) {
+    data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),
+          ishape[ishape.ndim()-1]));
+    // TODO this can potentially be a problem when casting the type.
+    mkldnn::memory::dims out_dims{(int) oshape.ProdShape(0, oshape.ndim()-1),
+      (int) oshape[ishape.ndim()-1]};
+    out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data[fullc::kOut].dtype()),
+      mkldnn::memory::format::any);
+  }
+  else if (data.shape().ndim() != 2) {
     data = data.Reshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
+    // TODO this can potentially be a problem when casting the type.
+    mkldnn::memory::dims out_dims{(int) oshape[0], (int) oshape.ProdShape(1, oshape.ndim())};
+    out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data[fullc::kOut].dtype()),
+      mkldnn::memory::format::any);
+  }
 
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
-      param.no_bias ? nullptr : &in_data[fullc::kBias], out_data[fullc::kOut]);
+      param.no_bias ? nullptr : &in_data[fullc::kBias], out_md);
   auto data_mem = data.GetMKLDNNDataReorder(ipFwd_pd.src_primitive_desc());
   auto weight_mem = weight.GetMKLDNNDataReorder(ipFwd_pd.weights_primitive_desc());
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
@@ -124,7 +137,8 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   NDArray weight = inputs[fullc::kWeight + 1];
   NDArray data = inputs[fullc::kData + 1];
   if (data.shape().ndim() != 2 && !param.flatten)
-    data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]));
+    data = data.Reshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),
+          ishape[ishape.ndim()-1]));
   else if (data.shape().ndim() != 2)
     data = data.Reshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
   NDArray out_grad = inputs[fullc::kOut];
@@ -134,7 +148,7 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     out_grad = out_grad.Reshape(Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())));
 
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
-      param.no_bias ? nullptr : &in_grad[fullc::kBias], out_grad);
+      param.no_bias ? nullptr : &in_grad[fullc::kBias], GetMemDesc(out_grad));
 
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   if (req[fullc::kData]) {
