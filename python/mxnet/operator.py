@@ -31,7 +31,7 @@ from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
+from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR, _STORAGE_TYPE_DEFAULT
 from .ndarray import _ndarray_cls
 
 
@@ -717,10 +717,10 @@ def register(reg_name):
                     n_in = len(op_prop.list_arguments())
                     n_out = len(op_prop.list_outputs())
                     n_aux = len(op_prop.list_auxiliary_states())
-                    total_inputs = n_in + 2 * n_out
+                    total_inputs = (n_in + 2 * n_out) if op_prop.need_top_grad_ else (n_in + n_out)
                     total_aux = n_aux
                     total_outputs = n_in
-                    assert num_tensor == (2 * n_in + 2 * n_out + n_aux)
+                    assert num_tensor == (total_inputs + total_aux + total_outputs)
 
                     stypes = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i]] \
                              for i in range(total_inputs + total_aux)]
@@ -923,6 +923,10 @@ def register(reg_name):
                         try:
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
+                                # continue for ograd when need_top_grad_ is False
+                                # This will cause len(ograd) = 0 when passed to backward
+                                if not op_prop.need_top_grad_ and tags[i] == 3:
+                                    continue
                                 if tags[i] == 2 or tags[i] == 4:
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                               NDArrayHandle),

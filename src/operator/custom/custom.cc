@@ -370,7 +370,8 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   std::vector<int> stypes;
-  stypes.reserve(params.num_outs * 2 + params.num_args * 2 + params.num_auxs);
+  const size_t num_bwd_args = params.bwd_idx.size();
+  stypes.reserve(num_bwd_args + params.num_args + params.num_auxs);
   for (size_t i = 0; i < iattr->size(); ++i) {
     stypes.push_back((*iattr)[i]);
   }
@@ -382,17 +383,17 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
       params.info->callbacks[kCustomOpPropBackwardInferStorageType])(
       stypes.size(), stypes.data(),
       params.info->contexts[kCustomOpPropBackwardInferStorageType]));
-  for (size_t i = 0; i < 2 * params.num_outs + params.num_args; ++i) {
+  for (size_t i = 0; i < num_bwd_args; ++i) {
     STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, stypes[i]);
   }
   for (size_t i = 0; i < params.num_args; ++i) {
     STORAGE_TYPE_ASSIGN_CHECK(
-        *oattr, i, stypes[i + 2 * params.num_outs + params.num_args]);
+        *oattr, i, stypes[i + num_bwd_args]);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
     STORAGE_TYPE_ASSIGN_CHECK(
-        *iattr, i + 2 * params.num_outs + params.num_args,
-        stypes[i + 2 * params.num_outs + 2 * params.num_args]);
+        *iattr, i + num_bwd_args,
+        stypes[i + num_bwd_args + params.num_args]);
   }
 
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
