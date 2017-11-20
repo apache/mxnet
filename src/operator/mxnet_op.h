@@ -416,6 +416,15 @@ struct Kernel<OP, cpu> {
     return true;
   }
 
+  // Where wrapper (ie op_with_req) OP type is derived from tuned
+  template<typename DType, typename T = OP, typename ...Args>
+  inline static
+  typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
+    LaunchTuned<typename OP::Operation, DType>(s, N, args...);
+    return true;
+  }
+
   /*!
    * \brief Launch CPU kernel which has OMP tuning data available.
    * When using this for a new kernel op, add declaration and tuning objects to
