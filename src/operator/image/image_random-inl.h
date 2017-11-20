@@ -106,12 +106,70 @@ static void ToTensor(const nnvm::NodeAttrs &attrs,
   });
 }
 
+struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
+  nnvm::Tuple<float> means;
+  nnvm::Tuple<float> stds;
+  DMLC_DECLARE_PARAMETER(NormalizeParam) {
+    DMLC_DECLARE_FIELD(means)
+    .describe("Sequence of means for each channel.");
+    DMLC_DECLARE_FIELD(stds)
+    .describe("Sequence of standard deviations for each channel.");
+  }
+};
+
+struct normalize {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+                                  const OpReqType req,
+                                  const int nchannel, const int size,
+                                  const float *means, const float *stds) {
+    int c = 0;
+    for (; c <= nchannel; ++c) {
+      if (c * size > i) {
+        --c; break;
+      }
+    }
+    float mean = (means ? means[c] : 0);
+    KERNEL_ASSIGN(out[i], req, static_cast<DType>((in[i] - mean) / stds[c]));
+  }
+};
+
 template<typename xpu>
 static void Normalize(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  int nchannel = inputs[0].shape_[0];
+  int size = inputs[0].Size() / nchannel;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      mxnet_op::Kernel<normalize, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(),
+        Req, nchannel, size, param.means.begin(), param.stds.begin());
+    });
+  });
+}
+
+template<typename xpu>
+static void NormalizeBackward(const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  int nchannel = inputs[0].shape_[0];
+  int size = inputs[0].Size() / nchannel;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      mxnet_op::Kernel<normalize, xpu>::Launch(
+        s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(),
+        Req, nchannel, size, nullptr, param.stds.begin()); 
+      });
+  });
 }
 
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
