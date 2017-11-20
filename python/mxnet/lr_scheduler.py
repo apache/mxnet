@@ -146,7 +146,8 @@ class MultiFactorScheduler(LRScheduler):
                 raise ValueError("Stop lr must be greater than begin lr")
             self.warmup_start_lr = warmup_start_lr
             self.warmup_stop_lr = warmup_stop_lr
-            self.const_update = (self.warmup_stop_lr - self.warmup_start_lr) / (self.warmup_step - 1)
+            self.const_update = (self.warmup_stop_lr - self.warmup_start_lr) / \
+                                (self.warmup_step - 1)
             self.cur_step = 0
 
     def __call__(self, num_update):
