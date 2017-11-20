@@ -229,7 +229,7 @@ if __name__ == "__main__":
             contexts[i] = mx.context.gpu(int(ctx[3:]))
         else:
             contexts[i] = mx.context.cpu()
-            num_gpu = len(contexts)
+    num_gpu = len(contexts)
 
     if args.batch_size % num_gpu != 0:
         raise Exception('num_gpu should be positive divisor of batch_size')
