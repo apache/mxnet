@@ -441,6 +441,8 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // If the storage type is the default type, we can just simply
   // reference to the memory for the default storage.
   if (storage_type == kDefaultStorage) {
+    if (shandle.dptr == nullptr)
+      CheckAndAlloc();
     Mkl_mem_.reset(new mkldnn::memory(mkldnn::memory::primitive_desc(data_md,
             cpu_engine), shandle.dptr));
   }
