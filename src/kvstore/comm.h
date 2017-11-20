@@ -593,21 +593,6 @@ class CommDevice : public Comm {
     using namespace mshadow;
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
       << "BroadcastRowSparse expects row-sparse src NDArray";
-    // first broadcast src to every device
-    std::vector<NDArray> srcs(dst.size());
-    int dev_id = key % dst.size();
-    NDArray* dev_id_out = dst[dev_id].first;
-    srcs[dev_id] = NDArray(kRowSparseStorage, src.shape(),
-      dev_id_out->ctx(), true, src.dtype(), src.aux_types());
-    CopyFromTo(src, srcs[dev_id], priority);
-    for (size_t i = 0; i < dst.size(); ++i) {
-      if (i != static_cast<size_t>(dev_id)) {
-        NDArray* out = dst[i].first;
-        srcs[i] = NDArray(kRowSparseStorage, src.shape(),
-          out->ctx(), true, src.dtype(), src.aux_types());
-        CopyFromTo(src, &srcs[i], priority);
-      }
-    }
     for (size_t i = 0; i < dst.size(); ++i) {
       NDArray* out = dst[i].first;
       NDArray row_id = dst[i].second;
@@ -616,7 +601,12 @@ class CommDevice : public Comm {
       } else {
         CHECK_EQ(out->storage_type(), kRowSparseStorage)
                  << "BroadcastRowSparse expects row_sparse dst NDArray";
-        NDArray src_gpu = srcs[i];
+        const bool is_diff_ctx = out->ctx() != src.ctx();
+        NDArray src_gpu = is_diff_ctx? NDArray(kRowSparseStorage, src.shape(),
+            out->ctx(), true, src.dtype(), src.aux_types()) : src;
+        if (is_diff_ctx) {
+          CopyFromTo(src, &src_gpu, priority);
+        }
         NDArray row_id_gpu = NDArray(row_id.shape(), out->ctx(), false, kInt64);
         const TBlob& indices = row_id_gpu.data();
         CopyFromTo(row_id, &row_id_gpu, priority);
