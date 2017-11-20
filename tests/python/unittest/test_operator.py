@@ -3585,18 +3585,12 @@ def test_rcbrt_op():
 def test_custom_op():
     class Sqr(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
-            if in_data[0].stype == 'default':
-                aux[0][:] = 1
-                self.assign(out_data[0], req[0], in_data[0]*in_data[0])
-            else:
-                self.assign(out_data[0], req[0], mx.nd.sparse.square(in_data[0]))
-                if in_data[0].stype == 'csr':
-                    assert(isinstance(in_data[0], mx.nd.sparse.CSRNDArray))
+            self.assign(out_data[0], req[0], in_data[0]*in_data[0])
+            aux[0][:] = 1
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
-            if in_data[0].stype == 'default':
-                assert (aux[0].asnumpy() == 1).all()
+            assert (aux[0].asnumpy() == 1).all()
 
     @mx.operator.register("sqr")
     class SqrProp(mx.operator.CustomOpProp):
@@ -3618,16 +3612,6 @@ def test_custom_op():
         def infer_type(self, in_type):
             return in_type, [in_type[0]], [in_type[0]]
 
-        def infer_storage_type(self, in_stype):
-            if in_stype[0] == 'default':
-                return ['default'], ['default'], ['default']
-            return ['csr'], ['csr'], ['csr']
-
-        def infer_storage_type_backward(self, in_stype):
-            if in_stype[1] == 'default':
-                return ['default', 'default', 'default'], ['default'], ['default']
-            return ['default', 'csr', 'csr'], ['csr'], ['csr']
-
         def create_operator(self, ctx, shapes, dtypes):
             return Sqr()
 
@@ -3640,18 +3624,15 @@ def test_custom_op():
 
     data = mx.symbol.cast(data, dtype='float64')
     op = mx.symbol.cast(op, dtype='float32')
+    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    aux = mx.nd.zeros_like(x)
     check_numeric_gradient(op, [x], [aux])
 
-    x = x.tostype('csr')
-    aux = mx.nd.zeros_like(x)
     x.attach_grad()
     with mx.contrib.autograd.train_section():
         y = mx.nd.Custom(x, aux, op_type='sqr')
         y.backward()
-    mx.nd.waitall()
-    assert (x.grad.stype == 'csr')
-    assert (y.stype == 'csr')
-    assert (aux.stype == 'csr')
+
 
 def test_psroipooling():
     for num_rois in [1, 2]:
