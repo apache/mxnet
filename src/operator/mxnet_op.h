@@ -391,28 +391,28 @@ struct Kernel<OP, cpu> {
   template<typename DType, typename T = OP, typename ...Args>
   inline static typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
-    LaunchTuned<OP, DType>(s, N, args...);
+    LaunchTuned<T, DType>(s, N, args...);
     return true;
   }
 
   template<typename DType, typename T = OP, typename ...Args>
   inline static typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    LaunchTuned<OP, DType>(s, N, dest, args...);
+    LaunchTuned<T, DType>(s, N, dest, args...);
     return true;
   }
 
   template<typename DType, typename T = OP, typename ...Args>
   inline static typename std::enable_if<std::is_base_of<tunable_wrapper, T>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
-    LaunchTuned<typename OP::Operation, DType>(s, N, args...);
+    LaunchTuned<typename T::Operation, DType>(s, N, args...);
     return true;
   }
 
   template<typename DType, typename T = OP, typename ...Args>
   inline static typename std::enable_if<std::is_base_of<tunable_wrapper, T>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    LaunchTuned<typename OP::Operation, DType>(s, N, dest, args...);
+    LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
     return true;
   }
 
@@ -421,7 +421,7 @@ struct Kernel<OP, cpu> {
   inline static
   typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, Args... args) {
-    LaunchTuned<typename OP::Operation, DType>(s, N, args...);
+    LaunchTuned<typename T::Operation, DType>(s, N, args...);
     return true;
   }
 
