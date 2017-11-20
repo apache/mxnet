@@ -203,20 +203,42 @@ function copy_params_from(self::Executor, arg_params::Dict{Base.Symbol,NDArray},
 end
 
 
+Base.show(io::IO, x::Executor) =
+  print(io, "mx.", split(string(typeof(x)), '.')[end], " ", x.handle.value)
+
 """
+    print([io::IO], x::Executor)
+
 Get a debug string about internal execution plan.
 
 Can be used to get an estimated about the memory cost.
+
 ```julia
-  net = ... # Symbol
-  dProvider = ... # DataProvider
-  exec = mx.simple_bind(net, mx.cpu(), data=size(dProvider.data_batch[1]))
-  dbg_str = mx.debug_str(exec)
-  println(split(ref, ['\\n'])[end-2])
+julia> x = mx.Variable(:x)
+MXNet.mx.SymbolicNode x
+
+julia> exec = mx.bind(x + 1, mx.cpu(), Dict(:x => mx.ones(2,3)))
+mx.Executor Ptr{Void} @0x000055c3dee9eb30
+
+julia> print(exec)
+Symbol Outputs:
+        output[0]=_plus_scalar0(0)
+Variable:x
+--------------------
+Op:_plus_scalar, Name=_plus_scalar0
+Inputs:
+        arg[0]=x(0) version=0
+Attrs:
+        scalar=1.00000000e+00
+Total 0 MB allocated
+Total 11 TempSpace resource requested
 ```
 """
-function debug_str(self :: Executor)
-  s_ref = Ref{Cstring}()
-  @mxcall(:MXExecutorPrint, (MX_handle, Ptr{Cstring}), self.handle, s_ref)
+Base.print(io::IO, x::Executor) = print(io, debug_str(x))
+Base.print(x::Executor)         = print(STDOUT, x)
+
+function debug_str(x::Executor)
+  s_ref = Ref{Cstring}(C_NULL)
+  @mxcall(:MXExecutorPrint, (MX_handle, Ptr{Cstring}), x.handle, s_ref)
   unsafe_string(s_ref[])
 end

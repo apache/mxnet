@@ -229,16 +229,16 @@ Base.show(io::IO, sym::SymbolicNode) =
 
 import Base: print
 
-function print(io :: IO, sym :: SymbolicNode)
+function print(io::IO, sym::SymbolicNode)
   out = Ref{mx.char_p}(C_NULL)
   @mx.mxcall(:MXSymbolPrint, (mx.MX_SymbolHandle, Ref{mx.char_p}), sym.handle, out)
   print(io, unsafe_string(out[]))
 end
 
-print(sym :: SymbolicNode) = print(STDOUT, sym)
+print(sym::SymbolicNode) = print(STDOUT, sym)
 
 """
-    print([io :: IO], sym :: SymbolicNode)
+    print([io::IO], sym::SymbolicNode)
 
 Print the content of symbol, used for debug.
 
