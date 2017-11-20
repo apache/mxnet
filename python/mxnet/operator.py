@@ -563,7 +563,7 @@ class CustomOpProp(object):
             list of aux stypes calculated from in_stype,
             in the same order as declared in list_auxiliary_states.
         """
-        return in_stype, [in_stype[0]]*len(self.list_outputs()), \
+        return in_stype, [in_stype[0]]*len(self.list_arguments()), \
             [in_stype[0]]*len(self.list_auxiliary_states())
 
     def list_outputs(self):
@@ -717,10 +717,10 @@ def register(reg_name):
                     n_in = len(op_prop.list_arguments())
                     n_out = len(op_prop.list_outputs())
                     n_aux = len(op_prop.list_auxiliary_states())
-                    total_inputs = n_in + 2 * n_out
+                    total_inputs = (n_in + 2 * n_out) if op_prop.need_top_grad_ else (n_in + n_out)
                     total_aux = n_aux
                     total_outputs = n_in
-                    assert num_tensor == (2 * n_in + 2 * n_out + n_aux)
+                    assert num_tensor == (total_inputs + total_aux + total_outputs)
 
                     stypes = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i]] \
                              for i in range(total_inputs + total_aux)]
@@ -923,6 +923,10 @@ def register(reg_name):
                         try:
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
+                                # continue for ograd when need_top_grad_ is False
+                                # This will cause len(ograd) = 0 when passed to backward
+                                if not op_prop.need_top_grad_ and tags[i] == 3:
+                                    continue
                                 if tags[i] == 2 or tags[i] == 4:
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                               NDArrayHandle),
