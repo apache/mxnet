@@ -133,8 +133,8 @@ struct static_init_var {
     return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
       mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+    init_ = mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
       mxnet::op::UnaryOpTune<__typ$>::TuneUnaryBackwardOperator<__op$>)
 
 /*!
