@@ -25,13 +25,15 @@
 #ifndef MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
+
+#include <mxnet/base.h>
 #include <vector>
 #include <cmath>
-#include <mxnet/base.h>
+#include <limits>
+#include <algorithm>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/mat.hpp>
 #include "../mxnet_op.h"
-#include "image_common.h"
 #include "../../operator/operator_common.h"
 #include "../../operator/linalg.h"
 
@@ -378,9 +380,9 @@ template <typename DType> static
 void RGB2HLSConvert(const DType src_r,
                     const DType src_g,
                     const DType src_b,
-                    DType &dst_h,
-                    DType &dst_l,
-                    DType &dst_s
+                    DType *dst_h,
+                    DType *dst_l,
+                    DType *dst_s
                    ) {
   DType b = src_b, g = src_g, r = src_r;
   DType h = 0.f, s = 0.f, l;
@@ -409,20 +411,27 @@ void RGB2HLSConvert(const DType src_r,
     h += (h < 0.f) * 360.f;
   }
 
-  dst_h = h;
-  dst_l = l;
-  dst_s = s;
+  *dst_h = h;
+  *dst_l = l;
+  *dst_s = s;
 }
 
 
-static  int c_HlsSectorData[6][3] = { { 1, 3, 0 }, { 1, 0, 2 }, { 3, 0, 1 }, { 0, 2, 1 }, { 0, 1, 3 }, { 2, 1, 0 } };
+static  int c_HlsSectorData[6][3] = {
+  { 1, 3, 0 },
+  { 1, 0, 2 },
+  { 3, 0, 1 },
+  { 0, 2, 1 },
+  { 0, 1, 3 },
+  { 2, 1, 0 }
+};
 
 template <typename DType>  static  void HLS2RGBConvert(const DType src_h,
     const DType src_l,
     const DType src_s,
-    DType &dst_r,
-    DType &dst_g,
-    DType &dst_b) {
+    DType *dst_r,
+    DType *dst_g,
+    DType *dst_b) {
 
 
   float h = src_h, l = src_l, s = src_s;
@@ -433,12 +442,13 @@ template <typename DType>  static  void HLS2RGBConvert(const DType src_h,
     p2 += (l > 0.5f) * (l + s - l * s);
     float p1 = 2 * l - p2;
 
-    if (h < 0)
-        do h += 6; while (h < 0);
-    else if (h >= 6)
-        do h -= 6; while (h >= 6);
+    if (h < 0) {
+      do { h += 6; } while (h < 0);
+    } else if (h >= 6) {
+      do { h -= 6; } while (h >= 6);
+    }
 
-    int sector = (int)(h);
+    int sector = static_cast<int>(h);
 
     h -= sector;
 
@@ -453,13 +463,18 @@ template <typename DType>  static  void HLS2RGBConvert(const DType src_h,
     r = tab[c_HlsSectorData[sector][2]];
   }
 
-  dst_b = b;
-  dst_g = g;
-  dst_r = r;
+  *dst_b = b;
+  *dst_g = g;
+  *dst_r = r;
 }
 
 template<typename xpu, typename DType>
-static  void RandomHueKernal(TBlob &input, TBlob &output, Stream<xpu> *s, int hight, int weight, DType alpha) {
+static  void RandomHueKernal(const TBlob &input,
+                             const TBlob &output,
+                             Stream<xpu> *s,
+                             int hight,
+                             int weight,
+                             DType alpha) {
   auto input_3d = input.get<xpu, 3, DType>(s);
   auto output_3d = output.get<xpu, 3, DType>(s);
   for (int h_index = 0; h_index < hight; ++h_index) {
@@ -470,20 +485,19 @@ static  void RandomHueKernal(TBlob &input, TBlob &output, Stream<xpu> *s, int hi
       RGB2HLSConvert(input_3d[0][h_index][w_index],
                      input_3d[1][h_index][w_index],
                      input_3d[2][h_index][w_index],
-                     h, l, s
-                    );
+                     &h, &l, &s);
       h += alpha;
       h = std::max(DType(0), std::min(DType(180), h));
 
       HLS2RGBConvert(
         h, l, s,
-        output_3d[0][h_index][w_index],
-        output_3d[1][h_index][w_index],
-        output_3d[2][h_index][w_index]
-      );
+        &output_3d[0][h_index][w_index],
+        &output_3d[1][h_index][w_index],
+        &output_3d[2][h_index][w_index]);
     }
   }
-};
+}
+
 template<typename xpu>
 static void RandomHue(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
@@ -500,7 +514,8 @@ static void RandomHue(const nnvm::NodeAttrs &attrs,
   Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu, real_t>(s);
 
   const RandomHueParam &param = nnvm::get<RandomHueParam>(attrs.parsed);
-  float alpha =  std::uniform_real_distribution<float>(-param.max_hue, param.max_hue)(prnd->GetRndEngine());
+  float alpha =  std::uniform_real_distribution<float>(
+    -param.max_hue, param.max_hue)(prnd->GetRndEngine());
   auto output_float = output.get<xpu, 3, float>(s);
 
   MSHADOW_TYPE_SWITCH(input.type_flag_, DType, {
