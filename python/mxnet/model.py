@@ -103,8 +103,8 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
         if update_on_kvstore:
             kvstore.pull(name, param_on_devs, priority=-idx)
 
-def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
-    """Perform update of param_arrays from grad_arrays on kvstore."""
+def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on NCCL kvstore."""
     valid_indices = [index for index, grad_list in
                      enumerate(grad_arrays) if grad_list[0] is not None]
     valid_grad_arrays = [grad_arrays[i] for i in valid_indices]
@@ -113,7 +113,7 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     size = len(valid_grad_arrays)
     start = 0
     # Use aggregation by default only with NCCL
-    default_batch = 16 if 'nccl' in kvstore.type else 1
+    default_batch = 16
     batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
     while start < size:
         end = start + batch if start + batch < size else size
@@ -122,6 +122,18 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         # pull back the weights
         kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
         start = end
+
+def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on kvstore."""
+    for index, pair in enumerate(zip(param_arrays, grad_arrays)):
+        arg_list, grad_list = pair
+        if grad_list[0] is None:
+            continue
+        name = param_names[index]
+        # push gradient, priority is negative index
+        kvstore.push(name, grad_list, priority=-index)
+        # pull back the weights
+        kvstore.pull(name, arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
@@ -272,9 +284,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 executor_manager.backward()
 
                 if update_on_kvstore:
-                    _update_params_on_kvstore(executor_manager.param_arrays,
-                                              executor_manager.grad_arrays,
-                                              kvstore, executor_manager.param_names)
+                    if 'nccl' in kvstore.type:
+                        _update_params_on_kvstore_nccl(executor_manager.param_arrays,
+                                                       executor_manager.grad_arrays,
+                                                       kvstore, executor_manager.param_names)
+                    else:
+                        _update_params_on_kvstore(executor_manager.param_arrays,
+                                                  executor_manager.grad_arrays,
+                                                  kvstore, executor_manager.param_names)
                 else:
                     _update_params(executor_manager.param_arrays,
                                    executor_manager.grad_arrays,
