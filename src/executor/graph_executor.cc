@@ -362,7 +362,6 @@ Graph AssignContext(Graph g,
 
   // loop through all the rest of input nodes not specified
   // in the ctx_map and populate maps and lists
-  LOG(INFO) << "args context";
   size_t arg_top = 0, aux_top = 0;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
@@ -381,22 +380,10 @@ Graph AssignContext(Graph g,
       ctx_list.push_back(ctx);  // save the current ctx in the list
     }
     device[nid] = ctx2id.at(ctx);  // assign device id to the current node
-    LOG(INFO) << "nid: " << nid << " ctx.dev_id " << ctx.dev_id;
   }
-  LOG(INFO) << "=====================";
-  LOG(INFO) << num_forward_outputs << " num_forward_outputs";
-  LOG(INFO) << g.outputs.size() << " g.outputs.size()";
-  LOG(INFO) << arg_grad_ctxes.size() << " arg_grad_ctxes.size()";
-  
+
   // loop through backward input nodes and populate maps and lists
   // the backward input nodes is the gradient of the loss wrt the output
-  LOG(INFO) << "arg grads contexts"; 
-  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i){
-    const uint32_t nid = idx.outputs()[i].node_id;
-    Context ctx = arg_grad_ctxes[i - num_forward_outputs];
-    LOG(INFO) << "nid " << nid  << " ctx " << ctx.dev_id;
-  }
-  LOG(INFO) << "=====================";
   for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i) {
     const uint32_t nid = idx.outputs()[i].node_id;
     Context ctx = arg_grad_ctxes[i - num_forward_outputs];
@@ -406,34 +393,7 @@ Graph AssignContext(Graph g,
     }
     int devid = ctx2id.at(ctx);
     if (device[nid] != -1) {
-      LOG(INFO) << "fail nid " << nid << " ctx " << ctx.dev_id;
-      const nnvm::IndexedGraph::Node fail_node = idx[nid];
-      // print the graph structure
-      const auto& ret = g;
-      const auto &idx = ret.indexed_graph();
-      uint32_t node_start = 0, node_end = idx.num_nodes();
-      if (ret.attrs.count("node_range")) {
-        const auto& range = ret.GetAttr<std::pair<uint32_t, uint32_t> >("node_range");
-        node_start = range.first;
-        node_end = range.second;
-      }
-      for (uint32_t nid = node_start; nid < node_end; ++nid) {
-        const auto& inode = idx[nid];
-        if (inode.source->is_variable()) {
-          LOG(INFO) << "node " << nid << " var " << inode.source->attrs.name;
-        } else {
-          LOG(INFO) << "node " << nid << " " << inode.source->attrs.op->name;
-          for (const auto& e : inode.inputs) {
-            auto eid = idx.entry_id(e);
-            LOG(INFO) << "\t\tinput " << eid << " (entry id)";
-          }
-          for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
-            uint32_t eid = idx.entry_id(nid, index);
-            LOG(INFO) << "\t\toutput " << eid  << " (entry id)";
-          }
-        }
-      } // end of the print
-      CHECK_EQ(device[nid], devid) << fail_node.source->attrs.name << " device of same output not equal to each other";
+      CHECK_EQ(device[nid], devid) << "device of same output not equal to each other";
     } else {
       device[nid] = devid;
     }

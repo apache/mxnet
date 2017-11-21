@@ -32,12 +32,9 @@ def matrix_fact_model_parallel_net(factor_size, num_hidden, max_user, max_item):
         item_weight = mx.symbol.Variable('item_weight', stype='row_sparse')
         item = mx.symbol.contrib.SparseEmbedding(data=item, weight=item_weight,
                                                  input_dim=max_item, output_dim=factor_size)
-        # set ctx_group attribute to 'dev2' for the symbols created in this scope,
-        # the symbols will be bound to the context that 'dev2' map to in group2ctxs
+    # set ctx_group attribute to 'dev2' for the symbols created in this scope,
+    # the symbols will be bound to the context that 'dev2' map to in group2ctxs
     with mx.AttrScope(ctx_group='dev2'):
-        weight = mx.symbol.Variable('ufcweight')
-        bias = mx.symbol.Variable('ufcbias')
-        user = mx.symbol.FullyConnected(data=user, weight=weight, bias=bias, num_hidden=num_hidden)
         # predict by the inner product, which is elementwise product and then sum
         pred = user * item
         pred = mx.symbol.sum(data=pred, axis=1)
