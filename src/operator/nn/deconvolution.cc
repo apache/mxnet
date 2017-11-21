@@ -26,6 +26,7 @@
 
 #include "./deconvolution-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -305,10 +306,9 @@ static void DeconvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
     const OpContext& ctx, const std::vector<NDArray>& inputs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNDeconvolution_Forward(attrs, ctx, inputs, req, outputs);
-      return;
+  if (SupportMKLDNNConv(inputs[0])) {
+    MKLDNNDeconvolution_Forward(attrs, ctx, inputs, req, outputs);
+    return;
   }
 #endif
   // TODO I need to convert format.
@@ -325,10 +325,9 @@ static void DeconvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     const OpContext& ctx, const std::vector<NDArray>& inputs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNDeconvolution_Backward(attrs, ctx, inputs, req, outputs);
-      return;
+  if (SupportMKLDNNConv(inputs[0])) {
+    MKLDNNDeconvolution_Backward(attrs, ctx, inputs, req, outputs);
+    return;
   }
 #endif
   // TODO I need to convert format.
