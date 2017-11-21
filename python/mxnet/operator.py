@@ -736,12 +736,18 @@ def register(reg_name):
                     in_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len]] \
                                      for i in range(n_in)]
                     in_stype_len = len(in_stype)
-                    out_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len + in_stype_len]] \
+                    out_stype = [_STORAGE_TYPE_ID_TO_STR
+                                 [tensor_stypes[i + ograd_stype_len + in_stype_len]] \
                                       for i in range(n_out)]
                     out_stype_len = len(out_stype)
-                    aux_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len + in_stype_len + out_stype_len]] \
-                                     for i in range(total_aux)]
-                    ret = op_prop.infer_storage_type_backward(ograd_stype, in_stype, out_stype, aux_stype)
+                    aux_stype = [_STORAGE_TYPE_ID_TO_STR
+                                 [tensor_stypes
+                                  [i + ograd_stype_len + in_stype_len + out_stype_len]] \
+                                    for i in range(total_aux)]
+                    ret = op_prop.infer_storage_type_backward(ograd_stype,
+                                                              in_stype,
+                                                              out_stype,
+                                                              aux_stype)
                     if len(ret) == 4:
                         ogstype, istype, ostype, igstype = ret
                         astype = []
@@ -750,7 +756,8 @@ def register(reg_name):
                     else:
                         raise AssertionError("infer_storage_type_backward must return 4 or 5 lists")
                     assert len(ogstype) == len(ograd_stype), \
-                        "InferStorageTypeBackward Error: expecting %d entries in returned output gradient " \
+                        "InferStorageTypeBackward Error: expecting %d "\
+                        "entries in returned output gradient " \
                         "stypes, got %d."%(len(ograd_stype), len(ogstype))
                     assert len(ostype) == len(out_stype), \
                         "InferStorageTypeBackward Error: expecting %d entries in returned output " \
@@ -759,9 +766,11 @@ def register(reg_name):
                         "InferStorageTypeBackward Error: expecting %d entries in returned input " \
                         "stypes, got %d."%(len(in_stype), len(istype))
                     assert len(astype) == len(aux_stype), \
-                        "InferStorageTypeBackward Error: expecting %d entries in returned aux_stypes " \
+                        "InferStorageTypeBackward Error: expecting %d "\
+                        "entries in returned aux_stypes " \
                         "stypes, got %d."%(len(aux_stype), len(astype))
-                    rtype = list(ogstype) + list(istype) + list(ostype) + list(igstype) + list(astype)
+                    rtype = list(ogstype) + list(istype) + \
+                            list(ostype) + list(igstype) + list(astype)
                     for i, dtype in enumerate(rtype):
                         tensor_stypes[i] = _STORAGE_TYPE_STR_TO_ID[dtype]
                     infer_storage_type_backward_entry._ref_holder = [tensor_stypes]
