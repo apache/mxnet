@@ -151,7 +151,7 @@ class Parameter(object):
         assert len(self._shape) == len(new_shape) and \
             all(j == 0 or i == j for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
-            str(new_shape), str(self._shape))
+                str(new_shape), str(self._shape))
 
         self._shape = new_shape
 
