@@ -49,7 +49,7 @@ KVStore* KVStore::Create(const char *type_name) {
     kv = new kvstore::KVStoreDist(use_device_comm);
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
       // configure the server to be the sync mode
-      kv->SendCommandToServers(kvstore::kSyncMode, "");
+      kv->SendCommandToServers(static_cast<int>(kvstore::CommandType::kSyncMode), "");
     }
 #else
     LOG(FATAL) << "compile with USE_DIST_KVSTORE=1 to use " << tname;

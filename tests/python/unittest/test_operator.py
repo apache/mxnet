@@ -3590,8 +3590,8 @@ def test_custom_op():
                 self.assign(out_data[0], req[0], in_data[0]*in_data[0])
             else:
                 self.assign(out_data[0], req[0], mx.nd.sparse.square(in_data[0]))
-                if in_data[0].stype == 'csr':
-                    assert(isinstance(in_data[0], mx.nd.sparse.CSRNDArray))
+            if in_data[0].stype == 'csr':
+                assert(isinstance(in_data[0], mx.nd.sparse.CSRNDArray))
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], 2*in_data[0]*out_grad[0])
@@ -3640,18 +3640,20 @@ def test_custom_op():
 
     data = mx.symbol.cast(data, dtype='float64')
     op = mx.symbol.cast(op, dtype='float32')
+    x = mx.nd.array(np.random.uniform(-1, 1, size=(4, 10)))
+    aux = mx.nd.zeros_like(x)
     check_numeric_gradient(op, [x], [aux])
 
-    x = x.tostype('csr')
-    aux = mx.nd.zeros_like(x)
     x.attach_grad()
     with mx.contrib.autograd.train_section():
         y = mx.nd.Custom(x, aux, op_type='sqr')
         y.backward()
+
     mx.nd.waitall()
     assert (x.grad.stype == 'csr')
     assert (y.stype == 'csr')
     assert (aux.stype == 'csr')
+
 
     # test for backward compatibility, i.e. the correctness of default implementation of
     # infer storage in custom operator

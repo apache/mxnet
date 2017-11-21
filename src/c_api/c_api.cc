@@ -748,6 +748,20 @@ int MXKVStoreCreate(const char *type,
   API_END();
 }
 
+int MXKVStoreSetGradientCompression(KVStoreHandle handle, mx_uint num_params,
+                                    const char** keys, const char** vals) {
+  API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > params;
+  for (mx_uint i = 0; i < num_params; ++i) {
+    std::pair<std::string, std::string> p;
+    p.first = keys[i];
+    p.second = vals[i];
+    params.push_back(p);
+  }
+  static_cast<KVStore*>(handle)->SetGradientCompression(params);
+  API_END();
+}
+
 int MXKVStoreFree(KVStoreHandle handle) {
   API_BEGIN();
   delete static_cast<KVStore*>(handle);
