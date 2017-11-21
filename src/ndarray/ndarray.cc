@@ -341,8 +341,11 @@ NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
 }
 
 NDArray NDArray::At(index_t idx) const {
-  CHECK(storage_type() == kDefaultStorage) << "Storage type "
-                                           << storage_type() << " doesn't support At()";
+  CHECK(storage_type() == kDefaultStorage
+#if MXNET_USE_MKLDNN == 1
+      || storage_type() == kMKLDNNStorage
+#endif
+      ) << "Storage type " << storage_type() << " doesn't support At()";
   NDArray ret = this->Slice(idx, idx+1);
   if (shape_.ndim() > 1) {
     return ret.Reshape(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
@@ -352,8 +355,11 @@ NDArray NDArray::At(index_t idx) const {
 }
 
 NDArray NDArray::AtWithRecord(index_t idx) {
-  CHECK(storage_type() == kDefaultStorage)
-      << "Storage type " << storage_type() << " doesn't support At()";
+  CHECK(storage_type() == kDefaultStorage
+#if MXNET_USE_MKLDNN == 1
+      || storage_type() == kMKLDNNStorage
+#endif
+      ) << "Storage type " << storage_type() << " doesn't support At()";
   NDArray ret = this->SliceWithRecord(idx, idx+1);
   if (shape_.ndim() > 1) {
     return ret.ReshapeWithRecord(TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
@@ -416,7 +422,8 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
 
   mkldnn::memory::dims dims;
   // These are shapes supprted by MKLDNN.
-  if (shape.ndim() == 1 || shape.ndim() == 2 || shape.ndim() == 4) {
+  if (shape.ndim() == 1 || shape.ndim() == 2 || shape.ndim() == 4
+      || shape.ndim() == 5) {
     dims.resize(shape.ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
@@ -429,12 +436,16 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
       dims[i + 1] = shape[i];
   }
   else
-    LOG(FATAL) << "Unsupported number of dimensions for MKLDNN";
+    LOG(FATAL) << "MKLDNN doesn't support " << shape.ndim() << " dimensions";
   mkldnn::memory::format layout = mkldnn::memory::format::format_undef;
   switch (dims.size()) {
     case 1: layout = mkldnn::memory::format::x; break;
     case 2: layout = mkldnn::memory::format::nc; break;
     case 4: layout = mkldnn::memory::format::nchw; break;
+    // TODO This isn't the right layout when the data has 5 dimensions in MXNet.
+    // MXNet interprets 5 dimensions as ncdhw, but MKLDNN doesn't have
+    // a corresponding format.
+    case 5: layout = mkldnn::memory::format::goihw; break;
   }
   mkldnn::memory::desc data_md{dims, get_mkldnn_type(dtype), layout};
   auto cpu_engine = CpuEngine::Instance().get_engine();
