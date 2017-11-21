@@ -19,4 +19,6 @@ It is highly recommended that the following best practices be followed when usin
 * By default, mx.random uses a static and fixed seed value. The random utilities in MXNet should therefore never be used to implement any type of security critical functionality where cryptographically secure pseudorandom number generation is required.
 
 # Deployment Considerations
+The following are not MXNet framework specific threats but are applicable to Machine Learning models in general.
+
 * When deploying high-value, proprietary models for inference, care should be taken to prevent an adversary from stealing the model. The research paper [Stealing Machine Learning Models via Prediction APIs] (https://arxiv.org/pdf/1609.02943.pdf) outlines experiments performed to show how an attacker can use a prediction API to leak the ML model or construct a nearly identical replica. A simple way to thwart such an attack is to not expose the prediction probabilities to a high degree of precision in the API response.
