@@ -544,27 +544,35 @@ class CustomOpProp(object):
         return in_stype, [in_stype[0]]*len(self.list_outputs()), \
             [in_stype[0]]*len(self.list_auxiliary_states())
 
-    def infer_storage_type_backward(self, in_stype):
+    def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, aux_stype):
         """infer_storage_type_backward interface. Used to infer storage
         type of inputs and outputs in the backward pass.
 
         Parameters
         ----------
-        in_stype : list of stypes. Provide the in_stypes in the
-        following order: output_grads, in_data, out_data, aux_data(optional)
+        ograd_stype : list
+            list of output gradient storage types.
+        in_stype : list
+            list of input storage types
+        out_stype : list
+            list of output storage types
+        aux_stype : list
+            list of auxiliary storage types
 
         Returns
         -------
+        ograd_stype : list
+            list of inferred output gradient storage types
         in_stype : list
-            list of input stypes.
+            list of inferred input storage types
         out_stype : list
-            list of output stypes calculated from in_stype.
+            list of inferred output storage types
+        ingrad_stype : list
+            list of inferred input gradient storage types
         aux_stype : list
-            list of aux stypes calculated from in_stype,
-            in the same order as declared in list_auxiliary_states.
+            list of inferred storage types for auxiliary states.
         """
-        return in_stype, [in_stype[0]]*len(self.list_arguments()), \
-            [in_stype[0]]*len(self.list_auxiliary_states())
+        return list(ograd_stype), list(in_stype), list(out_stype), list(in_stype), list(aux_stype)
 
     def list_outputs(self):
         """list_outputs interface. Can override when creating new operators.
@@ -722,23 +730,38 @@ def register(reg_name):
                     total_outputs = n_in
                     assert num_tensor == (total_inputs + total_aux + total_outputs)
 
-                    stypes = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i]] \
-                             for i in range(total_inputs + total_aux)]
-                    ret = op_prop.infer_storage_type_backward(stypes)
-                    if len(ret) == 2:
-                        istype, ostype = ret
+                    ograd_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i]] \
+                                   for i in range(n_out)] if op_prop.need_top_grad_ else []
+                    ograd_stype_len = len(ograd_stype)
+                    in_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len]] \
+                                     for i in range(n_in)]
+                    in_stype_len = len(in_stype)
+                    out_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len + in_stype_len]] \
+                                      for i in range(n_out)]
+                    out_stype_len = len(out_stype)
+                    aux_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len + in_stype_len + out_stype_len]] \
+                                     for i in range(total_aux)]
+                    ret = op_prop.infer_storage_type_backward(ograd_stype, in_stype, out_stype, aux_stype)
+                    if len(ret) == 4:
+                        ogstype, istype, ostype, igstype = ret
                         astype = []
-                    elif len(ret) == 3:
-                        istype, ostype, astype = ret
+                    elif len(ret) == 5:
+                        ogstype, istype, ostype, igstype, astype = ret
                     else:
-                        raise AssertionError("infer_storage_type backward must return 2 or 3 lists")
-                    assert len(ostype) == total_outputs, \
+                        raise AssertionError("infer_storage_type_backward must return 4 or 5 lists")
+                    assert len(ogstype) == len(ograd_stype), \
+                        "InferStorageTypeBackward Error: expecting %d entries in returned output gradient " \
+                        "stypes, got %d."%(len(ograd_stype), len(ogstype))
+                    assert len(ostype) == len(out_stype), \
                         "InferStorageTypeBackward Error: expecting %d entries in returned output " \
-                        "stypes, got %d."%(total_outputs, len(ostype))
-                    assert len(istype) == (total_inputs), \
-                        "InferStorageTypeBackward Error: expecting %d entries in returned output " \
-                        "stypes, got %d."%(total_inputs, len(istype))
-                    rtype = list(istype) + list(ostype) + list(astype)
+                        "stypes, got %d."%(len(out_stype), len(ostype))
+                    assert len(istype) == len(in_stype), \
+                        "InferStorageTypeBackward Error: expecting %d entries in returned input " \
+                        "stypes, got %d."%(len(in_stype), len(istype))
+                    assert len(astype) == len(aux_stype), \
+                        "InferStorageTypeBackward Error: expecting %d entries in returned aux_stypes " \
+                        "stypes, got %d."%(len(aux_stype), len(astype))
+                    rtype = list(ogstype) + list(istype) + list(ostype) + list(igstype) + list(astype)
                     for i, dtype in enumerate(rtype):
                         tensor_stypes[i] = _STORAGE_TYPE_STR_TO_ID[dtype]
                     infer_storage_type_backward_entry._ref_holder = [tensor_stypes]
@@ -924,10 +947,12 @@ def register(reg_name):
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 # continue for ograd when need_top_grad_ is False
-                                # This will cause len(ograd) = 0 when passed to backward
+                                # This will cause len(ograd) = 1 when passed to backward
                                 if not op_prop.need_top_grad_ and tags[i] == 3:
-                                    continue
-                                if tags[i] == 2 or tags[i] == 4:
+                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
+                                                                         NDArrayHandle),
+                                                                    writable=False))
+                                elif tags[i] == 2 or tags[i] == 4:
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
                                                                               NDArrayHandle),
                                                                          writable=True))

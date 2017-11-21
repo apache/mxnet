@@ -3623,10 +3623,10 @@ def test_custom_op():
                 return ['default'], ['default'], ['default']
             return ['csr'], ['csr'], ['csr']
 
-        def infer_storage_type_backward(self, in_stype):
-            if in_stype[1] == 'default':
-                return ['default', 'default', 'default'], ['default'], ['default']
-            return ['default', 'csr', 'csr'], ['csr'], ['csr']
+        def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, aux_stype):
+            if in_stype[0] == 'default':
+                return ['default'], ['default'], ['default'], ['default'], ['default']
+            return ['default'], ['csr'], ['csr'], ['csr'], ['csr']
 
         def create_operator(self, ctx, shapes, dtypes):
             return Sqr()
@@ -3687,7 +3687,7 @@ def test_custom_op():
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], in_data[1])
             self.assign(in_grad[1], req[1], in_data[0])
-            assert (len(out_grad) == 0)
+            assert (len(out_grad) == 1)
 
     @mx.operator.register("mult_no_grad")
     class MultNoGradProp(mx.operator.CustomOpProp):
