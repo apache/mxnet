@@ -58,7 +58,7 @@ class ToTensor(HybridBlock):
         super(ToTensor, self).__init__()
 
     def hybrid_forward(self, F, x):
-        return F.cast(x, 'float32').transpose((2, 0, 1))
+        return F.image.to_tensor(x)
 
 
 class Normalize(HybridBlock):
