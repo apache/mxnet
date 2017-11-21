@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset container."""
-__all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset', 'LabeledDataset',
+__all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset',
            'RecordFileDataset']
 
 import os

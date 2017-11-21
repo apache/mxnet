@@ -28,9 +28,9 @@ import struct
 import warnings
 import numpy as np
 
-from . import dataset
-from ..utils import download, check_sha1
-from ... import nd, image, recordio
+from .. import dataset
+from ...utils import download, check_sha1
+from .... import nd, image, recordio
 
 apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 
