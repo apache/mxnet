@@ -283,9 +283,8 @@ inline static bool backward_DeconvStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  uint32_t in_expected = param.no_bias ? 3 : 4;
   uint32_t out_expected = param.no_bias ? 2 : 3;
-  CHECK_EQ(in_attrs->size(), in_expected);
+  CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), out_expected);
 
 #if MXNET_USE_MKLDNN == 1
