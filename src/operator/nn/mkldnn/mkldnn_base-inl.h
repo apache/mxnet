@@ -27,62 +27,65 @@
 #define MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
-#include <string>
-#include <vector>
 #include <iterator>
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include "mkldnn.hpp"
-
+using namespace mkldnn;
 namespace mxnet {
 extern bool EnableMkldnnWarnGenerated();
 // =====  CpuEngine =======================================
 // cpu_engine singleton
 class CpuEngine {
  public:
-    static CpuEngine & Instance() {
-        // I's thread-safe in C++11.
-        static thread_local CpuEngine myInstance;
-        return myInstance;
-    }
-    CpuEngine(CpuEngine const&) = delete;             // Copy construct
-    CpuEngine(CpuEngine&&) = delete;                  // Move construct
-    CpuEngine& operator=(CpuEngine const&) = delete;  // Copy assign
-    CpuEngine& operator=(CpuEngine &&) = delete;      // Move assign
+  static CpuEngine &Instance() {
+    // I's thread-safe in C++11.
+    static thread_local CpuEngine myInstance;
+    return myInstance;
+  }
+  CpuEngine(CpuEngine const &) = delete;             // Copy construct
+  CpuEngine(CpuEngine &&) = delete;                  // Move construct
+  CpuEngine &operator=(CpuEngine const &) = delete;  // Copy assign
+  CpuEngine &operator=(CpuEngine &&) = delete;       // Move assign
 
-    mkldnn::engine & get_engine() { return _cpu_engine; }
+  mkldnn::engine &get_engine() { return _cpu_engine; }
+
  protected:
-    CpuEngine() : _cpu_engine(mkldnn::engine::cpu, 0) {}
-    ~CpuEngine() {}
+  CpuEngine() : _cpu_engine(mkldnn::engine::cpu, 0) {}
+  ~CpuEngine() {}
+
  private:
-    mkldnn::engine _cpu_engine;
+  mkldnn::engine _cpu_engine;
 };
 
 // type enumerator
-template<typename T>
+template <typename T>
 struct data_type_enum {};
 
-template<>
+template <>
 struct data_type_enum<float> {
-    enum { type = mkldnn::memory::data_type::f32 };
+  enum { type = mkldnn::memory::data_type::f32 };
 };
 
-template<>
+template <>
 struct data_type_enum<int32_t> {
-    enum { type = mkldnn::memory::data_type::s32 };
+  enum { type = mkldnn::memory::data_type::s32 };
 };
 
-template<>
+template <>
 struct data_type_enum<int16_t> {
-    enum { type = mkldnn::memory::data_type::s16 };
+  enum { type = mkldnn::memory::data_type::s16 };
 };
 
-template<>
+template <>
 struct data_type_enum<int8_t> {
-    enum { type = mkldnn::memory::data_type::s8 };
+  enum { type = mkldnn::memory::data_type::s8 };
 };
 
-template<>
+template <>
 struct data_type_enum<uint8_t> {
-    enum { type = mkldnn::memory::data_type::u8 };
+  enum { type = mkldnn::memory::data_type::u8 };
 };
 
 static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
@@ -99,7 +102,7 @@ static inline bool SupportMKLDNNConv(const NDArray &input) {
 }
 
 static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
-  switch(dtype) {
+  switch (dtype) {
     case mshadow::kFloat32:
       return mkldnn::memory::data_type::f32;
     default:
@@ -109,10 +112,9 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
 
 inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
   mkldnn::memory::dims dims(ndim);
-  for (size_t i = 0; i < dims.size(); i++)
-    dims[i] = arr.shape()[i];
+  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
   return mkldnn::memory::desc{dims, get_mkldnn_type(arr.dtype()),
-    mkldnn::memory::format::any};
+                              mkldnn::memory::format::any};
 }
 
 inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
@@ -120,17 +122,16 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
 }
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
-    int num_groups) {
+                                                 int num_groups) {
   if (num_groups == 1) {
     return GetMemDesc(arr);
-  }
-  else {
+  } else {
     CHECK_EQ(arr.shape().ndim(), 4U);
-    mkldnn::memory::dims tz = mkldnn::memory::dims{num_groups,
-      (int) arr.shape()[0] / num_groups, (int) arr.shape()[1],
-      (int) arr.shape()[2], (int) arr.shape()[3]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+        num_groups, (int)arr.shape()[0] / num_groups, (int)arr.shape()[1],
+        (int)arr.shape()[2], (int)arr.shape()[3]};
     return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-      mkldnn::memory::format::any};
+                                mkldnn::memory::format::any};
   }
 }
 
@@ -141,19 +142,16 @@ class MKLDNNStream {
   std::vector<mkldnn::primitive> net;
   // Here we hold all memory related to the operators in the stream.
   std::vector<mkldnn_mem_const_ptr> mem_holder;
-public:
+
+ public:
   static MKLDNNStream &Instance() {
     static thread_local MKLDNNStream stream;
     return stream;
   }
 
-  void RegisterPrim(const mkldnn::primitive &prim) {
-    net.push_back(prim);
-  }
+  void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
 
-  void RegisterMem(mkldnn_mem_const_ptr mem) {
-    mem_holder.push_back(mem);
-  }
+  void RegisterMem(mkldnn_mem_const_ptr mem) { mem_holder.push_back(mem); }
 
   void Submit() {
     mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
@@ -162,7 +160,14 @@ public:
   }
 };
 
-inline static mkldnn_mem_ptr CreateMKLDNNMem(const mkldnn::memory::primitive_desc &desc) {
+// some operators need to share workspace between fwd/bwd
+inline std::unordered_map<const NDArray *, mkldnn_mem_ptr> &mkldnn_wmap() {
+  static std::unordered_map<const NDArray *, mkldnn_mem_ptr> _wmap;
+  return _wmap;
+}
+
+inline static mkldnn_mem_ptr CreateMKLDNNMem(
+    const mkldnn::memory::primitive_desc &desc) {
   // TODO allocate memory more efficiently.
   std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
   MKLDNNStream::Instance().RegisterMem(ret);
@@ -177,8 +182,9 @@ enum OutDataOp {
 
 typedef std::pair<OutDataOp, mkldnn_mem_ptr> mkldnn_output_t;
 
-static inline mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
-    const mkldnn::memory::primitive_desc &desc, OpReqType req) {
+static inline mkldnn_output_t CreateMKLDNNMem(
+    const NDArray &arr, const mkldnn::memory::primitive_desc &desc,
+    OpReqType req) {
   if (kAddTo == req)
     return mkldnn_output_t(OutDataOp::AddBack, CreateMKLDNNMem(desc));
   else {
@@ -192,56 +198,64 @@ static inline mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
 
 namespace op {
 void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-    const mkldnn::memory &out);
+         const mkldnn::memory &out);
 }
 
-static inline void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
+static inline void CommitOutput(const NDArray &arr,
+                                const mkldnn_output_t &res) {
   if (res.first == CopyBack)
     const_cast<NDArray &>(arr).CopyFrom(*res.second);
   else if (res.first == AddBack) {
     // TODO I might need to reorder.
-    mkldnn_mem_const_ptr mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
+    mkldnn_mem_const_ptr mem =
+        arr.GetMKLDNNData(res.second->get_primitive_desc());
     CHECK(mem != nullptr);
     // We have to allocate new memory for the sum result.
-    mkldnn_mem_ptr sum_res(new mkldnn::memory(res.second->get_primitive_desc()));
+    mkldnn_mem_ptr sum_res(
+        new mkldnn::memory(res.second->get_primitive_desc()));
     MKLDNNStream::Instance().RegisterMem(sum_res);
     op::Sum(*res.second, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
 
-inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
-    const mkldnn::memory::primitive_desc &target_pd, int num_groups) {
+inline static mkldnn_mem_const_ptr GetWeights(
+    const NDArray &arr, const mkldnn::memory::primitive_desc &target_pd,
+    int num_groups) {
   mkldnn_mem_const_ptr mem;
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   auto engine = CpuEngine::Instance().get_engine();
   if (arr.shape().ndim() == 2) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
-      (int) arr.shape()[1]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
-    mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
+    mkldnn::memory::dims tz =
+        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1]};
+    mkldnn::memory::desc md =
+        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
+    mkldnn::memory::primitive_desc pd =
+        mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
-  }
-  else if (arr.shape().ndim() == 4 && num_groups == 1) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
-      (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
-    mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
+  } else if (arr.shape().ndim() == 4 && num_groups == 1) {
+    mkldnn::memory::dims tz =
+        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1],
+                             (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::desc md =
+        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
+    mkldnn::memory::primitive_desc pd =
+        mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
-  }
-  else if (arr.shape().ndim() == 4) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{num_groups, (int) arr.shape()[0] / num_groups,
-      (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
-    mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
+  } else if (arr.shape().ndim() == 4) {
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+        num_groups, (int)arr.shape()[0] / num_groups, (int)arr.shape()[1],
+        (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::desc md =
+        mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
+    mkldnn::memory::primitive_desc pd =
+        mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
-  }
-  else {
+  } else {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
     return nullptr;
   }
-  if (mem->get_primitive_desc() == target_pd)
-    return mem;
+  if (mem->get_primitive_desc() == target_pd) return mem;
 
   std::shared_ptr<mkldnn::memory> ret = CreateMKLDNNMem(target_pd);
   MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(*mem, *ret));
@@ -249,30 +263,36 @@ inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
 }
 
 inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
-    const mkldnn::engine &engine, int num_groups = 1) {
+                                              const mkldnn::engine &engine,
+                                              int num_groups = 1) {
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   if (arr.shape().ndim() == 2) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
-      (int) arr.shape()[1]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
-    mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
+    mkldnn::memory::dims tz =
+        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1]};
+    mkldnn::memory::desc md =
+        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
+    mkldnn::memory::primitive_desc pd =
+        mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
-  }
-  else if (arr.shape().ndim() == 4 && num_groups == 1) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{(int) arr.shape()[0],
-      (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
-    mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
+  } else if (arr.shape().ndim() == 4 && num_groups == 1) {
+    mkldnn::memory::dims tz =
+        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1],
+                             (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::desc md =
+        mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
+    mkldnn::memory::primitive_desc pd =
+        mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
-  }
-  else if (arr.shape().ndim() == 4) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{num_groups, (int) arr.shape()[0] / num_groups,
-      (int) arr.shape()[1], (int) arr.shape()[2], (int) arr.shape()[3]};
-    mkldnn::memory::desc md = mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
-    mkldnn::memory::primitive_desc pd = mkldnn::memory::primitive_desc{md, engine};
+  } else if (arr.shape().ndim() == 4) {
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+        num_groups, (int)arr.shape()[0] / num_groups, (int)arr.shape()[1],
+        (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::desc md =
+        mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
+    mkldnn::memory::primitive_desc pd =
+        mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
-  }
-  else {
+  } else {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
     return nullptr;
   }
