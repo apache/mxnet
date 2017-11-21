@@ -735,14 +735,12 @@ def register(reg_name):
                     ograd_stype_len = len(ograd_stype)
                     in_stype = [_STORAGE_TYPE_ID_TO_STR[tensor_stypes[i + ograd_stype_len]] \
                                      for i in range(n_in)]
-                    in_stype_len = len(in_stype)
                     out_stype = [_STORAGE_TYPE_ID_TO_STR
-                                 [tensor_stypes[i + ograd_stype_len + in_stype_len]] \
+                                 [tensor_stypes[i + ograd_stype_len + n_in]] \
                                       for i in range(n_out)]
-                    out_stype_len = len(out_stype)
                     aux_stype = [_STORAGE_TYPE_ID_TO_STR
                                  [tensor_stypes
-                                  [i + ograd_stype_len + in_stype_len + out_stype_len]] \
+                                  [i + ograd_stype_len + n_in + n_out]] \
                                     for i in range(total_aux)]
                     ret = op_prop.infer_storage_type_backward(ograd_stype,
                                                               in_stype,
