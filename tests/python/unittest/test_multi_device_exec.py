@@ -20,6 +20,17 @@ import numpy as np
 import mxnet as mx
 
 def test_ctx_group():
+    def check_ctx_group(group2ctx, grad_req, mlp, set_stage1):
+        texec = mlp.simple_bind(mx.cpu(0),
+                                group2ctx=group2ctx,
+                                data=(1,200), grad_req=grad_req)
+
+        for arr, name in zip(texec.arg_arrays, mlp.list_arguments()):
+            if name in set_stage1:
+                assert arr.context == group2ctx['stage1']
+            else:
+                assert arr.context == group2ctx['stage2']
+
     with mx.AttrScope(ctx_group='stage1'):
         data = mx.symbol.Variable('data')
         fc1  = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
@@ -40,15 +51,14 @@ def test_ctx_group():
         'stage2' : mx.cpu(2)
     }
 
-    texec = mlp.simple_bind(mx.cpu(0),
-                            group2ctx=group2ctx,
-                            data=(1,200))
+    # generate reqs with null
+    grad_req_with_null = {}
+    for arg in mlp.list_arguments():
+        grad_req_with_null[arg] = 'null' if arg == 'data' else 'write'
 
-    for arr, name in zip(texec.arg_arrays, mlp.list_arguments()):
-        if name in set_stage1:
-            assert arr.context == group2ctx['stage1']
-        else:
-            assert arr.context == group2ctx['stage2']
+    grad_reqs = ['write', grad_req_with_null]
+    for grad_req in grad_reqs:
+        check_ctx_group(group2ctx, grad_req, mlp, set_stage1)
 
 def test_ctx_group_sparse():
     with mx.AttrScope(ctx_group='stage1'):

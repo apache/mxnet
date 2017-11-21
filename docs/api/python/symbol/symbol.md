@@ -558,13 +558,13 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
-    mxnet.sym.random.uniform
-    mxnet.sym.random.normal
-    mxnet.sym.random.gamma
-    mxnet.sym.random.exponential
-    mxnet.sym.random.poisson
-    mxnet.sym.random.negative_binomial
-    mxnet.sym.random.generalized_negative_binomial
+    mxnet.symbol.random.uniform
+    mxnet.symbol.random.normal
+    mxnet.symbol.random.gamma
+    mxnet.symbol.random.exponential
+    mxnet.symbol.random.poisson
+    mxnet.symbol.random.negative_binomial
+    mxnet.symbol.random.generalized_negative_binomial
     mxnet.random.seed
 ```
 
