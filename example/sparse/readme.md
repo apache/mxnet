@@ -19,9 +19,3 @@ The example demonstrates the basic usage of the SparseEmbedding operator in MXNe
 
 - `python matrix_factorization.py`
 - To compare the train speed with (dense) Embedding, run `python matrix_factorization.py --use-dense`
-
-## Model Parallel
-
-The example demonstrates the basic usage of `group2ctxs` in `Module`, which allows one part of the model trained on cpu and the other on gpu..
-
-- `python matrix_factorization_model_parallel.py --num-gpus 2`
