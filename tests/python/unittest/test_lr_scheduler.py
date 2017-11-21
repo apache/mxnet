@@ -23,7 +23,7 @@ def multi_lr_sceduler(lr, steps, lr_factor = 1, warmup_step = 0, warmup_lr = 0):
     lr_scheduler = None
     if warmup_step > 0 and warmup_lr > lr:
         lr_scheduler =  mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=lr_factor, 
-                    warmup_step = warmup_step, begin_lr=lr, stop_lr=warmup_lr)
+                    warmup_step = warmup_step, warmup_start_lr=lr, warmup_stop_lr=warmup_lr)
     else:  
         lr_scheduler =  mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=lr_factor) 
 
@@ -61,7 +61,7 @@ def test_multi_lr_scheduler():
     """
     #Schedule step must be greater than warmup_step
     multi_lr_sceduler(lr = 0.02, steps = [8,12], lr_factor = 0.1, warmup_step = 10, warmup_lr = 0.1)
-    #stop_lr must larger than begin_lr
+    #warmup_stop_lr must larger than warmup_start_lr
     multi_lr_sceduler(lr = 0.02, steps = [8,12], lr_factor = 0.1, warmup_step = 10, warmup_lr = 0.001)
     #Schedule step must be an list
     multi_lr_sceduler(lr = 0.02, steps = 8, lr_factor = 0.1, warmup_step = 5, warmup_lr = 0.1)
