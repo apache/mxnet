@@ -85,8 +85,17 @@ struct data_type_enum<uint8_t> {
     enum { type = mkldnn::memory::data_type::u8 };
 };
 
-static inline bool SupportMKLDNN(int dtype) {
-  return dtype == mshadow::kFloat32;
+static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
+  int ndim = shape.ndim();
+  return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
+}
+
+static inline bool SupportMKLDNN(const NDArray &input) {
+  return SupportMKLDNN(input.dtype(), input.shape());
+}
+
+static inline bool SupportMKLDNNConv(const NDArray &input) {
+  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
 }
 
 static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
