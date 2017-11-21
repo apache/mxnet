@@ -49,7 +49,6 @@ mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 
 
-
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
