@@ -23,12 +23,14 @@ def factorization_machine_model(factor_size, num_features):
     """
     x = mx.symbol.Variable("data", stype='csr')
     # linear and bias terms
-    v = mx.symbol.Variable("v", shape=(num_features, factor_size),
-                           init=mx.initializer.Normal(0.000001), stype='row_sparse')
-    w1_weight = mx.symbol.var('w', shape=(num_features, 1),
-                              init=mx.initializer.Normal(0.00001), stype='row_sparse')
-    w1_bias = mx.symbol.var('w0', shape=(1,), init=mx.initializer.Normal(0.00001))
-    w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w1_weight), w1_bias)
+    v = mx.symbol.Variable("v", shape=(num_features, factor_size), stype='row_sparse',
+                           init=mx.initializer.Normal(0.000001), lr_mult=0.00001,
+                           wd_mult=0.00001)
+    w = mx.symbol.var('w', shape=(num_features, 1), stype='row_sparse',
+                      init=mx.initializer.Normal(0.00001), lr_mult=0.0001, wd_mult=0.001)
+    w0 = mx.symbol.var('w0', shape=(1,), init=mx.initializer.Normal(0.00001),
+                       lr_mult=0.01, wd_mult=0.01)
+    w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w), w0)
 
     # squared terms for subtracting self interactions
     v_s = mx.symbol._internal._square_sum(data=v, axis=1, keepdims=True)

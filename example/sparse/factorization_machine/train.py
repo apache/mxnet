@@ -37,7 +37,6 @@ parser.add_argument('--factor-size', type=int, default=16,
 parser.add_argument('--kvstore', type=str, default='local',
                     help='what kvstore to use', choices=["dist_async", "local"])
 
-
 if __name__ == '__main__':
     import logging
     head = '%(asctime)-15s %(message)s'
@@ -64,9 +63,9 @@ if __name__ == '__main__':
     mod = mx.mod.Module(symbol=model)
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
-    optim = mx.optimizer.create('adam', learning_rate=0.001, wd=0.0001,
-                                beta1=0.9, beta2=0.999, epsilon=1e-8)
-    mod.init_optimizer(optimizer=optim, kvstore=kv)
+    optimizer_params=(('learning_rate', 0.001), ('wd', 0.0001), ('beta1', 0.9),
+                      ('beta2', 0.999), ('epsilon', 1e-8))
+    mod.init_optimizer(optimizer='adam', kvstore=kv, optimizer_params=optimizer_params)
 
     # metrics
     metric = mx.metric.create(['log_loss'])
