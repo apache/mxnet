@@ -36,7 +36,8 @@ static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
 }
 #endif
 
-namespace mxnet { namespace test {
+namespace mxnet {
+namespace test {
 bool unitTestsWithCuda = false;
 #ifdef NDEBUG
 bool debug_output = false;
@@ -45,7 +46,9 @@ bool debug_output = false;
 #endif
 bool quick_test = false;
 bool performance_run = false;
-}}
+bool csv = false;
+}  // namespace test
+}  // namespace mxnet
 
 #if MXNET_USE_CUDA
 
@@ -90,6 +93,8 @@ int main(int argc, char ** argv) {
       mxnet::test::debug_output = true;
     } else if (!strcmp(argv[x], "--perf")) {
       mxnet::test::performance_run = true;
+    } else if (!strcmp(argv[x], "--csv")) {
+      mxnet::test::csv = true;
     } else if (!strcmp(argv[x], "--quick") || !strcmp(argv[x], "-q")) {
       mxnet::test::quick_test = true;
     }

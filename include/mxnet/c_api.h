@@ -147,9 +147,7 @@ enum CustomOpPropCallbacks {
   kCustomOpPropInferShape,
   kCustomOpPropDeclareBackwardDependency,
   kCustomOpPropCreateOperator,
-  kCustomOpPropInferType,
-  kCustomOpPropInferStorageType,
-  kCustomOpPropBackwardInferStorageType
+  kCustomOpPropInferType
 };
 
 
@@ -161,10 +159,6 @@ typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
                                       unsigned** /*shapes*/, void* /*state*/);
 typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*state*/);
-typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
-typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
-                                                    int * /*stypes*/,
-                                                    void * /*state*/);
 typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
                                   const int* /*out_data*/, int* /*num_deps*/,
                                   int** /*rdeps*/, void* /*state*/);
@@ -1550,6 +1544,19 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Set parameters to use low-bit compressed gradients
+ * \param handle handle to the kvstore
+ * \param keys keys for compression parameters
+ * \param vals values for compression parameters
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetGradientCompression(KVStoreHandle handle,
+                                              mx_uint num_params,
+                                              const char** keys,
+                                              const char** vals);
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
