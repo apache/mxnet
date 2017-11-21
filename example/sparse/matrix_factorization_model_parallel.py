@@ -26,12 +26,11 @@ from matrix_fact_parallel_model import matrix_fact_model_parallel_net
 
 logging.basicConfig(level=logging.DEBUG)
 
-parser = argparse.ArgumentParser(description="Run model parallel version of matrix factorization \
-                                 with sparse embedding",
+parser = argparse.ArgumentParser(description="Run model parallel version of matrix factorization",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-epoch', type=int, default=3,
                     help='number of epochs to train')
-parser.add_argument('--batch-size', type=int, default=1024,
+parser.add_argument('--batch-size', type=int, default=256,
                     help='number of examples per batch')
 parser.add_argument('--print-every', type=int, default=100,
                     help='logging interval')
@@ -78,9 +77,6 @@ if __name__ == '__main__':
     # construct the model
     net = matrix_fact_model_parallel_net(factor_size, factor_size, max_user, max_movies)
 
-    # create kvstore
-    kv = mx.kvstore.create('local') if num_gpus > 1 else None
-
     # initialize the module
     # map the ctx_group attribute to the context assignment
     group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.gpu(i) for i in range(num_gpus)]}
@@ -90,16 +86,11 @@ if __name__ == '__main__':
     mod.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
     optim = mx.optimizer.create(optimizer, learning_rate=learning_rate, momentum=momentum,
                                 wd=1e-4, rescale_grad=1.0/batch_size)
-    mod.init_optimizer(optimizer=optim, kvstore=kv)
+    mod.init_optimizer(optimizer=optim)
+
     # use MSE as the metric
     metric = mx.metric.create(['MSE'])
-    # get the row_sparse user_weight parameter
-    user_weight_index = mod._exec_group.param_names.index('user_weight')
-    user_weight_params = mod._exec_group.param_arrays[user_weight_index]
-    # get the row_sparse item_weight parameter
-    item_weight_index = mod._exec_group.param_names.index('item_weight')
-    item_weight_params = mod._exec_group.param_arrays[item_weight_index]
-
+    
     speedometer = mx.callback.Speedometer(batch_size, print_every)
     
     logging.info('Training started ...')
@@ -109,14 +100,7 @@ if __name__ == '__main__':
         metric.reset()
         for batch in train_iter:
             nbatch += 1
-            if kv:
-                # if kvstore is used, we need manually pull sparse weights from kvstore
-                user_row_ids = batch.data[0]
-                kv.row_sparse_pull('user_weight', user_weight_params, row_ids=[user_row_ids] * num_gpus,
-                                   priority=-user_weight_index)
-                item_row_ids = batch.data[1]
-                kv.row_sparse_pull('item_weight', item_weight_params, row_ids=[item_row_ids] * num_gpus,
-                                   priority=-item_weight_index)
+            # run forward and backward computation
             mod.forward_backward(batch)
             # update all parameters
             mod.update()

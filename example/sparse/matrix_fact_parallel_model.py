@@ -25,16 +25,26 @@ def matrix_fact_model_parallel_net(factor_size, num_hidden, max_user, max_item):
         user = mx.symbol.Variable('user')
         item = mx.symbol.Variable('item')
         # user feature lookup
-        user_weight = mx.symbol.Variable('user_weight', stype='row_sparse')
-        user = mx.symbol.contrib.SparseEmbedding(data=user, weight=user_weight,
-                                                 input_dim=max_user, output_dim=factor_size)
+        user_weight = mx.symbol.Variable('user_weight')
+        user = mx.symbol.Embedding(data=user, weight=user_weight,
+                                   input_dim=max_user, output_dim=factor_size)
         # item feature lookup
-        item_weight = mx.symbol.Variable('item_weight', stype='row_sparse')
-        item = mx.symbol.contrib.SparseEmbedding(data=item, weight=item_weight,
-                                                 input_dim=max_item, output_dim=factor_size)
+        item_weight = mx.symbol.Variable('item_weight')
+        item = mx.symbol.Embedding(data=item, weight=item_weight,
+                                   input_dim=max_item, output_dim=factor_size)
     # set ctx_group attribute to 'dev2' for the symbols created in this scope,
     # the symbols will be bound to the context that 'dev2' map to in group2ctxs
     with mx.AttrScope(ctx_group='dev2'):
+        # non-linear transformation of user features
+        user = mx.symbol.Activation(data=user, act_type='relu')
+        fc_user_weight = mx.symbol.Variable('fc_user_weight')
+        fc_user_bias = mx.symbol.Variable('fc_user_bias')
+        user = mx.symbol.FullyConnected(data=user, weight=fc_user_weight, bias=fc_user_bias, num_hidden=num_hidden)
+        # non-linear transformation of user features
+        item = mx.symbol.Activation(data=item, act_type='relu')
+        fc_item_weight = mx.symbol.Variable('fc_item_weight')
+        fc_item_bias = mx.symbol.Variable('fc_item_bias')
+        item = mx.symbol.FullyConnected(data=item, weight=fc_item_weight, bias=fc_item_bias, num_hidden=num_hidden)
         # predict by the inner product, which is elementwise product and then sum
         pred = user * item
         pred = mx.symbol.sum(data=pred, axis=1)
