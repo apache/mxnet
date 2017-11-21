@@ -182,6 +182,7 @@ class KVStoreNCCL : public KVStoreLocal {
                                       & kwargs) override {
     LOG(FATAL) << "NCCL kvstore does not support gradient compression";
   }
+
  protected:
   /**
    * \brief group values on keys
