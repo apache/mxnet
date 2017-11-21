@@ -17,24 +17,29 @@
 
 import mxnet as mx
 
-def fm_model(factor_size, num_features, init):
-    # data with csr storage type to enable feeding data with CSRNDArray
+def factorization_machine_model(factor_size, num_features):
+    """ builds factorization machine network with proper formulation:
+    y = w_0 \sum(x_i w_i) + 0.5(\sum\sum<v_i,v_j>x_ix_j - \sum<v_iv_i>x_i^2)
+    """
     x = mx.symbol.Variable("data", stype='csr')
-    # weight with row_sparse storage type to enable sparse gradient updates
+    # linear and bias terms
     v = mx.symbol.Variable("v", shape=(num_features, factor_size),
-                           init=init, stype='row_sparse')
-    w1_weight = mx.symbol.var('w1_weight', shape=(num_features, 1),
-                              init=init, stype='row_sparse')
-    w1_bias = mx.symbol.var('w1_bias', shape=(1))
+                           init=mx.initializer.Normal(0.000001), stype='row_sparse')
+    w1_weight = mx.symbol.var('w', shape=(num_features, 1),
+                              init=mx.initializer.Normal(0.00001), stype='row_sparse')
+    w1_bias = mx.symbol.var('w0', shape=(1,), init=mx.initializer.Normal(0.00001))
     w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w1_weight), w1_bias)
 
+    # squared terms for subtracting self interactions
     v_s = mx.symbol._internal._square_sum(data=v, axis=1, keepdims=True)
     x_s = mx.symbol.square(data=x)
     bd_sum = mx.sym.dot(x_s, v_s)
 
+    # interactions
     w2 = mx.symbol.dot(x, v)
     w2_squared = 0.5 * mx.symbol.square(data=w2)
 
+    # putting everything together
     w_all = mx.symbol.Concat(w1, w2_squared, dim=1)
     sum1 = mx.symbol.sum(data=w_all, axis=1, keepdims=True)
     sum2 = 0.5 * mx.symbol.negative(bd_sum)
