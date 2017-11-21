@@ -39,14 +39,11 @@ class SqrProp(mx.operator.CustomOpProp):
     def list_outputs(self):
         return ['output']
 
-    def list_auxiliary_states(self):
-        return ['aux']
-
     def infer_shape(self, in_shape):
-        return in_shape, [in_shape[0]], [in_shape[0]]
+        return in_shape, [in_shape[0]], []
 
     def infer_type(self, in_type):
-        return in_type, [in_type[0]], [in_type[0]]
+        return in_type, [in_type[0]], []
 
     def infer_storage_type(self, in_stype):
         '''Infer storage type logic for the forward pass
@@ -55,13 +52,13 @@ class SqrProp(mx.operator.CustomOpProp):
         second for output storage types inferred and third for aux storage
         types inferred
         The in_stype is the list containing storage type for inputs
-        If the input is a dense ndarray then we infer the input, output
-        and aux to be dense. If input is csr then input, output and
-        aux are inferred as csr.
+        If the input is a dense ndarray then we infer the input
+        and output to be dense. If input is csr then input and output
+        are inferred as csr.
         '''
         if in_stype[0] == 'default':
-            return ['default'], ['default'], ['default']
-        return ['csr'], ['csr'], ['csr']
+            return ['default'], ['default'], []
+        return ['csr'], ['csr'], []
 
     def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, aux_stype):
         '''Infer storage type logic for the backward pass
@@ -72,18 +69,17 @@ class SqrProp(mx.operator.CustomOpProp):
         and aux_stype
         '''
         if in_stype[0] == 'default':
-            return ['default'], ['default'], ['default'], ['default'], ['default']
-        return ['default'], ['csr'], ['csr'], ['csr'], ['csr']
+            return ['default'], ['default'], ['default'], ['default'], []
+        return ['default'], ['csr'], ['csr'], ['csr'], []
 
     def create_operator(self, ctx, shapes, dtypes):
         return Sqr()
 
 x = mx.nd.array(np.random.uniform(1, 10, size=(4,10)))
 x = x.tostype('csr')
-aux = mx.nd.zeros_like(x)
 x.attach_grad()
 with mx.contrib.autograd.train_section():
-    y = mx.nd.Custom(x, aux, op_type='sqr')
+    y = mx.nd.Custom(x, op_type='sqr')
     y.backward()
 mx.nd.waitall()
 print("Original ndarray")
@@ -94,4 +90,3 @@ print("--------------")
 print(y.asnumpy())
 print("stype of input is {}".format(x.stype))
 print("stype of output is {}".format(y.stype))
-print("stype of aux is {}".format(aux.stype))
