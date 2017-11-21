@@ -287,7 +287,7 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
   const float B2YF = 0.114f;
   static const float coeffs0[] = { R2YF, G2YF, B2YF };
 
-  MSHADOW_TYPE_SWITCH(input.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     auto input_3d = input.get<xpu, 3, DType>(s);
     DType sum = (DType)0.0;
     for (int c = 0; c < channel; ++c) {
@@ -341,7 +341,7 @@ static void RandomSaturation(const nnvm::NodeAttrs &attrs,
   static const float coeffs0[] = { R2YF, G2YF, B2YF };
 
 
-  MSHADOW_TYPE_SWITCH(input.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       auto input_3d =  input.get<xpu, 3, DType>(s);
       auto output_3d = output.get<xpu, 3, DType>(s);
