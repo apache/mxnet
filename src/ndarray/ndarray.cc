@@ -48,11 +48,11 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-static inline NDArrayStorageType DetermineSType(NDArrayStorageType stype, int dtype) {
+static inline NDArrayStorageType DetermineSType(NDArrayStorageType stype, int dtype, const TShape &shape) {
 #if MXNET_USE_MKLDNN == 1
   // We can't always generate a MKLDNN storage. If MKLDNN can't support the data type,
   // we'll have to fall back to the default storage.
-  if (stype == kMKLDNNStorage && !SupportMKLDNN(dtype))
+  if (stype == kMKLDNNStorage && !SupportMKLDNN(dtype, shape))
     return kDefaultStorage;
   else
 #endif
@@ -62,8 +62,8 @@ static inline NDArrayStorageType DetermineSType(NDArrayStorageType stype, int dt
 NDArray::NDArray(const NDArrayStorageType _stype, const TShape &shape, Context ctx,
     bool delay_alloc, int dtype, std::vector<int> aux_types,
     std::vector<TShape> aux_shapes, TShape storage_shape) : shape_(shape),
-  dtype_(dtype), storage_type_(DetermineSType(_stype, dtype)), entry_({nullptr, 0, 0}) {
-  NDArrayStorageType stype = DetermineSType(_stype, dtype);
+  dtype_(dtype), storage_type_(DetermineSType(_stype, dtype, shape)), entry_({nullptr, 0, 0}) {
+  NDArrayStorageType stype = DetermineSType(_stype, dtype, shape);
   // Assign default aux types if not given
   if (aux_types.size() == 0
 #if MXNET_USE_MKLDNN == 1

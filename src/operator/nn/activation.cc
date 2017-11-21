@@ -27,6 +27,7 @@
 #include "../mshadow_op.h"
 #include "../tensor/elemwise_unary_op.h"
 #if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_act-inl.h"
 #endif  // MXNET_USE_MKLDNN
 
@@ -58,12 +59,9 @@ static void ActivationComputeEx_CPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNAct_Forward<float>(ctx, param, inputs[0], req[0], outputs[0]);
-      return;
-    default:
-      break;
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNAct_Forward<float>(ctx, param, inputs[0], req[0], outputs[0]);
+    return;
   }
 #endif
   _ActivationCompute<cpu>(param, ctx, inputs[0].data(), req[0],
@@ -82,13 +80,10 @@ void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
 #endif
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNAct_Backward<float>(ctx, param, inputs[0], inputs[1], req[0],
-	  outputs[0]);
-      return;
-    default:
-      break;
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNAct_Backward<float>(ctx, param, inputs[0], inputs[1], req[0],
+        outputs[0]);
+    return;
   }
 #endif
   _ActivationGradCompute<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
