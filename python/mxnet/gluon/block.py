@@ -286,6 +286,19 @@ class Block(object):
         for cld in self._children:
             cld.hybridize(active)
 
+    def cast(self, dtype):
+        """Cast this Block to use another data type.
+
+        Parameters
+        ----------
+        dtype : str or numpy.dtype
+            The new data type.
+        """
+        for child in self._children:
+            child.cast(dtype)
+        for _, param in self.params.items():
+            param.cast(dtype)
+
     def __call__(self, *args):
         """Calls forward. Only accepts positional arguments."""
         return self.forward(*args)
@@ -388,7 +401,6 @@ class HybridBlock(Block):
 
     def _finish_deferred_init(self, hybrid, *args):
         self.infer_shape(*args)
-        self.infer_type(*args)
         if hybrid:
             for is_arg, i in self._cached_op_args:
                 if not is_arg:
@@ -428,6 +440,10 @@ class HybridBlock(Block):
     def hybridize(self, active=True):
         self._active = active
         super(HybridBlock, self).hybridize(active)
+
+    def cast(self, dtype):
+        self._clear_cached_op()
+        super(HybridBlock, self).cast(dtype)
 
     def _infer_attrs(self, infer_fn, attr, *args):
         """Generic infer attributes."""
