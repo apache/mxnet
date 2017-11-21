@@ -139,10 +139,12 @@ class DataParallelExecutorGroup(object):
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
+    group2ctxs : list of dict of str to context
+        Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
                  for_training, inputs_need_grad, shared_group=None, logger=logging,
-                 fixed_param_names=None, grad_req='write', state_names=None):
+                 fixed_param_names=None, grad_req='write', state_names=None, group2ctxs=None):
         self.param_names = param_names
         self.arg_names = symbol.list_arguments()
         self.aux_names = symbol.list_auxiliary_states()
@@ -150,6 +152,10 @@ class DataParallelExecutorGroup(object):
         self.symbol = symbol
         self.contexts = contexts
         self.workload = workload
+        if group2ctxs is None:
+            group2ctxs = [None] * len(self.contexts)
+        assert len(group2ctxs) == len(self.contexts)
+        self.group2ctxs = group2ctxs
 
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
@@ -597,9 +603,11 @@ class DataParallelExecutorGroup(object):
         if label_shapes is not None:
             input_types.update({x.name: x.dtype for x in label_shapes})
 
+        group2ctx = self.group2ctxs[i]
+
         executor = self.symbol.simple_bind(ctx=context, grad_req=self.grad_req,
                                            type_dict=input_types, shared_arg_names=self.param_names,
-                                           shared_exec=shared_exec,
+                                           shared_exec=shared_exec, group2ctx=group2ctx,
                                            shared_buffer=shared_data_arrays, **input_shapes)
         self._total_exec_bytes += int(executor.debug_str().split('\n')[-3].split()[1])
         return executor

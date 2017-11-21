@@ -168,7 +168,8 @@ def test_symbol_fluent():
                     'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
                     'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
-                    'square'])
+                    'square', 'reciprocal' 'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid',
+                    'softmax', 'log_softmax'])
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.symbol.Variable('data')
@@ -181,11 +182,12 @@ def test_symbol_fluent():
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
                  'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
-                 'exp', 'expm1',  'square']:
+                 'exp', 'expm1',  'square', 'reciprocal', 'argmax_channel']:
         check_fluent_regular(func, {})
 
     for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
-                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt']:
+                 'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
+                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax']:
         check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
@@ -201,6 +203,7 @@ def test_symbol_fluent():
     check_fluent_regular('clip', {'a_min': 0.25, 'a_max': 0.75})
     check_fluent_regular('broadcast_axes', {'axis': (2,), 'size': (5,)})
     check_fluent_regular('pad', {'mode': 'constant', 'pad_width': (0,0,0,0,3,0,0,4)}, shape=(5, 17, 2, 3))
+    check_fluent_regular('reshape_like', {'rhs': mx.sym.ones((30, 17))}, shape=(5, 17, 2, 3))
 
     for func in ['sum', 'nansum', 'prod', 'nanprod', 'mean', 'max', 'min']:
         check_fluent_regular(func, {'axis': (1, 2)})

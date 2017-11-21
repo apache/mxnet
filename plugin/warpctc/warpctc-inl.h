@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file warpctc-inl.h
  * \brief warpctc operator
  * \author Liang Xiang

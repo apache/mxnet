@@ -230,14 +230,14 @@ method forward(GluonInput $inputs, Maybe[GluonInput] $states=)
     {
         $states = [$states];
     }
-    zip(sub {
-        my ($state, $info) = @_;
+    for(zip($states, $self->state_info($batch_size))) {
+        my ($state, $info) = @$_;
         if(Dumper($state->shape) ne Dumper($info->{shape}))
         {
             my @state_shape = @{ $state->shape };
             confess("Invalid recurrent state shape. Expecting @{$info->{shape}}, got @state_shape.");
         }
-    }, $states, $self->state_info($batch_size));
+    }
     if($self->input_size == 0)
     {
         for my $i (0..$self->dir-1)

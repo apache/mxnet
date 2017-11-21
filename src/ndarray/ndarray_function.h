@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ndarray_op.h
  * \brief the real execution functions of ndarray operations
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file c_api.h
  * \brief C API of mxnet
  */
@@ -233,6 +234,13 @@ MXNET_DLL int MXDumpProfile();
 MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 
 /*!
+ * \brief set bulk execution limit
+ * \param bulk_size new bulk_size
+ * \param prev_bulk_size previous bulk_size
+ */
+MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
+
+/*!
  * \brief get the MXNet library version as an integer
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens
@@ -404,6 +412,12 @@ MXNET_DLL int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                            const NDArrayHandle handle_src,
                                            const int i);
 
+/*!
+ * \brief check whether the NDArray format is valid
+ * \param full_check if `True`, rigorous check, O(N) operations
+ *    Otherwise basic check, O(1) operations
+ */
+MXNET_DLL int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_check);
 /*!
  * \brief Wait until all the pending writes with respect NDArray are finished.
  *  Always call this before read data out synchronizely.
@@ -1530,6 +1544,19 @@ MXNET_DLL int MXInitPSEnv(mx_uint num_vars,
  */
 MXNET_DLL int MXKVStoreCreate(const char *type,
                               KVStoreHandle *out);
+
+/*!
+ * \brief Set parameters to use low-bit compressed gradients
+ * \param handle handle to the kvstore
+ * \param keys keys for compression parameters
+ * \param vals values for compression parameters
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreSetGradientCompression(KVStoreHandle handle,
+                                              mx_uint num_params,
+                                              const char** keys,
+                                              const char** vals);
+
 /*!
  * \brief Delete a KVStore handle.
  * \param handle handle to the kvstore
@@ -1994,6 +2021,26 @@ MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** ar
                                   mx_uint grid_dim_z, mx_uint block_dim_x,
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
+/*!
+ * \brief Get shared memory handle from NDArray
+ * \param handle NDArray handle.
+ * \param shared_pid output PID
+ * \param shared_id output shared memory id.
+ */
+MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
+                                          int* shared_id);
+/*!
+ * \brief Reconstruct NDArray from shared memory handle
+ * \param shared_pid shared PID
+ * \param shared_id shared memory id
+ * \param shape pointer to NDArray dimensions
+ * \param ndim number of NDArray dimensions
+ * \param dtype data type of NDArray
+ * \param out constructed NDArray
+ */
+MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                           mx_uint ndim, int dtype, NDArrayHandle *out);
+
 
 #ifdef __cplusplus
 }

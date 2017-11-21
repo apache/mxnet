@@ -81,7 +81,7 @@ def get_ranksel(model, ratio):
         if nxt_c > EC:
           continue
         nxt_v = dp[now][now_c] + math.log(S[i][d])
-        if dp[nxt].has_key(nxt_c):
+        if nxt_c in dp[nxt]:
           if nxt_v > dp[nxt][nxt_c]:
             dp[nxt][nxt_c] = nxt_v
             dpc[i][nxt_c] = (d,now_c)

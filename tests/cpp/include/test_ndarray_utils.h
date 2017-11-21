@@ -80,7 +80,7 @@ inline NDArray DnsND(const TShape shape, const Context ctx, std::vector<TEST_DTY
   // generate random values
   while (vs.size() < num_val) {
     auto v = RandFloat();
-    vs.push_back(v);
+    vs.emplace_back(v);
   }
   CHECK_EQ(vs.size(), nd.shape().Size());
   MSHADOW_TYPE_SWITCH(nd.dtype(), DType, {

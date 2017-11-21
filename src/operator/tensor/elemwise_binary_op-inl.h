@@ -129,7 +129,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
   if (is_dense_result) {
     if (!num_rows_l && !num_rows_r) {
       const size_t all_rows = static_cast<size_t>(lhs.shape()[0]);
-      iter_out = FillDense<cpu, DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
     }
   }
 
@@ -152,7 +152,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
     }
     if (is_dense_result) {
-      iter_out = FillDense<cpu, DType, OP>(s, idx_l, idx_r, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, idx_l, idx_r, req, &out, iter_out);
       DCHECK_EQ(iter_out, static_cast<size_t>(std::min(idx_l, idx_r)));
     }
     if (idx_l == idx_r) {
@@ -164,7 +164,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
       DCHECK_EQ(lvalue.shape_.Size(), rvalue.shape_.Size());
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
+        SerialLaunchCPU<mxnet_op::op_with_req<OP, Req>>(
           s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_, rvalue.dptr_);
       });
       num_common_rows++;
@@ -175,7 +175,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
       Tensor<cpu, 1, DType> lvalue = !lhs_is_dense ? data_l[iter_l++] : data_l[idx_l];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        mxnet_op::Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
+        SerialLaunchCPU<MissingRValueOp<OP, Req>>(
           s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_);
       });
     } else {
@@ -189,7 +189,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
       Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        mxnet_op::Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
+        SerialLaunchCPU<MissingLValueOp<OP, Req>>(
           s, rvalue.shape_.Size(), out[iter_out].dptr_, rvalue.dptr_);
       });
     }
@@ -201,11 +201,11 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       indices_out[iter_out] = indices_l[iter_l];
     } else {
       const IType idx_l = indices_l[iter_l];
-      iter_out = FillDense<cpu, DType, OP>(s, lhs.shape()[0], idx_l, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, lhs.shape()[0], idx_l, req, &out, iter_out);
     }
     Tensor<cpu, 1, DType> lvalue = data_l[iter_l++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
+      SerialLaunchCPU<MissingRValueOp<OP, Req>>(
         s, lvalue.shape_.Size(), out[iter_out++].dptr_, lvalue.dptr_);
     });
   }
@@ -214,17 +214,17 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       indices_out[iter_out] = indices_r[iter_r];
     } else {
       const IType idx_r = indices_r[iter_r];
-      iter_out = FillDense<cpu, DType, OP>(s, lhs.shape()[0], idx_r, req, &out, iter_out);
+      iter_out = FillDense<DType, OP>(s, lhs.shape()[0], idx_r, req, &out, iter_out);
     }
     Tensor<cpu, 1, DType> rvalue = data_r[iter_r++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
+      SerialLaunchCPU<MissingLValueOp<OP, Req>>(
         s, rvalue.shape_.Size(), out[iter_out++].dptr_, rvalue.dptr_);
     });
   }
   if (is_dense_result) {
     const size_t all_rows = static_cast<size_t>(lhs.shape()[0]);
-    iter_out = FillDense<cpu, DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
+    iter_out = FillDense<DType, OP>(s, all_rows, all_rows, req, &out, iter_out);
   } else {
     if (lhs_in_place) {
       CHECK_LE(iter_out, num_rows_l);
@@ -290,10 +290,10 @@ void ElemwiseBinaryOp::CsrCsrOp(mshadow::Stream<cpu> *s,
                                          Shape1(nr_cols));
   mshadow::Tensor<cpu, 1, DType> rhs_row(lhs_row.dptr_ + nr_cols, Shape1(nr_cols));
 
-  OpBase::FillDense<cpu, IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
-  OpBase::FillDense<cpu, DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
+  OpBase::FillDense<IType>(s, next.shape_.Size(), IType(-1), req, next.dptr_);
+  OpBase::FillDense<DType>(s, lhs_row.shape_.Size(), DType(0),  req, lhs_row.dptr_);
   if (!same_lhs_rhs) {
-    OpBase::FillDense<cpu, DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
+    OpBase::FillDense<DType>(s, rhs_row.shape_.Size(), DType(0), req, rhs_row.dptr_);
   }
 
   // Column indices

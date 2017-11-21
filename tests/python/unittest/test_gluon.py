@@ -531,6 +531,78 @@ def test_hybrid_stale_cache():
     net.initialize()
     assert net(mx.nd.ones((2,3,5))).shape == (2, 10)
 
+
+def test_lambda():
+    net1 = mx.gluon.nn.HybridSequential()
+    net1.add(nn.Activation('tanh'),
+             nn.LeakyReLU(0.1))
+
+    net2 = mx.gluon.nn.HybridSequential()
+    op3 = lambda F, x, *args: F.LeakyReLU(x, *args, slope=0.1)
+    net2.add(nn.HybridLambda('tanh'),
+             nn.HybridLambda(op3))
+
+    op4 = lambda x: mx.nd.LeakyReLU(x, slope=0.1)
+    net3 = mx.gluon.nn.Sequential()
+    net3.add(nn.Lambda('tanh'),
+             nn.Lambda(op4))
+
+    input_data = mx.nd.random.uniform(shape=(2, 3, 5, 7))
+    out1, out2, out3 = net1(input_data), net2(input_data), net3(input_data)
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out1.asnumpy(), out3.asnumpy())
+
+
+def test_fill_shape_deferred():
+    net = nn.HybridSequential()
+    with net.name_scope():
+        net.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                nn.BatchNorm(),
+                nn.Dense(10))
+    net.hybridize()
+    net.initialize()
+    net(mx.nd.ones((2,3,5,7)))
+    assert net[0].weight.shape[1] == 3, net[0].weight.shape[1]
+    assert net[1].gamma.shape[0] == 64, net[1].gamma.shape[0]
+    assert net[2].weight.shape[1] == 3072, net[2].weight.shape[1]
+
+
+def test_dtype():
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
+    net = mx.gluon.model_zoo.vision.resnet18_v1()
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+
+
+def test_fill_shape_load():
+    ctx = mx.context.current_context()
+    net1 = nn.HybridSequential()
+    with net1.name_scope():
+        net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                 nn.BatchNorm(),
+                 nn.Dense(10))
+    net1.hybridize()
+    net1.initialize(ctx=ctx)
+    net1(mx.nd.ones((2,3,5,7), ctx))
+    net1.save_params('net_fill.params')
+
+    net2 = nn.HybridSequential()
+    with net2.name_scope():
+        net2.add(nn.Conv2D(64, kernel_size=2, padding=1),
+                 nn.BatchNorm(),
+                 nn.Dense(10))
+    net2.hybridize()
+    net2.initialize()
+    net2.load_params('net_fill.params', ctx)
+    assert net2[0].weight.shape[1] == 3, net2[0].weight.shape[1]
+    assert net2[1].gamma.shape[0] == 64, net2[1].gamma.shape[0]
+    assert net2[2].weight.shape[1] == 3072, net2[2].weight.shape[1]
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

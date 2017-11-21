@@ -21,6 +21,7 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
+import warnings
 
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -325,7 +326,7 @@ class HybridBlock(Block):
         self._reg_params = {}
         self._cached_graph = ()
         self._cached_op = None
-        self._cached_params = None
+        self._cached_op_args = None
         self._out_format = None
         self._in_format = None
         self._active = False
@@ -363,34 +364,47 @@ class HybridBlock(Block):
 
     def _build_cache(self, *args):
         inputs, out = self._get_graph(*args)
+        input_idx = {var.name: i for i, var in enumerate(inputs)}
         self._cached_op = ndarray.CachedOp(out)
-
         params = dict(self.collect_params().items())
-        self._cached_params = [params.get(name, None) for name in out.list_inputs()]
-        assert len(params) + len(self._cached_graph[0]) == len(out.list_inputs()), \
-            "Wrong number of inputs."
 
-        name2pos = {var.name: i for i, var in enumerate(inputs)}
-        self._in_idx = [(i, name2pos[name]) for i, name in enumerate(out.list_inputs())
-                        if name not in params]
+        # verify graph inputs
+        expected_inputs = set(out.list_inputs())
+        for name in expected_inputs:
+            assert name in params or name in input_idx, \
+                "Unknown input to HybridBlock: %s"%name
+        for name, i in input_idx.items():
+            if name not in expected_inputs:
+                warnings.warn("The %d-th input to HybridBlock is not used by any "
+                              "computation. Is this intended?"%i)
+        for name in params:
+            if name not in expected_inputs:
+                warnings.warn("Parameter %s is not used by any computation. "
+                              "Is this intended?"%name)
+
+        self._cached_op_args = [(False, params[name]) if name in params
+                                else (True, input_idx[name])
+                                for name in out.list_inputs()]
+
+    def _finish_deferred_init(self, hybrid, *args):
+        self.infer_shape(*args)
+        self.infer_type(*args)
+        if hybrid:
+            for is_arg, i in self._cached_op_args:
+                if not is_arg:
+                    i._finish_deferred_init()
+        else:
+            for _, i in self.params.items():
+                i._finish_deferred_init()
 
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
 
-        try:
-            cargs = [i.data() if i else None for i in self._cached_params]
-        except DeferredInitializationError:
-            self.infer_shape(*args)
-            for i in self._cached_params:
-                if i is not None:
-                    i._finish_deferred_init()
-            cargs = [i.data() if i else None for i in self._cached_params]
-
         args, fmt = _flatten(args)
         assert fmt == self._in_format, "Invalid input format"
-        for i, j in self._in_idx:
-            cargs[i] = args[j]
+        cargs = [args[i] if is_arg else i.data()
+                 for is_arg, i in self._cached_op_args]
         out = self._cached_op(*cargs)
         if isinstance(out, NDArray):
             out = [out]
@@ -399,6 +413,7 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
+        self._cached_op_args = None
 
     def register_child(self, block):
         if not isinstance(block, HybridBlock):
@@ -414,17 +429,25 @@ class HybridBlock(Block):
         self._active = active
         super(HybridBlock, self).hybridize(active)
 
-    def infer_shape(self, *args):
-        """Infers shape of Parameters from inputs."""
+    def _infer_attrs(self, infer_fn, attr, *args):
+        """Generic infer attributes."""
         inputs, out = self._get_graph(*args)
         args, _ = _flatten(args)
-        arg_shapes, _, aux_shapes = out.infer_shape(
-            **{i.name: j.shape for i, j in zip(inputs, args)})
-        sdict = {i: j for i, j in zip(out.list_arguments(), arg_shapes)}
-        sdict.update({name : shape for name, shape in \
-                      zip(out.list_auxiliary_states(), aux_shapes)})
+        arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
+            **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
+        sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
+        sdict.update({name : attr for name, attr in \
+                      zip(out.list_auxiliary_states(), aux_attrs)})
         for i in self.collect_params().values():
-            i.shape = sdict[i.name]
+            setattr(i, attr, sdict[i.name])
+
+    def infer_shape(self, *args):
+        """Infers shape of Parameters from inputs."""
+        self._infer_attrs('infer_shape', 'shape', *args)
+
+    def infer_type(self, *args):
+        """Infers data type of Parameters from inputs."""
+        self._infer_attrs('infer_type', 'dtype', *args)
 
     def export(self, path):
         """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
@@ -462,15 +485,16 @@ class HybridBlock(Block):
         :py:class:`NDArray` or :py:class:`Symbol`."""
         if isinstance(x, NDArray):
             with x.context as ctx:
-                if self._active:
-                    return self._call_cached_op(x, *args)
                 try:
+                    if self._active:
+                        return self._call_cached_op(x, *args)
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 except DeferredInitializationError:
-                    self.infer_shape(x, *args)
-                    for i in self.collect_params().values():
-                        i._finish_deferred_init()
-                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+                    self._finish_deferred_init(self._active, x, *args)
+
+                if self._active:
+                    return self._call_cached_op(x, *args)
+                params = {i: j.data(ctx) for i, j in self._reg_params.items()}
                 return self.hybrid_forward(ndarray, x, *args, **params)
 
         assert isinstance(x, Symbol), \
@@ -559,6 +583,11 @@ class SymbolBlock(HybridBlock):
     def forward(self, x, *args):
         if isinstance(x, NDArray):
             with x.context:
+                try:
+                    return self._call_cached_op(x, *args)
+                except DeferredInitializationError:
+                    self._finish_deferred_init(True, x, *args)
+
                 return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \

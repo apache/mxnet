@@ -6,7 +6,7 @@
 Many real world datasets deal with high dimensional sparse feature vectors. When learning
 the weights of models with sparse datasets, the derived gradients of the weights could be sparse.
 
-Let's say we perform a matrix multiplication of ``X``  and ``W``, where ``X`` is a 2x2 matrix, and ``W`` is a 2x1 matrix. Let ``Y`` be the matrix multiplication of the two matrices:
+Let's say we perform a matrix multiplication of ``X``  and ``W``, where ``X`` is a 1x2 matrix, and ``W`` is a 2x3 matrix. Let ``Y`` be the matrix multiplication of the two matrices:
 
 ```python
 import mxnet as mx
@@ -271,7 +271,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 
 ## Sparse Operators and Storage Type Inference
 
-Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](https://mxnet.io/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
+Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.io/versions/master/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
 ```python

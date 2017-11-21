@@ -232,6 +232,10 @@ def test_sgd():
                                 if dtype != np.float16:
                                     compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
                                                       dtype, w_stype='csr', g_stype='csr')
+    # test optimizer with a big shape
+    big_shape = (54686454, 1)
+    kwarg = {'momentum': 0.9, 'wd': 0.05}
+    compare_optimizer(opt1(**kwarg), opt2(**kwarg), big_shape, np.float32)
 
 class PySparseSGD(mx.optimizer.Optimizer):
     """python reference implemenation of sgd"""

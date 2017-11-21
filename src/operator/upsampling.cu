@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file upsampling_nearest.cc
  * \brief
  * \author Bing Xu

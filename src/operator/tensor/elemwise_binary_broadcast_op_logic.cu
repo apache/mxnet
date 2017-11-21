@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op.cu
  * \brief GPU Implementation of unary function.
  */

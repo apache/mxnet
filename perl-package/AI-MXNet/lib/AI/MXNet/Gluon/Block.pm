@@ -565,21 +565,21 @@ method infer_shape(@args)
     my $args = \@args;
     ($args) = __PACKAGE__->_flatten($args);
     my %in;
-    zip(sub {
-        my ($i, $j) = @_;
+    for(zip($inputs, $args)) {
+        my ($i, $j) = @$_;
         $in{ $i->name } = $j->shape;
-    }, $inputs, $args);
+    }
     my ($arg_shapes, undef, $aux_shapes) = $out->infer_shape(%in);
     my %sdict;
-    zip(sub {
-        my ($i, $j) = @_;
+    for(zip($out->list_arguments(), $arg_shapes)) {
+        my ($i, $j) = @$_;
         $sdict{ $i } = $j;
-    }, $out->list_arguments(), $arg_shapes);
+    }
     my %aux;
-    zip(sub {
-        my ($i, $j) = @_;
+    for(zip($out->list_auxiliary_states(), $aux_shapes)) {
+        my ($i, $j) = @$_;
         $aux{ $i } = $j;
-    }, $out->list_auxiliary_states(), $aux_shapes);
+    }
     %sdict = (%sdict, %aux);
     for my $i ($self->collect_params->values)
     {
@@ -878,10 +878,10 @@ method forward($x, @args)
     assert((Data::Dumper::Dumper($in_fmt) eq Data::Dumper::Dumper($self->_in_format)), "Invalid input format");
     my $ret = $self->_cached_graph->[1]->deepcopy;
     my %in;
-    zip(sub {
-        my ($k, $v) = @_;
+    for(zip($self->_cached_graph->[0], $args)) {
+        my ($k, $v) = @$_;
         $in{$k->name} = $v;
-    }, $self->_cached_graph->[0], $args);
+    }
     $ret->_compose(%in);
     $ret = (__PACKAGE__->_regroup($ret, $self->_out_format))[0];
     if(ref($ret) eq 'ARRAY' and wantarray)
