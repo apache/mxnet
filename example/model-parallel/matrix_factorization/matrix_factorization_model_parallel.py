@@ -38,8 +38,6 @@ parser.add_argument('--factor-size', type=int, default=128,
                     help="the factor size of the embedding operation")
 parser.add_argument('--num-gpus', type=int, default=2,
                     help="number of gpus to use")
-parser.add_argument('--dummy-iter', action='store_true',
-                    help="use the dummy data iterator for speed test")
 
 MOVIELENS = {
     'dataset': 'ml-10m',
@@ -60,7 +58,6 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     optimizer = 'sgd'
     factor_size = args.factor_size
-    dummy_iter = args.dummy_iter
     print_every = args.print_every
     num_gpus = args.num_gpus    
  
@@ -71,49 +68,39 @@ if __name__ == '__main__':
     max_user = MOVIELENS['max_user']
     max_movies = MOVIELENS['max_movie']
     get_movielens_data(MOVIELENS['dataset'])
-    train_iter = get_movielens_iter(MOVIELENS['train'], batch_size, dummy_iter)
-    val_iter = get_movielens_iter(MOVIELENS['val'], batch_size, dummy_iter)
+    train_iter = get_movielens_iter(MOVIELENS['train'], batch_size)
+    val_iter = get_movielens_iter(MOVIELENS['val'], batch_size)
 
     # construct the model
     net = matrix_fact_model_parallel_net(factor_size, factor_size, max_user, max_movies)
 
-    # initialize the module
+    # construct the module
     # map the ctx_group attribute to the context assignment
-    group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.gpu(i) for i in range(num_gpus)]}
+    group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.cpu(i) for i in range(num_gpus)]}
     mod = mx.module.Module(symbol=net, context=[mx.cpu()]*num_gpus, data_names=['user', 'item'],
         label_names=['score'], group2ctxs=group2ctxs)
-    mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
-    mod.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
-    optim = mx.optimizer.create(optimizer, learning_rate=learning_rate, momentum=momentum,
-                                wd=1e-4, rescale_grad=1.0/batch_size)
-    mod.init_optimizer(optimizer=optim)
+    
+    # the initializer uesd to initialize the parameters
+    initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
+    
+    # the parameters for the optimizer constructor
+    optimizer_params = {
+        'learning_rate': learning_rate,
+        'wd': 1e-4,
+        'momentum': momentum,
+        'rescale_grad': 1.0/batch_size}
 
     # use MSE as the metric
     metric = mx.metric.create(['MSE'])
     
     speedometer = mx.callback.Speedometer(batch_size, print_every)
     
-    logging.info('Training started ...')
-
-    for epoch in range(num_epoch):
-        nbatch = 0
-        metric.reset()
-        for batch in train_iter:
-            nbatch += 1
-            # run forward and backward computation
-            mod.forward_backward(batch)
-            # update all parameters
-            mod.update()
-            # update training metric
-            mod.update_metric(metric, batch.label)
-            speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                       eval_metric=metric, locals=locals())
-            speedometer(speedometer_param)
-        # evaluate metric on validation dataset
-        score = mod.score(val_iter, ['MSE'])
-        logging.info('epoch %d, eval MSE = %s ' % (epoch, score[0][1]))
-        # reset the iterator for next pass of data
-        train_iter.reset()
-        val_iter.reset()
-    
-    logging.info('Training completed.')
+    # start training
+    mod.fit(train_iter,
+            val_iter,
+            eval_metric        = metric,
+            num_epoch          = num_epoch,
+            optimizer          = optimizer,
+            optimizer_params   = optimizer_params,
+            initializer        = initializer,
+            batch_end_callback = speedometer) 
