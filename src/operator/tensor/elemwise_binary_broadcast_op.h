@@ -139,8 +139,8 @@ template<int ndim, typename DType, typename OP>
 struct binary_broadcast_kernel {
   /*! \brief Map function for binary_broadcast_kernel */
   MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
-                                  const Shape<ndim> &lstride, const Shape<ndim> &rstride,
-                                  const Shape<ndim> &oshape, DType *lhs, DType *rhs,
+                                  const Shape <ndim> &lstride, const Shape <ndim> &rstride,
+                                  const Shape <ndim> &oshape, DType *lhs, DType *rhs,
                                   DType *out) {
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
@@ -153,6 +153,7 @@ struct binary_broadcast_kernel {
       // the actual op we'll eventually be using
       KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
     }
+  }
 };
 }  // namespace mxnet_op
 
