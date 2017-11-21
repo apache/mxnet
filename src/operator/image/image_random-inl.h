@@ -30,7 +30,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/mat.hpp>
 #include "../mxnet_op.h"
-#include "image_common.h"
 #include "../../operator/operator_common.h"
 
 namespace mxnet {
