@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+from metric import *
 from mxnet.test_utils import *
 from data import DummyIter
 from factorization_machine_model import *
@@ -35,6 +36,7 @@ parser.add_argument('--factor-size', type=int, default=16,
                     help='number of latent variables')
 parser.add_argument('--kvstore', type=str, default='local',
                     help='what kvstore to use', choices=["dist_async", "local"])
+
 
 if __name__ == '__main__':
     import logging
@@ -59,15 +61,15 @@ if __name__ == '__main__':
     model = factorization_machine_model(factor_size, num_features)
 
     # module
-    mod = mx.mod.Module(symbol=model, data_names=['data'], label_names=['softmax_label'])
+    mod = mx.mod.Module(symbol=model)
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
-    # TODO LR, lambda?
     optim = mx.optimizer.create('adam', learning_rate=0.001, wd=0.0001,
                                 beta1=0.9, beta2=0.999, epsilon=1e-8)
     mod.init_optimizer(optimizer=optim, kvstore=kv)
-    # use accuracy as the metric
-    metric = mx.metric.create(['accuracy'])
+
+    # metrics
+    metric = mx.metric.create(['log_loss'])
     speedometer = mx.callback.Speedometer(batch_size, 100)
 
     # get the sparse weight parameter
@@ -83,7 +85,8 @@ if __name__ == '__main__':
         metric.reset()
         for batch in data_iter:
             nbatch += 1
-            # for distributed training, we need to manually pull sparse weights from kvstore
+            # manually pull sparse weights from kvstore so that _square_sum
+            # only computes the rows necessary
             row_ids = batch.data[0].indices
             kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
             kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
