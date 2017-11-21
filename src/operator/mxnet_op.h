@@ -428,8 +428,7 @@ struct Kernel<OP, cpu> {
   inline static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    if (omp_threads < 2 || !tuned_op<OP, typename OP::DataType>::UseOMP(
-      N, omp_threads, args...)) {
+    if (omp_threads < 2) {
       OP::Map(0, N, args...);
     } else {
       const int length = (N + omp_threads - 1) / omp_threads;

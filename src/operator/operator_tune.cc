@@ -198,8 +198,6 @@ struct static_init_var {
 #define IMPLEMENT_CUSTOM_WORKLOAD_FWD(__op$) \
   MSHADOW_MACRO_FOREACH_TYPE(_IMPLEMENT_CUSTOM_WORKLOAD_FWD, __op$)
 
-IMPLEMENT_CUSTOM_WORKLOAD_FWD(mxnet::op::mxnet_op::tunable_binary_broadcast_kernel);  // NOLINT()
-
 /*!
  * \brief Tuning data and default weights in the case that MXNET_ENABLE_OPERATOR_AUTOTUNE is set
  *        to zero (thus turning off auto-tuning)
