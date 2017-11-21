@@ -100,6 +100,16 @@ class Storage {
    */
   virtual ~Storage() {}
   /*!
+   * \brief Returns mutex used by storage manager
+   */
+  std::mutex& GetMutex(Context::DeviceType dev) {
+    if (dev == Context::kCPU) {
+      return cpu_mutex_;
+    } else {
+      return gpu_mutex_;
+    }
+  }
+  /*!
    * \return Storage singleton.
    */
   static Storage* Get();
@@ -112,6 +122,10 @@ class Storage {
    * \return A shared pointer to Storage singleton.
    */
   static std::shared_ptr<Storage> _GetSharedRef();
+
+ private:
+  std::mutex cpu_mutex_;
+  std::mutex gpu_mutex_;
 };  // class Storage
 }  // namespace mxnet
 #endif  // MXNET_STORAGE_H_

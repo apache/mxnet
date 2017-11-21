@@ -29,6 +29,7 @@
   #include <cuda_runtime.h>
 #endif  // MXNET_USE_CUDA
 #include <mxnet/base.h>
+#include <mxnet/storage.h>
 #include <unordered_map>
 #include <vector>
 #include <mutex>
@@ -63,6 +64,11 @@ class GPUPooledStorageManager final : public StorageManager {
   void Free(Storage::Handle handle) override;
 
   void DirectFree(Storage::Handle handle) override {
+    std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
+    DirectFreeNoLock(handle);
+  }
+
+  void DirectFreeNoLock(Storage::Handle handle) {
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = handle.size + NDEV;
     // ignore unloading error, as memory has already been recycled
@@ -74,8 +80,6 @@ class GPUPooledStorageManager final : public StorageManager {
 
  private:
   void ReleaseAll();
-  // internal mutex
-  std::mutex mutex_;
   // used memory
   size_t used_memory_ = 0;
   // percentage of reserved memory
@@ -88,7 +92,7 @@ class GPUPooledStorageManager final : public StorageManager {
 };  // class GPUPooledStorageManager
 
 void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = handle->size + NDEV;
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
@@ -113,7 +117,7 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 }
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = handle.size + NDEV;
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(handle.dptr);
@@ -125,11 +129,12 @@ void GPUPooledStorageManager::ReleaseAll() {
       Storage::Handle handle;
       handle.dptr = j;
       handle.size = i.first - NDEV;
-      DirectFree(handle);
+      DirectFreeNoLock(handle);
     }
   }
   memory_pool_.clear();
 }
+
 #endif  // MXNET_USE_CUDA
 
 }  // namespace storage

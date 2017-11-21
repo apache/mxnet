@@ -622,7 +622,7 @@ def create(name='local'):
 
     Parameters
     ----------
-    name : {'local', 'device', 'dist_sync', 'dist_device_sync', 'dist_async'}
+    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async'}
         The type of KVStore.
     Returns
     -------
