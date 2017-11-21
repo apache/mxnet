@@ -403,7 +403,7 @@ void NDArray::set_fresh_out_grad(bool state) const {
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims) {
-  if (shape.ndim() != ndims)
+  if (shape.ndim() != (size_t)ndims)
     return false;
   for (int i = 0; i < ndims; i++)
     if (shape[i] != dims[i])

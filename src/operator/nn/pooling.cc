@@ -23,8 +23,8 @@
  * \brief
  * \author Bing Xu, Jun Wu, Da Zheng
 */
-#include "./pooling-inl.h"
 #include "../elemwise_op_common.h"
+#include "./pooling-inl.h"
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
 #include "../mkl/mkl_memory-inl.h"
@@ -33,11 +33,14 @@
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_pooling-inl.h"
+#endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
 namespace op {
 
-static void PoolingParamParser(nnvm::NodeAttrs* attrs) {
+static void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   using namespace mshadow;
   PoolingParam param_;
   param_.Init(attrs->dict);
@@ -48,102 +51,125 @@ static void PoolingParamParser(nnvm::NodeAttrs* attrs) {
     if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
     if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
   } else {
-    CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D pooling not supported";
+    CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim()
+                                       << "D pooling not supported";
     if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
     if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
   }
   CHECK_EQ(param_.stride.ndim(), param_.kernel.ndim())
-    << "stride and kernel should have the same length";
+      << "stride and kernel should have the same length";
   CHECK_EQ(param_.pad.ndim(), param_.kernel.ndim())
-    << "pad and kernel should have the same length";
+      << "pad and kernel should have the same length";
   attrs->parsed = std::move(param_);
 }
 
-static bool PoolingShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
-  const PoolingParam& param_ = nnvm::get<PoolingParam>(attrs.parsed);
+static bool PoolingShape(const nnvm::NodeAttrs &attrs,
+                         std::vector<TShape> *in_shape,
+                         std::vector<TShape> *out_shape) {
+  const PoolingParam &param_ = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
   const TShape &dshape = (*in_shape)[0];
-  CHECK_GE(dshape.ndim(), 3U) << "Pooling: Input data should be  3D in (batch, channel, x)"
-    << " Or 4D in (batch, channel, y, x) "
-    << " Or 5D in (batch, channel, d, y, x)";
+  CHECK_GE(dshape.ndim(), 3U)
+      << "Pooling: Input data should be  3D in (batch, channel, x)"
+      << " Or 4D in (batch, channel, y, x) "
+      << " Or 5D in (batch, channel, d, y, x)";
   TShape oshape = dshape;
-  if (dshape.ndim() ==  0) return false;
+  if (dshape.ndim() == 0) return false;
   if (param_.kernel.ndim() == 1) {
-    CHECK_EQ(dshape.ndim(), 3U) << "Pooling: Input data should be 3D in (batch, channel, x)";
+    CHECK_EQ(dshape.ndim(), 3U)
+        << "Pooling: Input data should be 3D in (batch, channel, x)";
     if (param_.global_pool) {
       oshape[2] = 1;
     } else {
       CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
-        << "kernel size (" << param_.kernel[0] << ") exceeds input (" << dshape[2]
-        << " padded to " << (dshape[2] + 2*param_.pad[0]) << ")";
+          << "kernel size (" << param_.kernel[0] << ") exceeds input ("
+          << dshape[2] << " padded to " << (dshape[2] + 2 * param_.pad[0])
+          << ")";
       if (param_.pooling_convention == pool_enum::kValid) {
-        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-          param_.stride[0];
+        oshape[2] = 1 +
+                    (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
+                        param_.stride[0];
       } else {
-        oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
-                dshape[2] + 2 * param_.pad[0] -
-                param_.kernel[0]) / param_.stride[0]));
+        oshape[2] = 1 + static_cast<int>(ceil(
+                            static_cast<float>(dshape[2] + 2 * param_.pad[0] -
+                                               param_.kernel[0]) /
+                            param_.stride[0]));
       }
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
   } else if (param_.kernel.ndim() == 2) {
-    CHECK_EQ(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
+    CHECK_EQ(dshape.ndim(), 4U)
+        << "Pooling: Input data should be 4D in (batch, channel, y, x)";
     if (param_.global_pool) {
       oshape[2] = 1;
       oshape[3] = 1;
     } else {
       CHECK(param_.kernel[0] <= dshape[2] + 2 * param_.pad[0])
-        << "kernel size (" << param_.kernel[0] << ") exceeds input (" << dshape[2]
-        << " padded to " << (dshape[2] + 2*param_.pad[0]) << ")";
+          << "kernel size (" << param_.kernel[0] << ") exceeds input ("
+          << dshape[2] << " padded to " << (dshape[2] + 2 * param_.pad[0])
+          << ")";
       CHECK(param_.kernel[1] <= dshape[3] + 2 * param_.pad[1])
-        << "kernel size (" << param_.kernel[1] << ") exceeds input (" << dshape[3]
-        << " padded to " << (dshape[3] + 2*param_.pad[1]) << ")";
+          << "kernel size (" << param_.kernel[1] << ") exceeds input ("
+          << dshape[3] << " padded to " << (dshape[3] + 2 * param_.pad[1])
+          << ")";
       if (param_.pooling_convention == pool_enum::kValid) {
-        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-          param_.stride[0];
-        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
-          param_.stride[1];
+        oshape[2] = 1 +
+                    (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
+                        param_.stride[0];
+        oshape[3] = 1 +
+                    (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
+                        param_.stride[1];
       } else {
-        oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
-                dshape[2] + 2 * param_.pad[0] -
-                param_.kernel[0]) / param_.stride[0]));
-        oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
-                dshape[3] + 2 * param_.pad[1] -
-                param_.kernel[1]) / param_.stride[1]));
+        oshape[2] = 1 + static_cast<int>(ceil(
+                            static_cast<float>(dshape[2] + 2 * param_.pad[0] -
+                                               param_.kernel[0]) /
+                            param_.stride[0]));
+        oshape[3] = 1 + static_cast<int>(ceil(
+                            static_cast<float>(dshape[3] + 2 * param_.pad[1] -
+                                               param_.kernel[1]) /
+                            param_.stride[1]));
       }
     }
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
   } else if (param_.kernel.ndim() == 3) {
     CHECK_EQ(dshape.ndim(), 5U)
-      << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
-    CHECK_LE(param_.kernel[0], dshape[2] + 2 * param_.pad[0]) << "kernel size exceeds input";
-    CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1]) << "kernel size exceeds input";
-    CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2]) << "kernel size exceeds input";
+        << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+    CHECK_LE(param_.kernel[0], dshape[2] + 2 * param_.pad[0])
+        << "kernel size exceeds input";
+    CHECK_LE(param_.kernel[1], dshape[3] + 2 * param_.pad[1])
+        << "kernel size exceeds input";
+    CHECK_LE(param_.kernel[2], dshape[4] + 2 * param_.pad[2])
+        << "kernel size exceeds input";
     if (param_.global_pool) {
       oshape[2] = 1;
       oshape[3] = 1;
       oshape[4] = 1;
     } else {
       if (param_.pooling_convention == pool_enum::kValid) {
-        oshape[2] = 1 + (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
-          param_.stride[0];
-        oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
-          param_.stride[1];
-        oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) /
-          param_.stride[2];
+        oshape[2] = 1 +
+                    (dshape[2] + 2 * param_.pad[0] - param_.kernel[0]) /
+                        param_.stride[0];
+        oshape[3] = 1 +
+                    (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
+                        param_.stride[1];
+        oshape[4] = 1 +
+                    (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) /
+                        param_.stride[2];
       } else {
-        oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
-                dshape[2] + 2 * param_.pad[0] -
-                param_.kernel[0]) / param_.stride[0]));
-        oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
-                dshape[3] + 2 * param_.pad[1] -
-                param_.kernel[1]) / param_.stride[1]));
-        oshape[4] = 1 + static_cast<int>(ceil(static_cast<float>(
-                dshape[4] + 2 * param_.pad[2] -
-                param_.kernel[2]) / param_.stride[2]));
+        oshape[2] = 1 + static_cast<int>(ceil(
+                            static_cast<float>(dshape[2] + 2 * param_.pad[0] -
+                                               param_.kernel[0]) /
+                            param_.stride[0]));
+        oshape[3] = 1 + static_cast<int>(ceil(
+                            static_cast<float>(dshape[3] + 2 * param_.pad[1] -
+                                               param_.kernel[1]) /
+                            param_.stride[1]));
+        oshape[4] = 1 + static_cast<int>(ceil(
+                            static_cast<float>(dshape[4] + 2 * param_.pad[2] -
+                                               param_.kernel[2]) /
+                            param_.stride[2]));
       }
     }
 
@@ -153,10 +179,54 @@ static bool PoolingShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                        const std::vector<NDArray> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<NDArray> &outputs) {
+#if MXNET_USE_MKLDNN == 1
+  switch (inputs[0].dtype()) {
+    case mshadow::kFloat32:
+      const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+      MKLDNNPooling_Forward<float>(ctx, param, inputs[0], req[0], outputs[0]);
+      return;
+  }
+#endif
+  // TODO I need to convert format.
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
+  PoolingCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+}
+
+void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                            const std::vector<NDArray> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<NDArray> &outputs) {
+#if MXNET_USE_MKLDNN == 1
+  switch (inputs[0].dtype()) {
+    case mshadow::kFloat32:
+      const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+      MKLDNNPooling_Backward<float>(ctx, param, inputs[0], inputs[1], req[0],
+                                    outputs[0]);
+      return;
+  }
+#endif
+  // TODO I need to convert format.
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
+  PoolingGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+}
+
 struct PoolingGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+  std::vector<nnvm::NodeEntry> operator()(
+      const nnvm::NodePtr &n,
+      const std::vector<nnvm::NodeEntry> &ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[pool_enum::kOut]);
     heads.push_back(n->inputs[pool_enum::kData]);
@@ -165,10 +235,52 @@ struct PoolingGrad {
   }
 };
 
+inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
+                                      const int dev_mask,
+                                      DispatchMode *dispatch_mode,
+                                      std::vector<int> *in_attrs,
+                                      std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    (*out_attrs)[0] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  (*out_attrs)[0] = kDefaultStorage;
+  return true;
+}
+
+inline static bool backward_PoolingStorageType(const nnvm::NodeAttrs &attrs,
+                                               const int dev_mask,
+                                               DispatchMode *dispatch_mode,
+                                               std::vector<int> *in_attrs,
+                                               std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3);
+  CHECK_EQ(out_attrs->size(), 1);
+
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    for (size_t i = 0; i < out_attrs->size(); i++)
+      (*out_attrs)[i] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
+  return true;
+}
+
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 NNVM_REGISTER_OP(Pooling)
-.describe(R"code(Performs pooling on the input.
+    .describe(R"code(Performs pooling on the input.
 
 The shapes for 1-D pooling are
 
@@ -207,28 +319,37 @@ For 3-D pooling, an additional *depth* dimension is added before
 height, width)*.
 
 )code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(PoolingParamParser)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
-.set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_Pooling"})
-.add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator.")
-.add_arguments(PoolingParam::__FIELDS__());
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr_parser(PoolingParamParser)
+    .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
+    .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingCompute_CPU)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseInOut{"_backward_Pooling"})
+    .add_argument("data", "NDArray-or-Symbol",
+                  "Input data to the pooling operator.")
+    .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Pooling)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<nnvm::FInplaceOption>(
+        "FInplaceOption",
+        [](const NodeAttrs &attrs) {
 #if MXNET_USE_CUDNN == 1
-  return std::vector<std::pair<int, int> >();
+          return std::vector<std::pair<int, int> >();
 #else
-  return std::vector<std::pair<int, int> >{{1, 0}};
+          return std::vector<std::pair<int, int> >{{1, 0}};
 #endif
-})
-.set_attr_parser(PoolingParamParser)
-.set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>);
+        })
+    .set_attr<FInferStorageType>("FInferStorageType",
+                                 backward_PoolingStorageType)
+    .set_attr_parser(PoolingParamParser)
+    .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>)
+    .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradCompute_CPU);
 
 }  // namespace op
 }  // namespace mxnet
