@@ -24,6 +24,7 @@
 */
 #include "./fully_connected-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 #if MXNET_USE_NNPACK == 1
 #include "./nnpack/nnpack_fully_connected-inl.h"
 #endif  // MXNET_USE_NNPACK
@@ -76,10 +77,9 @@ void FullyConnectedCompute_CPU(const nnvm::NodeAttrs& attrs, const OpContext &ct
     const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNFC_Forward(attrs, ctx, inputs, req, outputs);
-      return;
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNFC_Forward(attrs, ctx, inputs, req, outputs);
+    return;
   }
 #endif
   // TODO I need to convert format.
@@ -96,10 +96,9 @@ void FullyConnectedGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     const OpContext &ctx, const std::vector<NDArray> &inputs,
     const std::vector<OpReqType> &req, const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNFC_Backward(attrs, ctx, inputs, req, outputs);
-      return;
+  if (SupportMKLDNN(inputs[0])) {
+    MKLDNNFC_Backward(attrs, ctx, inputs, req, outputs);
+    return;
   }
 #endif
   // TODO I need to convert format.
