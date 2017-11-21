@@ -19,6 +19,7 @@
 
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file attach_op_resource_pass.cc
  * \brief Pass to attach resource to OpExecVector of the graph.
  */

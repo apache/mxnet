@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file init_op.h
  * \brief Function definition of initialization op
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file roi_pooling.cu
  * \brief roi pooling operator
  * \author Ross Girshick, Kye-Hyeon Kim, Jian Guo

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cpu_device_storage.h
  * \brief CPU storage implementation.
  */

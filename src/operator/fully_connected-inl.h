@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file fully_connect_op-inl.h
  * \brief fully connect operator and symbol
 */

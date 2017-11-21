@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file batchnorm_test.cc
  * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
@@ -1424,7 +1425,7 @@ static TShape MakeShape(const std::vector<index_t>& shape,
   CHECK_LT(channelAxis, shape.size() + 1);
   const index_t dim = index_t(shape.size()) + 1;
   TShape newShape(dim);
-  for (size_t x = 0; x < channelAxis; ++x) {
+  for (size_t x = 0; x < static_cast<size_t>(channelAxis); ++x) {
     newShape[x] = index_t(shape[x]);
   }
   newShape[channelAxis] = index_t(channelCount);

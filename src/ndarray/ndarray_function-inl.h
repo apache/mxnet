@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ndarray_function-inl.h
  * \brief The real implementation of NDArray functions.
  */

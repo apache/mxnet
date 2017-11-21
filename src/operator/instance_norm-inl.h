@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file instance_norm-inl.h
  * \brief Reproducing paper Instance Normalization: The Missing Ingredient for
  * Fast Stylization, D. Ulyanov, A. Vedaldi, V. Lempitsky, 2016
