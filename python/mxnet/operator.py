@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except
+# pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines
 """numpy interface for operators."""
 from __future__ import absolute_import
 
@@ -31,6 +31,9 @@ from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
+from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ID_TO_STR
+from .ndarray import _ndarray_cls
+
 
 c_int_p = POINTER(c_int)
 
@@ -659,6 +662,8 @@ def register(reg_name):
         infershape_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
                                         POINTER(POINTER(mx_uint)), c_void_p)
         infertype_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
+        inferstorage_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
+        inferstorage_backward_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
         list_functype = CFUNCTYPE(c_int, POINTER(POINTER(POINTER(c_char))), c_void_p)
         deps_functype = CFUNCTYPE(c_int, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
@@ -830,13 +835,13 @@ def register(reg_name):
                         raise AssertionError("infer_type must return 2 or 3 lists")
                     assert len(otype) == n_out, \
                         "InferType Error: expecting %d entries in returned output " \
-                        "shapes, got %d."%(n_out, len(otype))
+                        "types, got %d."%(n_out, len(otype))
                     assert len(itype) == n_in, \
                         "InferType Error: expecting %d entries in returned input " \
-                        "shapes, got %d."%(n_in, len(itype))
+                        "types, got %d."%(n_in, len(itype))
                     assert len(atype) == n_aux, \
                         "InferType Error: expecting %d entries in returned aux state " \
-                        "shapes, got %d."%(n_aux, len(atype))
+                        "types, got %d."%(n_aux, len(atype))
                     rtype = list(itype) + list(otype) + list(atype)
                     for i, dtype in enumerate(rtype):
                         tensor_types[i] = _DTYPE_NP_TO_MX[dtype]
@@ -925,13 +930,13 @@ def register(reg_name):
                             tensors = [[] for i in range(5)]
                             for i in range(num_ndarray):
                                 if tags[i] == 1 or tags[i] == 4:
-                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
-                                                                         NDArrayHandle),
-                                                                    writable=True))
+                                    tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
+                                                                              NDArrayHandle),
+                                                                         writable=True))
                                 else:
-                                    tensors[tags[i]].append(NDArray(cast(ndarraies[i],
-                                                                         NDArrayHandle),
-                                                                    writable=False))
+                                    tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
+                                                                              NDArrayHandle),
+                                                                         writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[1]))]
                             with ctx:
                                 op.forward(is_train=is_train, req=reqs,
@@ -960,8 +965,8 @@ def register(reg_name):
                                                                          writable=True))
                                 else:
                                     tensors[tags[i]].append(_ndarray_cls(cast(ndarraies[i],
-                                                                         NDArrayHandle),
-                                                                    writable=False))
+                                                                              NDArrayHandle),
+                                                                         writable=False))
                             reqs = [req_enum[reqs[i]] for i in range(len(tensors[2]))]
                             with ctx:
                                 op.backward(req=reqs,
@@ -1019,7 +1024,9 @@ def register(reg_name):
                          infershape_functype(infer_shape_entry),
                          deps_functype(declare_backward_dependency_entry),
                          createop_functype(create_operator_entry),
-                         infertype_functype(infer_type_entry)]
+                         infertype_functype(infer_type_entry),
+                         inferstorage_functype(infer_storage_type_entry),
+                         inferstorage_backward_functype(infer_storage_type_backward_entry)]
             callbacks = [cast(i, CFUNCTYPE(c_int)) for i in callbacks]
             contexts = [None]*len(callbacks)
             ret[0] = MXCallbackList(c_int(len(callbacks)),
