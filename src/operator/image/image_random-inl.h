@@ -150,31 +150,6 @@ static void Normalize(const nnvm::NodeAttrs &attrs,
   });
 }
 
-struct flip {
-  MSHADOW_XINLINE static int FlipIndex(int idx, const int stride, const int trailing) {
-    const int low = idx % trailing;
-    int high = idx / trailing;
-    const int x = high % stride;
-    high /= stride;
-
-    return (high * stride + stride - 1 - x) * trailing + low;
-  }
-
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int idx, DType *src, DType *dst,
-                                  const int stride, const int trailing) {
-    int new_idx = FlipIndex(idx, stride, trailing);
-    if (src == dst) {
-      // inplace operation
-      if (idx < new_idx) {
-        std::swap(dst[new_idx], src[idx]);
-      }
-    } else {
-      dst[new_idx] = src[idx];
-    }
-  }
-};
-
 inline static int FlipIndex(int idx, const int stride, const int trailing) {
   const int low = idx % trailing;
   int high = idx / trailing;
