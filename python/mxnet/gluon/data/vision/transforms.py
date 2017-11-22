@@ -151,3 +151,23 @@ class RandomColorJitter(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.image.random_color_jitter(x, *self._args)
+
+
+class AdjustLighting(HybridBlock):
+    def __init__(self, alpha_rgb=(0.0, 0.0, 0.0), eigval=(55.46, 4.794, 1.148),
+                 eigvec=(-0.5675, 0.7192, 0.4009, -0.5808, -0.0045, -0.8140, -0.5808, -0.0045, -0.8140)):
+        super(AdjustLighting, self).__init__()
+        self._args = (alpha_rgb, eigval, eigvec)
+
+    def hybrid_forward(self, F, x):
+        return F.image.adjust_lighting(x, *self._args)
+
+
+class RandomLighting(HybridBlock):
+    def __init__(self, alpha_std=0.05, eigval=(55.46, 4.794, 1.148),
+                 eigvec=(-0.5675, 0.7192, 0.4009, -0.5808, -0.0045, -0.8140, -0.5808, -0.0045, -0.8140)):
+        super(RandomLighting, self).__init__()
+        self._args = (alpha_std, eigval, eigvec)
+
+    def hybrid_forward(self, F, x):
+        return F.image.random_lighting(x, *self._args)
