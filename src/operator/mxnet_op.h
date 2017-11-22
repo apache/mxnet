@@ -85,7 +85,7 @@ inline int get_num_threads<gpu>(const int N) {
 
 template<>
 inline int get_num_threads<cpu>(const int N) {
-  return omp_get_max_threads();
+  return engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 }
 
 /*! \brief operator request type switch */
@@ -480,7 +480,8 @@ struct Kernel<OP, cpu> {
   static MSHADOW_CINLINE
   typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    return LaunchWithType<DType, T>(s, N, dest, args...);
+    LaunchTuned<T, DType>(s, N, dest, args...);
+    return true;
   }
 
   /*!
@@ -515,7 +516,8 @@ struct Kernel<OP, cpu> {
   static MSHADOW_CINLINE
   typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
   Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
-    return LaunchWithType<DType, T>(s, N, dest, args...);
+    LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
+    return true;
   }
 };
 

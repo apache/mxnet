@@ -263,7 +263,7 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 0);
   CHECK_EQ(outputs.size(), 1U);
   const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
-  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
+  Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
 struct PopulateFullIdxRspKernel : public mxnet_op::tunable {
