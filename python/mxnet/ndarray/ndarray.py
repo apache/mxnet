@@ -691,7 +691,7 @@ fixed-size items.
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
                     _internal._full(shape=shape, ctx=self.context,
-                                    dtype=self.dtype, value=value, out=self)
+                                    dtype=self.dtype, value=float(value), out=self)
                 elif isinstance(value, (np.ndarray, np.generic)):
                     if isinstance(value, np.generic) or value.shape != shape:
                         value = np.broadcast_to(value, shape)

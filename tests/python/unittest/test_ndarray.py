@@ -926,6 +926,16 @@ def test_ndarray_indexing():
         test_getitem_autograd(np_array, index[0])
 
 
+def test_assign_float_value_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/8668"""
+    a = np.array([47.844944], dtype=np.float32)
+    b = mx.nd.zeros(1, dtype=np.float32)
+    b[0] = a
+    assert same(a, b.asnumpy())
+    b[0] = a[0]
+    assert same(a, b.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
