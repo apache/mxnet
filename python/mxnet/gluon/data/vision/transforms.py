@@ -21,6 +21,7 @@ from .. import dataset
 from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import ndarray, initializer
+from ....base import _Null
 
 
 class Compose(Sequential):
@@ -151,3 +152,21 @@ class RandomColorJitter(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.image.random_color_jitter(x, *self._args)
+
+
+class AdjustLighting(HybridBlock):
+    def __init__(self, alpha_rgb=_Null, eigval=_Null, eigvec=_Null):
+        super(AdjustLighting, self).__init__()
+        self._args = (alpha_rgb, eigval, eigvec)
+
+    def hybrid_forward(self, F, x):
+        return F.image.adjust_lighting(x, *self._args)
+
+
+class RandomLighting(HybridBlock):
+    def __init__(self, alpha_std=_Null, eigval=_Null, eigvec=_Null):
+        super(RandomLighting, self).__init__()
+        self._args = (alpha_std, eigval, eigvec)
+
+    def hybrid_forward(self, F, x):
+        return F.image.random_lighting(x, *self._args)
