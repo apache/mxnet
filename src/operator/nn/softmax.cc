@@ -25,10 +25,51 @@
 #include "./softmax-inl.h"
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
+#include "mkldnn/mkldnn_base-inl.h"
+#include "mkldnn/mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxParam);
+
+static void SoftmaxCompute_CPU(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx, const std::vector<NDArray>& inputs,
+    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+#if MXNET_USE_MKLDNN == 1
+  // It seems MKLDNN softmax doesn't support training.
+  if (SupportMKLDNN(inputs[0]) && !ctx.is_train) {
+    MKLDNNSoftmax_Forward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+#endif
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++)
+    in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> out_blobs(outputs.size());
+  for (size_t i = 0; i < out_blobs.size(); i++)
+    out_blobs[i] = outputs[i].data();
+  SoftmaxCompute<cpu, mxnet_op::softmax_fwd>(attrs, ctx, in_blobs, req, out_blobs);
+}
+
+inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
+                                 const int dev_mask,
+                                 DispatchMode* dispatch_mode,
+                                 std::vector<int> *in_attrs,
+                                 std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    (*out_attrs)[0] = kDefaultStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  (*out_attrs)[0] = kDefaultStorage;
+  return true;
+}
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)
 .describe(R"code(Applies the softmax function.
@@ -54,6 +95,8 @@ Example::
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxCompute_CPU)
+.set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmax"})
 .add_arguments(SoftmaxParam::__FIELDS__());
 
