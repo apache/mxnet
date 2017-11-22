@@ -22,11 +22,11 @@ from data import DummyIter
 from factorization_machine_model import *
 import argparse, os
 
-parser = argparse.ArgumentParser(description="Run factorization machine",
+parser = argparse.ArgumentParser(description="Run factorization machine with criteo dataset",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--data', type=str, default="./data/",
                     help='training LibSVM files to use.')
-parser.add_argument('--num-epoch', type=int, default=10,
+parser.add_argument('--num-epoch', type=int, default=1,
                     help='number of epochs to train')
 parser.add_argument('--batch-size', type=int, default=10000,
                     help='number of examples per batch')
