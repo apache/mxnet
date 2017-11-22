@@ -35,10 +35,6 @@
 namespace mxnet {
 namespace op {
 
-
-enum ImageRandomResource { kRandom };
-
-template<typename xpu>
 static void RandomFlip(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
@@ -124,7 +120,6 @@ inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
 }
 
 
-template<typename xpu>
 static void Normalize(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
@@ -172,13 +167,14 @@ static void RandomBrightness(const nnvm::NodeAttrs &attrs,
   uint8_t* input = inputs[0].dptr<uint8_t>();
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
-  Random<cpu> *prnd = ctx.requested[kRandom].get_random<cpu, float>(s);
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
   float alpha_b = 1.0 + std::uniform_real_distribution<float>(
       -param.max_brightness, param.max_brightness)(prnd->GetRndEngine());
 
   for (int l = 0; l < length; ++l) {
     float val = static_cast<float>(input[l]) * alpha_b;
-    output[l] = static_cast<uint8_t>(std::min(std::max(val, 0.0f), 255.0f));
+    val = std::min(std::max(val, 0.f), 255.f);
+    output[l] = static_cast<uint8_t>(val);
   }
 }
 
@@ -193,7 +189,6 @@ struct RandomContrastParam : public dmlc::Parameter<RandomContrastParam> {
 };
 
 
-template<typename xpu>
 static void RandomContrast(const nnvm::NodeAttrs &attrs,
                            const OpContext &ctx,
                            const std::vector<TBlob> &inputs,
@@ -209,8 +204,8 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
   uint8_t* output = outputs[0].dptr<uint8_t>();
   uint8_t* input = inputs[0].dptr<uint8_t>();
 
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu, real_t>(s);
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
   float alpha_c = 1.0 + std::uniform_real_distribution<float>(
     -param.max_contrast, param.max_contrast)(prnd->GetRndEngine());
 
@@ -226,7 +221,8 @@ static void RandomContrast(const nnvm::NodeAttrs &attrs,
   float beta = (1 - alpha_c) * gray_mean;
 
   for (int l = 0; l < length * nchannels; ++l) {
-    float val = std::min(std::max(input[l] * alpha_c + beta, 0.f), 255.f);
+    float val = input[l] * alpha_c + beta;
+    val = std::min(std::max(val, 0.f), 255.f);
     output[l] = static_cast<uint8_t>(val);
   }
 }
@@ -240,7 +236,6 @@ struct RandomSaturationParam : public dmlc::Parameter<RandomSaturationParam> {
   }
 };
 
-template<typename xpu>
 static void RandomSaturation(const nnvm::NodeAttrs &attrs,
                              const OpContext &ctx,
                              const std::vector<TBlob> &inputs,
@@ -256,8 +251,8 @@ static void RandomSaturation(const nnvm::NodeAttrs &attrs,
   uint8_t* output = outputs[0].dptr<uint8_t>();
   uint8_t* input = inputs[0].dptr<uint8_t>();
 
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  Random<xpu> *prnd = ctx.requested[kRandom].get_random<xpu, real_t>(s);
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
   float alpha_s = 1.f + std::uniform_real_distribution<float>(
     -param.max_saturation, param.max_saturation)(prnd->GetRndEngine());
   float alpha_o = 1.f - alpha_s;
@@ -281,7 +276,6 @@ static void RandomSaturation(const nnvm::NodeAttrs &attrs,
   }
 }
 
-template<typename xpu>
 static void RandomHue(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
@@ -289,7 +283,6 @@ static void RandomHue(const nnvm::NodeAttrs &attrs,
                       const std::vector<TBlob> &outputs) {
 }
 
-template<typename xpu>
 static void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                               const OpContext &ctx,
                               const std::vector<TBlob> &inputs,
@@ -297,7 +290,6 @@ static void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                               const std::vector<TBlob> &outputs) {
 }
 
-template<typename xpu>
 static void RandomLighting(const nnvm::NodeAttrs &attrs,
                            const OpContext &ctx,
                            const std::vector<TBlob> &inputs,
