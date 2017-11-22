@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
 #include <mxnet/base.h>
+#include <algorithm>
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/mat.hpp>
@@ -290,11 +291,105 @@ static void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                               const std::vector<TBlob> &outputs) {
 }
 
+struct AdjustLightingParam : public dmlc::Parameter<AdjustLightingParam> {
+  nnvm::Tuple<float> alpha_rgb;
+  nnvm::Tuple<float> eigval;
+  nnvm::Tuple<float> eigvec;
+  DMLC_DECLARE_PARAMETER(AdjustLightingParam) {
+    DMLC_DECLARE_FIELD(alpha_rgb)
+    .set_default({0, 0, 0})
+    .describe("The lighting alphas for the R, G, B channels.");
+    DMLC_DECLARE_FIELD(eigval)
+    .describe("Eigen value.")
+    .set_default({ 55.46, 4.794, 1.148 });
+    DMLC_DECLARE_FIELD(eigvec)
+    .describe("Eigen vector.")
+    .set_default({ -0.5675,  0.7192,  0.4009,
+                   -0.5808, -0.0045, -0.8140,
+                   -0.5808, -0.0045, -0.8140 });
+  }
+};
+
+struct RandomLightingParam : public dmlc::Parameter<RandomLightingParam> {
+  float alpha_std;
+  nnvm::Tuple<float> eigval;
+  nnvm::Tuple<float> eigvec;
+  DMLC_DECLARE_PARAMETER(RandomLightingParam) {
+    DMLC_DECLARE_FIELD(alpha_std)
+    .set_default(0.05)
+    .describe("Level of the lighting noise.");
+    DMLC_DECLARE_FIELD(eigval)
+    .describe("Eigen value.")
+    .set_default({ 55.46, 4.794, 1.148 });
+    DMLC_DECLARE_FIELD(eigvec)
+    .describe("Eigen vector.")
+    .set_default({ -0.5675,  0.7192,  0.4009,
+                   -0.5808, -0.0045, -0.8140,
+                   -0.5808, -0.0045, -0.8140 });
+  }
+};
+
+void AdjustLightingImpl(uint8_t* dst, const uint8_t* src,
+                        float alpha_r, float alpha_g, float alpha_b,
+                        const nnvm::Tuple<float> eigval, const nnvm::Tuple<float> eigvec,
+                        int H, int W) {
+    alpha_r *= eigval[0];
+    alpha_g *= eigval[1];
+    alpha_b *= eigval[2];
+    float pca_r = alpha_r * eigvec[0] + alpha_g * eigvec[1] + alpha_b * eigvec[2];
+    float pca_g = alpha_r * eigvec[3] + alpha_g * eigvec[4] + alpha_b * eigvec[5];
+    float pca_b = alpha_r * eigvec[6] + alpha_g * eigvec[7] + alpha_b * eigvec[8];
+    for (int i = 0; i < H * W; i++) {
+        int base_ind = 3 * i;
+        float in_r = static_cast<float>(src[base_ind]);
+        float in_g = static_cast<float>(src[base_ind + 1]);
+        float in_b = static_cast<float>(src[base_ind + 2]);
+        dst[base_ind] = std::min(255, std::max(0, static_cast<int>(in_r + pca_r)));
+        dst[base_ind + 1] = std::min(255, std::max(0, static_cast<int>(in_g + pca_g)));
+        dst[base_ind + 2] = std::min(255, std::max(0, static_cast<int>(in_b + pca_b)));
+    }
+}
+
+static void AdjustLighting(const nnvm::NodeAttrs &attrs,
+                           const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs) {
+    using namespace mshadow;
+    const AdjustLightingParam &param = nnvm::get<AdjustLightingParam>(attrs.parsed);
+    CHECK_EQ(param.eigval.ndim(), 3) << "There should be 3 numbers in the eigval.";
+    CHECK_EQ(param.eigvec.ndim(), 9) << "There should be 9 numbers in the eigvec.";
+    CHECK_EQ(inputs[0].ndim(), 3);
+    CHECK_EQ(inputs[0].size(2), 3);
+    int H = inputs[0].size(0);
+    int W = inputs[0].size(1);
+    AdjustLightingImpl(outputs[0].dptr<uint8_t>(), inputs[0].dptr<uint8_t>(),
+                       param.alpha_rgb[0], param.alpha_rgb[1], param.alpha_rgb[2],
+                       param.eigval, param.eigvec, H, W);
+}
+
 static void RandomLighting(const nnvm::NodeAttrs &attrs,
                            const OpContext &ctx,
                            const std::vector<TBlob> &inputs,
                            const std::vector<OpReqType> &req,
                            const std::vector<TBlob> &outputs) {
+    using namespace mshadow;
+    const RandomLightingParam &param = nnvm::get<RandomLightingParam>(attrs.parsed);
+    CHECK_EQ(param.eigval.ndim(), 3) << "There should be 3 numbers in the eigval.";
+    CHECK_EQ(param.eigvec.ndim(), 9) << "There should be 9 numbers in the eigvec.";
+    CHECK_EQ(inputs[0].ndim(), 3);
+    CHECK_EQ(inputs[0].size(2), 3);
+    int H = inputs[0].size(0);
+    int W = inputs[0].size(1);
+    Stream<cpu> *s = ctx.get_stream<cpu>();
+    Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
+    std::normal_distribution<float> dist(0, param.alpha_std);
+    float alpha_r = dist(prnd->GetRndEngine());
+    float alpha_g = dist(prnd->GetRndEngine());
+    float alpha_b = dist(prnd->GetRndEngine());
+    AdjustLightingImpl(outputs[0].dptr<uint8_t>(), inputs[0].dptr<uint8_t>(),
+                       alpha_r, alpha_g, alpha_b,
+                       param.eigval, param.eigvec, H, W);
 }
 
 
