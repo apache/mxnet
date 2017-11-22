@@ -1,4 +1,4 @@
-Factorization Machine Example
+Factorization Machine
 ===========
 This example trains a factorization machine model using the criteo dataset.
 

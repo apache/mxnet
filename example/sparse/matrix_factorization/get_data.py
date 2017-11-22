@@ -38,19 +38,6 @@ class DummyIter(mx.io.DataIter):
     def next(self):
         return self.the_batch
 
-def get_libsvm_data(data_dir, data_name, url):
-    if not os.path.isdir(data_dir):
-        os.mkdir(data_dir)
-    os.chdir(data_dir)
-    if (not os.path.exists(data_name)):
-        print("Dataset " + data_name + " not present. Downloading now ...")
-        import urllib
-        zippath = os.path.join(data_dir, data_name + ".bz2")
-        urllib.urlretrieve(url + data_name + ".bz2", zippath)
-        os.system("bzip2 -d %r" % data_name + ".bz2")
-        print("Dataset " + data_name + " is now present.")
-    os.chdir("..")
-
 def get_movielens_data(prefix):
     if not os.path.exists("%s.zip" % prefix):
         print("Dataset MovieLens 10M not present. Downloading now ...")
