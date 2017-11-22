@@ -1,0 +1,103 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# 'License'); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+from __future__ import absolute_import
+from __future__ import print_function
+
+from collections import Counter
+import os
+
+from mxnet.test_utils import *
+from mxnet.text import glossary as glos
+
+
+def _get_test_str_of_tokens(token_delim, seq_delim):
+    seq1 = token_delim + token_delim.join(['Life', 'is', 'great', '!']) \
+           + token_delim + seq_delim
+    seq2 = token_delim + token_delim.join(['life', 'is', 'good', '.']) \
+           + token_delim + seq_delim
+    seq3 = token_delim + token_delim.join(['life', "isn't", 'bad', '.']) \
+           + token_delim + seq_delim
+    seqs = seq1 + seq2 + seq3
+    return seqs
+
+
+def _mk_dir_of_files(path, token_delim, seq_delim):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seqs = _get_test_str_of_tokens(token_delim, seq_delim)
+
+    with open(os.path.join(path, '1.txt'), 'w') as fout:
+        fout.write(seqs)
+    with open(os.path.join(path, '2.txt'), 'w') as fout:
+        for _ in range(2):
+            fout.write(seqs)
+
+
+def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
+    str_of_tokens = _get_test_str_of_tokens(token_delim, seq_delim)
+
+    cnt1 = mx.text.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
+                                         to_lower=False)
+    assert cnt1 == Counter(
+        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
+         "isn't": 1, 'bad': 1})
+
+    cnt2 = mx.text.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
+                                         to_lower=True)
+    assert cnt2 == Counter(
+        {'life': 3, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1, "isn't": 1,
+         'bad': 1})
+
+
+def test_count_tokens_from_str():
+    _test_count_tokens_from_str_with_delims(' ', '\n')
+    _test_count_tokens_from_str_with_delims('IS', 'LIFE')
+
+
+def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
+    _mk_dir_of_files(path, token_delim, seq_delim)
+    file1 = os.path.join(path, '1.txt')
+
+    cnt1 = mx.text.count_tokens_from_path(path, token_delim=token_delim,
+                                          seq_delim=seq_delim, to_lower=False)
+    assert cnt1 == Counter(
+        {'is': 6, 'life': 6, '.': 6, 'Life': 3, 'great': 3, '!': 3, 'good': 3,
+         "isn't": 3, 'bad': 3})
+
+    cnt2 = mx.text.count_tokens_from_path(path, token_delim=token_delim,
+                                          seq_delim=seq_delim, to_lower=True)
+    assert cnt2 == Counter(
+        {'life': 9, 'is': 6, '.': 6, 'great': 3, '!': 3, 'good': 3, "isn't": 3,
+         'bad': 3})
+
+    cnt3 = mx.text.count_tokens_from_path(file1, token_delim=token_delim,
+                                          seq_delim=seq_delim, to_lower=False)
+    assert cnt3 == Counter(
+        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
+         "isn't": 1, 'bad': 1})
+
+
+def test_count_tokens_from_path():
+    path = os.path.join('./data', 'test_texts')
+    _test_count_tokens_from_path_with_delims(path, ' ', '\n')
+    _test_count_tokens_from_path_with_delims(path, 'IS', 'LIFE')
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
