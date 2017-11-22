@@ -892,7 +892,8 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     data_shape : tuple of int
         Shape for output data
     resize : int
-        Resize shorter edge if larger than 0 at the begining
+        Resize shorter edge if it is integer and larger than 0
+        Resize to a fixed size if it is a tuple of int
     rand_crop : bool
         Whether to enable random cropping other than center crop
     rand_resize : bool
@@ -947,8 +948,13 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     """
     auglist = []
 
-    if resize > 0:
-        auglist.append(ResizeAug(resize, inter_method))
+    if isinstance(resize, int):
+        if resize > 0:
+            auglist.append(ResizeAug(resize, inter_method))
+    elif isinstance(resize, tuple) and len(resize) == 2:
+        auglist.append(ForceResizeAug(resize, inter_method))
+    else:
+        raise ValueError('resize must be an integer or a tuple of (width, height)!')
 
     crop_size = (data_shape[2], data_shape[1])
     if rand_resize:
