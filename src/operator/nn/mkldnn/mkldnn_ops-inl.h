@@ -63,6 +63,10 @@ void MKLDNNDeconvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext 
     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
     const std::vector<NDArray>& outputs);
 
+/* For softmax */
+void MKLDNNSoftmax_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+    const NDArray &in_data, const OpReqType &req, const NDArray &out_data);
+
 }
 }
 #endif  // MXNET_USE_MKLDNN == 1
