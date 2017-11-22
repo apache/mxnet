@@ -83,7 +83,7 @@ print('slicing the 2nd and 3rd elements, s=', s)
     <NDArray 2x4 @cpu(0)>
 
 
-Now let's try writing to a specific element. We'll write `9` to element `2` using `x[2] = 9.0`, which update the whole row.
+Now let's try writing to a specific element. We'll write `9` to element `2` using `x[2] = 9.0`, which will update the whole row.
 
 
 ```python
@@ -152,7 +152,7 @@ print('replaced range of elements with x[1:2, 1:3] = 5.0, x=', x)
 
 The basic slice syntax is `i:j:k` where _i_ is the starting index, _j_ is the stopping index, and _k_ is the step (_k_ must be nonzero).
 
-**Note**: Previously, MXNet supported basic slicing and indexing only with `step=1`. From release 1.0, abitrary value of `step` is supported.
+**Note**: Previously, MXNet supported basic slicing and indexing only with `step=1`. From release 1.0, arbitrary values of `step` are supported.
 
 
 ```python
@@ -207,7 +207,7 @@ x[1:2]
 
 
 
-You may use slicing to set values in the array, but (unlike lists) you can never grow the array. The size of the value to be set in `x[obj] = value` must be (broadcastable) to the same shape as `x[obj]`.
+You may use slicing to set values in the array, but (unlike lists) you can never grow the array. The size of the value to be set in `x[obj] = value` must be able to broadcast to the same shape as `x[obj]`.
 
 
 ```python
@@ -289,7 +289,7 @@ x[[0, 1, 2], [0, 1, 0]]
 
 
 
-To achieve a behaviour similar to the basic slicing above, broadcasting can be used. This is best understood with an example.
+To achieve a behavior similar to the basic slicing above, broadcasting can be used. This is best understood with an example.
 
 Example:
 From a 4x3 array the corner elements should be selected using advanced indexing. Thus all elements for which the column is one of `[0, 2]` and the row is one of `[0, 3]` need to be selected. To use advanced indexing one needs to select all elements explicitly. Using the method explained previously one could write:
@@ -369,5 +369,9 @@ print(x[:, :, ind1, :, ind2].shape)
 ```
 
     (2, 3, 4, 10, 20, 40)
+
+## References
+
+[NumPy documentation](https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
