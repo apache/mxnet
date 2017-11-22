@@ -62,7 +62,7 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    (*out_attrs)[0] = kDefaultStorage;
+    (*out_attrs)[0] = kMKLDNNStorage;
     return true;
   }
 #endif
