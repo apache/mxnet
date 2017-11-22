@@ -27,15 +27,13 @@
 
 #include <mxnet/base.h>
 #include <vector>
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/mat.hpp>
+#include <utility>
 #include "../mxnet_op.h"
-#include "image_common.h"
 #include "../../operator/operator_common.h"
+#include "image_common.h"
 
 namespace mxnet {
 namespace op {
-
 
 enum ImageRandomResource { kRandom };
 
@@ -80,6 +78,7 @@ static void ToTensor(const nnvm::NodeAttrs &attrs,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &outputs) {
   auto input = inputs[0];
+  CheckIsImage(input);
   auto output = outputs[0];
 
   int height = input.shape_[0];
@@ -96,9 +95,9 @@ static void ToTensor(const nnvm::NodeAttrs &attrs,
   MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
     auto input_3d =  input.get<xpu, 3, SrcDType>(s);
     auto output_3d = output.get<xpu, 3, DstDType>(s);
-    for (int h = 0; h < height; ++h) {
-      for (int w = 0; w < weight; ++w) {
-        for (int c = 0; c < channel; ++c) {
+    for (index_t h = 0; h < height; ++h) {
+      for (index_t w = 0; w < weight; ++w) {
+        for (index_t c = 0; c < channel; ++c) {
           Assign(output_3d[c][h][w], Req, DstDType(input_3d[h][w][c] / 255.0));
         }
       }
@@ -206,6 +205,64 @@ static void NormalizeBackward(const nnvm::NodeAttrs &attrs,
       });
   });
 }
+
+struct flip {
+  MSHADOW_XINLINE static int FlipIndex(int idx, const int stride, const int trailing) {
+    const int low = idx % trailing;
+    int high = idx / trailing;
+    const int x = high % stride;
+    high /= stride;
+
+    return (high * stride + stride - 1 - x) * trailing + low;
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int idx, DType *src, DType *dst,
+                                  const int stride, const int trailing) {
+    int new_idx = FlipIndex(idx, stride, trailing);
+    if (src == dst) {
+      // inplace operation
+      if (idx < new_idx) {
+        std::swap(dst[new_idx], src[idx]);
+      }
+    } else {
+      dst[new_idx] = src[idx];
+    }
+  }
+};
+
+template<typename xpu>
+static void FlipUpDown(const nnvm::NodeAttrs &attrs,
+                        const OpContext &ctx,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs) {
+  CheckIsImage(inputs[0]);
+  const TShape& ishape = inputs[0].shape_;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    mxnet_op::Kernel<flip, xpu>::Launch(s, inputs[0].Size(),
+                                        inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+                                        ishape[0], ishape[1] * ishape[2]);
+  });
+}
+
+template<typename xpu>
+static void FlipLeftRight(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
+  CheckIsImage(inputs[0]);
+  const TShape& ishape = inputs[0].shape_;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    mxnet_op::Kernel<flip, xpu>::Launch(s, inputs[0].Size(),
+                                        inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+                                        ishape[1], ishape[2]);
+  });
+}
+
 
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
   float max_brightness;

@@ -26,9 +26,19 @@
 #define MXNET_OPERATOR_IMAGE_IMAGE_COMMON_H_
 
 #include <mxnet/base.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/mat.hpp>
+#include "../mxnet_op.h"
+#include "../../operator/operator_common.h"
 
 namespace mxnet {
 namespace op {
+
+inline bool CheckIsImage(const TBlob &image) {
+  CHECK_EQ(image.type_flag_, mshadow::kUint8) << "input type is not an image.";
+  CHECK_EQ(image.ndim(), 3) << "input dimension is not 3.";
+  CHECK(image.shape_[2] == 1 || image.shape_[2] == 3) << "image channel should be 1 or 3.";
+}
 
 /**
 * @brief convert TBlob to cv::Mat
