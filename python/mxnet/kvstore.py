@@ -409,11 +409,12 @@ class KVStore(object):
             of gradient compression.
         """
         if (self.type() == 'device') or ('dist' in self.type()):
+            ckeys, cvals = _ctype_dict(compression_params)
+            check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
+                                                            mx_uint(len(compression_params)),
+                                                            ckeys, cvals))
+        else:
             raise Exception('Gradient compression is not supported for this type of kvstore')
-        ckeys, cvals = _ctype_dict(compression_params)
-        check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
-                                                        mx_uint(len(compression_params)),
-                                                        ckeys, cvals))
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
