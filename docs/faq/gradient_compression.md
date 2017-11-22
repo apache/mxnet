@@ -1,13 +1,13 @@
 # Gradient Compression
 
-Gradient Compression reduces communication bandwidth to make distributed training with GPUs more scalable and efficient without significant loss in convergence rate or accuracy.
+Gradient Compression reduces communication bandwidth, and in some scenarios, it can make training more scalable and efficient without significant loss in convergence rate or accuracy. Example implementations with GPUs, CPUs, and distributed training are provided in this document. 
 
 
 ## Benefits
 
 **Increased Speed**
 
-For architectures with fully connected components, the gradient compression capability is observed to speedup training by about 2x, depending on the size of the model and the network bandwidth of the instance. Bigger models see larger speedup with gradient compression.
+For architectures with fully connected layers, the gradient compression capability is observed to speedup training by about 2x, depending on the size of the model and the network bandwidth of the instance. Bigger models see larger speedup with gradient compression.
 
 **Minimal Accuracy Loss**
 
@@ -16,7 +16,7 @@ Gradient compression uses the approach of delaying the synchronization of weight
 
 ## When to Use Gradient Compression
 
-When training models whose architectures include large fully connected components, it can be helpful to use gradient compression. For larger models, the communication cost becomes a major factor. Such models stand to benefit greatly with gradient compression.
+When training models whose architectures include large fully connected components, it can be helpful to use gradient compression. For larger models, as well as recurrent neural networks, the communication cost becomes a major factor. Such models stand to benefit greatly with gradient compression.
 
 
 ### GPU versus CPU

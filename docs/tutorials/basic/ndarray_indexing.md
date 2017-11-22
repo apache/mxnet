@@ -118,7 +118,7 @@ print('replaced specific element with x[0, 2] = 9.0, x=', x)
      [ 5.  6.  7.  8.]
      [ 9.  9.  9.  9.]]
     <NDArray 3x4 @cpu(0)>
-    replaced specific element with x[0,2] = 9.0, x=
+    replaced specific element with x[0, 2] = 9.0, x=
     [[ 1.  2.  9.  4.]
      [ 5.  6.  7.  8.]
      [ 9.  9.  9.  9.]]
