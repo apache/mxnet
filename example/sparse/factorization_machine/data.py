@@ -18,6 +18,7 @@
 import os, gzip, argparse, sys
 import mxnet as mx
 import logging
+import subprocess
 head = '%(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=head)
 
@@ -45,9 +46,13 @@ def get_criteo_data(data_dir):
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
     try:
-        logging.info("Downloading dataset criteo to " + data_dir + " now ...")
-        os.system("aws s3 cp --recursive --no-sign-request s3://sparse-dataset/criteo " + data_dir)
+        logging.info("Downloading dataset criteo to " + data_dir + " now ... ")
+        logging.info("This requires ~13GB disk space. Press control + C to stop downloading")
+        process = subprocess.Popen(['aws', 's3', 'cp', '--recursive', '--no-sign-request', \
+                                    's3://sparse-dataset/criteo', data_dir])
+        process.wait()
     except Exception as e:
+        process.terminate()
         logging.error(e)
 
 parser = argparse.ArgumentParser(description="Download criteo dataset",
