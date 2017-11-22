@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -97,14 +96,14 @@ struct static_init_var {
 #define _IMPLEMENT_BLANK_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$); \
   namespace mxnet_op { \
-  template<> bool mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
+  template<> bool ::mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
     size_t N, size_t omp_threads) { \
-    return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
+    return ::mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
       N, omp_threads); \
   }}  /* namespace mxnet_op */ \
   template<> bool static_init_var<__op$, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::UnaryOpTune<__typ$>::TuneBlankOperatorEx<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::UnaryOpTune<__typ$>::TuneBlankOperatorEx<__op$>)
 
 /*!
  * \brief Implement tuning objects for a forward unary kernel operator
@@ -112,30 +111,30 @@ struct static_init_var {
 #define _IMPLEMENT_UNARY_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$); \
   namespace mxnet_op { \
-  template<> bool mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
+  template<> bool ::mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
     size_t N, size_t omp_threads) { \
-    return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
+    return ::mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
       N, omp_threads); \
   }}  /* namespace mxnet_op */ \
   template<> bool static_init_var<__op$, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::UnaryOpTune<__typ$>::TuneUnaryOperator<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::UnaryOpTune<__typ$>::TuneUnaryOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a backward unary kernel operator
  */
 #define _IMPLEMENT_UNARY_WORKLOAD_BWD(__op$, __typ$) \
-  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
+  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
   namespace mxnet_op { \
   template<> \
-  bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+  bool ::mxnet::op::mxnet_op::tuned_op<::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>::\
     UseOMP(size_t N, size_t omp_threads) { \
-    return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
-      mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
+    return ::mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
+      ::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
-    init_ = mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::UnaryOpTune<__typ$>::TuneUnaryBackwardOperator<__op$>)
+  template<> bool static_init_var<::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+    init_ = ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::UnaryOpTune<__typ$>::TuneUnaryBackwardOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a forward binary kernel operator
@@ -143,31 +142,32 @@ struct static_init_var {
 #define _IMPLEMENT_BINARY_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$); \
   namespace mxnet_op { \
-  template<> bool mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
+  template<> bool ::mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
     size_t N, size_t omp_threads) { \
-    return mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
+    return ::mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
       N, omp_threads); \
   }}  /* namespace mxnet_op */ \
   template<> bool static_init_var<__op$, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::BinaryOpTune<__typ$>::TuneBinaryOperator<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::BinaryOpTune<__typ$>::TuneBinaryOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a backward binary kernel operator
  */
 #define _IMPLEMENT_BINARY_WORKLOAD_BWD(__op$, __typ$) \
-  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
+  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
   namespace mxnet_op { \
   template<> \
-    bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+    bool ::mxnet::op::mxnet_op::tuned_op< \
+      ::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
       UseOMP(size_t N, size_t omp_threads) { \
-    return mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
-      mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
+    return ::mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
+      ::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad_tuned<__op$>, \
+  template<> bool static_init_var<::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, \
     __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>(  \
-      mxnet::op::BinaryOpTune<__typ$>::TuneBinaryBackwardOperator<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>(  \
+      ::mxnet::op::BinaryOpTune<__typ$>::TuneBinaryBackwardOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a custom forward kernel operator
@@ -175,7 +175,7 @@ struct static_init_var {
 #define _IMPLEMENT_CUSTOM_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$<__typ$>, __typ$); \
   template<> bool static_init_var<__op$<__typ$>, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$<__typ$>>(\
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$<__typ$>>(\
       __op$<__typ$>::Tune)
 
 /*!
