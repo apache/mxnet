@@ -339,16 +339,14 @@ void AdjustLightingImpl(uint8_t* dst, const uint8_t* src,
     float pca_r = alpha_r * eigvec[0] + alpha_g * eigvec[1] + alpha_b * eigvec[2];
     float pca_g = alpha_r * eigvec[3] + alpha_g * eigvec[4] + alpha_b * eigvec[5];
     float pca_b = alpha_r * eigvec[6] + alpha_g * eigvec[7] + alpha_b * eigvec[8];
-    for (int i = 0; i < H; i++) {
-        for (int j = 0; j < W; j++) {
-            int base_ind = 3 * (i * W + j);
-            float in_r = static_cast<float>(src[base_ind]);
-            float in_g = static_cast<float>(src[base_ind + 1]);
-            float in_b = static_cast<float>(src[base_ind + 2]);
-            dst[base_ind] = std::min(255, std::max(0, static_cast<int>(in_r + pca_r)));
-            dst[base_ind + 1] = std::min(255, std::max(0, static_cast<int>(in_g + pca_g)));
-            dst[base_ind + 2] = std::min(255, std::max(0, static_cast<int>(in_b + pca_b)));
-        }
+    for (int i = 0; i < H * W; i++) {
+        int base_ind = 3 * i;
+        float in_r = static_cast<float>(src[base_ind]);
+        float in_g = static_cast<float>(src[base_ind + 1]);
+        float in_b = static_cast<float>(src[base_ind + 2]);
+        dst[base_ind] = std::min(255, std::max(0, static_cast<int>(in_r + pca_r)));
+        dst[base_ind + 1] = std::min(255, std::max(0, static_cast<int>(in_g + pca_g)));
+        dst[base_ind + 2] = std::min(255, std::max(0, static_cast<int>(in_b + pca_b)));
     }
 }
 

@@ -21,6 +21,7 @@ from .. import dataset
 from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import ndarray, initializer
+from ....base import _Null
 
 
 class Compose(Sequential):
@@ -154,8 +155,7 @@ class RandomColorJitter(HybridBlock):
 
 
 class AdjustLighting(HybridBlock):
-    def __init__(self, alpha_rgb=(0.0, 0.0, 0.0), eigval=(55.46, 4.794, 1.148),
-                 eigvec=(-0.5675, 0.7192, 0.4009, -0.5808, -0.0045, -0.8140, -0.5808, -0.0045, -0.8140)):
+    def __init__(self, alpha_rgb=_Null, eigval=_Null, eigvec=_Null):
         super(AdjustLighting, self).__init__()
         self._args = (alpha_rgb, eigval, eigvec)
 
@@ -164,8 +164,7 @@ class AdjustLighting(HybridBlock):
 
 
 class RandomLighting(HybridBlock):
-    def __init__(self, alpha_std=0.05, eigval=(55.46, 4.794, 1.148),
-                 eigvec=(-0.5675, 0.7192, 0.4009, -0.5808, -0.0045, -0.8140, -0.5808, -0.0045, -0.8140)):
+    def __init__(self, alpha_std=_Null, eigval=_Null, eigvec=_Null):
         super(RandomLighting, self).__init__()
         self._args = (alpha_std, eigval, eigvec)
 
