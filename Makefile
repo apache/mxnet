@@ -435,7 +435,7 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
@@ -467,7 +467,7 @@ cyclean:
 
 # R related shortcuts
 rcpplint:
-	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
 	mkdir -p R-package/inst
@@ -525,7 +525,7 @@ scaladeploy:
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
-	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean $(EXTRA_PACKAGES_CLEAN)
