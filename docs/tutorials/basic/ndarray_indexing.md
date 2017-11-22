@@ -361,7 +361,7 @@ print(x[:, :, ind1, ind2, :].shape)
     (10, 20, 2, 3, 4, 50)
 
 
-- There are at least two advanced indices in the selection object, and there is at least one advanced index is separated from the others by basic indices. For example,  `x` is an `NDArray` with `shape=(10, 20, 30, 40, 50)` and `result=x[:, :, ind1, :, ind2]` has two advanced indices with shapes that are broadcastable to `shape=(2, 3, 4)`. Then the `result` has `shape=(2, 3, 4, 10, 20, 40)` because there is no unambiguous place to place the indexing subspace, hence it is prepended to the beginning.
+- There are at least two advanced indices in the selection object, and there is at least one advanced index separated from the others by basic indices. For example,  `x` is an `NDArray` with `shape=(10, 20, 30, 40, 50)` and `result=x[:, :, ind1, :, ind2]` has two advanced indices with shapes that are broadcastable to `shape=(2, 3, 4)`. Then the `result` has `shape=(2, 3, 4, 10, 20, 40)` because there is no unambiguous place to place the indexing subspace, hence it is prepended to the beginning.
 
 
 ```python
