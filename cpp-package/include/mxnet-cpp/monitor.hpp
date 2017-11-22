@@ -107,7 +107,7 @@ inline void Monitor::toc_print() {
       str = out.str();
     }
 
-    LG << "Batch: " << std::get<0>(stat) << ' ' << std::get<1>(stat) << ' ' << str;
+    LOG(INFO) << "Batch: " << std::get<0>(stat) << ' ' << std::get<1>(stat) << ' ' << str;
   }
 }
 

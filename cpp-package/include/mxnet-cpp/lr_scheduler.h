@@ -75,10 +75,10 @@ class FactorScheduler : public LRScheduler {
       base_lr_ *= factor_;
       if (base_lr_ < stop_factor_lr_) {
         base_lr_ = stop_factor_lr_;
-        LG << "Update[" << num_update << "]: now learning rate arrived at " \
+        LOG(INFO) << "Update[" << num_update << "]: now learning rate arrived at " \
            << base_lr_ << ", will not change in the future";
       } else {
-        LG << "Update[" << num_update << "]: Change learning rate to " << base_lr_;
+        LOG(INFO) << "Update[" << num_update << "]: Change learning rate to " << base_lr_;
       }
     }
     return base_lr_;
