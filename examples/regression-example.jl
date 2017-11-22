@@ -57,4 +57,4 @@ mx.fit(model, optimizer, eval_metric=mx.MSE(), trainprovider, eval_data=evalprov
 plotprovider = mx.ArrayDataProvider(:data => ValidationInput, :label => ValidationOutput)
 fit = mx.predict(model, plotprovider)
 println("correlation between fitted values and true regression line: ", cor(vec(fit), vec(ValidationOutput)))
-#scatter(ValidationOutput,fit',w = 3, xlabel="true", ylabel="predicted", title="45º line is what we hope for", show=true)
+#scatter(ValidationOutput',fit',w = 3, xlabel="true", ylabel="predicted", title="45º line is what we hope for", show=true)
