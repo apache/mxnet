@@ -486,12 +486,9 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
   auto desc2 = _desc.desc();
   // The MKL memory has the same format and shape as required,
   // or both use the default format, we can return the MKL memory.
-  if (ptr_->Mkl_mem_->get_primitive_desc() == desc) {
-    MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
-    return ptr_->Mkl_mem_;
-  }
-  else if (desc1.data.format == GetDefaultFormat(desc1)
-      && desc2.data.format == GetDefaultFormat(desc2)) {
+  if (ptr_->Mkl_mem_->get_primitive_desc() == desc
+      || (desc1.data.format == GetDefaultFormat(desc1)
+        && desc2.data.format == GetDefaultFormat(desc2))) {
     MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
     mkldnn_mem_ptr ret(new mkldnn::memory(desc, ptr_->Mkl_mem_->get_data_handle()));
     MKLDNNStream::Instance().RegisterMem(ret);
