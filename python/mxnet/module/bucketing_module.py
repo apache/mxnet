@@ -52,7 +52,8 @@ class BucketingModule(BaseModule):
     state_names : list of str
         States are similar to data and label, but not provided by data iterator.
         Instead they are initialized to 0 and can be set by set_states()
-    group2ctxs : list of dict of str to context
+    group2ctxs : dict of str to context or list of context,
+                 or list of dict of str to context
         Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     compression_params : dict
         Specifies type of gradient compression and additional arguments depending
