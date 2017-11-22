@@ -7,7 +7,7 @@ Gradient Compression reduces communication bandwidth to make distributed trainin
 
 **Increased Speed**
 
-For tasks like acoustic modeling in speech recognition (like in Alexa), the gradient compression capability is observed to speedup training by about 2 times, depending on the size of the model and the network bandwidth of the instance. Bigger models see larger speedup with gradient compression.
+For architectures with fully connected components, the gradient compression capability is observed to speedup training by about 2x, depending on the size of the model and the network bandwidth of the instance. Bigger models see larger speedup with gradient compression.
 
 **Minimal Accuracy Loss**
 
@@ -21,7 +21,7 @@ When training models whose architectures include large fully connected component
 
 ### GPU versus CPU
 
-The greatest benefits from gradient compression are realized when using GPUs for both single-node multi-GPU and multi-node (single or multi-GPU) distributed training. Training on CPU would provide a lower compute density per compute node as compared to the massive compute density per compute node on a GPU. Due to this, the required communication bandwidth for CPU-based nodes during training is not as high as for GPU-based nodes. Hence, the benefits of gradient compression are lower for CPU-based nodes as compared to GPU-based nodes.
+The greatest benefits from gradient compression are realized when using multi-node (single or multi-GPU) distributed training. Training on CPU would provide a lower compute density per compute node as compared to the massive compute density per compute node on a GPU. Due to this, the required communication bandwidth for CPU-based nodes during training is not as high as for GPU-based nodes. Hence, the benefits of gradient compression are lower for CPU-based nodes as compared to GPU-based nodes.
 
 
 ### Network Latency
@@ -50,14 +50,23 @@ Architectures like Convolutional Neural Networks on the other hand have a higher
 When the training is configured to use device to device communication on a single node with multiple GPUs, gradient compression can be used to reduce the cost communication. This can provide about 20% speedup for large models using older generation architectures. However, speed benefits may be negligible on a machine with a newer generation architecture where GPUs can communicate at low latency.
 
 
-## Deep Neural Networks and Sparse Data
+## Approach
 
-It is well-known that typically the weights of a fully connected DNN (Deep Neural Networks) are sparsely distributed with most weights close to zero, and so it is not surprising that sub-gradients are also sparse [1]. Since sub-gradients are computed from a small part of the training data, they are even sparser than the weights. Hence, only a small fraction of the weights is required to be updated after each mini-batch. In other words, elements of the gradient that are near zero can safely be delayed longer than the typical mini-batch size. The sub-gradients are compressed significantly by considering only gradient elements whose absolute values exceed a threshold. The resulting sparse gradients are then encoded using 2-bit quantization thereby reducing the communication bandwidth. The delayed gradient values are aggregated into a gradient residual which is communicated when it reaches the threshold.
+The idea behind gradient compression comes from two observations:
 
+First, when training large neural networks, the gradients of weights computed for a small mini-batch of training data are typically sparse. Only a small fraction of the weights have significant updates after each mini-batch. The synchronization of updates that are near zero can be safely delayed longer than the typical mini-batch size. This essentially means that the rate of weight-update can vary depending on the value of an individual weight.
+
+Secondly, gradients can be compressed significantly by considering only those gradient elements whose absolute values exceed a threshold, and then quantizing them to use lower bits per gradient value. By compressing the gradients, we can reduce communication bandwidth. The delayed gradient values, in the form of quantization error and values that don't meet the threshold, are aggregated into a gradient residual which is communicated when it reaches the threshold.
 
 ## Technical Implementation
 
-For data-parallel training, the model is replicated across compute nodes with the weight-updates synchronized across all the model replicas. The massive local computational density of the GPU nodes increases the required communication bandwidth for weight updates across model replicas in data-parallel distributed training. Instead of the uniform update-rate of weights imposed by the mini-batch size, the gradient compression capability controls the rate of weight-update per individual weight. Gradient compression uses the approach of delaying synchronization of weights whose updates (aka gradients) are small, and compressing the weight-updates which are synchronized. This reduction in communication bandwidth enables distributed training to be more efficient and scalable to more GPU nodes without significant loss in convergence rate or accuracy.
+### Two Bit Quantization
+
+Currently the supported type of quantization uses two bits for each gradient value. Any positive value greater than or equal to the threshold sets two bits as `11`, any negative value whose absolute value is greater or equal to the threshold sets two bits as `10`, and others are set to `00`. This enables us to store 16 quantized gradients as one float. The error in quantization, which is `original_value - quantized_value` is stored in the form of a gradient residual.
+
+### Types of Kvstore
+
+Supported types of `kvstore` are `device` and all distributed kvstores such as `dist_sync`, `dist_async`, and `dist_sync_device`. When `kvstore` is `device`, the communication between GPUs is compressed. Please note that this increases the memory usage of GPUs because of the additional residual stored. When using a distributed kvstore, worker-to-server communication is compressed. In this case, compression and decompression happen on the CPU, and gradient residuals will be stored on the CPU. Server-to-worker communication and device-to-device communication are not compressed to avoid multiple levels of compression.
 
 ## Enabling the Gradient Compression in MXNet
 
