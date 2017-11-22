@@ -41,7 +41,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
 
 ## Security
-* [How to run MXNet securely?](http://mxnet.io/how_to/security.md)
+* [How to run MXNet securely?](http://mxnet.io/how_to/security.html)
 
 ## Extend and Contribute to MXNet
 
