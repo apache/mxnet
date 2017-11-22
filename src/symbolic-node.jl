@@ -348,6 +348,27 @@ function Variable(name :: Union{Symbol, AbstractString}; attrs = Dict())
 end
 
 """
+    @var <symbols>...
+
+A handy macro for creating `mx.Variable`.
+
+```julia
+julia> x = @mx.var x
+MXNet.mx.SymbolicNode x
+
+julia> x, y, z = @mx.var x y z
+(MXNet.mx.SymbolicNode x, MXNet.mx.SymbolicNode y, MXNet.mx.SymbolicNode z)
+```
+"""
+macro var(n::Symbol)
+  Expr(:call, :Variable, QuoteNode(n))
+end
+
+macro var(names::Symbol...)
+  Expr(:tuple, map(n -> Expr(:call, :Variable, QuoteNode(n)), names)...)
+end
+
+"""
     Group(nodes :: SymbolicNode...)
 
 Create a `SymbolicNode` by grouping nodes together.

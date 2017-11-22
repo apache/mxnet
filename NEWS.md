@@ -6,6 +6,16 @@
 
 * `mx.get_children` for exploring the graph programmatically. (#TBD)
 
+* A handy macro `@mx.var` for creating `mx.Variable`. (#TBD)
+
+  ```julia
+  julia> x = @mx.var x
+  MXNet.mx.SymbolicNode x
+
+  julia> x, y, z = @mx.var x y z
+  (MXNet.mx.SymbolicNode x, MXNet.mx.SymbolicNode y, MXNet.mx.SymbolicNode z)
+  ```
+
 # v0.3.0 (2017.11.16)
 
 * Update `libmxnet` to

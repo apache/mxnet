@@ -506,6 +506,21 @@ function test_get_name()
   @test contains(name, "Ptr")
 end  # function test_get_name
 
+function test_var()
+  info("SymbolicNode::var")
+  x = @mx.var x
+  @test x isa mx.SymbolicNode
+
+  x′ = @mx.var x
+  @test x.handle != x′.handle
+
+  x, y, z = @mx.var x y z
+  @test x isa mx.SymbolicNode
+  @test y isa mx.SymbolicNode
+  @test z isa mx.SymbolicNode
+end  # test_var
+
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -529,6 +544,7 @@ end  # function test_get_name
   test_div()
   test_power()
   test_get_name()
+  test_var()
 end
 
 end
