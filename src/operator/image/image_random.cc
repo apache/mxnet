@@ -70,7 +70,7 @@ NNVM_REGISTER_OP(_image_flip_left_right)
                                 [](const NodeAttrs& attrs){
                                   return std::vector<std::pair<int, int> >{{0, 0}};
                                 })
-.set_attr<FCompute>("FCompute<cpu>", FlipLeftRight)
+.set_attr<FCompute>("FCompute<cpu>", Flip<0>)
 .add_argument("data", "NDArray-or-Symbol", "The input.");
 
 NNVM_REGISTER_OP(_image_flip_up_down)
@@ -83,7 +83,7 @@ NNVM_REGISTER_OP(_image_flip_up_down)
                                 [](const NodeAttrs& attrs){
                                   return std::vector<std::pair<int, int> >{{0, 0}};
                                 })
-.set_attr<FCompute>("FCompute<cpu>", FlipUpDown)
+.set_attr<FCompute>("FCompute<cpu>", Flip<1>)
 .add_argument("data", "NDArray-or-Symbol", "The input.");
 
 DMLC_REGISTER_PARAMETER(RandomBrightnessParam);

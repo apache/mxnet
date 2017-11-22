@@ -27,6 +27,7 @@
 
 #include <mxnet/base.h>
 #include <vector>
+#include <algorithm>
 #include <utility>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -160,8 +161,8 @@ inline static int FlipIndex(int idx, const int stride, const int trailing) {
 }
 
 template<typename DType>
-static void Flip(const int size, DType *src, DType *dst,
-                 const int stride, const int trailing) {
+static void FlipImpl(const int size, DType *src, DType *dst,
+                     const int stride, const int trailing) {
   for (int idx = 0; idx < size; ++idx) {
     int new_idx = FlipIndex(idx, stride, trailing);
     if (src == dst) {
@@ -175,29 +176,17 @@ static void Flip(const int size, DType *src, DType *dst,
   }
 }
 
-static void FlipUpDown(const nnvm::NodeAttrs &attrs,
-                        const OpContext &ctx,
-                        const std::vector<TBlob> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &outputs) {
+template<int axis>
+static void Flip(const nnvm::NodeAttrs &attrs,
+                  const OpContext &ctx,
+                  const std::vector<TBlob> &inputs,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &outputs) {
   CheckIsImage(inputs[0]);
   const TShape& ishape = inputs[0].shape_;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Flip(inputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
-         ishape[0], ishape[1] * ishape[2]);
-  });
-}
-
-static void FlipLeftRight(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const std::vector<TBlob> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<TBlob> &outputs) {
-  CheckIsImage(inputs[0]);
-  const TShape& ishape = inputs[0].shape_;
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Flip(inputs[0].Size(), inputs[0].dptr<DType>(),
-         outputs[0].dptr<DType>(), ishape[1], ishape[2]);
+    FlipImpl(inputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+             ishape[1-axis], ishape[2] * (axis == 0 ? 1 : ishape[1]));
   });
 }
 
