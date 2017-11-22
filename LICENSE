@@ -234,6 +234,7 @@
     1. Fast R-CNN  - For details, see example/rcnn/LICENSE
     2. Faster R-CNN - For details, see example/rcnn/LICENSE
     3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
+    4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
 
 
     ========================================================================

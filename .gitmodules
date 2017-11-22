@@ -16,3 +16,6 @@
 [submodule "cub"]
 	path = cub
 	url = https://github.com/dmlc/cub
+[submodule "3rdparty/openmp"]
+	path = 3rdparty/openmp
+	url = https://github.com/llvm-mirror/openmp
