@@ -155,7 +155,7 @@ class OperatorTuneByType : public OperatorTuneBase {
    * \return tune::TuningMode value for the current tuning mode
    */
   static MSHADOW_CINLINE tune::TuningMode tuning_mode() {
-    return tuning_mode_;
+    return const_cast<tune::TuningMode &>(tuning_mode_);
   }
 
   /*!
