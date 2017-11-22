@@ -22,9 +22,13 @@
  * \file initialize.cc
  * \brief initialize mxnet library
  */
+#if _WIN32 || _WIN64
+#include <windows.h>
+#endif
 #include <signal.h>
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
+#include <mxnet/c_api.h>
 
 #include "engine/profiler.h"
 
@@ -85,3 +89,26 @@ LibraryInitializer* LibraryInitializer::Get() {
 
 static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet
+
+#if _WIN32 || _WIN64
+
+static void shutdown() {
+  MXNotifyShutdown();
+  mxnet::Engine::Get()->WaitForAll();
+  mxnet::Engine::Get()->Stop();
+}
+
+/*
+ * \brief notify_all() on shutdown condition vars sometimes hang in Windows during static shutdown
+ */
+extern "C" bool WINAPI DllMain(HANDLE /*hinstDLL*/, DWORD reason, LPVOID /*lpvReserved*/) {
+  switch (reason) {
+    case DLL_PROCESS_DETACH:
+      shutdown();
+      break;
+    default:
+      break;
+  }
+  return true;
+}
+#endif  // _WIN32 || _WIN64
