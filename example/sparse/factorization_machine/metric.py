@@ -78,7 +78,7 @@ class LogLossMetric(mx.metric.EvalMetric):
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
             pred = pred.asnumpy()
-            pred = np.column_stack((pred, 1 - pred))
+            pred = np.column_stack((1 - pred, pred))
 
             label = label.ravel()
             num_examples = pred.shape[0]

@@ -34,6 +34,8 @@ parser.add_argument('--input-size', type=int, default=2000000,
                     help='number of features in the input')
 parser.add_argument('--factor-size', type=int, default=16,
                     help='number of latent variables')
+parser.add_argument('--log-interval', type=int, default=100,
+                    help='number of batches between logging messages')
 parser.add_argument('--kvstore', type=str, default='local',
                     help='what kvstore to use', choices=["dist_async", "local"])
 
@@ -50,6 +52,7 @@ if __name__ == '__main__':
     kvstore = args.kvstore
     factor_size = args.factor_size
     num_features = args.input_size
+    log_interval = args.log_interval
 
     # create kvstore
     kv = mx.kvstore.create(kvstore)
@@ -69,7 +72,7 @@ if __name__ == '__main__':
 
     # metrics
     metric = mx.metric.create(['log_loss'])
-    speedometer = mx.callback.Speedometer(batch_size, 100)
+    speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     # get the sparse weight parameter
     w_index = mod._exec_group.param_names.index('w')
