@@ -24,26 +24,30 @@ When training models whose architectures include large fully connected component
 The greatest benefits from gradient compression are realized when using GPUs for both single-node multi-GPU and multi-node (single or multi-GPU) distributed training. Training on CPU would provide a lower compute density per compute node as compared to the massive compute density per compute node on a GPU. Due to this, the required communication bandwidth for CPU-based nodes during training is not as high as for GPU-based nodes. Hence, the benefits of gradient compression are lower for CPU-based nodes as compared to GPU-based nodes.
 
 
-### Scaling
-
-When the training is configured to use device to device communication on a single node with multiple GPUs, gradient compression can be used to reduce the cost communication. This can provide about 20% speedup for large models using older generation architectures where GPU communication goes through the CPU. However, speed benefits may be negligible on a 8-GPU machine with a newer generation architecture where GPUs can communicate without going through the CPU first.
-
-
 ### Network Latency
 
 Benefits of gradient compression can be found when using distributed training with network connected nodes. Depending on the network latency between nodes and the model's size, these can contribute to slow performance such that gradient compression may provide speed improvements.
 
-You may not want to use gradient compression if you have low latency communication. The performance may be negligible when GPUs can communicate at low latency in newer architectures.
+You may not want to use gradient compression if you have low latency network communication.
 
 
 ### Model Size
 
-If the model is small, gradient compression can actually decrease speed. More examples of this are covered in the Benchmarking section.
-
+Distributed training involves synchronization of weights after each batch. Larger models have much higher communication costs during training, hence such models stand to benefit much more from gradient compression.
+When running distributed training with gradient compression, the quantize and dequantize operations happen on CPU parallelized with OpenMP. For smaller models, when training on GPUs, it helps to set `OMP_NUM_THREADS=1` on each node, so that the overhead of launching OMP threads doesn't cause the compression and decompression to be slow.
 
 ### Model Architecture
 
-The communication bandwidth requirements during training vary across various neural network architectures and hence the benefits of gradient compression vary accordingly. Fully Connected and Long Short-Term Memory architectures require more communication bandwidth for training as compared to Convolutional Neural Network architectures. Models like AlexNet and VGG have large fully connected components as part of the network, hence stand to benefit from gradient compression.
+The communication bandwidth requirements during training vary across various neural network architectures and hence the benefits of gradient compression vary accordingly.
+
+In networks which have significant fully connected components, since such layers have low compute cost on GPUs, communication becomes a bottleneck limiting the speed of distributed training. Gradient compression can help reduce the communication cost, and thus speed up training in such cases. We have observed speedup of about 2x on large fully connected neural networks. Models like AlexNet and VGG have large fully connected components as part of the network, hence stand to benefit from gradient compression. Long Short-Term Memory architectures require more communication bandwidth, so they also exhibit speed improvements with gradient compression.
+
+Architectures like Convolutional Neural Networks on the other hand have a higher compute cost, in which case some communication can be parallelized with compute. Since communication is not the bottleneck in such networks, gradient compression doesn't help much.
+
+
+### Single Node Gradient Compression
+
+When the training is configured to use device to device communication on a single node with multiple GPUs, gradient compression can be used to reduce the cost communication. This can provide about 20% speedup for large models using older generation architectures. However, speed benefits may be negligible on a machine with a newer generation architecture where GPUs can communicate at low latency.
 
 
 ## Deep Neural Networks and Sparse Data
@@ -64,6 +68,7 @@ Gradient compression is a run-time configuration parameter to be enabled during 
 ```
 trainer = gluon.Trainer(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
+A reference `gluon` implementation with a gradient compression option can be found in the [train.py script from a word-level language modeling RNN example](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/word_language_model/train.py).
 
 **Module API**:
 
@@ -71,9 +76,7 @@ trainer = gluon.Trainer(..., compression_params={'type’:'2bit', 'threshold':0.
 mod = mx.mod.Module(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
 
-### Examples
-
-In order to try out gradient compression you will need to first setup distributed training. [This example of distributed training](https://mxnet.incubator.apache.org/versions/master/how_to/multi_devices.html) comes with the option of turning on gradient compression.
+A `module` example is provided with [this guide for setting up MXNet with distributed training](https://mxnet.incubator.apache.org/versions/master/how_to/multi_devices.html#distributed-training-with-multiple-machines). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py).
 
 ### Configuration Details
 
