@@ -52,9 +52,8 @@ Profiler::Profiler()
 
   this->cpu_num_ = std::thread::hardware_concurrency();
 #if MXNET_USE_CUDA
-  int gpu_num = 0;
-  CUDA_CALL(cudaGetDeviceCount(&gpu_num));
-  this->gpu_num_ = (unsigned int)gpu_num;
+  int kMaxNumGpus = 32;
+  this->gpu_num_ = kMaxNumGpus;
 #else
   this->gpu_num_ = 0;
 #endif
