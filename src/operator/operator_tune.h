@@ -56,7 +56,7 @@ class OperatorTuneBase {
    * \return Tick object representing the current itmestamp
    */
   static MSHADOW_CINLINE Tick Now() {
-    return std::move(std::chrono::high_resolution_clock::now());
+    return std::chrono::high_resolution_clock::now();
   }
 
   /*!

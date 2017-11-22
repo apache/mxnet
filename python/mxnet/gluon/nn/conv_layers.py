@@ -113,11 +113,11 @@ class _Conv(HybridBlock):
             dshape[layout.find('C')] = in_channels
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
             self.weight = self.params.get('weight', shape=wshapes[1],
-                                          dtype=None, init=weight_initializer,
+                                          init=weight_initializer,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=wshapes[2],
-                                            dtype=None, init=bias_initializer,
+                                            init=bias_initializer,
                                             allow_deferred_init=True)
             else:
                 self.bias = None

@@ -326,16 +326,16 @@ class RNNCell(HybridRecurrentCell):
         self._activation = activation
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
-                                          dtype=None, init=i2h_weight_initializer,
+                                          init=i2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
-                                          dtype=None, init=h2h_weight_initializer,
+                                          init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
-                                        dtype=None, init=i2h_bias_initializer,
+                                        init=i2h_bias_initializer,
                                         allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
-                                        dtype=None, init=h2h_bias_initializer,
+                                        init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
@@ -434,16 +434,16 @@ class LSTMCell(HybridRecurrentCell):
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          dtype=None, init=i2h_weight_initializer,
+                                          init=i2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
-                                          dtype=None, init=h2h_weight_initializer,
+                                          init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        dtype=None, init=i2h_bias_initializer,
+                                        init=i2h_bias_initializer,
                                         allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        dtype=None, init=h2h_bias_initializer,
+                                        init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
@@ -541,16 +541,16 @@ class GRUCell(HybridRecurrentCell):
         self._hidden_size = hidden_size
         self._input_size = input_size
         self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
-                                          dtype=None, init=i2h_weight_initializer,
+                                          init=i2h_weight_initializer,
                                           allow_deferred_init=True)
         self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
-                                          dtype=None, init=h2h_weight_initializer,
+                                          init=h2h_weight_initializer,
                                           allow_deferred_init=True)
         self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
-                                        dtype=None, init=i2h_bias_initializer,
+                                        init=i2h_bias_initializer,
                                         allow_deferred_init=True)
         self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
-                                        dtype=None, init=h2h_bias_initializer,
+                                        init=h2h_bias_initializer,
                                         allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
