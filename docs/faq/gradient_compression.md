@@ -11,7 +11,7 @@ For architectures with fully connected components, the gradient compression capa
 
 **Minimal Accuracy Loss**
 
-Gradient compression uses the approach of delaying the synchronization of weight updates which are small. Although small weight updates might not be sent for that batch, this information is not discarded. Once the weight updates for this location accumulate to become a larger value, they will be propagated. Since there is no information loss, but only delayed updates, it does not lead to a significant loss in accuracy or convergence rate. In distributed training experiments[1], it is observed a loss of accuracy as low as 1% for this technique.
+Gradient compression uses the approach of delaying the synchronization of weight updates which are small. Although small weight updates might not be sent for that batch, this information is not discarded. Once the weight updates for this location accumulate to become a larger value, they will be propagated. Since there is no information loss, but only delayed updates, it does not lead to a significant loss in accuracy or convergence rate. In distributed training experiments[1], the accuracy loss observed due to gradient compression was as low as 1%
 
 
 ## When to Use Gradient Compression
@@ -40,14 +40,14 @@ When running distributed training with gradient compression, the quantize and de
 
 The communication bandwidth requirements during training vary across various neural network architectures and hence the benefits of gradient compression vary accordingly.
 
-In networks which have significant fully connected components, since such layers have low compute cost on GPUs, communication becomes a bottleneck limiting the speed of distributed training. Gradient compression can help reduce the communication cost, and thus speed up training in such cases. We have observed speedup of about 2x on large fully connected neural networks. Models like AlexNet and VGG have large fully connected components as part of the network, hence stand to benefit from gradient compression. Long Short-Term Memory architectures require more communication bandwidth, so they also exhibit speed improvements with gradient compression.
+In networks which have significant fully connected components, since such layers have low compute cost on GPUs, communication becomes a bottleneck limiting the speed of distributed training. Gradient compression can help reduce the communication cost, and thus speed up training in such cases. We have observed speedup of about 2x on large fully connected neural networks. Models like AlexNet and VGG have large fully connected components as part of the network, hence stand to benefit from gradient compression. As with these models, Long Short-Term Memory architectures require more communication bandwidth, so they also exhibit speed improvements with gradient compression.
 
-Architectures like Convolutional Neural Networks on the other hand have a higher compute cost, in which case some communication can be parallelized with compute. Since communication is not the bottleneck in such networks, gradient compression doesn't help much.
+Architectures like Convolutional Neural Networks on the other hand have a higher compute cost, in which case some communication can be parallelized with computation. Since communication is not the bottleneck in such networks, gradient compression doesn't help much.
 
 
 ### Single Node Gradient Compression
 
-When the training is configured to use device to device communication on a single node with multiple GPUs, gradient compression can be used to reduce the cost communication. This can provide about 20% speedup for large models using older generation architectures. However, speed benefits may be negligible on a machine with a newer generation architecture where GPUs can communicate at low latency.
+When the training is configured to use device to device communication on a single node with multiple GPUs, gradient compression can be used to reduce the cost of communication. This can provide about 20% speedup for large models using older generation architectures. However, speed benefits may be negligible on a machine with a newer generation architecture where GPUs can communicate at low latency.
 
 
 ## Approach

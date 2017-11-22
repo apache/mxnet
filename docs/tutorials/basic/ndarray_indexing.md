@@ -1,13 +1,12 @@
 
 # NDArray Indexing - Array indexing features
 
-MXNet's advanced indexing features are modeled after [NumPy's implementation and documentation](https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing). You will see direct adaptations of many NumPy indexing features, and these are close, if not identical.
+MXNet's advanced indexing features are modeled after [NumPy's implementation and documentation](https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing). You will see direct adaptations of many NumPy indexing features and examples which are close, if not identical, so we borrow much from their documentation.
 
 `NDArray`s can be indexed using the standard Python `x[obj]` syntax, where _x_ is the array and _obj_ the selection.
 
-There are three kinds of indexing available:
+There are two kinds of indexing available:
 
-1. field access
 1. basic slicing
 1. advanced indexing
 
@@ -27,7 +26,6 @@ a[:]         # a copy of the whole array
 
 
 ```python
-import mxnet as mx
 from mxnet import nd
 ```
 
@@ -106,13 +104,13 @@ print('replaced entire row with x[2] = 9.0, x=', x)
     <NDArray 3x4 @cpu(0)>
 
 
-We can target specific elements too. Let's replace the number `3` in the first row with the number `9` using `x[0,2] = 9.0`.
+We can target specific elements too. Let's replace the number `3` in the first row with the number `9` using `x[0, 2] = 9.0`.
 
 
 ```python
 print('original x, x=', x)
-x[0,2] = 9.0
-print('replaced specific element with x[0,2] = 9.0, x=', x)
+x[0, 2] = 9.0
+print('replaced specific element with x[0, 2] = 9.0, x=', x)
 ```
 
     original x, x=
@@ -127,13 +125,13 @@ print('replaced specific element with x[0,2] = 9.0, x=', x)
     <NDArray 3x4 @cpu(0)>
 
 
-Now lets target even more by selecting a couple of targets at the same time. We'll replace the `6` and the `7` with `x[1:2,1:3] = 5.0`.
+Now lets target even more by selecting a couple of targets at the same time. We'll replace the `6` and the `7` with `x[1:2, 1:3] = 5.0`.
 
 
 ```python
 print('original x, x=', x)
-x[1:2,1:3] = 5.0
-print('replaced range of elements with x[1:2,1:3] = 5.0, x=', x)
+x[1:2, 1:3] = 5.0
+print('replaced range of elements with x[1:2, 1:3] = 5.0, x=', x)
 ```
 
     original x, x=
@@ -141,7 +139,7 @@ print('replaced range of elements with x[1:2,1:3] = 5.0, x=', x)
      [ 5.  6.  7.  8.]
      [ 9.  9.  9.  9.]]
     <NDArray 3x4 @cpu(0)>
-    replaced range of elements with x[1:2,1:3] = 5.0, x=
+    replaced range of elements with x[1:2, 1:3] = 5.0, x=
     [[ 1.  2.  9.  4.]
      [ 5.  5.  5.  8.]
      [ 9.  9.  9.  9.]]
@@ -152,7 +150,7 @@ print('replaced range of elements with x[1:2,1:3] = 5.0, x=', x)
 
 ### Step
 
-The basic slice syntax is `i:j:k` where _i_ is the starting index, _j_ is the stopping index, and _k_ is the step (k must be nonzero).
+The basic slice syntax is `i:j:k` where _i_ is the starting index, _j_ is the stopping index, and _k_ is the step (_k_ must be nonzero).
 
 **Note**: Previously, MXNet supported basic slicing and indexing only with `step=1`. From release 1.0, abitrary value of `step` is supported.
 
@@ -194,7 +192,7 @@ If the number of objects in the selection tuple is less than N , then : is assum
 
 ```python
 x = nd.array([[[1],[2],[3]],
-                 [[4],[5],[6]]], dtype='int32')
+              [[4],[5],[6]]], dtype='int32')
 x[1:2]
 ```
 
@@ -277,8 +275,8 @@ From each row, a specific element should be selected. The row index is just [0, 
 
 ```python
 x = nd.array([[1, 2],
-                 [3, 4],
-                 [5, 6]], dtype='int32')
+              [3, 4],
+              [5, 6]], dtype='int32')
 x[[0, 1, 2], [0, 1, 0]]
 ```
 
@@ -299,9 +297,9 @@ From a 4x3 array the corner elements should be selected using advanced indexing.
 
 ```python
 x = nd.array([[ 0,  1,  2],
-                 [ 3,  4,  5],
-                 [ 6,  7,  8],
-                 [ 9, 10, 11]], dtype='int32')
+              [ 3,  4,  5],
+              [ 6,  7,  8],
+              [ 9, 10, 11]], dtype='int32')
 x[[[0, 0], [3, 3]],
   [[0, 2], [0, 2]]]
 ```
@@ -363,7 +361,7 @@ print(x[:, :, ind1, ind2, :].shape)
     (10, 20, 2, 3, 4, 50)
 
 
-- There are at least two advanced indices in the selection object, and there is at least one advanced index is separated from the others by basic indices. For example,  `x` is an `NDArray` with `shape=(10, 20, 30, 40, 50)` and `result=x[:, :, ind1, :, ind2]` has two advanced indices with shapes that are broadcastable to `shape=(2, 3, 4)`. Then the `result` has `shape=(2, 3, 4, 10, 20, 40)` because there is no unambiguous place to place the indexing subspace, hence it is prepend to the beginning.
+- There are at least two advanced indices in the selection object, and there is at least one advanced index is separated from the others by basic indices. For example,  `x` is an `NDArray` with `shape=(10, 20, 30, 40, 50)` and `result=x[:, :, ind1, :, ind2]` has two advanced indices with shapes that are broadcastable to `shape=(2, 3, 4)`. Then the `result` has `shape=(2, 3, 4, 10, 20, 40)` because there is no unambiguous place to place the indexing subspace, hence it is prepended to the beginning.
 
 
 ```python
