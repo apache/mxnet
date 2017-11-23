@@ -23,9 +23,9 @@ import numpy as np
 
 def test_profiler():
     profile_filename = "test_profile.json"
-    iter_num = 100
-    begin_profiling_iter = 50
-    end_profiling_iter = 50
+    iter_num = 5
+    begin_profiling_iter = 2
+    end_profiling_iter = 4
 
 
     profiler.profiler_set_config(mode='symbolic', filename=profile_filename)
@@ -59,6 +59,7 @@ def test_profiler():
     duration = t1 - t0
     print('duration: {0}s'.format(duration))
     print('          {0}ms/operator'.format(duration*1000/iter_num))
+    profiler.dump_profile()
 
 if __name__ == '__main__':
     test_profiler()
