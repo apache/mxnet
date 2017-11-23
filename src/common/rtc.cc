@@ -25,6 +25,8 @@
 
 #if MXNET_USE_CUDA
 
+const int mshadow::gpu::kDevMask;
+
 namespace mxnet {
 namespace rtc {
 
