@@ -44,6 +44,7 @@ extern bool unitTestsWithCuda;
 extern bool debug_output;
 extern bool quick_test;
 extern bool performance_run;
+extern bool csv;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
@@ -672,16 +673,20 @@ struct less_shapevect {
 };
 
 inline std::string pretty_num(uint64_t val) {
-  std::string res, s = std::to_string(val);
-  size_t ctr = 0;
-  for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
-    if (ctr && (ctr % 3) == 0) {
-      res += ",";
+  if (!test::csv) {
+    std::string res, s = std::to_string(val);
+    size_t ctr = 0;
+    for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
+      if (ctr && (ctr % 3) == 0) {
+        res += ",";
+      }
+      res.push_back(s[i]);
     }
-    res.push_back(s[i]);
+    std::reverse(res.begin(), res.end());
+    return res;
+  } else {
+    return std::to_string(val);
   }
-  std::reverse(res.begin(), res.end());
-  return res;
 }
 
 /*! \brief Change a value during the scope of this declaration */

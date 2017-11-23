@@ -141,16 +141,16 @@ struct binary_broadcast_kernel {
                                   const Shape<ndim>& lstride, const Shape<ndim>& rstride,
                                   const Shape<ndim>& oshape, DType* lhs, DType* rhs,
                                   DType* out, int lsize, int rsize) {
-    Shape<ndim> coord = unravel(base, oshape);
+      Shape <ndim> coord = unravel(base, oshape);
     index_t lidx = dot(coord, lstride);
     index_t ridx = dot(coord, rstride);
-    KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
-    // starts from 1 to avoid extra inc at end of loop
-    for (int i = 1; i < length; ++i) {
-      inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
-      KERNEL_ASSIGN(out[base+i], req, OP::Map(lhs[lidx], rhs[ridx]));
+      KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
+      // starts from 1 to avoid extra inc at end of loop
+      for (int i = 1; i < length; ++i) {
+        inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
+        KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
+      }
     }
-  }
 };
 
 }  // namespace mxnet_op
