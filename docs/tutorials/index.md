@@ -39,6 +39,7 @@ please see [gluon.mxnet.io](http://gluon.mxnet.io).
    :maxdepth: 1
 
    basic/ndarray
+   basic/ndarray_indexing
    basic/symbol
    basic/module
    basic/data
