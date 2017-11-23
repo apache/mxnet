@@ -50,7 +50,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   static auto constexpr kPriorityQueue = kPriority;
   static auto constexpr kWorkerQueue = kFIFO;
 
-  ThreadedEnginePerDevice() noexcept(false) {
+  ThreadedEnginePerDevice() noexcept(false)
+    : stopped_(true) {
     this->Start();
 #ifndef _WIN32
     pthread_atfork(
@@ -75,24 +76,29 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   }
 
   void Stop() override {
-    SignalQueuesForKill();
-    gpu_normal_workers_.Clear();
-    gpu_copy_workers_.Clear();
-    cpu_normal_workers_.Clear();
-    cpu_priority_worker_.reset(nullptr);
+    if(!stopped_.load()) {
+      SignalQueuesForKill();
+      gpu_normal_workers_.Clear();
+      gpu_copy_workers_.Clear();
+      cpu_normal_workers_.Clear();
+      cpu_priority_worker_.reset(nullptr);
+      stopped_.store(true);
+    }
   }
 
   void Start() override {
+    CHECK_EQ(stopped_.load(), false) << "Attempt to start already running execution engine";
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     // create CPU task
-    int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
+    const int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
     cpu_priority_worker_.reset(new ThreadWorkerBlock<kPriorityQueue>());
     cpu_priority_worker_->pool.reset(new ThreadPool(
         cpu_priority_nthreads, [this]() {
           this->CPUWorker(Context(), cpu_priority_worker_.get());
         }));
     // GPU tasks will be created lazily
+    stopped_.store(false);
   }
 
  protected:
@@ -208,6 +214,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > gpu_normal_workers_;
   // workers doing copy works from/to GPU
   common::LazyAllocArray<ThreadWorkerBlock<kCopyQueue> > gpu_copy_workers_;
+  /*! \brief Record whether queues have been signaled for kill */
+  std::atomic<bool> stopped_;
   /*!
    * \brief GPU worker that performs operations on a certain device.
    * \param dev_id The device id of the worker.
