@@ -11,18 +11,18 @@ MXNet Change Log
 ### New Features - Gradient Compression [Experimental]
   - Speed up multi-GPU and distributed training by compressing communication of gradients. This is especially effective when training networks with large fully-connected layers. In Gluon this can be activated with `compression_params` in Trainer.
 ### New Features - Support of NVIDIA Collective Communication Library (NCCL) [Experimental]
-  - Use kvstore=’nccl’ for (in some cases) faster training on multiple GPUs.
+  - Use `kvstore=’nccl’` for (in some cases) faster training on multiple GPUs.
   - Significantly faster than kvstore=’device’ when batch size is small.
-  - It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when using NCCL version 2.1 or newer.
+  - It is recommended to set environment variable `NCCL_LAUNCH_MODE` to `PARALLEL` when using NCCL version 2.1 or newer.
 ### New Features - Advanced Indexing [General Availability]
   - NDArray now supports advanced indexing (both slice and assign) as specified by the numpy standard: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing with the following restrictions:
-    - if key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported, while not for key=[[1, 2]].
+    - if key is a list type, only a list of integers is supported, e.g. `key=[1, 2]` is supported, while not for `key=[[1, 2]]`.
     - Ellipsis (...) and np.newaxis are not supported.
-    - Boolean array indexing is not supported.
+    - `Boolean` array indexing is not supported.
 ### New Features - Gluon [General Availability]
   - Performance optimizations discussed above.
-  - Added support for loading data in parallel with multiple processes to gluon.data.DataLoader. The number of workers can be set with num_worker. Does not support windows yet.
-  - Added Block.cast to support networks with different data types, e.g. float16.
+  - Added support for loading data in parallel with multiple processes to `gluon.data.DataLoader`. The number of workers can be set with `num_worker`. Does not support windows yet.
+  - Added Block.cast to support networks with different data types, e.g. `float16`.
   - Added Lambda block for wrapping a user defined function as a block.
   - Generalized `gluon.data.ArrayDataset` to support arbitrary number of arrays.
 ### New Features - ARM / Raspberry Pi support [Experimental]
@@ -48,6 +48,7 @@ MXNet Change Log
   - Fixed License Headers including restoring copyright attributions.
   - Documentation updates. 
   - Links for viewing source.
+ 
  For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.0+Release+Notes)
 
 
