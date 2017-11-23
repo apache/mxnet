@@ -408,7 +408,7 @@ class KVStore(object):
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """
-        if (self.type == 'device') or ('dist' in self.type):
+        if ('device' in self.type) or ('dist' in self.type):
             ckeys, cvals = _ctype_dict(compression_params)
             check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
                                                             mx_uint(len(compression_params)),
