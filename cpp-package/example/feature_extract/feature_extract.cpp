@@ -117,7 +117,7 @@ NDArray Data2NDArray() {
   NDArray ret(Shape(2, 3, 224, 224), global_ctx, false);
   ifstream inf("./img.dat", ios::binary);
   vector<float> data(2 * 3 * 224 * 224);
-  inf.read(reinterpret_cast<char *>data.data(), 2 * 3 * 224 * 224 * sizeof(float));
+  inf.read(reinterpret_cast<char *>(data.data()), 2 * 3 * 224 * 224 * sizeof(float));
   inf.close();
   ret.SyncCopyFromCPU(data.data(), 2 * 3 * 224 * 224);
   NDArray::WaitAll();
