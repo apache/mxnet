@@ -52,7 +52,7 @@ def list_image(root, recursive, exts):
                     yield (i, os.path.relpath(fpath, root), cat[path])
                     i += 1
 
-        with open(args.prefix + '_labels.txt', 'w') as fout:
+        with open(args.prefix + '_synsets.txt', 'w') as fout:
             for k, v in sorted(cat.items(), key=lambda x: x[1]):
                 print(os.path.relpath(k, root), v)
                 fout.write('%s\n' % (os.path.relpath(k, root)))
