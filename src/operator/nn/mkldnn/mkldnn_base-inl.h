@@ -161,8 +161,8 @@ class MKLDNNStream {
 };
 
 // some operators need to share workspace between fwd/bwd
-inline std::unordered_map<const NDArray *, mkldnn_mem_ptr> &mkldnn_wmap() {
-  static std::unordered_map<const NDArray *, mkldnn_mem_ptr> _wmap;
+inline std::unordered_map<const void *, mkldnn_mem_ptr> &mkldnn_wmap() {
+  static std::unordered_map<const void *, mkldnn_mem_ptr> _wmap;
   return _wmap;
 }
 
