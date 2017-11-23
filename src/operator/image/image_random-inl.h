@@ -107,7 +107,6 @@ struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   }
 };
 
-
 inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
@@ -151,42 +150,57 @@ static void Normalize(const nnvm::NodeAttrs &attrs,
   });
 }
 
-inline static int FlipIndex(int idx, const int stride, const int trailing) {
-  const int low = idx % trailing;
-  int high = idx / trailing;
-  const int x = high % stride;
-  high /= stride;
+struct FlipParam : public dmlc::Parameter<FlipParam> {
+  int axis;
+  DMLC_DECLARE_PARAMETER(FlipParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("0 or 1. 0 for horizontal flip, 1 for vertical flip.");
+  }
+};
 
-  return (high * stride + stride - 1 - x) * trailing + low;
-}
+#define SWAP_IF_INPLACE(dst, dst_idx, src, src_idx) \
+  if (dst == src) {                                 \
+    std::swap(dst[dst_idx], src[src_idx]);          \
+  } else {                                          \
+    dst[dst_idx] = src[src_idx];                    \
+  }
 
 template<typename DType>
-static void FlipImpl(const int size, DType *src, DType *dst,
-                     const int stride, const int trailing) {
-  for (int idx = 0; idx < size; ++idx) {
-    int new_idx = FlipIndex(idx, stride, trailing);
-    if (src == dst) {
-      // inplace operation
-      if (idx < new_idx) {
-        std::swap(dst[new_idx], src[idx]);
+static void FlipImpl(const TShape &shape, DType *src, DType *dst, int axis) {
+  const int height = shape[0];
+  const int width = shape[1];
+  const int nchannel = shape[2];
+
+  const int length = width * nchannel;
+  const int height_stride = (src == dst && axis == 1) ? (height >> 1) : height;
+  const int width_stride = (src == dst && axis == 0) ? (width >> 1) : width;
+
+  for (int h = 0; h < height_stride; ++h) {
+    const int h_dst = (axis == 0) ? h : (height - h);
+    for (int w = 0; w < width_stride; ++w) {
+      const int w_dst = (axis == 0) ? (width - w) : w;
+      const int idx_dst = h_dst * length + w_dst * nchannel;
+      const int idx_src = h * length + w * nchannel;
+      SWAP_IF_INPLACE(dst, idx_dst, src, idx_src);
+      if (nchannel > 1) {
+        SWAP_IF_INPLACE(dst, idx_dst + 1, src, idx_src + 1);
+        SWAP_IF_INPLACE(dst, idx_dst + 2, src, idx_src + 2);
       }
-    } else {
-      dst[new_idx] = src[idx];
     }
   }
 }
 
-template<int axis>
 static void Flip(const nnvm::NodeAttrs &attrs,
                   const OpContext &ctx,
                   const std::vector<TBlob> &inputs,
                   const std::vector<OpReqType> &req,
                   const std::vector<TBlob> &outputs) {
+  const FlipParam &param = nnvm::get<FlipParam>(attrs.parsed);
+  CHECK(param.axis == 0 || param.axis == 1) << "flip axis must be 0 or 1.";
   CheckIsImage(inputs[0]);
   const TShape& ishape = inputs[0].shape_;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    FlipImpl(inputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
-             ishape[1-axis], ishape[2] * (axis == 0 ? 1 : ishape[1]));
+    FlipImpl(ishape, inputs[0].dptr<DType>(), outputs[0].dptr<DType>(), param.axis);
   });
 }
 
