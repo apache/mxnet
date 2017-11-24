@@ -22,11 +22,154 @@
  * \file matrix_op.cu
  * \brief GPU Implementation of matrix operations
  */
+#include <cub/cub.cuh>
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
 
+
 namespace mxnet {
 namespace op {
+
+template<>
+void SliceDimOneCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
+                             const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  nnvm::dim_t begin_row = begin[0];
+  nnvm::dim_t end_row = end[0];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        SliceCsrIndPtrImpl<gpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
+
+        // retrieve nnz (CPU implementation)
+        RType nnz = 0;
+        CUDA_CALL(cudaMemcpy(&nnz, &out_indptr[indptr_len-1], sizeof(RType),
+            cudaMemcpyDeviceToHost));
+        // return csr zeros if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        // copy indices and values
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType* in_data = in.data().dptr<DType>();
+        DType* out_data = out.data().dptr<DType>();
+        int offset = in_indptr[begin_row];
+
+        Stream<gpu> *s = ctx.get_stream<gpu>();
+        mshadow::Copy(Tensor<gpu, 1, IType>(out_idx, Shape1(nnz), nnz, s),
+                      Tensor<gpu, 1, IType>(in_idx + offset, Shape1(nnz), nnz, s), s);
+        mshadow::Copy(Tensor<gpu, 1, DType>(out_data, Shape1(nnz), nnz, s),
+                      Tensor<gpu, 1, DType>(in_data + offset, Shape1(nnz), nnz, s), s);
+      });
+    });
+  });
+}
+
+struct SliceMarkCsrIndPtr {
+  template<typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  RType* prefix_sum,
+                                  const IType* in_idx,
+                                  const RType* in_indptr,
+                                  const int begin_col, const int end_col) {
+    if (i == 0) {
+      prefix_sum[0] = 0;
+    }
+    RType size = 0;
+    for (RType j = in_indptr[i]; j < in_indptr[i+1]; j++) {
+      // indices of CSRNDArray are in ascending order per row
+      if (in_idx[j] >= end_col) {
+        break;
+      } else if (in_idx[j] >= begin_col) {
+        size++;
+      }
+    }
+    prefix_sum[i+1] = size;
+  }
+};
+
+
+template<>
+void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
+                             const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+
+  nnvm::dim_t begin_row = begin[0], end_row = end[0];
+  nnvm::dim_t begin_col = begin[1], end_col = end[1];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
+
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+
+        Kernel<SliceMarkCsrIndPtr, gpu>::Launch(s, indptr_len - 1,
+                                                out_indptr,
+                                                in_idx,
+                                                in_indptr + begin_row,
+                                                begin_col, end_col);
+        void* d_temp_storage = NULL;
+        size_t temp_storage_bytes = 0;
+        cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                      temp_storage_bytes,
+                                      out_indptr,
+                                      out_indptr,
+                                      indptr_len,
+                                      Stream<gpu>::GetStream(s));
+        Tensor<gpu, 1, char> workspace = ctx.requested[0]
+            .get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
+        d_temp_storage = workspace.dptr_;
+
+        cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                      temp_storage_bytes,
+                                      out_indptr,
+                                      out_indptr,
+                                      indptr_len,
+                                      Stream<gpu>::GetStream(s));
+        RType nnr = 0;
+        CUDA_CALL(cudaMemcpy(&nnr, &out_indptr[indptr_len-1], sizeof(RType),
+            cudaMemcpyDeviceToHost));
+
+        // returns zeros in csr format if nnr = 0
+        if (nnr == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnr));
+        out.CheckAndAllocData(Shape1(nnr));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Kernel<SliceDimTwoCsrAssign, gpu>::Launch(s, indptr_len - 1, out_idx, out_data,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
+                                                  begin_col, end_col);
+      });
+    });
+  });
+}
+
+
 NNVM_REGISTER_OP(Reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
@@ -40,7 +183,8 @@ NNVM_REGISTER_OP(expand_dims)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(slice)
-.set_attr<FCompute>("FCompute<gpu>", SliceOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpForward<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SliceEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_slice)
 .set_attr<FCompute>("FCompute<gpu>", SliceOpBackward<gpu>);
