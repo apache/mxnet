@@ -12,7 +12,7 @@ powerful heterogeneous hardware environments to achieve significant speedups.
 
 There are two primary ways that we can spread a workload across multiple devices.
 In a previous document, [we addressed data parallelism](./multi_devices.md),
-an approach in which examples within a batch are divvied among the available devices.
+an approach in which examples within a batch are divided among the available devices.
 With data parallelism, each device stores a complete copy of the model.
 Here, we explore _model parallelism_, a different approach.
 Instead of splitting the batch among the devices, we partition the model itself.
