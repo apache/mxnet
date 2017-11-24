@@ -221,20 +221,15 @@ namespace mxnet_op {
  */
 template<typename Operation, typename DType>
 struct tuned_op : public Operation {
-  /*! \brief nanoseconds to perform WORKLOAD_COUNT operations
-   *  \note It is conceivable that a vector of values could be used for more complex tuning,
-   *        but the need hasn't yet arisen
+  /*! \brief Runtime workload calculation values. Generally, nanoseconds to perform WORKLOAD_COUNT
+   *        operations (for unary and binary ops), although they can be anything if the UseOMP()
+   *        function is written elsewhere for that op (other than in operator_tune-inl.h)
    *  \remarks This variable generally needs to be implemented somewhere.  Currently this is mostly
    *           done via macros in operator_tune.cc.  If you get undefined reference errors when
    *           linking, then try to use one of the macros in that file to instantiate the required
    *           data/functions
    */
-  static size_t workload_;
-
-  /*!
-   * \brief Extra workload-calculating information (ie times for sub-portions of the calculation)
-   */
-  static std::vector<float> workload_ex_;
+  static std::vector<float> workload_;
 
   /*!
    * \brief Calls parent class (Operation)'s UseOMP
