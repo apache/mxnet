@@ -154,8 +154,8 @@ class OperatorTuneByType : public OperatorTuneBase {
    * \brief Get the current tuning mode
    * \return tune::TuningMode value for the current tuning mode
    */
-  static MSHADOW_CINLINE volatile tune::TuningMode tuning_mode() {
-    return tuning_mode_;
+  static MSHADOW_CINLINE tune::TuningMode tuning_mode() {
+    return const_cast<tune::TuningMode &>(tuning_mode_);
   }
 
   /*!
