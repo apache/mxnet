@@ -72,7 +72,7 @@ function get_cpucore()
     if haskey(ENV, "TRAVIS")  # on travis-ci
         2
     else
-        min(Sys.CPU_CORES, 8)
+        min(Sys.CPU_CORES, 32)
     end
 end
 
