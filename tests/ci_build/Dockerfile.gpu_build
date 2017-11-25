@@ -1,6 +1,6 @@
 FROM nvidia/cuda:8.0-cudnn5-devel
 # cuda8.0 has to be used because this is the first ubuntu16.04 container
-# # which is required due to OpenBLAS being incompatible with ubuntu14.04
+# which is required due to OpenBLAS being incompatible with ubuntu14.04
 # the reason we used a gpu base container because we are going to test MKLDNN
 # operator implementation against GPU implementation
 
@@ -10,8 +10,20 @@ COPY install/ubuntu_install_python.sh /install/
 RUN /install/ubuntu_install_python.sh
 COPY install/ubuntu_install_scala.sh /install/
 RUN /install/ubuntu_install_scala.sh
+COPY install/ubuntu_install_r.sh /install/
+RUN /install/ubuntu_install_r.sh
+COPY install/ubuntu_install_perl.sh /install/
+RUN /install/ubuntu_install_perl.sh
 
-RUN wget --no-check-certificate -O /tmp/mklml.tgz https://github.com/01org/mkl-dnn/releases/download/v0.10/mklml_lnx_2018.0.20170908.tgz
+
+RUN wget --no-check-certificate -O /tmp/mklml.tgz https://github.com/01org/mkl-dnn/releases/download/v0.10/mklml_lnx_2018.0.20170720.tgz
 RUN tar -zxvf /tmp/mklml.tgz && cp -rf mklml_*/* /usr/local/ && rm -rf mklml_*
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+
+# TODO: Make this right!
+RUN apt update
+RUN apt install -y software-properties-common
+RUN add-apt-repository -y ppa:graphics-drivers
+RUN apt update
+RUN DEBIAN_FRONTEND=noninteractive  apt install -y nvidia-384

@@ -252,7 +252,7 @@ endif
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
 ifeq ($(CUDA_ARCH),)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
+	KNOWN_CUDA_ARCHS := 30 52
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
@@ -330,6 +330,9 @@ ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda -lcufft -lnvrtc
+	# Make sure to add stubs in order to be able to build without 
+	# full CUDA install (especially if no GPU is present)
+	LDFLAGS += -L/usr/local/cuda/lib64/stubs
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
 	ifeq ($(USE_NCCL), 1)
 		ifneq ($(USE_NCCL_PATH), NONE)
