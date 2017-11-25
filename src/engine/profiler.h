@@ -77,7 +77,7 @@ struct DevStat {
    */
   ~DevStat() {
     std::shared_ptr<moodycamel::ConcurrentQueue<OprExecStat *>> es = opr_exec_stats_;
-    if(es) {
+    if (es) {
       OprExecStat *opr_stat = nullptr;
       while (es->try_dequeue(opr_stat)) {
         delete opr_stat;

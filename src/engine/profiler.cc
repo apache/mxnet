@@ -166,7 +166,7 @@ void Profiler::DumpProfile() {
   for (uint32_t i = 0; i < dev_num; ++i) {
     DevStat &d = profile_stat[i];
     OprExecStat *opr_stat = nullptr;
-    while(d.opr_exec_stats_->try_dequeue(opr_stat)) {
+    while (d.opr_exec_stats_->try_dequeue(opr_stat)) {
       uint32_t pid = i;
       uint32_t tid = opr_stat->thread_id;
 
