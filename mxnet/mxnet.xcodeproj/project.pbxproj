@@ -1,0 +1,67 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 48;
+	objects = {
+
+/* Begin PBXGroup section */
+		DED3A7381F9B2BD8006C3D8E = {
+			isa = PBXGroup;
+			children = (
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		DED3A7391F9B2BD8006C3D8E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0900;
+			};
+			buildConfigurationList = DED3A73C1F9B2BD8006C3D8E /* Build configuration list for PBXProject "mxnet" */;
+			compatibilityVersion = "Xcode 8.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = DED3A7381F9B2BD8006C3D8E;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		DED3A73D1F9B2BD8006C3D8E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		DED3A73E1F9B2BD8006C3D8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DED3A73C1F9B2BD8006C3D8E /* Build configuration list for PBXProject "mxnet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DED3A73D1F9B2BD8006C3D8E /* Debug */,
+				DED3A73E1F9B2BD8006C3D8E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DED3A7391F9B2BD8006C3D8E /* Project object */;
+}
