@@ -1,7 +1,18 @@
 group 'io.mxnet'
-version '0.1.0-SNAPSHOT'
+version '0.9.0'
 
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+    }
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
+
 apply plugin: 'antlr'
 apply plugin: 'application'
 
@@ -23,8 +34,11 @@ generateGrammarSource {
 }
 
 jar {
-    baseName = 'caffe-mxnet-translator'
-    version =  '0.1.0'
+    baseName = 'caffe-translator'
+    version = version
+    manifest {
+        attributes 'Main-Class': 'io.mxnet.caffetranslator.Launcher'
+    }
 }
 
 mainClassName = "io.mxnet.caffetranslator.Launcher"
