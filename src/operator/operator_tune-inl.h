@@ -408,7 +408,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
           res.push_back(token);
         }
       }
-      return std::move(res);
+      return res;
     }
   };
 
