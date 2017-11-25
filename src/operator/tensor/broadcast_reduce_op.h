@@ -428,7 +428,7 @@ void ReduceAxesComputeImpl(const nnvm::NodeAttrs& attrs,
           s, out_data, req[0], in_data);
       Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      broadcast::Reduce<reducer, NDim, DType, mshadow::op::identity>(
+      broadcast::Reduce<reducer, NDim, DType, op::mshadow_op::identity>(
           s, out_data, req[0], workspace, in_data);
       if (normalize) {
         auto out = out_data.FlatTo2D<xpu, DType>(s);
@@ -635,7 +635,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 seg_len);
             if (normalize) {
               mxnet_op::Kernel<
-                  mxnet_op::op_with_req<mshadow::op::div, req_type>,
+                  mxnet_op::op_with_req<op::mshadow_op::div, req_type>,
                   xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
                                output->data().dptr<DType>(), DType(num_rows));
             }
@@ -656,7 +656,7 @@ void SumCsrImpl(const nnvm::NodeAttrs& attrs, mshadow::Stream<xpu>* s, const OpC
                 in_data);
             if (normalize) {
               mxnet_op::Kernel<
-                  mxnet_op::op_with_req<mshadow::op::div, req_type>,
+                  mxnet_op::op_with_req<op::mshadow_op::div, req_type>,
                   xpu>::Launch(s, out_data_size, output->data().dptr<DType>(),
                                output->data().dptr<DType>(), DType(num_cols));
             }

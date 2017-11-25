@@ -635,7 +635,7 @@ class UnaryOpTune : public OperatorTune<DType> {
    */
   template<typename OP>
   static void TuneBlankOperator() {
-    mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_ = GetBlankWorkload<OP>();
+    mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_[0] = GetBlankWorkload<OP>();
     if (Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_UNARY_WORKLOAD_FWD("
                 << Super::template type_name<OP>()
@@ -651,7 +651,7 @@ class UnaryOpTune : public OperatorTune<DType> {
    */
   template<typename OP>
   static void TuneUnaryOperator() {
-    mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_ = GetUnaryWorkload<OP>();
+    mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_[0] = GetUnaryWorkload<OP>();
     if (Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_UNARY_WORKLOAD_FWD("
                 << Super::template type_name<OP>()
@@ -667,8 +667,8 @@ class UnaryOpTune : public OperatorTune<DType> {
    */
   template<typename OP>
   static void TuneUnaryBackwardOperator() {
-    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad<OP>, DType>::workload_ =
-      GetBinaryWorkload<mxnet::op::mxnet_op::backward_grad<OP>>();
+    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad_tuned<OP>, DType>::workload_[0] =
+      GetBinaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
     if (Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_UNARY_WORKLOAD_BWD("
                 << Super::template type_name<OP>()
@@ -685,7 +685,7 @@ class UnaryOpTune : public OperatorTune<DType> {
    */
   template<typename OP>
   static void TuneBlankOperatorEx() {
-    mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_ = GetBlankWorkloadEx<OP>();
+    mxnet::op::mxnet_op::tuned_op<OP, DType>::workload_[0] = GetBlankWorkloadEx<OP>();
     if (Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_BLANK_WORKLOAD_FWD("
                 << Super::template type_name<OP>()
@@ -696,7 +696,7 @@ class UnaryOpTune : public OperatorTune<DType> {
   /*!
    * \brief Determine whether to use OMP based upon both timing and configuration using the
    *        given (templated) operator's workload
-   * \tparam OP Operator whose workload to use (tuned_op::workload_)
+   * \tparam OP Operator whose workload to use (tuned_op::workload_[0])
    * \param N Number of iterations desired
    * \param thread_count Number of OMP threads available to perform the iterations
    * \returns Whether it's faster to use OMP for these iterations
@@ -705,7 +705,7 @@ class UnaryOpTune : public OperatorTune<DType> {
   inline static bool UseOMP(size_t N, size_t thread_count) {
       return OperatorTune<DType>::UseOMP(N,
                                          thread_count,
-                                         static_cast<uint64_t>(N) * OP::workload_);
+                                         static_cast<uint64_t>(N) * OP::workload_[0]);
   }
 };
 
@@ -725,7 +725,7 @@ class BinaryOpTune : public UnaryOpTune<DType> {
    */
   template<typename OP>
   static void TuneBinaryOperator() {
-    mxnet_op::tuned_op<OP, DType>::workload_ = Super::template GetBinaryWorkload<OP>();
+    mxnet_op::tuned_op<OP, DType>::workload_[0] = Super::template GetBinaryWorkload<OP>();
     if (Super::Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_BINARY_WORKLOAD_FWD("
                 << Super::template type_name<OP>()
@@ -739,8 +739,8 @@ class BinaryOpTune : public UnaryOpTune<DType> {
    */
   template<typename OP>
   static void TuneBinaryBackwardOperator() {
-    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad<OP>, DType>::workload_ =
-      Super::template GetTertiaryWorkload<mxnet::op::mxnet_op::backward_grad<OP>>();
+    mxnet::op::mxnet_op::tuned_op<mxnet_op::backward_grad_tuned<OP>, DType>::workload_[0] =
+      Super::template GetTertiaryWorkload<mxnet::op::mxnet_op::backward_grad_tuned<OP>>();
     if (Super::Super::output_tuning_data_) {
       std::cout << "IMPLEMENT_BINARY_WORKLOAD_BWD("
                 << Super::template type_name<OP>()

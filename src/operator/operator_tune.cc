@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <float.h>
 #include <atomic>
 #include "./mxnet_op.h"
 #include "./mshadow_op.h"
@@ -84,27 +84,25 @@ struct static_init_var {
   __macro$(__VA_ARGS__, int32_t); \
   __macro$(__VA_ARGS__, int64_t);
 
-
 #define IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$) \
   namespace mxnet_op { \
-  template<> size_t mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::workload_ = INT_MAX / 4; \
-  template<> std::vector<float> mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::workload_ex_ = {}; \
+  template<> std::vector<float> mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::workload_ = \
+    { static_cast<float>(INT_MAX >> 3) }; \
   }  /* namespace mxnet_op */
-
 /*!
  * \brief Implement tuning objects for a forward blank (no arguments) kernel operator
  */
 #define _IMPLEMENT_BLANK_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$); \
   namespace mxnet_op { \
-  template<> bool mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
+  template<> bool ::mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
     size_t N, size_t omp_threads) { \
-    return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
+    return ::mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
       N, omp_threads); \
   }}  /* namespace mxnet_op */ \
   template<> bool static_init_var<__op$, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::UnaryOpTune<__typ$>::TuneBlankOperatorEx<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::UnaryOpTune<__typ$>::TuneBlankOperatorEx<__op$>)
 
 /*!
  * \brief Implement tuning objects for a forward unary kernel operator
@@ -112,30 +110,30 @@ struct static_init_var {
 #define _IMPLEMENT_UNARY_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$); \
   namespace mxnet_op { \
-  template<> bool mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
+  template<> bool ::mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
     size_t N, size_t omp_threads) { \
-    return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
+    return ::mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
       N, omp_threads); \
   }}  /* namespace mxnet_op */ \
   template<> bool static_init_var<__op$, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::UnaryOpTune<__typ$>::TuneUnaryOperator<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::UnaryOpTune<__typ$>::TuneUnaryOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a backward unary kernel operator
  */
 #define _IMPLEMENT_UNARY_WORKLOAD_BWD(__op$, __typ$) \
-  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad<__op$>, __typ$); \
+  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
   namespace mxnet_op { \
   template<> \
-  bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::UseOMP( \
-    size_t N, size_t omp_threads) { \
-    return mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
-      mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>>(N, omp_threads); \
+  bool ::mxnet::op::mxnet_op::tuned_op<::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>::\
+    UseOMP(size_t N, size_t omp_threads) { \
+    return ::mxnet::op::UnaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
+      ::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::UnaryOpTune<__typ$>::TuneUnaryBackwardOperator<__op$>)
+  template<> bool static_init_var<::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+    init_ = ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::UnaryOpTune<__typ$>::TuneUnaryBackwardOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a forward binary kernel operator
@@ -143,30 +141,32 @@ struct static_init_var {
 #define _IMPLEMENT_BINARY_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$, __typ$); \
   namespace mxnet_op { \
-  template<> bool mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
+  template<> bool ::mxnet::op::mxnet_op::tuned_op<__op$, __typ$>::UseOMP( \
     size_t N, size_t omp_threads) { \
-    return mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
+    return ::mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op<__op$, __typ$>>( \
       N, omp_threads); \
   }}  /* namespace mxnet_op */ \
   template<> bool static_init_var<__op$, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
-      mxnet::op::BinaryOpTune<__typ$>::TuneBinaryOperator<__op$>)
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>( \
+      ::mxnet::op::BinaryOpTune<__typ$>::TuneBinaryOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a backward binary kernel operator
  */
 #define _IMPLEMENT_BINARY_WORKLOAD_BWD(__op$, __typ$) \
-  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(mxnet::op::mxnet_op::backward_grad<__op$>, __typ$); \
+  IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$); \
   namespace mxnet_op { \
   template<> \
-    bool mxnet::op::mxnet_op::tuned_op<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::UseOMP( \
-    size_t N, size_t omp_threads) { \
-    return mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
-      mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>>(N, omp_threads); \
+    bool ::mxnet::op::mxnet_op::tuned_op< \
+      ::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>:: \
+      UseOMP(size_t N, size_t omp_threads) { \
+    return ::mxnet::op::BinaryOpTune<__typ$>::UseOMP<mxnet_op::tuned_op< \
+      ::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, __typ$>>(N, omp_threads); \
   }}  /* namespace mxnet_op */ \
-  template<> bool static_init_var<mxnet::op::mxnet_op::backward_grad<__op$>, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>(  \
-      mxnet::op::BinaryOpTune<__typ$>::TuneBinaryBackwardOperator<__op$>)
+  template<> bool static_init_var<::mxnet::op::mxnet_op::backward_grad_tuned<__op$>, \
+    __typ$>::init_ = \
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$>(  \
+      ::mxnet::op::BinaryOpTune<__typ$>::TuneBinaryBackwardOperator<__op$>)
 
 /*!
  * \brief Implement tuning objects for a custom forward kernel operator
@@ -174,7 +174,7 @@ struct static_init_var {
 #define _IMPLEMENT_CUSTOM_WORKLOAD_FWD(__op$, __typ$) \
   IMPLEMENT_WORKLOAD_VALUE_FOR_TYPE(__op$<__typ$>, __typ$); \
   template<> bool static_init_var<__op$<__typ$>, __typ$>::init_ = \
-    mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$<__typ$>>(\
+    ::mxnet::op::OperatorTune<__typ$>::ScheduleTune<__op$<__typ$>>(\
       __op$<__typ$>::Tune)
 
 /*!
@@ -206,7 +206,6 @@ struct static_init_var {
  *       integer value
  */
 OperatorTuneBase::duration_t OperatorTuneBase::omp_overhead_ns_ = 5000;
-IMPLEMENT_UNARY_WORKLOAD_FWD(mshadow::op::identity);  // NOLINT()
 IMPLEMENT_UNARY_WORKLOAD_FWD(mxnet::op::mshadow_op::identity);  // NOLINT()
 IMPLEMENT_UNARY_WORKLOAD_BWD(mxnet::op::mshadow_op::identity_grad);  // NOLINT()
 IMPLEMENT_UNARY_WORKLOAD_FWD(mxnet::op::mshadow_op::negation);  // NOLINT()
@@ -281,12 +280,19 @@ IMPLEMENT_UNARY_WORKLOAD_FWD(mxnet::op::mshadow_op::degrees);  // NOLINT()
 IMPLEMENT_UNARY_WORKLOAD_BWD(mxnet::op::mshadow_op::degrees_grad);  // NOLINT()
 IMPLEMENT_UNARY_WORKLOAD_FWD(mxnet::op::mshadow_op::radians);  // NOLINT()
 IMPLEMENT_UNARY_WORKLOAD_BWD(mxnet::op::mshadow_op::radians_grad);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mshadow::op::plus);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mshadow::op::minus);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mshadow::op::mul);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mshadow::op::div);  // NOLINT()
-IMPLEMENT_BINARY_WORKLOAD_FWD(mshadow::op::right);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::clip);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::clip);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::plus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::minus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::mul);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::div);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::rminus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::rdiv);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::plus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::minus);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::mul);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::div);  // NOLINT()
+IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::rminus);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::rdiv);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_FWD(mxnet::op::mshadow_op::div_grad);  // NOLINT()
 IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::div_grad);  // NOLINT()
