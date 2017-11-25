@@ -935,6 +935,15 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+def test_ndarray_dtype():
+    a = np.ones((1,), dtype=np.int64)
+    b = mx.nd.array(a)
+    assert(a.dtype == b.dtype)
+    a = mx.nd.array([1])
+    assert(a.dtype == np.float32)
+    a = mx.nd.ones((1,), dtype=np.int32)
+    b = mx.nd.array(a)
+    assert(b.dtype == np.int32)
 
 if __name__ == '__main__':
     import nose
