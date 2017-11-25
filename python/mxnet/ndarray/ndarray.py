@@ -2212,6 +2212,15 @@ def full(shape, val, ctx=None, dtype=mx_real_t, out=None):
     out[:] = val
     return out
 
+def _prepare_dtype(src_array, dtype):
+    """Prepare dtype if `dtype` is None. If `src_array` is an NDArray or numpy.ndarray,
+    return src_array.dtype. float32 is returned otherwise."""
+    if dtype is None:
+        if isinstance(src_array, (NDArray, np.ndarray)):
+            dtype = src_array.dtype
+        else:
+            dtype = mx_real_t
+    return dtype
 
 def array(source_array, ctx=None, dtype=None):
     """Creates an array from any object exposing the array interface.
@@ -2232,15 +2241,12 @@ def array(source_array, ctx=None, dtype=None):
     NDArray
         An `NDArray` with the same contents as the `source_array`.
     """
-    if isinstance(source_array, NDArray):
-        dtype = source_array.dtype if dtype is None else dtype
-    else:
-        dtype = mx_real_t if dtype is None else dtype
-        if not isinstance(source_array, np.ndarray):
-            try:
-                source_array = np.array(source_array, dtype=dtype)
-            except:
-                raise TypeError('source_array must be array like object')
+    dtype = _prepare_dtype(source_array, dtype)
+    if not isinstance(source_array, (np.ndarray, NDArray)):
+        try:
+            source_array = np.array(source_array, dtype=dtype)
+        except:
+            raise TypeError('source_array must be array like object')
     arr = empty(source_array.shape, ctx, dtype)
     arr[:] = source_array
     return arr
