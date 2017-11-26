@@ -1,4 +1,4 @@
-group 'io.mxnet'
+group 'org.caffetranslator'
 version '0.9.0'
 
 buildscript {
@@ -35,10 +35,17 @@ generateGrammarSource {
 
 jar {
     baseName = 'caffe-translator'
+    appendix = 'slim'
     version = version
     manifest {
         attributes 'Main-Class': 'io.mxnet.caffetranslator.Launcher'
     }
+}
+
+shadowJar {
+    baseName = 'caffe-translator'
+    classifier = null
+    version = version
 }
 
 mainClassName = "io.mxnet.caffetranslator.Launcher"
