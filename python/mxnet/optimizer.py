@@ -793,9 +793,9 @@ class AdaGrad(Optimizer):
             srt = op.sqrt(adjusted_add)
             div = _internal._scatter_elemwise_div(grad, srt)
             retained_weight = sparse.retain(weight, grad.indices)
-            to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, wd))
+            to_add = sparse.elemwise_add(div, _internal._mul_scalar(retained_weight, float(wd)))
             assert len(to_add.indices) == grad_indices_count
-            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, -lr))
+            weight[:] = sparse.elemwise_add(weight, _internal._mul_scalar(to_add, float(-lr)))
             state[:] = history
             assert state.stype == save_history_stype
             assert len(history_indices) == grad_indices_count

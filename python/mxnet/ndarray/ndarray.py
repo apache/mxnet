@@ -376,16 +376,25 @@ fixed-size items.
         else:
             self.handle = None
 
+    # pylint: disable=line-too-long
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
 
-        Set self[key] to value.
+        Sets value to self[key]. This functions supports advanced indexing defined in the following reference with
+        some restrictions.
+
+        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+
+        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
+          while not for key=[[1, 2]].
+        - Ellipsis (...) and np.newaxis are not supported.
+        - Boolean array indexing is not supported.
 
         Parameters
         ----------
-        key : int, slice or tuple
+        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
             The indexing key.
-        value : scalar, NDArray or numpy.ndarray
+        value : scalar or array-like object that can be broadcast to the shape of self[key]
             The value to set.
 
         Examples
@@ -431,24 +440,27 @@ fixed-size items.
         else:
             raise ValueError('Indexing NDArray with index=%s and type=%s is not supported'
                              % (str(key), str(type(key))))
+    # pylint: enable=line-too-long
 
     # pylint: disable=line-too-long
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
+
         Returns a sliced view of this array if the elements fetched are contiguous in memory;
         otherwise, returns a newly created NDArray.
         This functions supports advanced indexing defined in the following reference with
-        some limitations.
+        some restrictions.
+
         https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
-        The following features/functionality are not supported for now:
-        1. If key is a list type, only a list of integers is supported,
-           i.e. key=[1, 2] is okay, while not for key=[[1]].
-        2. Ellipsis (...) and np.newaxis are not supported.
-        3. Boolean array indexing.
+
+        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
+          while not for key=[[1, 2]].
+        - Ellipsis (...) and np.newaxis are not supported.
+        - Boolean array indexing is not supported.
 
         Parameters
         ----------
-        key : int or slice, or array like
+        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
             Indexing key.
 
         Examples
@@ -679,7 +691,7 @@ fixed-size items.
                         value.copyto(self)
                 elif isinstance(value, numeric_types):
                     _internal._full(shape=shape, ctx=self.context,
-                                    dtype=self.dtype, value=value, out=self)
+                                    dtype=self.dtype, value=float(value), out=self)
                 elif isinstance(value, (np.ndarray, np.generic)):
                     if isinstance(value, np.generic) or value.shape != shape:
                         value = np.broadcast_to(value, shape)
