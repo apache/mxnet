@@ -620,5 +620,10 @@ class SymbolBlock(HybridBlock):
         ret._compose(**{k.name: v for k, v in zip(self._cached_graph[0], args)})
         return _regroup(list(ret), self._out_format)[0]
 
+    def _clear_cached_op(self):
+        tmp = self._cached_graph
+        super(SymbolBlock, self)._clear_cached_op()
+        self._cached_graph = tmp
+
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError

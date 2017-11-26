@@ -28,6 +28,8 @@
 #include <nnvm/graph.h>
 #include <vector>
 #include <atomic>
+#include <utility>
+#include <string>
 #include <unordered_map>
 
 #include "./ndarray.h"

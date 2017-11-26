@@ -110,8 +110,8 @@ class CachedOp(object):
         check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
             len(flags),
-            c_array(ctypes.c_char_p, [c_str(key) for key, _ in flags]),
-            c_array(ctypes.c_char_p, [c_str(str(val)) for _, val in flags]),
+            c_str_array([key for key, _ in flags]),
+            c_str_array([str(val) for _, val in flags]),
             ctypes.byref(self.handle)))
 
     def __del__(self):
