@@ -68,15 +68,15 @@ struct DevStat {
   /*! \brief device name */
   std::string dev_name_;
   /*! \brief operation execution statistics on this device */
-  std::shared_ptr<moodycamel::ConcurrentQueue<OprExecStat *>> opr_exec_stats_ =
-    std::make_shared<moodycamel::ConcurrentQueue<OprExecStat *>>();
+  std::shared_ptr<dmlc::moodycamel::ConcurrentQueue<OprExecStat *>> opr_exec_stats_ =
+    std::make_shared<dmlc::moodycamel::ConcurrentQueue<OprExecStat *>>();
 
   /*!
    * \brief Destructor, clean up allocated objects
    *        TODO(cjolivier01) Investigate queueing unique_ptr<>'s if it won't hurt performance
    */
   ~DevStat() {
-    std::shared_ptr<moodycamel::ConcurrentQueue<OprExecStat *>> es = opr_exec_stats_;
+    std::shared_ptr<dmlc::moodycamel::ConcurrentQueue<OprExecStat *>> es = opr_exec_stats_;
     if (es) {
       OprExecStat *opr_stat = nullptr;
       while (es->try_dequeue(opr_stat)) {
