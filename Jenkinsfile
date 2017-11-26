@@ -186,6 +186,23 @@ try {
           }
         }
       },
+      'CPU: MKLML': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-mklml-cpu') {
+            init_git()
+            def flag = """ \
+    DEV=1                         \
+    USE_PROFILER=1                \
+    USE_BLAS=mkl                  \
+    USE_MKL2017=1                 \
+    USE_MKL2017_EXPERIMENTAL=1    \
+    USE_CPP_PACKAGE=1             \
+    -j\$(nproc)
+    """
+            make('cpu', flag)
+            pack_lib('mklml-cpu')
+          }
+        }
       'GPU: MKLML': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-mklml') {
@@ -250,8 +267,8 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/ut-python2-mklml-cpu') {
             init_git()
-            unpack_lib('mklml')
-            python2_ut('gpu_build')
+            unpack_lib('mklml-cpu')
+            python2_ut('cpu')
           }
         }
       },
@@ -268,8 +285,8 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/ut-python3-mklml-cpu') {
             init_git()
-            unpack_lib('mklml')
-            python3_ut('gpu_build')
+            unpack_lib('mklml-cpu')
+            python3_ut('cpu')
           }
         }
       },
