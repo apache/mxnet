@@ -65,36 +65,37 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <div class="python">
     <div class="cpu">
 
-The following installation instructions have been tested on Ubuntu 14.04 and 16.04.
+The following installation instructions have been tested on Ubuntu 14.04, 16.04 and 17.04
 
 <div class="virtualenv">
 <br/>
 
-**Step 1**  Install virtualenv for Ubuntu.
+**Step 1**  Install virtualenv for Ubuntu and required runtime libraries.
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install -y python-dev python-virtualenv
+$ sudo apt-get install -y python3 python3-pip python3-dev python-virtualenv libgfortran3
 ```
 
 **Step 2**  Create and activate virtualenv environment for MXNet.
 
-Following command creates a virtualenv environment at `~/mxnet` directory. However, you can choose any directory by replacing `~/mxnet` with a directory of your choice.
+Following command creates a python3 virtualenv environment at `~/py3` directory. You can choose a different path for that.
 
 ```bash
-$ virtualenv --system-site-packages ~/mxnet
+$ virtualenv --system-site-packages -p /usr/bin/python3 ~/py3
 ```
 
-Activate the virtualenv environment created for *MXNet*.
+Activate the virtualenv environment created for *MXNet*. Now when you install packages with pip it
+would be local to this environment and not pollute your system's python installation & libraries.
 
 ```bash
-$ source ~/mxnet/bin/activate
+$ source ~/py3/bin/activate
 ```
 
 After activating the environment, you should see the prompt as below.
 
 ```bash
-(mxnet)$
+(py3)$
 ```
 
 **Step 3**  Install MXNet in the active virtualenv environment.
@@ -200,7 +201,8 @@ Building *MXNet* from source is a 2 step process.
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
+2. [CMake](https://cmake.org/)
+3. [GNU Make](https://www.gnu.org/software/make/) or [Ninja](https://ninja-build.org/)
 
 <br/>
 
@@ -209,7 +211,7 @@ Building *MXNet* from source is a 2 step process.
 **Step 1** Install build tools and git.
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install -y build-essential git
+$ sudo apt-get install -y build-essential git cmake ninja-build
 ```
 
 **Step 2** Install OpenBLAS.
@@ -226,15 +228,29 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources 
 
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
+```
+
+
+**Step 5** build MXNet core shared library with Make
+```bash
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
+
+
+**Step 5a** (Alternative) Build MXNet core shared library with CMake
+```bash
+$ mkdir -p build && cd build
+$ cmake -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja .. && ninja
+```
+
+*Note* - USE_OPENCV and USE_BLAS are build flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `CMakeLists.txt`.
 
 <br/>
 
@@ -277,7 +293,7 @@ pip install graphviz
 <div class="python">
 <div class="gpu">
 
-The following installation instructions have been tested on Ubuntu 14.04 and 16.04.
+The following installation instructions have been tested on Ubuntu 14.04, 16.04 and 17.04
 
 
 **Prerequisites**
@@ -289,7 +305,10 @@ Install the following NVIDIA libraries to setup *MXNet* with GPU support:
 
 **Note:** Make sure to add CUDA install path to `LD_LIBRARY_PATH`.
 
-Example - *export LD_LIBRARY_PATH=/usr/local/cuda/lib64/:$LD_LIBRARY_PATH*
+```bash
+export CUDA_HOME=/usr/local/cuda/
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64"
+```
 
 <div class="pip">
 <br/>
@@ -429,7 +448,8 @@ Building *MXNet* from source is a 2 step process.
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
+2. [CMake](https://cmake.org/)
+3. [GNU Make](https://www.gnu.org/software/make/) or [Ninja](https://ninja-build.org/)
 
 <br/>
 
@@ -438,7 +458,7 @@ Building *MXNet* from source is a 2 step process.
 **Step 1** Install build tools and git.
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install -y build-essential git
+$ sudo apt-get install -y build-essential git cmake ninja-build
 ```
 **Step 2** Install OpenBLAS.
 
@@ -454,15 +474,28 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources 
 
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
+```
+
+**Step 5** build MXNet core shared library.
+```bash
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
 *Note* - USE_OPENCV, USE_BLAS, USE_CUDA, USE_CUDA_PATH AND USE_CUDNN are make file flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `make/config.mk`. Make sure to set USE_CUDA_PATH to right CUDA installation path. In most cases it is - */usr/local/cuda*.
+
+
+**Step 5a** (Alternative) build MXNet core shared library.
+```bash
+$ mkdir -p build && cd build
+$ cmake -DUSE_CUDA=ON -DUSE_CUDNN=ON -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja .. && ninja
+```
+
+*Note* - USE_OPENCV, USE_BLAS, USE_CUDA and USE_CUDNN are build flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `CMakeLists.txt`. To set a different cuda path you can set the environment variable CUDA_HOME to the cuda location. In most cases it is - */usr/local/cuda*.
 
 <br/>
 
@@ -756,7 +789,8 @@ Building *MXNet* from source is a 2 step process.
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
+2. [CMake](https://cmake.org/)
+3. [GNU Make](https://www.gnu.org/software/make/) or [Ninja](https://ninja-build.org/)
 
 <br/>
 
@@ -787,10 +821,12 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+$ mkdir -p build && cd build
+$ cmake -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja ..
+$ ninja
 ```
 
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
+*Note* - USE_OPENCV and USE_BLAS are build flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `CMakeLists.txt`.
 
 <br/>
 
@@ -807,7 +843,7 @@ $ R CMD INSTALL mxnet_current_r.tar.gz
 
 <div class="gpu">
 
-The following installation instructions have been tested on Ubuntu 14.04 and 16.04.
+The following installation instructions have been tested on Ubuntu 14.04, 16.04 and 17.04
 
 
 **Prerequisites**
@@ -829,7 +865,8 @@ Building *MXNet* from source is a 2 step process.
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
+2. [CMake](https://cmake.org/)
+3. [GNU Make](https://www.gnu.org/software/make/) or [Ninja](https://ninja-build.org/)
 
 <br/>
 
@@ -838,7 +875,7 @@ Building *MXNet* from source is a 2 step process.
 **Step 1** Install build tools and git.
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install -y build-essential git
+$ sudo apt-get install -y build-essential git cmake ninja-build
 ```
 **Step 2** Install OpenBLAS.
 
@@ -859,10 +896,12 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/dmlc/mxnet
 $ cd mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+$ mkdir -p build && cd build
+$ cmake -DUSE_CUDA=ON -DUSE_CUDNN=ON -DUSE_OPENCV=ON -DUSE_BLAS=openblas -GNinja ..
+$ ninja
 ```
 
-*Note* - USE_OPENCV, USE_BLAS, USE_CUDA, USE_CUDA_PATH AND USE_CUDNN are make file flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `make/config.mk`. Make sure to set USE_CUDA_PATH to right CUDA installation path. In most cases it is - */usr/local/cuda*.
+*Note* - USE_OPENCV, USE_BLAS, USE_CUDA, USE_CUDNN are build flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `CMakeLists.txt`. To set a different cuda path you can set the environment variable CUDA_HOME to the cuda location. In most cases it is - */usr/local/cuda*.
 
 <br/>
 
@@ -967,6 +1006,11 @@ Installing MXNet is a two-step process:
 
 **Step 1** Build the Shared Library
 
+For building mxnet on ARM you can use the multi-arch build files located in `docker_multiarch/` see
+the README in that directory on how to use. This is much faster than building directly on device.
+
+Nonetheless, if you still wish to compile on device:
+
 On Raspbian versions Wheezy and later, you need the following dependencies:
 
 - Git (to pull code from GitHub)
@@ -982,28 +1026,26 @@ On Raspbian versions Wheezy and later, you need the following dependencies:
 Install these dependencies using the following commands in any directory:
 
 ```bash
-    sudo apt-get update
-    sudo apt-get -y install git cmake build-essential g++-4.8 c++-4.8 liblapack* libblas* libopencv*
+$ sudo apt-get update
+$ sudo apt-get -y install git cmake build-essential g++-4.8 c++-4.8 liblapack* libblas* libopencv*
 ```
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
-    cd mxnet
+$ git clone https://github.com/dmlc/mxnet.git --recursive
+$ cd mxnet
 ```
 
 If you aren't processing images with MXNet on the Raspberry Pi, you can minimize the size of the compiled library by building MXNet without the Open Source Computer Vision (OpenCV) library with the following commands:
+
 ```bash
-    export USE_OPENCV = 0
-    make
+$ mkdir build && cd build
+$ cmake -DUSE_CUDA=OFF -DUSE_OPENCV=OFF -DUSE_OPENMP=OFF -GNinja ..
+$ ninja -v -j1
 ```
 
-Otherwise, you can build the complete MXNet library with the following command:
-```bash
-    make
-```
-
-Executing either of these commands start the build process, which can take up to a couple hours, and creates a file called ```libmxnet.so``` in the mxnet/lib directory.
+Executing either of these commands start the build process, which can take up to a couple hours, and
+creates a file called ```libmxnet.so``` in the build/ directory.
 
 If you are getting build errors in which the compiler is being killed, it is likely that the compiler is running out of memory (especially if you are on Raspberry Pi 1, 2 or Zero, which have less than 1GB of RAM), this can often be rectified by increasing the swapfile size on the Pi by editing the file /etc/dphys-swapfile and changing the line CONF_SWAPSIZE=100 to CONF_SWAPSIZE=1024, then running:
 ```bash
@@ -1017,12 +1059,13 @@ If you are getting build errors in which the compiler is being killed, it is lik
 To install python bindings run the following commands in the MXNet directory:
 
 ```bash
-    cd python
-    pip install --upgrade pip
-    pip install -e .
+  cp build/libmxnet.* python/mxnet
+  cd python
+  pip install --upgrade pip
+  pip install -e .
 ```
 
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed, the package is not copied to a new location.
 
 You are now ready to run MXNet on your Raspberry Pi device. You can get started by following the tutorial on [Real-time Object Detection with MXNet On The Raspberry Pi](http://mxnet.io/tutorials/embedded/wine_detector.html).
 
@@ -1062,58 +1105,35 @@ Install these dependencies using the following commands in any directory:
 
 ```bash
     sudo apt-get update
-    sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
+    sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip cmake ninja-build
     sudo pip install pip --upgrade
     sudo pip install setuptools numpy --upgrade
     sudo pip install graphviz jupyter
 ```
 
-Clone the MXNet source code repository using the following ```git``` command in your home directory:
+Clone and build MXNet using the following commands:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
-    cd mxnet
+$ git clone --recursive https://github.com/dmlc/mxnet
+$ cd mxnet
+$ mkdir -p build && cd build
+$ cmake -DMSHADOW_USE_PASCAL=1 -GNinja ..
+$ ninja
 ```
 
-Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
-```bash
-    cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk    
-    echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
-    echo "USE_CUDNN=1" >> config.mk
-```
-
-Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing mshadow/make/mshadow.mk and adding the following after line 122:
-```bash
-MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
-```
-
-Now you can build the complete MXNet library with the following command:
-```bash
-    make -j $(nproc)
-```
-
-Executing this command creates a file called ```libmxnet.so``` in the mxnet/lib directory.
+Executing this command creates a file called ```libmxnet.so``` in the build/ directory.
 
 **Step 2** Install MXNet Python Bindings
 
 To install python bindings run the following commands in the MXNet directory:
 
 ```bash
+    cp build/libmxnet.* python/mxnet
     cd python
     pip install --upgrade pip
     pip install -e .
 ```
 
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
-
-Add the mxnet folder to the path:
-
-```bash
-    cd ..
-    export MXNET_HOME=$(pwd)                       
-    echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
-    source ~/.bashrc
-```
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed, the package is not copied to a new location.
 
 You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
@@ -1458,7 +1478,7 @@ Will be available soon.
   </div>
     <div class="gpu">
 
-The following installation instructions have been tested on Ubuntu 14.04 and 16.04.
+The following installation instructions have been tested on Ubuntu 14.04, 16.04 and 17.04
 
 
 **Prerequisites**
