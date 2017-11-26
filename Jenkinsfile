@@ -203,6 +203,7 @@ try {
             pack_lib('mklml-cpu')
           }
         }
+      },
       'GPU: MKLML': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-mklml') {
