@@ -229,7 +229,7 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
@@ -457,7 +457,7 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
@@ -785,7 +785,7 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
@@ -857,7 +857,7 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
@@ -988,7 +988,7 @@ Install these dependencies using the following commands in any directory:
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
+    git clone https://github.com/apache/incubator-mxnet.git --recursive
     cd mxnet
 ```
 
@@ -1070,7 +1070,7 @@ Install these dependencies using the following commands in any directory:
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
+    git clone https://github.com/apache/incubator-mxnet.git --recursive
     cd mxnet
 ```
 
@@ -1499,7 +1499,7 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet).
+1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet).
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
