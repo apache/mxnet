@@ -162,7 +162,7 @@ try {
     USE_CPP_PACKAGE=1             \
     -j\$(nproc)
     """
-            make('gpu_build', flag)
+            make('cpu_cuda', flag)
             pack_lib('gpu')
             stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           }
@@ -202,7 +202,7 @@ try {
     USE_CPP_PACKAGE=1             \
     -j\$(nproc)
     """
-            make('gpu_build', flag)
+            make('cpu_cuda', flag)
             pack_lib('mklml')
           }
         }
@@ -251,7 +251,7 @@ try {
           ws('workspace/ut-python2-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python2_ut('gpu_build')
+            python2_ut('cpu_cuda')
           }
         }
       },
@@ -269,7 +269,7 @@ try {
           ws('workspace/ut-python3-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python3_ut('gpu_build')
+            python3_ut('cpu_cuda')
           }
         }
       },
