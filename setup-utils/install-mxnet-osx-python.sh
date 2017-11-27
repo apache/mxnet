@@ -29,11 +29,9 @@
 export MXNET_GITPATH="https://github.com/dmlc/mxnet.git"
 if [ -z ${MXNET_TAG} ];
 then
-	#
-	# TODO: Change this to latest tag
-	#       to avoid updating this value for every release
-	#
-	export MXNET_TAG="0.12.0"
+    export MXNET_BRANCH_TAG=""
+else
+    export MXNET_BRANCH_TAG="--branch $MXNET_TAG"
 fi
 
 export TARIKH=`/bin/date +%Y-%m-%d-%H:%M:%S`
@@ -362,19 +360,16 @@ download_mxnet() {
 
 	echo " "
 	echo "MXNET GIT Path = ${MXNET_GITPATH}"
-	#echo "MXNET Tag = ${MXNET_TAG}"
-	#echo "You can set \$MXNET_TAG to the appropriate github repo tag"
-	#echo "If not set, the default value used is the latest release"
-	echo " "
+	echo "MXNET Tag = ${MXNET_TAG}"
+    	echo "You can set \$MXNET_TAG to the appropriate github repo tag"
+    	echo "If not set, the default value used is the latest version on master"
+    	echo " "
 	sleep ${SLEEP_TIME}
 
-	chkret git clone ${MXNET_GITPATH} ${MXNET_HOME} --recursive
+	chkret git clone ${MXNET_BRANCH_TAG} ${MXNET_GITPATH} ${MXNET_HOME} --recursive
 	sleep ${SLEEP_TIME}
 	cd ${MXNET_HOME}
 	echo " "
-	#echo "Checkout tag = ${MXNET_TAG}"
-	#chkret git checkout ${MXNET_TAG}
-	#echo " "
 	sleep ${SLEEP_TIME}
 	echo "END: Download MXNet"
 	echo $LINE
