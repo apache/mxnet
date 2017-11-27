@@ -105,9 +105,15 @@ const NDArrayOrReal = Union{NDArray, Real}
 
 @unfuse NDArray
 
-function Base.show(io :: IO, arr :: NDArray)
-  println(io, "$(join(size(arr), "×")) mx.NDArray{$(eltype(arr))} @ $(context(arr)):")
-  Base.showarray(io, try_get_shared(arr, sync=:read), false, header=false)
+function Base.show(io::IO, x::NDArray)
+  print(io, "NDArray ")
+  Base.showarray(io, try_get_shared(x, sync = :read), header = false)
+end
+
+# for REPL
+function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray)
+  println(io, "$(join(size(x), "×")) mx.NDArray{$(eltype(x))} @ $(context(x)):")
+  Base.showarray(io, try_get_shared(x, sync = :read), false, header = false)
 end
 
 function Base.unsafe_convert(::Type{MX_handle}, obj::NDArray)

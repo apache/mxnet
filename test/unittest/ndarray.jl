@@ -741,12 +741,22 @@ function test_transpose()
 end
 
 function test_show()
-  let str = sprint(show, mx.NDArray([1 2 3 4]))
+  info("NDArray::show::REPL")
+  let str = sprint(show, MIME"text/plain"(), mx.NDArray([1 2 3 4]))
     @test contains(str, "1×4")
     @test contains(str, "mx.NDArray")
     @test contains(str, "Int64")
     @test contains(str, "CPU")
     @test match(r"1\s+2\s+3\s+4", str) != nothing
+  end
+
+  info("NDArray::show")
+  let str = sprint(show, mx.NDArray([1 2 3 4]))
+    @test str == "NDArray [1 2 3 4]"
+  end
+
+  let str = sprint(show, mx.zeros(4))
+    @test str == "NDArray Float32[0.0, 0.0, 0.0, 0.0]"
   end
 end
 
