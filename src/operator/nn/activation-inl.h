@@ -101,10 +101,10 @@ void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
 
 template<typename xpu>
 void ActivationCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
@@ -134,10 +134,10 @@ void ActivationCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
 #if MXNET_USE_CUDNN == 1
   CHECK_EQ(inputs.size(), 3U);
 #else

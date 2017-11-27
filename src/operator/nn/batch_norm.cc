@@ -318,7 +318,8 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
 static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
-    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                           std::vector<TShape> *in_shape,
+                           std::vector<TShape> *out_shape) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
@@ -357,7 +358,7 @@ static inline std::vector<std::string> ListOutputs() {
 }
 
 static bool BatchNormType(const nnvm::NodeAttrs& attrs,
-    std::vector<int> *in_type, std::vector<int> *out_type) {
+                          std::vector<int> *in_type, std::vector<int> *out_type) {
   using namespace mshadow;
   CHECK_GE(in_type->size(), 1U);
   const int dtype = (*in_type)[0];

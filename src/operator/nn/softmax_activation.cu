@@ -34,10 +34,10 @@ namespace op {
 
 template<>
 void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<TBlob>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<TBlob>& outputs) {
   const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -55,10 +55,10 @@ void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
 template<>
 void SoftmaxActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                                       const OpContext& ctx,
+                                       const std::vector<TBlob>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<TBlob>& outputs) {
   const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1);

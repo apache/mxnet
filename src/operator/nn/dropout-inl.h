@@ -101,7 +101,7 @@ class DropoutOp {
   }
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
-      const std::vector<OpReqType> &req, const std::vector<TBlob> &out_data) {
+               const std::vector<OpReqType> &req, const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(in_data.size(), 1U);
@@ -136,7 +136,8 @@ class DropoutOp {
   }
 
   void Backward(const OpContext &ctx, const TBlob &out_grad,
-      const TBlob &out_data_mask, const OpReqType &req, const TBlob &in_grad) {
+                const TBlob &out_data_mask, const OpReqType &req,
+                const TBlob &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -169,10 +170,10 @@ class DropoutOp {
 
 template<typename xpu>
 void DropoutCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     static thread_local DropoutOp<xpu, DType> op;
@@ -183,10 +184,10 @@ void DropoutCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void DropoutGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1);
