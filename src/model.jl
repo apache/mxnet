@@ -25,6 +25,7 @@ mutable struct FeedForward <: AbstractModel
 
   # leave the rest fields undefined
   FeedForward(arch :: SymbolicNode, ctx :: Vector{Context}) = new(arch, ctx)
+  FeedForward(arch :: SymbolicNode, ctx :: Context) = new(arch, [ctx])
 end
 
 """
@@ -53,14 +54,8 @@ end
          or a list of `Context` objects. In the latter case, data parallelization will be used
          for training. If no context is provided, the default context `cpu()` will be used.
 """
-function FeedForward(arch :: SymbolicNode; context :: Union{Context, Vector{Context}, Void} = nothing)
-  if isa(context, Void)
-    context = [Context(CPU)]
-  elseif isa(context, Context)
-    context = [context]
-  end
+FeedForward(arch::SymbolicNode; context::Union{Context,Vector{Context}} = [cpu()]) =
   FeedForward(arch, context)
-end
 
 """
     init_model(self, initializer; overwrite=false, input_shapes...)
