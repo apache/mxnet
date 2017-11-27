@@ -223,12 +223,24 @@ class KVStoreLocal : public KVStore {
                << "PullRowSparse expects row_sparse src NDArray";
       auto &target_val_rowids = grouped_val_rowids[i];
       const size_t num_vals = target_val_rowids.size();
+
+      bool is_same_rowid = true;
+      for (size_t i = 1; i < num_vals; i++) {
+        if (target_val_rowids[i].second.var() != target_val_rowids[0].second.var()) {
+          is_same_rowid = false;
+        }
+      }
+
       for (size_t i = 0; i < num_vals; i++) {
-        auto &row_id = target_val_rowids[i].second;
-        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
-        CopyFromTo(row_id, &indices, 0);
-        Unique(&indices, priority);
-        target_val_rowids[i].second = indices;
+        if (is_same_rowid && i != 0) {
+          target_val_rowids[i].second = target_val_rowids[0].second;
+        } else {
+          auto &row_id = target_val_rowids[i].second;
+          NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
+          CopyFromTo(row_id, &indices, 0);
+          Unique(&indices, priority);
+          target_val_rowids[i].second = indices;
+        }
       }
       comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
     }

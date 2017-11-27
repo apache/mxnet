@@ -658,7 +658,20 @@ class CommDevice : public Comm {
     using namespace mshadow;
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
       << "BroadcastRowSparse expects row-sparse src NDArray";
+
+    bool is_same_rowid = true;
+    for (size_t i = 1; i < dst.size(); ++i) {
+      if (dst[i].second.var() != dst[0].second.var()) {
+        is_same_rowid = false;
+      }
+    }
+
     for (size_t i = 0; i < dst.size(); ++i) {
+      if (is_same_rowid && i != 0) {
+        CopyFromTo(*dst[0].first, dst[i].first, priority);
+        continue;
+      }
+
       NDArray* out = dst[i].first;
       NDArray row_id = dst[i].second;
       if (use_copy) {
