@@ -41,7 +41,7 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"act_type", "tanh"});
-  test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
+  test::op::CoreOpRunner<mxnet::op::ActivationProp, float, float> runner;
   runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
@@ -52,7 +52,7 @@ TEST(ACTIVATION_PERF, TimingCPU) {
   kwargs_t kwargs = basic_activation_args;
   // Which math function is arbitrary since it will have roughly constant timing among approaches
   kwargs.push_back({"act_type", "tanh"});
-  test::op::LegacyOpRunner<mxnet::op::ActivationProp, float, float> runner;
+  test::op::CoreOpRunner<mxnet::op::ActivationProp, float, float> runner;
   runner.RunBidirectional(false,
                           { TShape({10, 10, 10, 10}) },
                           kwargs, 1);  // prime code and cache
