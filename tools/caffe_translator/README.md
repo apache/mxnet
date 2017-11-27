@@ -1,7 +1,7 @@
 # CaffeTranslator
 CaffeTranslator is a source code translator that translates Caffe code into MXNet Python code. Note that this is different from the Caffe to MXNet model converted which is available [here](https://github.com/apache/incubator-mxnet/tree/master/tools/caffe_converter).
 
-CaffeTranslator takes the training/validation prototxt (example) and solver prototxt (example) for a Caffe model as input and produces MXNet Python code (example) that builds and trains the same network specified in the prototxt.
+CaffeTranslator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code that builds and trains the same network specified in the prototxt.
 
 ### Prerequisites
 **To translate code:**
