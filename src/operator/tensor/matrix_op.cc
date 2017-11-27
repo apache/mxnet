@@ -31,46 +31,6 @@ namespace op {
 
 
 template<>
-void SliceDimOneCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace csr;
-  nnvm::dim_t begin_row = begin[0];
-  nnvm::dim_t end_row = end[0];
-  nnvm::dim_t indptr_len = end_row - begin_row + 1;
-  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
-  // assume idx indptr share the same type
-  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
-    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
-      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        SliceCsrIndPtrImpl<cpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
-        // retrieve nnz (CPU implementation)
-        int nnz = out_indptr[indptr_len - 1];
-        // return csr zeros if nnz = 0
-        if (nnz == 0) {
-          out.set_aux_shape(kIdx, Shape1(0));
-          return;
-        }
-        // copy indices and values
-        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
-        out.CheckAndAllocData(Shape1(nnz));
-        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
-        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
-        DType* in_data = in.data().dptr<DType>();
-        DType* out_data = out.data().dptr<DType>();
-        int offset = in_indptr[begin_row];
-        // this is also a CPU-only implementation
-        memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
-        memcpy(out_data, in_data + offset, nnz * sizeof(DType));
-      });
-    });
-  });
-}
-
-template<>
 void SliceDimTwoCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
                              const NDArray &in, const NDArray &out) {
   using namespace mshadow;

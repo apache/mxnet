@@ -450,11 +450,57 @@ void SliceCsrIndPtrImpl(const int begin, const int end, RunContext ctx,
 
 /*
  * Slice a CSR NDArray for first dimension
- * Only implemented for CPU
  */
 template<typename xpu>
 void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
-                        const NDArray &in, const NDArray &out);
+                        const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  nnvm::dim_t begin_row = begin[0];
+  nnvm::dim_t end_row = end[0];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        SliceCsrIndPtrImpl<xpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
+
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        // wait SliceCsrIndPtrImpl to complete
+        s->Wait();
+
+        RType nnz = 0;
+        mshadow::Copy(Tensor<cpu, 1, RType>(&nnz, Shape1(1)),
+                      Tensor<xpu, 1, RType>(out_indptr + indptr_len - 1, Shape1(1), s));
+        // return csr zeros if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        // copy indices and values
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType* in_data = in.data().dptr<DType>();
+        DType* out_data = out.data().dptr<DType>();
+
+        RType offset = 0;
+        mshadow::Copy(Tensor<cpu, 1, RType>(&offset, Shape1(1)),
+                      Tensor<xpu, 1, RType>(in_indptr + begin_row, Shape1(1), s));
+
+        mshadow::Copy(Tensor<xpu, 1, IType>(out_idx, Shape1(nnz), s),
+                      Tensor<xpu, 1, IType>(in_idx + offset, Shape1(nnz), s), s);
+        mshadow::Copy(Tensor<xpu, 1, DType>(out_data, Shape1(nnz), s),
+                      Tensor<xpu, 1, DType>(in_data + offset, Shape1(nnz), s), s);
+      });
+    });
+  });
+}
 
 /*!
  * \brief slice a CSRNDArray for two dimensions
@@ -496,7 +542,6 @@ struct SliceDimTwoCsrAssign {
 
 /*
  * Slice a CSR NDArray for two dimensions
- * Only implemented for CPU
  */
 template<typename xpu>
 void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,

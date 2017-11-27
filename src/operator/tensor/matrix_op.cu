@@ -30,51 +30,8 @@
 namespace mxnet {
 namespace op {
 
-template<>
-void SliceDimOneCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace csr;
-  nnvm::dim_t begin_row = begin[0];
-  nnvm::dim_t end_row = end[0];
-  nnvm::dim_t indptr_len = end_row - begin_row + 1;
-  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
-  // assume idx indptr share the same type
-  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
-    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
-      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        SliceCsrIndPtrImpl<gpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
 
-        RType nnz = 0;
-        CUDA_CALL(cudaMemcpy(&nnz, &out_indptr[indptr_len-1], sizeof(RType),
-            cudaMemcpyDeviceToHost));
-        // return csr zeros if nnz = 0
-        if (nnz == 0) {
-          out.set_aux_shape(kIdx, Shape1(0));
-          return;
-        }
-        // copy indices and values
-        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
-        out.CheckAndAllocData(Shape1(nnz));
-        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
-        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
-        DType* in_data = in.data().dptr<DType>();
-        DType* out_data = out.data().dptr<DType>();
-        int offset = in_indptr[begin_row];
-
-        Stream<gpu> *s = ctx.get_stream<gpu>();
-        mshadow::Copy(Tensor<gpu, 1, IType>(out_idx, Shape1(nnz), nnz, s),
-                      Tensor<gpu, 1, IType>(in_idx + offset, Shape1(nnz), nnz, s), s);
-        mshadow::Copy(Tensor<gpu, 1, DType>(out_data, Shape1(nnz), nnz, s),
-                      Tensor<gpu, 1, DType>(in_data + offset, Shape1(nnz), nnz, s), s);
-      });
-    });
-  });
-}
-
+// compute the number of elements of every row
 struct SliceMarkCsrIndPtr {
   template<typename IType, typename RType>
   MSHADOW_XINLINE static void Map(int i,
@@ -145,6 +102,9 @@ void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpCon
                                       out_indptr,
                                       indptr_len,
                                       Stream<gpu>::GetStream(s));
+        // wait InclusiveSum to complete
+        s->Wait();
+        // retrieve nnr
         RType nnr = 0;
         CUDA_CALL(cudaMemcpy(&nnr, &out_indptr[indptr_len-1], sizeof(RType),
             cudaMemcpyDeviceToHost));
