@@ -100,7 +100,7 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
         // mark row flags
-        Kernel<op_with_req<set_to_int<0>, kWriteTo>, cpu>::Launch(s, num_rows, row_flg);
+        Fill<false>(s, TBlob(row_flg, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
         // calculate inclusive prefix sum
         // TODO(haibin) ideally this is should be done in parallel

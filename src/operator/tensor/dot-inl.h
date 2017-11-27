@@ -620,7 +620,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
           // prefix sum array re-uses the row_flg array temp space
           dim_t* prefix_sum = row_flg;
-          Kernel<op_with_req<set_to_int<0>, kWriteTo>, cpu>::Launch(s, num_rows, row_flg);
+          Kernel<set_zero, cpu>::Launch(s, num_rows, row_flg);
           Kernel<MarkRowFlgKernel, cpu>::Launch(s, lhs.aux_shape(csr::kIdx)[0], row_flg,
             col_idx_l.dptr<CType>());
 
