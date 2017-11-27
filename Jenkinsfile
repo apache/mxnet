@@ -202,7 +202,7 @@ try {
     USE_CPP_PACKAGE=1             \
     -j\$(nproc)
     """
-            make('cpu_cuda', flag) #TODO: Check, this should use MKLML
+            make('cpu_cuda', flag) //TODO: Check, this should use MKLML
             pack_lib('mklml')
           }
         }
@@ -251,7 +251,7 @@ try {
           ws('workspace/ut-python2-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python2_ut('cpu_cuda') #CHECK: Rethink, this should use MKLML
+            python2_ut('cpu_cuda') //CHECK: Rethink, this should use MKLML
           }
         }
       },
@@ -269,7 +269,7 @@ try {
           ws('workspace/ut-python3-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python3_ut('cpu_cuda') #TODO: Check, this should use MKLML
+            python3_ut('cpu_cuda') //TODO: Check, this should use MKLML
           }
         }
       },
