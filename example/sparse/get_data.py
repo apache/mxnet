@@ -95,15 +95,24 @@ class Dictionary(object):
     def __init__(self):
         self.word2idx = {}
         self.idx2word = []
+        self.word_count = []
 
     def add_word(self, word):
         if word not in self.word2idx:
             self.idx2word.append(word)
             self.word2idx[word] = len(self.idx2word) - 1
-        return self.word2idx[word]
+            self.word_count.append(0)
+        index = self.word2idx[word]
+        self.word_count[index] += 1
+        return index
 
     def __len__(self):
         return len(self.idx2word)
+
+    def unigram(self):
+        prob = mx.nd.array(self.word_count)
+        total_count = mx.nd.sum(prob)
+        return prob / total_count
 
 
 class Corpus(object):
@@ -146,7 +155,7 @@ def batchify(data, batch_size):
 
 class CorpusIter(mx.io.DataIter):
     "An iterator that returns the a batch of sequence each time"
-    def __init__(self, source, batch_size, bptt):
+    def __init__(self, source, batch_size, bptt, k, unigram):
         super(CorpusIter, self).__init__()
         self.batch_size = batch_size
         self.provide_data = [('data', (batch_size, bptt))]
@@ -154,6 +163,8 @@ class CorpusIter(mx.io.DataIter):
         self._index = 0
         self._bptt = bptt
         self._source = batchify(source, batch_size)
+        self._unigram = unigram
+        self._k = k
 
     def iter_next(self):
         i = self._index
@@ -161,6 +172,7 @@ class CorpusIter(mx.io.DataIter):
             return False
         self._next_data = self._source[i:i+self._bptt]
         self._next_label = self._source[i+1:i+1+self._bptt]
+        self._next_sample = mx.nd.random.multinomial(self._unigram, shape=(self._k,))
         self._index += self._bptt
         return True
 
@@ -176,7 +188,7 @@ class CorpusIter(mx.io.DataIter):
         self._next_label = None
 
     def getdata(self):
-        return [self._next_data.T]
+        return [self._next_data.T, self._next_sample]
 
     def getlabel(self):
         return [self._next_label.T]
