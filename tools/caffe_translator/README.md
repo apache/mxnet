@@ -3,6 +3,20 @@ CaffeTranslator is a source code translator that translates Caffe code into MXNe
 
 CaffeTranslator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code that builds and trains the same network specified in the prototxt.
 
+### How to use
+To translate `train_val.prototxt` and `solver.prototxt` to MXNet, run the following command:
+```
+java -jar caffetranslator-<version>.jar --training-prototxt <train_val_prototxt_path> \
+    --solver <solver_prototxt_path> \
+    --output-file <output_file_path>
+```
+Example:
+```
+java -jar caffetranslator-0.9.0.jar --training-prototxt lenet_train_test.prototxt \
+    --solver lenet_solver.prototxt \
+    --output-file translated_code.py
+```
+
 ### Prerequisites
 **To translate code:**
 1. JDK
