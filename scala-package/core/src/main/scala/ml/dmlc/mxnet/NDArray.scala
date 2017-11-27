@@ -445,7 +445,7 @@ object NDArray {
       val end = retShape.toArray
       for (arr <- arrays) {
         if (axis == 0) {
-          ret.slice(idx, idx + arr.shape(0)).set(arr)
+          ret.slice(idx, idx + arr.shape(0)).set(arr).dispose()
         } else {
           begin(axis) = idx
           end(axis) = idx + arr.shape(axis)
