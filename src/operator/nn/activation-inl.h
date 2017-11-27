@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file activation-inl.h
  * \brief Activation operator
- * \author Bing Xu
+ * \author Bing Xu, Da Zheng
 */
 
 #ifndef MXNET_OPERATOR_NN_ACTIVATION_INL_H_
@@ -37,6 +37,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../mxnet_op.h"
+#include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -61,158 +62,114 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
   }
 };
 
-/**
- * \brief This is the implementation of activation operator.
- * \tparam xpu The device that the op will be executed on.
- */
 template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
-class ActivationOp : public Operator {
- public:
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1U);
-    CHECK_EQ(out_data.size(), 1U);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TBlob& input = in_data[activation::kData];
-    const size_t sz = input.shape_.Size();
-    if (sz) {
-      MXNET_ASSIGN_REQ_SWITCH(req[activation::kOut], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
-          s, sz,
-          out_data[activation::kOut].dptr<DType>(),
-          input.dptr<DType>());
-      });
-    }
+void ActivationForward(const OpContext &ctx, const TBlob &in_data,
+                       const OpReqType &req, const TBlob &out_data) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const size_t sz = input.shape_.Size();
+  if (sz) {
+    MXNET_ASSIGN_REQ_SWITCH(req[activation::kOut], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
+        s, sz,
+        out_data.dptr<DType>(),
+        in_data.dptr<DType>());
+    });
   }
+}
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1U);
-    CHECK(in_data.size() == 1 && in_grad.size() == 1);
-    CHECK_EQ(req.size(), 1U);
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TBlob& m_out_grad = out_grad[activation::kOut];
-    const TBlob& m_out_data = out_data[activation::kOut];
-    const TBlob&  m_in_grad = in_grad[activation::kData];
-    const size_t sz = m_out_data.shape_.Size();
-    if (sz) {
-      MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<
-          mxnet::op::mxnet_op::backward_grad_tuned<BackwardOp>, Req>, xpu>::Launch(
-          s, sz,
-          m_in_grad.dptr<DType>(),
-          m_out_grad.dptr<DType>(),
-          m_out_data.dptr<DType>());
-      });
-    }
+template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
+void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
+                        const TBlob &out_data, const OpReqType &req,
+                        const TBlob &in_grad) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const size_t sz = out_data.shape_.Size();
+  if (sz) {
+    MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<
+        mxnet::op::mxnet_op::backward_grad_tuned<BackwardOp>, Req>, xpu>::Launch(
+        s, sz,
+        in_grad.dptr<DType>(),
+        out_grad.dptr<DType>(),
+        out_data.dptr<DType>());
+    });
   }
-};  // class ActivationOp
+}
 
-// Declare Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(ActivationParam type, int dtype, const TShape& dshape);
-
-#if DMLC_USE_CXX11
-class ActivationProp : public OperatorProperty {
- public:
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    param_.Init(kwargs);
-  }
-
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
-
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
-    using namespace mshadow;
-    CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
-    const TShape &dshape = in_shape->at(activation::kData);
-    if (dshape.ndim() == 0) return false;
-    out_shape->clear();
-    out_shape->push_back(dshape);
-    return true;
-  }
-
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1U);
-    int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
-      if ((*in_type)[i] == -1) {
-          (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
-      }
+void ActivationCompute(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    switch (param.act_type) {
+      case activation::kReLU:
+        ActivationForward<xpu, mshadow_op::relu, mshadow_op::relu_grad, DType>(
+            ctx, inputs[0], req[0], outputs[0]);
+        break;
+      case activation::kSigmoid:
+        ActivationForward<xpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>(
+            ctx, inputs[0], req[0], outputs[0]);
+        break;
+      case activation::kTanh:
+        ActivationForward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>(
+            ctx, inputs[0], req[0], outputs[0]);
+        break;
+      case activation::kSoftReLU:
+        ActivationForward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>(
+            ctx, inputs[0], req[0], outputs[0]);
+        break;
+      default:
+        LOG(FATAL) << "unknown activation type";
     }
-    out_type->clear();
-    out_type->push_back(dtype);
-    return true;
-  }
+  });
+}
 
-  OperatorProperty* Copy() const override {
-    auto ptr = new ActivationProp();
-    ptr->param_ = param_;
-    return ptr;
-  }
-
-  std::string TypeString() const override {
-    return "Activation";
-  }
-
-  // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+template<typename xpu>
+void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
 #if MXNET_USE_CUDNN == 1
-    return {out_grad[activation::kOut], out_data[activation::kOut], in_data[activation::kData]};
+  CHECK_EQ(inputs.size(), 3U);
 #else
-    return {out_grad[activation::kOut], out_data[activation::kOut]};
-#endif  // MXNET_USE_CUDNN
-  }
+  CHECK_EQ(inputs.size(), 2U);
+#endif
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    switch (param.act_type) {
+      case activation::kReLU:
+        ActivationBackward<xpu, mshadow_op::relu, mshadow_op::relu_grad, DType>(
+            ctx, inputs[0], inputs[1], req[0], outputs[0]);
+        break;
+      case activation::kSigmoid:
+        ActivationBackward<xpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>(
+            ctx, inputs[0], inputs[1], req[0], outputs[0]);
+        break;
+      case activation::kTanh:
+        ActivationBackward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>(
+            ctx, inputs[0], inputs[1], req[0], outputs[0]);
+        break;
+      case activation::kSoftReLU:
+        ActivationBackward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>(
+            ctx, inputs[0], inputs[1], req[0], outputs[0]);
+        break;
+      default:
+        LOG(FATAL) << "unknown activation type";
+    }
+  });
+}
 
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    return {{out_grad[activation::kOut], in_grad[activation::kData]}};
-  }
-
-  std::vector<std::pair<int, void*> > ForwardInplaceOption(
-    const std::vector<int> &in_data,
-    const std::vector<void*> &out_data) const override {
-    return {{in_data[activation::kData], out_data[activation::kOut]}};
-  }
-
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not Implemented.";
-    return NULL;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                             std::vector<int> *in_type) const override;
-
- private:
-  ActivationParam param_;
-};
-#endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_ACTIVATION_INL_H_
