@@ -22,7 +22,7 @@
  * \file convolution-inl.h
  * \brief
  * \ref: https://github.com/Yangqing/caffe/wiki/Convolution-in-Caffe:-a-memo
- * \author Bing Xu, Jun Wu
+ * \author Bing Xu, Jun Wu, Da Zheng
 */
 #ifndef MXNET_OPERATOR_NN_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_NN_CONVOLUTION_INL_H_
@@ -148,9 +148,9 @@ namespace mxnet {
 namespace op {
 
 template<typename xpu, typename DType>
-class ConvolutionOp : public Operator {
+class ConvolutionOp {
  public:
-  explicit ConvolutionOp(ConvolutionParam p) {
+  void Init(ConvolutionParam p) {
     this->param_ = p;
     // convert MBytes first to Bytes and then to elements.
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
@@ -160,11 +160,10 @@ class ConvolutionOp : public Operator {
       << "Only support NCW, NCHW and NCDHW layout";
   }
 
-  virtual void Forward(const OpContext &ctx,
+  void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+                       const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[conv::kOut], kWriteTo);
@@ -233,18 +232,19 @@ class ConvolutionOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
+  void Backward(const OpContext &ctx,
                         const std::vector<TBlob>& out_grad,
                         const std::vector<TBlob>& in_data,
-                        const std::vector<TBlob>& out_data,
                         const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& in_grad,
-                        const std::vector<TBlob>& aux_args) {
+                        const std::vector<TBlob>& in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1U);
+    // We expect 2 inputs: in data and weight. We don't need bias for
+    // computing gradient.
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    CHECK(in_data.size() == expected && in_grad.size() == expected);
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(in_grad.size(), expected);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[conv::kWeight].CheckContiguous(), true);
     LayerSetUp(in_grad[conv::kData].shape_, out_grad[conv::kOut].shape_);
@@ -386,299 +386,35 @@ class ConvolutionOp : public Operator {
 };  // class ConvolutionOp
 
 template<typename xpu>
-Operator* CreateOp(ConvolutionParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape,
-                   Context ctx);
+void ConvolutionCompute(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx, const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
+  MSHADOW_REAL_TYPE_SWITCH(inputs[conv::kData].type_flag_, DType, {
+    static thread_local ConvolutionOp<xpu, DType> op;
+    op.Init(param);
+    op.Forward(ctx, inputs, req, outputs);
+  });
+}
 
-#if DMLC_USE_CXX11
-class ConvolutionProp : public OperatorProperty {
- public:
-  std::vector<std::string> ListArguments() const override {
-    if (!param_.no_bias) {
-      return {"data", "weight", "bias"};
-    } else {
-      return {"data", "weight"};
-    }
-  }
+template<typename xpu>
+void ConvolutionGradCompute(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx, const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
+  std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
+  const TBlob &out_grad = inputs[0];
+  const std::vector<TBlob> &in_grad = outputs;
 
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    using namespace mshadow;
-    param_.Init(kwargs);
-    if (param_.kernel.ndim() == 1) {
-      param_.layout = param_.layout? param_.layout.value() : mshadow::kNCW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
-    } else if (param_.kernel.ndim() == 2) {
-      param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
-    } else {
-      CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
-      param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
-    }
-  }
+  MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
+    static thread_local ConvolutionOp<xpu, DType> op;
+    op.Init(param);
+    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
+  });
+}
 
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
-
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
-    using namespace mshadow;
-    if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
-    } else {
-      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
-    }
-    // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
-    out_shape->resize(1, TShape());
-    const TShape &dshp = (*in_shape)[conv::kData];
-    if (dshp.ndim() ==  0) return false;
-
-    if (param_.kernel.ndim() == 1) {
-      // 1d conv
-      CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
-      Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
-      Shape<3> wshape = Shape3(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
-                               param_.kernel[0]);
-      wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
-      wshape[0] *= param_.num_group;
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
-      if (!param_.no_bias) {
-        SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
-      }
-
-      const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
-      CHECK_EQ(dshape[1] % param_.num_group, 0U) \
-          << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
-          << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0U) \
-          << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0U) \
-          << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0U) \
-          << "incorrect dilate size: " << param_.dilate;
-      Shape<3> oshape;
-      oshape[0] = dshape[0];
-      oshape[1] = param_.num_filter;
-      oshape[2] = dshape[2] ?
-          (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1 : 0;
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
-      // Perform incomplete shape inference. Fill in the missing values in data shape.
-      // 1) We can always fill in the batch_size.
-      // 2) We can back-calculate the input height/width if the corresponding stride is 1.
-      oshape = ConvertLayout((*out_shape)[0].get<3>(), param_.layout.value(), kNCW);
-      dshape[0] = oshape[0];
-      if (oshape[2] && param_.stride[0] == 1) {
-        dshape[2] = oshape[2] + dilated_ksize_x - 1 - 2 * param_.pad[0];
-      }
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
-                          ConvertLayout(dshape, kNCW, param_.layout.value()));
-      // Check whether the kernel sizes are valid
-      if (dshape[2] != 0) {
-        CHECK_LE(dilated_ksize_x, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
-      }
-      return true;
-    } else if (param_.kernel.ndim() == 2) {
-      // 2d conv
-      CHECK_EQ(dshp.ndim(), 4U) \
-          << "Input data should be 4D in batch-num_filter-y-x";
-      Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
-      Shape<4> wshape = Shape4(param_.num_filter / param_.num_group,
-                               dshape[1] / param_.num_group,
-                               param_.kernel[0], param_.kernel[1]);
-      wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
-      wshape[0] *= param_.num_group;
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
-      if (!param_.no_bias) {
-        SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
-      }
-
-      const index_t dilated_ksize_y = param_.DilatedKernelSize(0);
-      const index_t dilated_ksize_x = param_.DilatedKernelSize(1);
-      CHECK_EQ(dshape[1] % param_.num_group, 0U) \
-          << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
-          << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0U) \
-          << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0U) \
-          << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0U) \
-          << "incorrect dilate size: " << param_.dilate;
-      Shape<4> oshape;
-      oshape[0] = dshape[0];
-      oshape[1] = param_.num_filter;
-      oshape[2] = dshape[2] ?
-        (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_y) / param_.stride[0] + 1 : 0;
-      oshape[3] = dshape[3] ?
-        (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_x) / param_.stride[1] + 1 : 0;
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
-      // Perform incomplete shape inference. Fill in the missing values in data shape.
-      // 1) We can always fill in the batch_size.
-      // 2) We can back-calculate the input height/width if the corresponding stride is 1.
-      oshape = ConvertLayout((*out_shape)[0].get<4>(), param_.layout.value(), kNCHW);
-      dshape[0] = oshape[0];
-      if (oshape[2] && param_.stride[0] == 1) {
-        dshape[2] = oshape[2] + dilated_ksize_y - 1 - 2 * param_.pad[0];
-      }
-      if (oshape[3] && param_.stride[1] == 1) {
-        dshape[3] = oshape[3] + dilated_ksize_x - 1 - 2 * param_.pad[1];
-      }
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
-                          ConvertLayout(dshape, kNCHW, param_.layout.value()));
-      // Check whether the kernel sizes are valid
-      if (dshape[2] != 0) {
-        CHECK_LE(dilated_ksize_y, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
-      }
-      if (dshape[3] != 0) {
-        CHECK_LE(dilated_ksize_x, AddPad(dshape[3], param_.pad[1])) << "kernel size exceed input";
-      }
-      return true;
-    } else if (param_.kernel.ndim() == 3) {
-      // 3d conv
-      CHECK_EQ(dshp.ndim(), 5U) \
-        << "Input data should be 5D in batch-num_filter-depth-y-x";
-      Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout.value(), kNCDHW);
-      Shape<5> wshape = Shape5(param_.num_filter / param_.num_group, dshape[1] / param_.num_group,
-                               param_.kernel[0], param_.kernel[1], param_.kernel[2]);
-      wshape = ConvertLayout(wshape, kNCDHW, param_.layout.value());
-      wshape[0] *= param_.num_group;
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kWeight, wshape);
-      if (!param_.no_bias) {
-        SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
-      }
-
-      // Note: 3D dilation currently not supported.
-      // Calculations below done to preserve symmetry with 1D/2D code.
-      const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
-      const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
-      const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
-      CHECK_EQ(dshape[1] % param_.num_group, 0U)
-        << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0U)
-        << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0U) \
-        << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0U) \
-        << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0U) \
-        << "incorrect dilate size: " << param_.dilate;
-      CHECK_EQ(param_.dilate.Size(), 1U)
-        << "Dilate is not supported in 3d convolution";
-      Shape<5> oshape;
-      oshape[0] = dshape[0];
-      oshape[1] = param_.num_filter;
-      oshape[2] = dshape[2] ?
-        (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_d) / param_.stride[0] + 1 : 0;
-      oshape[3] = dshape[3] ?
-        (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_y) / param_.stride[1] + 1 : 0;
-      oshape[4] = dshape[4] ?
-        (AddPad(dshape[4], param_.pad[2]) - dilated_ksize_x) / param_.stride[2] + 1 : 0;
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
-      // Perform incomplete shape inference. Fill in the missing values in data shape.
-      // 1) We can always fill in the batch_size.
-      // 2) We can back-calculate the input depth/height/width if the corresponding stride is 1.
-      oshape = ConvertLayout((*out_shape)[0].get<5>(), param_.layout.value(), kNCDHW);
-      dshape[0] = oshape[0];
-      if (oshape[2] && param_.stride[0] == 1) {
-        dshape[2] = oshape[2] + dilated_ksize_d - 1 - 2 * param_.pad[0];
-      }
-      if (oshape[3] && param_.stride[1] == 1) {
-        dshape[3] = oshape[3] + dilated_ksize_y - 1 - 2 * param_.pad[1];
-      }
-      if (oshape[4] && param_.stride[2] == 1) {
-        dshape[4] = oshape[4] + dilated_ksize_x - 1 - 2 * param_.pad[2];
-      }
-      SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
-                          ConvertLayout(dshape, kNCDHW, param_.layout.value()));
-      // Check whether the kernel sizes are valid
-      if (dshape[2] != 0) {
-        CHECK_LE(dilated_ksize_d, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
-      }
-      if (dshape[3] != 0) {
-        CHECK_LE(dilated_ksize_y, AddPad(dshape[3], param_.pad[1])) << "kernel size exceed input";
-      }
-      if (dshape[4] != 0) {
-        CHECK_LE(dilated_ksize_x, AddPad(dshape[4], param_.pad[2])) << "kernel size exceed input";
-      }
-      return true;
-    } else {
-      LOG(FATAL) << "Unknown convolution type";
-      return false;
-    }
-  }
-
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1U);
-    int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
-      if ((*in_type)[i] == -1) {
-        (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
-      }
-    }
-    out_type->clear();
-    out_type->push_back(dtype);
-    return true;
-  }
-
-  OperatorProperty* Copy() const override {
-    auto ptr = new ConvolutionProp();
-    ptr->param_ = param_;
-    return ptr;
-  }
-
-  std::string TypeString() const override {
-    return "Convolution";
-  }
-
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    return {out_grad[conv::kOut], in_data[conv::kData], in_data[conv::kWeight]};
-  }
-
-  std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
-  std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not Implemented.";
-    return NULL;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                             std::vector<int> *in_type) const override;
-
- private:
-  // Adds symmetric padding to a data input (in one dimension)
-  index_t AddPad(index_t dsize, index_t pad) const {
-    return dsize + 2 * pad;
-  }
-
-  ConvolutionParam param_;
-};  // class ConvolutionProp
-#endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_CONVOLUTION_INL_H_
