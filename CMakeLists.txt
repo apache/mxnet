@@ -266,10 +266,11 @@ endif()
 # ---[ OpenMP
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
-  # This should build on Windows, but there's some problem and I don;t have a Windows box, so
+  # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt AND SYSTEM_ARCHITECTURE STREQUAL "x86_64" AND NOT MSVC)
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
+    set(LIBOMP_HAVE_VERSION_SYMBOLS ON)
     set(OPENMP_STANDALONE_BUILD TRUE)
     set(LIBOMP_ENABLE_SHARED FALSE)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
