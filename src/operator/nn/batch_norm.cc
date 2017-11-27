@@ -323,7 +323,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
-  const TShape &dshape = in_shape->at(0);
+  const TShape &dshape = in_shape->at(batchnorm::kData);
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -336,10 +336,10 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  in_shape->at(1) = TShape(Shape1(channelCount));
-  in_shape->at(2) = TShape(Shape1(channelCount));
-  in_shape->at(3) = TShape(Shape1(channelCount));  // kMovingMean
-  in_shape->at(4) = TShape(Shape1(channelCount));  // kMovingVar
+  in_shape->at(batchnorm::kGamma) = TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kBeta) = TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kInMovingMean) = TShape(Shape1(channelCount));  // kMovingMean
+  in_shape->at(batchnorm::kInMovingVar) = TShape(Shape1(channelCount));  // kMovingVar
 
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
