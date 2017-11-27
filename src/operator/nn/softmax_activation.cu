@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file softmax_activation.cu
  * \brief
- * \author Junyuan Xie
+ * \author Junyuan Xie, Da Zheng
 */
 #include "./softmax_activation-inl.h"
 #include "../mshadow_op.h"
@@ -31,14 +31,56 @@
 
 namespace mxnet {
 namespace op {
+
 template<>
-Operator *CreateOp<gpu>(SoftmaxActivationParam param) {
+void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+
 #if MXNET_USE_CUDNN == 1
-  return new CuDNNSoftmaxActivationOp(param);
+  static thread_local CuDNNSoftmaxActivationOp op;
+  op.Init(param);
+  op.Forward(ctx, inputs[0], req[0], outputs[0]);
 #else
-  return new SoftmaxActivationOp<gpu>(param);
-#endif  // MXNET_USE_CUDNN
+  static thread_local SoftmaxActivationOp<xpu> op;
+  op.Init(param);
+  op.Forward(ctx, inputs[0], req[0], outputs[0]);
+#endif
 }
+
+template<>
+void SoftmaxActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1);
+  CHECK_EQ(req.size(), 1);
+
+#if MXNET_USE_CUDNN == 1
+  static thread_local CuDNNSoftmaxActivationOp op;
+  op.Init(param);
+  op.Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
+#else
+  static thread_local SoftmaxActivationOp<xpu> op;
+  op.Init(param);
+  op.Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
+#endif
+}
+
+NNVM_REGISTER_OP(SoftmaxActivation)
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_SoftmaxActivation)
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationGradCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet
 
