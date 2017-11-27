@@ -32,6 +32,7 @@
 namespace mxnet {
 namespace op {
 
+#if MXNET_USE_CUDNN == 1
 template<>
 void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
@@ -42,15 +43,9 @@ void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-#if MXNET_USE_CUDNN == 1
   static thread_local CuDNNSoftmaxActivationOp op;
   op.Init(param);
   op.Forward(ctx, inputs[0], req[0], outputs[0]);
-#else
-  static thread_local SoftmaxActivationOp<xpu> op;
-  op.Init(param);
-  op.Forward(ctx, inputs[0], req[0], outputs[0]);
-#endif
 }
 
 template<>
@@ -64,16 +59,11 @@ void SoftmaxActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
 
-#if MXNET_USE_CUDNN == 1
   static thread_local CuDNNSoftmaxActivationOp op;
   op.Init(param);
   op.Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
-#else
-  static thread_local SoftmaxActivationOp<xpu> op;
-  op.Init(param);
-  op.Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
-#endif
 }
+#endif
 
 NNVM_REGISTER_OP(SoftmaxActivation)
 .set_attr<FCompute>("FCompute<gpu>", SoftmaxActivationCompute<gpu>);
