@@ -451,7 +451,7 @@ class KVStore(object):
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
-                optim_str = pickle.dumps(optimizer, 0)
+                optim_str = py_str(pickle.dumps(optimizer, 0))
             except:
                 raise
             self._send_command_to_servers(0, optim_str)
