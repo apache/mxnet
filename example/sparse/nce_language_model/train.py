@@ -18,7 +18,7 @@
 import numpy as np
 import mxnet as mx
 import argparse
-from get_data import Corpus, CorpusIter, DummyIter
+from data import Corpus, CorpusIter, DummyIter
 from nce_model import rnn_model, nce_loss, ce_loss
 import os
 
