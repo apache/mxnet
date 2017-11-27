@@ -87,20 +87,20 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   dim_t num_rows = output.shape()[0];
   dim_t row_length = output.shape()[1];
-  // TODO(haibin) request less storage to save space in the future
-  size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
+  size_t workspace_size = num_rows * sizeof(dim_t);
   Tensor<cpu, 1, char> workspace =
     ctx.requested[embedding::kTempSpace].get_space_typed<cpu, 1, char>(
       Shape1(workspace_size), s);
   dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
-  dim_t* prefix_sum = row_flg + num_rows;
+  // prefix sum array re-uses the row_flg array temp space
+  dim_t* prefix_sum = row_flg;
   dim_t data_size = static_cast<dim_t>(data.shape_.Size());
 
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
         // mark row flags
-        Fill<false>(s, TBlob(row_flg, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
+        Kernel<op_with_req<set_to_int<0>, kWriteTo>, cpu>::Launch(s, num_rows, row_flg);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
         // calculate inclusive prefix sum
         // TODO(haibin) ideally this is should be done in parallel
