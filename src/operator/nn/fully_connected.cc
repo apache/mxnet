@@ -31,7 +31,8 @@ namespace mxnet {
 namespace op {
 
 static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
-    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                                std::vector<TShape> *in_shape,
+                                std::vector<TShape> *out_shape) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   if (!param.no_bias) {
@@ -71,7 +72,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
 }
 
 static bool FullyConnectedType(const nnvm::NodeAttrs& attrs,
-    std::vector<int> *in_type, std::vector<int> *out_type) {
+                               std::vector<int> *in_type, std::vector<int> *out_type) {
   CHECK_GE(in_type->size(), 1U);
   return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
       attrs, in_type, out_type, -1);

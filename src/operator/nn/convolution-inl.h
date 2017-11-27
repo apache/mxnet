@@ -161,9 +161,9 @@ class ConvolutionOp {
   }
 
   void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[conv::kOut], kWriteTo);
@@ -233,10 +233,10 @@ class ConvolutionOp {
   }
 
   void Backward(const OpContext &ctx,
-                        const std::vector<TBlob>& out_grad,
-                        const std::vector<TBlob>& in_data,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& in_grad) {
+                const std::vector<TBlob>& out_grad,
+                const std::vector<TBlob>& in_data,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1U);
@@ -387,9 +387,9 @@ class ConvolutionOp {
 
 template<typename xpu>
 void ConvolutionCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                        const OpContext& ctx, const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   MSHADOW_REAL_TYPE_SWITCH(inputs[conv::kData].type_flag_, DType, {
     static thread_local ConvolutionOp<xpu, DType> op;
@@ -400,9 +400,9 @@ void ConvolutionCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void ConvolutionGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                            const OpContext& ctx, const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
   const TBlob &out_grad = inputs[0];

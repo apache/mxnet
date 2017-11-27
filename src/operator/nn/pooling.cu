@@ -43,10 +43,10 @@ static CuDNNPoolingOp<DType> &GetCuDNNPoolingOp(const PoolingParam &param) {
 
 template<>
 void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
@@ -80,10 +80,10 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
 template<>
 void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);

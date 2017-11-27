@@ -60,7 +60,7 @@ static void PoolingParamParser(nnvm::NodeAttrs* attrs) {
 }
 
 static bool PoolingShape(const nnvm::NodeAttrs& attrs,
-    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                         std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
   const PoolingParam& param_ = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
   const TShape &dshape = (*in_shape)[0];

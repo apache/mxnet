@@ -32,7 +32,7 @@ namespace mxnet {
 namespace op {
 
 static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
-    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                            std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
   const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_shape->size(), 1U);
   const TShape &dshape = (*in_shape)[0];
@@ -87,7 +87,7 @@ static inline std::vector<std::string> ListArguments(const UpSamplingParam& para
 }
 
 static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
-    std::vector<int> *in_type, std::vector<int> *out_type) {
+                           std::vector<int> *in_type, std::vector<int> *out_type) {
   const UpSamplingParam& param = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
