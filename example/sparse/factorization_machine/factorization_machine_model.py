@@ -17,19 +17,21 @@
 
 import mxnet as mx
 
-def factorization_machine_model(factor_size, num_features):
+def factorization_machine_model(factor_size, num_features,
+                                lr_mult_config, wd_mult_config, init_config):
     """ builds factorization machine network with proper formulation:
     y = w_0 \sum(x_i w_i) + 0.5(\sum\sum<v_i,v_j>x_ix_j - \sum<v_iv_i>x_i^2)
     """
     x = mx.symbol.Variable("data", stype='csr')
-    # linear and bias terms
+    # factor, linear and bias terms
     v = mx.symbol.Variable("v", shape=(num_features, factor_size), stype='row_sparse',
-                           init=mx.initializer.Normal(0.000001), lr_mult=0.00001,
-                           wd_mult=0.00001)
+                           init=init_config['v'], lr_mult=lr_mult_config['v'],
+                           wd_mult=wd_mult_config['v'])
     w = mx.symbol.var('w', shape=(num_features, 1), stype='row_sparse',
-                      init=mx.initializer.Normal(0.00001), lr_mult=0.0001, wd_mult=0.001)
-    w0 = mx.symbol.var('w0', shape=(1,), init=mx.initializer.Normal(0.00001),
-                       lr_mult=0.01, wd_mult=0.01)
+                      init=init_config['w'], lr_mult=lr_mult_config['w'],
+                      wd_mult=wd_mult_config['w'])
+    w0 = mx.symbol.var('w0', shape=(1,), init=init_config['w0'],
+                       lr_mult=lr_mult_config['w0'], wd_mult=wd_mult_config['w0'])
     w1 = mx.symbol.broadcast_add(mx.symbol.dot(x, w), w0)
 
     # squared terms for subtracting self interactions

@@ -28,12 +28,30 @@ parser.add_argument('--data', type=str, default="./data/",
                     help='training LibSVM files to use.')
 parser.add_argument('--num-epoch', type=int, default=1,
                     help='number of epochs to train')
-parser.add_argument('--batch-size', type=int, default=10000,
+parser.add_argument('--batch-size', type=int, default=1000,
                     help='number of examples per batch')
 parser.add_argument('--input-size', type=int, default=2000000,
                     help='number of features in the input')
 parser.add_argument('--factor-size', type=int, default=16,
                     help='number of latent variables')
+parser.add_argument('--factor-lr', type=float, default=0.0001,
+                    help='learning rate for factor terms')
+parser.add_argument('--linear-lr', type=float, default=0.001,
+                    help='learning rate for linear terms')
+parser.add_argument('--bias-lr', type=float, default=0.1,
+                    help='learning rate for bias terms')
+parser.add_argument('--factor-wd', type=float, default=0.00001,
+                    help='weight decay rate for factor terms')
+parser.add_argument('--linear-wd', type=float, default=0.001,
+                    help='weight decay rate for linear terms')
+parser.add_argument('--bias-wd', type=float, default=0.01,
+                    help='weight decay rate for bias terms')
+parser.add_argument('--factor-sigma', type=float, default=0.001,
+                    help='standard deviation for initialization of factor terms')
+parser.add_argument('--linear-sigma', type=float, default=0.01,
+                    help='standard deviation for initialization of linear terms')
+parser.add_argument('--bias-sigma', type=float, default=0.01,
+                    help='standard deviation for initialization of bias terms')
 parser.add_argument('--log-interval', type=int, default=100,
                     help='number of batches between logging messages')
 parser.add_argument('--kvstore', type=str, default='local',
@@ -60,13 +78,18 @@ if __name__ == '__main__':
     train_data = mx.io.LibSVMIter(data_libsvm=args.data, data_shape=(num_features,),
                                   batch_size=batch_size)
     # model
-    model = factorization_machine_model(factor_size, num_features)
+    lr_config = {'v': args.factor_lr, 'w': args.linear_lr, 'w0': args.bias_lr}
+    wd_config = {'v': args.factor_wd, 'w': args.linear_wd, 'w0': args.bias_wd}
+    init_config = {'v': mx.initializer.Normal(args.factor_sigma),
+                   'w': mx.initializer.Normal(args.linear_sigma),
+                   'w0': mx.initializer.Normal(args.bias_sigma)}
+    model = factorization_machine_model(factor_size, num_features, lr_config, wd_config, init_config)
 
     # module
     mod = mx.mod.Module(symbol=model)
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
-    optimizer_params=(('learning_rate', 0.001), ('wd', 0.0001), ('beta1', 0.9),
+    optimizer_params=(('learning_rate', 1), ('wd', 1), ('beta1', 0.9),
                       ('beta2', 0.999), ('epsilon', 1e-8))
     mod.init_optimizer(optimizer='adam', kvstore=kv, optimizer_params=optimizer_params)
 
