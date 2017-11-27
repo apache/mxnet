@@ -33,12 +33,18 @@
 namespace mxnet {
 namespace op {
 template<typename DType>
-class CuDNNActivationOp : public Operator {
+class CuDNNActivationOp {
  public:
-  explicit CuDNNActivationOp(ActivationParam param) {
-    param_ = param;
-    init_cudnn_ = false;
+  CuDNNActivationOp() {
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+    #if CUDNN_MAJOR >= 5
+    nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
+    CUDNN_CALL(cudnnCreateActivationDescriptor(&desc_));
+    #endif
+  }
+
+  void Init(const ActivationParam &param) {
+    param_ = param;
     switch (param_.act_type) {
       case activation::kReLU:
         mode_ = CUDNN_ACTIVATION_RELU;
@@ -54,67 +60,55 @@ class CuDNNActivationOp : public Operator {
         break;
     }
     #if CUDNN_MAJOR >= 5
-    nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
-    CUDNN_CALL(cudnnCreateActivationDescriptor(&desc_));
     CUDNN_CALL(cudnnSetActivationDescriptor(desc_, mode_, nan_prop_, relu_ceil_));
     #endif
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
   }
 
   ~CuDNNActivationOp() {
-    if (init_cudnn_) {
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(shape_desc_));
-      #if CUDNN_MAJOR >= 5
-      CUDNN_CALL(cudnnDestroyActivationDescriptor(desc_));
-      #endif
-    }
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(shape_desc_));
+    #if CUDNN_MAJOR >= 5
+    CUDNN_CALL(cudnnDestroyActivationDescriptor(desc_));
+    #endif
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  void Forward(const OpContext &ctx, const TBlob &in_data,
+      const OpReqType &req, const TBlob &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1U);
-    CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     Tensor<gpu, 4, DType> data;
     Tensor<gpu, 4, DType> out;
-    if (in_data[activation::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(in_data[activation::kData].shape_[0],
-                               in_data[activation::kData].shape_[1], 1, 1);
-      data = in_data[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
-      out = out_data[activation::kOut].get_with_shape<gpu, 4, DType>(dshape, s);
+    if (in_data.ndim() == 2) {
+      Shape<4> dshape = Shape4(in_data.shape_[0],
+                               in_data.shape_[1], 1, 1);
+      data = in_data.get_with_shape<gpu, 4, DType>(dshape, s);
+      out = out_data.get_with_shape<gpu, 4, DType>(dshape, s);
     } else {
       Shape<4> dshape;
-      index_t size_left = in_data[activation::kData].Size();
+      index_t size_left = in_data.Size();
       for (int i = 0; i < 3; ++i) {
-        if (i < in_data[activation::kData].ndim()) {
-          dshape[i] = in_data[activation::kData].shape_[i];
+        if (i < in_data.ndim()) {
+          dshape[i] = in_data.shape_[i];
         } else {
           dshape[i] = 1;
         }
         size_left /= dshape[i];
       }
       dshape[3] = size_left;
-      data = in_data[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
-      out = out_data[activation::kOut].get_with_shape<gpu, 4, DType>(dshape, s);
+      data = in_data.get_with_shape<gpu, 4, DType>(dshape, s);
+      out = out_data.get_with_shape<gpu, 4, DType>(dshape, s);
     }
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
-    if (!init_cudnn_) {
-      init_cudnn_ = true;
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&shape_desc_));
-      CUDNN_CALL(cudnnSetTensor4dDescriptor(shape_desc_,
-                                            CUDNN_TENSOR_NCHW,
-                                            dtype_,
-                                            data.shape_[0],
-                                            data.shape_[1],
-                                            data.shape_[2],
-                                            data.shape_[3]));
-    }
+    CUDNN_CALL(cudnnSetTensor4dDescriptor(shape_desc_,
+                                          CUDNN_TENSOR_NCHW,
+                                          dtype_,
+                                          data.shape_[0],
+                                          data.shape_[1],
+                                          data.shape_[2],
+                                          data.shape_[3]));
     #if CUDNN_MAJOR <= 4
     CUDNN_CALL(cudnnActivationForward(s->dnn_handle_,
                                       mode_,
@@ -136,20 +130,11 @@ class CuDNNActivationOp : public Operator {
     #endif
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  void Backward(const OpContext &ctx, const TBlob &out_grad,
+      const TBlob &in_data, const TBlob &out_data,
+      const OpReqType &req, const TBlob &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1U);
-    CHECK_EQ(in_data.size(), 1U);
-    CHECK_EQ(out_data.size(), 1U);
-    CHECK_EQ(req.size(), 1U);
-    CHECK_EQ(in_grad.size(), 1U);
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -157,31 +142,38 @@ class CuDNNActivationOp : public Operator {
     Tensor<gpu, 4, DType> data;
     Tensor<gpu, 4, DType> output_data;
     Tensor<gpu, 4, DType> input_grad;
-    if (in_grad[activation::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(in_grad[activation::kData].shape_[0],
-                               in_grad[activation::kData].shape_[1], 1, 1);
-      data = in_data[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
-      grad = out_grad[activation::kOut].get_with_shape<gpu, 4, DType>(dshape, s);
-      output_data = out_data[activation::kOut].get_with_shape<gpu, 4, DType>(dshape, s);
-      input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
+    if (in_grad.ndim() == 2) {
+      Shape<4> dshape = Shape4(in_grad.shape_[0],
+                               in_grad.shape_[1], 1, 1);
+      data = in_data.get_with_shape<gpu, 4, DType>(dshape, s);
+      grad = out_grad.get_with_shape<gpu, 4, DType>(dshape, s);
+      output_data = out_data.get_with_shape<gpu, 4, DType>(dshape, s);
+      input_grad = in_grad.get_with_shape<gpu, 4, DType>(dshape, s);
     } else {
       Shape<4> dshape;
-      index_t size_left = in_grad[activation::kData].Size();
+      index_t size_left = in_grad.Size();
       for (int i = 0; i < 3; ++i) {
-        if (i < in_grad[activation::kData].ndim()) {
-          dshape[i] = in_grad[activation::kData].shape_[i];
+        if (i < in_grad.ndim()) {
+          dshape[i] = in_grad.shape_[i];
         } else {
           dshape[i] = 1;
         }
         size_left /= dshape[i];
       }
       dshape[3] = size_left;
-      data = in_data[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
-      output_data = out_data[activation::kOut].get_with_shape<gpu, 4, DType>(dshape, s);
-      grad = out_grad[activation::kOut].get_with_shape<gpu, 4, DType>(dshape, s);
-      input_grad = in_grad[activation::kData].get_with_shape<gpu, 4, DType>(dshape, s);
+      data = in_data.get_with_shape<gpu, 4, DType>(dshape, s);
+      output_data = out_data.get_with_shape<gpu, 4, DType>(dshape, s);
+      grad = out_grad.get_with_shape<gpu, 4, DType>(dshape, s);
+      input_grad = in_grad.get_with_shape<gpu, 4, DType>(dshape, s);
     }
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
+    CUDNN_CALL(cudnnSetTensor4dDescriptor(shape_desc_,
+                                          CUDNN_TENSOR_NCHW,
+                                          dtype_,
+                                          data.shape_[0],
+                                          data.shape_[1],
+                                          data.shape_[2],
+                                          data.shape_[3]));
     #if CUDNN_MAJOR <= 4
     CUDNN_CALL(cudnnActivationBackward(s->dnn_handle_,
                                        mode_,
@@ -212,7 +204,6 @@ class CuDNNActivationOp : public Operator {
   }
 
  private:
-  bool init_cudnn_;
   cudnnDataType_t dtype_;
   cudnnActivationMode_t mode_;
   cudnnTensorDescriptor_t shape_desc_;
