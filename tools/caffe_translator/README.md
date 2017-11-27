@@ -1,7 +1,9 @@
 # CaffeTranslator
-CaffeTranslator is a source code translator that translates Caffe training/validation prototxt into MXNet Python code. 
+CaffeTranslator is a source code translator that translates Caffe code into MXNet Python code. Note that this is different from the Caffe to MXNet model converted which is available [here](https://github.com/apache/incubator-mxnet/tree/master/tools/caffe_converter).
 
-# Prerequisites
+CaffeTranslator takes the training/validation prototxt (example) and solver prototxt (example) for a Caffe model as input and produces MXNet Python code (example) that builds and trains the same network specified in the prototxt.
+
+### Prerequisites
 **To translate code:**
 1. JDK
 
@@ -9,7 +11,7 @@ CaffeTranslator is a source code translator that translates Caffe training/valid
 1. Caffe with MXNet interface ([Why?](faq.md#why_caffe) [How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#install-caffe-with-mxnet-interface))
 2. MXNet with Caffe plugin ([How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#compile-with-caffe))
 
-# Build
+### Build
 Step 1: Clone the code:
 ```
 git clone https://github.com/apache/incubator-mxnet.git mxnet
@@ -31,7 +33,7 @@ Step 5: Set PATH
 PATH=$PWD/build/install/caffetranslator/bin/:$PATH
 ```
 
-# Run
+### Run
 ```
 caffetranslator --training-prototxt <train_val_prototxt_path> --solver <solver_prototxt_path> --output-file <output_file_path>
 ```
