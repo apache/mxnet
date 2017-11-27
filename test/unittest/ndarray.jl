@@ -264,6 +264,12 @@ function test_minus()
   scalar_large = Float16(1e4)
   @test t6 - scalar_small ≈ copy(a6 .- scalar_small)
   @test t6 - scalar_large ≈ copy(a6 .- scalar_large)
+
+  info("NDArray::minus::type stablility")
+  let x = mx.zeros(dims), y = mx.ones(dims)
+    @inferred x - y
+    @inferred x .- y
+  end
 end
 
 function test_mul()
@@ -361,29 +367,29 @@ end
 
 
 function test_rdiv()
-  info("NDarray::rdiv")
+  info("NDArray::rdiv")
 
-  info("NDarray::rdiv::Inf16")
+  info("NDArray::rdiv::Inf16")
   let x = 1 ./ mx.zeros(Float16, 4)
     @test copy(x) == [Inf16, Inf16, Inf16, Inf16]
   end
 
-  info("NDarray::rdiv::Inf32")
+  info("NDArray::rdiv::Inf32")
   let x = 1 ./ mx.zeros(Float32, 4)
     @test copy(x) == [Inf32, Inf32, Inf32, Inf32]
   end
 
-  info("NDarray::rdiv::Inf64")
+  info("NDArray::rdiv::Inf64")
   let x = 1 ./ mx.zeros(Float64, 4)
     @test copy(x) == [Inf64, Inf64, Inf64, Inf64]
   end
 
-  info("NDarray::rdiv::Int")
+  info("NDArray::rdiv::Int")
   let x = 1 ./ mx.NDArray([1 2; 3 4])
     @test copy(x) == [1 0; 0 0]
   end
 
-  info("NDarray::rdiv::Float32")
+  info("NDArray::rdiv::Float32")
   let x = 1 ./ mx.NDArray(Float32[1 2; 3 4])
     y = 1 ./ Float32[1 2; 3 4]
     @test copy(x) ≈ y

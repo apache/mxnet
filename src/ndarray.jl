@@ -637,7 +637,7 @@ function sub_from!(dst::NDArray, arg::NDArrayOrReal)
   if isa(arg, Real)
     _minus_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
   else
-    _minus(dst, arg, out=dst)
+    _minus!(dst, arg)
   end
 end
 
@@ -1037,6 +1037,15 @@ function _autoimport(name::Symbol)
   end
 end
 
+function _outexpr(name::Symbol, x #= the first arg of `sig` =#)
+  if endswith(string(name), "!")  # `func!`
+    Ptr, 1, :([[MX_handle(x.handle)]]), :($x)
+  else
+    retexpr = :(NDArray(MX_NDArrayHandle(unsafe_load(hdls_ref[], 1))))
+    Ref, 0, :(Ref{Ptr{MX_handle}}(C_NULL)), retexpr
+  end
+end
+
 macro _remap(sig::Expr, imp::Expr)
   fname = sig.args[1]
   opname = string(imp.args[1])
@@ -1055,16 +1064,19 @@ macro _remap(sig::Expr, imp::Expr)
   mxvals = Expr(:vect, map(x -> :(dump_mx_param($(x.args[2]))), mxargs)...)
   ndhlds = Expr(:vect, map(x -> :($(x).handle), ndin)...)
 
+  # handler for `func!` which has side effect on first argument.
+  T, n_output, hdls_ref, retexpr = _outexpr(fname, sig.args[2].args[1])
+
   func_body = quote
     op_handle = _get_cached_libmx_op_handle($opname)
-    n_output = Ref(Cint(0))
-    hdls_ref = Ref{Ptr{MX_handle}}(C_NULL)
+    n_output = Ref(Cint($n_output))
+    hdls_ref = $hdls_ref
     @mxcall(:MXImperativeInvoke,
             (MX_handle,
              Cint,
              Ptr{MX_handle},
              Ref{Cint},
-             Ref{Ptr{MX_handle}},
+             $T{Ptr{MX_handle}},
              Cint,
              char_pp,
              char_pp),
@@ -1076,7 +1088,7 @@ macro _remap(sig::Expr, imp::Expr)
             $(length(mxargs)),
             $mxkeys,
             $mxvals)
-    NDArray(MX_NDArrayHandle(unsafe_load(hdls_ref[], 1)))
+    $retexpr
   end
 
   docstr = "    $sig"
@@ -1122,6 +1134,13 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 
 @_remap prod(arr::NDArray)       prod(arr)
 @_remap prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
+
+################################################################################
+# remapping to solving type unstablility
+################################################################################
+
+@_remap _minus(x::NDArray, y::NDArray)  _minus(x, y)
+@_remap _minus!(x::NDArray, y::NDArray) _minus(x, y)
 
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
@@ -1248,6 +1267,7 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "dot",
     "transpose",
     "prod",
+    "_minus",
 ]
 
 macro _import_ndarray_functions()
