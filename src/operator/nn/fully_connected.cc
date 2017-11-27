@@ -29,52 +29,68 @@
 
 namespace mxnet {
 namespace op {
-template<>
-Operator* CreateOp<cpu>(FullyConnectedParam param, int dtype,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape,
-                        Context ctx) {
-  Operator *op = NULL;
-#if MXNET_USE_NNPACK == 1
-  const size_t batch_size = (*in_shape)[0][0];
-  // nnp_fully_connected_inference will do optimization for batch-size = 1
-  // nnp_fully_connected_output will do optimization for batch-size > 1
-  switch (dtype) {
-  case mshadow::kFloat32:
-    return new NNPACKFullyConnectedOp<cpu, float>(param);
-  default:
-    break;
+
+static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
+    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  using namespace mshadow;
+  if (!param.no_bias) {
+    CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
+  } else {
+    CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
   }
-#endif
-  switch (dtype) {
-  case mshadow::kFloat32:
-    op = new FullyConnectedOp<cpu, float>(param);
-    break;
-  case mshadow::kFloat64:
-    op = new FullyConnectedOp<cpu, double>(param);
-    break;
-  case mshadow::kFloat16:
-    LOG(FATAL) << "float16 fully connected layer is currently"
-                  "only supported by CuDNN version.";
-    break;
-  default:
-    LOG(FATAL) << "Unsupported type " << dtype;
+  CHECK_EQ(out_shape->size(), 1U);
+  TShape dshape = (*in_shape)[fullc::kData];
+  TShape oshape = (*out_shape)[0];
+  // require data to be known
+  if (dshape.ndim() ==  0) return false;
+
+  index_t num_input;
+  if (!param.flatten) {
+    num_input = dshape[dshape.ndim()-1];
+  } else {
+    num_input = dshape.ProdShape(1, dshape.ndim());
+  }
+  SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param.num_hidden, num_input));
+  if (!param.no_bias) {
+    SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param.num_hidden));
   }
 
-  return op;
+  if (!param.flatten) {
+    TShape result_shape(dshape);
+    result_shape[dshape.ndim()-1] = param.num_hidden;
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
+  } else {
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
+  }
+  if (oshape.ndim() != 0) {
+    dshape[0] = oshape[0];
+    SHAPE_ASSIGN_CHECK(*in_shape, fullc::kData, dshape);
+  }
+  return true;
 }
 
-// DO_BIND_DISPATCH comes from operator_common.h
-Operator *FullyConnectedProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                     std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape(1, TShape()), aux_shape;
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], in_shape, &out_shape, ctx);
+static bool FullyConnectedType(const nnvm::NodeAttrs& attrs,
+    std::vector<int> *in_type, std::vector<int> *out_type) {
+  CHECK_GE(in_type->size(), 1U);
+  return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
+      attrs, in_type, out_type, -1);
 }
+
+struct FullyConnectedGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[fullc::kData]);
+    heads.push_back(n->inputs[fullc::kWeight]);
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
-MXNET_REGISTER_OP_PROPERTY(FullyConnected, FullyConnectedProp)
+NNVM_REGISTER_OP(FullyConnected)
 .describe(R"code(Applies a linear transformation: :math:`Y = XW^T + b`.
 
 If ``flatten`` is set to be true, then the shapes are:
@@ -96,9 +112,37 @@ The learnable parameters include both ``weight`` and ``bias``.
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
 )code" ADD_FILELINE)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const FullyConnectedParam& params = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  return params.no_bias ? 2 : 3;
+})
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<FullyConnectedParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
+  const FullyConnectedParam& params = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  if (!params.no_bias) {
+    return std::vector<std::string>{"data", "weight", "bias"};
+  } else {
+    return std::vector<std::string>{"data", "weight"};
+  }
+})
+.set_attr<nnvm::FInferShape>("FInferShape", FullyConnectedShape)
+.set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
+.set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", FullyConnectedGrad{"_backward_FullyConnected"})
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("weight", "NDArray-or-Symbol", "Weight matrix.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_FullyConnected)
+.set_num_outputs(3)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
+  return std::vector<std::pair<int, int> >{{1, 0}};
+})
+.set_attr_parser(ParamParser<FullyConnectedParam>)
+.set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);
+
 }  // namespace op
 }  // namespace mxnet

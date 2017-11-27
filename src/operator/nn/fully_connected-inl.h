@@ -66,24 +66,18 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
  * \tparam xpu The device that the op will be executed on.
  */
 template<typename xpu, typename DType>
-class FullyConnectedOp : public Operator {
+class FullyConnectedOp {
  public:
-  explicit FullyConnectedOp(FullyConnectedParam p) {
+  void Init(const FullyConnectedParam &p) {
     this->param_ = p;
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
+      const std::vector<OpReqType> &req, const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     if (req[fullc::kOut] == kNullOp) return;
     CHECK_EQ(req[fullc::kOut], kWriteTo);
-    size_t expected = param_.no_bias ? 2 : 3;
-    CHECK_EQ(in_data.size(), expected);
-    CHECK_EQ(out_data.size(), 1U);
     // TODO(bing): check the BLAS Handle, be careful
     // maybe need blas handle from context
     // TODO(bing): judge shape to remove flatten op
@@ -118,19 +112,11 @@ class FullyConnectedOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  void Backward(const OpContext &ctx, const std::vector<TBlob> &out_grad,
+      const std::vector<TBlob> &in_data, const std::vector<OpReqType> &req,
+      const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    CHECK_EQ(out_grad.size(), 1U);
-    size_t expected = param_.no_bias ? 2 : 3;
-    CHECK(in_data.size() == expected && in_grad.size() == expected);
-    CHECK_EQ(req.size(), expected);
     // TODO(bing): check the BLAS Handle, be careful
     //  maybe need blas handle from context
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -177,124 +163,80 @@ class FullyConnectedOp : public Operator {
     linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
   }
 
+  static FullyConnectedOp &get_op(const FullyConnectedParam& param) {
+    static thread_local FullyConnectedOp op;
+    op.Init(param);
+    return op;
+  }
+
  private:
   FullyConnectedParam param_;
 };  // class FullyConnectedOp
 
-// Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(FullyConnectedParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape,
-                   Context ctx);
+void FullyConnectedCompute(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  uint32_t in_expected = param.no_bias ? 2 : 3;
+  CHECK_EQ(inputs.size(), in_expected);
+  CHECK_EQ(outputs.size(), 1U);
+  int dtype = inputs[0].type_flag_;
 
-#if DMLC_USE_CXX11
-class FullyConnectedProp : public OperatorProperty {
- public:
-  std::vector<std::string> ListArguments() const override {
-    if (!param_.no_bias) {
-      return {"data", "weight", "bias"};
-    } else {
-      return {"data", "weight"};
-    }
+  switch (dtype) {
+  case mshadow::kFloat32:
+    FullyConnectedOp<xpu, float>::get_op(param).Forward(ctx, inputs,
+        req, outputs);
+    break;
+  case mshadow::kFloat64:
+    FullyConnectedOp<xpu, double>::get_op(param).Forward(ctx, inputs,
+        req, outputs);
+    break;
+  case mshadow::kFloat16:
+    LOG(FATAL) << "float16 fully connected layer is currently"
+                  "only supported by CuDNN version.";
+    break;
+  default:
+    LOG(FATAL) << "Unsupported type " << dtype;
   }
+}
 
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    param_.Init(kwargs);
+template<typename xpu>
+void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  uint32_t out_expected = param.no_bias ? 2 : 3;
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), out_expected);
+  CHECK_EQ(req.size(), out_expected);
+
+  std::vector<TBlob> out_grad{inputs[0]};
+  std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
+  int dtype = inputs[0].type_flag_;
+
+  switch (dtype) {
+  case mshadow::kFloat32:
+    FullyConnectedOp<xpu, float>::get_op(param).Backward(ctx, out_grad, in_data,
+        req, outputs);
+    break;
+  case mshadow::kFloat64:
+    FullyConnectedOp<xpu, double>::get_op(param).Backward(ctx, out_grad, in_data,
+        req, outputs);
+    break;
+  case mshadow::kFloat16:
+    LOG(FATAL) << "float16 fully connected layer is currently"
+                  "only supported by CuDNN version.";
+    break;
+  default:
+    LOG(FATAL) << "Unsupported type " << dtype;
   }
+}
 
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
-
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
-    using namespace mshadow;
-    if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
-    } else {
-      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
-    }
-    CHECK_EQ(out_shape->size(), 1U);
-    TShape dshape = (*in_shape)[fullc::kData];
-    TShape oshape = (*out_shape)[0];
-    // require data to be known
-    if (dshape.ndim() ==  0) return false;
-
-    index_t num_input;
-    if (!param_.flatten) {
-      num_input = dshape[dshape.ndim()-1];
-    } else {
-      num_input = dshape.ProdShape(1, dshape.ndim());
-    }
-    SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param_.num_hidden, num_input));
-    if (!param_.no_bias) {
-      SHAPE_ASSIGN_CHECK(*in_shape, fullc::kBias, Shape1(param_.num_hidden));
-    }
-
-    if (!param_.flatten) {
-      TShape result_shape(dshape);
-      result_shape[dshape.ndim()-1] = param_.num_hidden;
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
-    } else {
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param_.num_hidden));
-    }
-    if (oshape.ndim() != 0) {
-      dshape[0] = oshape[0];
-      SHAPE_ASSIGN_CHECK(*in_shape, fullc::kData, dshape);
-    }
-    return true;
-  }
-
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1U);
-    nnvm::NodeAttrs attrs;
-    attrs.name = "FullyConnected";
-    return ElemwiseAttr<int, type_is_none, type_assign, true, type_string>(
-      attrs, in_type, out_type, -1);
-  }
-
-  OperatorProperty* Copy() const override {
-    FullyConnectedProp* fc_sym = new FullyConnectedProp();
-    fc_sym->param_ = this->param_;
-    return fc_sym;
-  }
-
-  std::string TypeString() const override {
-    return "FullyConnected";
-  }
-
-  // decalre dependency and inplace optimization options
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    return {out_grad[fullc::kOut], in_data[fullc::kData], in_data[fullc::kWeight]};
-  }
-
-  std::vector<std::pair<int, void*> > BackwardInplaceOption(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data,
-    const std::vector<void*> &in_grad) const override {
-    return {{in_data[fullc::kData], in_grad[fullc::kData]}};
-  }
-
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not Implemented.";
-    return NULL;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                             std::vector<int> *in_type) const override;
-
- private:
-  FullyConnectedParam param_;
-};  // class FullyConnectedSymbol
-#endif
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_FULLY_CONNECTED_INL_H_
