@@ -401,7 +401,7 @@ There are other options to tune the performance.
 .set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
 .set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
-      const int dev_mask, DispatchMode* dispatch_mode, 
+      const int dev_mask, DispatchMode* dispatch_mode,
       std::vector<int> *in_attrs, std::vector<int> *out_attrs) {
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (params.no_bias)
