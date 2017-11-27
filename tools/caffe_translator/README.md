@@ -17,6 +17,17 @@ java -jar caffetranslator-0.9.0.jar --training-prototxt lenet_train_test.prototx
     --output-file translated_code.py
 ```
 
+**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information using a `#caffe2mxnet` directive like shown below:
+
+```
+  data_param {
+    source: "data/mnist/mnist_train_lmdb"
+    #caffe2mxnet num_examples: 60000
+    batch_size: 64
+    backend: LMDB
+  }
+```
+
 ### Prerequisites
 **To translate code:**
 1. JDK
