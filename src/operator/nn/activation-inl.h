@@ -68,9 +68,9 @@ void ActivationForward(const OpContext &ctx, const TBlob &in_data,
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const size_t sz = input.shape_.Size();
+  const size_t sz = in_data.shape_.Size();
   if (sz) {
-    MXNET_ASSIGN_REQ_SWITCH(req[activation::kOut], Req, {
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
       mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
         s, sz,
         out_data.dptr<DType>(),
@@ -88,7 +88,7 @@ void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const size_t sz = out_data.shape_.Size();
   if (sz) {
-    MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
+    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
       mxnet_op::Kernel<mxnet_op::op_with_req<
         mxnet::op::mxnet_op::backward_grad_tuned<BackwardOp>, Req>, xpu>::Launch(
         s, sz,
