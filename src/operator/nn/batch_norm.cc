@@ -21,16 +21,17 @@
  * Copyright (c) 2015 by Contributors
  * \file batch_norm.cc
  * \brief
- * \author Bing Xu, Chris Olivier
+ * \author Bing Xu, Chris Olivier, Da Zheng
 */
 
 #include "batch_norm-inl.h"
-#include <nnvm/op_attr_types.h>
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
 #include "../mkl/mkl_memory-inl.h"
 #include "../mkl/mkl_batch_norm-inl.h"
 #endif  // MXNET_USE_MKL2017
+#include <nnvm/op_attr_types.h>
+#include "../elemwise_op_common.h"
 
 /*! \brief inverse standard deviation <-> variance */
 #define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
@@ -89,12 +90,12 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
 
 /*! \brief Forward CPU */
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
-                                                 const OpContext &ctx,
-                                                 const std::vector<TBlob> &in_data,
-                                                 const std::vector<OpReqType> &req,
-                                                 const std::vector<TBlob> &out_data,
-                                                 const std::vector<TBlob> &aux_states) {
+void DoBNForward(mshadow::Stream<cpu> *,
+                 const OpContext &ctx, const BatchNormParam& param_,
+                 const std::vector<TBlob> &in_data,
+                 const std::vector<OpReqType> &req,
+                 const std::vector<TBlob> &out_data,
+                 const std::vector<TBlob> &aux_states) {
   // Input
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
@@ -164,7 +165,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
 
     // note that var is still invstd
     if (!param_.fix_gamma) {
-      if (IsWriting(req[batchnorm::kData])) {
+      if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
                     [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
                                                                  DType *out_data) {
@@ -173,10 +174,10 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
                     });
       }
     } else {
-      if (IsWriting(req[batchnorm::kGamma])) {
+      if (IsBNWriting(req[batchnorm::kGamma])) {
         w[channel] = AccReal(1);
       }
-      if (IsWriting(req[batchnorm::kData])) {
+      if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
                     [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
                                                                  DType *out_data) {
@@ -189,14 +190,14 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
-                                                  const OpContext &ctx,
-                                                  const std::vector<TBlob> &out_grad,
-                                                  const std::vector<TBlob> &in_data,
-                                                  const std::vector<TBlob> &out_data,
-                                                  const std::vector<OpReqType> &req,
-                                                  const std::vector<TBlob> &in_grad,
-                                                  const std::vector<TBlob> &aux_states) {
+void DoBNBackward(mshadow::Stream<cpu> *,
+                  const OpContext &ctx, const BatchNormParam& param_,
+                  const std::vector<TBlob> &out_grad,
+                  const std::vector<TBlob> &in_data,
+                  const std::vector<TBlob> &out_data,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &in_grad,
+                  const std::vector<TBlob> &aux_states) {
   // Input Data
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights   = in_data[batchnorm::kGamma];
@@ -264,7 +265,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
 
-    if (!gradIn.IsEmpty() && IsWriting(req[batchnorm::kData])) {  // if there's a grad input
+    if (!gradIn.IsEmpty() && IsBNWriting(req[batchnorm::kData])) {  // if there's a grad input
       if (is_train_and_not_global_stats) {
         // when in training mode
         // Q(X) = X - E[x] ; i.e. input centered to zero mean
@@ -300,7 +301,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
     // May want to make this a param eventually
     const AccReal scale = 1.0f;
 
-    if (IsWriting(req[batchnorm::kGamma])) {
+    if (IsBNWriting(req[batchnorm::kGamma])) {
       if (!param_.fix_gamma) {
         gradWeightData[channel] = scale * dotp * invstd;
       } else {
@@ -308,51 +309,77 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
       }
     }
 
-    if (IsWriting(req[batchnorm::kBeta])) {
+    if (IsBNWriting(req[batchnorm::kBeta])) {
       gradBiasData[channel] = scale * sumGradOut;
     }
   }
 }
 
-template<>
-Operator *CreateOp<cpu>(BatchNormParam param, const int dtype, const TShape& shape) {
-  param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
-  Operator *op = nullptr;
-#if MXNET_USE_MKL2017 == 1
-  if (shape.ndim() == 4
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && !mxnet::op::batchnorm::disable_mkl) {
-    switch (dtype) {
-      case mshadow::kFloat32:
-        op = new MKLBatchNormOp<cpu, float>(param);
-        break;
-      case mshadow::kFloat64:
-        op = new MKLBatchNormOp<cpu, double>(param);
-        break;
-      default:
-        // MKL operator doesn't support half_t, so fall through
-        break;
-    }
-  }
-#endif
-  if (!op) {
-    MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
-                                DType,
-                                AccReal, {
-                                  op = new BatchNormOp<cpu, DType, AccReal>(param); });
-  }
-  return op;
-}
-
-// DO_BIND_DISPATCH comes from operator_common.h
-Operator *BatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                          std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_shape)[0]);
-}
-
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
-MXNET_REGISTER_OP_PROPERTY(BatchNorm, BatchNormProp)
+static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
+                           std::vector<TShape> *in_shape,
+                           std::vector<TShape> *out_shape) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
+  using namespace mshadow;
+  CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
+  const TShape &dshape = in_shape->at(batchnorm::kData);
+
+  const size_t channelAxis = static_cast<size_t>(param.axis < 0
+      ? static_cast<int>(dshape.ndim()) + param.axis
+      : param.axis);
+  CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
+
+  const int channelCount = dshape[channelAxis];
+
+  if (dshape.ndim() == 0) {
+    return false;
+  }
+
+  in_shape->at(batchnorm::kGamma) = TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kBeta) = TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kInMovingMean) = TShape(Shape1(channelCount));  // kMovingMean
+  in_shape->at(batchnorm::kInMovingVar) = TShape(Shape1(channelCount));  // kMovingVar
+
+  out_shape->clear();
+  out_shape->push_back(dshape);                // kOut
+  out_shape->push_back(Shape1(channelCount));  // kMean
+  out_shape->push_back(Shape1(channelCount));  // kVar
+
+  return true;
+}
+
+static bool BatchNormType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_type, std::vector<int> *out_type) {
+  using namespace mshadow;
+  CHECK_GE(in_type->size(), 1U);
+  const int dtype = (*in_type)[0];
+  CHECK_NE(dtype, -1) << "First input must have specified type";
+  // For float16 input type beta, gamma, mean, and average are stored in float32.
+  // For other input types, these parameters have the same type as input
+  // NOTE: This requirement is from cuDNN (v. 4 and 5)
+  int dtype_param;
+  MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
+      dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+  std::vector<std::string> args{"data", "gamma", "beta", "mean", "var"};
+  CHECK_LE(in_type->size(), args.size());
+  for (index_t i = 1; i < in_type->size(); ++i) {
+    if ((*in_type)[i] == -1) {
+      (*in_type)[i] = dtype_param;
+    } else {
+      UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, args[i]);
+    }
+  }
+  const size_t n_out = 3;
+  out_type->clear();
+  out_type->push_back(dtype);
+  for (size_t i = 1; i < n_out; ++i) {
+    out_type->push_back(dtype_param);
+  }
+  return true;
+}
+
+NNVM_REGISTER_OP(BatchNorm)
 .describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
@@ -398,14 +425,35 @@ Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is tr
 then set ``gamma`` to 1 and its gradient to 0.
 
 )code" ADD_FILELINE)
+.set_num_inputs(5)
+.set_num_outputs(3)
+.set_attr_parser(ParamParser<BatchNormParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data", "gamma", "beta", "moving_mean", "moving_var"};
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"output", "mean", "var"};
+})
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+    [](const NodeAttrs& attrs) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
+  return param.output_mean_var ? 3 : 1;
+})
+.set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
+  return std::vector<uint32_t>{3, 4};
+})
+.set_attr<nnvm::FInferShape>("FInferShape", BatchNormShape)
+.set_attr<nnvm::FInferType>("FInferType", BatchNormType)
+.set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_BatchNorm"})
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
 .add_argument("beta", "NDArray-or-Symbol", "beta array")
 .add_argument("moving_mean", "NDArray-or-Symbol", "running mean of input")
 .add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
-.add_arguments(BatchNormParam::__FIELDS__());
-
-NNVM_REGISTER_OP(BatchNorm)
+.add_arguments(BatchNormParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>(
   "FSetInputVarAttrOnCompose",
   [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
@@ -416,6 +464,12 @@ NNVM_REGISTER_OP(BatchNorm)
       var->attrs.dict["__init__"] = "[\"one\", {}]";
     }
   });
+
+NNVM_REGISTER_OP(_backward_BatchNorm)
+.set_num_outputs(5)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr_parser(ParamParser<BatchNormParam>)
+.set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file deconvolution-inl.h
  * \brief
- * \author Wei Wu
+ * \author Wei Wu, Da Zheng
 */
 #ifndef MXNET_OPERATOR_NN_DECONVOLUTION_INL_H_
 #define MXNET_OPERATOR_NN_DECONVOLUTION_INL_H_
@@ -195,19 +195,18 @@ namespace mxnet {
 namespace op {
 
 template<typename xpu, typename DType>
-class DeconvolutionOp : public Operator {
+class DeconvolutionOp {
  public:
-  explicit DeconvolutionOp(DeconvolutionParam p) {
+  void Init(DeconvolutionParam p) {
     this->param_ = p;
     // convert MBytes first to Bytes and then to elements.
     param_.workspace = (param_.workspace << 20) / sizeof(real_t);
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
 
@@ -322,19 +321,18 @@ class DeconvolutionOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
     CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    CHECK(in_data.size() == expected && in_grad.size() == expected);
+    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(in_grad.size(), expected);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[deconv::kWeight].CheckContiguous(), true);
     // get data
@@ -489,300 +487,52 @@ class DeconvolutionOp : public Operator {
 };  // class DeconvolutionOp
 
 template<typename xpu>
-Operator* CreateOp(DeconvolutionParam param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape,
-                   Context ctx);
+void _DeconvolutionCompute(const DeconvolutionParam& param,
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  MSHADOW_REAL_TYPE_SWITCH(inputs[deconv::kData].type_flag_, DType, {
+    DeconvolutionOp<xpu, DType> op;
+    op.Init(param);
+    op.Forward(ctx, inputs, req, outputs);
+  });
+}
 
-#if DMLC_USE_CXX11
-class DeconvolutionProp : public OperatorProperty {
- public:
-  std::vector<std::string> ListArguments() const override {
-    if (!param_.no_bias) {
-      return {"data", "weight", "bias"};
-    } else {
-      return {"data", "weight"};
-    }
-  }
+template<typename xpu>
+void DeconvolutionCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  _DeconvolutionCompute<xpu>(param, ctx, inputs, req, outputs);
+}
 
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    using namespace mshadow;
-    param_.Init(kwargs);
-    if (param_.kernel.ndim() == 1) {
-      param_.layout = param_.layout? param_.layout.value() : mshadow::kNCW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
-      if (param_.adj.ndim() == 0) param_.adj = Shape1(0);
-    } else if (param_.kernel.ndim() == 2) {
-      param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
-      if (param_.adj.ndim() == 0) param_.adj = Shape2(0, 0);
-    } else {
-      CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D deconvolution not supported";
-      param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
-      if (param_.adj.ndim() == 0) param_.adj = Shape3(0, 0, 0);
-    }
-  }
+template<typename xpu>
+void _DeconvolutionGradCompute(const DeconvolutionParam& param,
+                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+  std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
+  const TBlob &out_grad = inputs[0];
+  const std::vector<TBlob> &in_grad = outputs;
 
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
+  MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
+    DeconvolutionOp<xpu, DType> op;
+    op.Init(param);
+    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
+  });
+}
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
-#if MXNET_USE_CUDNN == 0
-    if (param_.kernel.ndim() > 2) {
-      LOG(FATAL) << "If not using CUDNN, only 1D or 2D Deconvolution is supported";
-      return false;
-    }
-#endif  // CUDNN
 
-    using namespace mshadow;
-    if (!param_.no_bias) {
-      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
-    } else {
-      CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
-    }
-    out_shape->resize(1, TShape());
-    const TShape &dshape = (*in_shape)[deconv::kData];
-    if (dshape.ndim() ==  0) return false;
+template<typename xpu>
+void DeconvolutionGradCompute(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx, const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  _DeconvolutionGradCompute<xpu>(param, ctx, inputs, req, outputs);
+}
 
-    if (param_.kernel.ndim() == 1) {
-      // 1d conv
-      CHECK_EQ(dshape.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
-      Shape<3> dshape_ncw = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW);
-      Shape<3> wshape = Shape3(dshape_ncw[1], param_.num_filter / param_.num_group,
-                               param_.kernel[0]);
-      wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
-      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
-      if (!param_.no_bias) {
-        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
-      }
-
-      const index_t dilated_ksize_x = param_.DilatedKernelSize(0);
-
-      index_t o_pad[1];
-      index_t o_adj[1];
-      param_.InferPad(dshape_ncw, o_pad, o_adj);
-
-      CHECK_EQ(dshape_ncw[1] % param_.num_group, 0U) \
-        << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
-        << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0U) \
-        << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0U) \
-        << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0U) \
-        << "incorrect dilate size: " << param_.dilate;
-
-      CHECK_GE(param_.stride[0]-1, o_adj[0]) << "adj(x) must be samller than stride[0]";
-
-      Shape<3> oshape;
-      oshape[0] = dshape_ncw[0];
-      oshape[1] = param_.num_filter;
-      oshape[2] = param_.stride[0] * (dshape_ncw[2] - 1) +
-        dilated_ksize_x - 2 * o_pad[0] + o_adj[0];
-
-      if (param_.target_shape[0] > 0) {
-        CHECK_EQ(param_.target_shape[0], oshape[2]) \
-          << "param_.target_shape[0] was not reasonable, please set it carefully";
-      }
-
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
-
-      return true;
-    } else if (param_.kernel.ndim() == 2) {
-      // 2d conv
-      CHECK_EQ(dshape.ndim(), 4U) \
-        << "Input data should be 4D in batch-num_filter-y-x";
-      Shape<4> dshape_nchw = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW);
-      Shape<4> wshape = Shape4(dshape_nchw[1],
-                               param_.num_filter / param_.num_group,
-                               param_.kernel[0], param_.kernel[1]);
-      wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
-      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
-      if (!param_.no_bias) {
-        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
-      }
-
-      const index_t dilated_ksize_y = param_.DilatedKernelSize(0);
-      const index_t dilated_ksize_x = param_.DilatedKernelSize(1);
-
-      index_t o_pad[2];
-      index_t o_adj[2];
-      param_.InferPad(dshape_nchw, o_pad, o_adj);
-
-      CHECK_EQ(dshape_nchw[1] % param_.num_group, 0U) \
-        << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
-        << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0U) \
-        << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0U) \
-        << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0U) \
-          << "incorrect dilate size: " << param_.dilate;
-
-      CHECK_GE(param_.stride[0]-1, o_adj[0]) << "adj(y) must be samller than stride[0]";
-      CHECK_GE(param_.stride[1]-1, o_adj[1]) << "adj(x) must be samller than stride[1]";
-
-      Shape<4> oshape;
-      oshape[0] = dshape_nchw[0];
-      oshape[1] = param_.num_filter;
-      oshape[2] = param_.stride[0] * (dshape_nchw[2] - 1) +
-        dilated_ksize_y - 2 * o_pad[0] + o_adj[0];
-      oshape[3] = param_.stride[1] * (dshape_nchw[3] - 1) +
-        dilated_ksize_x - 2 * o_pad[1] + o_adj[1];
-
-      if (param_.target_shape[0] > 0) {
-        CHECK_EQ(param_.target_shape[0], oshape[2]) \
-          << "param_.target_shape[0] was not reasonable, please set it carefully";
-      }
-      if (param_.target_shape[1] > 0) {
-        CHECK_EQ(param_.target_shape[1], oshape[3]) \
-          << "param_.target_shape[1] was not reasonable, please set it carefully";
-      }
-
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
-
-      return true;
-    } else if (param_.kernel.ndim() == 3) {
-      // 3d conv
-      CHECK_EQ(dshape.ndim(), 5U) \
-        << "Input data should be 5D in batch-num_filter-depth-y-x";
-      Shape<5> dshape_ncdhw = ConvertLayout(dshape.get<5>(), param_.layout.value(), kNCDHW);
-      Shape<5> wshape = Shape5(dshape_ncdhw[1], param_.num_filter / param_.num_group,
-                               param_.kernel[0], param_.kernel[1], param_.kernel[2]);
-      wshape = ConvertLayout(wshape, kNCDHW, param_.layout.value());
-      SHAPE_ASSIGN_CHECK(*in_shape, deconv::kWeight, wshape);
-      if (!param_.no_bias) {
-        SHAPE_ASSIGN_CHECK(*in_shape, deconv::kBias, Shape1(param_.num_filter));
-      }
-
-      // Note: 3D dilation currently not supported.
-      // Calculations below done to preserve symmetry with 1D/2D code.
-      const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
-      const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
-      const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
-
-      index_t o_pad[3];
-      index_t o_adj[3];
-      param_.InferPad(dshape_ncdhw, o_pad, o_adj);
-
-      CHECK_EQ(dshape_ncdhw[1] % param_.num_group, 0U) \
-        << "input num_filter must divide group size";
-      CHECK_EQ(param_.num_filter % param_.num_group, 0U) \
-        << "output num_filter must divide group size";
-      CHECK_GT(param_.kernel.Size(), 0U) \
-        << "incorrect kernel size: " << param_.kernel;
-      CHECK_GT(param_.stride.Size(), 0U) \
-        << "incorrect stride size: " << param_.stride;
-      CHECK_GT(param_.dilate.Size(), 0U) \
-        << "incorrect dilate size: " << param_.dilate;
-      CHECK_EQ(param_.dilate.Size(), 1U)
-        << "Dilate is not supported in 3d deconvolution";
-
-      CHECK_GE(param_.stride[0]-1, o_adj[0]) << "adj(d) must be samller than stride[0]";
-      CHECK_GE(param_.stride[1]-1, o_adj[1]) << "adj(y) must be samller than stride[1]";
-      CHECK_GE(param_.stride[2]-1, o_adj[2]) << "adj(x) must be samller than stride[2]";
-
-      Shape<5> oshape;
-      oshape[0] = dshape_ncdhw[0];
-      oshape[1] = param_.num_filter;
-      oshape[2] = param_.stride[0] * (dshape_ncdhw[2] - 1) +
-        dilated_ksize_d - 2 * o_pad[0] + o_adj[0];
-      oshape[3] = param_.stride[1] * (dshape_ncdhw[3] - 1) +
-        dilated_ksize_y - 2 * o_pad[1] + o_adj[1];
-      oshape[4] = param_.stride[2] * (dshape_ncdhw[4] - 1) +
-        dilated_ksize_x - 2 * o_pad[2] + o_adj[2];
-
-      if (param_.target_shape[0] > 0) {
-        CHECK_EQ(param_.target_shape[0], oshape[2]) \
-          << "param_.target_shape[0] was not reasonable, please it carefully";
-      }
-      if (param_.target_shape[1] > 0) {
-        CHECK_EQ(param_.target_shape[1], oshape[3]) \
-          << "param_.target_shape[1] was not reasonable, please set it carefully";
-      }
-      if (param_.target_shape[2] > 0) {
-        CHECK_EQ(param_.target_shape[2], oshape[4]) \
-          << "param_.target_shape[2] was not reasonable, please set it carefully";
-      }
-
-      SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
-
-      return true;
-    } else {
-      LOG(FATAL) << "Unknown convolution type";
-      return false;
-    }
-  }
-
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1U);
-    int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
-      if ((*in_type)[i] == -1) {
-        (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
-      }
-    }
-    out_type->clear();
-    out_type->push_back(dtype);
-    return true;
-  }
-
-  OperatorProperty* Copy() const override {
-    auto ptr = new DeconvolutionProp();
-    ptr->param_ = param_;
-    return ptr;
-  }
-
-  std::string TypeString() const override {
-    return "Deconvolution";
-  }
-
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    return {out_grad[deconv::kOut], in_data[deconv::kData], in_data[deconv::kWeight]};
-  }
-
-  std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
-  std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not Implemented";
-    return NULL;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                             std::vector<int> *in_type) const override;
-
- private:
-  DeconvolutionParam param_;
-};  // class DeconvolutionProp
-#endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_NN_DECONVOLUTION_INL_H_

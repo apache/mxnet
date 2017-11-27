@@ -42,7 +42,7 @@ const kwargs_t basic_fullyconn_args = { {"num_hidden", "250"} };
 TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
   TShape shape({5, 5});
   kwargs_t kwargs = basic_fullyconn_args;
-  test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
+  test::op::CoreOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
   runner.RunBidirectional(false, { shape }, kwargs, 1);
 }
 
@@ -51,7 +51,7 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
  */
 TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   kwargs_t kwargs = basic_fullyconn_args;
-  test::op::LegacyOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
+  test::op::CoreOpRunner<mxnet::op::FullyConnectedProp, float, float> runner;
   runner.RunBidirectional(false,
                           { TShape({10, 10, 10, 10}) },
                           kwargs, 1);  // prime code and cache
