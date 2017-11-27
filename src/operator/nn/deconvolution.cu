@@ -41,9 +41,11 @@ static DeconvolutionOp<gpu, DType> &get_op(const DeconvolutionParam& param) {
 
 template<typename DType>
 static CuDNNDeconvolutionOp<DType> &get_cudnn_op(const DeconvolutionParam& param,
-    int forward_compute_type, int backward_compute_type,
-    const std::vector<TShape>& in_shape, const std::vector<TShape>& out_shape,
-    const Context& ctx, bool backward) {
+                                                 int forward_compute_type,
+                                                 int backward_compute_type,
+                                                 const std::vector<TShape>& in_shape,
+                                                 const std::vector<TShape>& out_shape,
+                                                 const Context& ctx, bool backward) {
   // Convolution forward has to be called before backward for this operator.
   // So we can't make this operator thread local. backward might be called
   // in another thread.
@@ -55,9 +57,10 @@ static CuDNNDeconvolutionOp<DType> &get_cudnn_op(const DeconvolutionParam& param
 
 template<>
 void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   int dtype = inputs[0].type_flag_;
   // If 1D deconvolution, use MXNet implementation
@@ -98,9 +101,10 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
 template<>
 void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<TBlob>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<TBlob>& outputs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
   const TBlob &out_grad = inputs[0];

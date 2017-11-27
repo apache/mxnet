@@ -202,9 +202,9 @@ class DeconvolutionOp {
   }
 
   void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data) {
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
 
@@ -309,10 +309,10 @@ class DeconvolutionOp {
   }
 
   void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad) {
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
@@ -453,9 +453,9 @@ class DeconvolutionOp {
 
 template<typename xpu>
 void _DeconvolutionCompute(const DeconvolutionParam& param,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
   MSHADOW_REAL_TYPE_SWITCH(inputs[deconv::kData].type_flag_, DType, {
     static thread_local DeconvolutionOp<xpu, DType> op;
     op.Init(param);
@@ -465,18 +465,18 @@ void _DeconvolutionCompute(const DeconvolutionParam& param,
 
 template<typename xpu>
 void DeconvolutionCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   _DeconvolutionCompute<xpu>(param, ctx, inputs, req, outputs);
 }
 
 template<typename xpu>
 void _DeconvolutionGradCompute(const DeconvolutionParam& param,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
   std::vector<TBlob> in_data(inputs.begin() + 1, inputs.end());
   const TBlob &out_grad = inputs[0];
   const std::vector<TBlob> &in_grad = outputs;
@@ -491,9 +491,9 @@ void _DeconvolutionGradCompute(const DeconvolutionParam& param,
 
 template<typename xpu>
 void DeconvolutionGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                              const OpContext& ctx, const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   _DeconvolutionGradCompute<xpu>(param, ctx, inputs, req, outputs);
 }

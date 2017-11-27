@@ -88,7 +88,7 @@ class PoolingOp {
   }
 
   void Forward(const OpContext& ctx, const TBlob& in_data,
-      const OpReqType& req, const TBlob& out_data) {
+               const OpReqType& req, const TBlob& out_data) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
@@ -103,8 +103,8 @@ class PoolingOp {
   }
 
   void Backward(const OpContext& ctx, const TBlob& out_grad,
-      const TBlob& in_data, const TBlob& out_data,
-      const OpReqType& req, const TBlob& in_grad) {
+                const TBlob& in_data, const TBlob& out_data,
+                const OpReqType& req, const TBlob& in_grad) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
@@ -132,10 +132,10 @@ PoolingOp<xpu, DType> &GetPoolingOp(const PoolingParam &param) {
 
 template<typename xpu>
 void PoolingCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
@@ -152,10 +152,10 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);

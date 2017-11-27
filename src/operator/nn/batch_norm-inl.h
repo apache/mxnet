@@ -110,10 +110,10 @@ class BatchNormOp {
    * \sa OpReqType, OpContext
    */
   void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_states) {
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data,
+               const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
 
@@ -160,12 +160,12 @@ class BatchNormOp {
    * \sa OperatorProperty, OpReqType, OpContext
    */
   void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_states) {
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad,
+                const std::vector<TBlob> &aux_states) {
     CHECK_EQ(out_grad.size(), param_.output_mean_var ? 3U : 1U);
     CHECK_EQ(in_data.size(), 3U);
     CHECK_EQ(out_data.size(), 3U);
@@ -222,9 +222,9 @@ static BatchNormOp<xpu, DType, AccReal> &GetBatchNormOp(const BatchNormParam& pa
 
 template<typename xpu>
 void BatchNormCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx, const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 5U);
   std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
@@ -237,9 +237,9 @@ void BatchNormCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 11U);
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<TBlob> out_grad(inputs.begin(),

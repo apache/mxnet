@@ -73,7 +73,7 @@ class SoftmaxActivationOp {
   }
 
   void Forward(const OpContext &ctx, const TBlob &in_data,
-      const OpReqType &req, const TBlob &out_data) {
+               const OpReqType &req, const TBlob &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -94,7 +94,7 @@ class SoftmaxActivationOp {
   }
 
   void Backward(const OpContext &ctx, const TBlob &out_grad,
-      const TBlob &out_data, const OpReqType &req, const TBlob &in_grad) {
+                const TBlob &out_data, const OpReqType &req, const TBlob &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     // Use 3d tensor for both mode -> {instance, channel}. Get shapes
@@ -126,10 +126,10 @@ class SoftmaxActivationOp {
 
 template<typename xpu>
 void SoftmaxActivationCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
   const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -141,10 +141,10 @@ void SoftmaxActivationCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void SoftmaxActivationGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                                  const OpContext& ctx,
+                                  const std::vector<TBlob>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<TBlob>& outputs) {
   const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1);

@@ -52,7 +52,8 @@ static inline std::vector<std::string> ListArguments(const ConvolutionParam& par
 }
 
 static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
-    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                             std::vector<TShape> *in_shape,
+                             std::vector<TShape> *out_shape) {
   using namespace mshadow;
   const ConvolutionParam& param_ = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (!param_.no_bias) {
@@ -241,7 +242,7 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
 }
 
 static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
-    std::vector<int> *in_type, std::vector<int> *out_type) {
+                            std::vector<int> *in_type, std::vector<int> *out_type) {
   const ConvolutionParam& param_ = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];

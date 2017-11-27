@@ -73,7 +73,7 @@ class FullyConnectedOp {
   }
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
-      const std::vector<OpReqType> &req, const std::vector<TBlob> &out_data) {
+               const std::vector<OpReqType> &req, const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     if (req[fullc::kOut] == kNullOp) return;
@@ -113,8 +113,8 @@ class FullyConnectedOp {
   }
 
   void Backward(const OpContext &ctx, const std::vector<TBlob> &out_grad,
-      const std::vector<TBlob> &in_data, const std::vector<OpReqType> &req,
-      const std::vector<TBlob> &in_grad) {
+                const std::vector<TBlob> &in_data, const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     // TODO(bing): check the BLAS Handle, be careful
@@ -175,10 +175,10 @@ class FullyConnectedOp {
 
 template<typename xpu>
 void FullyConnectedCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t in_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(inputs.size(), in_expected);
@@ -205,10 +205,10 @@ void FullyConnectedCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu>
 void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t out_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(inputs.size(), 3U);

@@ -30,7 +30,8 @@ namespace mxnet {
 namespace op {
 
 static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
-    std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                               std::vector<TShape> *in_shape,
+                               std::vector<TShape> *out_shape) {
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
 #if MXNET_USE_CUDNN == 0
   if (param_.kernel.ndim() != 2) {
@@ -236,7 +237,7 @@ static inline std::vector<std::string> ListArguments(const DeconvolutionParam& p
 }
 
 static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
-    std::vector<int> *in_type, std::vector<int> *out_type) {
+                              std::vector<int> *in_type, std::vector<int> *out_type) {
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
