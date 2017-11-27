@@ -57,6 +57,11 @@ USE_CUDA_PATH = NONE
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+#whether to use NCCL library
+USE_NCCL = 0
+#add the path to NCCL library
+USE_NCCL_PATH = NONE
+
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
@@ -105,6 +110,12 @@ USE_LAPACK = 1
 # path to lapack library in case of a non-standard installation
 USE_LAPACK_PATH =
 
+# by default, disable lapack when using MKL
+# switch on when there is a full installation of MKL available (not just MKL2017/MKL_ML)
+ifeq ($(USE_BLAS), mkl)
+USE_LAPACK = 0
+endif
+
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable
 USE_INTEL_PATH = NONE
@@ -146,6 +157,12 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # libcurl4-openssl-dev is required, it can be installed on Ubuntu by
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
+
+#----------------------------
+# performance settings
+#----------------------------
+# Use operator tuning
+USE_OPERATOR_TUNING = 1
 
 # Use gperftools if found
 USE_GPERFTOOLS = 1

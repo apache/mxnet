@@ -123,11 +123,20 @@ We summarize the interface for each class in the following sections.
     CSRNDArray.copy
     CSRNDArray.copyto
     CSRNDArray.as_in_context
-    CSRNDArray.asnumpy
     CSRNDArray.asscipy
+    CSRNDArray.asnumpy
     CSRNDArray.asscalar
     CSRNDArray.astype
     CSRNDArray.tostype
+```
+
+### Array inspection
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.check_format
 ```
 
 ### Array creation
@@ -137,6 +146,25 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     CSRNDArray.zeros_like
+```
+
+### Array reduction
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.sum
+    CSRNDArray.mean
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.square
 ```
 
 ### Indexing
@@ -190,6 +218,15 @@ We summarize the interface for each class in the following sections.
     RowSparseNDArray.tostype
 ```
 
+### Array inspection
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.check_format
+```
+
 ### Array creation
 
 ```eval_rst
@@ -213,6 +250,52 @@ We summarize the interface for each class in the following sections.
     RowSparseNDArray.trunc
 ```
 
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.sin
+    RowSparseNDArray.tan
+    RowSparseNDArray.arcsin
+    RowSparseNDArray.arctan
+    RowSparseNDArray.degrees
+    RowSparseNDArray.radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.sinh
+    RowSparseNDArray.tanh
+    RowSparseNDArray.arcsinh
+    RowSparseNDArray.arctanh
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.expm1
+    RowSparseNDArray.log1p
+```
+
+### Powers
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.sqrt
+    RowSparseNDArray.square
+```
+
 ### Indexing
 
 ```eval_rst
@@ -221,6 +304,7 @@ We summarize the interface for each class in the following sections.
 
     RowSparseNDArray.__getitem__
     RowSparseNDArray.__setitem__
+    RowSparseNDArray.retain
 ```
 
 ### Lazy evaluation
@@ -230,6 +314,16 @@ We summarize the interface for each class in the following sections.
     :nosignatures:
 
     RowSparseNDArray.wait_to_read
+```
+
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    RowSparseNDArray.clip
+    RowSparseNDArray.sign
 ```
 
 ## Array creation routines
@@ -311,6 +405,16 @@ We summarize the interface for each class in the following sections.
     arctanh
 ```
 
+### Reduce functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sum
+    mean
+```
+
 ### Rounding
 
 ```eval_rst
@@ -355,6 +459,20 @@ We summarize the interface for each class in the following sections.
     sign
 ```
 
+## Neural network
+
+### Updater
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    sgd_update
+    sgd_mom_update
+    adam_update
+    ftrl_update
+```
+
 ### More
 
 ```eval_rst
@@ -363,6 +481,7 @@ We summarize the interface for each class in the following sections.
 
     make_loss
     stop_gradient
+    mxnet.ndarray.contrib.SparseEmbedding
 ```
 
 ## API Reference
@@ -372,10 +491,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __getitem__, __setitem__
+    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __neg__, sum, mean, square, __getitem__, __setitem__, check_format
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, __getitem__, __setitem__
+    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, __getitem__, __setitem__, check_format, retain, clip, sign
 
 .. automodule:: mxnet.ndarray.sparse
     :members:

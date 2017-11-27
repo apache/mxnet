@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file correlation.cc
  * \brief correlation op
  * \author Xu Dong

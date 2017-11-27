@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file matrix_op.cu
  * \brief GPU Implementation of matrix operations
  */
@@ -39,16 +40,16 @@ NNVM_REGISTER_OP(expand_dims)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(slice)
-.set_attr<FCompute>("FCompute<gpu>", Slice<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_slice)
-.set_attr<FCompute>("FCompute<gpu>", SliceBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_slice_assign)
-.set_attr<FCompute>("FCompute<gpu>", SliceAssign<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceAssignOpForward<gpu>);
 
-NNVM_REGISTER_OP(_crop_assign_scalar)
-.set_attr<FCompute>("FCompute<gpu>", CropAssignScalar<gpu>);
+NNVM_REGISTER_OP(_slice_assign_scalar)
+.set_attr<FCompute>("FCompute<gpu>", SliceAssignScalarOpForward<gpu>);
 
 NNVM_REGISTER_OP(slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxis<gpu>);

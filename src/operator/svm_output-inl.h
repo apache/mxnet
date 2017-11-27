@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file svm_output-inl.h
  * \brief
  * \author Jonas Amaro

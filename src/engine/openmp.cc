@@ -30,7 +30,7 @@ namespace engine {
 #endif
 
 static inline bool is_env_set(const char *var) {
-  return dmlc::GetEnv(var, INT_MIN) == INT_MIN;
+  return dmlc::GetEnv(var, INT_MIN) != INT_MIN;
 }
 
 OpenMP *OpenMP::Get() {
@@ -53,10 +53,8 @@ OpenMP::OpenMP()
       omp_set_num_threads(omp_thread_max_);
     } else {
       omp_thread_max_ = omp_get_max_threads();
+    }
   }
-  }
-  omp_set_nested(dmlc::GetEnv("OMP_NESTED", false));
-  omp_set_dynamic(dmlc::GetEnv("OMP_DYNAMIC", false));
 #else
   enabled_ = false;
   omp_thread_max_ = 1;

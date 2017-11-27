@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
  * \brief
  * \author Bing Xu, Siyi Li, Chi Zhang
@@ -44,6 +45,7 @@
 #include "./dot-inl.h"
 #include "./init_op.h"
 #include "./matrix_op-inl.h"
+#include "../../engine/openmp.h"
 
 namespace mxnet {
 namespace op {
@@ -186,9 +188,8 @@ inline bool SparseEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
   const int& weight_stype = in_attrs->at(embedding::kWeight);
   int& out_stype = out_attrs->at(embedding::kOut);
   bool dispatched = false;
-  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   if (!dispatched && data_stype == kDefaultStorage &&
-      weight_stype == kRowSparseStorage && !invalid_ctx) {
+      weight_stype == kRowSparseStorage) {
     // dns, rsp -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
@@ -214,9 +215,8 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   int& data_grad_stype = out_attrs->at(0);
   int& weight_grad_stype = out_attrs->at(1);
   bool dispatched = false;
-  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   if (!dispatched && ograd_stype == kDefaultStorage &&
-      data_stype == kDefaultStorage && !invalid_ctx) {
+      data_stype == kDefaultStorage) {
     // dns, dns -> dns, rsp
     if (type_assign(&data_grad_stype, kDefaultStorage) &&
         type_assign(&weight_grad_stype, kRowSparseStorage) &&
@@ -335,8 +335,8 @@ struct TakeRspKernel {
   }
 };
 
-inline void EmbeddingOpForwardRspImpl(mshadow::Stream<mshadow::cpu>* s,
-                                      const cpu& cpu_dev,
+template<typename xpu>
+inline void EmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
                                       const TBlob& data,
                                       const NDArray& weight,
                                       const OpReqType req,
@@ -350,7 +350,7 @@ inline void EmbeddingOpForwardRspImpl(mshadow::Stream<mshadow::cpu>* s,
           size_t data_size = data.shape_.Size();
           // only using the second dim since weight.ndim() == 2
           const nnvm::dim_t row_length = weight.shape()[1];
-          Kernel<TakeRspKernel<req_t>, cpu>::Launch(s, data_size, data.dptr<IType>(),
+          Kernel<TakeRspKernel<req_t>, xpu>::Launch(s, data_size, data.dptr<IType>(),
                                                     output.dptr<DType>(),
                                                     weight.aux_data(kIdx).dptr<RType>(),
                                                     weight.data().dptr<DType>(),
@@ -368,39 +368,7 @@ void SparseEmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
                                      const TBlob& data,
                                      const NDArray& weight,
                                      const OpReqType req,
-                                     const TBlob& output) {
-  if (req == kNullOp) return;
-  CHECK((std::is_same<xpu, mshadow::cpu>::value)) << "SparseEmbedding is only implemented for CPU";
-  using namespace rowsparse;
-  using namespace mxnet_op;
-  // zeros weight
-  if (req == kWriteTo && !weight.storage_initialized()) {
-    size_t out_size = output.shape_.Size();
-    MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
-      Kernel<set_zero, xpu>::Launch(s, out_size, output.dptr<DType>());
-    })
-    return;
-  }
-  // check out-of-bound indices
-  bool is_valid = true;
-  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
-    DType min = 0;
-    DType max = static_cast<DType>(weight.shape()[0] - 1);
-    // check with single thread is faster since data is small
-    DType* data_ptr = data.dptr<DType>();
-    size_t data_size = data.shape_.Size();
-    for (size_t i = 0; i < data_size; i++) {
-      if (data_ptr[i] > max || data_ptr[i] < min) is_valid = false;
-    }
-  })
-  CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
-  // the weight is actually dense
-  if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
-    EmbeddingOpForwardDnsImpl(s, data, weight.data(), req, output);
-  } else {
-    EmbeddingOpForwardRspImpl(s, xpu(), data, weight, req, output);
-  }
-}
+                                     const TBlob& output);
 
 template<typename xpu>
 void EmbeddingOpForward(const nnvm::NodeAttrs& attrs,
@@ -602,71 +570,12 @@ struct AddTakeGradRspKernel {
   }
 };
 
+template<typename xpu>
 inline void SparseEmbeddingOpBackwardRspImpl(const OpContext& ctx,
-                                             const cpu& cpu_dev,
                                              const TBlob& ograd,
                                              const TBlob& data,
                                              const OpReqType req,
-                                             const NDArray& output) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using namespace mshadow::expr;
-  using namespace rowsparse;
-  using nnvm::dim_t;
-  if (req == kNullOp) return;
-  CHECK_EQ(req, kWriteTo) << "SparseEmbedding layer doesn't support "
-                          << "weight gradient calculation with req != write";
-
-  // Request temporary storage for marking non-zero rows and prefix sum
-  Stream<cpu> *s = ctx.get_stream<cpu>();
-  dim_t num_rows = output.shape()[0];
-  dim_t row_length = output.shape()[1];
-  // TODO(haibin) request less storage to save space in the future
-  size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
-  Tensor<cpu, 1, char> workspace =
-    ctx.requested[embedding::kTempSpace].get_space_typed<cpu, 1, char>(
-      Shape1(workspace_size), s);
-  dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
-  dim_t* prefix_sum = row_flg + num_rows;
-  dim_t data_size = static_cast<dim_t>(data.shape_.Size());
-
-  MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
-    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH(output.aux_type(kIdx), RType, {
-        // mark row flags
-        Fill<false>(s, TBlob(row_flg, mshadow::Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
-        Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
-        // calculate inclusive prefix sum
-        // TODO(haibin) ideally this is should be done in parallel
-        prefix_sum[0] = row_flg[0];
-        for (dim_t i = 1; i < num_rows; i++) {
-          prefix_sum[i] = prefix_sum[i - 1] + row_flg[i];
-        }
-        // total number of non-zero rows
-        dim_t nnr = prefix_sum[num_rows - 1];
-        if (nnr == 0) {
-          FillZerosRspImpl(s, output);
-          return;
-        }
-        output.CheckAndAlloc({Shape1(nnr)});
-        RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
-        // fill row_idx array of output matrix, using the row_flg values
-        Kernel<FillRspRowIdxKernel, cpu>::Launch(s, num_rows,
-               grad_row_idx, prefix_sum, num_rows);
-        // prefill with zeros
-        DType* grad_data = output.data().dptr<DType>();
-        Kernel<set_zero, cpu>::Launch(s, nnr * row_length, grad_data);
-        // add the final gradients
-        int num_threads = Engine::Get()->num_omp_threads_per_worker();
-        dim_t segment_len = (nnr + num_threads - 1) / num_threads;
-        Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
-                                                  ograd.dptr<DType>(), row_length,
-                                                  data.dptr<IType>(), data_size, segment_len,
-                                                  num_rows);
-      });
-    });
-  });
-}
+                                             const NDArray& output);
 
 template<typename xpu>
 void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
@@ -686,8 +595,8 @@ void SparseEmbeddingOpBackwardEx(const nnvm::NodeAttrs& attrs,
           << "SparseEmbedding layer doesn't support calculate data gradient";
   if (data.storage_type() == kDefaultStorage && ograd.storage_type() == kDefaultStorage &&
       weight_grad.storage_type() == kRowSparseStorage) {
-    SparseEmbeddingOpBackwardRspImpl(ctx, xpu(), ograd.data(), data.data(),
-                                     req[embedding::kWeight], weight_grad);
+    SparseEmbeddingOpBackwardRspImpl<xpu>(ctx, ograd.data(), data.data(),
+                                          req[embedding::kWeight], weight_grad);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
@@ -740,7 +649,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
     using namespace mshadow;
     const TShape &arrshape = (*in_attrs)[take_::kArr];
     const TShape &idxshape = (*in_attrs)[take_::kIdx];
-    if (idxshape.ndim() == 0) return false;
+    if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
 
     out_attrs->clear();
 
@@ -1207,10 +1116,10 @@ struct scatter_nd {
 
 template<typename xpu>
 void ScatterNDForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -1224,13 +1133,28 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   mshadow::Shape<10> strides;
   for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    Fill<true>(s, outputs[0], req[0], 0);
+    if (kWriteTo == req[0]) {
+      Fill<true>(s, outputs[0], req[0], 0);
+    }
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
+}
+
+/*!
+ * This is for internal use only.
+ * DO NOT call this function unless you have to.
+ */
+template<typename xpu>
+void ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  ScatterNDForward<xpu>(attrs, ctx, inputs, {kWriteInplace}, outputs);
 }
 
 }  // namespace op

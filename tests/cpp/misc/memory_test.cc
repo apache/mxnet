@@ -79,7 +79,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
 
       start = test::perf::getNannoTickCount();
       #pragma omp parallel for num_threads(GetOMPThreadCount())
-      for (int i = 0; i < test_size; ++i) {
+      for (int i = 0; i < static_cast<int>(test_size); ++i) {
         src[i] = 42;
       }
       const uint64_t omp_set_time = test::perf::getNannoTickCount() - start;
@@ -94,7 +94,7 @@ TEST(MEMORY_TEST, MemsetAndMemcopyPerformance) {
 
       start = test::perf::getNannoTickCount();
       #pragma omp parallel for num_threads(GetOMPThreadCount())
-      for (int i = 0; i < test_size; ++i) {
+      for (int i = 0; i < static_cast<int>(test_size); ++i) {
         dest[i] = src[i];
       }
       const uint64_t omp_copy_time = test::perf::getNannoTickCount() - start;

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file test_util.h
  * \brief unit test performance analysis functions
  * \author Chris Olivier
@@ -43,6 +44,7 @@ extern bool unitTestsWithCuda;
 extern bool debug_output;
 extern bool quick_test;
 extern bool performance_run;
+extern bool csv;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
@@ -609,17 +611,82 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
   return static_cast<ScalarType>(x / bin_size + min);
 }
 
-inline std::string pretty_num(uint64_t val) {
-  std::string res, s = std::to_string(val);
-  size_t ctr = 0;
-  for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
-    if (ctr && (ctr % 3) == 0) {
-      res += ",";
+/*!
+ * \brief Deterministically compare TShape objects as less-than,
+ *        for use in stl sorted key such as map and set
+ * \param s1 First shape
+ * \param s2 Second shape
+ * \return true if s1 is less than s2
+ */
+inline bool operator < (const nnvm::TShape &s1, const nnvm::TShape &s2) {
+  if (s1.Size() == s2.Size()) {
+    if (s1.ndim() == s2.ndim()) {
+      for (size_t i = 0, n = s1.ndim(); i < n; ++i) {
+        if (s1[i] == s2[i]) {
+          continue;
+        }
+        return s1[i] < s2[i];
+      }
+      return false;
     }
-    res.push_back(s[i]);
+    return s1.ndim() < s2.ndim();
   }
-  std::reverse(res.begin(), res.end());
-  return res;
+  return s1.Size() < s2.Size();
+}
+
+/*!
+ * \brief Deterministically compare a vector of TShape objects as less-than,
+ *        for use in stl sorted key such as map and set
+ * \param v1 First vector of shapes
+ * \param v2 Second vector of shapes
+ * \return true if v1 is less than v2
+ */
+inline bool operator < (const std::vector<nnvm::TShape>& v1, const std::vector<nnvm::TShape>& v2) {
+  if (v1.size() == v2.size()) {
+    for (size_t i = 0, n = v1.size(); i < n; ++i) {
+      if (v1[i] == v2[i]) {
+        continue;
+      }
+      return v1[i] < v2[i];
+    }
+    return false;
+  }
+  return v1.size() < v2.size();
+}
+
+/*!
+ * \brief std::less compare structure for compating vectors of shapes for stl sorted containers
+ */
+struct less_shapevect {
+  bool operator()(const std::vector<nnvm::TShape>& v1, const std::vector<nnvm::TShape>& v2) const {
+    if (v1.size() == v2.size()) {
+      for (size_t i = 0, n = v1.size(); i < n; ++i) {
+        if (v1[i] == v2[i]) {
+          continue;
+        }
+        return v1[i] < v2[i];
+      }
+      return false;
+    }
+    return v1.size() < v2.size();
+  }
+};
+
+inline std::string pretty_num(uint64_t val) {
+  if (!test::csv) {
+    std::string res, s = std::to_string(val);
+    size_t ctr = 0;
+    for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
+      if (ctr && (ctr % 3) == 0) {
+        res += ",";
+      }
+      res.push_back(s[i]);
+    }
+    std::reverse(res.begin(), res.end());
+    return res;
+  } else {
+    return std::to_string(val);
+  }
 }
 
 /*! \brief Change a value during the scope of this declaration */

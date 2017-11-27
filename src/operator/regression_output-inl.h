@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file regression_ouput-inl.h
  * \brief Regression output operator.
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file kvstore.h
  * \brief key-value store interface for mxnet
  */
@@ -30,6 +31,7 @@
 #include <string>
 #include <functional>
 #include <atomic>
+#include "../../src/kvstore/gradient_compression.h"
 #include "./ndarray.h"
 #if MXNET_USE_DIST_KVSTORE
 #include "ps/ps.h"
@@ -63,6 +65,14 @@ class KVStore {
    * \brief return the type
    */
   inline const std::string& type() { return type_; }
+
+  /**
+   * \brief Set parameters to use low-bit compressed gradients
+   * \param compression_type type of compression
+   * \param threshold threshold for 2bit compression
+   */
+  virtual void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                                      & kwargs) = 0;
 
   /*!
    * \brief Initialize a list of key-value pair to the store.
@@ -386,6 +396,12 @@ class KVStore {
    * \brief the kvstore type
    */
   std::string type_;
+
+  /** \brief Gradient compression object starts with GC_NONE mode
+   * Used if SetGradientCompression sets the type.
+   * Currently there is no support for un-setting gradient compression
+   */
+  std::shared_ptr<kvstore::GradientCompression> gradient_compression_;
 
   /**
    * \brief whether to do barrier when finalize
