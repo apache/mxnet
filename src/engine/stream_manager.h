@@ -91,7 +91,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
 #endif  // MXNET_USE_CUDA
     }
     default:
-      LOG(FATAL) << "Undefined dev_mask "<<ctx.dev_mask();
+      LOG(FATAL) << "Undefined dev_mask " << ctx.dev_mask();
       break;
   }
   return ret;
@@ -121,7 +121,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
 #endif  // MXNET_USE_CUDA
     }
     default:
-      LOG(FATAL) << "Undefined dev_mask "<<ctx.dev_mask();
+      LOG(FATAL) << "Undefined dev_mask " << ctx.dev_mask();
       break;
   }
   return ret;
