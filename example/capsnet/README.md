@@ -13,6 +13,10 @@ Install scipy with pip
 ```
 pip install scipy
 ```
+Install tensorboard with pip
+```
+pip install tensorboard
+```
 
 On Single gpu
 ```
