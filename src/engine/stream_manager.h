@@ -89,6 +89,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      break;
 #endif  // MXNET_USE_CUDA
     default:
       LOG(FATAL) << "Not Reached";
@@ -121,6 +122,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      break;
 #endif  // MXNET_USE_CUDA
     default:
       LOG(FATAL) << "Not Reached";
