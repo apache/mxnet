@@ -385,6 +385,13 @@ class ConvolutionOp {
   bool is_1x1_;
 };  // class ConvolutionOp
 
+template<typename xpu, typename DType>
+ConvolutionOp<xpu, DType> &GetConvolutionOp(const ConvolutionParam& param) {
+  static thread_local ConvolutionOp<xpu, DType> op;
+  op.Init(param);
+  return op;
+}
+
 template<typename xpu>
 void ConvolutionCompute(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx, const std::vector<TBlob>& inputs,
@@ -392,9 +399,7 @@ void ConvolutionCompute(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   MSHADOW_REAL_TYPE_SWITCH(inputs[conv::kData].type_flag_, DType, {
-    static thread_local ConvolutionOp<xpu, DType> op;
-    op.Init(param);
-    op.Forward(ctx, inputs, req, outputs);
+    GetConvolutionOp<xpu, DType>(param).Forward(ctx, inputs, req, outputs);
   });
 }
 
@@ -409,9 +414,8 @@ void ConvolutionGradCompute(const nnvm::NodeAttrs& attrs,
   const std::vector<TBlob> &in_grad = outputs;
 
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
-    static thread_local ConvolutionOp<xpu, DType> op;
-    op.Init(param);
-    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
+    GetConvolutionOp<xpu, DType>(param).Backward(ctx, std::vector<TBlob>{out_grad},
+                                                 in_data, req, in_grad);
   });
 }
 
