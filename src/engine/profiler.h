@@ -132,7 +132,6 @@ class Profiler {
  protected:
   /*! \brief make constructor protected. */
   Profiler();
-  ~Profiler();
 
  private:
   /*! \brief generate device information following chrome profile file format */

@@ -69,10 +69,6 @@ Profiler::Profiler()
   }
 }
 
-Profiler::~Profiler(){
-  delete this->profile_stat;
-}
-
 Profiler* Profiler::Get() {
 #if MXNET_USE_PROFILER
   static Profiler inst;
