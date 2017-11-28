@@ -1,5 +1,8 @@
+import org.gradle.api.XmlProvider
+import org.gradle.api.artifacts.maven.MavenDeployment
+
 group 'org.caffetranslator'
-version '0.9.0'
+version '0.9.0-SNAPSHOT'
 
 buildscript {
     repositories {
@@ -15,6 +18,9 @@ apply plugin: 'java'
 
 apply plugin: 'antlr'
 apply plugin: 'application'
+
+apply plugin: 'maven'
+apply plugin: 'signing'
 
 sourceCompatibility = 1.8
 
@@ -46,6 +52,48 @@ shadowJar {
     baseName = 'caffe-translator'
     classifier = null
     version = version
+}
+
+artifacts {
+    shadowJar
+}
+
+signing {
+    sign shadowJar
+}
+
+uploadShadow {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: sonatypeRepositoryUrl) {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'Caffe Translator'
+                packaging 'jar'
+                description 'Translate Caffe code to MXNet Python code'
+                url 'http://caffetranslator.org'
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'indhub'
+                        name 'Indu Bharathi'
+                    }
+                }
+            }
+        }
+    }
 }
 
 mainClassName = "io.mxnet.caffetranslator.Launcher"
