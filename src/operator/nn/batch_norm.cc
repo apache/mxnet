@@ -349,14 +349,6 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static inline std::vector<std::string> ListArguments() {
-  return {"data", "gamma", "beta"};
-}
-
-static inline std::vector<std::string> ListOutputs() {
-  return {"output", "mean", "var"};
-}
-
 static bool BatchNormType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_type, std::vector<int> *out_type) {
   using namespace mshadow;
@@ -369,14 +361,16 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   int dtype_param;
   MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
       dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+  std::vector<std::string> args{"data", "gamma", "beta"};
+  CHECK_LE(in_type->size(), args.size());
   for (index_t i = 1; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype_param;
     } else {
-      UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, ListArguments()[i]);
+      UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, args[i]);
     }
   }
-  const size_t n_out = ListOutputs().size();
+  const size_t n_out = 3;
   out_type->clear();
   out_type->push_back(dtype);
   for (size_t i = 1; i < n_out; ++i) {
