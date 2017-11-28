@@ -1,4 +1,3 @@
-import org.gradle.api.XmlProvider
 import org.gradle.api.artifacts.maven.MavenDeployment
 
 group 'org.caffetranslator'
@@ -50,22 +49,38 @@ jar {
 
 shadowJar {
     baseName = 'caffe-translator'
-    classifier = null
+    classifier = ''
     version = version
 }
 
+configurations {
+    releaseJars
+    ascSignatures
+}
+
 artifacts {
-    shadowJar
+    releaseJars shadowJar
 }
 
 signing {
-    sign shadowJar
+    sign configurations.releaseJars
 }
 
 uploadShadow {
     repositories {
         mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+            beforeDeployment { MavenDeployment deployment
+                -> signing.signPom(deployment)
+                configurations.releaseJars.artifacts.each { ra ->
+                    def ascfile = file(ra.file.path + '.asc')
+                    def ascArtifact = project.artifacts.add('ascSignatures', ascfile) {
+                        classifier = ra.classifier
+                        extension = ra.extension + '.asc'
+                        type = ra.type + '.asc'
+                    }
+                    deployment.addArtifact(ascArtifact)
+                }
+            }
 
             repository(url: sonatypeRepositoryUrl) {
                 authentication(userName: ossrhUsername, password: ossrhPassword)
