@@ -73,8 +73,9 @@ public class Solver {
 
     public String getProperty(String key) {
         List<String> list = getProperties(key);
-        if (list == null)
+        if (list == null) {
             return null;
+        }
         return getProperties(key).get(0);
     }
 
@@ -88,9 +89,10 @@ public class Solver {
 
     public String getProperty(String key, String defaultValue) {
         String value = getProperty(key);
-        if (value == null)
+        if (value == null) {
             return defaultValue;
-        else
+        } else {
             return value;
+        }
     }
 }

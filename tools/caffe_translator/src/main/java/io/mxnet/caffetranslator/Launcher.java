@@ -59,7 +59,7 @@ public class Launcher {
         parseCommandLine(args);
 
         Converter converter = new Converter(trainingPrototextPath, solverPrototextPath);
-        if(paramsFilePath != null) {
+        if (paramsFilePath != null) {
             converter.setParamsFilePath(paramsFilePath);
         }
         String code = converter.generateMXNetCode();

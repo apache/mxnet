@@ -49,8 +49,9 @@ public class SolverListener extends CaffePrototxtBaseListener {
         String value = ctx.value().getText();
         value = parserHelper.removeQuotes(value);
 
-        if (properties.get(key) == null)
+        if (properties.get(key) == null) {
             properties.put(key, new ArrayList<>());
+        }
 
         properties.get(key).add(value);
     }

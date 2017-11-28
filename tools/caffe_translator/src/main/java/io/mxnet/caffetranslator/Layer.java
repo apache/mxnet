@@ -88,7 +88,9 @@ public class Layer {
 
     public String getAttr(String key) {
         List<String> list = attr.get(key);
-        if (list == null) return null;
+        if (list == null) {
+            return null;
+        }
 
         return list.get(0);
     }
@@ -103,7 +105,9 @@ public class Layer {
     }
 
     public boolean attrEquals(String key, String value) {
-        if (!attr.containsKey(key)) return false;
+        if (!attr.containsKey(key)) {
+            return false;
+        }
         return getAttr(key).equals(value);
     }
 

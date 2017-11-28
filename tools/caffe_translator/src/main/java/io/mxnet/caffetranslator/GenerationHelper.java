@@ -74,8 +74,9 @@ public class GenerationHelper {
 
     public ST getTemplate(String name) {
         ST st = stGroupDir.getInstanceOf(name);
-        if (st != null)
+        if (st != null) {
             return st;
+        }
         return stGroupFile.getInstanceOf(name);
     }
 
@@ -93,14 +94,17 @@ public class GenerationHelper {
     }
 
     public String getInit(String fillerType, String fillerValue) {
-        if (fillerType == null && fillerValue == null)
+        if (fillerType == null && fillerValue == null) {
             return null;
+        }
 
-        if (fillerType == null)
+        if (fillerType == null) {
             fillerType = "constant";
+        }
 
-        if (fillerValue == null)
+        if (fillerValue == null) {
             fillerValue = "0";
+        }
 
         String initializer;
         switch (fillerType) {
@@ -158,12 +162,15 @@ public class GenerationHelper {
         if (value == null) {
             for (String altKey : altKeys) {
                 value = layer.getAttr(altKey);
-                if (value != null) break;
+                if (value != null) {
+                    break;
+                }
             }
         }
 
-        if (value == null && defaultValue != null)
+        if (value == null && defaultValue != null) {
             value = defaultValue;
+        }
 
         if (value == null) {
             System.err.println(String.format("Layer %s does not contain attribute %s or alternates",

@@ -39,20 +39,25 @@ public class ScaleGenerator extends BaseGenerator {
 
         StringBuilder out = new StringBuilder();
 
-        if (use_bias)
+        if (use_bias) {
             out.append(generator.generate(layer, model, 2).code);
-        else
+        } else {
             out.append(generator.generate(layer, model, 1).code);
+        }
 
         String fillerType = layer.getAttr("filler.type");
         String fillerValue = layer.getAttr("filler.value");
-        if (fillerType == null && fillerValue == null) fillerValue = "1";
+        if (fillerType == null && fillerValue == null) {
+            fillerValue = "1";
+        }
         out.append(gh.initializeParam(gh.getVarname(layer.getTop()), 1, gh.getInit(fillerType, fillerValue)));
 
         if (use_bias) {
             fillerType = layer.getAttr("bias_filler.type");
             fillerValue = layer.getAttr("bias_filler.value");
-            if (fillerType == null && fillerValue == null) fillerValue = "0";
+            if (fillerType == null && fillerValue == null) {
+                fillerValue = "0";
+            }
             out.append(gh.initializeParam(gh.getVarname(layer.getTop()), 2, gh.getInit(fillerType, fillerValue)));
         }
 

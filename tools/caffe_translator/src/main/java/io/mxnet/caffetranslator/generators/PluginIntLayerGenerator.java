@@ -49,12 +49,15 @@ public class PluginIntLayerGenerator extends BaseGenerator {
 
         st.add("name", layer.getName());
 
-        if (layer.getBottoms().size() != 1)
+        if (layer.getBottoms().size() != 1) {
             st.add("num_data", layer.getBottoms().size());
-        if (layer.getTops().size() != 1)
+        }
+        if (layer.getTops().size() != 1) {
             st.add("num_out", layer.getTops().size());
-        if (num_weight != 0)
+        }
+        if (num_weight != 0) {
             st.add("num_weight", num_weight);
+        }
 
         String dataList = helper.getDataList(layer);
         st.add("data", dataList);

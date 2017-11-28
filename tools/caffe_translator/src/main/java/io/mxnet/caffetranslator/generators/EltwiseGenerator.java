@@ -36,7 +36,9 @@ public class EltwiseGenerator extends BaseGenerator {
     @Override
     public GeneratorOutput generate(Layer layer, MLModel model) {
         String operation = layer.getAttr("eltwise_param.operation");
-        if (operation == null) operation = "SUM";
+        if (operation == null) {
+            operation = "SUM";
+        }
 
         ST st;
         switch (operation) {

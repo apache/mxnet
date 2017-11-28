@@ -50,7 +50,9 @@ public abstract class BaseGenerator implements SymbolGenerator {
         st.add("lr_mult", (lr_mult == null) ? "None" : lr_mult);
         st.add("wd_mult", (wd_mult == null) ? "None" : wd_mult);
         st.add("init", (init == null) ? "None" : init);
-        if (shape != null) st.add("shape", shape);
+        if (shape != null) {
+            st.add("shape", shape);
+        }
 
         return st.render();
     }

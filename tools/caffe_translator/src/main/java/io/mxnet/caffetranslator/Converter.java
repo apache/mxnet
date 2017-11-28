@@ -114,11 +114,11 @@ public class Converter {
     }
 
     public String generateMXNetCode() {
-        if(!parseTrainingPrototxt()) {
+        if (!parseTrainingPrototxt()) {
             return "";
         }
 
-        if(!parseSolverPrototxt()) {
+        if (!parseSolverPrototxt()) {
             return "";
         }
 
@@ -136,7 +136,7 @@ public class Converter {
         code.append(generateMetricsClasses());
         code.append(System.lineSeparator());
 
-        if(paramsFilePath != null) {
+        if (paramsFilePath != null) {
             code.append(generateParamsLoader());
             code.append(System.lineSeparator());
         }
@@ -230,11 +230,13 @@ public class Converter {
         String display = solver.getProperty("display");
         String average_loss = solver.getProperty("average_loss");
 
-        if (display != null)
+        if (display != null) {
             st.add("display", display);
+        }
 
-        if (average_loss != null)
+        if (average_loss != null) {
             st.add("average_loss", average_loss);
+        }
 
         return st.render();
     }
@@ -333,8 +335,9 @@ public class Converter {
                 st.add("opt_name", "RMSProp");
                 break;
             default:
-                if (!caffeOptimizer.equals("sgd"))
+                if (!caffeOptimizer.equals("sgd")) {
                     System.err.println("Unknown optimizer. Will use SGD instead.");
+                }
 
                 st = gh.getTemplate("opt_sgd");
                 st.add("opt_name", "SGD");
@@ -391,8 +394,9 @@ public class Converter {
         for (Layer layer : mlModel.getDataLayers()) {
             if (layer.getAttr("include.phase").equalsIgnoreCase("train")) {
                 String dataName = layer.getTops().get(topIndex);
-                if (dataName != null)
+                if (dataName != null) {
                     dataList.add(String.format("'%s'", dataName));
+                }
             }
         }
         return dataList;
@@ -431,20 +435,22 @@ public class Converter {
         st.add("prototxt", prototxt);
 
         String dataName = "???";
-        if (layer.getTops().size() >= 1)
+        if (layer.getTops().size() >= 1) {
             dataName = layer.getTops().get(0);
-        else
+        } else {
             System.err.println(String.format("Data layer %s doesn't have data", layer.getName()));
+        }
         st.add("data_name", dataName);
 
         String labelName = "???";
-        if (layer.getTops().size() >= 1)
+        if (layer.getTops().size() >= 1) {
             labelName = layer.getTops().get(1);
-        else
+        } else {
             System.err.println(String.format("Data layer %s doesn't have label", layer.getName()));
+        }
         st.add("label_name", labelName);
 
-        if(layer.hasAttr("data_param.num_examples")) {
+        if (layer.hasAttr("data_param.num_examples")) {
             st.add("num_examples", layer.getAttr("data_param.num_examples"));
         }
 

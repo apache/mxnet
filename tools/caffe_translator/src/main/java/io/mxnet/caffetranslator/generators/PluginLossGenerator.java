@@ -45,8 +45,9 @@ public class PluginLossGenerator extends BaseGenerator {
         st.add("name", layer.getName());
 
         // Handle data
-        if (layer.getBottoms().size() != 1)
+        if (layer.getBottoms().size() != 1) {
             st.add("num_data", layer.getBottoms().size());
+        }
         String dataList = helper.getDataList(layer);
         st.add("data", dataList);
 
