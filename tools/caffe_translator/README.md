@@ -35,11 +35,11 @@ java -jar caffe-translator-0.9.0.jar --training-prototxt lenet_train_test.protot
 
 #### Run the translated code:
 
-Following pre-requisites are required to run the translated code:
+Following prerequisites are required to run the translated code:
 1. Caffe with MXNet interface ([Why?](faq.md#why_caffe) [How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#install-caffe-with-mxnet-interface))
 2. MXNet with Caffe plugin ([How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#compile-with-caffe))
 
-Once pre-requisites are installed, the translated Python code can be run like any other Python code:
+Once prerequisites are installed, the translated Python code can be run like any other Python code:
 
 Example:
 ```
@@ -68,4 +68,4 @@ Caffe Translator can currently translate the following layers.
 
 <sup>*</sup> - Uses [CaffePlugin](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe)
 
-If you want CaffeTranslator to translate a layer that is not in the above list, please create an [issue](https://github.com/apache/incubator-mxnet/issues/new).
+If you want Caffe Translator to translate a layer that is not in the above list, please create an [issue](https://github.com/apache/incubator-mxnet/issues/new).
