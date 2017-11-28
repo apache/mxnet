@@ -165,8 +165,9 @@ void Profiler::DumpProfile() {
   bool first_flag = true;
   for (uint32_t i = 0; i < dev_num; ++i) {
     DevStat &d = profile_stat[i];
-    OprExecStat *opr_stat = nullptr;
+    OprExecStat *opr_stat;
     while (d.opr_exec_stats_->try_dequeue(opr_stat)) {
+      CHECK_NOTNULL(opr_stat);
       uint32_t pid = i;
       uint32_t tid = opr_stat->thread_id;
 
@@ -181,6 +182,7 @@ void Profiler::DumpProfile() {
       file << ",\n";
       this->EmitEvent(&file, opr_stat->opr_name, "category", "E",
                       opr_stat->opr_end_rel_micros, pid, tid);
+      delete opr_stat;
     }
   }
 
