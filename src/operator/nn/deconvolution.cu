@@ -40,7 +40,7 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
                                                      const std::vector<TShape>& in_shape,
                                                      const std::vector<TShape>& out_shape,
                                                      const Context& ctx, bool backward) {
-  // TODO (zhengda) Convolution forward has to be called before backward for this operator.
+  // Convolution forward has to be called before backward for this operator.
   // So we can't make this operator thread local. backward might be called
   // in another thread.
   static CuDNNDeconvolutionOp<DType> op;
