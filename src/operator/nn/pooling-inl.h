@@ -81,53 +81,39 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 };
 
 template<typename xpu, typename DType>
-class PoolingOp {
- public:
-  void Init(PoolingParam p) {
-    this->param_ = p;
-  }
+void PoolingForward(const OpContext& ctx, const PoolingParam &param,
+                    const TBlob& in_data, const OpReqType& req,
+                    const TBlob& out_data) {
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TShape& ishape = in_data.shape_;
 
-  void Forward(const OpContext& ctx, const TBlob& in_data,
-               const OpReqType& req, const TBlob& out_data) {
-    using namespace mshadow;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TShape& ishape = in_data.shape_;
-
-    pool(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
-         param_.global_pool?
-           TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
-           : param_.kernel,
-         param_.pad,
-         param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
-         param_.pool_type, req, out_data.dptr<DType>());
-  }
-
-  void Backward(const OpContext& ctx, const TBlob& out_grad,
-                const TBlob& in_data, const TBlob& out_data,
-                const OpReqType& req, const TBlob& in_grad) {
-    using namespace mshadow;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TShape& ishape = in_data.shape_;
-
-    unpool(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
-           in_grad.shape_, out_grad.shape_,
-           param_.global_pool?
-             TShape(ishape.data()+ishape.ndim()-param_.kernel.ndim(), ishape.data()+ishape.ndim())
-             : param_.kernel,
-           param_.pad,
-           param_.global_pool? TShape(param_.kernel.ndim()) : param_.stride,
-           param_.pool_type, req, in_grad.dptr<DType>());
-  }
-
- private:
-  PoolingParam param_;
-};  // class PoolingOp
+  pool(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
+       param.global_pool?
+       TShape(ishape.data()+ishape.ndim()-param.kernel.ndim(), ishape.data()+ishape.ndim())
+       : param.kernel,
+       param.pad,
+       param.global_pool? TShape(param.kernel.ndim()) : param.stride,
+       param.pool_type, req, out_data.dptr<DType>());
+}
 
 template<typename xpu, typename DType>
-PoolingOp<xpu, DType> &GetPoolingOp(const PoolingParam &param) {
-  static thread_local PoolingOp<xpu, DType> op;
-  op.Init(param);
-  return op;
+void PoolingBackward(const OpContext& ctx, const PoolingParam &param,
+                     const TBlob& out_grad, const TBlob& in_data,
+                     const TBlob& out_data, const OpReqType& req,
+                     const TBlob& in_grad) {
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TShape& ishape = in_data.shape_;
+
+  unpool(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
+         in_grad.shape_, out_grad.shape_,
+         param.global_pool?
+         TShape(ishape.data()+ishape.ndim()-param.kernel.ndim(), ishape.data()+ishape.ndim())
+         : param.kernel,
+         param.pad,
+         param.global_pool? TShape(param.kernel.ndim()) : param.stride,
+         param.pool_type, req, in_grad.dptr<DType>());
 }
 
 template<typename xpu>
@@ -143,7 +129,7 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      GetPoolingOp<xpu, DType>(param).Forward(ctx, inputs[0], req[0], outputs[0]);
+      PoolingForward<xpu, DType>(ctx, param, inputs[0], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
     }
@@ -164,7 +150,7 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type) {
-      GetPoolingOp<xpu, DType>(param).Backward(ctx,
+      PoolingBackward<xpu, DType>(ctx, param,
           inputs[0], inputs[1], inputs[2], req[0], outputs[0]);
     } else {
       LOG(FATAL) << "unknown pooling type";
