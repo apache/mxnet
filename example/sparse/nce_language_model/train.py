@@ -27,13 +27,13 @@ parser.add_argument('--model', type=str, default='lstm',
                     help='type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)')
 parser.add_argument('--data', type=str, default='./data/ptb.',
                     help='location of the data corpus')
-parser.add_argument('--emsize', type=int, default=200,
+parser.add_argument('--emsize', type=int, default=1500,
                     help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=200,
+parser.add_argument('--nhid', type=int, default=1500,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=0.001,
+parser.add_argument('--lr', type=float, default=0.1,
                     help='initial learning rate')
 parser.add_argument('--mom', type=float, default=0.0,
                     help='momentum for sgd')
@@ -46,7 +46,7 @@ parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=32, metavar='N',
                     help='batch size')
-parser.add_argument('--dropout', type=float, default=0.2,
+parser.add_argument('--dropout', type=float, default=0.65,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
@@ -54,8 +54,10 @@ parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
 parser.add_argument('--scale', type=int, default=1,
                     help='scaling factor for vocab size')
-parser.add_argument('--k', type=int, default=32,
+parser.add_argument('--k', type=int, default=15,
                     help='number of noise samples to estimate')
+parser.add_argument('--use-gpu', type=int, default=0,
+                    help='which gpu to use')
 parser.add_argument('--use-dense', action='store_true',
                     help='use dense embedding instead of sparse embedding')
 parser.add_argument('--use-full-softmax', action='store_true',
@@ -64,6 +66,8 @@ parser.add_argument('--cuda', action='store_true',
                     help='whether to use gpu')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
+parser.add_argument('--profile', action='store_true',
+                    help='whether to use profiler')
 #parser.add_argument('--save', type=str, default='model.params',
 #                    help='path to save the final model')
 args = parser.parse_args()
@@ -73,7 +77,8 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     args = parser.parse_args()
-    ctx = mx.gpu(0) if args.cuda else mx.cpu()
+    logging.info(args)
+    ctx = mx.gpu(args.use_gpu) if args.cuda else mx.cpu()
     full_softmax = args.use_full_softmax
 
     # data
@@ -98,6 +103,13 @@ if __name__ == '__main__':
     # use accuracy as the metric
     metric = mx.metric.Perplexity(ignore_label=None)
     speedometer = mx.callback.Speedometer(args.batch_size, args.log_interval)
+    if args.profile:
+        config = ['scale', args.scale, 'nhid', args.nhid, 'k', args.k, 'nlayers', args.nlayers,
+                  'use_dense', args.use_dense, 'use_full_softmax', args.use_full_softmax]
+        config_str = map(lambda x: str(x), config)
+        filename = '-'.join(config_str) + '.json'
+        mx.profiler.profiler_set_config(mode='all', filename=filename)
+        mx.profiler.profiler_set_state('run')
 
     # train
     logging.info("Training started ... ")
@@ -119,3 +131,5 @@ if __name__ == '__main__':
             speedometer(speedometer_param)
         train_data.reset()
     logging.info("Training completed. ")
+    if args.profile:
+        mx.profiler.profiler_set_state('stop')
