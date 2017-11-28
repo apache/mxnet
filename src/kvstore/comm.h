@@ -659,7 +659,6 @@ class CommDevice : public Comm {
                           const std::vector<std::pair<NDArray*, NDArray>>& dst,
                           const bool use_copy,
                           const int priority) override {
-    using namespace mshadow;
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
       << "BroadcastRowSparse expects row-sparse src NDArray";
 
@@ -689,7 +688,7 @@ class CommDevice : public Comm {
         if (is_diff_ctx) {
           CopyFromTo(src, &src_gpu, priority);
         }
-        NDArray row_id_gpu = NDArray(row_id.shape(), out->ctx(), false, kInt64);
+        NDArray row_id_gpu = NDArray(row_id.shape(), out->ctx(), false, mshadow::kInt64);
         const TBlob& indices = row_id_gpu.data();
         CopyFromTo(row_id, &row_id_gpu, priority);
 
