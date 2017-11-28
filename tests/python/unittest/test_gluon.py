@@ -257,7 +257,6 @@ def test_deconv():
     # # check_layer_forward(layer, (1, 10, 10, 10, 4))
 
 
-
 def test_pool():
     layers1d = [
         nn.MaxPool1D(),
