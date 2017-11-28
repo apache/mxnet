@@ -61,6 +61,7 @@ _WHITE_LIST = ['R-package/',
                'dmlc-core/',
                'mshadow/',
                'nnvm',
+               '3rdparty',   
                'ps-lite',
                'src/operator/mkl/',
                'src/operator/contrib/ctc_include/']

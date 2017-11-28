@@ -131,6 +131,10 @@ ifeq ($(USE_MKL2017), 1)
 	LDFLAGS +=  -liomp5
 endif
 
+ifeq ($(USE_OPERATOR_TUNING), 1)
+	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
+endif
+
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -327,8 +331,19 @@ ifeq ($(USE_CUDA), 1)
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda -lcufft -lnvrtc
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
+	ifeq ($(USE_NCCL), 1)
+		ifneq ($(USE_NCCL_PATH), NONE)
+			CFLAGS += -I$(USE_NCCL_PATH)/include
+			LDFLAGS += -L$(USE_NCCL_PATH)/lib
+		endif
+		LDFLAGS += -lnccl
+		CFLAGS += -DMXNET_USE_NCCL=1
+	else
+		CFLAGS += -DMXNET_USE_NCCL=0
+	endif
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
+	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
 ifeq ($(USE_LIBJPEG_TURBO), 1)
@@ -420,7 +435,7 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
@@ -452,7 +467,7 @@ cyclean:
 
 # R related shortcuts
 rcpplint:
-	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
 	mkdir -p R-package/inst
@@ -510,7 +525,7 @@ scaladeploy:
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
-	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean $(EXTRA_PACKAGES_CLEAN)

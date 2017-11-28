@@ -20,6 +20,7 @@
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
+import os
 import time
 import logging
 import warnings
@@ -101,6 +102,26 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
 
         if update_on_kvstore:
             kvstore.pull(name, param_on_devs, priority=-idx)
+
+def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_names):
+    """Perform update of param_arrays from grad_arrays on NCCL kvstore."""
+    valid_indices = [index for index, grad_list in
+                     enumerate(grad_arrays) if grad_list[0] is not None]
+    valid_grad_arrays = [grad_arrays[i] for i in valid_indices]
+    valid_param_arrays = [param_arrays[i] for i in valid_indices]
+    valid_param_names = [param_names[i] for i in valid_indices]
+    size = len(valid_grad_arrays)
+    start = 0
+    # Use aggregation by default only with NCCL
+    default_batch = 16
+    batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
+    while start < size:
+        end = start + batch if start + batch < size else size
+        # push gradient, priority is negative index
+        kvstore.push(valid_param_names[start:end], valid_grad_arrays[start:end], priority=-start)
+        # pull back the weights
+        kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
+        start = end
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on kvstore."""
@@ -263,9 +284,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 executor_manager.backward()
 
                 if update_on_kvstore:
-                    _update_params_on_kvstore(executor_manager.param_arrays,
-                                              executor_manager.grad_arrays,
-                                              kvstore, executor_manager.param_names)
+                    if 'nccl' in kvstore.type:
+                        _update_params_on_kvstore_nccl(executor_manager.param_arrays,
+                                                       executor_manager.grad_arrays,
+                                                       kvstore, executor_manager.param_names)
+                    else:
+                        _update_params_on_kvstore(executor_manager.param_arrays,
+                                                  executor_manager.grad_arrays,
+                                                  kvstore, executor_manager.param_names)
                 else:
                     _update_params(executor_manager.param_arrays,
                                    executor_manager.grad_arrays,

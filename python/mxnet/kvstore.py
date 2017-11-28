@@ -451,7 +451,7 @@ class KVStore(object):
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
-                optim_str = pickle.dumps(optimizer, 0)
+                optim_str = py_str(pickle.dumps(optimizer, 0))
             except:
                 raise
             self._send_command_to_servers(0, optim_str)
@@ -622,7 +622,7 @@ def create(name='local'):
 
     Parameters
     ----------
-    name : {'local', 'device', 'dist_sync', 'dist_device_sync', 'dist_async'}
+    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async'}
         The type of KVStore.
     Returns
     -------

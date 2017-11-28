@@ -301,7 +301,7 @@ class KVStoreDistServer {
           using namespace mshadow;
           Engine::Get()->PushAsync(
             [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-              op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
+              op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
                 {}, {}, {recved, merged.array}, {kWriteTo}, {out});
               on_complete();
             }, recved.ctx(), const_vars, {out.var()},
