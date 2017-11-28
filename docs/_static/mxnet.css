@@ -57,7 +57,7 @@ li, dt a, dt span {
 
 .footer {
     z-index: 10;
-    position: absolute;
+    position: relative;
     bottom: 0;
     width: 100%;
 }
