@@ -575,6 +575,8 @@ class CommDevice : public Comm {
 #if MXNET_USE_CUDA
             case gpu::kDevMask: {
               mxnet::ndarray::ElementwiseSum(rctx.get_stream<gpu>(), rsc, reduce, &out);
+              // wait for GPU operations to complete
+              rctx.get_stream<gpu>()->Wait();
               break;
             }
 #endif
@@ -703,6 +705,8 @@ class CommDevice : public Comm {
               case gpu::kDevMask: {
                 mxnet::common::SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
                   src_gpu, indices, kWriteTo, &temp);
+                // wait for GPU operations to complete
+                rctx.get_stream<gpu>()->Wait();
                 break;
               }
 #endif
@@ -774,7 +778,7 @@ class CommDevice : public Comm {
       int key  = std::get<0>(sorted_key_attrs_[i]);
       TShape shape = std::get<1>(sorted_key_attrs_[i]);
       int type = std::get<2>(sorted_key_attrs_[i]);
-      NDArrayStorageType stype = std::get<3>(sorted_key_attrs_[i]);
+      const NDArrayStorageType stype = std::get<3>(sorted_key_attrs_[i]);
       auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
