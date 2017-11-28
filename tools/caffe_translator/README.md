@@ -22,7 +22,7 @@ java -jar caffe-translator-0.9.0.jar --training-prototxt lenet_train_test.protot
     --output-file translated_code.py
 ```
 
-**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information using a `#caffe2mxnet` directive like shown below:
+**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#caffe2mxnet` directive like shown below:
 
 ```
   data_param {
