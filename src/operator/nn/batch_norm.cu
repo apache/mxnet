@@ -579,13 +579,13 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
   flags |= ctx.is_train ? IS_TRAINING_FLAG : 0;
   flags |= params.fix_gamma ? FIX_GAMMA_FLAG : 0;
   flags |= params.use_global_stats ? USE_GLOBAL_STATS_FLAG : 0;
-  if (BatchNormOp<xpu, DType, AccReal>::IsWriting(req[batchnorm::kData])) {
+  if (IsBNWriting(req[batchnorm::kData])) {
     flags |= WRITE_DATA_FLAG;
   }
-  if (BatchNormOp<xpu, DType, AccReal>::IsWriting(req[batchnorm::kGamma])) {
+  if (IsBNWriting(req[batchnorm::kGamma])) {
     flags |= WRITE_GAMMA_FLAG;
   }
-  if (BatchNormOp<xpu, DType, AccReal>::IsWriting(req[batchnorm::kBeta])) {
+  if (IsBNWriting(req[batchnorm::kBeta])) {
     flags |= WRITE_BETA_FLAG;
   }
   return flags;
@@ -593,16 +593,16 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
 
 /*! \brief Forward batch-norm pass on GPU */
 template<typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<gpu> *stream,
-                                                 const OpContext &ctx,
-                                                 const std::vector<TBlob> &in_data,
-                                                 const std::vector<OpReqType> &req,
-                                                 const std::vector<TBlob> &out_data,
-                                                 const std::vector<TBlob> &aux_states) {
+void DoBNForward(mshadow::Stream<gpu> *stream,
+                 const OpContext &ctx, const BatchNormParam& param,
+                 const std::vector<TBlob> &in_data,
+                 const std::vector<OpReqType> &req,
+                 const std::vector<TBlob> &out_data,
+                 const std::vector<TBlob> &aux_states) {
   batchnorm::cuda::BatchNormalizationUpdateOutput<DType, AccReal>(
     stream,
     ctx,
-    param_,
+    param,
     in_data,
     out_data,
     aux_states,
@@ -614,18 +614,18 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<gpu> *stream,
 
 /*! \brief Backward batch-norm pass on GPU */
 template<typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
-                                                  const OpContext &ctx,
-                                                  const std::vector<TBlob> &out_grad,
-                                                  const std::vector<TBlob> &in_data,
-                                                  const std::vector<TBlob> &out_data,
-                                                  const std::vector<OpReqType> &req,
-                                                  const std::vector<TBlob> &in_grad,
-                                                  const std::vector<TBlob> &aux_states) {
+void DoBNBackward(mshadow::Stream<gpu> *stream,
+                  const OpContext &ctx, const BatchNormParam& param,
+                  const std::vector<TBlob> &out_grad,
+                  const std::vector<TBlob> &in_data,
+                  const std::vector<TBlob> &out_data,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &in_grad,
+                  const std::vector<TBlob> &aux_states) {
   batchnorm::cuda::BatchNormalizationBackward<DType, AccReal>(
     stream,
     ctx,
-    param_,
+    param,
     out_grad,
     in_data,
     out_data,
@@ -646,9 +646,9 @@ static CuDNNBatchNormOp<DType> &GetCuDNNOp(const BatchNormParam& param) {
 
 template<>
 void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
   BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 5U);
   std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
@@ -677,9 +677,9 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
 template<>
 void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx, const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 11U);
   BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<TBlob> out_grad(1, inputs[0]);
