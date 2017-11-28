@@ -45,3 +45,27 @@ Example:
 ```
 python translated_code.py
 ```
+
+### What layers are supported?
+
+Caffe Translator can currently translate the following layers.
+
+- Accuracy and Top-k
+- Batch Normalization
+- Concat
+- Convolution
+- Data<sup>*</sup>
+- Deconvolution
+- Eltwise
+- Inner Product (Fully Connected layer)
+- Flatten
+- Permute
+- Pooling
+- Power
+- Relu
+- Scale<sup>*</sup>
+- SoftmaxOutput
+
+<sup>*</sup> - Uses [CaffePlugin](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe)
+
+If you want CaffeTranslator to translate a layer that is not in the above list, please create an [issue](https://github.com/apache/incubator-mxnet/issues/new).
