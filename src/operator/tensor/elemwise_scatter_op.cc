@@ -79,8 +79,9 @@ static bool StorageTypeScatteredScalarOp(const NodeAttrs& attrs,
 
 /*! \brief _scatter_elemwise_div */
 MXNET_OPERATOR_REGISTER_BINARY(_scatter_elemwise_div)
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseScatterBinaryOp::Compute<cpu, mshadow::op::div>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseScatterBinaryOp::ComputeEx<cpu, mshadow::op::div>)
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseScatterBinaryOp::Compute<cpu, op::mshadow_op::div>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseScatterBinaryOp::ComputeEx<
+  cpu, op::mshadow_op::div>)
 .describe(R"code(Divides arguments element-wise.  If the left-hand-side input is 'row_sparse', then
 only the values which exist in the left-hand sparse array are computed.  The 'missing' values
 are ignored.
@@ -117,9 +118,9 @@ with default storage
 )code")
 .set_attr<FInferStorageType>("FInferStorageType", StorageTypeScatteredScalarOp)
 .set_attr<FCompute>("FCompute<cpu>",
-                    ElemwiseScatterBinaryScalarOp::Compute<cpu, mshadow::op::plus>)
+                    ElemwiseScatterBinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
-                      ElemwiseScatterBinaryScalarOp::ComputeEx<cpu, mshadow::op::plus>)
+                      ElemwiseScatterBinaryScalarOp::ComputeEx<cpu, op::mshadow_op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 /*! \brief _scatter_minus_scalar */
@@ -138,9 +139,9 @@ with default storage
 )code")
 .set_attr<FInferStorageType>("FInferStorageType", StorageTypeScatteredScalarOp)
 .set_attr<FCompute>("FCompute<cpu>",
-                    ElemwiseScatterBinaryScalarOp::Compute<cpu, mshadow::op::minus>)
+                    ElemwiseScatterBinaryScalarOp::Compute<cpu, op::mshadow_op::minus>)
 .set_attr<FComputeEx>("FComputeEx<cpu>",
-                      ElemwiseScatterBinaryScalarOp::ComputeEx<cpu, mshadow::op::minus>)
+                      ElemwiseScatterBinaryScalarOp::ComputeEx<cpu, op::mshadow_op::minus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 }  // namespace op

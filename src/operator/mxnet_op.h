@@ -85,7 +85,7 @@ inline int get_num_threads<gpu>(const int N) {
 
 template<>
 inline int get_num_threads<cpu>(const int N) {
-  return omp_get_max_threads();
+  return engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 }
 
 /*! \brief operator request type switch */
@@ -291,6 +291,12 @@ struct backward_grad {
   }
 };
 
+/*! \brief Binary op backward gradient OP wrapper (tuned) */
+template<typename GRAD_OP>
+struct backward_grad_tuned : public backward_grad<GRAD_OP>, public tunable {
+  using backward_grad<GRAD_OP>::Map;
+};
+
 /*! \brief Select assignment operation based upon the req value
  * Also useful for mapping mshadow Compute (F<OP>) to Kernel<OP>::Launch
  */
@@ -360,11 +366,10 @@ struct Kernel<OP, cpu> {
    * operator_tune.cc
    * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
    * \param N Number of iterations
-   * \param dest Destination pointer (used to infer DType)
    * \param args Varargs to eventually pass to the OP::Map() functoion
    */
   template<typename ...Args>
-  inline static void Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
+  inline static bool Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
@@ -382,6 +387,7 @@ struct Kernel<OP, cpu> {
       OP::Map(i, args...);
     }
 #endif
+    return true;
   }
 
   /*!
@@ -441,7 +447,45 @@ struct Kernel<OP, cpu> {
     OP::Map(0, N, args...);
 #endif
   }
+
+  /*!
+   * \brief Launch a tunable OP with implicitly-supplied data type
+   * \tparam DType Data type
+   * \tparam T OP type
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param s Stream (usually null for CPU)
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \return Always true
+   */
+  template<typename DType, typename T = OP, typename ...Args>
+  static MSHADOW_CINLINE
+  typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+    LaunchTuned<T, DType>(s, N, dest, args...);
+    return true;
+  }
+
+  /*!
+   * \brief Launch a tunable OP wrapper with explicitly-supplied data type (ie op_with_req)
+   * \tparam DType Data type
+   * \tparam T Wrapper type
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param s Stream (usually null for CPU)
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \return Always true
+   */
+  template<typename DType, typename T = OP, typename ...Args>
+  static MSHADOW_CINLINE
+  typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
+  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+    LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
+    return true;
+  }
 };
+
+
 
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
@@ -482,48 +526,11 @@ struct Kernel<OP, gpu> {
 #endif  // __CUDACC__
 
 /*!
- * \brief Wrap Kernel<OP, xpu>::Launch* with some special-case helpers
- */
-template<typename OP, typename xpu>
-struct KernelWrapper {
-  /*!
-   * \brief Launch 'mshadow_op-type' op (i.e. DType (*)( ... ) { return <operation> }
-   * \tparam Args Varargs type to eventually pass to the OP::Map() function
-   * \param s Stream object pointer (unused)
-   * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
-   */
-  template<typename DType, typename ...Args>
-  MSHADOW_CINLINE static void LaunchMShadowOpEx(mshadow::Stream<xpu> *s,
-                                                const int N,
-                                                DType *dest,
-                                                Args... args) {
-    mxnet::op::mxnet_op::Kernel<OP, xpu>::template LaunchTuned<
-      typename OP::Operation, DType>(s, N, dest, args...);
-  }
-
-  /*!
-   * \brief Launch 'mxnet_op-type' op (i.e. void (*)(int N, DType *out, ... )
-   * \tparam Args Varargs type to eventually pass to the OP::Map() function
-   * \param s Stream object pointer (unused)
-   * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
-   */
-  template<typename DType, typename ...Args>
-  MSHADOW_CINLINE static void LaunchMXNetOpEx(mshadow::Stream<xpu> *s,
-                                              const int N,
-                                              DType *dest,
-                                              Args... args) {
-    mxnet::op::mxnet_op::Kernel<OP, xpu>::template LaunchTuned<OP, DType>(s, N, dest, args...);
-  }
-};
-
-/*!
  * \brief Set to immediate scalar value kernel
  * \tparam val Scalar immediate
  */
 template<int val>
-struct set_to_int {
+struct set_to_int : public tunable {
   // mxnet_op version (when used directly with Kernel<>::Launch()) */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out) {
@@ -540,22 +547,7 @@ struct set_to_int {
  */
 using set_zero = set_to_int<0>;
 using set_one  = set_to_int<1>;
-_MXNET_TUNABLE_MXNET_OP_FWD(set_zero);  // _ prefix denotes "already in mxnet_op namespace"
-_MXNET_TUNABLE_MXNET_OP_FWD(set_one);
 }  // namespace mxnet_op
-
-/*!
- * \brief Tuning specializations for the simple ops in <mshadow/base.h>
- *        Basically, this overrides mxnet::op::mxnet_op::Kernel<OP, cpu>::Launch() and
- *        redirects to mxnet::op::mxnet_op::KernelWrapper<OP, cpu>::Launch????OpEx(),
- *        which eventually leads back to mxnet::op::mxnet_op::Kernel<OP, cpu>::LaunchTuned()
- */
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::identity)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::plus)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::minus)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::mul)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::div)
-MXNET_TUNABLE_MSHADOW_OP_FWD_AND_BWD(mshadow::op::right)
 
 }  // namespace op
 }  // namespace mxnet

@@ -154,7 +154,7 @@ std::vector<nnvm::NodeEntry> Imperative::CachedOp::Gradient(
     auto nop = Node::Create();
     nop->attrs.op = _NoGrad;
     nop->attrs.name = "NoGradient";
-    uint32_t j = 0, k = 0;
+    uint32_t k = 0;
     for (const auto& i : fwd_graph_.indexed_graph().input_nodes()) {
       if (auxs.count(i)) {
         ret.emplace_back(NodeEntry{nop, 0, 0});
