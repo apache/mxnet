@@ -470,8 +470,6 @@ void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext&
         SliceCsrIndPtrImpl<xpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
 
         Stream<xpu> *s = ctx.get_stream<xpu>();
-        // wait SliceCsrIndPtrImpl to complete
-        s->Wait();
 
         RType nnz = 0;
         mshadow::Copy(Tensor<cpu, 1, RType>(&nnz, Shape1(1)),

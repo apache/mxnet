@@ -102,8 +102,6 @@ void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpCon
                                       out_indptr,
                                       indptr_len,
                                       Stream<gpu>::GetStream(s));
-        // wait InclusiveSum to complete
-        s->Wait();
         // retrieve nnr
         RType nnr = 0;
         CUDA_CALL(cudaMemcpy(&nnr, &out_indptr[indptr_len-1], sizeof(RType),
