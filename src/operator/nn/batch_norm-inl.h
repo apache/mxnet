@@ -214,8 +214,8 @@ void BatchNormCompute(const nnvm::NodeAttrs& attrs,
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 5U);
   std::vector<TBlob> in_data(inputs.begin(),
-                             inputs.begin() + (int) batchnorm::kInMovingMean);
-  std::vector<TBlob> aux_states(inputs.begin() + (int) batchnorm::kInMovingMean,
+                             inputs.begin() + batchnorm::kInMovingMean);
+  std::vector<TBlob> aux_states(inputs.begin() + batchnorm::kInMovingMean,
                                 inputs.end());
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
     BNForward<xpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
@@ -231,8 +231,8 @@ void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   int num_out_grads = param.output_mean_var ? 3U : 1U;
   int in_data_start = 3;
-  int aux_states_start = in_data_start + (int) batchnorm::kInMovingMean;
-  int out_data_start = in_data_start + (int) batchnorm::kInMovingVar + 1;
+  int aux_states_start = in_data_start + batchnorm::kInMovingMean;
+  int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
   std::vector<TBlob> out_grad(inputs.begin(), inputs.begin() + num_out_grads);
   std::vector<TBlob> in_data(inputs.begin() + in_data_start,
                              inputs.begin() + aux_states_start);
