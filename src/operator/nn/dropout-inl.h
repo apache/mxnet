@@ -114,7 +114,7 @@ void DropoutForward(const OpContext &ctx, const DropoutParam &param,
     DType* dataptr = data.dptr_;
     auto maskptr = reinterpret_cast<int*>(mask.dptr_);
     int count = mask.shape_[0]*mask.shape_[1];
-    bernoulli_generate(count, this->pkeep_, maskptr);
+    bernoulli_generate(count, pkeep_, maskptr);
     const float pk_1 = 1.0f / pkeep_;
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int i = 0; i < count; ++i) {
