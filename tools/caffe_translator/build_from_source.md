@@ -1,6 +1,6 @@
 ### Build Caffe Translator from source
 
-#### Pre-requisites:
+#### Prerequisites:
 - JDK
 
 #### Instructions to build
