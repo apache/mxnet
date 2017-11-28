@@ -47,13 +47,14 @@ public class Solver {
         properties = new HashMap<>();
     }
 
-    public void parsePrototxt() {
+    public boolean parsePrototxt() {
         CharStream cs = null;
         try {
             FileInputStream fis = new FileInputStream(new File(solverPath));
             cs = CharStreams.fromStream(fis, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Unable to read prototxt " + solverPath);
+            return false;
         }
 
         CaffePrototxtLexer lexer = new CaffePrototxtLexer(cs);
@@ -67,6 +68,7 @@ public class Solver {
         properties = solverListener.getProperties();
 
         parseDone = true;
+        return true;
     }
 
     public String getProperty(String key) {

@@ -85,14 +85,15 @@ public class Converter {
         generators.addGenerator("Scale", new ScaleGenerator());
     }
 
-    public void parseTrainingPrototxt() {
+    public boolean parseTrainingPrototxt() {
 
         CharStream cs = null;
         try {
             FileInputStream fis = new FileInputStream(new File(trainPrototxt));
             cs = CharStreams.fromStream(fis, StandardCharsets.UTF_8);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Unable to read prototxt: " + trainPrototxt);
+            return false;
         }
 
         CaffePrototxtLexer lexer = new CaffePrototxtLexer(cs);
@@ -103,16 +104,23 @@ public class Converter {
         CreateModelListener modelCreator = new CreateModelListener(parser, mlModel);
         parser.addParseListener(modelCreator);
         parser.prototxt();
+
+        return true;
     }
 
-    public void parseSolverPrototxt() {
+    public boolean parseSolverPrototxt() {
         solver = new Solver(solverPrototxt);
-        solver.parsePrototxt();
+        return solver.parsePrototxt();
     }
 
     public String generateMXNetCode() {
-        parseTrainingPrototxt();
-        parseSolverPrototxt();
+        if(!parseTrainingPrototxt()) {
+            return "";
+        }
+
+        if(!parseSolverPrototxt()) {
+            return "";
+        }
 
         StringBuilder code = new StringBuilder();
 
