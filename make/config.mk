@@ -33,7 +33,7 @@ DEBUG = 0
 # whether compile with profiler
 USE_PROFILER =
 
-# whether to turn on signal handler (e.g. segfault logger)
+# whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
