@@ -289,8 +289,9 @@ public class Converter {
                 code = st.render();
                 break;
             default:
-                System.err.println("Unknown lr_policy: " + lrPolicy);
-                code = "";
+                String message = "Unknown lr_policy: " + lrPolicy;
+                System.err.println(message);
+                code = "# " + message + System.lineSeparator();
                 break;
         }
         return Utils.indent(code, 2, true, 4);
