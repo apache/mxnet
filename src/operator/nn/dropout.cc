@@ -40,10 +40,6 @@ struct DropoutGrad {
   }
 };
 
-std::vector<std::string> ListOutputs() {
-  return std::vector<std::string>{"output", "mask"};
-}
-
 DMLC_REGISTER_PARAMETER(DropoutParam);
 
 NNVM_REGISTER_OP(Dropout)
@@ -86,7 +82,7 @@ Example::
 })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
-  return ListOutputs();
+  return std::vector<std::string>{"output", "mask"};
 })
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
     [](const NodeAttrs& attrs) {
@@ -113,7 +109,7 @@ Example::
     return false;
   }
 
-  size_t nout = ListOutputs().size();
+  size_t nout = 2;
   out_type->clear();
   for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
   return true;
