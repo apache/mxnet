@@ -35,12 +35,12 @@ namespace op {
 #if MXNET_USE_CUDNN == 1
 template<typename DType>
 static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& param,
-                                                 int forward_compute_type,
-                                                 int backward_compute_type,
-                                                 const std::vector<TShape>& in_shape,
-                                                 const std::vector<TShape>& out_shape,
-                                                 const Context& ctx, bool backward) {
-  // Convolution forward has to be called before backward for this operator.
+                                                     int forward_compute_type,
+                                                     int backward_compute_type,
+                                                     const std::vector<TShape>& in_shape,
+                                                     const std::vector<TShape>& out_shape,
+                                                     const Context& ctx, bool backward) {
+  // TODO (zhengda) Convolution forward has to be called before backward for this operator.
   // So we can't make this operator thread local. backward might be called
   // in another thread.
   static CuDNNDeconvolutionOp<DType> op;
@@ -61,7 +61,9 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
   // If 1D deconvolution, use MXNet implementation
   if (param.kernel.ndim() == 1) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      GetDeconvolutionOp<gpu, DType>(param).Forward(ctx, inputs, req, outputs);
+      DeconvolutionOp<gpu, DType> op;
+      op.Init(param);
+      op.Forward(ctx, inputs, req, outputs);
     })
     return;
   }
@@ -71,12 +73,16 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off) {
-      GetDeconvolutionOp<gpu, DType>(param).Forward(ctx, inputs, req, outputs);
+      DeconvolutionOp<gpu, DType> op;
+      op.Init(param);
+      op.Forward(ctx, inputs, req, outputs);
     } else if (!CuDNNDeconvolutionOp<DType>::Supports(param,
           compute_type, compute_type, ctx.run_ctx.ctx)) {
       LOG(WARNING) <<
         "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
-      GetDeconvolutionOp<gpu, DType>(param).Forward(ctx, inputs, req, outputs);
+      DeconvolutionOp<gpu, DType> op;
+      op.Init(param);
+      op.Forward(ctx, inputs, req, outputs);
     } else {
       std::vector<TShape> in_shape(inputs.size());
       std::vector<TShape> out_shape(1, outputs[0].shape_);
@@ -89,7 +95,9 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
   })
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    GetDeconvolutionOp<gpu, DType>(param).Forward(ctx, inputs, req, outputs);
+    DeconvolutionOp<gpu, DType> op;
+    op.Init(param);
+    op.Forward(ctx, inputs, req, outputs);
   })
 #endif  // MXNET_USE_CUDNN
 }
@@ -109,8 +117,9 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   // If 1D deconvolution, use MXNet implementation
   if (param.kernel.ndim() == 1) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      GetDeconvolutionOp<gpu, DType>(param).Backward(ctx, std::vector<TBlob>{out_grad},
-          in_data, req, in_grad);
+      DeconvolutionOp<gpu, DType> op;
+      op.Init(param);
+      op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     })
     return;
   }
@@ -120,14 +129,16 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     if (param.cudnn_off) {
-      GetDeconvolutionOp<gpu, DType>(param).Backward(ctx, std::vector<TBlob>{out_grad},
-          in_data, req, in_grad);
+      DeconvolutionOp<gpu, DType> op;
+      op.Init(param);
+      op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     } else if (!CuDNNDeconvolutionOp<DType>::Supports(param,
           compute_type, compute_type, ctx.run_ctx.ctx)) {
       LOG(WARNING) <<
         "This deconvolution is not supported by cudnn, MXNET deconvolution is applied.";
-      GetDeconvolutionOp<gpu, DType>(param).Backward(ctx, std::vector<TBlob>{out_grad},
-          in_data, req, in_grad);
+      DeconvolutionOp<gpu, DType> op;
+      op.Init(param);
+      op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     } else {
       std::vector<TShape> in_shape(in_data.size());
       std::vector<TShape> out_shape(1, out_grad.shape_);
@@ -141,8 +152,9 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   })
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    GetDeconvolutionOp<gpu, DType>(param).Backward(ctx, std::vector<TBlob>{out_grad},
-        in_data, req, in_grad);
+    DeconvolutionOp<gpu, DType> op;
+    op.Init(param);
+    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
   })
 #endif  // MXNET_USE_CUDNN
 }
