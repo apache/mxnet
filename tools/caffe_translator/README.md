@@ -6,7 +6,7 @@ CaffeTranslator takes the training/validation prototxt ([example](https://github
 ### How to use
 
 #### Get the translator:
-Download the Caffe Translator from maven or build from source. Java Runtime Environment (JRE) is required to run the translator.
+Download the Caffe Translator from maven [repository](https://mvnrepository.com/artifact/org.caffetranslator/caffe-translator) or [build](build_from_source.md) from source. Java Runtime Environment (JRE) is required to run the translator.
 
 #### Translate code:
 To translate `train_val.prototxt` and `solver.prototxt` to MXNet Python code, run the following command:
