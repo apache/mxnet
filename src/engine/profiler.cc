@@ -93,7 +93,7 @@ void Profiler::SetConfig(ProfilerMode mode, std::string output_filename) {
 }
 
 OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
-  OprExecStat* opr_stat = new OprExecStat;
+  std::unique_ptr<OprExecStat> opr_stat(new OprExecStat);
   opr_stat->dev_type = dev_type;
   opr_stat->dev_id   = dev_id;
   opr_stat->opr_name[sizeof(opr_stat->opr_name)-1] = '\0';
@@ -115,8 +115,8 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
   }
 
   DevStat& dev_stat = profile_stat[idx];
-  dev_stat.opr_exec_stats_->enqueue(opr_stat);
-  return opr_stat;
+  dev_stat.opr_exec_stats_->enqueue(opr_stat.get());
+  return opr_stat.release();
 }
 
 void Profiler::EmitPid(std::ostream *os, const std::string& name, uint32_t pid) {
@@ -165,9 +165,10 @@ void Profiler::DumpProfile() {
   bool first_flag = true;
   for (uint32_t i = 0; i < dev_num; ++i) {
     DevStat &d = profile_stat[i];
-    OprExecStat *opr_stat;
-    while (d.opr_exec_stats_->try_dequeue(opr_stat)) {
-      CHECK_NOTNULL(opr_stat);
+    OprExecStat *_opr_stat;
+    while (d.opr_exec_stats_->try_dequeue(_opr_stat)) {
+      CHECK_NOTNULL(_opr_stat);
+      std::unique_ptr<OprExecStat> opr_stat(_opr_stat);  // manage lifecycle
       uint32_t pid = i;
       uint32_t tid = opr_stat->thread_id;
 
