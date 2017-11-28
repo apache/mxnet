@@ -36,7 +36,11 @@ namespace op {
 
 template<typename DType>
 static CuDNNActivationOp<DType> &get_cudnn_op(const ActivationParam& param) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local CuDNNActivationOp<DType> cudnn_op;
+#else
+  static MX_THREAD_LOCAL CuDNNActivationOp<DType> cudnn_op;
+#endif
   cudnn_op.Init(param);
   return cudnn_op;
 }
