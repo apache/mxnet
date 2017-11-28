@@ -24,7 +24,11 @@
 
 package io.mxnet.caffetranslator;
 
-import org.stringtemplate.v4.*;
+import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STErrorListener;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupFile;
+import org.stringtemplate.v4.STRawGroupDir;
 import org.stringtemplate.v4.misc.STMessage;
 
 import java.util.ArrayList;
@@ -33,6 +37,7 @@ import java.util.List;
 public class GenerationHelper {
 
     protected final STGroup stGroupDir;
+
     protected final STGroup stGroupFile;
 
     private class SuppressSTErrorsListener implements STErrorListener {

@@ -58,10 +58,10 @@ public class Layer {
 
     @Setter
     @Getter
-    private final List<Map<String, String>> params;
+    private List<Map<String, String>> params;
 
     @Setter
-    private final Map<String, List<String>> attr;
+    private Map<String, List<String>> attr;
 
     public Layer() {
         tops = new ArrayList<>();

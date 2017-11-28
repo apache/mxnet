@@ -46,7 +46,7 @@ public class MLModel {
 
     @Getter
     @Setter
-    private final List<Layer> layerList;
+    private List<Layer> layerList;
 
     private final Map<String, Map<String, Layer>> layerLookup;
 

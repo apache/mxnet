@@ -29,7 +29,11 @@ import io.mxnet.caffetranslator.CaffePrototxtParser;
 import io.mxnet.caffetranslator.ParserHelper;
 import lombok.Getter;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class StatsListener extends CaffePrototxtBaseListener {
 
