@@ -45,15 +45,15 @@ import java.util.Set;
 public class Converter {
 
     private final String trainPrototxt, solverPrototxt;
-    private Solver solver;
-    private MLModel mlModel;
-    private STGroup stGroup;
-    private SymbolGeneratorFactory generators;
+    private final MLModel mlModel;
+    private final STGroup stGroup;
+    private final SymbolGeneratorFactory generators;
     private final String NL;
-    private GenHelper gh;
+    private final GenHelper gh;
     @Setter
-    private String paramsFilePath;
 
+    private String paramsFilePath;
+    private Solver solver;
 
     Converter(String trainPrototxt, String solverPrototxt) {
         this.trainPrototxt = trainPrototxt;

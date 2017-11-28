@@ -33,12 +33,13 @@ import java.util.*;
 
 public class StatsListener extends CaffePrototxtBaseListener {
 
-    private String layerType;
-    private Stack<String> keys;
+    private final Stack<String> keys;
     @Getter
-    private Map<String, Set<String>> attrMap;
+    private final Map<String, Set<String>> attrMap;
+    private final ParserHelper parserHelper;
+
+    private String layerType;
     private Set<String> curAttr;
-    ParserHelper parserHelper;
 
     public StatsListener() {
         attrMap = new TreeMap<>();

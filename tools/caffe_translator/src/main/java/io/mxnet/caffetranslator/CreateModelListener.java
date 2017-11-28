@@ -34,16 +34,14 @@ import java.util.Stack;
 
 public class CreateModelListener extends CaffePrototxtBaseListener {
 
-    private CaffePrototxtParser parser;
+    private final CaffePrototxtParser parser;
     @Getter
-    private MLModel mlModel;
-    private Stack<String> keys;
+    private final MLModel mlModel;
+    private final Stack<String> keys;
+    private final ParserHelper parserHelper;
 
     private Layer currentLayer;
-
     private Map<String, String> currentParams;
-
-    ParserHelper parserHelper;
 
     public CreateModelListener(CaffePrototxtParser parser, MLModel mlModel) {
         this.parser = parser;

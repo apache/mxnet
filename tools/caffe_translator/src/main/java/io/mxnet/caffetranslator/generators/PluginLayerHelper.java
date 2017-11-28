@@ -29,7 +29,7 @@ import io.mxnet.caffetranslator.Layer;
 
 public class PluginLayerHelper {
 
-    GenHelper gh;
+    private final GenHelper gh;
 
     public PluginLayerHelper() {
         gh = new GenHelper();

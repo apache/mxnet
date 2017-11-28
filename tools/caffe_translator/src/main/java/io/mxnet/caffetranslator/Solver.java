@@ -40,7 +40,7 @@ public class Solver {
 
     private boolean parseDone;
     private Map<String, List<String>> properties;
-    private String solverPath;
+    private final String solverPath;
 
     public Solver(String solverPath) {
         this.solverPath = solverPath;

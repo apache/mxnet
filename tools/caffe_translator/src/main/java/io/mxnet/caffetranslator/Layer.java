@@ -47,21 +47,21 @@ public class Layer {
     private Kind kind;
 
     @Getter
-    private List<String> bottoms;
-
-    @Getter
-    private List<String> tops;
-
-    @Setter
-    @Getter
-    private List<Map<String, String>> params;
-
-    @Getter
     @Setter
     private String prototxt;
 
+    @Getter
+    private final List<String> bottoms;
+
+    @Getter
+    private final List<String> tops;
+
     @Setter
-    private Map<String, List<String>> attr;
+    @Getter
+    private final List<Map<String, String>> params;
+
+    @Setter
+    private final Map<String, List<String>> attr;
 
     public Layer() {
         tops = new ArrayList<>();

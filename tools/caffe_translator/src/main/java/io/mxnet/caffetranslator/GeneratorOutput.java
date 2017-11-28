@@ -25,8 +25,8 @@
 package io.mxnet.caffetranslator;
 
 public class GeneratorOutput {
-    public String code;
-    public int numLayersTranslated;
+    public final String code;
+    public final int numLayersTranslated;
 
     public GeneratorOutput(String code, int n) {
         this.code = code;

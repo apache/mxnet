@@ -32,7 +32,7 @@ import java.util.List;
 
 public abstract class BaseGenerator implements SymbolGenerator {
 
-    protected GenHelper gh;
+    protected final GenHelper gh;
 
     public BaseGenerator() {
         gh = new GenHelper();

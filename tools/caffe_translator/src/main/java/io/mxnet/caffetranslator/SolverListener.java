@@ -31,8 +31,8 @@ import java.util.Map;
 
 public class SolverListener extends CaffePrototxtBaseListener {
 
-    Map<String, List<String>> properties;
-    ParserHelper parserHelper;
+    private final Map<String, List<String>> properties;
+    private final ParserHelper parserHelper;
 
     public SolverListener() {
         properties = new HashMap<>();

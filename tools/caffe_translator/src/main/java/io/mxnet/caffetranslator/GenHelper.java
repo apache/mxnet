@@ -32,8 +32,8 @@ import java.util.List;
 
 public class GenHelper {
 
-    protected STGroup stGroupDir;
-    protected STGroup stGroupFile;
+    protected final STGroup stGroupDir;
+    protected final STGroup stGroupFile;
 
     private class SuppressSTErrorsListener implements STErrorListener {
 

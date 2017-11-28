@@ -31,7 +31,7 @@ import org.stringtemplate.v4.ST;
 
 public class PluginLossGenerator extends BaseGenerator {
 
-    private PluginLayerHelper helper;
+    private final PluginLayerHelper helper;
 
     public PluginLossGenerator() {
         super();

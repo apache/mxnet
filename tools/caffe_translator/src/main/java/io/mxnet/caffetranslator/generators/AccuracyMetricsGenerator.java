@@ -34,8 +34,8 @@ import java.util.Map;
 
 public class AccuracyMetricsGenerator {
 
-    Map<String, String> map;
-    private GenHelper gh;
+    private final Map<String, String> map;
+    private final GenHelper gh;
 
     public AccuracyMetricsGenerator() {
         map = new HashMap<>();
