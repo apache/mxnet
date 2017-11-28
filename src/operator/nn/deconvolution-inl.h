@@ -486,15 +486,24 @@ class DeconvolutionOp {
   index_t nstep_;
 };  // class DeconvolutionOp
 
+template<typename xpu, typename DType>
+DeconvolutionOp<xpu, DType> &GetDeconvolutionOp(const DeconvolutionParam& param) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local DeconvolutionOp<xpu, DType> op;
+#else
+  static MX_THREAD_LOCAL DeconvolutionOp<xpu, DType> op;
+#endif
+  op.Init(param);
+  return op;
+}
+
 template<typename xpu>
 void _DeconvolutionCompute(const DeconvolutionParam& param,
                            const OpContext& ctx, const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs) {
   MSHADOW_REAL_TYPE_SWITCH(inputs[deconv::kData].type_flag_, DType, {
-    static thread_local DeconvolutionOp<xpu, DType> op;
-    op.Init(param);
-    op.Forward(ctx, inputs, req, outputs);
+    GetDeconvolutionOp<xpu, DType>(param).Forward(ctx, inputs, req, outputs);
   });
 }
 
@@ -517,9 +526,8 @@ void _DeconvolutionGradCompute(const DeconvolutionParam& param,
   const std::vector<TBlob> &in_grad = outputs;
 
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
-    static thread_local DeconvolutionOp<xpu, DType> op;
-    op.Init(param);
-    op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
+    GetDeconvolutionOp<xpu, DType>(param).Backward(ctx, std::vector<TBlob>{out_grad},
+                                                   in_data, req, in_grad);
   });
 }
 

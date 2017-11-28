@@ -387,7 +387,11 @@ class ConvolutionOp {
 
 template<typename xpu, typename DType>
 ConvolutionOp<xpu, DType> &GetConvolutionOp(const ConvolutionParam& param) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local ConvolutionOp<xpu, DType> op;
+#else
+  static MX_THREAD_LOCAL ConvolutionOp<xpu, DType> op;
+#endif
   op.Init(param);
   return op;
 }
