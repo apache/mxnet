@@ -19,7 +19,7 @@ import numpy as np
 import mxnet as mx
 import argparse
 from data import Corpus, CorpusIter, DummyIter
-from nce_model import rnn_model, nce_loss, ce_loss
+from model import rnn_model, nce_loss, ce_loss
 import os
 
 parser = argparse.ArgumentParser(description='PennTreeBank RNN/LSTM Language Model with Noice Contrastive Estimation')
@@ -58,10 +58,12 @@ parser.add_argument('--k', type=int, default=32,
                     help='number of noise samples to estimate')
 parser.add_argument('--use-dense', action='store_true',
                     help='use dense embedding instead of sparse embedding')
+parser.add_argument('--use-full-softmax', action='store_true',
+                    help='use full softmax ce loss instead of noise contrastive estimation')
+parser.add_argument('--cuda', action='store_true',
+                    help='whether to use gpu')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-#parser.add_argument('--cuda', action='store_true',
-#                    help='Whether to use gpu')
 #parser.add_argument('--save', type=str, default='model.params',
 #                    help='path to save the final model')
 args = parser.parse_args()
@@ -71,28 +73,28 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     args = parser.parse_args()
+    ctx = mx.gpu(0) if args.cuda else mx.cpu()
+    full_softmax = args.use_full_softmax
 
     # data
     corpus = Corpus(args.data)
     ntokens = len(corpus.dictionary) * args.scale
     # TODO dict should be the unigram for train?
-    train_data = DummyIter(mx.io.PrefetchingIter(CorpusIter(corpus.train, args.batch_size, args.bptt, args.k, corpus.dictionary.unigram())))
+    train_data = mx.io.PrefetchingIter(CorpusIter(corpus.train, args.batch_size, args.bptt, args.k, corpus.dictionary.unigram()))
     # val_data = mx.io.PrefetchingIter(CorpusIter(corpus.valid, args.batch_size, args.bptt, args.k))
     # model
     rnn_out = rnn_model(args.bptt, "lstm", ntokens, args.emsize, args.nhid,
                         args.nlayers, args.dropout, args.use_dense)
-    model = nce_loss(rnn_out, ntokens, args.nhid, args.k)
-    state_names = ['sample']
-    model = ce_loss(rnn_out, ntokens)
-    state_names = None
+    model = nce_loss(rnn_out, ntokens, args.nhid, args.k) if not full_softmax else ce_loss(rnn_out, ntokens)
+    state_names = ['sample'] if not full_softmax else None
     # module
-    module = mx.mod.Module(symbol=model, context=mx.cpu(), state_names=state_names,
+    module = mx.mod.Module(symbol=model, context=ctx, state_names=state_names,
                            data_names=['data'], label_names=['label'])
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
-    optim = mx.optimizer.create('sgd', learning_rate=args.lr, momentum=args.mom, wd=args.wd,
-                                clip_gradient=args.clip)
-    module.init_optimizer(optimizer=optim)
+    optimizer_params=(('learning_rate', args.lr), ('wd', args.wd), ('momentum', args.mom),
+                      ('clip_gradient', args.clip))
+    module.init_optimizer(optimizer='sgd', optimizer_params=optimizer_params)
     # use accuracy as the metric
     metric = mx.metric.Perplexity(ignore_label=None)
     speedometer = mx.callback.Speedometer(args.batch_size, args.log_interval)
@@ -104,8 +106,9 @@ if __name__ == '__main__':
         metric.reset()
         for batch in train_data:
             nbatch += 1
-            samples = batch.data[1]
-            module.set_states(value=samples)
+            if not full_softmax:
+                samples = batch.data[1]
+                module.set_states(value=samples)
             module.forward_backward(batch)
             # update all parameters (including the weight parameter)
             module.update()
@@ -115,3 +118,4 @@ if __name__ == '__main__':
                                                        eval_metric=metric, locals=locals())
             speedometer(speedometer_param)
         train_data.reset()
+    logging.info("Training completed. ")

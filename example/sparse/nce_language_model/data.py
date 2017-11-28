@@ -106,7 +106,7 @@ class CorpusIter(mx.io.DataIter):
     def __init__(self, source, batch_size, bptt, k, unigram):
         super(CorpusIter, self).__init__()
         self.batch_size = batch_size
-        self.provide_data = [('data', (batch_size, bptt))]
+        self.provide_data = [('data', (batch_size, bptt), np.int32)]
         self.provide_label = [('label', (batch_size, bptt))]
         self._index = 0
         self._bptt = bptt
@@ -119,8 +119,8 @@ class CorpusIter(mx.io.DataIter):
         if i+self._bptt > self._source.shape[0] - 1:
             return False
         self._next_data = self._source[i:i+self._bptt]
-        self._next_label = self._source[i+1:i+1+self._bptt]
-        self._next_sample = mx.nd.random.multinomial(self._unigram, shape=(self._k,))
+        self._next_label = self._source[i+1:i+1+self._bptt].astype(np.float32)
+        self._next_sample = mx.nd.random.multinomial(self._unigram, shape=(self._k,)).astype(np.float32)
         self._index += self._bptt
         return True
 

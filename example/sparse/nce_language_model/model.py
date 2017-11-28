@@ -22,7 +22,7 @@ def nce_loss(pred, vocab_size, num_hidden, k, decoder_weight=None):
     sample = mx.sym.Variable('sample', shape=(k,), dtype='float32')
     label = mx.sym.Variable('label')
     # shape=(batch_size*bptt)
-    label = mx.sym.Reshape(label, shape=(-1,))
+    label = mx.sym.Reshape(label, shape=(-1,), name="label_reshape")
 
     # weight and bias
     if decoder_weight is None:
@@ -50,12 +50,12 @@ def nce_loss(pred, vocab_size, num_hidden, k, decoder_weight=None):
     # pred.shape=(batch_size*bptt, num_hidden)
     # shape=(batch_size*bptt, k)
     sample_pred = mx.sym.FullyConnected(data=pred, weight=sample_weight,
-                                        num_hidden=k, bias=mx.sym.Reshape(sample_bias, shape=(32,)), name='debug')
+                                        num_hidden=k, bias=mx.sym.Reshape(sample_bias, shape=(k,)))
     # shape=(batch_size*bptt, 1, num_hidden)
-    pred_3d = mx.sym.Reshape(pred, (-1, 1, num_hidden))
+    pred_3d = mx.sym.Reshape(pred, (-1, 1, num_hidden), name='pred_reshape')
     # shape=(batch_size*bptt, 1, 1)
     true_pred = mx.sym.batch_dot(pred_3d, true_weight)
-    true_pred = mx.sym.Reshape(true_pred, (-1, 1))
+    true_pred = mx.sym.Reshape(true_pred, (-1, 1), name='true_pred_reshape')
     true_pred = mx.sym.broadcast_add(true_pred, true_bias)
     '''
     check = true_pred
