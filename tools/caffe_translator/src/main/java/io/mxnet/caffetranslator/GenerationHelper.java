@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file GenHelper.java
+ * \file GenerationHelper.java
  * \brief Helper class used by generators
  */
 
@@ -30,7 +30,7 @@ import org.stringtemplate.v4.misc.STMessage;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GenHelper {
+public class GenerationHelper {
 
     protected final STGroup stGroupDir;
     protected final STGroup stGroupFile;
@@ -58,7 +58,7 @@ public class GenHelper {
         }
     }
 
-    public GenHelper() {
+    public GenerationHelper() {
         this.stGroupDir = new STRawGroupDir("templates");
         this.stGroupFile = new STGroupFile("templates/symbols.stg");
 

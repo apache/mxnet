@@ -49,7 +49,7 @@ public class Converter {
     private final STGroup stGroup;
     private final SymbolGeneratorFactory generators;
     private final String NL;
-    private final GenHelper gh;
+    private final GenerationHelper gh;
     @Setter
 
     private String paramsFilePath;
@@ -62,7 +62,7 @@ public class Converter {
         this.stGroup = new STRawGroupDir("templates");
         this.generators = SymbolGeneratorFactory.getInstance();
         NL = System.getProperty("line.separator");
-        gh = new GenHelper();
+        gh = new GenerationHelper();
         addGenerators();
     }
 

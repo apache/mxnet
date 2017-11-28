@@ -24,7 +24,7 @@
 
 package io.mxnet.caffetranslator.generators;
 
-import io.mxnet.caffetranslator.GenHelper;
+import io.mxnet.caffetranslator.GenerationHelper;
 import io.mxnet.caffetranslator.Layer;
 import io.mxnet.caffetranslator.MLModel;
 import org.stringtemplate.v4.ST;
@@ -35,11 +35,11 @@ import java.util.Map;
 public class AccuracyMetricsGenerator {
 
     private final Map<String, String> map;
-    private final GenHelper gh;
+    private final GenerationHelper gh;
 
     public AccuracyMetricsGenerator() {
         map = new HashMap<>();
-        gh = new GenHelper();
+        gh = new GenerationHelper();
     }
 
     public String generate(MLModel model) {

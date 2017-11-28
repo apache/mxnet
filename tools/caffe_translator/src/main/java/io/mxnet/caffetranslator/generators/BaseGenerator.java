@@ -24,7 +24,7 @@
 
 package io.mxnet.caffetranslator.generators;
 
-import io.mxnet.caffetranslator.GenHelper;
+import io.mxnet.caffetranslator.GenerationHelper;
 import io.mxnet.caffetranslator.SymbolGenerator;
 import org.stringtemplate.v4.ST;
 
@@ -32,10 +32,10 @@ import java.util.List;
 
 public abstract class BaseGenerator implements SymbolGenerator {
 
-    protected final GenHelper gh;
+    protected final GenerationHelper gh;
 
     public BaseGenerator() {
-        gh = new GenHelper();
+        gh = new GenerationHelper();
     }
 
     protected ST getTemplate(String name) {

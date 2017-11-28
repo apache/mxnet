@@ -24,15 +24,15 @@
 
 package io.mxnet.caffetranslator.generators;
 
-import io.mxnet.caffetranslator.GenHelper;
+import io.mxnet.caffetranslator.GenerationHelper;
 import io.mxnet.caffetranslator.Layer;
 
 public class PluginLayerHelper {
 
-    private final GenHelper gh;
+    private final GenerationHelper gh;
 
     public PluginLayerHelper() {
-        gh = new GenHelper();
+        gh = new GenerationHelper();
     }
 
     public String getDataList(Layer layer) {
