@@ -251,6 +251,8 @@ class CommCPU : public Comm {
             [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
               CopyRetainedRowsToGPU(rctx.get_stream<cpu>(), rctx.get_stream<gpu>(),
                                     src, row_id, out);
+              // wait for GPU operations to complete
+              rctx.get_stream<gpu>()->Wait();
               on_complete();
             }, out->ctx(), {src.var(), row_id.var()}, {out->var()},
             FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("KVStoreCopyRetainedRowsToGPU"));

@@ -36,10 +36,10 @@ def init_kv_with_str(stype='default', kv_type='local'):
     return kv
 
 
-def test_row_sparse_pull(kv_type='device'):
+def test_row_sparse_pull(kv_type='local'):
     kv = init_kv_with_str('row_sparse', kv_type)
     kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
-    kv.push('e', [mx.nd.ones(shape, ctx=mx.cpu(i)).tostype('row_sparse') for i in range(2)])
+    kv.push('e', [mx.nd.ones(shape, ctx=mx.gpu(i)).tostype('row_sparse') for i in range(2)])
     def check_row_sparse_pull(kv, count, ctx=default_context()):
         num_rows = shape[0]
         vals = []
@@ -67,3 +67,4 @@ def test_row_sparse_pull(kv_type='device'):
 
 if __name__ == '__main__':
     test_row_sparse_pull()
+    test_row_sparse_pull('device')
