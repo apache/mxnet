@@ -90,12 +90,12 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
 
 /*! \brief Forward CPU */
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
-                                                 const OpContext &ctx,
-                                                 const std::vector<TBlob> &in_data,
-                                                 const std::vector<OpReqType> &req,
-                                                 const std::vector<TBlob> &out_data,
-                                                 const std::vector<TBlob> &aux_states) {
+void DoBNForward(mshadow::Stream<cpu> *,
+                 const OpContext &ctx, const BatchNormParam& param_,
+                 const std::vector<TBlob> &in_data,
+                 const std::vector<OpReqType> &req,
+                 const std::vector<TBlob> &out_data,
+                 const std::vector<TBlob> &aux_states) {
   // Input
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
@@ -165,7 +165,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
 
     // note that var is still invstd
     if (!param_.fix_gamma) {
-      if (IsWriting(req[batchnorm::kData])) {
+      if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
                     [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
                                                                  DType *out_data) {
@@ -174,10 +174,10 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
                     });
       }
     } else {
-      if (IsWriting(req[batchnorm::kGamma])) {
+      if (IsBNWriting(req[batchnorm::kGamma])) {
         w[channel] = AccReal(1);
       }
-      if (IsWriting(req[batchnorm::kData])) {
+      if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
                     [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
                                                                  DType *out_data) {
@@ -190,14 +190,14 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<cpu> *,
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
-                                                  const OpContext &ctx,
-                                                  const std::vector<TBlob> &out_grad,
-                                                  const std::vector<TBlob> &in_data,
-                                                  const std::vector<TBlob> &out_data,
-                                                  const std::vector<OpReqType> &req,
-                                                  const std::vector<TBlob> &in_grad,
-                                                  const std::vector<TBlob> &aux_states) {
+void DoBNBackward(mshadow::Stream<cpu> *,
+                  const OpContext &ctx, const BatchNormParam& param_,
+                  const std::vector<TBlob> &out_grad,
+                  const std::vector<TBlob> &in_data,
+                  const std::vector<TBlob> &out_data,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &in_grad,
+                  const std::vector<TBlob> &aux_states) {
   // Input Data
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights   = in_data[batchnorm::kGamma];
@@ -265,7 +265,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
 
-    if (!gradIn.IsEmpty() && IsWriting(req[batchnorm::kData])) {  // if there's a grad input
+    if (!gradIn.IsEmpty() && IsBNWriting(req[batchnorm::kData])) {  // if there's a grad input
       if (is_train_and_not_global_stats) {
         // when in training mode
         // Q(X) = X - E[x] ; i.e. input centered to zero mean
@@ -301,7 +301,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
     // May want to make this a param eventually
     const AccReal scale = 1.0f;
 
-    if (IsWriting(req[batchnorm::kGamma])) {
+    if (IsBNWriting(req[batchnorm::kGamma])) {
       if (!param_.fix_gamma) {
         gradWeightData[channel] = scale * dotp * invstd;
       } else {
@@ -309,7 +309,7 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<cpu> *,
       }
     }
 
-    if (IsWriting(req[batchnorm::kBeta])) {
+    if (IsBNWriting(req[batchnorm::kBeta])) {
       gradBiasData[channel] = scale * sumGradOut;
     }
   }
