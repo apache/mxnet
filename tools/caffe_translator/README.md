@@ -4,15 +4,20 @@ CaffeTranslator is a source code translator that translates Caffe code into MXNe
 CaffeTranslator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code that builds and trains the same network specified in the prototxt.
 
 ### How to use
-To translate `train_val.prototxt` and `solver.prototxt` to MXNet, run the following command:
+
+#### Get the translator:
+Download the Caffe Translator from maven or build from source. Java Runtime Environment (JRE) is required to run the translator.
+
+#### Translate code:
+To translate `train_val.prototxt` and `solver.prototxt` to MXNet Python code, run the following command:
 ```
-java -jar caffetranslator-<version>.jar --training-prototxt <train_val_prototxt_path> \
+java -jar caffe-translator-<version>.jar --training-prototxt <train_val_prototxt_path> \
     --solver <solver_prototxt_path> \
     --output-file <output_file_path>
 ```
 Example:
 ```
-java -jar caffetranslator-0.9.0.jar --training-prototxt lenet_train_test.prototxt \
+java -jar caffe-translator-0.9.0.jar --training-prototxt lenet_train_test.prototxt \
     --solver lenet_solver.prototxt \
     --output-file translated_code.py
 ```
@@ -28,37 +33,15 @@ java -jar caffetranslator-0.9.0.jar --training-prototxt lenet_train_test.prototx
   }
 ```
 
-### Prerequisites
-**To translate code:**
-1. JDK
+#### Run the translated code:
 
-**To run the translated code:**
+Following pre-requisites are required to run the translated code:
 1. Caffe with MXNet interface ([Why?](faq.md#why_caffe) [How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#install-caffe-with-mxnet-interface))
 2. MXNet with Caffe plugin ([How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#compile-with-caffe))
 
-### Build
-Step 1: Clone the code:
-```
-git clone https://github.com/apache/incubator-mxnet.git mxnet
-```
-Step 2: CD to CaffeTranslator directory
-```
-cd mxnet/tools/caffe_translator/
-```
-Step 3: Build
-```
-./gradlew build
-```
-Step 4: Install
-```
-./gradlew installDist
-```
-Step 5: Set PATH
-```
-PATH=$PWD/build/install/caffetranslator/bin/:$PATH
-```
+Once pre-requisites are installed, the translated Python code can be run like any other Python code:
 
-### Run
+Example:
 ```
-caffetranslator --training-prototxt <train_val_prototxt_path> --solver <solver_prototxt_path> --output-file <output_file_path>
+python translated_code.py
 ```
