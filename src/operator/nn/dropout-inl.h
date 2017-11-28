@@ -137,7 +137,6 @@ void DropoutBackward(const OpContext &ctx, const DropoutParam &param,
                      const OpReqType &req, const TBlob &in_grad) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  real_t pkeep_ = 1.0f - param.p;
   int mode_ = param.mode;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Tensor<xpu, 2, DType> grad = out_grad.FlatTo2D<xpu, DType>(s);
@@ -145,6 +144,7 @@ void DropoutBackward(const OpContext &ctx, const DropoutParam &param,
   Tensor<xpu, 2, DType> gdata = in_grad.FlatTo2D<xpu, DType>(s);
   if (ctx.is_train || mode_ == dropout::kAlways) {
 #if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
+    real_t pkeep_ = 1.0f - param.p;
     DType* ingradptr = gdata.dptr_;
     DType* outgradptr = grad.dptr_;
     auto maskptr = reinterpret_cast<int*>(mask.dptr_);
