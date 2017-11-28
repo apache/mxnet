@@ -46,19 +46,19 @@ struct BinaryBase {
 
 // operators
 struct Plus : public BinaryBase {
-  typedef mshadow::op::plus mshadow_op;
+  typedef op::mshadow_op::plus mshadow_op;
 };
 
 struct Minus : public BinaryBase {
-  typedef mshadow::op::minus mshadow_op;
+  typedef op::mshadow_op::minus mshadow_op;
 };
 
 struct Mul : public BinaryBase {
-  typedef mshadow::op::mul mshadow_op;
+  typedef op::mshadow_op::mul mshadow_op;
 };
 
 struct Div : public BinaryBase {
-  typedef mshadow::op::div mshadow_op;
+  typedef op::mshadow_op::div mshadow_op;
 };
 
 struct Mod : public BinaryBase {

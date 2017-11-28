@@ -110,7 +110,7 @@ class ActivationOp : public Operator {
     if (sz) {
       MXNET_ASSIGN_REQ_SWITCH(req[activation::kData], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<
-          mxnet::op::mxnet_op::backward_grad<BackwardOp>, Req>, xpu>::Launch(
+          mxnet::op::mxnet_op::backward_grad_tuned<BackwardOp>, Req>, xpu>::Launch(
           s, sz,
           m_in_grad.dptr<DType>(),
           m_out_grad.dptr<DType>(),
