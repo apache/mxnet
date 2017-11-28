@@ -93,80 +93,74 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
 };  // struct DropoutParam
 
 template<typename xpu, typename DType>
-class DropoutOp {
- public:
-  void Init(const DropoutParam &param) {
-    this->pkeep_ = 1.0f - param.p;
-    this->mode_ = param.mode;
+void DropoutForward(const OpContext &ctx, const DropoutParam &param,
+                    const std::vector<TBlob> &in_data, const std::vector<OpReqType> &req,
+                    const std::vector<TBlob> &out_data) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  real_t pkeep_ = 1.0f - param.p;
+  int mode_ = param.mode;
+  CHECK_EQ(in_data.size(), 1U);
+  if (ctx.is_train) {
+    CHECK_EQ(out_data.size(), 2U);
   }
-
-  void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req, const std::vector<TBlob> &out_data) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    CHECK_EQ(in_data.size(), 1U);
-    if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 2U);
-    }
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
-    if (ctx.is_train || mode_ == dropout::kAlways) {
-      Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
+  Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
+  if (ctx.is_train || mode_ == dropout::kAlways) {
+    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
 #if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
-      DType* outptr = out.dptr_;
-      DType* dataptr = data.dptr_;
-      auto maskptr = reinterpret_cast<int*>(mask.dptr_);
-      int count = mask.shape_[0]*mask.shape_[1];
-      bernoulli_generate(count, this->pkeep_, maskptr);
-      const float pk_1 = 1.0f / pkeep_;
-      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-      for (int i = 0; i < count; ++i) {
-        outptr[i] = dataptr[i] * maskptr[i] * pk_1;
-      }
+    DType* outptr = out.dptr_;
+    DType* dataptr = data.dptr_;
+    auto maskptr = reinterpret_cast<int*>(mask.dptr_);
+    int count = mask.shape_[0]*mask.shape_[1];
+    bernoulli_generate(count, this->pkeep_, maskptr);
+    const float pk_1 = 1.0f / pkeep_;
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (int i = 0; i < count; ++i) {
+      outptr[i] = dataptr[i] * maskptr[i] * pk_1;
+    }
 #else
-      Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
-      mask = tcast<DType>(F<mshadow_op::threshold>(
-             prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
-      Assign(out, req[dropout::kOut], data * mask);
+    Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
+    mask = tcast<DType>(F<mshadow_op::threshold>(
+            prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
+    Assign(out, req[dropout::kOut], data * mask);
 #endif  // USE_MKL && _OPENMP
-    } else {
-      Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
-    }
+  } else {
+    Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
   }
+}
 
-  void Backward(const OpContext &ctx, const TBlob &out_grad,
-                const TBlob &out_data_mask, const OpReqType &req,
-                const TBlob &in_grad) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 2, DType> grad = out_grad.FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> mask = out_data_mask.FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> gdata = in_grad.FlatTo2D<xpu, DType>(s);
-    if (ctx.is_train || mode_ == dropout::kAlways) {
+template<typename xpu, typename DType>
+void DropoutBackward(const OpContext &ctx, const DropoutParam &param,
+                     const TBlob &out_grad, const TBlob &out_data_mask,
+                     const OpReqType &req, const TBlob &in_grad) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  real_t pkeep_ = 1.0f - param.p;
+  int mode_ = param.mode;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Tensor<xpu, 2, DType> grad = out_grad.FlatTo2D<xpu, DType>(s);
+  Tensor<xpu, 2, DType> mask = out_data_mask.FlatTo2D<xpu, DType>(s);
+  Tensor<xpu, 2, DType> gdata = in_grad.FlatTo2D<xpu, DType>(s);
+  if (ctx.is_train || mode_ == dropout::kAlways) {
 #if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
-      DType* ingradptr = gdata.dptr_;
-      DType* outgradptr = grad.dptr_;
-      auto maskptr = reinterpret_cast<int*>(mask.dptr_);
-      int count = mask.shape_[0]*mask.shape_[1];
-      const float pk_1 = 1.0f / pkeep_;
-      #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-      for (int i = 0; i < count; ++i) {
-        ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
-      }
-#else  // USE_MKL && _OPENMP
-      Assign(gdata, req, grad * mask);
-#endif  // USE_MKL && _OPENMP
-    } else {
-      Assign(gdata, req, F<mshadow_op::identity>(grad));
+    DType* ingradptr = gdata.dptr_;
+    DType* outgradptr = grad.dptr_;
+    auto maskptr = reinterpret_cast<int*>(mask.dptr_);
+    int count = mask.shape_[0]*mask.shape_[1];
+    const float pk_1 = 1.0f / pkeep_;
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (int i = 0; i < count; ++i) {
+      ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
     }
+#else  // USE_MKL && _OPENMP
+    Assign(gdata, req, grad * mask);
+#endif  // USE_MKL && _OPENMP
+  } else {
+    Assign(gdata, req, F<mshadow_op::identity>(grad));
   }
-
- private:
-  real_t pkeep_;
-  int mode_;
-};  // class DropoutOp
+}
 
 template<typename xpu>
 void DropoutCompute(const nnvm::NodeAttrs& attrs,
@@ -176,9 +170,7 @@ void DropoutCompute(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& outputs) {
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    static thread_local DropoutOp<xpu, DType> op;
-    op.Init(param);
-    op.Forward(ctx, inputs, req, outputs);
+    DropoutForward<xpu, DType>(ctx, param, inputs, req, outputs);
   });
 }
 
@@ -194,9 +186,8 @@ void DropoutGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1);
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    static thread_local DropoutOp<xpu, DType> op;
-    op.Init(param);
-    op.Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
+    DropoutBackward<xpu, DType>(ctx, param, inputs[0], inputs[1], req[0],
+                                outputs[0]);
   });
 }
 
