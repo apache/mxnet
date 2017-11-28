@@ -42,6 +42,7 @@ static ConvolutionOp<gpu, DType> &get_op(const ConvolutionParam& param) {
   return op;
 }
 
+#if MXNET_USE_CUDNN == 1
 template<typename DType>
 static CuDNNConvolutionOp<DType> &get_cudnn_op(const ConvolutionParam& param,
     int forward_compute_type, int backward_compute_type,
@@ -52,6 +53,7 @@ static CuDNNConvolutionOp<DType> &get_cudnn_op(const ConvolutionParam& param,
       in_shape, out_shape, ctx);
   return op;
 }
+#endif
 
 template<>
 void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
