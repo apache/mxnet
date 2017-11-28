@@ -86,105 +86,21 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   }
 };
 
-/*! \brief Batch normalization operator */
+static inline bool IsBNWriting(const OpReqType ort) {
+  return ort == kWriteTo || ort == kWriteInplace;
+}
+
 template <typename xpu, typename DType, typename AccReal>
-class BatchNormOp {
- public:
-  void Init(BatchNormParam param) {
-    this->param_ = param;
-  }
-
-  static inline bool IsWriting(const OpReqType ort) {
-    return ort == kWriteTo || ort == kWriteInplace;
-  }
-
-  /*!
-   * \brief perform a forward operation of Operator, save the output to TBlob.
-   * \param ctx runtime context available to this call
-   * \param in_data array of input data, it is const
-   * \param req the request types of saving operation, can only be kWriteTo or kWriteInplace.
-   * \param out_data array of output data, pointer is used to indicate that this is holder
-   *        the space of TBlob in out_data must be pre-allocated with InferShape
-   * \param aux_states Auxiliary states of operator. Normally operator doesn't
-   *        need, epecial case like Batch Norm requires.
-   * \sa OpReqType, OpContext
-   */
-  void Forward(const OpContext &ctx,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_states) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-
-    CHECK_EQ(in_data.size(), 3U);
-    CHECK_EQ(aux_states.size(), 2U);
-    if (ctx.is_train) {
-      CHECK_EQ(out_data.size(), 3U);
-      CHECK_EQ(req.size(), 3U);
-    } else {
-      CHECK_GE(out_data.size(), 1U);
-      CHECK_GE(req.size(), 1U);
-      CHECK_EQ(req[batchnorm::kOut], kWriteTo);
-    }
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    DoForward(s, ctx, in_data, req, out_data, aux_states);
-  }
-
-  /*!
-   * \brief Perform a Backward Operation, write gradient to the in_grad.
-   *
-   * \note
-   * Convention:
-   *   out_grad.size() == OperatorProperty.NumVisibleOutputs()
-   *   out_data.size() == OperatorProperty.NumOutputs()
-   * out_data can contain additional invisible returns that remembers the
-   * state carried from the Forward pass. For example mask in the dropout.
-   * The gradients are passed from visible returns in this function.
-   *
-   * \par
-   * Not all the TBlobs in the arguments will be available
-   * if you override the DeclareBackwardDependency of corresponding OperatorProperty class.
-   * Only the dependencies you declared will be available at corresponding position,
-   * the rest of the parameters are simply dummy where you will get a nullptr.
-   * You will be safe if you use the default DeclareBackwardDependency.
-   * But only declare what you need will give engine more chance for optimization.
-   *
-   * \param ctx runtime context available to this call
-   * \param out_grad the gradient value we get from of the Operator.
-   * \param in_data the array of input data.
-   * \param out_data the array of output data.
-   * \param req request types of the saving operation, can be all types.
-   * \param in_grad the array of gradient we need to write to.
-   * \param aux_states Auxiliary states of operator. Normally operator doesn't need
-   * \sa OperatorProperty, OpReqType, OpContext
-   */
-  void Backward(const OpContext &ctx,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad,
-                const std::vector<TBlob> &aux_states) {
-    CHECK_EQ(out_grad.size(), param_.output_mean_var ? 3U : 1U);
-    CHECK_EQ(in_data.size(), 3U);
-    CHECK_EQ(out_data.size(), 3U);
-    CHECK_EQ(in_grad.size(), 3U);
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    DoBackward(s, ctx, out_grad, in_data,
-               out_data, req, in_grad, aux_states);
-  }
-
- private:
-  void DoForward(mshadow::Stream<cpu> *stream,
-                 const OpContext &ctx,
+void DoBNForward(mshadow::Stream<cpu> *stream,
+                 const OpContext &ctx, const BatchNormParam& param,
                  const std::vector<TBlob> &in_data,
                  const std::vector<OpReqType> &req,
                  const std::vector<TBlob> &out_data,
                  const std::vector<TBlob> &aux_states);
 
-  void DoBackward(mshadow::Stream<cpu> *stream,
-                  const OpContext &ctx,
+template <typename xpu, typename DType, typename AccReal>
+void DoBNBackward(mshadow::Stream<cpu> *stream,
+                  const OpContext &ctx, const BatchNormParam& param,
                   const std::vector<TBlob> &out_grad,
                   const std::vector<TBlob> &in_data,
                   const std::vector<TBlob> &out_data,
@@ -193,14 +109,16 @@ class BatchNormOp {
                   const std::vector<TBlob> &aux_states);
 
 #if MXNET_USE_CUDA
-  void DoForward(mshadow::Stream<gpu> *stream,
-                 const OpContext &ctx,
+template <typename xpu, typename DType, typename AccReal>
+void DoBNForward(mshadow::Stream<gpu> *stream,
+                 const OpContext &ctx, const BatchNormParam& param,
                  const std::vector<TBlob> &in_data,
                  const std::vector<OpReqType> &req,
                  const std::vector<TBlob> &out_data,
                  const std::vector<TBlob> &aux_states);
-  void DoBackward(mshadow::Stream<gpu> *stream,
-                  const OpContext &ctx,
+template <typename xpu, typename DType, typename AccReal>
+void DoBNBackward(mshadow::Stream<gpu> *stream,
+                  const OpContext &ctx, const BatchNormParam& param,
                   const std::vector<TBlob> &out_grad,
                   const std::vector<TBlob> &in_data,
                   const std::vector<TBlob> &out_data,
@@ -209,15 +127,83 @@ class BatchNormOp {
                   const std::vector<TBlob> &aux_states);
 #endif  // MXNET_USE_CUDA
 
-  /*! \brief Batch normalization operator parameters */
-  BatchNormParam param_;
-};  // class BatchNormOp
+/*!
+ * \brief perform a forward operation of Operator, save the output to TBlob.
+ * \param ctx runtime context available to this call
+ * \param in_data array of input data, it is const
+ * \param req the request types of saving operation, can only be kWriteTo or kWriteInplace.
+ * \param out_data array of output data, pointer is used to indicate that this is holder
+ *        the space of TBlob in out_data must be pre-allocated with InferShape
+ * \param aux_states Auxiliary states of operator. Normally operator doesn't
+ *        need, epecial case like Batch Norm requires.
+ * \sa OpReqType, OpContext
+ */
+template <typename xpu, typename DType, typename AccReal>
+void BNForward(const OpContext &ctx, const BatchNormParam& param,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data,
+               const std::vector<TBlob> &aux_states) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
 
-template<typename xpu, typename DType, typename AccReal>
-static BatchNormOp<xpu, DType, AccReal> &GetBatchNormOp(const BatchNormParam& param) {
-  static thread_local BatchNormOp<xpu, DType, AccReal> op;
-  op.Init(param);
-  return op;
+  CHECK_EQ(in_data.size(), 3U);
+  CHECK_EQ(aux_states.size(), 2U);
+  if (ctx.is_train) {
+    CHECK_EQ(out_data.size(), 3U);
+    CHECK_EQ(req.size(), 3U);
+  } else {
+    CHECK_GE(out_data.size(), 1U);
+    CHECK_GE(req.size(), 1U);
+    CHECK_EQ(req[batchnorm::kOut], kWriteTo);
+  }
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  DoBNForward<xpu, DType, AccReal>(s, ctx, param, in_data, req, out_data, aux_states);
+}
+
+/*!
+ * \brief Perform a Backward Operation, write gradient to the in_grad.
+ *
+ * \note
+ * Convention:
+ *   out_grad.size() == OperatorProperty.NumVisibleOutputs()
+ *   out_data.size() == OperatorProperty.NumOutputs()
+ * out_data can contain additional invisible returns that remembers the
+ * state carried from the Forward pass. For example mask in the dropout.
+ * The gradients are passed from visible returns in this function.
+ *
+ * \par
+ * Not all the TBlobs in the arguments will be available
+ * if you override the DeclareBackwardDependency of corresponding OperatorProperty class.
+ * Only the dependencies you declared will be available at corresponding position,
+ * the rest of the parameters are simply dummy where you will get a nullptr.
+ * You will be safe if you use the default DeclareBackwardDependency.
+ * But only declare what you need will give engine more chance for optimization.
+ *
+ * \param ctx runtime context available to this call
+ * \param out_grad the gradient value we get from of the Operator.
+ * \param in_data the array of input data.
+ * \param out_data the array of output data.
+ * \param req request types of the saving operation, can be all types.
+ * \param in_grad the array of gradient we need to write to.
+ * \param aux_states Auxiliary states of operator. Normally operator doesn't need
+ * \sa OperatorProperty, OpReqType, OpContext
+ */
+template <typename xpu, typename DType, typename AccReal>
+void BNBackward(const OpContext &ctx, const BatchNormParam& param,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad,
+                const std::vector<TBlob> &aux_states) {
+  CHECK_EQ(out_grad.size(), param.output_mean_var ? 3U : 1U);
+  CHECK_EQ(in_data.size(), 3U);
+  CHECK_EQ(out_data.size(), 3U);
+  CHECK_EQ(in_grad.size(), 3U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  DoBNBackward<xpu, DType, AccReal>(s, ctx, param, out_grad, in_data,
+                                    out_data, req, in_grad, aux_states);
 }
 
 template<typename xpu>
@@ -232,8 +218,7 @@ void BatchNormCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> aux_states(inputs.begin() + (int) batchnorm::kInMovingMean,
                                 inputs.end());
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    GetBatchNormOp<xpu, DType, AccReal>(param).Forward(ctx, in_data,
-        req, outputs, aux_states);
+    BNForward<xpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
   });
 }
 
@@ -257,8 +242,8 @@ void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> in_grad(outputs.begin(), outputs.begin() + 3);
 
   MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
-    GetBatchNormOp<xpu, DType, AccReal>(param).Backward(ctx, out_grad,
-        in_data, out_data, req, in_grad, aux_states);
+    BNBackward<xpu, DType, AccReal>(ctx, param, out_grad, in_data, out_data, req,
+                                    in_grad, aux_states);
   });
 }
 
