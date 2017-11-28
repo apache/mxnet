@@ -156,12 +156,12 @@ void Normalize(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename DType>
-inline DType image_cast(const float& src) {
+inline DType saturate_cast(const float& src) {
   return static_cast<DType>(src);
 }
 
 template<>
-inline uint8_t image_cast(const float& src) {
+inline uint8_t saturate_cast(const float& src) {
   return std::min(std::max(src, 0.f), 255.f);
 }
 
@@ -263,7 +263,7 @@ void RandomBrightness(const nnvm::NodeAttrs &attrs,
     DType* input = inputs[0].dptr<DType>();
     for (int l = 0; l < length; ++l) {
       float val = static_cast<float>(input[l]) * alpha_b;
-      output[l] = image_cast<DType>(val);
+      output[l] = saturate_cast<DType>(val);
     }
   });
 }
@@ -292,7 +292,7 @@ void RandomContrast(const nnvm::NodeAttrs &attrs,
     float sum = 0.f;
     if (nchannels > 1) {
       for (int l = 0; l < length; ++l) {
-        for (int c = 0; c < nchannels; ++c) sum += input[l*nchannels + c] * coef[c];
+        for (int c = 0; c < 3; ++c) sum += input[l*3 + c] * coef[c];
       }
     } else {
       for (int l = 0; l < length; ++l) sum += input[l];
@@ -302,7 +302,7 @@ void RandomContrast(const nnvm::NodeAttrs &attrs,
 
     for (int l = 0; l < length * nchannels; ++l) {
       float val = input[l] * alpha_c + beta;
-      output[l] = image_cast<DType>(val);
+      output[l] = saturate_cast<DType>(val);
     }
   });
 }
@@ -330,37 +330,35 @@ void RandomSaturation(const nnvm::NodeAttrs &attrs,
     DType* input = inputs[0].dptr<DType>();
 
     if (nchannels == 1) {
-      for (int l = 0; l < length * nchannels; ++l) output[l] = input[l];
+      for (int l = 0; l < length; ++l) output[l] = input[l];
       return;
     }
 
     for (int l = 0; l < length; ++l) {
       float gray = 0.f;
-      for (int c = 0; c < nchannels; ++c) {
-        gray = input[l*nchannels + c] * coef[c];
+      for (int c = 0; c < 3; ++c) {
+        gray = input[l*3 + c] * coef[c];
       }
       gray *= alpha_o;
-      for (int c = 0; c < nchannels; ++c) {
-        float val = gray + input[l*nchannels + c] * alpha_s;
-        output[l*nchannels + c] = image_cast<DType>(val);
+      for (int c = 0; c < 3; ++c) {
+        float val = gray + input[l*3 + c] * alpha_s;
+        output[l*3 + c] = saturate_cast<DType>(val);
       }
     }
   });
 }
 
-template <typename DType>
-void RGB2HLSConvert(const DType src_r,
-                    const DType src_g,
-                    const DType src_b,
-                    DType *dst_h,
-                    DType *dst_l,
-                    DType *dst_s
-                   ) {
-  DType b = src_b, g = src_g, r = src_r;
-  DType h = 0.f, s = 0.f, l;
-  DType vmin;
-  DType vmax;
-  DType diff;
+void RGB2HLSConvert(const float& src_r,
+                    const float& src_g,
+                    const float& src_b,
+                    float *dst_h,
+                    float *dst_l,
+                    float *dst_s) {
+  float b = src_b / 255.f, g = src_g / 255.f, r = src_r / 255.f;
+  float h = 0.f, s = 0.f, l;
+  float vmin;
+  float vmax;
+  float diff;
 
   vmax = vmin = r;
   vmax = fmax(vmax, g);
@@ -371,7 +369,7 @@ void RGB2HLSConvert(const DType src_r,
   diff = vmax - vmin;
   l = (vmax + vmin) * 0.5f;
 
-  if (diff > std::numeric_limits<DType>::epsilon()) {
+  if (diff > std::numeric_limits<float>::epsilon()) {
     s = (l < 0.5f) * diff / (vmax + vmin);
     s += (l >= 0.5f) * diff / (2.0f - vmax - vmin);
 
@@ -388,13 +386,12 @@ void RGB2HLSConvert(const DType src_r,
   *dst_s = s;
 }
 
-template <typename DType>
-void HLS2RGBConvert(const DType src_h,
-                    const DType src_l,
-                    const DType src_s,
-                    DType *dst_r,
-                    DType *dst_g,
-                    DType *dst_b) {
+void HLS2RGBConvert(const float& src_h,
+                    const float& src_l,
+                    const float& src_s,
+                    float *dst_r,
+                    float *dst_g,
+                    float *dst_b) {
   static const int c_HlsSectorData[6][3] = {
     { 1, 3, 0 },
     { 1, 0, 2 },
@@ -411,6 +408,8 @@ void HLS2RGBConvert(const DType src_h,
     float p2 = (l <= 0.5f) * l * (1 + s);
     p2 += (l > 0.5f) * (l + s - l * s);
     float p1 = 2 * l - p2;
+
+    h *= 1.f / 60.f;
 
     if (h < 0) {
       do { h += 6; } while (h < 0);
@@ -433,9 +432,9 @@ void HLS2RGBConvert(const DType src_h,
     r = tab[c_HlsSectorData[sector][2]];
   }
 
-  *dst_b = b;
-  *dst_g = g;
-  *dst_r = r;
+  *dst_b = b * 255.f;
+  *dst_g = g * 255.f;
+  *dst_r = r * 255.f;
 }
 
 void AdjustHueImpl(float alpha,
@@ -443,27 +442,26 @@ void AdjustHueImpl(float alpha,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
                    const std::vector<TBlob> &outputs) {
-  auto input_3d = input.get<cpu, 3, DType>(s);
-  auto output_3d = output.get<cpu, 3, DType>(s);
-  for (int h_index = 0; h_index < hight; ++h_index) {
-    for (int w_index = 0; w_index < weight; ++w_index) {
-      DType h;
-      DType l;
-      DType s;
-      RGB2HLSConvert(input_3d[0][h_index][w_index],
-                     input_3d[1][h_index][w_index],
-                     input_3d[2][h_index][w_index],
-                     &h, &l, &s);
-      h += alpha;
-      h = std::max(DType(0), std::min(DType(180), h));
+  int length = inputs[0].shape_[0] * inputs[0].shape_[1];
+  if (inputs[0].shape_[2] == 1) return;
 
-      HLS2RGBConvert(
-        h, l, s,
-        &output_3d[0][h_index][w_index],
-        &output_3d[1][h_index][w_index],
-        &output_3d[2][h_index][w_index]);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    DType* input = inputs[0].dptr<DType>();
+    DType* output = outputs[0].dptr<DType>();
+
+    for (int i = 0; i < length; ++i) {
+      float h, l, s;
+      float r = static_cast<float>(*(input++));
+      float g = static_cast<float>(*(input++));
+      float b = static_cast<float>(*(input++));
+      RGB2HLSConvert(r, g, b, &h, &l, &s);
+      h += alpha * 360.f;
+      HLS2RGBConvert(h, l, s, &r, &g, &b);
+      *(output++) = saturate_cast<DType>(r);
+      *(output++) = saturate_cast<DType>(g);
+      *(output++) = saturate_cast<DType>(b);
     }
-  }
+  });
 }
 
 void RandomHue(const nnvm::NodeAttrs &attrs,
@@ -475,11 +473,11 @@ void RandomHue(const nnvm::NodeAttrs &attrs,
   const RandomEnhanceParam &param = nnvm::get<RandomEnhanceParam>(attrs.parsed);
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
-  Random<cpu> *prnd = ctx.requested[kRandom].get_random<cpu, real_t>(s);
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
   float alpha =  std::uniform_real_distribution<float>(
       param.min_factor, param.max_factor)(prnd->GetRndEngine());
 
-  AdjustHueImpl<DType>(input, output, s, hight, weight, alpha);
+  AdjustHueImpl(alpha, ctx, inputs, req, outputs);
 }
 
 void RandomColorJitter(const nnvm::NodeAttrs &attrs,
@@ -535,9 +533,9 @@ void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
       float in_r = static_cast<float>(input[base_ind]);
       float in_g = static_cast<float>(input[base_ind + 1]);
       float in_b = static_cast<float>(input[base_ind + 2]);
-      output[base_ind] = image_cast<DType>(in_r + pca_r);
-      output[base_ind + 1] = image_cast<DType>(in_g + pca_g);
-      output[base_ind + 2] = image_cast<DType>(in_b + pca_b);
+      output[base_ind] = saturate_cast<DType>(in_r + pca_r);
+      output[base_ind + 1] = saturate_cast<DType>(in_g + pca_g);
+      output[base_ind + 2] = saturate_cast<DType>(in_b + pca_b);
     }
   });
 }
