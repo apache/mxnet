@@ -33,6 +33,17 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_CUDNN == 1
+
+static inline CuDNNSoftmaxActivationOp &GetCuDNNSoftmaxActOp(const SoftmaxActivationParam& param) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local CuDNNSoftmaxActivationOp op;
+#else
+  static MX_THREAD_LOCAL CuDNNSoftmaxActivationOp op;
+#endif
+  op.Init(param);
+  return op;
+}
+
 template<>
 void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
@@ -42,10 +53,7 @@ void SoftmaxActivationCompute<gpu>(const nnvm::NodeAttrs& attrs,
   const SoftmaxActivationParam& param = nnvm::get<SoftmaxActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-
-  static thread_local CuDNNSoftmaxActivationOp op;
-  op.Init(param);
-  op.Forward(ctx, inputs[0], req[0], outputs[0]);
+  GetCuDNNSoftmaxActOp(param).Forward(ctx, inputs[0], req[0], outputs[0]);
 }
 
 template<>
@@ -58,10 +66,7 @@ void SoftmaxActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
-
-  static thread_local CuDNNSoftmaxActivationOp op;
-  op.Init(param);
-  op.Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
+  GetCuDNNSoftmaxActOp(param).Backward(ctx, inputs[0], inputs[1], req[0], outputs[0]);
 }
 #endif
 

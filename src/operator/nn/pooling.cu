@@ -35,7 +35,11 @@ namespace op {
 #if MXNET_USE_CUDNN == 1
 template<typename DType>
 static CuDNNPoolingOp<DType> &GetCuDNNPoolingOp(const PoolingParam &param) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local CuDNNPoolingOp<DType> op;
+#else
+  static MX_THREAD_LOCAL CuDNNPoolingOp<DType> op;
+#endif
   op.Init(param);
   return op;
 }

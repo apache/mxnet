@@ -33,7 +33,11 @@ namespace op {
 
 template<typename DType>
 static CuDNNBatchNormOp<DType> &GetCuDNNOp(const BatchNormParam& param) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local CuDNNBatchNormOp<DType> op;
+#else
+  static MX_THREAD_LOCAL CuDNNBatchNormOp<DType> op;
+#endif
   op.Init(param);
   return op;
 }
