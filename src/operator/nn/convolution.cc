@@ -422,7 +422,6 @@ There are other options to tune the performance.
 .add_arguments(ConvolutionParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Convolution)
-.set_num_inputs(3)
 .set_num_outputs([](const NodeAttrs& attrs) {
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   return params.no_bias ? 2 : 3;
