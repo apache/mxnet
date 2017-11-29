@@ -22,6 +22,7 @@
  * \file ndarray.cc
  * \brief ndarry module of mxnet
  */
+#include <mkldnn.hpp>
 #include <dmlc/io.h>
 #include <dmlc/memory_io.h>
 #include <dmlc/logging.h>
