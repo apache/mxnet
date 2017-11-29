@@ -7,6 +7,7 @@ Committers
 ----------
 Committers are people who have made substantial contribution to the project and being active.
 The committers are the granted write access to the project.
+A full list of committers can be found here:  http://incubator.apache.org/projects/mxnet.html
 
 * [Bing Xu](https://github.com/antinucleon)
   - Bing is the initiator and major contributor of operators and ndarray modules of mxnet.
@@ -39,6 +40,7 @@ The committers are the granted write access to the project.
   - Zixuan is one of major maintainers of mxnet scala package.
 * [Yuan Tang](https://github.com/terrytangyuan)
   - Yuan is one of major maintainers of mxnet scala package.
+* [Chris Olivier](https://github.com/cjolivier01)
 
 ### Become a Committer
 MXNet is a opensource project and we are actively looking for new committers
