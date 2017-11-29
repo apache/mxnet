@@ -658,6 +658,28 @@ void RandomLighting(const nnvm::NodeAttrs &attrs,
   AdjustLightingImpl({alpha_r, alpha_g, alpha_b}, ctx, inputs, req, outputs);
 }
 
+
+#define MXNET_REGISTER_IMAGE_AUG_OP(name)                                   \
+  NNVM_REGISTER_OP(name)                                                    \
+  .set_num_inputs(1)                                                        \
+  .set_num_outputs(1)                                                       \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                         \
+    [](const NodeAttrs& attrs){                                             \
+      return std::vector<std::pair<int, int> >{{0, 0}};                     \
+    })                                                                      \
+  .set_attr<nnvm::FInferShape>("FInferShape", ImageShape)                   \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)             \
+  .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })   \
+  .add_argument("data", "NDArray-or-Symbol", "The input.")
+
+
+#define MXNET_REGISTER_IMAGE_RND_AUG_OP(name)                               \
+  MXNET_REGISTER_IMAGE_AUG_OP(name)                                         \
+  .set_attr<FResourceRequest>("FResourceRequest",                           \
+    [](const NodeAttrs& attrs) {                                            \
+      return std::vector<ResourceRequest>{ResourceRequest::kRandom};        \
+    })
+
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet
