@@ -96,6 +96,7 @@
           Derivative Works a copy of this License; and
 
       (b) You must cause any modified files to carry prominent notices
+
           stating that You changed the files; and
 
       (c) You must retain, in the Source form of any Derivative Works
@@ -224,8 +225,10 @@
     7. mshadow - For details, see, mshadow/LICENSE
     8. nnvm/dmlc-core - For details, see, nnvm/dmlc-core/LICENSE
     9. nnvm - For details, see, nnvm/LICENSE
-    10. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
-    11. ps-lite - For details, see, ps-lite/LICENSE
+    10. nnvm/tvm - For details, see, nnvm/tvm/LICENSE
+    11. nnvm/tvm/HalideIR/LICENSE - For details, see,  nnvm/tvm/HalideIR/LICENSE
+    12. nnvm-fusion - For details, see, nnvm/plugin/nnvm-fusion/LICENSE
+    13. ps-lite - For details, see, ps-lite/LICENSE
 
     ========================================================================
     MIT licenses
@@ -350,7 +353,8 @@
     (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
     LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
     ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF TH
+E USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     The views and conclusions contained in the software and documentation are those
