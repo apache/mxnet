@@ -243,20 +243,13 @@ struct RandomEnhanceParam : public dmlc::Parameter<RandomEnhanceParam> {
   }
 };
 
-void RandomBrightness(const nnvm::NodeAttrs &attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
+inline void AdjustBrightnessImpl(const float& alpha_b,
+                                 const OpContext &ctx,
+                                 const std::vector<TBlob> &inputs,
+                                 const std::vector<OpReqType> &req,
+                                 const std::vector<TBlob> &outputs) {
   using namespace mshadow;
-  const RandomEnhanceParam &param = nnvm::get<RandomEnhanceParam>(attrs.parsed);
-
   int length = inputs[0].Size();
-
-  Stream<cpu> *s = ctx.get_stream<cpu>();
-  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
-  float alpha_b = 1.0 + std::uniform_real_distribution<float>(
-      param.min_factor, param.max_factor)(prnd->GetRndEngine());
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     DType* output = outputs[0].dptr<DType>();
@@ -268,22 +261,33 @@ void RandomBrightness(const nnvm::NodeAttrs &attrs,
   });
 }
 
-void RandomContrast(const nnvm::NodeAttrs &attrs,
-                    const OpContext &ctx,
-                    const std::vector<TBlob> &inputs,
-                    const std::vector<OpReqType> &req,
-                    const std::vector<TBlob> &outputs) {
+void RandomBrightness(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  const RandomEnhanceParam &param = nnvm::get<RandomEnhanceParam>(attrs.parsed);
+
+
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
+  float alpha_b = std::uniform_real_distribution<float>(
+      param.min_factor, param.max_factor)(prnd->GetRndEngine());
+
+  AdjustBrightnessImpl(alpha_b, ctx, inputs, req, outputs);
+}
+
+inline void AdjustContrastImpl(const float& alpha_c,
+                               const OpContext &ctx,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   static const float coef[] = { 0.299f, 0.587f, 0.114f };
-  const RandomEnhanceParam &param = nnvm::get<RandomEnhanceParam>(attrs.parsed);
 
   int length = inputs[0].shape_[0] * inputs[0].shape_[1];
   int nchannels = inputs[0].shape_[2];
-
-  Stream<cpu> *s = ctx.get_stream<cpu>();
-  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
-  float alpha_c = 1.0 + std::uniform_real_distribution<float>(
-      param.min_factor, param.max_factor)(prnd->GetRndEngine());
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     DType* output = outputs[0].dptr<DType>();
@@ -307,22 +311,33 @@ void RandomContrast(const nnvm::NodeAttrs &attrs,
   });
 }
 
-void RandomSaturation(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs) {
+inline void RandomContrast(const nnvm::NodeAttrs &attrs,
+                           const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   const RandomEnhanceParam &param = nnvm::get<RandomEnhanceParam>(attrs.parsed);
+
+
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
+  float alpha_c = std::uniform_real_distribution<float>(
+      param.min_factor, param.max_factor)(prnd->GetRndEngine());
+
+  AdjustContrastImpl(alpha_c, ctx, inputs, req, outputs);
+}
+
+inline void AdjustSaturationImpl(const float& alpha_s,
+                                 const OpContext &ctx,
+                                 const std::vector<TBlob> &inputs,
+                                 const std::vector<OpReqType> &req,
+                                 const std::vector<TBlob> &outputs) {
   static const float coef[] = { 0.299f, 0.587f, 0.114f };
 
   int length = inputs[0].shape_[0] * inputs[0].shape_[1];
   int nchannels = inputs[0].shape_[2];
 
-  Stream<cpu> *s = ctx.get_stream<cpu>();
-  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
-  float alpha_s = 1.f + std::uniform_real_distribution<float>(
-      param.min_factor, param.max_factor)(prnd->GetRndEngine());
   float alpha_o = 1.f - alpha_s;
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -346,6 +361,22 @@ void RandomSaturation(const nnvm::NodeAttrs &attrs,
       }
     }
   });
+}
+
+inline void RandomSaturation(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const std::vector<TBlob> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  const RandomEnhanceParam &param = nnvm::get<RandomEnhanceParam>(attrs.parsed);
+
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
+  float alpha_s = std::uniform_real_distribution<float>(
+      param.min_factor, param.max_factor)(prnd->GetRndEngine());
+
+  AdjustSaturationImpl(alpha_s, ctx, inputs, req, outputs);
 }
 
 void RGB2HLSConvert(const float& src_r,
@@ -474,18 +505,79 @@ void RandomHue(const nnvm::NodeAttrs &attrs,
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
-  float alpha =  std::uniform_real_distribution<float>(
+  float alpha = std::uniform_real_distribution<float>(
       param.min_factor, param.max_factor)(prnd->GetRndEngine());
 
   AdjustHueImpl(alpha, ctx, inputs, req, outputs);
 }
+
+struct RandomColorJitterParam : public dmlc::Parameter<RandomColorJitterParam> {
+  float brightness;
+  float contrast;
+  float saturation;
+  float hue;
+  DMLC_DECLARE_PARAMETER(RandomColorJitterParam) {
+    DMLC_DECLARE_FIELD(brightness)
+    .describe("How much to jitter brightness.");
+    DMLC_DECLARE_FIELD(contrast)
+    .describe("How much to jitter contrast.");
+    DMLC_DECLARE_FIELD(saturation)
+    .describe("How much to jitter saturation.");
+    DMLC_DECLARE_FIELD(hue)
+    .describe("How much to jitter hue.");
+  }
+};
 
 void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  const RandomColorJitterParam &param = nnvm::get<RandomColorJitterParam>(attrs.parsed);
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
 
+  int order[4] = {0, 1, 2, 3};
+  std::shuffle(order, order + 4, prnd->GetRndEngine());
+  bool flag = false;
+
+  for (int i = 0; i < 4; ++i) {
+    switch (order[i]) {
+      case 0:
+        if (param.brightness > 0) {
+          float alpha_b = 1.0 + std::uniform_real_distribution<float>(
+              -param.brightness, param.brightness)(prnd->GetRndEngine());
+          AdjustBrightnessImpl(alpha_b, ctx, flag ? outputs : inputs, req, outputs);
+          flag = true;
+        }
+        break;
+      case 1:
+        if (param.contrast > 0) {
+          float alpha_c = 1.0 + std::uniform_real_distribution<float>(
+              -param.contrast, param.contrast)(prnd->GetRndEngine());
+          AdjustContrastImpl(alpha_c, ctx, flag ? outputs : inputs, req, outputs);
+          flag = true;
+        }
+        break;
+      case 2:
+        if (param.saturation > 0) {
+          float alpha_s = 1.f + std::uniform_real_distribution<float>(
+              -param.saturation, param.saturation)(prnd->GetRndEngine());
+          AdjustSaturationImpl(alpha_s, ctx, flag ? outputs : inputs, req, outputs);
+          flag = true;
+        }
+        break;
+      case 3:
+        if (param.hue > 0) {
+          float alpha_h = std::uniform_real_distribution<float>(
+              -param.hue, param.hue)(prnd->GetRndEngine());
+          AdjustHueImpl(alpha_h, ctx, flag ? outputs : inputs, req, outputs);
+          flag = true;
+        }
+        break;
+    }
+  }
 }
 
 struct AdjustLightingParam : public dmlc::Parameter<AdjustLightingParam> {
