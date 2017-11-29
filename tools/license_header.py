@@ -63,7 +63,6 @@ _WHITE_LIST = ['R-package/',
                'nnvm',
                'ps-lite',
                'src/operator/mkl/',
-               'src/operator/contrib/ctc_include/',
                'cmake/Modules/FindJeMalloc.cmake',
                'src/operator/special_functions-inl.h',
                'src/operator/nn/pool.h',
@@ -71,7 +70,8 @@ _WHITE_LIST = ['R-package/',
                'src/operator/contrib/nn/deformable_im2col.h',
                'example/speech-demo/io_func/convert2kaldi.py',
                'example/speech-demo/decode_mxnet.sh',
-               'example/image-classification/predict-cpp/image-classification-predict.cc']
+               'example/image-classification/predict-cpp/image-classification-predict.cc',
+               'src/operator/contrib/ctc_include/']
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
