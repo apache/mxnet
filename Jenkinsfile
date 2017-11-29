@@ -248,7 +248,7 @@ try {
           ws('workspace/ut-python2-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python2_ut('cpu_gpu_cuda_mklml')
+            python2_ut('cpu_mklml')
           }
         }
       },
@@ -266,7 +266,7 @@ try {
           ws('workspace/ut-python3-mklml-cpu') {
             init_git()
             unpack_lib('mklml')
-            python3_ut('cpu_gpu_cuda_mklml') 
+            python3_ut('cpu_mklml') 
           }
         }
       },
