@@ -46,7 +46,7 @@ static inline int get_type_size(int dtype) {
 }
 
 void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns) {
-  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), cpu::kDevMask);
+  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), Context::kCPU);
   CHECK(src.shape() == dns->shape_);
   CHECK_EQ(src.dtype(), dns->type_flag_);
   // This converts the source data to the default format and copy the data to
@@ -56,7 +56,7 @@ void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns)
 }
 
 void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dst) {
-  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), cpu::kDevMask);
+  CHECK_EQ(ctx.run_ctx.ctx.dev_mask(), Context::kCPU);
   CHECK(dst.shape() == src.shape());
   CHECK_EQ(dst.dtype(), src.dtype());
 
