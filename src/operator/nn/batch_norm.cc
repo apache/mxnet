@@ -361,7 +361,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   int dtype_param;
   MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
       dtype_param = mshadow::DataType<AccRealX>::kFlag; });
-  std::vector<std::string> args{"data", "gamma", "beta"};
+  std::vector<std::string> args{"data", "gamma", "beta", "mean", "var"};
   CHECK_LE(in_type->size(), args.size());
   for (index_t i = 1; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
