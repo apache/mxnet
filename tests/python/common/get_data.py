@@ -79,3 +79,22 @@ def MNISTIterator(batch_size, input_shape):
         flat=flat)
 
     return (train_dataiter, val_dataiter)
+
+class DummyIter(mx.io.DataIter):
+    "A dummy iterator that always returns the same batch, used for speed testing"
+    def __init__(self, real_iter):
+        super(DummyIter, self).__init__()
+        self.real_iter = real_iter
+        self.provide_data = real_iter.provide_data
+        self.provide_label = real_iter.provide_label
+        self.batch_size = real_iter.batch_size
+
+        for batch in real_iter:
+            self.the_batch = batch
+            break
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        return self.the_batch

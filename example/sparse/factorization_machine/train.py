@@ -18,8 +18,7 @@
 import mxnet as mx
 from metric import *
 from mxnet.test_utils import *
-from data import DummyIter
-from factorization_machine_model import *
+from model import *
 import argparse, os
 
 parser = argparse.ArgumentParser(description="Run factorization machine with criteo dataset",

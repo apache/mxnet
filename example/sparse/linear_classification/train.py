@@ -17,7 +17,7 @@
 
 import mxnet as mx
 from mxnet.test_utils import *
-from get_data import get_libsvm_data
+from data import get_avazu_data
 from linear_model import *
 import argparse
 import os
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     data_dir = os.path.join(os.getcwd(), 'data')
     train_data = os.path.join(data_dir, AVAZU['train'])
     val_data = os.path.join(data_dir, AVAZU['test'])
-    get_libsvm_data(data_dir, AVAZU['train'], AVAZU['url'])
-    get_libsvm_data(data_dir, AVAZU['test'], AVAZU['url'])
+    get_avazu_data(data_dir, AVAZU['train'], AVAZU['url'])
+    get_avazu_data(data_dir, AVAZU['test'], AVAZU['url'])
 
     # data iterator
     train_data = mx.io.LibSVMIter(data_libsvm=train_data, data_shape=(num_features,),
