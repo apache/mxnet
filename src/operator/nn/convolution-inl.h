@@ -39,9 +39,9 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
-#include "./nn/im2col.h"
-#include "./linalg.h"
+#include "../operator_common.h"
+#include "../linalg.h"
+#include "./im2col.h"
 
 
 namespace mxnet {

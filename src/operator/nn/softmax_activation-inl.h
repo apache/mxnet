@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include "./operator_common.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {

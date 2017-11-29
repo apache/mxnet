@@ -34,9 +34,9 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./mshadow_op.h"
-#include "./operator_common.h"
-#include "mxnet_op.h"
+#include "../mshadow_op.h"
+#include "../operator_common.h"
+#include "../mxnet_op.h"
 
 #ifdef __GNUG__
 #pragma GCC diagnostic push

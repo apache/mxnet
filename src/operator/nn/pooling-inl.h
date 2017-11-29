@@ -35,8 +35,8 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "./operator_common.h"
-#include "./nn/pool.h"
+#include "../operator_common.h"
+#include "./pool.h"
 
 namespace mxnet {
 namespace op {

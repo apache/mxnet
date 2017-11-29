@@ -24,7 +24,7 @@
  * \author Junyuan Xie
 */
 #include "./softmax_activation-inl.h"
-#include "./mshadow_op.h"
+#include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
