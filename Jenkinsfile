@@ -148,6 +148,24 @@ try {
           }
         }
       },
+      'CPU: MKLML': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-mklml') {
+            init_git()
+            def flag = """ \
+    DEV=1                         \
+    USE_PROFILER=1                \
+    USE_CPP_PACKAGE=1             \
+    USE_BLAS=openblas             \
+    USE_MKL2017=1                 \
+    USE_MKL2017_EXPERIMENTAL=1    \
+    -j\$(nproc)
+    """
+            make("cpu_mklml", flag)
+            pack_lib('mklml')
+          }
+        }
+      },
       'GPU: CUDA7.5+cuDNN5': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-gpu') {
@@ -162,7 +180,7 @@ try {
     USE_CPP_PACKAGE=1             \
     -j\$(nproc)
     """
-            make('cpu_gpu_cuda_mklml', flag)
+            make('build_cuda', flag)
             pack_lib('gpu')
             stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
           }
@@ -183,27 +201,6 @@ try {
             init_git()
             make('cpu', '-C amalgamation/ clean')
             make('cpu', '-C amalgamation/ USE_BLAS=openblas')
-          }
-        }
-      },
-      'GPU: MKLML': {
-        node('mxnetlinux-cpu') {
-          ws('workspace/build-mklml') {
-            init_git()
-            def flag = """ \
-    DEV=1                         \
-    USE_PROFILER=1                \
-    USE_BLAS=openblas             \
-    USE_MKL2017=1                 \
-    USE_MKL2017_EXPERIMENTAL=1    \
-    USE_CUDA=1                    \
-    USE_CUDA_PATH=/usr/local/cuda \
-    USE_CUDNN=1                   \
-    USE_CPP_PACKAGE=1             \
-    -j\$(nproc)
-    """
-            make('cpu_gpu_cuda_mklml', flag)
-            pack_lib('mklml')
           }
         }
       }
@@ -260,7 +257,7 @@ try {
           ws('workspace/ut-python2-mklml-gpu') {
             init_git()
             unpack_lib('mklml')
-            python2_gpu_ut('mklml_gpu')
+            python2_gpu_ut('gpu_mklml')
           }
         }
       },
@@ -278,7 +275,7 @@ try {
           ws('workspace/ut-python3-mklml-gpu') {
             init_git()
             unpack_lib('mklml')
-            python3_gpu_ut('mklml_gpu')
+            python3_gpu_ut('gpu_mklml')
           }
         }
       },
