@@ -1,7 +1,27 @@
 import org.gradle.api.artifacts.maven.MavenDeployment
 
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'java'
+
+apply plugin: 'antlr'
+apply plugin: 'application'
+
+apply plugin: 'maven'
+apply plugin: 'signing'
+
 group 'org.caffetranslator'
-version '0.9.0-SNAPSHOT'
+version '0.9.0'
+
+def isReleaseBuild
+def repositoryUrl
+
+if(hasProperty("release")) {
+    isReleaseBuild = true
+    repositoryUrl = stagingRepositoryUrl
+} else if(hasProperty("CI")) {
+    repositoryUrl = snapshotRepositoryUrl
+    version += "-SNAPSHOT"
+}
 
 buildscript {
     repositories {
@@ -11,15 +31,6 @@ buildscript {
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
     }
 }
-
-apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'java'
-
-apply plugin: 'antlr'
-apply plugin: 'application'
-
-apply plugin: 'maven'
-apply plugin: 'signing'
 
 sourceCompatibility = 1.8
 
@@ -47,6 +58,16 @@ jar {
     }
 }
 
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
 shadowJar {
     baseName = 'caffe-translator'
     classifier = ''
@@ -60,17 +81,27 @@ configurations {
 
 artifacts {
     releaseJars shadowJar
+    releaseJars sourcesJar
+    releaseJars javadocJar
 }
 
-signing {
-    sign configurations.releaseJars
+if(isReleaseBuild) {
+    signing {
+        sign configurations.releaseJars
+    }
+} else {
+    task signReleaseJars {
+        //no-op
+    }
 }
 
 uploadShadow {
     repositories {
         mavenDeployer {
-            beforeDeployment { MavenDeployment deployment
-                -> signing.signPom(deployment)
+            beforeDeployment { MavenDeployment deployment ->
+                if(isReleaseBuild) {
+                    signing.signPom(deployment)
+                }
                 configurations.releaseJars.artifacts.each { ra ->
                     def ascfile = file(ra.file.path + '.asc')
                     def ascArtifact = project.artifacts.add('ascSignatures', ascfile) {
@@ -78,11 +109,12 @@ uploadShadow {
                         extension = ra.extension + '.asc'
                         type = ra.type + '.asc'
                     }
+                    deployment.addArtifact(ra)
                     deployment.addArtifact(ascArtifact)
                 }
             }
 
-            repository(url: sonatypeRepositoryUrl) {
+            repository(url: repositoryUrl) {
                 authentication(userName: ossrhUsername, password: ossrhPassword)
             }
 
@@ -97,13 +129,6 @@ uploadShadow {
                         name 'The Apache Software License, Version 2.0'
                         url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
                         distribution 'repo'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id 'indhub'
-                        name 'Indu Bharathi'
                     }
                 }
             }
