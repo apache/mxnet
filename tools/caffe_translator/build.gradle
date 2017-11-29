@@ -10,7 +10,7 @@ apply plugin: 'maven'
 apply plugin: 'signing'
 
 group 'org.caffetranslator'
-version '0.9.0'
+version '0.9.1'
 
 def isReleaseBuild
 def repositoryUrl
@@ -140,9 +140,9 @@ uploadShadow {
                 }
 
                 scm {
-                    connection 'scm:git:git://github.com:CaffeTranslator/CaffeTranslator.git'
-                    developerConnection 'scm:git:ssh://github.com:CaffeTranslator/CaffeTranslator.git'
-                    url 'https://github.com/CaffeTranslator/CaffeTranslator.git'
+                    connection 'scm:git:git://github.com:apache/incubator-mxnet.git'
+                    developerConnection 'scm:git:git@github.com:apache/incubator-mxnet.git'
+                    url 'https://github.com/apache/incubator-mxnet.git'
                 }
             }
         }
