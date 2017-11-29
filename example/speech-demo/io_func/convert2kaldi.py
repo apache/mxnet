@@ -2,14 +2,14 @@
 # Copyright 2013    Yajie Miao    Carnegie Mellon University
 
 
-import numpy as npo
+import numpy as np
 import os
 import sys
 
 from StringIO import StringIO
 import json
 import utils.utils as utils
-from model_io import string_2_arrayo
+from model_io import string_2_array
 
 # Various functions to convert models into Kaldi formats
 def _nnet2kaldi(nnet_spec, set_layer_num = -1, filein='nnet.in',
