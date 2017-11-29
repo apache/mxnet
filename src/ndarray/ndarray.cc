@@ -649,6 +649,8 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
         }
       }, ret.ctx(), const_vars, {ret.var(), rsc.var},
     FnProperty::kNormal, priority, PROFILER_MESSAGE("RowSparseElementwiseSum"));
+  } else {
+    LOG(FATAL) << "Not implemented for storage_type " << stype;
   }
 }
 
