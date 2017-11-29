@@ -30,6 +30,13 @@
 
 namespace mxnet {
 namespace op {
+namespace image {
+
+DMLC_REGISTER_PARAMETER(NormalizeParam);
+DMLC_REGISTER_PARAMETER(RandomEnhanceParam);
+DMLC_REGISTER_PARAMETER(AdjustLightingParam);
+DMLC_REGISTER_PARAMETER(RandomLightingParam);
+DMLC_REGISTER_PARAMETER(RandomColorJitterParam);
 
 NNVM_REGISTER_OP(_image_to_tensor)
 .describe(R"code()code" ADD_FILELINE)
@@ -42,13 +49,12 @@ NNVM_REGISTER_OP(_image_to_tensor)
 .add_argument("data", "NDArray-or-Symbol", "The input.");
 
 
-DMLC_REGISTER_PARAMETER(NormalizeParam);
 NNVM_REGISTER_OP(_image_normalize)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NormalizeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", NormalizeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -59,33 +65,31 @@ NNVM_REGISTER_OP(_image_normalize)
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(NormalizeParam::__FIELDS__());
 
-DMLC_REGISTER_PARAMETER(FlipParam);
-NNVM_REGISTER_OP(_image_flip)
+
+NNVM_REGISTER_OP(_image_random_horizontal_flip)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<FlipParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                [](const NodeAttrs& attrs){
-                                  return std::vector<std::pair<int, int> >{{0, 0}};
-                                })
-.set_attr<FCompute>("FCompute<cpu>", Flip)
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.set_attr<FCompute>("FCompute<cpu>", RandomHorizontalFlip)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
-.add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(FlipParam::__FIELDS__());
+.add_argument("data", "NDArray-or-Symbol", "The input.");
 
-DMLC_REGISTER_PARAMETER(RandomBrightnessParam);
+
 NNVM_REGISTER_OP(_image_random_brightness)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<RandomBrightnessParam>)
+.set_attr_parser(ParamParser<RandomEnhanceParam>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kRandom};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -94,18 +98,18 @@ NNVM_REGISTER_OP(_image_random_brightness)
 .set_attr<FCompute>("FCompute<cpu>", RandomBrightness)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(RandomBrightnessParam::__FIELDS__());
+.add_arguments(RandomEnhanceParam::__FIELDS__());
 
-DMLC_REGISTER_PARAMETER(RandomContrastParam);
+
 NNVM_REGISTER_OP(_image_random_contrast)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<RandomContrastParam>)
+.set_attr_parser(ParamParser<RandomEnhanceParam>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kRandom};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -114,18 +118,18 @@ NNVM_REGISTER_OP(_image_random_contrast)
 .set_attr<FCompute>("FCompute<cpu>", RandomContrast)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(RandomContrastParam::__FIELDS__());
+.add_arguments(RandomEnhanceParam::__FIELDS__());
 
-DMLC_REGISTER_PARAMETER(RandomSaturationParam);
+
 NNVM_REGISTER_OP(_image_random_saturation)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<RandomSaturationParam>)
+.set_attr_parser(ParamParser<RandomEnhanceParam>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kRandom};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -134,31 +138,44 @@ NNVM_REGISTER_OP(_image_random_saturation)
 .set_attr<FCompute>("FCompute<cpu>", RandomSaturation)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(RandomSaturationParam::__FIELDS__());
+.add_arguments(RandomEnhanceParam::__FIELDS__());
 
-DMLC_REGISTER_PARAMETER(RandomHueParam);
 NNVM_REGISTER_OP(_image_random_hue)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<RandomHueParam>)
+.set_attr_parser(ParamParser<RandomEnhanceParam>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kRandom};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", RandomHue<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", RandomHue)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(RandomHueParam::__FIELDS__());
+.add_arguments(RandomEnhanceParam::__FIELDS__());
 
-DMLC_REGISTER_PARAMETER(AdjustLightingParam);
+NNVM_REGISTER_OP(_image_random_color_jitter)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<RandomColorJitterParam>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest>{ResourceRequest::kRandom};
+})
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", RandomColorJitter)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.add_argument("data", "NDArray-or-Symbol", "The input.")
+.add_arguments(RandomColorJitterParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_image_adjust_lighting)
 .describe(R"code(Adjust the lighting level of the input. Follow the AlexNet style.)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdjustLightingParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -169,7 +186,7 @@ NNVM_REGISTER_OP(_image_adjust_lighting)
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(AdjustLightingParam::__FIELDS__());
 
-DMLC_REGISTER_PARAMETER(RandomLightingParam);
+
 NNVM_REGISTER_OP(_image_random_lighting)
 .describe(R"code(Randomly add PCA noise. Follow the AlexNet style.)code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -178,7 +195,7 @@ NNVM_REGISTER_OP(_image_random_lighting)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kRandom};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -189,5 +206,6 @@ NNVM_REGISTER_OP(_image_random_lighting)
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(RandomLightingParam::__FIELDS__());
 
+}  // namespace image
 }  // namespace op
 }  // namespace mxnet
