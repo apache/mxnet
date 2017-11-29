@@ -24,8 +24,8 @@
  * \author Bing Xu, Jun Wu
 */
 
-#ifndef MXNET_OPERATOR_POOLING_INL_H_
-#define MXNET_OPERATOR_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_NN_POOLING_INL_H_
+#define MXNET_OPERATOR_NN_POOLING_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -332,4 +332,4 @@ class PoolingProp : public OperatorProperty {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_NN_POOLING_INL_H_

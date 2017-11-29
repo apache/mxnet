@@ -22,8 +22,8 @@
  * \brief CUDA depthwise convolution code
  * \author shuqian.qu@hobot.cc
 */
-#ifndef MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_INL_H_
-#define MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_INL_H_
 #include <algorithm>
 #include <vector>
 #include "./convolution-inl.h"
@@ -350,4 +350,4 @@ void DepthwiseConvolutionOp<DType>::Backward(const OpContext &ctx,
 }  // namespace mxnet
 #endif
 
-#endif  // MXNET_OPERATOR_DEPTHWISE_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_NN_DEPTHWISE_CONVOLUTION_INL_H_

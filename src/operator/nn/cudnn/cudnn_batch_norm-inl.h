@@ -24,8 +24,8 @@
  * \author Junyuan Xie
 */
 
-#ifndef MXNET_OPERATOR_CUDNN_BATCH_NORM_INL_H_
-#define MXNET_OPERATOR_CUDNN_BATCH_NORM_INL_H_
+#ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_
+#define MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_
 #include <vector>
 #include <map>
 #include <string>
@@ -387,4 +387,4 @@ class CuDNNBatchNormProp : public OperatorProperty {
 #endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CUDNN_BATCH_NORM_INL_H_
+#endif  // MXNET_OPERATOR_NN_CUDNN_CUDNN_BATCH_NORM_INL_H_

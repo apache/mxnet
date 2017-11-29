@@ -24,8 +24,8 @@
  * \author Bing Xu
 */
 
-#ifndef MXNET_OPERATOR_ACTIVATION_INL_H_
-#define MXNET_OPERATOR_ACTIVATION_INL_H_
+#ifndef MXNET_OPERATOR_NN_ACTIVATION_INL_H_
+#define MXNET_OPERATOR_NN_ACTIVATION_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -215,4 +215,4 @@ class ActivationProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_ACTIVATION_INL_H_
+#endif  // MXNET_OPERATOR_NN_ACTIVATION_INL_H_

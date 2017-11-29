@@ -24,8 +24,8 @@
  * \author Bing Xu
 */
 
-#ifndef MXNET_OPERATOR_CUDNN_POOLING_INL_H_
-#define MXNET_OPERATOR_CUDNN_POOLING_INL_H_
+#ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_POOLING_INL_H_
+#define MXNET_OPERATOR_NN_CUDNN_CUDNN_POOLING_INL_H_
 #include <algorithm>
 #include <vector>
 #include "./pooling-inl.h"
@@ -311,5 +311,5 @@ class CuDNNPoolingOp : public Operator {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CUDNN_POOLING_INL_H_
+#endif  // MXNET_OPERATOR_NN_CUDNN_CUDNN_POOLING_INL_H_
 
