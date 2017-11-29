@@ -63,7 +63,8 @@ _WHITE_LIST = ['R-package/',
                'nnvm',
                'ps-lite',
                'src/operator/mkl/',
-               'src/operator/contrib/ctc_include/']
+               'src/operator/contrib/ctc_include/',
+               'cmake/Modules/FindJeMalloc.cmake']
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
