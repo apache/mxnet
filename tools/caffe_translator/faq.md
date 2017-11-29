@@ -1,9 +1,9 @@
-# Frequently asked questions
+### Frequently asked questions
 
-[**Why is Caffe needed to run the translated code?**](#why_caffe)
+[**Why is Caffe required to run the translated code?**](#why_caffe)
 
-There is a couple of reasons why Caffe is needed:
+There is a couple of reasons why Caffe is required to run the translated code:
 
-1. The translator does not convert caffe data layer to native MXNet code because MXNet cannot read from LMDB files. Translator instead generates code that uses CaffeDataIter which can read LMDB files. CaffeDataIter needs Caffe to run.
+1. The translator does not convert Caffe data layer to native MXNet code because MXNet cannot read from LMDB files. Translator instead generates code that uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) which can read LMDB files. `CaffeDataIter` needs Caffe to run.
 
-2. If the caffe code to be translated uses custom layers, or layers that don't have equivalent MXNet layers (like scale layer), translator will generate code that will use CaffeOp. CaffeOp needs Caffe to run.
+2. If the Caffe code to be translated uses custom layers, or layers that don't have equivalent MXNet layers, the translator will generate code that will use [CaffeOp](https://mxnet.incubator.apache.org/how_to/caffe.html#use-sym-caffeop). CaffeOp needs Caffe to run.
