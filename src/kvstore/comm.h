@@ -176,17 +176,17 @@ class CommCPU : public Comm {
         reduce[i] = buf.copy_buf[i];
         const_vars[i] = reduce[i].var();
       }
-      auto result = buf.merged;
+      NDArray result = buf.merged;
+      Resource rsc = ResourceManager::Get()->Request(result.ctx(),
+          ResourceRequest(ResourceRequest::kTempSpace));
       Engine::Get()->PushAsync(
-        [reduce, result, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        [reduce, result, rsc, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           NDArray out = result;
-          Resource rsc = ResourceManager::Get()->Request(rctx.ctx,
-              ResourceRequest(ResourceRequest::kTempSpace));
           is_serial_push_?
             ReduceSumCPUExSerial(reduce, &out)
             : mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
           on_complete();
-        }, Context::CPU(), const_vars, {result.var()},
+        }, Context::CPU(), const_vars, {result.var(), rsc.var},
         FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreReduce"));
     }
 
@@ -525,7 +525,8 @@ class CommDevice : public Comm {
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
 
-    if (buf.merged.storage_type() == kDefaultStorage) {
+    const NDArrayStorageType stype = buf.merged.storage_type();
+    if (stype == kDefaultStorage) {
       CopyFromTo(src[0], &(buf.merged), priority);
       reduce[0] = buf.merged;
 
@@ -544,10 +545,7 @@ class CommDevice : public Comm {
         CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
         reduce[i+1] = buf.copy_buf[i];
       }
-
-      ElementwiseSum(reduce, &buf.merged);
     } else {
-      std::vector<Engine::VarHandle> const_vars(src.size());
       if (buf.copy_buf.empty()) {
         buf.copy_buf.resize(src.size());
         for (size_t j = 0; j < src.size(); ++j) {
@@ -559,33 +557,9 @@ class CommDevice : public Comm {
       for (size_t i = 0; i < src.size(); ++i) {
         CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
         reduce[i] = buf.copy_buf[i];
-        const_vars[i] = reduce[i].var();
       }
-      auto result = buf.merged;
-      Engine::Get()->PushAsync(
-        [reduce, result, this](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          NDArray out = result;
-          Resource rsc = ResourceManager::Get()->Request(rctx.ctx,
-            ResourceRequest(ResourceRequest::kTempSpace));
-          switch (result.ctx().dev_mask()) {
-            case cpu::kDevMask: {
-              mxnet::ndarray::ElementwiseSum(rctx.get_stream<cpu>(), rsc, reduce, &out);
-              break;
-            }
-#if MXNET_USE_CUDA
-            case gpu::kDevMask: {
-              mxnet::ndarray::ElementwiseSum(rctx.get_stream<gpu>(), rsc, reduce, &out);
-              // wait for GPU operations to complete
-              rctx.get_stream<gpu>()->Wait();
-              break;
-            }
-#endif
-            default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-          }
-          on_complete();
-        }, result.ctx(), const_vars, {result.var()},
-      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreReduce"));
     }
+    ElementwiseSum(reduce, &buf.merged, priority);
     return buf.merged;
   }
 

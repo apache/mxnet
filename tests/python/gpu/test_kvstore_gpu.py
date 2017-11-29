@@ -36,35 +36,36 @@ def init_kv_with_str(stype='default', kv_type='local'):
     return kv
 
 
-def test_row_sparse_pull(kv_type='local'):
-    kv = init_kv_with_str('row_sparse', kv_type)
-    kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
-    kv.push('e', [mx.nd.ones(shape, ctx=mx.cpu(i)).tostype('row_sparse') for i in range(2)])
-    def check_row_sparse_pull(kv, count, ctx=default_context()):
-        num_rows = shape[0]
-        vals = []
-        row_ids = []
-        all_row_ids = np.arange(num_rows)
-        for i in range(count):
-            vals.append(mx.nd.zeros(shape, ctx=ctx).tostype('row_sparse'))
-            row_id = np.random.randint(num_rows, size=num_rows)
-            row_ids.append(mx.nd.array(row_id, dtype='int64'))
-        row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
-        vals_to_pull = vals[0] if len(vals) == 1 else vals
+def test_rsp_push_pull():
+    def check_rsp_push_pull(kv_type):
+        kv = init_kv_with_str('row_sparse', kv_type)
+        kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
+        kv.push('e', [mx.nd.ones(shape, ctx=mx.gpu(i)).tostype('row_sparse') for i in range(2)])
+        def check_rsp_pull(kv, count, ctxs):
+            num_rows = shape[0]
+            vals = []
+            row_ids = []
+            all_row_ids = np.arange(num_rows)
+            for i in range(count):
+                vals.append(mx.nd.zeros(shape, ctx=ctxs[i]).tostype('row_sparse'))
+                row_id = np.random.randint(num_rows, size=num_rows)
+                row_ids.append(mx.nd.array(row_id, dtype='int64'))
+            row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
+            vals_to_pull = vals[0] if len(vals) == 1 else vals
 
-        kv.row_sparse_pull('e', out=vals_to_pull, row_ids=row_ids_to_pull)
-        for val, row_id in zip(vals, row_ids):
-            retained = val.asnumpy()
-            excluded_row_ids = np.setdiff1d(all_row_ids, row_id.asnumpy())
-            for row in range(num_rows):
-                expected_val = np.zeros_like(retained[row])
-                expected_val += 0 if row in excluded_row_ids else 2
-                assert_almost_equal(retained[row], expected_val)
+            kv.row_sparse_pull('e', out=vals_to_pull, row_ids=row_ids_to_pull)
+            for val, row_id in zip(vals, row_ids):
+                retained = val.asnumpy()
+                excluded_row_ids = np.setdiff1d(all_row_ids, row_id.asnumpy())
+                for row in range(num_rows):
+                    expected_val = np.zeros_like(retained[row])
+                    expected_val += 0 if row in excluded_row_ids else 2
+                    assert_almost_equal(retained[row], expected_val)
 
-    check_row_sparse_pull(kv, 1, mx.gpu(0))
-    check_row_sparse_pull(kv, 4, mx.gpu(0))
-
+        check_rsp_pull(kv, 1, [mx.gpu(0)])
+        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)])
+    check_rsp_push_pull('local')
+    check_rsp_push_pull('device')
 
 if __name__ == '__main__':
-    test_row_sparse_pull()
-    test_row_sparse_pull('device')
+    test_rsp_push_pull()
