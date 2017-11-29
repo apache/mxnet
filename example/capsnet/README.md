@@ -51,10 +51,10 @@ python capsulenet.py --devices gpu0,gpu1 --lr 0.0005 --decay 0.99 --model_prefix
 
 | Trial | Epoch | train err(%) | test err(%) | train loss | test loss |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | 120 | 0.06 | 0.31 | 0.000056 | 0.000064 |
-| 2 | 167 | 0.03 | 0.29 | 0.000048 | 0.000058 |
-| 3 | 182 | 0.04 | 0.31 | 0.000046 | 0.000058 |
-| average | - | 0.043 | 0.303 | 0.00005 | 0.00006 |
+| 1 | 120 | 0.06 | 0.31 | 0.0056 | 0.0064 |
+| 2 | 167 | 0.03 | 0.29 | 0.0048 | 0.0058 |
+| 3 | 182 | 0.04 | 0.31 | 0.0046 | 0.0058 |
+| average | - | 0.043 | 0.303 | 0.005 | 0.006 |
 
 We achieved `the best test error rate=0.29%` and `average test error=0.303%`. It is the best accuracy and fastest training time result among other implementations(Keras, Tensorflow at 2017-11-23).
 The result on paper is `0.25% (average test error rate)`.

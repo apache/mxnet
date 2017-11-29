@@ -128,6 +128,7 @@ class LossMetric(mx.metric.EvalMetric):
         self.batch_num_inst = 0
         self.batch_loss = 0.0
         self.recon_loss = 0.0
+        self.n_batch = 0
 
     def update(self, labels, preds):
         batch_sum_metric = 0
@@ -146,11 +147,12 @@ class LossMetric(mx.metric.EvalMetric):
         self.batch_sum_metric = batch_sum_metric
         self.batch_num_inst = batch_num_inst
         self.batch_loss = batch_loss
+        self.n_batch += 1 
 
     def get_name_value(self):
         acc = float(self.sum_metric)/float(self.num_inst)
-        mean_loss = self.loss / float(self.num_inst)
-        mean_recon_loss = self.recon_loss / float(self.num_inst)
+        mean_loss = self.loss / float(self.n_batch)
+        mean_recon_loss = self.recon_loss / float(self.n_batch)
         return acc, mean_loss, mean_recon_loss
 
     def get_batch_log(self, n_batch):
@@ -166,6 +168,7 @@ class LossMetric(mx.metric.EvalMetric):
         self.num_inst = 0
         self.loss = 0.0
         self.recon_loss = 0.0
+        self.n_batch = 0
 
 
 class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
