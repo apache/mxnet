@@ -469,7 +469,7 @@ void CopyFromToImpl(const NDArray& from, const NDArray& to,
   const auto from_ctx = from.ctx();
   const auto to_ctx = to.ctx();
   bool is_train = Imperative::Get()->is_training();
-  
+
   OpContext opctx{is_train,
                   rctx,
                   engine::CallbackOnComplete(),
