@@ -137,7 +137,10 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .add_arguments(FullyConnectedParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_FullyConnected)
-.set_num_outputs(3)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const FullyConnectedParam& params = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  return params.no_bias ? 2 : 3;
+})
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
