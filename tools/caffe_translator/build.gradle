@@ -131,6 +131,19 @@ uploadShadow {
                         distribution 'repo'
                     }
                 }
+
+                developers {
+                    developer {
+                        name 'Indu Bharathi'
+                        email 'indhub@apache.org'
+                    }
+                }
+
+                scm {
+                    connection 'scm:git:git://github.com:CaffeTranslator/CaffeTranslator.git'
+                    developerConnection 'scm:git:ssh://github.com:CaffeTranslator/CaffeTranslator.git'
+                    url 'https://github.com/CaffeTranslator/CaffeTranslator.git'
+                }
             }
         }
     }
