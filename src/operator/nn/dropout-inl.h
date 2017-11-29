@@ -38,13 +38,6 @@
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 
-#if defined(USE_MKL) && defined(_OPENMP)
-#include <omp.h>
-
-#include <mkl_vml_functions.h>
-#include <mkl_vsl.h>
-#endif  // USE_MKL && _OPENMP
-
 namespace dropout {
 enum DropoutOpInputs {kData};
 enum DropoutOpOutputs {kOut, kMask};
@@ -54,28 +47,6 @@ enum DropoutOpMode {kTraining, kAlways};
 
 namespace mxnet {
 namespace op {
-
-#if defined(USE_MKL) && defined(_OPENMP)
-static void bernoulli_generate(int n, double p, int* r) {
-  const int seed = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-# pragma omp parallel num_threads(nthr)
-  {
-    const int ithr = omp_get_thread_num();
-    const int avg_amount = (n + nthr - 1) / nthr;
-    const int my_offset = ithr * avg_amount;
-    const int my_amount = std::min(my_offset + avg_amount, n) - my_offset;
-    if (my_amount > 0) {
-      VSLStreamStatePtr stream;
-      vslNewStream(&stream, VSL_BRNG_MCG31, seed);
-      vslSkipAheadStream(stream, my_offset);
-      viRngBernoulli(VSL_RNG_METHOD_BERNOULLI_ICDF, stream, my_amount,
-        r + my_offset, p);
-      vslDeleteStream(&stream);
-    }
-  }
-}
-#endif  // USE_MKL && _OPENMP
 
 struct DropoutParam : public dmlc::Parameter<DropoutParam> {
   float p;
@@ -109,23 +80,10 @@ void DropoutForward(const OpContext &ctx, const DropoutParam &param,
   Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
   if (ctx.is_train || mode_ == dropout::kAlways) {
     Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
-#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
-    DType* outptr = out.dptr_;
-    DType* dataptr = data.dptr_;
-    auto maskptr = reinterpret_cast<int*>(mask.dptr_);
-    int count = mask.shape_[0]*mask.shape_[1];
-    bernoulli_generate(count, pkeep_, maskptr);
-    const float pk_1 = 1.0f / pkeep_;
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int i = 0; i < count; ++i) {
-      outptr[i] = dataptr[i] * maskptr[i] * pk_1;
-    }
-#else
     Random<xpu> *prnd = ctx.requested[dropout::kRandom].get_random<xpu, real_t>(s);
     mask = tcast<DType>(F<mshadow_op::threshold>(
             prnd->uniform(mask.shape_), pkeep_) * (1.0f / pkeep_));
     Assign(out, req[dropout::kOut], data * mask);
-#endif  // USE_MKL && _OPENMP
   } else {
     Assign(out, req[dropout::kOut], F<mshadow_op::identity>(data));
   }
@@ -143,20 +101,7 @@ void DropoutBackward(const OpContext &ctx, const DropoutParam &param,
   Tensor<xpu, 2, DType> mask = out_data_mask.FlatTo2D<xpu, DType>(s);
   Tensor<xpu, 2, DType> gdata = in_grad.FlatTo2D<xpu, DType>(s);
   if (ctx.is_train || mode_ == dropout::kAlways) {
-#if !defined(__CUDACC__) && defined(USE_MKL) && defined(_OPENMP)
-    real_t pkeep_ = 1.0f - param.p;
-    DType* ingradptr = gdata.dptr_;
-    DType* outgradptr = grad.dptr_;
-    auto maskptr = reinterpret_cast<int*>(mask.dptr_);
-    int count = mask.shape_[0]*mask.shape_[1];
-    const float pk_1 = 1.0f / pkeep_;
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int i = 0; i < count; ++i) {
-      ingradptr[i] = outgradptr[i] * maskptr[i] * pk_1;
-    }
-#else  // USE_MKL && _OPENMP
     Assign(gdata, req, grad * mask);
-#endif  // USE_MKL && _OPENMP
   } else {
     Assign(gdata, req, F<mshadow_op::identity>(grad));
   }
