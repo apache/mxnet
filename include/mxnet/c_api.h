@@ -164,6 +164,7 @@ typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*
 typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
 typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
                                                     int * /*stypes*/,
+                                                    int * /*tags*/,
                                                     void * /*state*/);
 typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
                                   const int* /*out_data*/, int* /*num_deps*/,

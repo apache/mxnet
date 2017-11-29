@@ -60,27 +60,28 @@ class SqrProp(mx.operator.CustomOpProp):
             return ['default'], ['default'], []
         return ['csr'], ['csr'], []
 
-    def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, aux_stype):
+    def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, igrad_stype, aux_stype):
         '''Infer storage type logic for the backward pass
         Takes storage type of output gradients(ograd_stype), inputs(in_stype),
         outputs(out_stype) and aux(aux_stype).
-        Returns a inferred storage type in the following order:
+        Returns inferred storage types in the following order:
         ograd_stype, in_stype, out_stype, igrad_stype (Storage type for input gradients)
-        and aux_stype
+        and aux_stype.
         '''
         if in_stype[0] == 'default':
             return ['default'], ['default'], ['default'], ['default'], []
-        return ['default'], ['csr'], ['csr'], ['csr'], []
+        return ['csr'], ['csr'], ['csr'], ['default'], []
 
     def create_operator(self, ctx, shapes, dtypes):
         return Sqr()
 
 x = mx.nd.array(np.random.uniform(1, 10, size=(4,10)))
 x = x.tostype('csr')
-x.attach_grad()
+x.attach_grad(stype='default')
+z = mx.nd.zeros_like(x)
 with mx.contrib.autograd.train_section():
     y = mx.nd.Custom(x, op_type='sqr')
-    y.backward()
+    y.backward(out_grad=z)
 mx.nd.waitall()
 print("Original ndarray")
 print("--------------")

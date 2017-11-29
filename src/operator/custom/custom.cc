@@ -369,31 +369,48 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     return true;
   }
 
-  std::vector<int> stypes;
-  const size_t num_bwd_args = params.bwd_idx.size();
-  stypes.reserve(num_bwd_args + params.num_args + params.num_auxs);
-  for (size_t i = 0; i < iattr->size(); ++i) {
-    stypes.push_back((*iattr)[i]);
+  size_t total = 2 * params.num_args + 2 * params.num_outs + params.num_auxs;
+  size_t bwd_deps_size = params.bwd_idx.size();
+  std::vector<int> stypes(bwd_deps_size, -1);
+  std::vector<int> tags;
+  stypes.reserve(total);
+  tags.reserve(total);
+
+  for (size_t i = 0; i < bwd_deps_size; i++) {
+    if (params.bwd_idx[i] < static_cast<int>(params.num_outs))
+      tags.push_back(3);
+    else if (params.bwd_idx[i] <
+             static_cast<int>(params.num_outs + params.num_args))
+      tags.push_back(0);
+    else
+      tags.push_back(1);
+    stypes[i] = (*iattr)[i];
   }
-  for (size_t i = 0; i < oattr->size(); ++i) {
+
+  for (size_t i = 0; i < oattr->size(); i++) {
     stypes.push_back((*oattr)[i]);
+    tags.push_back(2);
+  }
+
+  for (size_t i = (iattr->size() - params.num_auxs); i < iattr->size(); i++) {
+    stypes.push_back((*iattr)[i]);
+    tags.push_back(4);
   }
 
   CHECK(reinterpret_cast<CustomOpBackwardInferStorageTypeFunc>(
       params.info->callbacks[kCustomOpPropBackwardInferStorageType])(
-      stypes.size(), stypes.data(),
+      stypes.size(), stypes.data(), tags.data(),
       params.info->contexts[kCustomOpPropBackwardInferStorageType]));
-  for (size_t i = 0; i < num_bwd_args; ++i) {
+
+  for (size_t i = 0; i < bwd_deps_size; ++i) {
     STORAGE_TYPE_ASSIGN_CHECK(*iattr, i, stypes[i]);
   }
-  for (size_t i = 0; i < params.num_args; ++i) {
-    STORAGE_TYPE_ASSIGN_CHECK(
-        *oattr, i, stypes[i + num_bwd_args]);
+  for (size_t i = 0; i < oattr->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*oattr, i, stypes[i + bwd_deps_size]);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
     STORAGE_TYPE_ASSIGN_CHECK(
-        *iattr, i + num_bwd_args,
-        stypes[i + num_bwd_args + params.num_args]);
+        *iattr, (i + iattr->size() - params.num_auxs), stypes[i + params.num_outs + bwd_deps_size]);
   }
 
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
