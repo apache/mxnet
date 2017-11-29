@@ -43,6 +43,7 @@
 #include "./nn/im2col.h"
 #include "./linalg.h"
 
+const int SAME_FLAG = -1;
 
 namespace mxnet {
 namespace op {
@@ -103,6 +104,15 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   // Adjusts kernel size for effects of dilation in the dimension `dim`.
   index_t DilatedKernelSize(int dim) const {
     return 1 + (kernel[dim] - 1) * dilate[dim];
+  }
+  // Computes padding so that output and input sizes match in dimension `dim`.
+  index_t SamePaddingSize(int dim, index_t dshape) const {
+    index_t total_pad = (ceil(static_cast<float>(dshape) / stride[dim]) - 1) \
+            * stride[dim] + DilatedKernelSize(dim) - dshape;
+    CHECK_EQ(total_pad % 2, 0U) \
+              << "The combination of input size, dilation, and stride in dim index " \
+              << dim << " will induce asymmetric padding, which is not supported.";
+    return total_pad / 2;
   }
 
   bool operator==(const ConvolutionParam& other) const {
@@ -212,7 +222,7 @@ class ConvolutionOp : public Operator {
       for (index_t n = 0; n < num_; ++n) {
         // transform image to col_buffer in order to use gemm
         im2col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
-               col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
+               col_buffer.shape_, param_.kernel, inferred_pad_, param_.stride, param_.dilate,
                col_buffer.dptr<DType>());
         Tensor<xpu, 3, DType> output_3d = output_4d[n];
         for (index_t g = 0; g < group_; ++g) {
@@ -303,12 +313,12 @@ class ConvolutionOp : public Operator {
           linalg_gemm(weight_3d[g], out_grad_3d[g], col_buffer_3d[g], true, false, s);
         }
         col2im(s, col_buffer.dptr<DType>(), in_grad[conv::kData].shape_, col_buffer.shape_,
-               param_.kernel, param_.pad, param_.stride, param_.dilate,
+               param_.kernel, inferred_pad_, param_.stride, param_.dilate,
                in_grad[conv::kData].dptr<DType>()+n*input_dim_, req[conv::kData]);
 
         // gradient w.r.t. weight, dWeight should accumulate across the batch and group
         im2col(s, in_data[conv::kData].dptr<DType>()+n*input_dim_, in_data[conv::kData].shape_,
-               col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
+               col_buffer.shape_, param_.kernel, inferred_pad_, param_.stride, param_.dilate,
                col_buffer.dptr<DType>());
         for (index_t g = 0; g < group_; ++g) {
           auto request = (n == 0) ? req[conv::kWeight] : kAddTo;
@@ -334,10 +344,14 @@ class ConvolutionOp : public Operator {
     const index_t first_spatial_axis = channel_axis_ + 1;
     const index_t num_axes = param_.kernel.ndim() + 2;
     num_spatial_axes_ = num_axes - first_spatial_axis;
+
+    inferred_pad_ = param_.pad;
     is_1x1_ = true;
     for (index_t i = 0; i < param_.kernel.ndim(); ++i) {
-      is_1x1_ &= param_.kernel[i] == 1 && param_.stride[i] == 1 && param_.pad[i] == 0;
-      if (!is_1x1_) break;
+      if (inferred_pad_[i] == SAME_FLAG) {
+        inferred_pad_[i] = param_.SamePaddingSize(i, ishape[2+i]);
+      }
+      is_1x1_ &= param_.kernel[i] == 1 && param_.stride[i] == 1 && inferred_pad_[i] == 0;
     }
 
     // batch size
@@ -381,6 +395,7 @@ class ConvolutionOp : public Operator {
   index_t output_dim_;
   index_t num_kernels_im2col_;
   index_t num_kernels_col2im_;
+  TShape inferred_pad_;
   bool bias_term_;  // has bias term?
   bool is_1x1_;
 };  // class ConvolutionOp
@@ -440,6 +455,9 @@ class ConvolutionProp : public OperatorProperty {
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
     out_shape->resize(1, TShape());
     const TShape &dshp = (*in_shape)[conv::kData];
+
+    TShape inferred_pad = param_.pad;
+
     if (dshp.ndim() ==  0) return false;
 
     if (param_.kernel.ndim() == 1) {
@@ -469,8 +487,12 @@ class ConvolutionProp : public OperatorProperty {
       Shape<3> oshape;
       oshape[0] = dshape[0];
       oshape[1] = param_.num_filter;
-      oshape[2] = dshape[2] ?
-          (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_x) / param_.stride[0] + 1 : 0;
+      oshape[2] = dshape[2] ? dshape[2] : 0;
+      if (inferred_pad[0] == SAME_FLAG) {
+        inferred_pad[0] = param_.SamePaddingSize(0, dshape[2]);
+      } else {
+        oshape[2] = (AddPad(dshape[2], inferred_pad[0]) - dilated_ksize_x) / param_.stride[0] + 1;
+      }
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCW, param_.layout.value()));
       // Perform incomplete shape inference. Fill in the missing values in data shape.
       // 1) We can always fill in the batch_size.
@@ -478,13 +500,13 @@ class ConvolutionProp : public OperatorProperty {
       oshape = ConvertLayout((*out_shape)[0].get<3>(), param_.layout.value(), kNCW);
       dshape[0] = oshape[0];
       if (oshape[2] && param_.stride[0] == 1) {
-        dshape[2] = oshape[2] + dilated_ksize_x - 1 - 2 * param_.pad[0];
+        dshape[2] = oshape[2] + dilated_ksize_x - 1 - 2 * inferred_pad[0];
       }
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
                           ConvertLayout(dshape, kNCW, param_.layout.value()));
       // Check whether the kernel sizes are valid
       if (dshape[2] != 0) {
-        CHECK_LE(dilated_ksize_x, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+        CHECK_LE(dilated_ksize_x, AddPad(dshape[2], inferred_pad[0])) << "kernel size exceed input";
       }
       return true;
     } else if (param_.kernel.ndim() == 2) {
@@ -517,10 +539,18 @@ class ConvolutionProp : public OperatorProperty {
       Shape<4> oshape;
       oshape[0] = dshape[0];
       oshape[1] = param_.num_filter;
-      oshape[2] = dshape[2] ?
-        (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_y) / param_.stride[0] + 1 : 0;
-      oshape[3] = dshape[3] ?
-        (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_x) / param_.stride[1] + 1 : 0;
+      oshape[2] = dshape[2] ? dshape[2] : 0;
+      if (inferred_pad[0] == SAME_FLAG) {
+        inferred_pad[0] = param_.SamePaddingSize(0, dshape[2]);
+      } else {
+        oshape[2] = (AddPad(dshape[2], inferred_pad[0]) - dilated_ksize_y) / param_.stride[0] + 1;
+      }
+      oshape[3] = dshape[3] ? dshape[3] : 0;
+      if (inferred_pad[1] == SAME_FLAG) {
+        inferred_pad[1] = param_.SamePaddingSize(1, dshape[3]);
+      } else {
+        oshape[3] = (AddPad(dshape[3], inferred_pad[1]) - dilated_ksize_x) / param_.stride[1] + 1;
+      }
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
       // Perform incomplete shape inference. Fill in the missing values in data shape.
       // 1) We can always fill in the batch_size.
@@ -528,19 +558,19 @@ class ConvolutionProp : public OperatorProperty {
       oshape = ConvertLayout((*out_shape)[0].get<4>(), param_.layout.value(), kNCHW);
       dshape[0] = oshape[0];
       if (oshape[2] && param_.stride[0] == 1) {
-        dshape[2] = oshape[2] + dilated_ksize_y - 1 - 2 * param_.pad[0];
+        dshape[2] = oshape[2] + dilated_ksize_y - 1 - 2 * inferred_pad[0];
       }
       if (oshape[3] && param_.stride[1] == 1) {
-        dshape[3] = oshape[3] + dilated_ksize_x - 1 - 2 * param_.pad[1];
+        dshape[3] = oshape[3] + dilated_ksize_x - 1 - 2 * inferred_pad[1];
       }
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
                           ConvertLayout(dshape, kNCHW, param_.layout.value()));
       // Check whether the kernel sizes are valid
       if (dshape[2] != 0) {
-        CHECK_LE(dilated_ksize_y, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+        CHECK_LE(dilated_ksize_y, AddPad(dshape[2], inferred_pad[0])) << "kernel size exceed input";
       }
       if (dshape[3] != 0) {
-        CHECK_LE(dilated_ksize_x, AddPad(dshape[3], param_.pad[1])) << "kernel size exceed input";
+        CHECK_LE(dilated_ksize_x, AddPad(dshape[3], inferred_pad[1])) << "kernel size exceed input";
       }
       return true;
     } else if (param_.kernel.ndim() == 3) {
@@ -577,12 +607,24 @@ class ConvolutionProp : public OperatorProperty {
       Shape<5> oshape;
       oshape[0] = dshape[0];
       oshape[1] = param_.num_filter;
-      oshape[2] = dshape[2] ?
-        (AddPad(dshape[2], param_.pad[0]) - dilated_ksize_d) / param_.stride[0] + 1 : 0;
-      oshape[3] = dshape[3] ?
-        (AddPad(dshape[3], param_.pad[1]) - dilated_ksize_y) / param_.stride[1] + 1 : 0;
-      oshape[4] = dshape[4] ?
-        (AddPad(dshape[4], param_.pad[2]) - dilated_ksize_x) / param_.stride[2] + 1 : 0;
+      oshape[2] = dshape[2] ? dshape[2] : 0;
+      if (inferred_pad[0] == SAME_FLAG) {
+        inferred_pad[0] = param_.SamePaddingSize(0, dshape[2]);
+      } else {
+        oshape[2] = (AddPad(dshape[2], inferred_pad[0]) - dilated_ksize_d) / param_.stride[0] + 1;
+      }
+      oshape[3] = dshape[3] ? dshape[3] : 0;
+      if (inferred_pad[1] == SAME_FLAG) {
+        inferred_pad[1] = param_.SamePaddingSize(1, dshape[3]);
+      } else {
+        oshape[3] = (AddPad(dshape[3], inferred_pad[1]) - dilated_ksize_y) / param_.stride[1] + 1;
+      }
+      oshape[4] = dshape[4] ? dshape[4] : 0;
+      if (inferred_pad[2] == SAME_FLAG) {
+        inferred_pad[2] = param_.SamePaddingSize(2, dshape[4]);
+      } else {
+        oshape[4] = (AddPad(dshape[4], inferred_pad[2]) - dilated_ksize_x) / param_.stride[2] + 1;
+      }
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCDHW, param_.layout.value()));
       // Perform incomplete shape inference. Fill in the missing values in data shape.
       // 1) We can always fill in the batch_size.
@@ -590,25 +632,25 @@ class ConvolutionProp : public OperatorProperty {
       oshape = ConvertLayout((*out_shape)[0].get<5>(), param_.layout.value(), kNCDHW);
       dshape[0] = oshape[0];
       if (oshape[2] && param_.stride[0] == 1) {
-        dshape[2] = oshape[2] + dilated_ksize_d - 1 - 2 * param_.pad[0];
+        dshape[2] = oshape[2] + dilated_ksize_d - 1 - 2 * inferred_pad[0];
       }
       if (oshape[3] && param_.stride[1] == 1) {
-        dshape[3] = oshape[3] + dilated_ksize_y - 1 - 2 * param_.pad[1];
+        dshape[3] = oshape[3] + dilated_ksize_y - 1 - 2 * inferred_pad[1];
       }
       if (oshape[4] && param_.stride[2] == 1) {
-        dshape[4] = oshape[4] + dilated_ksize_x - 1 - 2 * param_.pad[2];
+        dshape[4] = oshape[4] + dilated_ksize_x - 1 - 2 * inferred_pad[2];
       }
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kData,
                           ConvertLayout(dshape, kNCDHW, param_.layout.value()));
       // Check whether the kernel sizes are valid
       if (dshape[2] != 0) {
-        CHECK_LE(dilated_ksize_d, AddPad(dshape[2], param_.pad[0])) << "kernel size exceed input";
+        CHECK_LE(dilated_ksize_d, AddPad(dshape[2], inferred_pad[0])) << "kernel size exceed input";
       }
       if (dshape[3] != 0) {
-        CHECK_LE(dilated_ksize_y, AddPad(dshape[3], param_.pad[1])) << "kernel size exceed input";
+        CHECK_LE(dilated_ksize_y, AddPad(dshape[3], inferred_pad[1])) << "kernel size exceed input";
       }
       if (dshape[4] != 0) {
-        CHECK_LE(dilated_ksize_x, AddPad(dshape[4], param_.pad[2])) << "kernel size exceed input";
+        CHECK_LE(dilated_ksize_x, AddPad(dshape[4], inferred_pad[2])) << "kernel size exceed input";
       }
       return true;
     } else {
