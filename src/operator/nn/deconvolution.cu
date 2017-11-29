@@ -26,7 +26,7 @@
 
 #include "./deconvolution-inl.h"
 #if MXNET_USE_CUDNN == 1
-#include "./cudnn_deconvolution-inl.h"
+#include "./cudnn/cudnn_deconvolution-inl.h"
 #endif  // MXNET_USE_CUDNN
 
 namespace mxnet {

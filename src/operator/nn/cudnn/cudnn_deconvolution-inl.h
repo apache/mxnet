@@ -30,9 +30,9 @@
 #include <vector>
 #include <mutex>
 #include <string>
-#include "./deconvolution-inl.h"
+#include "../deconvolution-inl.h"
 #include "./cudnn_algoreg-inl.h"
-#include "../common/cuda_utils.h"
+#include "../../../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {

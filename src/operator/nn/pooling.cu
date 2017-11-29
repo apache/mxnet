@@ -26,7 +26,7 @@
 #include <vector>
 #include "./pooling-inl.h"
 #if MXNET_USE_CUDNN == 1
-#include "./cudnn_pooling-inl.h"
+#include "./cudnn/cudnn_pooling-inl.h"
 #endif  // MXNET_USE_CUDNN
 
 namespace mxnet {

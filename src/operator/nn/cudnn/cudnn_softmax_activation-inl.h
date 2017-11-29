@@ -28,7 +28,7 @@
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_SOFTMAX_ACTIVATION_INL_H_
 #include <algorithm>
 #include <vector>
-#include "./softmax_activation-inl.h"
+#include "../softmax_activation-inl.h"
 
 namespace mxnet {
 namespace op {

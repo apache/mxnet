@@ -27,7 +27,7 @@
 #include "./convolution-inl.h"
 #include <vector>
 #if MXNET_USE_CUDNN == 1
-#include "./cudnn_convolution-inl.h"
+#include "./cudnn/cudnn_convolution-inl.h"
 #endif  // MXNET_USE_CUDNN
 
 #include "./depthwise_convolution-inl.h"

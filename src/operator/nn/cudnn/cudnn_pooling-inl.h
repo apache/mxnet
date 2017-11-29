@@ -28,7 +28,7 @@
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_POOLING_INL_H_
 #include <algorithm>
 #include <vector>
-#include "./pooling-inl.h"
+#include "../pooling-inl.h"
 
 namespace mxnet {
 namespace op {
