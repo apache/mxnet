@@ -24,7 +24,7 @@ skip_scoring=false
 use_gpu_id=-1 # disable gpu
 #parallel_opts="-pe smp 2" # use 2 CPUs (1 DNN-forward, 1 decoder)
 parallel_opts= # use 2 CPUs (1 DNN-forward, 1 decoder)
-# End configuration section.o
+# End configuration section.
 
 echo "$0 $@"  # Print the command line for logging
 
