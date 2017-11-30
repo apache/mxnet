@@ -41,12 +41,53 @@ class Dataset(object):
         raise NotImplementedError
 
     def transform(self, fn, lazy=True):
+        """Returns a new dataset with each sample transformed by the
+        transformer function `fn`.
+
+        Parameters
+        ----------
+        fn : callable
+            A transformer function that takes a sample as input and
+            returns the transformed sample.
+        lazy : bool, default True
+            If False, transforms all samples at once. Otherwise,
+            transforms each sample on demand. Note that if `fn`
+            is stochastic, you must set lazy to True or you will
+            get the same result on all epochs.
+
+        Returns
+        -------
+        Dataset
+            The transformed dataset.
+        """
         trans = _LazyTransformDataset(self, fn)
         if lazy:
             return trans
         return SimpleDataset([i for i in trans])
 
     def transform_first(self, fn, lazy=True):
+        """Returns a new dataset with the first element of each sample
+        transformed by the transformer function `fn`.
+
+        This is useful, for example, when you only want to transform data
+        while keeping label as is.
+
+        Parameters
+        ----------
+        fn : callable
+            A transformer function that takes the first elemtn of a sample
+            as input and returns the transformed element.
+        lazy : bool, default True
+            If False, transforms all samples at once. Otherwise,
+            transforms each sample on demand. Note that if `fn`
+            is stochastic, you must set lazy to True or you will
+            get the same result on all epochs.
+
+        Returns
+        -------
+        Dataset
+            The transformed dataset.
+        """
         def base_fn(x, *args):
             if args:
                 return (fn(x),) + args
@@ -55,6 +96,13 @@ class Dataset(object):
 
 
 class SimpleDataset(Dataset):
+    """Simple Dataset wrapper for lists and arrays.
+
+    Parameters
+    ----------
+    data : dataset-like object
+        Any object that implements `len()` and `[]`.
+    """
     def __init__(self, data):
         self._data = data
 
@@ -66,6 +114,7 @@ class SimpleDataset(Dataset):
 
 
 class _LazyTransformDataset(Dataset):
+    """Lazily transformed dataset."""
     def __init__(self, data, fn):
         self._data = data
         self._fn = fn
@@ -81,13 +130,14 @@ class _LazyTransformDataset(Dataset):
 
 
 class ArrayDataset(Dataset):
-    """A dataset of multiple arrays.
+    """A dataset that combines multiple dataset-like objects, e.g.
+    Datasets, lists, arrays, etc.
 
-    The i-th sample is `(x1[i], x2[i], ...)`.
+    The i-th sample is defined as `(x1[i], x2[i], ...)`.
 
     Parameters
     ----------
-    *args : one or more arrays
+    *args : one or more dataset-like objects
         The data arrays.
     """
     def __init__(self, *args):
