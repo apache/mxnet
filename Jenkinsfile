@@ -150,7 +150,7 @@ try {
       },
       'CPU: MKLML': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-mklml') {
+          ws('workspace/build-mklml-cpu') {
             init_git()
             def flag = """ \
     DEV=1                         \
@@ -162,11 +162,32 @@ try {
     -j\$(nproc)
     """
             make("cpu_mklml", flag)
-            pack_lib('mklml')
+            pack_lib('mklml_cpu')
           }
         }
       },
-      'GPU: CUDA7.5+cuDNN5': {
+      'GPU: MKLML': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-mklml-gpu') {
+            init_git()
+            def flag = """ \
+    DEV=1                         \
+    USE_PROFILER=1                \
+    USE_CPP_PACKAGE=1             \
+    USE_BLAS=openblas             \
+    USE_MKL2017=1                 \
+    USE_MKL2017_EXPERIMENTAL=1    \
+    USE_CUDA=1                    \
+    USE_CUDA_PATH=/usr/local/cuda \
+    USW_CUDNN=1                   \
+    -j\$(nproc)
+    """
+            make("build_cuda", flag)
+            pack_lib('mklml_gpu')
+          }
+        }
+      },
+      'GPU: CUDA8.0+cuDNN5': {
         node('mxnetlinux-cpu') {
           ws('workspace/build-gpu') {
             init_git()
@@ -247,7 +268,7 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/ut-python2-mklml-cpu') {
             init_git()
-            unpack_lib('mklml')
+            unpack_lib('mklml_cpu')
             python2_ut('cpu_mklml')
           }
         }
@@ -256,7 +277,7 @@ try {
         node('mxnetlinux-gpu') {
           ws('workspace/ut-python2-mklml-gpu') {
             init_git()
-            unpack_lib('mklml')
+            unpack_lib('mklml_gpu')
             python2_gpu_ut('gpu_mklml')
           }
         }
@@ -265,7 +286,7 @@ try {
         node('mxnetlinux-cpu') {
           ws('workspace/ut-python3-mklml-cpu') {
             init_git()
-            unpack_lib('mklml')
+            unpack_lib('mklml_cpu')
             python3_ut('cpu_mklml') 
           }
         }
@@ -274,7 +295,7 @@ try {
         node('mxnetlinux-gpu') {
           ws('workspace/ut-python3-mklml-gpu') {
             init_git()
-            unpack_lib('mklml')
+            unpack_lib('mklml_gpu')
             python3_gpu_ut('gpu_mklml')
           }
         }
