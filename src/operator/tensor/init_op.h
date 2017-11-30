@@ -319,6 +319,24 @@ void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
 }
 
 /*!
+ * \brief Set a row_sparse NDArray with val
+ * \param s - The device stream
+ * \param val - The value to be set
+ * \param dst - NDArray which is to be set to val
+ */
+template<typename xpu>
+void SetValueRspImpl(mshadow::Stream<xpu> *s,
+                     const real_t val, NDArray *dst) {
+  PopulateFullIdxRspImpl(s, dst);
+  dst->CheckAndAllocData(dst->shape());
+  Fill<false>(s, dst->data(), kWriteTo, val);
+}
+
+template<typename xpu>
+void SetValueRsp(mshadow::Stream<xpu> *s,
+                 const real_t val, const NDArray& dst);
+
+/*!
  * \brief Fill a CSR NDArray with zeros by updating the aux shape
  * \param s - The device stream
  * \param dst - NDArray which is to be set to "all zeroes"
