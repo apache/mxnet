@@ -17,6 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
+echo ""
+echo "NOTE: Please review the licensing of the datasets in this script before proceeding"
+echo ""
+sleep 30 # seconds
 
 RNN_DIR=$(cd `dirname $0`; pwd)
 DATA_DIR="${RNN_DIR}/data/"
