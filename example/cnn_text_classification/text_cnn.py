@@ -26,12 +26,13 @@ import numpy as np
 import argparse
 import logging
 import data_helpers
+from mxnet.test_utils import str2bool
 
 logging.basicConfig(level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="CNN for text classification",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--pretrained-embedding', type=bool, default=False,
+parser.add_argument('--pretrained-embedding', type=str2bool, default=False,
                     help='use pre-trained word2vec')
 parser.add_argument('--num-embed', type=int, default=300,
                     help='embedding layer size')

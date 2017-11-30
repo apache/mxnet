@@ -20,6 +20,7 @@ import tools.find_mxnet
 import mxnet as mx
 import os
 import sys
+from mxnet.test_utils import str2bool
 from evaluate.evaluate_net import evaluate_net
 
 def parse_args():
@@ -59,11 +60,11 @@ def parse_args():
                         help='non-maximum suppression threshold')
     parser.add_argument('--overlap', dest='overlap_thresh', type=float, default=0.5,
                         help='evaluation overlap threshold')
-    parser.add_argument('--force', dest='force_nms', type=bool, default=False,
+    parser.add_argument('--force', dest='force_nms', type=str2bool, default=False,
                         help='force non-maximum suppression on different class')
-    parser.add_argument('--use-difficult', dest='use_difficult', type=bool, default=False,
+    parser.add_argument('--use-difficult', dest='use_difficult', type=str2bool, default=False,
                         help='use difficult ground-truths in evaluation')
-    parser.add_argument('--voc07', dest='use_voc07_metric', type=bool, default=True,
+    parser.add_argument('--voc07', dest='use_voc07_metric', type=str2bool, default=True,
                         help='use PASCAL VOC 07 metric')
     parser.add_argument('--deploy', dest='deploy_net', help='Load network from model',
                         action='store_true', default=False)

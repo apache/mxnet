@@ -24,6 +24,7 @@ from atari_game import AtariGame
 from utils import *
 import logging
 import argparse
+from mxnet.test_utils import str2bool
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -55,7 +56,7 @@ def main():
                         help='Eps of the AdaGrad optimizer')
     parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                         help='Clip threshold of the AdaGrad optimizer')
-    parser.add_argument('--double-q', required=False, type=bool, default=False,
+    parser.add_argument('--double-q', required=False, type=str2bool, default=False,
                         help='Use Double DQN')
     parser.add_argument('--wd', required=False, type=float, default=0.0,
                         help='Weight of the L2 Regularizer')

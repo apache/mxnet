@@ -19,6 +19,7 @@ import mxnet as mx
 from data import get_iterator
 import argparse
 import train_model
+from mxnet.test_utils import str2bool
 
 def get_mlp():
     """
@@ -77,7 +78,7 @@ def parse_args():
                         help='the cnn to use (mlp | lenet | <path to network json file>')
     parser.add_argument('--caffe-loss', type=int, default=0,
                         help='Use CaffeLoss symbol')
-    parser.add_argument('--caffe-data', type=bool, default=False,
+    parser.add_argument('--caffe-data', type=str2bool, default=False,
                         help='Use Caffe input-data layer (True | False)')
     parser.add_argument('--data-dir', type=str, default='mnist/',
                         help='the input data directory')
