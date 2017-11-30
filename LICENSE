@@ -237,7 +237,7 @@
     1. Fast R-CNN  - For details, see example/rcnn/LICENSE
     2. Faster R-CNN - For details, see example/rcnn/LICENSE
     3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
-    4. JQuery - For details, see http://jquery.org/license
+    4. JQuery - For details, see docs/_static/jquery-1.11.1.js
 
     ========================================================================
     NVIDIA Licenses
