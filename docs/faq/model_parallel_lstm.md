@@ -25,7 +25,7 @@ for [natural language translation](https://arxiv.org/pdf/1409.0473.pdf), [speech
 and working with [time series data](https://arxiv.org/abs/1511.03677).
 For a general high-level introduction to LSTMs,
 see the excellent [tutorial](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) by Christopher Olah. For a working example of LSTM training with model parallelism,
-see [example/model-parallelism-lstm/](https://github.com/dmlc/mxnet/blob/master/example/model-parallel-lstm/lstm.py).
+see [example/model-parallelism-lstm/](https://github.com/dmlc/mxnet/blob/master/example/model-parallel/lstm/lstm.py).
 
 
 ## Model Parallelism: Using Multiple GPUs As a Pipeline
@@ -44,7 +44,7 @@ This differs significantly from data parallelism.
 Here, there is no contention to update the shared model at the end of each iteration,
 and most of the communication happens when passing intermediate results between GPUs.
 
-In the current implementation, the layers are defined in [lstm_unroll()](https://github.com/dmlc/mxnet/blob/master/example/model-parallel-lstm/lstm.py).
+In the current implementation, the layers are defined in [lstm_unroll()](https://github.com/dmlc/mxnet/blob/master/example/model-parallel/lstm/lstm.py).
 
 ## Workload Partitioning
 
