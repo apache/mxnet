@@ -179,7 +179,7 @@ try {
     USE_MKL2017_EXPERIMENTAL=1    \
     USE_CUDA=1                    \
     USE_CUDA_PATH=/usr/local/cuda \
-    USW_CUDNN=1                   \
+    USE_CUDNN=1                   \
     -j\$(nproc)
     """
             make("build_cuda", flag)
