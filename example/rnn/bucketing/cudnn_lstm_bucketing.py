@@ -223,6 +223,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format=head)
 
     args = parser.parse_args()
+
     if args.num_layers >= 4 and len(args.gpus.split(',')) >= 4 and not args.stack_rnn:
         print('WARNING: stack-rnn is recommended to train complex model on multiple GPUs')
 

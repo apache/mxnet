@@ -101,7 +101,6 @@ def parse_args():
                         person, pottedplant, sheep, sofa, train, tvmonitor',
                         help='string of comma separated names, or text filename')
     args = parser.parse_args()
-    print(args.show_timer)
     return args
 
 def parse_class_names(class_names):
