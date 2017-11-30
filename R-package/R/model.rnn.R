@@ -12,7 +12,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
   input.names <- names(dlist)
   arg.params.names <- names(arg.params)
   
-  sym_ini <- if (is.list(symbol)) symbol[[names(train.data$bucketID)]] else symbol
+  if (is.list(symbol)) sym_ini <- symbol[[names(train.data$bucketID)]] else sym_ini <- symbol
   
   slices <- lapply(seq_len(ndevice), function(i) {
     sapply(names(dlist), function(n) mx.nd.split(data=dlist[[n]], num_outputs = ndevice, axis = 0, squeeze_axis = FALSE))

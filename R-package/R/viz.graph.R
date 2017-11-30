@@ -125,7 +125,7 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     stringsAsFactors=FALSE)
   edges_df$from<- id_dic[as.character(edges_df$from)]
   
-  nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled",
+  nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", 
                                 fillcolor=adjustcolor(nodes_df$color, alpha.f = 1), fontcolor = "black")
   edge_df_new<- create_edge_df(from = edges_df$from, to=edges_df$to, color="black", fontcolor = "black")
   
@@ -142,8 +142,8 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     }
   }
   
-  graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = TRUE) %>%
-    set_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>%
+  graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = TRUE) %>% 
+    set_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>% 
     add_global_graph_attrs("rankdir", value = direction, attr_type = "graph")
   
   if (type=="vis"){

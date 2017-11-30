@@ -23,6 +23,7 @@ rnn.graph <- function(num.rnn.layer,
                       cell.type,
                       masking = FALSE,
                       output_last_state = FALSE) {
+  
   # define input arguments
   data <- mx.symbol.Variable("data")
   label <- mx.symbol.Variable("label")
@@ -56,8 +57,8 @@ rnn.graph <- function(num.rnn.layer,
   # Decode
   if (config=="seq-to-one") {
     
-    mask <- if (masking) mx.symbol.SequenceLast(data=rnn[[1]], use.sequence.length = TRUE, sequence_length = seq.mask, name = "mask") else
-      mx.symbol.SequenceLast(data=rnn[[1]], use.sequence.length = FALSE, name = "mask")
+    if (masking) mask <- mx.symbol.SequenceLast(data=rnn[[1]], use.sequence.length = TRUE, sequence_length = seq.mask, name = "mask") else
+      mask <- mx.symbol.SequenceLast(data=rnn[[1]], use.sequence.length = FALSE, name = "mask")
     
     decode <- mx.symbol.FullyConnected(data=mask,
                                        weight=cls.weight,
@@ -104,10 +105,10 @@ rnn.graph <- function(num.rnn.layer,
 
 # LSTM cell symbol
 lstm.cell <- function(num.hidden, indata, prev.state, param, seqidx, layeridx, dropout = 0) {
-  i2h <- mx.symbol.FullyConnected(data = indata, weight = param$i2h.weight, bias = param$i2h.bias,
+  i2h <- mx.symbol.FullyConnected(data = indata, weight = param$i2h.weight, bias = param$i2h.bias, 
                                   num.hidden = num.hidden * 4, name = paste0("t", seqidx, ".l", layeridx, ".i2h"))
   
-  if (dropout > 0)
+  if (dropout > 0) 
     i2h <- mx.symbol.Dropout(data = i2h, p = dropout)
   
   if (!is.null(prev.state)) {
@@ -119,7 +120,7 @@ lstm.cell <- function(num.hidden, indata, prev.state, param, seqidx, layeridx, d
     gates <- i2h
   }
   
-  split.gates <- mx.symbol.split(gates, num.outputs = 4, axis = 1, squeeze.axis = FALSE,
+  split.gates <- mx.symbol.split(gates, num.outputs = 4, axis = 1, squeeze.axis = FALSE, 
                                  name = paste0("t", seqidx, ".l", layeridx, ".slice"))
   
   in.gate <- mx.symbol.Activation(split.gates[[1]], act.type = "sigmoid")
@@ -127,13 +128,14 @@ lstm.cell <- function(num.hidden, indata, prev.state, param, seqidx, layeridx, d
   forget.gate <- mx.symbol.Activation(split.gates[[3]], act.type = "sigmoid")
   out.gate <- mx.symbol.Activation(split.gates[[4]], act.type = "sigmoid")
   
-  next.c <- if (is.null(prev.state)) {
-              in.gate * in.transform
-            } else {
-              (forget.gate * prev.state$c) + (in.gate * in.transform)
-            }
+  if (is.null(prev.state)) {
+    next.c <- in.gate * in.transform
+  } else {
+    next.c <- (forget.gate * prev.state$c) + (in.gate * in.transform)
+  }
   
   next.h <- out.gate * mx.symbol.Activation(next.c, act.type = "tanh")
+  
   return(list(c = next.c, h = next.h))
 }
 
@@ -143,7 +145,7 @@ gru.cell <- function(num.hidden, indata, prev.state, param, seqidx, layeridx, dr
                                   bias = param$gates.i2h.bias, num.hidden = num.hidden * 2, 
                                   name = paste0("t", seqidx, ".l", layeridx, ".gates.i2h"))
   
-  if (dropout > 0)
+  if (dropout > 0) 
     i2h <- mx.symbol.Dropout(data = i2h, p = dropout)
   
   if (!is.null(prev.state)) {
@@ -209,7 +211,7 @@ rnn.graph.unroll <- function(num.rnn.layer,
   cls.bias <- mx.symbol.Variable("cls.bias")
   
   param.cells <- lapply(seq_len(num.rnn.layer), function(i) {
-  
+    
     if (cell.type=="lstm"){
       cell <- list(i2h.weight = mx.symbol.Variable(paste0("l", i, ".i2h.weight")),
                    i2h.bias = mx.symbol.Variable(paste0("l", i, ".i2h.bias")),
@@ -248,15 +250,15 @@ rnn.graph.unroll <- function(num.rnn.layer,
     
     for (i in seq_len(num.rnn.layer)) {
       
-      prev.state<- if (seqidx==1) init.state[[i]] else last.states[[i]]
+      if (seqidx==1) prev.state<- init.state[[i]] else prev.state <- last.states[[i]]
       
-      cell.symbol <- if (cell.type=="lstm") {
+      if (cell.type=="lstm") {
         cell.symbol <- lstm.cell
       } else if (cell.type=="gru"){
         cell.symbol <- gru.cell
       }
       
-      next.state <- cell.symbol(num.hidden = num.hidden,
+      next.state <- cell.symbol(num.hidden = num.hidden, 
                                 indata = hidden,
                                 prev.state = prev.state,
                                 param = param.cells[[i]],

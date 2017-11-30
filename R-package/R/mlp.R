@@ -60,7 +60,6 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
                 "softmax" = mx.symbol.SoftmaxOutput(fc),
                 "logistic" = mx.symbol.LogisticRegressionOutput(fc),
                 stop("Not supported yet."))
-  
   model <- mx.model.FeedForward.create(out, X=data, y=label, ctx = ctx, ...)
   return(model)
 }

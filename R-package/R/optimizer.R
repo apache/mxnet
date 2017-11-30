@@ -403,7 +403,6 @@ mx.opt.create <- function(name, ...) {
          "adagrad" = mx.opt.adagrad(...),
          "adadelta" = mx.opt.adadelta(...),
          stop("Unknown optimizer ", name))
-  
 }
 
 #' Get an updater closure that can take list of weight and gradient
