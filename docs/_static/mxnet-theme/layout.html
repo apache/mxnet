@@ -56,7 +56,7 @@
       };
     </script>
 
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
     {% for name in ['underscore.js', 'searchtools_custom.js', 'doctools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
@@ -152,7 +152,6 @@
     <div class='content-block'>
     {%- include "navbar.html" %}
     
-
     {% if pagename != 'index' %}
     <script type="text/javascript">
         $('body').css('background', 'white');
