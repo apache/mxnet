@@ -19,5 +19,7 @@
 # pylint: disable=wildcard-import
 """Text utilities."""
 
-from . import text
-from .text import *
+from . import utils
+from .utils import *
+from . import glossary
+from .glossary import *

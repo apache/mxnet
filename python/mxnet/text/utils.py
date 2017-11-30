@@ -20,14 +20,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from collections import Counter
-import logging
-import numpy as np
+
 import os
 import re
-
-from ..base import numeric_types
-from .. import ndarray as nd
-from .. import io
 
 
 def count_tokens_from_str(tokens, token_delim=" ", seq_delim="\n",
@@ -103,23 +98,22 @@ def count_tokens_from_path(path, token_delim=' ', seq_delim='\n',
      >>> See `count_tokens_from_str`.
      """
     if os.path.isdir(path):
-        files = [os.path.join(path, file) for file in os.listdir(path)
-                 if os.path.isfile(os.path.join(path, file))]
+        files = [os.path.join(path, f) for f in os.listdir(path)
+                 if os.path.isfile(os.path.join(path, f))]
     elif os.path.isfile(path):
         files = [path]
     else:
-        raise IOError('{} is not a valid path to a directory of files or a '
-                      'single file.'.format(path))
+        raise IOError('%s is not a valid path to a directory of files or a '
+                      'single file.', path)
 
     file_strs = []
 
-    for file in files:
+    for f in files:
         try:
-            with open(file) as fin:
+            with open(f) as fin:
                 file_strs.append(fin.read())
         except IOError:
-            raise IOError('{} contains or is a file that cannot be '
-                          'read.'.format(path))
+            raise IOError('%s contains or is a file that cannot be read.', path)
 
     return count_tokens_from_str(''.join(file_strs), token_delim, seq_delim,
                                  to_lower)
