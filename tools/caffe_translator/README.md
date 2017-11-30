@@ -1,7 +1,7 @@
 # Caffe Translator
-Caffe Translator is a source code translator that translates Caffe code into MXNet Python code. Note that this is different from the Caffe to MXNet model converted which is available [here](https://github.com/apache/incubator-mxnet/tree/master/tools/caffe_converter).
+Caffe Translator is a migration tool that helps developers migrate their existing Caffe code to MXNet and continue further development using MXNet. Note that this is different from the Caffe to MXNet model converter which is available [here](https://github.com/apache/incubator-mxnet/tree/master/tools/caffe_converter).
 
-Caffe Translator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code as output. The translated Python code uses MXNet Symbol and Module API to build the network, reads data from LMDB files, runs training and saves the trained model using the MXNet Module API.
+Caffe Translator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code ([example](sample/lenet_translated.py)) as output. The translated Python code uses MXNet Symbol and Module API to build the network, reads data from LMDB files, runs training and saves the trained model using the MXNet Module API.
 
 ### How to use
 
@@ -45,6 +45,7 @@ Here is the list of command line parameters accepted by the Caffe Translator:
 Following prerequisites are required to run the translated code:
 1. Caffe with MXNet interface ([Why?](faq.md#why_caffe) [How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#install-caffe-with-mxnet-interface))
 2. MXNet with Caffe plugin ([How to build?](https://github.com/apache/incubator-mxnet/tree/master/plugin/caffe#compile-with-caffe))
+3. The dataset in LMDB format.
 
 Once prerequisites are installed, the translated Python code can be run like any other Python code:
 
