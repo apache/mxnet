@@ -73,20 +73,31 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
-static inline bool ContainMKLStorage(const std::vector<int> &storages) {
+static inline bool ContainStorage(const std::vector<int> &storages,
+                                  NDArrayStorageType type) {
   for (const auto& i : storages) {
-    if (i == kMKLDNNStorage)
+    if (i == type)
       return true;
   }
   return false;
 }
 
-static inline bool ContainMKLStorage(const std::vector<NDArray>& inputs) {
+static inline bool ContainStorage(const std::vector<NDArray>& inputs,
+                                  NDArrayStorageType type) {
   for (const auto &i : inputs) {
-    if (i.storage_type() == kMKLDNNStorage)
+    if (i.storage_type() == type)
       return true;
   }
   return false;
+}
+
+static inline bool ContainOnlyStorage(const std::vector<NDArray>& inputs,
+                                  NDArrayStorageType type) {
+  for (const auto &i : inputs) {
+    if (i.storage_type() != type)
+      return false;
+  }
+  return true;
 }
 
 bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -97,7 +108,8 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && ContainMKLStorage(*in_attrs)) {
+  if (dev_mask == mshadow::cpu::kDevMask
+      && ContainStorage(*in_attrs, kMKLDNNStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -124,9 +136,21 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
-  } else if (ContainMKLStorage(inputs)) {
+  } else if (ContainStorage(inputs, kMKLDNNStorage)) {
     MKLDNNSum_Forward(attrs, op_ctx, inputs, req[0], outputs[0]);
 #endif
+  } else if (ContainOnlyStorage(inputs, kDefaultStorage)) {
+    // This case happens when we want to create an MKLDNN NDArray but the type
+    // or the shape isn't supported by MKLDNN. In this case, NDArray falls back
+    // to the default storage type and, thus, we have to handle the default
+    // storage in FComputeEx.
+    std::vector<TBlob> in_blobs(inputs.size());
+    std::vector<TBlob> out_blobs(outputs.size());
+    for (size_t i = 0; i < in_blobs.size(); i++)
+      in_blobs[i] = inputs[i].data();
+    for (size_t i = 0; i < out_blobs.size(); i++)
+      out_blobs[i] = outputs[i].data();
+    ElementWiseSumCompute<cpu>(attrs, op_ctx, in_blobs, req, out_blobs);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, op_ctx, inputs, req, outputs);
   }
