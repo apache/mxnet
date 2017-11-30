@@ -1,6 +1,5 @@
 # Tutorials
 
-
 ## Gluon
 
 Gluon is the high-level interface for MXNet. It is more intuitive and easier to use than the lower level interface.
