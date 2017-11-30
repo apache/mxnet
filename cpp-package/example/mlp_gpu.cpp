@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
   opt->SetLRScheduler(std::move(lr_sch));
 
   // Create executor by binding parameters to the model
-  auto *exec = net.SimpleBind(ctx, args);
+  auto exec = net.SimpleBind(ctx, args);
   auto arg_names = net.ListArguments();
 
   // Create metrics
@@ -150,7 +150,6 @@ int main(int argc, char** argv) {
     LG << "Epoch[" << iter << "] Val-Accuracy=" << val_acc.Get();
   }
 
-  delete exec;
   MXNotifyShutdown();
   return 0;
 }

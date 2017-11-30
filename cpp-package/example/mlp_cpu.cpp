@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
      ->SetParam("wd", weight_decay);
 
   // Create executor by binding parameters to the model
-  auto *exec = net.SimpleBind(ctx, args);
+  auto exec = net.SimpleBind(ctx, args);
   auto arg_names = net.ListArguments();
 
   // Start training
@@ -134,7 +134,6 @@ int main(int argc, char** argv) {
     LG << "Epoch: " << iter << " " << samples/duration << " samples/sec Accuracy: " << acc.Get();
   }
 
-  delete exec;
   MXNotifyShutdown();
   return 0;
 }

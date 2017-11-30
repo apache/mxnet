@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
   opt->SetLRScheduler(std::move(lr_sch));
 
   // Create executor by binding parameters to the model
-  auto *exec = net.SimpleBind(ctx, args);
+  auto exec = net.SimpleBind(ctx, args);
   auto arg_names = net.ListArguments();
 
   float score = 0;
@@ -143,7 +143,6 @@ int main(int argc, char** argv) {
     score = acc.Get();
   }
 
-  delete exec;
   MXNotifyShutdown();
   return score >= MIN_SCORE ? 0 : 1;
 }

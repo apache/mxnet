@@ -176,7 +176,7 @@ int main(int argc, char const *argv[]) {
      ->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay);
 
-  auto *exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
+  auto exec = inception_bn_net.SimpleBind(Context::gpu(), args_map);
   auto arg_names = inception_bn_net.ListArguments();
 
   for (int iter = 0; iter < max_epoch; ++iter) {
@@ -212,7 +212,6 @@ int main(int argc, char const *argv[]) {
     }
     LG << "Accuracy: " << acu.Get();
   }
-  delete exec;
   MXNotifyShutdown();
   return 0;
 }

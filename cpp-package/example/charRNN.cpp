@@ -453,14 +453,14 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
   }
   vector<mx_float> zeros(batch_size * num_hidden, 0);
   // RNN.SimpleBind(device, args_map, {}, {{"data", kNullOp}});
-  Executor* exe = RNN.SimpleBind(device, args_map);
+  auto exe = RNN.SimpleBind(device, args_map);
 
   if (start_epoch == -1) {
     Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2.34);
     for (auto &arg : exe->arg_dict())
       xavier(arg.first, &arg.second);
   } else {
-    LoadCheckpoint(prefix + "-" + to_string(start_epoch) + ".params", exe);
+    LoadCheckpoint(prefix + "-" + to_string(start_epoch) + ".params", exe.get());
   }
   start_epoch++;
 
@@ -499,7 +499,7 @@ void train(const string file, int batch_size, int max_epoch, int start_epoch) {
         chrono::duration_cast<chrono::seconds>(toc - tic).count() << " seconds ";
     OutputPerplexity(&exe->arg_dict()["softmax_label"], &exe->outputs[0]);
     string filepath = prefix + "-" + to_string(epoch) + ".params";
-    SaveCheckpoint(filepath, RNN, exe);
+    SaveCheckpoint(filepath, RNN, exe.get());
   }
 }
 
@@ -538,14 +538,14 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
   args_map["LSTM_init_h"] = NDArray(Shape(num_lstm_layer, batch_size, num_hidden), device, false);
   args_map["softmax_label"] = NDArray(Shape(batch_size, sequence_length_max), device, false);
   vector<mx_float> zeros(batch_size * num_lstm_layer * num_hidden, 0);
-  Executor* exe = RNN.SimpleBind(device, args_map);
+  auto exe = RNN.SimpleBind(device, args_map);
 
   if (start_epoch == -1) {
     RNNXavier xavier = RNNXavier(Xavier::gaussian, Xavier::in, 2.34);
     for (auto &arg : exe->arg_dict())
       xavier(arg.first, &arg.second);
   } else {
-    LoadCheckpoint(prefix + "-" + to_string(start_epoch) + ".params", exe);
+    LoadCheckpoint(prefix + "-" + to_string(start_epoch) + ".params", exe.get());
   }
   start_epoch++;
 
@@ -578,7 +578,7 @@ void trainWithBuiltInRNNOp(const string file, int batch_size, int max_epoch, int
         chrono::duration_cast<chrono::seconds>(toc - tic).count() << " seconds ";
     OutputPerplexity(&exe->arg_dict()["softmax_label"], &exe->outputs[0]);
     string filepath = prefix + "-" + to_string(epoch) + ".params";
-    SaveCheckpoint(filepath, RNN, exe);
+    SaveCheckpoint(filepath, RNN, exe.get());
   }
 }
 
@@ -602,8 +602,8 @@ void predict(wstring* ptext, int sequence_length, const string param_file,
     args_map[key + "c"].SyncCopyFromCPU(zeros);
     args_map[key + "h"].SyncCopyFromCPU(zeros);
   }
-  Executor* exe = RNN.SimpleBind(device, args_map);
-  LoadCheckpoint(param_file, exe);
+  auto exe = RNN.SimpleBind(device, args_map);
+  LoadCheckpoint(param_file, exe.get());
 
   mx_float index;
   wchar_t next = 0;
@@ -662,8 +662,8 @@ void predictWithBuiltInRNNOp(wstring* ptext, int sequence_length, const string p
   args_map["LSTM_init_h"] = NDArray(Shape(num_lstm_layer, 1, num_hidden), device, false);
   args_map["LSTM_init_c"].SyncCopyFromCPU(zeros);
   args_map["LSTM_init_h"].SyncCopyFromCPU(zeros);
-  Executor* exe = RNN.SimpleBind(device, args_map);
-  LoadCheckpoint(param_file, exe);
+  auto exe = RNN.SimpleBind(device, args_map);
+  LoadCheckpoint(param_file, exe.get());
 
   mx_float index;
   wchar_t next = 0;

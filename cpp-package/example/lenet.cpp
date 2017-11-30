@@ -138,7 +138,7 @@ class Lenet {
        ->SetParam("lr", learning_rate)
        ->SetParam("wd", weight_decay);
 
-    Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
+    auto exe = lenet.SimpleBind(ctx_dev, args_map);
     auto arg_names = lenet.ListArguments();
 
     for (int ITER = 0; ITER < max_epoch; ++ITER) {
@@ -168,7 +168,6 @@ class Lenet {
       LG << "Iter " << ITER
          << ", accuracy: " << ValAccuracy(batch_size * 10, lenet);
     }
-    delete exe;
   }
 
  private:
@@ -218,7 +217,7 @@ class Lenet {
       start_index += batch_size;
       NDArray::WaitAll();
 
-      Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
+      auto exe = lenet.SimpleBind(ctx_dev, args_map);
       exe->Forward(false);
 
       const auto &out = exe->outputs;
@@ -244,8 +243,6 @@ class Lenet {
         if (label == p_label) correct_count++;
       }
       all_count += batch_size;
-
-      delete exe;
     }
     return correct_count * 1.0 / all_count;
   }

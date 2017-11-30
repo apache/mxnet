@@ -141,7 +141,7 @@ void MLP() {
   std::vector<NDArray> aux_states;
 
   cout << "make the Executor" << endl;
-  Executor* exe = new Executor(sym_out, ctx_dev, in_args, arg_grad_store,
+  auto exe = new Executor(sym_out, ctx_dev, in_args, arg_grad_store,
                                grad_req_type, aux_states);
 
   cout << "Training" << endl;
@@ -168,7 +168,6 @@ void MLP() {
     NDArray::WaitAll();
   }
 
-  delete exe;
   delete[] aptr_x;
   delete[] aptr_y;
 }

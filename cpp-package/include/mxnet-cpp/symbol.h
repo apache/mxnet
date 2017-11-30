@@ -33,6 +33,7 @@
 #include "mxnet-cpp/base.h"
 #include "mxnet-cpp/ndarray.h"
 #include "mxnet-cpp/op_map.h"
+#include "mxnet-cpp/utils.h"
 
 namespace mxnet {
 namespace cpp {
@@ -231,7 +232,7 @@ class Symbol {
   * \param aux_map NDArray that stores the internal state in op
   * \return a new executor, which need to be free manually.
   */
-  Executor *SimpleBind(const Context &context,
+  std::unique_ptr<Executor> SimpleBind(const Context &context,
                        const std::map<std::string, NDArray> &args_map,
                        const std::map<std::string, NDArray> &arg_grad_store =
                            std::map<std::string, NDArray>(),
@@ -257,7 +258,7 @@ class Symbol {
   *shares state with shared_exec, and should not be used in parallel with it.
   * \return a new executor, which need to be free manually.
   */
-  Executor *Bind(const Context &context, const std::vector<NDArray> &arg_arrays,
+  std::unique_ptr<Executor> Bind(const Context &context, const std::vector<NDArray> &arg_arrays,
                  const std::vector<NDArray> &grad_arrays,
                  const std::vector<OpReqType> &grad_reqs,
                  const std::vector<NDArray> &aux_arrays,
@@ -267,7 +268,7 @@ class Symbol {
 
  private:
   std::shared_ptr<SymBlob> blob_ptr_;
-  static OpMap*& op_map();
+  static std::unique_ptr<OpMap>& op_map();
 };
 Symbol operator+(mx_float lhs, const Symbol &rhs);
 Symbol operator-(mx_float lhs, const Symbol &rhs);
