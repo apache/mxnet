@@ -183,7 +183,6 @@ void Profiler::DumpProfile() {
       file << ",\n";
       this->EmitEvent(&file, opr_stat->opr_name, "category", "E",
                       opr_stat->opr_end_rel_micros, pid, tid);
-      delete opr_stat;
     }
   }
 
