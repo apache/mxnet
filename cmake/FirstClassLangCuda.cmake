@@ -106,7 +106,7 @@ set(CUDA_COMMON_GPU_ARCHITECTURES "3.0" "3.5" "5.0")
 
 if (CUDA_TOOLSET VERSION_GREATER "6.5")
   list(APPEND CUDA_KNOWN_GPU_ARCHITECTURES "Kepler+Tegra" "Kepler+Tesla" "Maxwell+Tegra")
-  list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "5.2")
+  list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "5.2" "3.7")
 endif ()
 
 if (CUDA_TOOLSET VERSION_GREATER "7.5")
@@ -122,8 +122,8 @@ endif ()
 #   mshadow_select_nvcc_arch_flags(out_variable)
 function(mshadow_select_nvcc_arch_flags out_variable)
   
-  set(CUDA_ARCH_LIST "All" CACHE STRING "Select target NVIDIA GPU achitecture.")
-  set_property( CACHE CUDA_ARCH_LIST PROPERTY STRINGS "" "All" ${CUDA_KNOWN_GPU_ARCHITECTURES} )
+  set(CUDA_ARCH_LIST "Common" CACHE STRING "Select target NVIDIA GPU achitecture.")
+  set_property( CACHE CUDA_ARCH_LIST PROPERTY STRINGS "" "All" "Common" ${CUDA_KNOWN_GPU_ARCHITECTURES} )
   mark_as_advanced(CUDA_ARCH_NAME)
     
     
