@@ -23,8 +23,8 @@
  * \brief SoftmaxActivation operator
  * \author Junyuan Xie
 */
-#ifndef MXNET_OPERATOR_SOFTMAX_ACTIVATION_INL_H_
-#define MXNET_OPERATOR_SOFTMAX_ACTIVATION_INL_H_
+#ifndef MXNET_OPERATOR_NN_SOFTMAX_ACTIVATION_INL_H_
+#define MXNET_OPERATOR_NN_SOFTMAX_ACTIVATION_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include "./operator_common.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -210,4 +210,4 @@ class SoftmaxActivationProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_SOFTMAX_ACTIVATION_INL_H_
+#endif  // MXNET_OPERATOR_NN_SOFTMAX_ACTIVATION_INL_H_

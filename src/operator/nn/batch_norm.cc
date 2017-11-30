@@ -28,8 +28,8 @@
 #include <nnvm/op_attr_types.h>
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
-#include "./mkl/mkl_memory-inl.h"
-#include "./mkl/mkl_batch_norm-inl.h"
+#include "../mkl/mkl_memory-inl.h"
+#include "../mkl/mkl_batch_norm-inl.h"
 #endif  // MXNET_USE_MKL2017
 
 /*! \brief inverse standard deviation <-> variance */
