@@ -17,10 +17,17 @@ java -jar caffe-translator-<version>.jar --training-prototxt <train_val_prototxt
 ```
 Example:
 ```
-java -jar caffe-translator-0.9.0.jar --training-prototxt lenet_train_test.prototxt \
+java -jar caffe-translator-0.9.1.jar --training-prototxt lenet_train_test.prototxt \
     --solver lenet_solver.prototxt \
     --output-file translated_code.py
 ```
+
+Here is the list of command line parameters accepted by the Caffe Translator:
+- *training-prototxt*: specifies the path to the training/validation prototxt to be translated.
+- *solver-prototxt*: specifies the path to the solver prototxt to be translated.
+- *output-file*: specifies the file to write the translated output into.
+- *params-file* (optional): specifies the .caffemodel file to initialize parameters from.
+- *custom-data-layers* (optional): Specifies a comma-separated list of types of the custom data layers used in the prototxt. The translator will use [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to translate these layers to MXNet.
 
 **Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#caffe2mxnet` directive like shown below:
 
