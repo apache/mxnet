@@ -38,7 +38,6 @@
 #include "../operator_common.h"
 #include "../mxnet_op.h"
 
-
 namespace mxnet {
 namespace op {
 // Declare enumeration of input order to make code more intuitive.
