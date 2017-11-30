@@ -65,6 +65,7 @@ public class Launcher {
         String code = converter.generateMXNetCode();
 
         writeToOutFile(code);
+        System.out.println("Translated code saved in " + outFile.getAbsolutePath());
     }
 
     private void writeToOutFile(String code) {
