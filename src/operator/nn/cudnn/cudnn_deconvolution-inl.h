@@ -23,16 +23,16 @@
  * \brief
  * \author Wei Wu, Leonard Lausen
 */
-#ifndef MXNET_OPERATOR_CUDNN_DECONVOLUTION_INL_H_
-#define MXNET_OPERATOR_CUDNN_DECONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_DECONVOLUTION_INL_H_
+#define MXNET_OPERATOR_NN_CUDNN_CUDNN_DECONVOLUTION_INL_H_
 
 #include <algorithm>
 #include <vector>
 #include <mutex>
 #include <string>
-#include "./deconvolution-inl.h"
+#include "../deconvolution-inl.h"
 #include "./cudnn_algoreg-inl.h"
-#include "../common/cuda_utils.h"
+#include "../../../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -951,4 +951,4 @@ class CuDNNDeconvolutionOp : public Operator {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CUDNN_DECONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_NN_CUDNN_CUDNN_DECONVOLUTION_INL_H_

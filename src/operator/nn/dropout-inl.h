@@ -24,8 +24,8 @@
  * \author Bing Xu
 */
 
-#ifndef MXNET_OPERATOR_DROPOUT_INL_H_
-#define MXNET_OPERATOR_DROPOUT_INL_H_
+#ifndef MXNET_OPERATOR_NN_DROPOUT_INL_H_
+#define MXNET_OPERATOR_NN_DROPOUT_INL_H_
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
@@ -34,9 +34,9 @@
 #include <string>
 #include <utility>
 #include <algorithm>
-#include "./operator_common.h"
-#include "./mshadow_op.h"
-#include "../engine/openmp.h"
+#include "../../engine/openmp.h"
+#include "../operator_common.h"
+#include "../mshadow_op.h"
 
 #if defined(USE_MKL) && defined(_OPENMP)
 #include <omp.h>
@@ -285,4 +285,4 @@ class DropoutProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_DROPOUT_INL_H_
+#endif  // MXNET_OPERATOR_NN_DROPOUT_INL_H_

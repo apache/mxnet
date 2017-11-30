@@ -36,10 +36,10 @@
 #define USE_GLOBAL_STATS_FLAG 32
 
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-#include "./cudnn_batch_norm-inl.h"
+#include "./cudnn/cudnn_batch_norm-inl.h"
 #endif
 
-#include "../common/cuda_utils.h"
+#include "../../common/cuda_utils.h"
 
 using namespace mxnet;
 
