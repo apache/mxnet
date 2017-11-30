@@ -455,19 +455,19 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
 // Make a copy of an NDArray based on storage type
 template<typename from_xpu, typename to_xpu>
 void CopyFromToImpl(const NDArray& from, const NDArray& to,
-                    RunContext rctx, std::vector<Resource> requested) {
+                    RunContext rctx, const std::vector<Resource>& requested) {
   using namespace std;
   using namespace mshadow;
   // if storage type doesn't match, cast the storage first
-  auto from_stype = from.storage_type();
-  auto to_stype = to.storage_type();
+  const NDArrayStorageType from_stype = from.storage_type();
+  const NDArrayStorageType to_stype = to.storage_type();
   CHECK(from_stype == kDefaultStorage
       || to_stype == kDefaultStorage
       || from_stype == to_stype)
     << "Copying ndarray of stype = " << from_stype
     << " to stype = " << to_stype << " is not supported";
-  const auto from_ctx = from.ctx();
-  const auto to_ctx = to.ctx();
+  const Context from_ctx = from.ctx();
+  const Context to_ctx = to.ctx();
   bool is_train = Imperative::Get()->is_training();
 
   OpContext opctx{is_train,
@@ -515,14 +515,14 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
-  const auto from_ctx = from.ctx();
-  int a = from_ctx.dev_mask();
-  int b = to.ctx().dev_mask();
+  const Context from_ctx = from.ctx();
+  const int a = from_ctx.dev_mask();
+  const int b = to.ctx().dev_mask();
   std::vector<Engine::VarHandle> const_vars;
   if (from.var() != to.var()) const_vars.push_back(from.var());
 
-  auto from_stype = from.storage_type();
-  auto to_stype = to.storage_type();
+  const NDArrayStorageType from_stype = from.storage_type();
+  const NDArrayStorageType to_stype = to.storage_type();
 
   std::vector<Engine::VarHandle> mutable_vars(1, to.var());
 

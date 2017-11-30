@@ -100,7 +100,7 @@ def test_module_ctx_group():
         assert(np.all(mod1_input_grads[0].asnumpy() == mod2_input_grads[0].asnumpy()))
         assert(np.all(mod1_input_grads[1].asnumpy() == mod2_input_grads[1].asnumpy()))
 
-    check_module_ctx_group([mx.cpu(0)], {'dev1': mx.cpu(1), 'dev2': mx.cpu(2)}, [mx.cpu(1), mx.cpu(2)])
+    check_module_ctx_group([mx.cpu(0)], {'dev1': mx.cpu(1), 'dev2': mx.cpu(2)}, grad_ctxs=[mx.cpu(1), mx.cpu(2)])
     check_module_ctx_group([mx.cpu(0), mx.cpu(1)],
         [{'dev1': mx.cpu(2), 'dev2': mx.cpu(3)}, {'dev1': mx.cpu(4), 'dev2': mx.cpu(5)}])
     check_module_ctx_group([mx.cpu(0), mx.cpu(1)], {'dev1': mx.cpu(2), 'dev2': mx.cpu(3)})
