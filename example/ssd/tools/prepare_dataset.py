@@ -19,7 +19,6 @@ from __future__ import print_function
 import sys, os
 import argparse
 import subprocess
-from mxnet.test_utils import str2bool
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.join(curr_path, '..'))
 from dataset.pascal_voc import PascalVoc
@@ -103,8 +102,8 @@ def parse_args():
     parser.add_argument('--root', dest='root_path', help='dataset root path',
                         default=os.path.join(curr_path, '..', 'data', 'VOCdevkit'),
                         type=str)
-    parser.add_argument('--shuffle', dest='shuffle', help='shuffle list',
-                        type=str2bool, default=True)
+    parser.add_argument('--no-shuffle', dest='shuffle', help='shuffle list',
+                        action='store_false')
     args = parser.parse_args()
     return args
 

@@ -18,7 +18,6 @@
 import numpy as np
 import mxnet as mx
 import argparse
-from mxnet.test_utils import str2bool
 
 parser = argparse.ArgumentParser(description="Train RNN on Penn Tree Bank",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -34,8 +33,8 @@ parser.add_argument('--num-hidden', type=int, default=200,
                     help='hidden layer size')
 parser.add_argument('--num-embed', type=int, default=200,
                     help='embedding layer size')
-parser.add_argument('--bidirectional', type=str2bool, default=False,
-                    help='whether to use bidirectional layers')
+parser.add_argument('--bidirectional', action='store_true',
+                    help='uses bidirectional layers if specified')
 parser.add_argument('--gpus', type=str,
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. ' \
                          'Increase batch size when using multiple gpus for best performance.')
