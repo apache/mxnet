@@ -1,4 +1,5 @@
-FROM nvidia/cuda:8.0-cudnn5-devel
+#FROM nvidia/cuda:8.0-cudnn5-devel
+FROM ubuntu:16.04
 # cuda8.0 has to be used because this is the first ubuntu16.04 container
 # which is required due to OpenBLAS being incompatible with ubuntu14.04
 # the reason we used a gpu base container because we are going to test MKLDNN
