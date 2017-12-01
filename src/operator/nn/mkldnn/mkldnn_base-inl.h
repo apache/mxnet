@@ -90,7 +90,7 @@ struct data_type_enum<uint8_t> {
 
 static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
   int ndim = shape.ndim();
-  return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
+  return ndim == 1 || ndim == 2 || ndim == 4;
 }
 
 static inline bool SupportMKLDNN(const NDArray &input) {
@@ -105,7 +105,14 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   switch (dtype) {
     case mshadow::kFloat32:
       return mkldnn::memory::data_type::f32;
+    case mshadow::kInt32:
+      return mkldnn::memory::data_type::s32;
+    case mshadow::kInt8:
+      return mkldnn::memory::data_type::s8;
+    case mshadow::kUint8:
+      return mkldnn::memory::data_type::u8;
     default:
+      LOG(FATAL) << "unknown type for MKLDNN";
       return mkldnn::memory::data_type::data_undef;
   }
 }
@@ -159,12 +166,6 @@ class MKLDNNStream {
     mem_holder.clear();
   }
 };
-
-// some operators need to share workspace between fwd/bwd
-inline std::unordered_map<const void *, mkldnn_mem_ptr> &mkldnn_wmap() {
-  static std::unordered_map<const void *, mkldnn_mem_ptr> _wmap;
-  return _wmap;
-}
 
 inline static mkldnn_mem_ptr CreateMKLDNNMem(
     const mkldnn::memory::primitive_desc &desc) {
