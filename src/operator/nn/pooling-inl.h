@@ -58,7 +58,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 
     DMLC_DECLARE_FIELD(kernel)
     .enforce_nonzero()
-    .describe("pooling kernel size: (y, x) or (d, y, x)");
+    .describe("Pooling kernel size: (y, x) or (d, y, x)");
 
     DMLC_DECLARE_FIELD(pool_type)
     .add_enum("max", pool_enum::kMaxPooling)
@@ -73,10 +73,10 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
     .enforce_nonzero()
-    .describe("stride: for pooling (y, x) or (d, y, x)");
+    .describe("Stride: for pooling (y, x) or (d, y, x). Defaults to 1 for each dimension.");
 
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
-    .describe("pad for pooling: (y, x) or (d, y, x)");
+    .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
   }
 };
 
