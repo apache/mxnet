@@ -85,14 +85,6 @@ void ToTensor(const nnvm::NodeAttrs &attrs,
   });
 }
 
-inline bool TensorShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
-  TShape& dshape = (*in_attrs)[0];
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
-  return true;
-}
-
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   nnvm::Tuple<float> mean;
   nnvm::Tuple<float> std;
@@ -179,20 +171,32 @@ inline bool ImageShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename DType>
-void FlipImpl(const TShape &shape, DType *src, DType *dst, int axis) {
-  int head = 1, mid = shape[axis], tail = 1;
-  for (int i = 0; i < axis; ++i) head *= shape[i];
-  for (int i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
+#define SWAP_IF_INPLACE(dst, dst_idx, src, src_idx) \
+  if (dst == src) {                                 \
+    std::swap(dst[dst_idx], src[src_idx]);          \
+  } else {                                          \
+    dst[dst_idx] = src[src_idx];                    \
+  }
 
-  for (int i = 0; i < head; ++i) {
-    for (int j = 0; j < (mid >>2); ++j) {
-      int idx1 = (i*mid + j)*tail;
-      int idx2 = idx1 + (mid - (j<<2))*tail;
-      for (int k = 0; k < tail; ++k, ++idx1, ++idx2) {
-        DType tmp = src[idx1];
-        dst[idx1] = src[idx2];
-        dst[idx2] = tmp;
+template<typename DType, int axis>
+static void FlipImpl(const TShape &shape, DType *src, DType *dst) {
+  const int height = shape[0];
+  const int width = shape[1];
+  const int nchannel = shape[2];
+
+  const int length = width * nchannel;
+  const int height_stride = (src == dst && axis == 1) ? (height >> 1) : height;
+  const int width_stride = (src == dst && axis == 0) ? (width >> 1) : width;
+  for (int h = 0; h < height_stride; ++h) {
+    const int h_dst = (axis == 0) ? h : (height - h - 1);
+    for (int w = 0; w < width_stride; ++w) {
+      const int w_dst = (axis == 0) ? (width - w - 1) : w;
+      const int idx_dst = h_dst * length + w_dst * nchannel;
+      const int idx_src = h * length + w * nchannel;
+      SWAP_IF_INPLACE(dst, idx_dst, src, idx_src);
+      if (nchannel > 1) {
+        SWAP_IF_INPLACE(dst, idx_dst + 1, src, idx_src + 1);
+        SWAP_IF_INPLACE(dst, idx_dst + 2, src, idx_src + 2);
       }
     }
   }
@@ -207,10 +211,15 @@ void RandomHorizontalFlip(
   using namespace mshadow;
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
-  if (std::bernoulli_distribution()(prnd->GetRndEngine())) return;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    FlipImpl(inputs[0].shape_, inputs[0].dptr<DType>(),
-             outputs[0].dptr<DType>(), 1);
+    if (std::bernoulli_distribution()(prnd->GetRndEngine())) {
+      if (outputs[0].dptr_ != inputs[0].dptr_) {
+        std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
+      }
+    } else {
+      FlipImpl<DType, 0>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                         outputs[0].dptr<DType>());
+    }
   });
 }
 
@@ -223,10 +232,15 @@ void RandomVerticalFlip(
   using namespace mshadow;
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
-  if (std::bernoulli_distribution()(prnd->GetRndEngine())) return;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    FlipImpl(inputs[0].shape_, inputs[0].dptr<DType>(),
-             outputs[0].dptr<DType>(), 0);
+    if (std::bernoulli_distribution()(prnd->GetRndEngine())) {
+      if (outputs[0].dptr_ != inputs[0].dptr_) {
+        std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
+      }
+    } else {
+      FlipImpl<DType, 1>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                         outputs[0].dptr<DType>());
+    }
   });
 }
 
