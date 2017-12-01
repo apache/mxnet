@@ -69,7 +69,7 @@ static bool PoolingType(const nnvm::NodeAttrs& attrs,
   out_attrs->at(0) = in_attrs->at(0);
 #if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (MKLDNNRequireWorkspace(param)) {
+  if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param)) {
     CHECK_GT(out_attrs->size(), 1U);
     out_attrs->at(1) = mshadow::kFloat32;
   }
@@ -113,7 +113,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-    if (MKLDNNRequireWorkspace(param_))
+    if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
       out_shape->push_back(oshape); // for workspace
 #endif
   } else if (param_.kernel.ndim() == 2) {
@@ -152,7 +152,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-    if (MKLDNNRequireWorkspace(param_))
+    if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
       out_shape->push_back(oshape); // for workspace
 #endif
   } else if (param_.kernel.ndim() == 3) {
@@ -198,7 +198,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-    if (MKLDNNRequireWorkspace(param_))
+    if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
       out_shape->push_back(oshape); // for workspace
 #endif
   }
@@ -291,7 +291,8 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
       (*out_attrs)[i] = kMKLDNNStorage;
@@ -312,7 +313,8 @@ inline static bool backward_PoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
       (*out_attrs)[i] = kMKLDNNStorage;
@@ -372,7 +374,7 @@ height, width)*.
     .set_num_outputs([](const NodeAttrs& attrs) {
 #if MXNET_USE_MKLDNN == 1
         const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-        return MKLDNNRequireWorkspace(param) ? 2 : 1;
+        return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
 #else
         return 1;
 #endif
