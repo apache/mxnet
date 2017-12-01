@@ -1,7 +1,7 @@
 # Caffe Translator
 Caffe Translator is a migration tool that helps developers migrate their existing Caffe code to MXNet and continue further development using MXNet. Note that this is different from the Caffe to MXNet model converter which is available [here](https://github.com/apache/incubator-mxnet/tree/master/tools/caffe_converter).
 
-Caffe Translator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code ([example](http://www.caffetranslator.org/examples/lenet/lenet_translated.py)) as output. The translated Python code uses MXNet Symbol and Module API to build the network, reads data from LMDB files, runs training and saves the trained model using the MXNet Module API.
+Caffe Translator takes the training/validation prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_train_test.prototxt)) and solver prototxt ([example](https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet_solver.prototxt)) as input and produces MXNet Python code ([example](https://www.caffetranslator.org/examples/lenet/lenet_translated.py)) as output. The translated Python code uses MXNet Symbol and Module API to build the network, reads data from LMDB files ([example](https://www.caffetranslator.org/datasets/mnist.tar.gz)), runs training and saves the trained model using the MXNet Module API ([example](https://www.caffetranslator.org/examples/lenet/lenet_saved_model.tar.gz)).
 
 ### How to use
 
