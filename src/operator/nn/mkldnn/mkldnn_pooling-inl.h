@@ -30,6 +30,12 @@
 namespace mxnet {
 namespace op {
 
+static inline bool SupportMKLDNNPooling(const PoolingParam &param) {
+  return param.kernel.ndim() == 2
+      && (param.pool_type == pool_enum::kMaxPooling
+          || param.pool_type == pool_enum::kAvgPooling);
+}
+
 static inline algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   switch (param.pool_type) {
     case pool_enum::kMaxPooling:
