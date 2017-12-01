@@ -87,10 +87,13 @@ inline static pooling_forward::primitive_desc GetPoolingFwd(
   return mkldnn::pooling_forward::primitive_desc(poolingFwd_desc, engine);
 }
 
-template <typename Dtype>
+inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
+  return param.pool_type != pool_enum::kAvgPooling;
+}
+
 void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
                            const NDArray &in_data, const OpReqType &req,
-                           const NDArray &out_data) {
+                           const NDArray &out_data, const NDArray *workspace) {
   std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
   auto data_mpd = input_mem->get_primitive_desc();
   auto data_md = data_mpd.desc();
@@ -106,11 +109,11 @@ void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
   std::shared_ptr<const mkldnn::memory> output_memory =
       const_cast<NDArray &>(out_data).CreateMKLDNNData(
           pdesc.dst_primitive_desc());
+  std::shared_ptr<const mkldnn::memory> workspace_mem;
 
-  if (ctx.is_train && param.pool_type != pool_enum::kAvgPooling) {
-    // TODO: reuse workspace_mem from 2nd iter
-    auto workspace_mem = CreateMKLDNNMem(pdesc.workspace_primitive_desc());
-    mkldnn_wmap()[in_data.getPtr()] = workspace_mem;
+  if (ctx.is_train && MKLDNNRequireWorkspace(param)) {
+    CHECK(workspace != nullptr);
+    workspace_mem = workspace->GetMKLDNNData();
     MKLDNNStream::Instance().RegisterPrim(
         pooling_forward(pdesc, *input_mem, *output_memory, *workspace_mem));
   } else {
@@ -120,10 +123,10 @@ void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
   MKLDNNStream::Instance().Submit();
 }
 
-template <typename Dtype>
 void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
                             const NDArray &out_grad, const NDArray &in_data,
-                            const OpReqType &req, const NDArray &in_grad) {
+                            const NDArray *workspace, const OpReqType &req,
+                            const NDArray &in_grad) {
   if (req == kNullOp) {
     return;
   }
@@ -157,11 +160,11 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
 
   auto diff_src_mem =
       CreateMKLDNNMem(in_grad, pdesc.diff_src_primitive_desc(), req);
+  std::shared_ptr<const mkldnn::memory> workspace_mem;
 
-  if (param.pool_type != pool_enum::kAvgPooling) {
-    // look-up workspace mem used for fwd
-    auto workspace_mem = mkldnn_wmap()[in_data.getPtr()];
-    // TODO: remove workspace_mem after submit
+  if (MKLDNNRequireWorkspace(param)) {
+    CHECK(workspace != nullptr);
+    workspace_mem = workspace->GetMKLDNNData();
     MKLDNNStream::Instance().RegisterPrim(
         pooling_backward(pdesc, *diff_dst_mem, primitive::at(*workspace_mem),
                          *diff_src_mem.second));

@@ -572,9 +572,6 @@ class NDArray {
   void CopyFrom(const mkldnn::memory &mem);
   std::shared_ptr<mkldnn::memory> CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
-  inline const void *getPtr() const{
-    return static_cast<const void*>(ptr_.get());
-  }
 #endif
 
   /*!
