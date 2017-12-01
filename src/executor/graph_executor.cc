@@ -54,6 +54,10 @@ GraphExecutor::~GraphExecutor() {
   }
 }
 
+inline bool SharableStorage(NDArrayStorageType stype) {
+  return stype == kDefaultStorage || stype == kMKLDNNStorage;
+}
+
 inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
                                 const Context &ctx, const int dtype) {
   // NDArray with default storage
@@ -698,7 +702,7 @@ NDArray ReshapeOrCreate(const std::string& name,
                         const Context& ctx,
                         std::unordered_map<std::string, NDArray>* shared_buffer,
                         bool enable_row_sparse_sharing) {
-  bool stype_shareable = dest_arg_stype == kDefaultStorage;
+  bool stype_shareable = SharableStorage(dest_arg_stype);
   if (enable_row_sparse_sharing) {
     stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
   }
@@ -798,7 +802,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           const NDArray& in_arg_nd = shared_exec->in_arg_map().at(arg_name);
           auto arg_nd_stype = in_arg_nd.storage_type();
           // for model parameter, both default storage and row_sparse storage can be shared
-          bool shareable_arg_stype = inferred_stype == kDefaultStorage ||
+          bool shareable_arg_stype = SharableStorage(inferred_stype) ||
                                      inferred_stype == kRowSparseStorage;
           // try to reuse memory from shared_exec
           CHECK(shareable_arg_stype) << "Inferred storage type "
@@ -832,8 +836,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           auto grad_oid = grad_store_.size() + num_forward_outputs_;
           auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
           auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
-          if (nullptr != shared_exec && grad_stype == kDefaultStorage &&
-              shared_exec->arg_grad_map().at(arg_name).storage_type() == kDefaultStorage) {
+          if (nullptr != shared_exec && SharableStorage(grad_stype) &&
+              shared_exec->arg_grad_map().at(arg_name).storage_type() == grad_stype) {
             // try to reuse memory from shared_exec
             arg_grad_vec->emplace_back(shared_exec->arg_grad_map().at(arg_name));
           } else {
