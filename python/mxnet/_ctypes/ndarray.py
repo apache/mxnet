@@ -105,10 +105,13 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle"]
-    def __init__(self, sym):
+    def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
-        check_call(_LIB.MXCreateCachedOp(
+        check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
+            len(flags),
+            c_str_array([key for key, _ in flags]),
+            c_str_array([str(val) for _, val in flags]),
             ctypes.byref(self.handle)))
 
     def __del__(self):

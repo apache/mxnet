@@ -1508,7 +1508,7 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 
 &nbsp;
 Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
-- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](http://www.graphviz.org/Download_windows.php).
+- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
 **Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
 
 

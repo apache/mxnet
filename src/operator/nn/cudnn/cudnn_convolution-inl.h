@@ -23,16 +23,16 @@
  * \brief
  * \author Bing Xu
 */
-#ifndef MXNET_OPERATOR_CUDNN_CONVOLUTION_INL_H_
-#define MXNET_OPERATOR_CUDNN_CONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_NN_CUDNN_CUDNN_CONVOLUTION_INL_H_
 
 #include <algorithm>
 #include <vector>
 #include <mutex>
 #include <string>
-#include "./convolution-inl.h"
+#include "../convolution-inl.h"
 #include "./cudnn_algoreg-inl.h"
-#include "../common/cuda_utils.h"
+#include "../../../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -912,4 +912,4 @@ class CuDNNConvolutionOp : public Operator {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CUDNN_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_NN_CUDNN_CUDNN_CONVOLUTION_INL_H_

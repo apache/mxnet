@@ -81,8 +81,8 @@ NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
   NDArray ret = this->Reshape(shape);
   if (!Imperative::Get()->is_recording()) return ret;
 
-  CHECK_GE(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape must have must have the same size as "
+  CHECK_EQ(shape_.Size(), shape.Size())
+    << "NDArray.Reshape: target shape must have the same size as "
     << "current shape when recording with autograd.";
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("Reshape");;
