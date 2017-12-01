@@ -29,12 +29,12 @@ Here is the list of command line parameters accepted by the Caffe Translator:
 - *params-file* (optional): specifies the .caffemodel file to initialize parameters from.
 - *custom-data-layers* (optional): Specifies a comma-separated list of types of the custom data layers used in the prototxt. The translator will use [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to translate these layers to MXNet.
 
-**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#caffe2mxnet` directive like shown below:
+**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/how_to/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#CaffeToMXNet` directive like shown below:
 
 ```
   data_param {
     source: "data/mnist/mnist_train_lmdb"
-    #caffe2mxnet num_examples: 60000
+    #CaffeToMXNet num_examples: 60000
     batch_size: 64
     backend: LMDB
   }
