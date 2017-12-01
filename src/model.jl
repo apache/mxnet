@@ -18,14 +18,14 @@ mutable struct FeedForward <: AbstractModel
   arch        :: SymbolicNode
   ctx         :: Vector{Context}
 
-  arg_params  :: Dict{Base.Symbol, NDArray}
-  aux_params  :: Dict{Base.Symbol, NDArray}
+  arg_params  :: Dict{Symbol}
+  aux_params  :: Dict{Symbol}
 
-  pred_exec   :: Union{Executor, Void}
+  pred_exec   :: Union{Executor,Void}
 
   # leave the rest fields undefined
-  FeedForward(arch :: SymbolicNode, ctx :: Vector{Context}) = new(arch, ctx)
-  FeedForward(arch :: SymbolicNode, ctx :: Context) = new(arch, [ctx])
+  FeedForward(arch::SymbolicNode, ctx::Vector{Context}) = new(arch, ctx)
+  FeedForward(arch::SymbolicNode, ctx::Context) = new(arch, [ctx])
 end
 
 """
@@ -33,7 +33,7 @@ Get a split of `batch_size` into `n_split` pieces for data parallelization. Retu
 of length `n_split`, with each entry a `UnitRange{Int}` indicating the slice index for that
 piece.
 """
-function _split_inputs(batch_size :: Int, n_split :: Int)
+function _split_inputs(batch_size::Int, n_split::Int)
   @assert(batch_size >= n_split)
   per_split = floor(Int, batch_size / n_split)
   counts    = Base.zeros(Int, n_split)+per_split
@@ -73,7 +73,7 @@ weights.
 * `input_shapes`: the shape of all data and label inputs to this model, given as keyword arguments.
                   For example, `data=(28,28,1,100), label=(100,)`.
 """
-function init_model(self :: FeedForward, initializer :: AbstractInitializer; overwrite::Bool=false, input_shapes...)
+function init_model(self::FeedForward, initializer::AbstractInitializer; overwrite::Bool=false, input_shapes...)
   # all arg names, including data, label, and parameters
   arg_names    = list_arguments(self.arch)
 
@@ -92,8 +92,8 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
     self.aux_params = Dict{Symbol, NDArray}()
   end
 
-  arg_params = Dict{Symbol, NDArray}()
-  aux_params = Dict{Symbol, NDArray}()
+  arg_params = Dict{Symbol,NDArray}()
+  aux_params = Dict{Symbol,NDArray}()
 
   for (name, shape) in filter(x -> in(x[1],param_names), zip(arg_names, arg_shapes))
     if haskey(self.arg_params, name)
@@ -138,7 +138,7 @@ function init_model(self :: FeedForward, initializer :: AbstractInitializer; ove
   return (arg_names, param_names, aux_names)
 end
 
-function _setup_predictor(self :: FeedForward, overwrite :: Bool=false; verbosity :: Integer = 1, data_shapes...)
+function _setup_predictor(self::FeedForward, overwrite::Bool=false; verbosity::Integer = 1, data_shapes...)
   if !isdefined(self, :pred_exec) || isa(self.pred_exec, Void) || overwrite
     if !isdefined(self, :arg_params) || !isdefined(self, :aux_params)
       @assert(false, "Model weights not defined, please init or train the model, or load from file")
@@ -202,12 +202,12 @@ end
 
 See also [`train`](@ref), [`fit`](@ref), [`init_model`](@ref), and [`load_checkpoint`](@ref)
 """
-function predict(callback :: Function, self :: FeedForward, data :: AbstractDataProvider;
-                 overwrite :: Bool = true, verbosity :: Integer = 1)
+function predict(callback::Function, self::FeedForward, data::AbstractDataProvider;
+                 overwrite::Bool = true, verbosity::Integer = 1)
   predict(self, data; overwrite = overwrite, callback=callback, verbosity = verbosity)
 end
-function predict(self :: FeedForward, data :: AbstractDataProvider;
-                 overwrite::Bool=true, callback::Union{Function,Void}=nothing, verbosity :: Integer = 1)
+function predict(self::FeedForward, data::AbstractDataProvider;
+                 overwrite::Bool = true, callback::Union{Function,Void}=nothing, verbosity::Integer = 1)
   data_shapes = provide_data(data)
   data_names  = [x[1] for x in data_shapes]
   _setup_predictor(self, overwrite; verbosity = verbosity, data_shapes...)
@@ -255,11 +255,13 @@ function predict(self :: FeedForward, data :: AbstractDataProvider;
   return output_arrays
 end
 
-function _init_model(self :: FeedForward, data :: AbstractDataProvider, initializer :: AbstractInitializer, overwrite :: Bool)
-  init_model(self, initializer; overwrite=overwrite, [provide_data(data)..., provide_label(data)...]...)
+function _init_model(self::FeedForward, data::AbstractDataProvider,
+                     initializer::AbstractInitializer, overwrite::Bool)
+  init_model(self, initializer; overwrite=overwrite,
+             [provide_data(data)..., provide_label(data)...]...)
 end
 
-function _create_kvstore(kv_type :: Base.Symbol, num_device :: Int, arg_params :: Dict{Base.Symbol,NDArray}, verbosity :: Int)
+function _create_kvstore(kv_type::Symbol, num_device::Int, arg_params::Dict{Symbol}, verbosity::Int)
   if num_device == 1 && !ismatch(r"dist", string(kv_type))
     return nothing
   else
@@ -281,7 +283,7 @@ end
   n_epoch     :: Int = 10,
   eval_data   :: Union{Void, AbstractDataProvider} = nothing,
   eval_metric :: AbstractEvalMetric = Accuracy(),
-  kvstore     :: Union{Base.Symbol, KVStore} = :local,
+  kvstore     :: Union{Symbol, KVStore} = :local,
   force_init  :: Bool = false,
   callbacks   :: Vector{AbstractCallback} = AbstractCallback[],
   verbosity   :: Int = 3
@@ -289,7 +291,7 @@ end
 
 function _invoke_callbacks(self::FeedForward, callbacks::Vector{AbstractCallback},
                            state::OptimizationState, type_filter::Type;
-                           metric::Vector{Tuple{Base.Symbol, T}} = Vector{Tuple{Base.Symbol, Real}}()) where T<:Real
+                           metric::Vector{Tuple{Symbol,T}} = Vector{Tuple{Symbol,Real}}()) where T<:Real
   map(callbacks) do cb
     if isa(cb, type_filter)
       if type_filter == AbstractEpochCallback
@@ -327,7 +329,7 @@ Train the `model` on `data` with the `optimizer`.
           calculated on the validation set.
 * `kvstore`: keyword argument, default `:local`. The key-value store used to synchronize gradients
           and parameters when multiple devices are used for training.
-   :type kvstore: `KVStore` or `Base.Symbol`
+   :type kvstore: `KVStore` or `Symbol`
 * `initializer::AbstractInitializer`: keyword argument, default `UniformInitializer(0.01)`.
 * `force_init::Bool`: keyword argument, default false. By default, the random initialization using the
           provided `initializer` will be skipped if the model weights already exists, maybe from a previous
@@ -342,7 +344,8 @@ Train the `model` on `data` with the `optimizer`.
           - `2`: Print one time messages and a message at the start of each epoch
           - `3`: Print a summary of the training and validation accuracy for each epoch
 """
-function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: AbstractDataProvider; kwargs...)
+function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractDataProvider;
+             kwargs...)
   opts = TrainingOptions(; kwargs...)
 
   opts.verbosity >= 1 && info("Start training on $(self.ctx)")
@@ -357,7 +360,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
 
   # setup kvstore
   kvstore = opts.kvstore
-  if isa(kvstore, Base.Symbol)
+  if isa(kvstore, Symbol)
     opts.verbosity >= 2 && info("Creating KVStore...")
     kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params, opts.verbosity)
   end
@@ -379,7 +382,7 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   freeze_idx = filter(i -> in(param_names[i], freeze_names), 1:length(param_names))
 
   # Setup grad_req as a dictionary
-  grad_req = Dict{Symbol, GRAD_REQ}()
+  grad_req = Dict{Symbol,GRAD_REQ}()
   for param in param_names
     if in(param, freeze_names)
       grad_req[param] = GRAD_NOP
@@ -581,24 +584,26 @@ function fit(self :: FeedForward, optimizer :: AbstractOptimizer, data :: Abstra
   nothing
 end
 
-function save_checkpoint(self :: FeedForward, prefix :: AbstractString, state :: OptimizationState)
+save_checkpoint(self::FeedForward, prefix::AbstractString, state::OptimizationState) =
   save_checkpoint(self.arch, self.arg_params, self.aux_params, prefix, state.curr_epoch)
-end
-function save_checkpoint(sym :: SymbolicNode, arg_params :: Dict{Base.Symbol, NDArray},
-                         aux_params :: Dict{Base.Symbol, NDArray}, prefix :: AbstractString, epoch :: Int)
+
+function save_checkpoint(sym::SymbolicNode, arg_params::Dict{Symbol},
+                         aux_params::Dict{Symbol}, prefix::AbstractString, epoch::Int)
   save("$prefix-symbol.json", sym)
-  save_dict = merge(Dict{Base.Symbol, NDArray}(map((x) -> Symbol("arg:$(x[1])") => x[2], arg_params)),
-                    Dict{Base.Symbol, NDArray}(map((x) -> Symbol("aux:$(x[1])") => x[2], aux_params)))
+  save_dict = Dict{Symbol, NDArray}(map((x) -> Symbol("arg:$(x[1])") => x[2], arg_params))
+  if !isempty(aux_params)
+    merge!(save_dict, Dict(map((x) -> Symbol("aux:$(x[1])") => x[2], aux_params)))
+  end
   save_filename = format("{1}-{2:04d}.params", prefix, epoch)
   save(save_filename, save_dict)
   info("Saved checkpoint to '$save_filename'")
 end
 
-function load_checkpoint(prefix :: AbstractString, epoch :: Int)
+function load_checkpoint(prefix::AbstractString, epoch::Int)
   arch       = load("$prefix-symbol.json", SymbolicNode)
   saved_dict = load(format("{1}-{2:04d}.params", prefix, epoch), NDArray)
-  arg_params = Dict{Base.Symbol, NDArray}()
-  aux_params = Dict{Base.Symbol, NDArray}()
+  arg_params = Dict{Symbol,Any}()
+  aux_params = Dict{Symbol,Any}()
   for (k,v) in saved_dict
     tp, name = split(string(k), ':')
     name = Symbol(name)
@@ -617,7 +622,7 @@ end
 
 Load a mx.FeedForward model from the checkpoint *prefix*, *epoch* and optionally provide a context.
 """
-function load_checkpoint(prefix :: AbstractString, epoch :: Int, ::Type{FeedForward}; context = nothing)
+function load_checkpoint(prefix::AbstractString, epoch::Int, ::Type{FeedForward}; context = nothing)
   arch, arg_params, aux_params = load_checkpoint(prefix, epoch)
   model = FeedForward(arch, context = context)
   model.arg_params = arg_params
@@ -625,8 +630,8 @@ function load_checkpoint(prefix :: AbstractString, epoch :: Int, ::Type{FeedForw
   return model
 end
 
-function load_checkpoint(self :: FeedForward, prefix :: AbstractString, epoch :: Int;
-                         overwrite :: Bool = true, allow_different_arch :: Bool = false)
+function load_checkpoint(self::FeedForward, prefix::AbstractString, epoch::Int;
+                         overwrite::Bool = true, allow_different_arch::Bool = false)
   if isdefined(self, :arg_params) && isdefined(self, :aux_params) && !overwrite
     info("model weights already exists, skip loading... (call with overwrite=true if needed)")
     return self

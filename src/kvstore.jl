@@ -3,10 +3,10 @@ mutable struct KVStore
   updater_c :: Ptr{Void}
   updater   :: Function
 
-  KVStore(hdr :: MX_KVStoreHandle) = new(hdr, Ptr{Void}(0))
+  KVStore(hdr::MX_KVStoreHandle) = new(hdr, Ptr{Void}(0))
 end
 
-function KVStore(kv_type::Base.Symbol = :local)
+function KVStore(kv_type::Symbol = :local)
   #@assert(kv_type ∈ [:local]) # TODO: update with allowed types
 
   ref_hdr = Ref{MX_handle}(0)
@@ -20,7 +20,7 @@ end
 Base.convert(t::Type{MX_handle}, obj::KVStore) = Base.unsafe_convert(t, obj)
 Base.cconvert(t::Type{MX_handle}, obj::KVStore) = Base.unsafe_convert(t, obj)
 
-function _flatten_kvlist(keys :: Vector{Int}, vals :: Vector{Vector{NDArray}})
+function _flatten_kvlist(keys :: Vector{Int}, vals :: Vector{<:Vector{<:NDArray}})
   @assert length(keys) == length(vals)
   keys_flt = Int[]
   vals_flt = NDArray[]
@@ -31,16 +31,15 @@ function _flatten_kvlist(keys :: Vector{Int}, vals :: Vector{Vector{NDArray}})
   return (keys_flt, vals_flt)
 end
 
-function init!(self :: KVStore, key :: Int, val :: NDArray)
-  init!(self, [key], [val])
-end
-function init!(self :: KVStore, key :: Int, vals :: Vector{NDArray})
-  init!(self, Base.ones(Int, length(vals))*key, vals)
-end
-function init!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{Vector{NDArray}})
+init!(self::KVStore, key::Int, val::NDArray) = init!(self, [key], [val])
+
+init!(self::KVStore, key::Int, vals::Vector{<:NDArray}) =
+  init!(self, Base.ones(Int, length(vals)) * key, vals)
+
+init!(self::KVStore, keys::Vector{Int}, vals::Vector{<:Vector{<:NDArray}}) =
   init!(self, _flatten_kvlist(keys, vals)...)
-end
-function init!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{NDArray})
+
+function init!(self::KVStore, keys::Vector{Int}, vals::Vector{<:NDArray})
   @assert length(keys) == length(vals)
   keys = Cint[keys...]
   vals = MX_handle[vals...]
@@ -52,13 +51,14 @@ import Base.push!
 function push!(self :: KVStore, key :: Int, val :: NDArray; priority :: Int = 0)
   push!(self, [key], [val]; priority = priority)
 end
-function push!(self :: KVStore, key :: Int, vals :: Vector{NDArray}; priority :: Int = 0)
+function push!(self :: KVStore, key :: Int, vals :: Vector{<:NDArray}; priority :: Int = 0)
   push!(self, Base.ones(Int, length(vals))*key, vals; priority = priority)
 end
-function push!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{Vector{NDArray}}; priority::Int=0)
+function push!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{<:Vector{<:NDArray}};
+               priority::Int=0)
   push!(self, _flatten_kvlist(keys, vals)...; priority = priority)
 end
-function push!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{NDArray}; priority::Int=0)
+function push!(self :: KVStore, keys :: Vector{Int}, vals :: Vector{<:NDArray}; priority::Int=0)
   @assert length(keys) == length(vals)
   keys = Cint[keys...]
   vals = MX_handle[vals...]
@@ -69,13 +69,13 @@ end
 function pull!(self :: KVStore, key :: Int, out :: NDArray; priority :: Int = 0)
   pull!(self, [key], [out])
 end
-function pull!(self :: KVStore, key :: Int, outs :: Vector{NDArray}; priority :: Int = 0)
+function pull!(self :: KVStore, key :: Int, outs :: Vector{<:NDArray}; priority :: Int = 0)
   pull!(self, Base.ones(Int, length(outs))*key, outs; priority = priority)
 end
-function pull!(self :: KVStore, keys :: Vector{Int}, outs :: Vector{Vector{NDArray}}; priority::Int=0)
+function pull!(self :: KVStore, keys :: Vector{Int}, outs :: Vector{<:Vector{<:NDArray}}; priority::Int=0)
   pull!(self, _flatten_kvlist(keys, outs)...; priority = priority)
 end
-function pull!(self :: KVStore, keys :: Vector{Int}, outs :: Vector{NDArray}; priority::Int=0)
+function pull!(self :: KVStore, keys :: Vector{Int}, outs :: Vector{<:NDArray}; priority::Int=0)
   @assert length(keys) == length(outs)
   keys = Cint[keys...]
   outs = MX_handle[outs...]

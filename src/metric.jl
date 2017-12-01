@@ -14,7 +14,7 @@ abstract type AbstractEvalMetric end
     hasNDArraySupport(metric) -> Val{true/false}
 
 Trait for `_update_single_output` should return `Val{true}() if metric can handle `NDArray`
-directly and `Val{false}()i` if requires `Array`. Metric that work with NDArrays can be
+directly and `Val{false}()` if requires `Array`. Metric that work with NDArrays can be
 async, while native Julia arrays require that we copy the output of the network, which is
 a blocking operation.
 """
@@ -30,11 +30,12 @@ Update and accumulate metrics.
 * `labels::Vector{NDArray}`: the labels from the data provider.
 * `preds::Vector{NDArray}`: the outputs (predictions) of the network.
 """
-function update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}) where T <: AbstractEvalMetric
+function update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray) where T <: AbstractEvalMetric
   _update!(metric, labels, preds, hasNDArraySupport(metric))
 end
 
-function _update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{true}) where T<: AbstractEvalMetric
+function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
+                  ::Val{true}) where T<: AbstractEvalMetric
   if length(labels) != length(preds)
     Base.warn_once(
       "The number of labels ($(length(labels))) does not correspond to the\
@@ -45,7 +46,8 @@ function _update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArra
   end
 end
 
-function _update!(metric :: T, labels :: Vector{NDArray}, preds :: Vector{NDArray}, :: Val{false}) where T<: AbstractEvalMetric
+function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
+                  ::Val{false}) where T<: AbstractEvalMetric
   if length(labels) != length(preds)
     Base.warn_once(
       "The number of labels ($(length(labels))) does not correspond to the\
@@ -65,9 +67,7 @@ end
 
 Reset the accumulation counter.
 """
-function reset!(metric :: AbstractEvalMetric)
-  throw(MethodError(reset!, (typeof(metric),)))
-end
+reset!(metric::AbstractEvalMetric) = throw(MethodError(reset!, (typeof(metric),)))
 
 
 import Base: get
@@ -79,9 +79,7 @@ Get the accumulated metrics.
 Returns `Vector{Tuple{Base.Symbol, Real}}`, a list of name-value pairs.
 For example, `[(:accuracy, 0.9)]`.
 """
-function get(metric :: AbstractEvalMetric)
-  throw(MethodError(get, (typeof(metric),)))
-end
+get(metric::AbstractEvalMetric) = throw(MethodError(get, (typeof(metric),)))
 
 """
     NullMetric()
@@ -91,17 +89,11 @@ A metric that calculates nothing. Can be used to ignore an output during trainin
 mutable struct NullMetric <: mx.AbstractEvalMetric
 end
 
-function update!(metric :: NullMetric, labels :: Vector{NDArray}, preds :: Vector{NDArray})
-  return nothing
-end
+update!(metric::NullMetric, labels::VecOfNDArray, preds::VecOfNDArray) = nothing
 
-function reset!(metric :: NullMetric)
-  return nothing
-end
+reset!(metric::NullMetric) = nothing
 
-function get(metric :: NullMetric)
-  return Tuple{Symbol, Float64}[]
-end
+get(metric::NullMetric) = Tuple{Symbol, Float64}[]
 
 """
     MultiMetric(metrics::Vector{AbstractEvalMetric})
@@ -118,21 +110,19 @@ mutable struct MultiMetric <: mx.AbstractEvalMetric
     metrics :: Vector{mx.AbstractEvalMetric}
 end
 
-function update!(metric :: MultiMetric, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+function update!(metric :: MultiMetric, labels :: Vector{<:NDArray}, preds :: Vector{<:NDArray})
     for m in metric.metrics
         update!(m, labels, preds)
     end
-    return nothing
+    nothing
 end
 
 function reset!(metric :: MultiMetric)
     map(reset!, metric.metrics)
-    return nothing
+    nothing
 end
 
-function get(metric :: MultiMetric)
-    mapreduce(get, append!, metric.metrics)
-end
+get(metric :: MultiMetric) = mapreduce(get, append!, metric.metrics)
 
 """
     SeqMetric(metrics::Vector{AbstractEvalMetric})
@@ -150,23 +140,21 @@ mutable struct SeqMetric <: mx.AbstractEvalMetric
     metrics :: Vector{mx.AbstractEvalMetric}
 end
 
-function update!(metric :: SeqMetric, labels :: Vector{NDArray}, preds :: Vector{NDArray})
+function update!(metric::SeqMetric, labels::VecOfNDArray, preds::VecOfNDArray)
     @assert length(metric.metrics) == length(labels)
     @assert length(metric.metrics) == length(preds)
     for (m, l, p) in zip(metric.metrics, labels, preds)
         update!(m, [l], [p])
     end
-    return nothing
+    nothing
 end
 
-function reset!(metric :: SeqMetric)
+function reset!(metric::SeqMetric)
     map(reset!, metric.metrics)
-    return nothing
+    nothing
 end
 
-function get(metric :: SeqMetric)
-    mapreduce(get, append!, metric.metrics)
-end
+get(metric::SeqMetric) = mapreduce(get, append!, metric.metrics)
 
 """
     Accuracy
@@ -185,7 +173,7 @@ end
 
 hasNDArraySupport(::Accuracy) = Val{false}()
 
-function _update_single_output(metric :: Accuracy, label :: Array, pred :: Array)
+function _update_single_output(metric::Accuracy, label::Array, pred::Array)
   # Samples are stored in the last dimension
   @assert size(label, ndims(label)) == size(pred, ndims(pred))
 
@@ -217,9 +205,7 @@ function _update_single_output(metric :: Accuracy, label :: Array, pred :: Array
   end
 end
 
-function get(metric :: Accuracy)
-  return [(:accuracy, metric.acc_sum / metric.n_sample)]
-end
+get(metric::Accuracy) = [(:accuracy, metric.acc_sum / metric.n_sample)]
 
 function reset!(metric :: Accuracy)
   metric.acc_sum  = 0.0
@@ -235,31 +221,34 @@ Calculates the mean squared error regression loss.
 Requires that label and prediction have the same shape.
 """
 
-mutable struct MSE <: AbstractEvalMetric
-  mse_sum  :: Vector{NDArray}
+mutable struct MSE{N} <: AbstractEvalMetric
+  mse_sum  :: Vector{NDArray{MX_float,N}}
   n_sample :: Int
 
-  MSE() = new(Vector{NDArray}(), 0)
+  MSE{N}() where {N} = new(Vector{NDArray{MX_float,N}}(), 0)
 end
+
+MSE() = MSE{1}()  # backward compat?
 
 hasNDArraySupport(::MSE) = Val{true}()
 
-function _update_single_output(metric :: MSE, label :: NDArray, pred :: NDArray)
+function _update_single_output(metric::MSE, label::NDArray{T,N},
+                               pred::NDArray{T,N}) where {T,N}
   @assert size(label) == size(pred)
   metric.n_sample += length(label)
-  mse_sum = mx.sum(mx._PowerScalar(label - pred,scalar=2))
+  mse_sum = mx.sum((label .- pred).^2)
   push!(metric.mse_sum, mse_sum)
-  return nothing
+  nothing
 end
 
-function get(metric :: MSE)
+function get(metric::MSE)
   # Delay copy until last possible moment
   mse_sum = mapreduce(nda->copy(nda)[1], +, 0.0, metric.mse_sum)
-  return [(:MSE, mse_sum / metric.n_sample)]
+  [(:MSE, mse_sum / metric.n_sample)]
 end
 
-function reset!(metric :: MSE)
-  metric.mse_sum = Vector{NDArray}()
+function reset!(metric::MSE{N}) where N
+  metric.mse_sum = Vector{NDArray{Float32,N}}()
   metric.n_sample = 0
 end
 
@@ -319,7 +308,7 @@ end
 
 hasNDArraySupport(::NMSE) = Val{false}()
 
-function _update_single_output(metric :: NMSE, label :: Array, pred :: Array)
+function _update_single_output(metric::NMSE, label::Array, pred::Array)
   n_sample = size(pred)[end]
   metric.n_sample += n_sample
 
@@ -332,11 +321,9 @@ function _update_single_output(metric :: NMSE, label :: Array, pred :: Array)
   end
 end
 
-function get(metric :: NMSE)
-  return [(:NMSE, metric.nmse_sum / metric.n_sample)]
-end
+get(metric::NMSE) = [(:NMSE, metric.nmse_sum / metric.n_sample)]
 
-function reset!(metric :: NMSE)
+function reset!(metric::NMSE)
   metric.nmse_sum = 0.0
   metric.n_sample = 0
 end
@@ -357,11 +344,9 @@ mutable struct ACE <: AbstractEvalMetric
   ACE(eps=1.0e-8) = new(0.0, 0, eps)
 end
 
-function get(metric :: ACE)
-  return [(:ACE, - metric.ace_sum / metric.n_sample)]
-end
+get(metric::ACE) = [(:ACE, - metric.ace_sum / metric.n_sample)]
 
-function reset!(metric :: ACE)
+function reset!(metric::ACE)
   metric.ace_sum = 0.0
   metric.n_sample = 0
 end
@@ -474,4 +459,3 @@ function _update_single_output(metric :: MultiACE, label :: Array{T}, pred :: Ar
     error("Can't handle prediction with dimensions $(ndims(pred)).")
   end
 end
-

@@ -3,7 +3,7 @@ const DType = Union{Float32, Float64, Float16, UInt8, Int32, Int8, Int64}
 @enum TypeFlag kFloat32 kFloat64 kFloat16 kUint8 kInt32 kInt8 kInt64
 const DEFAULT_DTYPE = Float32  # MSHADOW_DEFAULT_DTYPE
 
-function toTypeFlag(:: Type{T}) where T <: DType
+function toTypeFlag(T::Type{<:DType})
   if T == Float32
     return kFloat32
   elseif T == Float64
@@ -23,7 +23,7 @@ function toTypeFlag(:: Type{T}) where T <: DType
   end
 end
 
-function fromTypeFlag(T :: TypeFlag)
+function fromTypeFlag(T::TypeFlag)
   if T == kFloat32
     return Float32
   elseif T == kFloat64
@@ -89,19 +89,21 @@ of tensor-based computation.
       C/C++/Python shape (100,1,28,28), while in Julia, the same piece of memory
       have shape (28,28,1,100).
 """
-mutable struct NDArray
+mutable struct NDArray{T,D}
   handle   :: MX_NDArrayHandle
   writable :: Bool
 
-  function NDArray(handle, writable=true)
-    new(handle, writable)
-  end
+  NDArray{T,D}(handle, writable = true) where {T,D} = new(handle, writable)
 end
 
 NDArray(x::AbstractArray{T}) where {T<:DType} = copy(collect(x), cpu())
 NDArray(x::Array{T}) where {T<:DType} = copy(x, cpu())
+NDArray(handle, writable = true) =
+  NDArray{eltype(handle), ndims(handle)}(handle, writable)
 
+# type aliases
 const NDArrayOrReal = Union{NDArray, Real}
+const VecOfNDArray = AbstractVector{<:NDArray}
 
 @unfuse NDArray
 
@@ -112,15 +114,15 @@ end
 
 # for REPL
 function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray)
-  println(io, "$(join(size(x), "×")) mx.NDArray{$(eltype(x))} @ $(context(x)):")
-  Base.showarray(io, try_get_shared(x, sync = :read), false, header = false)
+  type_ = split(string(typeof(x)), '.', limit=2)[end]
+  println(io, "$(join(size(x), "×")) $(type_) @ $(context(x)):")
+  Base.showarray(io, try_get_shared(x, sync = :read), false, header=false)
 end
 
-function Base.unsafe_convert(::Type{MX_handle}, obj::NDArray)
+Base.unsafe_convert(::Type{MX_handle}, obj::NDArray) =
   Base.unsafe_convert(MX_handle, obj.handle)
-end
-Base.convert(t::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(t, obj)
-Base.cconvert(t::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(t, obj)
+Base.convert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
+Base.cconvert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
 
 ################################################################################
 # NDArray functions exported to the users
@@ -140,21 +142,15 @@ end
 
 
 """
-    empty(DType, shape :: Tuple, ctx :: Context)
-    empty(DType, shape :: Tuple)
+    empty(DType, dims[, ctx::Context = cpu()])
+    empty(DType, dims)
     empty(DType, dim1, dim2, ...)
 
 Allocate memory for an uninitialized `NDArray` with a specified type.
 """
-function empty(::Type{T}, shape :: NTuple{N, Int}) where {N,T<:DType}
-  empty(T, shape, cpu())
-end
-function empty(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context) where {N,T<:DType}
-  NDArray(_ndarray_alloc(T, shape, ctx, false))
-end
-function empty(:: Type{T}, shape :: Int...) where T<:DType
-  empty(T, shape)
-end
+empty(::Type{T}, dims::NTuple{N, Int}, ctx::Context = cpu()) where {N,T<:DType} =
+  NDArray{T, N}(_ndarray_alloc(T, dims, ctx, false))
+empty(::Type{T}, dims::Int...) where {T<:DType} = empty(T, dims)
 
 """
     empty(shape :: Tuple, ctx :: Context)
@@ -173,54 +169,39 @@ function empty(shape :: Int...)
   empty(shape)
 end
 
-import Base.similar
+"""
+    similar(x::NDArray)
+
+Create an `NDArray` with similar shape, data type,
+and context with the given one.
+Note that the returned `NDArray` is uninitialized.
+"""
+Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
 
 """
-    similar(arr :: NDArray)
+    zeros(DType, dims[, ctx::Context = cpu()])
+    zeros(DType, dims...)
 
-Create an `NDArray` with similar shape, data type, and context with the given one.
+Create zero-ed `NDArray` with specific shape and type.
 """
-function similar(arr :: NDArray)
-  empty(eltype(arr), size(arr), context(arr))
-end
-
-"""
-    zeros(DType, shape :: Tuple, ctx :: Context)
-    zeros(DType, shape :: Tuple)
-    zeros(DType, dim1, dim2, ...)
-
-Create zero-ed `NDArray` with specific shape and type
-"""
-function zeros(:: Type{T}, shape :: NTuple{N, Int}) where {N,T<:DType}
-  zeros(T, shape, cpu())
-end
-function zeros(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context) where {N,T<:DType}
-  arr = empty(T, shape, ctx)
+function zeros(::Type{T}, dims::NTuple{N, Int}, ctx::Context = cpu()) where {N,T<:DType}
+  arr = empty(T, dims, ctx)
   arr[:] = zero(T)
-  return arr
-end
-function zeros(:: Type{T}, shape :: Int...) where T<:DType
-  zeros(T, shape)
+  arr
 end
 
+zeros(::Type{T}, dims::Int...) where {T<:DType} = zeros(T, dims)
+
 """
-    zeros(shape :: Tuple, ctx :: Context)
-    zeros(shape :: Tuple)
-    zeros(dim1, dim2, ...)
+    zeros(dims[, ctx::Context = cpu()])
+    zeros(dims...)
 
 Create zero-ed `NDArray` with specific shape.
 """
-function zeros(shape :: NTuple{N, Int}) where N
-  zeros(shape, cpu())
-end
-function zeros(shape :: NTuple{N, Int}, ctx :: Context) where N
-  arr = empty(shape, ctx)
-  arr[:] = 0
-  return arr
-end
-function zeros(shape :: Int...)
-  zeros(shape)
-end
+zeros(dims::NTuple{N, Int}, ctx::Context = cpu()) where N =
+  zeros(MX_float, dims, ctx)
+
+zeros(dims::Int...) = zeros(dims)
 
 """
     ones(DType, shape :: Tuple, ctx :: Context)
@@ -263,11 +244,11 @@ end
 import Base: size, length, ndims, eltype
 
 """
-    size(arr :: NDArray)
-    size(arr :: NDArray, dim :: Int)
+    size(x::NDArray)
+    size(x::NDArray, dim)
 
-Get the shape of an `NDArray`. The shape is in Julia's column-major convention. See
-also the notes on NDArray shapes [`NDArray`](@ref).
+Get the shape of an `NDArray`. The shape is in Julia's column-major convention.
+See also the notes on NDArray shapes [`NDArray`](@ref).
 """
 function size(arr :: NDArray)
   ref_ndim  = Ref{MX_uint}(0)
@@ -281,45 +262,50 @@ function size(arr :: NDArray, dim :: Int)
 end
 
 """
-    length(arr :: NDArray)
+    length(x::NDArray)
 
 Get the number of elements in an `NDArray`.
 """
-function length(arr :: NDArray)
-  prod(size(arr))
+length(x::NDArray) = prod(size(x))
+
+"""
+    ndims(x::NDArray)
+
+Get the number of dimensions of an `NDArray`.
+Is equivalent to `length(size(arr))`.
+"""
+ndims(x::NDArray) = ndims(x.handle)
+
+function ndims(x::MX_NDArrayHandle)::Int
+  ref_ndim  = Ref{MX_uint}(0)
+  ref_shape = Ref{Ptr{MX_uint}}(0)
+  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
+          x, ref_ndim, ref_shape)
+  ref_ndim[]
 end
 
 """
-    ndims(arr :: NDArray)
-
-Get the number of dimensions of an `NDArray`. Is equivalent to `length(size(arr))`.
-"""
-function ndims(arr :: NDArray)
-  length(size(arr))
-end
-
-"""
-    eltype(arr :: NDArray)
+    eltype(x::NDArray)
 
 Get the element type of an `NDArray`.
 """
-function eltype(arr :: T) where T <: Union{NDArray, MX_NDArrayHandle}
+function eltype(x::Union{NDArray, MX_NDArrayHandle})
   dtype_ref = Ref{Cint}(0)
-  @mxcall(:MXNDArrayGetDType, (MX_handle, Ptr{Cint}), arr, dtype_ref)
+  @mxcall(:MXNDArrayGetDType, (MX_handle, Ptr{Cint}), x, dtype_ref)
 
-  if dtype_ref[] == -1 # arr->is_none()
-    warn("Eltype of $arr is not defined")
+  if dtype_ref[] == -1 # x->is_none()
+    warn("Eltype of $x is not defined")
     Base.show_backtrace(STDOUT, backtrace())
     println()
-    return Float32
+    Float32
   else
-    return fromTypeFlag(TypeFlag(dtype_ref[]))
+    fromTypeFlag(TypeFlag(dtype_ref[]))
   end
 end
 
-@inline _first(arr::NDArray) = try_get_shared(arr, sync = :read) |> first
+@inline _first(x::NDArray) = try_get_shared(x, sync = :read) |> first
 
-Base.first(arr::NDArray) = _first(arr)
+Base.first(x::NDArray) = _first(x)
 
 """
     slice(arr :: NDArray, start:stop)
@@ -469,7 +455,7 @@ import Base: copy!, copy, convert, deepcopy
 
 Copy contents of `src` into `dst`.
 """
-function copy!(dst :: NDArray, src :: NDArray)
+function copy!(dst::NDArray, src::NDArray)
   @assert(dst.writable)
   if dst.handle == src.handle
     warn("Copying an NDArray to itself")
@@ -480,33 +466,31 @@ function copy!(dst :: NDArray, src :: NDArray)
   return dst
 end
 
-function copy!(dst :: Array{T}, src :: NDArray) where T<:DType
-  @assert T == eltype(src)
+function copy!(dst::Array{T}, src::NDArray{T}) where T<:DType
   @assert size(dst) == size(src)
   @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{Void}, Csize_t),
           src, pointer(dst), length(dst))
-  return dst
-end
-function copy!(dst :: Array{T}, src :: NDArray) where T<:Real
-  copy!(dst, copy(src))
+  dst
 end
 
-function copy!(dst :: NDArray, src :: Array{T}) where T<:Real
+copy!(dst::Array{<:Real}, src::NDArray) = copy!(dst, copy(src))
+
+function copy!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable
   @assert size(dst) == size(src)
-  src = convert(Array{eltype(dst)}, src) # this might involve copying
+  src = convert(Array{T}, src) # this might involve copying
   @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
           dst.handle, pointer(src), length(src))
-  return dst
+  dst
 end
 
-function copy_ignore_shape!(dst :: NDArray, src :: Array{T}) where T<:Real
+function copy_ignore_shape!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable
   @assert length(dst) == length(src)
-  src = convert(Array{eltype(dst)}, src) # this might involve copying
+  src = convert(Array{T}, src) # this might involve copying
   @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
           dst.handle, pointer(src), length(src))
-  return dst
+  dst
 end
 
 
@@ -519,31 +503,23 @@ Create a copy of an array. When no `Context` is given, create a Julia `Array`.
 Otherwise, create an `NDArray` on the specified context.
 """
 # Create copy: NDArray -> Julia Array
-function copy(arr :: NDArray)
-  j_arr = Array{eltype(arr)}(size(arr))
-  copy!(j_arr, arr)
-end
+copy(x::NDArray{T,D}) where{T,D} = copy!(Array{T,D}(size(x)), x)
 
 # Create copy: NDArray -> NDArray in a given context
-function copy(arr :: NDArray, ctx :: Context)
-  dst = NDArray(_ndarray_alloc(eltype(arr), size(arr), ctx, true))
-  copy!(dst, arr)
-end
+copy(x::NDArray{T,D}, ctx::Context) where {T,D} =
+  copy!(NDArray{T,D}(_ndarray_alloc(T, size(x), ctx, true)), x)
 
 # Create copy: Julia Array -> NDArray in a given context
-function copy(arr :: Array{T}, ctx :: Context) where T<:DType
-  dst = empty(T, size(arr), ctx)
-  copy!(dst, arr)
-end
+copy(x::Array{T}, ctx::Context) where {T<:DType} =
+  copy!(empty(T, size(x), ctx), x)
 
 """
-    convert(::Type{Array{T}}, arr :: NDArray)
+    convert(::Type{Array{<:Real}}, x::NDArray)
 
-Convert an `NDArray` into a Julia `Array` of specific type. Data will be copied.
+Convert an `NDArray` into a Julia `Array` of specific type.
+Data will be copied.
 """
-function convert(t::Type{Array{T}}, arr :: NDArray) where T<:Real
-  convert(t, copy(arr))
-end
+convert(T::Type{Array{<:Real}}, x::NDArray) = convert(T, copy(x))
 
 """
     deepcopy(arr::NDArray)
@@ -599,13 +575,13 @@ end
 
 Add a bunch of arguments into `dst`. Inplace updating.
 """
-function add_to!(dst::NDArray, args::NDArrayOrReal...)
+function add_to!(dst::NDArray{T}, args::NDArrayOrReal...) where T
   @assert dst.writable
   for arg in args
     if isa(arg, Real)
-      _plus_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
+      _plus_scalar(dst, scalar = convert(T, arg), out = dst)
     else
-      _plus(dst, arg, out=dst)
+      _plus(dst, arg, out = dst)
     end
   end
   return dst
@@ -632,10 +608,10 @@ broadcast_(::typeof(+), x::Real, y::NDArray)          = x + y
 
 Subtract a bunch of arguments from `dst`. Inplace updating.
 """
-function sub_from!(dst::NDArray, arg::NDArrayOrReal)
+function sub_from!(dst::NDArray{T}, arg::NDArrayOrReal) where T
   @assert dst.writable
   if isa(arg, Real)
-    _minus_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
+    _minus_scalar(dst, scalar = convert(T, arg), out = dst)
   else
     _minus!(dst, arg)
   end
@@ -664,12 +640,12 @@ broadcast_(::typeof(-), x::Real, y::NDArray)          = x - y
 Elementwise multiplication into `dst` of either a scalar or an `NDArray` of the same shape.
 Inplace updating.
 """
-function mul_to!(dst::NDArray, arg::NDArrayOrReal)
+function mul_to!(dst::NDArray{T}, arg::NDArrayOrReal) where T
   @assert dst.writable
   if isa(arg, Real)
-    _mul_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
+    _mul_scalar(dst, scalar = convert(T, arg), out = dst)
   else
-    _mul(dst, arg, out=dst)
+    _mul(dst, arg, out = dst)
   end
 end
 
@@ -692,23 +668,19 @@ broadcast_(::typeof(*), x::Real, y::NDArray) = y .* x
 
 Matrix (2D NDArray) multiplication.
 """
-function *(x::NDArray, y::NDArray)
-  @assert ndims(x) == 2
-  @assert ndims(y) == 2
-  dot(x, y)
-end
+*(x::NDArray{T,2}, y::NDArray{S,2}) where {T,S} = dot(x, y)
 
 """
     div_from!(dst::NDArray, arg::NDArrayOrReal)
 
 Elementwise divide a scalar or an `NDArray` of the same shape from `dst`. Inplace updating.
 """
-function div_from!(dst::NDArray, arg::NDArrayOrReal)
+function div_from!(dst::NDArray{T}, arg::NDArrayOrReal) where {T}
   @assert dst.writable
   if isa(arg, Real)
-    _div_scalar(dst, scalar=convert(eltype(dst), arg), out=dst)
+    _div_scalar(dst, scalar = convert(T, arg), out = dst)
   else
-    _div(dst, arg, out=dst)
+    _div(dst, arg, out = dst)
   end
 end
 
@@ -717,9 +689,9 @@ end
 
 Elementwise divide a scalar by an `NDArray`. Inplace updating.
 """
-function rdiv_from!(x::Real, y::NDArray)
+function rdiv_from!(x::Real, y::NDArray{T}) where {T}
   @assert y.writable
-  _rdiv_scalar(y, scalar=convert(eltype(y), x), out=y)
+  _rdiv_scalar(y, scalar = convert(T, x), out = y)
 end
 
 import Base: /
@@ -902,12 +874,11 @@ function pointer(arr :: NDArray)
   @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{Void}}), arr, pdata)
   return convert(Ptr{eltype(arr)}, pdata[])
 end
-function _wait_to_read(arr :: NDArray)
+
+@inline _wait_to_read(arr :: NDArray) =
   @mxcall(:MXNDArrayWaitToRead, (MX_handle,), arr)
-end
-function _wait_to_write(arr :: NDArray)
+@inline _wait_to_write(arr :: NDArray) =
   @mxcall(:MXNDArrayWaitToWrite, (MX_handle,), arr)
-end
 
 """
     try_get_shared(arr; sync=:nop)
@@ -926,19 +897,19 @@ Try to create a Julia array by sharing the data with the underlying `NDArray`.
   On CPU, invoke `_wait_to_read` if `:read`;
   invoke `_wait_to_write` if `:write`.
 """
-function try_get_shared(arr :: NDArray; sync::Symbol=:nop)
-  if context(arr).device_type == CPU
+function try_get_shared(x::NDArray; sync::Symbol=:nop)
+  if context(x).device_type == CPU
     # try to do data sharing
     if sync == :read
-      _wait_to_read(arr)
+      _wait_to_read(x)
     elseif sync == :write
-      _wait_to_write(arr)
+      _wait_to_write(x)
     end
 
-    unsafe_wrap(Array, pointer(arr), size(arr))
+    unsafe_wrap(Array, pointer(x), size(x))
   else
     # impossible to share, just copying
-    copy(arr)
+    copy(x)
   end
 end
 
@@ -952,16 +923,16 @@ Test whether `j_arr` is sharing data with `arr`.
 * `j_arr::Array`: the Julia Array.
 * `arr::NDArray`: the `NDArray`.
 """
-is_shared(j_arr :: Array, arr :: NDArray) = false
+is_shared(::Array, ::NDArray) = false
 
-function is_shared(j_arr :: Array{T}, arr :: NDArray) where T<:DType
+function is_shared(j_arr::Array{T}, arr::NDArray{T}) where {T<:DType}
   if length(j_arr) != length(arr)
     return false
   end
   if context(arr).device_type != CPU
     return false
   end
-  return pointer(j_arr) == pointer(arr)
+  pointer(j_arr) == pointer(arr)
 end
 
 """
@@ -980,7 +951,7 @@ corresponding components enabled. Examples:
 * `hdfs://my-bucket/path/my-hdfs-ndarray`
 * `/path-to/my-local-ndarray`
 """
-function load(filename::AbstractString, ::Type{NDArray})
+function load(filename::AbstractString, ::Type{<:NDArray})
   out_size      = Ref{MX_uint}(0)
   out_hdrs      = Ref{Ptr{MX_handle}}(0)
   out_name_size = Ref{MX_uint}(0)
@@ -999,25 +970,25 @@ function load(filename::AbstractString, ::Type{NDArray})
 end
 
 """
-    save(filename :: AbstractString, data)
+    save(filename::AbstractString, data)
 
 Save NDarrays to binary file. Filename could be S3 or HDFS address, if `libmxnet` is built
 with corresponding support (see `load`).
 
 * `filename::String`: path to the binary file to write to.
-* `data`: data to save to file. Data can be a`NDArray`, a `Vector{NDArray}`, or a `Dict{Base.Symbol, NDArray}`.
+* `data`: data to save to file. Data can be a`NDArray`, a `Vector` of `NDArray`,
+  or a `Dict{Symbol}` contains `NDArray`s.
 """
-function save(filename::String, data::NDArray)
-  save(filename, [data])
-end
-function save(filename::String, data::Vector{NDArray})
+save(filename::String, data::NDArray) = save(filename, [data])
+
+save(filename::String, data::VecOfNDArray) =
   @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
           filename, length(data), MX_handle[data...], char_pp(0))
-end
-function save(filename::String, data::Dict{Base.Symbol,NDArray})
-  names  = [k for k in keys(data)]
-  arrays = MX_handle[data[k] for k in names]
-  names  = String[string(k) for k in names]
+
+function save(filename::String, data::Dict{Symbol})
+  names  = keys(data)
+  arrays = MX_handle.(collect(values(data)))
+  names  = String.(collect(names))
 
   @mxcall(:MXNDArraySave, (char_p, MX_uint, Ptr{MX_handle}, char_pp),
           filename, length(names), arrays, names)
@@ -1047,7 +1018,7 @@ function _outexpr(name::Symbol, x #= the first arg of `sig` =#)
 end
 
 macro _remap(sig::Expr, imp::Expr)
-  fname = sig.args[1]
+  fname = (sig.head == :call) ? sig.args[1] : sig.args[1].args[1]  # case of `where`
   opname = string(imp.args[1])
 
   import_expr = _autoimport(fname)
@@ -1065,7 +1036,7 @@ macro _remap(sig::Expr, imp::Expr)
   ndhlds = Expr(:vect, map(x -> :($(x).handle), ndin)...)
 
   # handler for `func!` which has side effect on first argument.
-  T, n_output, hdls_ref, retexpr = _outexpr(fname, sig.args[2].args[1])
+  T, n_output, hdls_ref, retexpr = _outexpr(fname, _firstarg(sig))
 
   func_body = quote
     op_handle = _get_cached_libmx_op_handle($opname)
@@ -1126,7 +1097,7 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap minimum(arr::NDArray, dims) min(arr; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
-@_remap dot(x::NDArray, y::NDArray) dot(y, x)
+@_remap dot(x::NDArray{T,N}, y::NDArray{S,N}) where {T,S,N} dot(y, x)
 
 # See https://github.com/dmlc/MXNet.jl/pull/123
 @_remap transpose(arr::NDArray) transpose(_only2d(arr))
@@ -1192,7 +1163,7 @@ function _get_ndarray_function_def(name :: String)
   func_name = Symbol(name)
 
   func_def = quote
-    function $func_name(::Type{NDArray}, args::NDArray...; out=nothing, kwargs...)
+    function $func_name(::Type{<:NDArray}, args::NDArray...; out=nothing, kwargs...)
       if out != nothing
         output_vars = out
         if isa(output_vars, NDArray)

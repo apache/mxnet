@@ -8,46 +8,49 @@ be carried out with an executor.
 mutable struct Executor
   handle :: MX_ExecutorHandle
   symbol :: SymbolicNode
-  arg_arrays  :: Vector{NDArray}
-  grad_arrays :: Vector{Union{Void,NDArray}}
-  aux_arrays  :: Vector{NDArray}
-  outputs     :: Vector{NDArray}
-  arg_dict    :: Dict{Base.Symbol, NDArray}
-  aux_dict    :: Dict{Base.Symbol, NDArray}
+  arg_arrays  :: VecOfNDArray
+  grad_arrays :: Vector{Union{Void,<:NDArray}}
+  aux_arrays  :: VecOfNDArray
+  outputs     :: VecOfNDArray
+  arg_dict    :: Dict{Symbol}
+  aux_dict    :: Dict{Symbol}
 end
-function Executor(hdr :: MX_ExecutorHandle, symbol :: SymbolicNode,
-                  arg_arrays :: Vector{NDArray}, grad_arrays :: Vector{Union{Void,NDArray}},
-                  aux_arrays :: Vector{NDArray})
+
+function Executor(hdl::MX_ExecutorHandle, sym::SymbolicNode,
+                  arg_arrays::VecOfNDArray, grad_arrays::AbstractVector,
+                  aux_arrays::VecOfNDArray)
   # get output arrays
   ref_size = Ref{MX_uint}(0)
-  ref_hdrs = Ref{Ptr{MX_handle}}(0)
+  ref_hdls = Ref{Ptr{MX_handle}}(C_NULL)
   @mxcall(:MXExecutorOutputs, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_handle}}),
-          hdr, ref_size, ref_hdrs)
-  out_hdrs = unsafe_wrap(Array, ref_hdrs[], ref_size[])
+          hdl, ref_size, ref_hdls)
+  out_hdrs = unsafe_wrap(Array, ref_hdls[], ref_size[])
   out_arrays = [NDArray(MX_NDArrayHandle(x)) for x in out_hdrs]
 
-  arg_names = list_arguments(symbol)
+  arg_names = list_arguments(sym)
   @assert(length(arg_names) == length(unique(arg_names)), "Duplicated names in arguments: $arg_names")
-  arg_dict = Dict{Base.Symbol,NDArray}(zip(arg_names, arg_arrays))
+  arg_dict = Dict(zip(arg_names, arg_arrays))
 
-  aux_names = list_auxiliary_states(symbol)
+  aux_names = list_auxiliary_states(sym)
   @assert(length(aux_names) == length(unique(aux_names)), "Duplicated names in auxiliary states: $aux_names")
-  aux_dict = Dict{Base.Symbol,NDArray}(zip(aux_names, aux_arrays))
+  aux_dict = Dict(zip(aux_names, aux_arrays))
 
-  Executor(hdr, symbol, arg_arrays, grad_arrays, aux_arrays, out_arrays, arg_dict, aux_dict)
+  Executor(hdl, sym, arg_arrays, grad_arrays, aux_arrays, out_arrays, arg_dict, aux_dict)
 end
 
-function Base.unsafe_convert(::Type{MX_handle}, obj::Executor)
+Base.unsafe_convert(::Type{MX_handle}, obj::Executor) =
   Base.unsafe_convert(MX_handle, obj.handle)
-end
 Base.convert(t::Type{MX_handle}, obj::Executor) = Base.unsafe_convert(t, obj)
 Base.cconvert(t::Type{MX_handle}, obj::Executor) = Base.unsafe_convert(t, obj)
 
-function _get_ndarray_inputs(arg_key::AbstractString, args::Vector{NDArray}, arg_names::Vector{Base.Symbol}, allow_missing::Bool)
+function _get_ndarray_inputs(arg_key::AbstractString, args::VecOfNDArray,
+                             arg_names::Vector{Symbol}, allow_missing::Bool)
   @assert(length(args) == length(arg_names), "Length of $arg_key does not match number of arguments")
   return (MX_handle[args...], args)
 end
-function _get_ndarray_inputs(arg_key::AbstractString, args::Dict{Base.Symbol,NDArray}, arg_names::Vector{Base.Symbol}, allow_missing::Bool)
+
+function _get_ndarray_inputs(arg_key::AbstractString, args::Dict{Symbol},
+                             arg_names::Vector{Symbol}, allow_missing::Bool)
   args_vec = map(arg_names) do name
     arr = get(args, name, nothing)
     if !allow_missing
@@ -75,16 +78,16 @@ Create an `Executor` by binding a `SymbolicNode` to concrete `NDArray`.
 * `ctx::Context`: the context on which the computation should run.
 * `args`: either a list of `NDArray` or a dictionary of name-array pairs. Concrete
           arrays for all the inputs in the network architecture. The inputs typically include
-          network parameters (weights, bias, filters, etc.), data and labels. See [`list_arguments`](@ref)
-          and [`infer_shape`](@ref).
-* `args_grad`:
-* `aux_states`:
-* `grad_req`:
+          network parameters (weights, bias, filters, etc.), data and labels.
+          See [`list_arguments`](@ref) and [`infer_shape`](@ref).
+* `args_grad`: a `Vector` of `NDArray` or a `Dict` contains `NDArray`
+* `aux_states`: a `Vector` of `NDArray` or a `Dict` contains `NDArray`
+* `grad_req`: single value, a `Vector` of `GRAD_REQ` or a `Dict{Symbol,GRAD_REQ}`
 """
-function bind(self :: SymbolicNode, ctx :: Context, args :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}};
-              args_grad  :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}} = Dict{Base.Symbol,NDArray}(),
-              aux_states :: Union{Vector{NDArray},Dict{Base.Symbol,NDArray}} = Dict{Base.Symbol,NDArray}(),
-              grad_req   :: Union{GRAD_REQ,Vector{GRAD_REQ},Dict{Base.Symbol,GRAD_REQ}} = GRAD_WRITE)
+function bind(self::SymbolicNode, ctx::Context, args;
+              args_grad = Dict{Symbol,NDArray}(),
+              aux_states = Dict{Symbol,NDArray}(),
+              grad_req = GRAD_WRITE)
 
   arg_names = list_arguments(self)
 
@@ -97,7 +100,7 @@ function bind(self :: SymbolicNode, ctx :: Context, args :: Union{Vector{NDArray
   elseif isa(grad_req, Vector{GRAD_REQ})
     @assert(length(grad_req) == length(args))
     reqs = MX_uint[grad_req...]
-  elseif isa(grad_req, Dict{Base.Symbol, GRAD_REQ})
+  elseif isa(grad_req, Dict{Symbol, GRAD_REQ})
     reqs = MX_uint[get(grad_req, name, GRAD_NOP) for name in arg_names]
   end
 
@@ -111,20 +114,16 @@ function bind(self :: SymbolicNode, ctx :: Context, args :: Union{Vector{NDArray
   executor = Executor(MX_ExecutorHandle(ref_hdr[]), self,
                       args, args_grad, aux_states)
 end
-function bind(self :: SymbolicNode; kwargs...)
+
+function bind(x::SymbolicNode; context::Context = cpu(), kwargs...)
   kwargs = Dict(kwargs)
   @assert(haskey(kwargs, :args), "Must specify args")
   args = pop!(kwargs, :args)
-  if haskey(kwargs, :context)
-    context = pop!(kwargs, :context)
-  else
-    context = cpu()
-  end
-  bind(self, context, args; kwargs...)
+  bind(x, context, args; kwargs...)
 end
 
-function simple_bind(self :: SymbolicNode, ctx :: Context;
-                     grad_req :: Union{GRAD_REQ, Dict{Symbol, GRAD_REQ}}=GRAD_WRITE,
+function simple_bind(self::SymbolicNode, ctx::Context;
+                     grad_req::Union{GRAD_REQ,Dict{Symbol,GRAD_REQ}} = GRAD_WRITE,
                      kwargs...)
   arg_shapes, out_shapes, aux_shapes = infer_shape(self; kwargs...)
   @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
@@ -168,21 +167,15 @@ function forward(self::Executor; is_train::Bool = false, kwargs...)
   self.outputs
 end
 
-function backward(self :: Executor)
-  backward(self, NDArray[])
-end
-function backward(self :: Executor, out_grad :: NDArray)
-  backward(self, [out_grad])
-end
-function backward(self :: Executor, out_grads :: Vector{NDArray})
-  out_grads = MX_handle[out_grads...]
-  @mxcall(:MXExecutorBackward, (MX_handle, MX_uint, Ptr{MX_handle}), self, length(out_grads), out_grads)
-end
+backward(x::Executor) = backward(x, NDArray[])
+backward(x::Executor, out_grad::NDArray) = backward(x, [out_grad])
+backward(x::Executor, out_grads::VecOfNDArray) =
+  @mxcall(:MXExecutorBackward, (MX_handle, MX_uint, Ptr{MX_handle}),
+          x, length(out_grads), MX_handle[out_grads...])
 
-
-function copy_params_from(self::Executor, arg_params::Dict{Base.Symbol,NDArray},
-                          aux_params::Union{Void,Dict{Base.Symbol,NDArray}}=nothing;
-                          allow_extra_params::Bool=false)
+function copy_params_from(self::Executor, arg_params::Dict{Symbol},
+                          aux_params::Dict{Symbol} = Dict{Symbol,Any}();
+                          allow_extra_params::Bool = false)
   for (name, array) in arg_params
     if haskey(self.arg_dict, name)
       copy!(self.arg_dict[name], array)
@@ -191,13 +184,11 @@ function copy_params_from(self::Executor, arg_params::Dict{Base.Symbol,NDArray},
     end
   end
 
-  if !isa(aux_params, Void)
-    for (name, array) in aux_params
-      if haskey(self.aux_dict, name)
-        copy!(self.aux_dict[name], array)
-      else
-        @assert(allow_extra_params, "Extra auxiliary state $name not recognized")
-      end
+  for (name, array) in aux_params
+    if haskey(self.aux_dict, name)
+      copy!(self.aux_dict[name], array)
+    else
+      @assert(allow_extra_params, "Extra auxiliary state $name not recognized")
     end
   end
 end

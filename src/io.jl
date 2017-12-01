@@ -113,24 +113,29 @@ function get_label end
 A basic subclass of `AbstractDataBatch`, that implement the interface by
 accessing member fields.
 """
-mutable struct DataBatch <: AbstractDataBatch
-  data  :: Vector{NDArray}
-  label :: Vector{NDArray}
+mutable struct DataBatch{T,S,N,M} <: AbstractDataBatch
+  data  :: Vector{NDArray{T,N}}
+  label :: Vector{NDArray{S,M}}
   count :: Int
 end
-count_samples(batch :: DataBatch) = batch.count
-get_data(::Provider, batch :: DataBatch) where {Provider<:AbstractDataProvider} = batch.data
-get_label(::Provider, batch :: DataBatch) where {Provider<:AbstractDataProvider} = batch.label
+
+count_samples(batch::DataBatch) = batch.count
+
+get_data(::Provider, batch::DataBatch) where {Provider<:AbstractDataProvider} =
+  batch.data
+
+get_label(::Provider, batch::DataBatch) where {Provider<:AbstractDataProvider} =
+  batch.label
 
 """
     SlicedNDArray
 
 A alias type of `Tuple{UnitRange{Int},NDArray}`.
 """
-const SlicedNDArray = Tuple{UnitRange{Int},NDArray}
+const SlicedNDArray = Tuple{UnitRange{Int},<:NDArray}
 
 function _load_general!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
-                        targets :: Vector{Vector{SlicedNDArray}}, loader::Function)
+                        targets :: Vector{<:Vector{<:SlicedNDArray}}, loader::Function)
   data = loader(provider, batch)
   for (d_src, d_targets) in zip(data, targets)
     for (slice_idx, d_dst) in d_targets
@@ -157,7 +162,7 @@ This utility function is used in data parallelization, where a mini-batch is spl
 and computed on several different devices.
 """
 function load_data!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
-                    targets :: Vector{Vector{SlicedNDArray}})
+                    targets :: Vector{<:Vector{<:SlicedNDArray}})
   _load_general!(provider, batch, targets, get_data)
 end
 
@@ -171,16 +176,18 @@ end
 The same as [`load_data!`](@ref), except that this is for loading labels.
 """
 function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
-                     targets :: Vector{Vector{SlicedNDArray}})
+                     targets :: Vector{<:Vector{<:SlicedNDArray}})
   _load_general!(provider, batch, targets, get_label)
 end
 
-function load_data!(provider :: AbstractDataProvider, batch :: AbstractDataBatch, targets :: Vector{NDArray})
+function load_data!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
+                    targets :: Vector{<:NDArray})
   for (src, dst) in zip(get_data(provider, batch), targets)
     copy!(dst, src)
   end
 end
-function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatch, targets :: Vector{NDArray})
+function load_label!(provider :: AbstractDataProvider, batch :: AbstractDataBatch,
+                     targets :: Vector{<:NDArray})
   for (src, dst) in zip(get_label(provider, batch), targets)
     copy!(dst, src)
   end
@@ -198,7 +205,7 @@ import Base.get
 
 Returns the corresponding data array corresponding to that name.
 """
-function get(provider :: AbstractDataProvider, batch :: AbstractDataBatch, name :: Base.Symbol)
+function get(provider::AbstractDataProvider, batch::AbstractDataBatch, name::Symbol)
   for (idx, (k, s)) in enumerate(provide_data(provider))
     if name == k
       return get_data(provider, batch)[idx]
@@ -216,20 +223,20 @@ end
     eachbatch(provider::AbstractDataProvider)
 
 Allows you to perform operations on data every epoch. This is especially useful
-when you need to perform real-time augmentation of the data. 
+when you need to perform real-time augmentation of the data.
 
 # Arguments:
 * `provider`: an instance of the custom DataProvider type. You must return this
 instance after modifying its fields.
 
 """
-eachbatch(provider :: AbstractDataProvider) = provider
+eachbatch(provider::AbstractDataProvider) = provider
 
 """
     ArrayDataProvider
 
 A convenient tool to iterate `NDArray` or Julia `Array`.
- 
+
     ArrayDataProvider(data[, label]; batch_size, shuffle, data_padding, label_padding)
 
 Construct a data provider from `NDArray` or Julia Arrays.
@@ -252,19 +259,19 @@ Construct a data provider from `NDArray` or Julia Arrays.
 TODO: remove `data_padding` and `label_padding`, and implement rollover that copies
 the last or first several training samples to feed the padding.
 """
-mutable struct ArrayDataProvider <: AbstractDataProvider
-  data_arrays   :: Vector{Array}
-  data_names    :: Vector{Base.Symbol}
-  label_arrays  :: Vector{Array}
-  label_names   :: Vector{Base.Symbol}
+mutable struct ArrayDataProvider{T,N} <: AbstractDataProvider
+  data_arrays   :: Vector{Array{T,N}}
+  data_names    :: Vector{Symbol}
+  label_arrays
+  label_names   :: Vector{Symbol}
   batch_size    :: Int
   sample_count  :: Int
   shuffle       :: Bool
   data_padding  :: MX_float
   label_padding :: MX_float
 
-  data_batch    :: Vector{NDArray}
-  label_batch   :: Vector{NDArray}
+  data_batch
+  label_batch
 end
 
 # Julia's type system is sometimes very frustrating. You cannot specify a function
@@ -273,10 +280,14 @@ end
 # results, about the parametric type in the Pair{T1,T2} type, thus does not match the
 # generic Pair type. In general, Int <: Number but Vector{Int} <: Vector{Number} is not
 # true. So let us just use Any here...
-function ArrayDataProvider(data::Any; batch_size::Int=0, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
-  ArrayDataProvider(data, [], batch_size=batch_size, shuffle=shuffle, data_padding=data_padding, label_padding=label_padding)
+function ArrayDataProvider(data; batch_size::Int = 0, shuffle::Bool = false,
+                           data_padding::Real = 0, label_padding::Real = 0)
+  ArrayDataProvider(data, [], batch_size = batch_size, shuffle = shuffle,
+                    data_padding = data_padding, label_padding = label_padding)
 end
-function ArrayDataProvider(data::Any, label::Any; batch_size::Int=0, shuffle::Bool=false, data_padding::Real=0, label_padding::Real=0)
+
+function ArrayDataProvider(data, label; batch_size::Int = 0, shuffle::Bool = false,
+                           data_padding::Real = 0, label_padding::Real = 0)
   asarr(arr :: Array{T}) where {T} = convert(Array{MX_float}, arr)
   asarr(arr :: NDArray) = copy(arr)
 
@@ -349,16 +360,15 @@ function ArrayDataProvider(data::Any, label::Any; batch_size::Int=0, shuffle::Bo
   end
 
   ArrayDataProvider(data_arrays, data_names, label_arrays, label_names, batch_size,
-                    sample_count, shuffle, data_padding, label_padding, data_batch, label_batch)
+                    sample_count, shuffle, MX_float(data_padding), MX_float(label_padding),
+                    data_batch, label_batch)
 end
 
-function provide_data(provider::ArrayDataProvider)
-  return collect(zip(provider.data_names, map(size, provider.data_batch)))
-end
+provide_data(provider::ArrayDataProvider) =
+  collect(zip(provider.data_names, map(size, provider.data_batch)))
 
-function provide_label(provider::ArrayDataProvider)
-  return collect(zip(provider.label_names, map(size, provider.label_batch)))
-end
+provide_label(provider::ArrayDataProvider) =
+  collect(zip(provider.label_names, map(size, provider.label_batch)))
 
 get_batch_size(provider::ArrayDataProvider) = provider.batch_size
 
@@ -366,9 +376,7 @@ struct ArrayDataProviderState <: AbstractDataProviderState
   curr_idx :: Int
 end
 
-function Base.eltype(provider :: ArrayDataProvider)
-  ArrayDataProviderState
-end
+Base.eltype(provider :: ArrayDataProvider) = ArrayDataProviderState
 
 function Base.start(provider :: ArrayDataProvider)
   if provider.shuffle
@@ -381,9 +389,8 @@ function Base.start(provider :: ArrayDataProvider)
   return ArrayDataProviderState(1)
 end
 
-function Base.done(provider::ArrayDataProvider, state :: ArrayDataProviderState)
-  return state.curr_idx > provider.sample_count
-end
+Base.done(provider::ArrayDataProvider, state::ArrayDataProviderState) =
+  state.curr_idx > provider.sample_count
 
 struct ArrayDataBatch <: AbstractDataBatch
   idx :: UnitRange{Int}
@@ -425,8 +432,8 @@ a list of built-in data iterators.
 """
 mutable struct MXDataProvider <: AbstractDataProvider
   handle     :: MX_DataIterHandle
-  data_shape :: Vector{Tuple{Base.Symbol, Tuple}}
-  label_shape:: Vector{Tuple{Base.Symbol, Tuple}}
+  data_shape :: Vector{Tuple{Symbol,Tuple}}
+  label_shape:: Vector{Tuple{Symbol,Tuple}}
   batch_size :: Int
 
   # those two a auxiliary variables to help avoid calling reset
@@ -455,8 +462,8 @@ function _get_label(handle :: MX_DataIterHandle)
 end
 
 function MXDataProvider(handle     :: MX_DataIterHandle;
-                        data_name  :: Base.Symbol=:data,
-                        label_name :: Union{Base.Symbol,Void}=:softmax_label,
+                        data_name  :: Symbol = :data,
+                        label_name :: Union{Symbol,Void} = :softmax_label,
                         kwargs...) # for convenience, we ignore the rest keyword arguments
   # init iterator, load the first batch and get shapes
   @assert(_iter_next(handle), "Failed to load the first batch in MXDataProvider")
@@ -569,7 +576,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
   isprovider =  endswith(string(iter_name), "Iter")
   signature = _format_signature(Int(ref_narg[]), ref_arg_names)
   f_desc = "    " * string(iter_name) * "(" *signature * ")\n\n"
-  if isprovider 
+  if isprovider
     f_desc *= "Can also be called with the alias `$(string(iter_name)[1:end-4] * "Provider")`.\n"
   end
   f_desc *= unsafe_string(ref_desc[]) * "\n\n"

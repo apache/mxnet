@@ -202,3 +202,17 @@ function _sig_checker()
 
   end
 end
+
+"""
+Get first position argument from function sig
+"""
+function _firstarg(sig::Expr)
+  if sig.head ∈ (:where, :(::))
+    _firstarg(sig.args[1])
+  elseif sig.head == :call
+    i = (sig.args[2] isa Expr && sig.args[2].head == :parameters) ? 3 : 2
+    _firstarg(sig.args[i])
+  end
+end
+
+_firstarg(s::Symbol) = s

@@ -423,7 +423,7 @@ function test_saveload()
   j_array, nd_array = rand_tensors(dims)
   mx.save(fname, nd_array)
   data = mx.load(fname, mx.NDArray)
-  @test data isa Vector{mx.NDArray}
+  @test data isa Vector{<:mx.NDArray}
   @test length(data) == 1
   @test copy(data[1]) ≈ j_array
 
@@ -432,7 +432,7 @@ function test_saveload()
   nd_arrays = mx.NDArray[x[2] for x in arrays]
   mx.save(fname, nd_arrays)
   data = mx.load(fname, mx.NDArray)
-  @test isa(data, Vector{mx.NDArray})
+  @test data isa Vector{<:mx.NDArray}
   @test length(data) == n_arrays
   for i = 1:n_arrays
     @test copy(data[i]) ≈ arrays[i][1]
@@ -443,7 +443,7 @@ function test_saveload()
   dict = Dict([(n, v) for (n,v) in zip(names, nd_arrays)])
   mx.save(fname, dict)
   data = mx.load(fname, mx.NDArray)
-  @test data isa Dict{Symbol, mx.NDArray}
+  @test data isa Dict{Symbol,<:mx.NDArray}
   @test length(data) == n_arrays
   for i = 1:n_arrays
     @test copy(data[names[i]]) ≈ arrays[i][1]
@@ -592,6 +592,10 @@ function test_dot()
   y = mx.zeros(dims2)
   z = mx.dot(x, y)
   @test size(z) == (2, 8)
+
+  x = mx.zeros(1, 2)
+  y = mx.zeros(1, 2, 3)
+  @test_throws MethodError dot(x, y)
 end
 
 function test_eltype()
