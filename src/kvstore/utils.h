@@ -36,8 +36,7 @@ namespace kvstore {
  * without invoking sparse_retain op.
  */
 template<typename from_xpu, typename to_xpu>
-void CopyRetainedRowsImpl(mshadow::Stream<from_xpu>* from_stream,
-                          mshadow::Stream<to_xpu>* to_stream,
+void CopyRetainedRowsImpl(mshadow::Stream<to_xpu>* to_stream,
                           mshadow::Stream<gpu>* gpu_stream,
                           const NDArray& src,
                           const NDArray& indices,
@@ -66,15 +65,15 @@ void CopyRetainedRowsImpl(mshadow::Stream<from_xpu>* from_stream,
   MSHADOW_TYPE_SWITCH(src.dtype(), DType, {
     MSHADOW_IDX_TYPE_SWITCH(indices.dtype(), IType, {
       // copy idx array
-      Tensor<to_xpu, 1, IType> dst_idx_tensor = dst_idx_data.FlatTo1D<to_xpu, IType>(to_stream);
+      Tensor<to_xpu, 1, IType> dst_idx_tensor = dst_idx_data.FlatTo1D<to_xpu, IType>();
       const Tensor<cpu, 1, IType> idx_tensor = idx_data.FlatTo1D<cpu, IType>();
       Copy(dst_idx_tensor, idx_tensor, to_stream);
       // copy src data
       const Tensor<from_xpu, 2, DType> src_data_tensor =
           src_data.get_with_shape<from_xpu, 2, DType>(
-              Shape2(src_data.shape_[0], row_length), from_stream);
+              Shape2(src_data.shape_[0], row_length));
       Tensor<to_xpu, 2, DType> dst_data_tensor = dst_data.get_with_shape<to_xpu, 2, DType>(
-          Shape2(dst_data.shape_[0], row_length), to_stream);
+          Shape2(dst_data.shape_[0], row_length));
 
       for (size_t i = 0; i < num_rows_retained; ++i) {
         Copy(dst_data_tensor[i], src_data_tensor[idx_tensor[i]], gpu_stream);
@@ -92,13 +91,13 @@ void CopyRetainedRows(RunContext rctx,
   CHECK(is_src_gpu || is_dst_gpu) << "Not implemented for case of cpu to cpu";
 #if MXNET_USE_CUDA == 1
   if (is_src_gpu && is_dst_gpu) {
-    CopyRetainedRowsImpl<gpu, gpu>(rctx.get_stream<gpu>(), rctx.get_stream<gpu>(),
+    CopyRetainedRowsImpl<gpu, gpu>(rctx.get_stream<gpu>(),
       rctx.get_stream<gpu>(), src, indices, dst);
   } else if (!is_src_gpu && is_dst_gpu) {
-    CopyRetainedRowsImpl<cpu, gpu>(rctx.get_stream<cpu>(), rctx.get_stream<gpu>(),
+    CopyRetainedRowsImpl<cpu, gpu>(rctx.get_stream<gpu>(),
       rctx.get_stream<gpu>(), src, indices, dst);
   } else {
-    CopyRetainedRowsImpl<gpu, cpu>(rctx.get_stream<gpu>(), rctx.get_stream<cpu>(),
+    CopyRetainedRowsImpl<gpu, cpu>(rctx.get_stream<cpu>(),
       rctx.get_stream<gpu>(), src, indices, dst);
   }
 #else
