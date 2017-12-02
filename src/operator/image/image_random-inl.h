@@ -171,32 +171,20 @@ inline bool ImageShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#define SWAP_IF_INPLACE(dst, dst_idx, src, src_idx) \
-  if (dst == src) {                                 \
-    std::swap(dst[dst_idx], src[src_idx]);          \
-  } else {                                          \
-    dst[dst_idx] = src[src_idx];                    \
-  }
-
 template<typename DType, int axis>
-static void FlipImpl(const TShape &shape, DType *src, DType *dst) {
-  const int height = shape[0];
-  const int width = shape[1];
-  const int nchannel = shape[2];
+void FlipImpl(const TShape &shape, DType *src, DType *dst) {
+  int head = 1, mid = shape[axis], tail = 1;
+  for (int i = 0; i < axis; ++i) head *= shape[i];
+  for (int i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
 
-  const int length = width * nchannel;
-  const int height_stride = (src == dst && axis == 1) ? (height >> 1) : height;
-  const int width_stride = (src == dst && axis == 0) ? (width >> 1) : width;
-  for (int h = 0; h < height_stride; ++h) {
-    const int h_dst = (axis == 0) ? h : (height - h - 1);
-    for (int w = 0; w < width_stride; ++w) {
-      const int w_dst = (axis == 0) ? (width - w - 1) : w;
-      const int idx_dst = h_dst * length + w_dst * nchannel;
-      const int idx_src = h * length + w * nchannel;
-      SWAP_IF_INPLACE(dst, idx_dst, src, idx_src);
-      if (nchannel > 1) {
-        SWAP_IF_INPLACE(dst, idx_dst + 1, src, idx_src + 1);
-        SWAP_IF_INPLACE(dst, idx_dst + 2, src, idx_src + 2);
+  for (int i = 0; i < head; ++i) {
+    for (int j = 0; j < (mid >> 1); ++j) {
+      int idx1 = (i*mid + j) * tail;
+      int idx2 = idx1 + (mid-(j << 1)-1) * tail;
+      for (int k = 0; k < tail; ++k, ++idx1, ++idx2) {
+        DType tmp = src[idx1];
+        dst[idx1] = src[idx2];
+        dst[idx2] = tmp;
       }
     }
   }
@@ -217,7 +205,7 @@ void RandomHorizontalFlip(
         std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
       }
     } else {
-      FlipImpl<DType, 0>(inputs[0].shape_, inputs[0].dptr<DType>(),
+      FlipImpl<DType, 1>(inputs[0].shape_, inputs[0].dptr<DType>(),
                          outputs[0].dptr<DType>());
     }
   });
@@ -238,7 +226,7 @@ void RandomVerticalFlip(
         std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
       }
     } else {
-      FlipImpl<DType, 1>(inputs[0].shape_, inputs[0].dptr<DType>(),
+      FlipImpl<DType, 0>(inputs[0].shape_, inputs[0].dptr<DType>(),
                          outputs[0].dptr<DType>());
     }
   });

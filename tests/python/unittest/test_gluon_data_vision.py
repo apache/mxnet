@@ -24,20 +24,9 @@ from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
 
-def run_random(func, func_expect, data_in, n=100, ratio_same=0.5, ratio_delta=0.1):
-    num_same = 0
-    for i in range(n):
-        data_trans = func(nd.array(data_in, dtype='uint8')).asnumpy()
-        if almost_equal(data_trans, data_in):
-            num_same += 1
-        else:
-            assert_almost_equal(func_expect(data_in), data_trans)
-    ratio = num_same * 1.0 / n
-    assert ratio >= ratio_same - ratio_delta and ratio <= ratio_same + ratio_delta
-
 def test_to_tensor():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    out_nd = transforms.ToTensor()(nd.array(data_in))
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(out_nd.asnumpy(), np.transpose(
         data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
 
@@ -50,6 +39,17 @@ def test_normalize():
     data_expected[:][:][1] = (data_expected[:][:][1] - 1.0) / 2.0
     data_expected[:][:][2] = data_expected[:][:][2] - 2.0
     assert_almost_equal(data_expected, out_nd.asnumpy())
+
+def run_random(func, func_expect, data_in, n=100, ratio_same=0.5, ratio_delta=0.1):
+    num_same = 0
+    for i in range(n):
+        data_trans = func(nd.array(data_in, dtype='uint8')).asnumpy()
+        if almost_equal(data_trans, data_in):
+            num_same += 1
+        else:
+            assert_almost_equal(func_expect(data_in), data_trans)
+    ratio = num_same * 1.0 / n
+    assert ratio >= ratio_same - ratio_delta and ratio <= ratio_same + ratio_delta
 
 def test_random_horizontal_flip():
     f = transforms.RandomHorizontalFlip()
