@@ -226,21 +226,28 @@ import Base: size, length, ndims, eltype
 
 """
     size(x::NDArray)
-    size(x::NDArray, dim)
+    size(x::NDArray, dims...)
 
 Get the shape of an `NDArray`. The shape is in Julia's column-major convention.
 See also the notes on NDArray shapes [`NDArray`](@ref).
 """
-function size(arr :: NDArray)
+function size(x::NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
-          arr, ref_ndim, ref_shape)
+          x, ref_ndim, ref_shape)
   tuple(map(Int, flipdim(unsafe_wrap(Array, ref_shape[], ref_ndim[]),1))...)
 end
-function size(arr :: NDArray, dim :: Int)
-  size(arr)[dim]
+
+function size(x::NDArray{T,N}, dim::Int) where {T,N}
+  if dim > N
+    1
+  else
+    size(x)[dim]
+  end
 end
+
+size(x::NDArray, dims::Int...) = map(d -> size(x, d), dims)
 
 """
     length(x::NDArray)

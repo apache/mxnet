@@ -16,6 +16,22 @@
   (MXNet.mx.SymbolicNode x, MXNet.mx.SymbolicNode y, MXNet.mx.SymbolicNode z)
   ```
 
+### `NDArray`
+
+* `size(x, dims...)` is supported now. (#TBD)
+
+  ```julia
+  julia> x = mx.NDArray([1 2; 3 4; 5 6])
+  3×2 mx.NDArray{Int64,2} @ CPU0:
+   1  2
+   3  4
+   5  6
+
+  julia> size(x, 1, 2, 3, 4)
+  (3, 2, 1, 1)
+
+  ```
+
 # v0.3.0 (2017.11.16)
 
 * Update `libmxnet` to
