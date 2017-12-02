@@ -42,7 +42,7 @@ double OperatorTuneBase::tuning_weight_scale_ = 0.0;
   template<> std::vector<__typ$> OperatorTune<__typ$>::data_set_ = {}; \
   template<> volatile tune::TuningMode OperatorTuneByType<__typ$>::tuning_mode_ = tune::kAuto; \
   template<> volatile int OperatorTune<__typ$>::volatile_int_ = 9;  /* arbitrary number */ \
-  template<> std::unordered_set<std::string> OperatorTune<__typ$>::operator_names_ = {}; \
+  template<> std::unordered_set<std::string> OperatorTune<__typ$>::operator_names_({}); \
   template<> bool OperatorTune<__typ$>::output_tuning_data_ = false; \
   template<> std::list<void (*)()> *OperatorTune<__typ$>::GetTuningList() { \
     static std::list<void (*)()> ll; \
