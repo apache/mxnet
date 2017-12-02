@@ -336,27 +336,24 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
       default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
     }
   } else if (stype == kRowSparseStorage) {
-    switch (ret.ctx().dev_mask()) {
-      case cpu::kDevMask: {
-        Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-            op::SetValueRsp(ctx.get_stream<cpu>(), rhs, ret);
-          }, ret.ctx(), {}, {ret.var()},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-        break;
-      }
+    Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
+        switch (ret.ctx().dev_mask()) {
+          case cpu::kDevMask: {
+            ndarray::SetValueRsp(ctx.get_stream<cpu>(), rhs, ret);
+            break;
+          }
 #if MXNET_USE_CUDA
-      case gpu::kDevMask: {
-        Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-            op::SetValueRsp(ctx.get_stream<gpu>(), rhs, ret);
+          case gpu::kDevMask: {
+            ndarray::SetValueRsp(ctx.get_stream<gpu>(), rhs, ret);
             // Wait GPU kernel to complete
             ctx.get_stream<gpu>()->Wait();
-          }, ret.ctx(), {}, {ret.var()},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-        break;
-      }
+            break;
+          }
 #endif
-      default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-    }
+          default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        }
+      }, ret.ctx(), {}, {ret.var()},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
   } else {
     LOG(FATAL) << "Not implemented for " << stype;
   }

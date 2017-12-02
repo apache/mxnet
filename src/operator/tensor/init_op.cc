@@ -28,14 +28,6 @@
 namespace mxnet {
 namespace op {
 
-template<>
-void SetValueRsp<cpu>(mshadow::Stream<cpu> *s,
-                      const real_t val, const NDArray& dst) {
-  NDArray temp = dst;
-  SetValueRspImpl(s, val, &temp);
-}
-
-
 DMLC_REGISTER_PARAMETER(InitOpParam);
 DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
 DMLC_REGISTER_PARAMETER(RangeParam);

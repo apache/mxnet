@@ -183,5 +183,13 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
   }
 }
 
+
+template<>
+void SetValueRsp<cpu>(mshadow::Stream<cpu> *s,
+                      const real_t val, const NDArray& dst) {
+  NDArray temp = dst;
+  SetValueRspImpl(s, val, &temp);
+}
+
 }  // namespace ndarray
 }  // namespace mxnet

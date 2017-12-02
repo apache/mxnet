@@ -43,12 +43,6 @@ void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst) {
   });
 }
 
-template<>
-void SetValueRsp<gpu>(mshadow::Stream<gpu> *s,
-                      const real_t val, const NDArray& dst) {
-  NDArray temp = dst;
-  SetValueRspImpl(s, val, &temp);
-}
 
 NNVM_REGISTER_OP(_zeros)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>)

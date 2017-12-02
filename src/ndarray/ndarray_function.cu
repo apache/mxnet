@@ -203,5 +203,12 @@ void ElementwiseSum<gpu>(mshadow::Stream<gpu>* s,
   }
 }
 
+template<>
+void SetValueRsp<gpu>(mshadow::Stream<gpu> *s,
+                      const real_t val, const NDArray& dst) {
+  NDArray temp = dst;
+  SetValueRspImpl(s, val, &temp);
+}
+
 }  // namespace ndarray
 }  // namespace mxnet
