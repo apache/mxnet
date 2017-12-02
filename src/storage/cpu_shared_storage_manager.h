@@ -139,6 +139,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
+  close(fid);
 #endif  // _WIN32
 
   if (is_new) {
