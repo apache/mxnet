@@ -88,9 +88,17 @@ struct data_type_enum<uint8_t> {
   enum { type = mkldnn::memory::data_type::u8 };
 };
 
+static inline bool SupportMKLDNNArray(int dtype, const TShape &shape) {
+  int ndim = shape.ndim();
+  bool support = ndim == 1 || ndim == 2 || ndim == 4;
+  support = support && (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32
+                        || dtype == mshadow::kInt8 || dtype == mshadow::kUint8);
+  return support;
+}
+
 static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
   int ndim = shape.ndim();
-  return ndim == 1 || ndim == 2 || ndim == 4;
+  return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNN(const NDArray &input) {
