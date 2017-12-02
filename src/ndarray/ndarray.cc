@@ -52,7 +52,7 @@ static inline NDArrayStorageType DetermineSType(NDArrayStorageType stype, int dt
 #if MXNET_USE_MKLDNN == 1
   // We can't always generate a MKLDNN storage. If MKLDNN can't support the data type,
   // we'll have to fall back to the default storage.
-  if (stype == kMKLDNNStorage && !SupportMKLDNN(dtype, shape))
+  if (stype == kMKLDNNStorage && !SupportMKLDNNArray(dtype, shape))
     return kDefaultStorage;
   else
 #endif
