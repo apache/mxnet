@@ -571,10 +571,10 @@ function add_to!(dst::NDArray{T}, args::NDArrayOrReal...) where T
     if isa(arg, Real)
       _plus_scalar(dst, scalar = convert(T, arg), out = dst)
     else
-      _plus(dst, arg, out = dst)
+      _plus!(dst, arg)
     end
   end
-  return dst
+  dst
 end
 
 import Base: +
@@ -1100,6 +1100,9 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 # remapping to solving type unstablility
 ################################################################################
 
+@_remap _plus(x::NDArray, y::NDArray)  _plus(x, y)
+@_remap _plus!(x::NDArray, y::NDArray) _plus(x, y)
+
 @_remap _minus(x::NDArray, y::NDArray)  _minus(x, y)
 @_remap _minus!(x::NDArray, y::NDArray) _minus(x, y)
 
@@ -1228,6 +1231,8 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "dot",
     "transpose",
     "prod",
+
+    "_plus",
     "_minus",
 ]
 
