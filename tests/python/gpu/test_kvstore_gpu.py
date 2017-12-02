@@ -73,5 +73,6 @@ def test_rsp_push_pull():
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 
+
 if __name__ == '__main__':
     test_rsp_push_pull()
