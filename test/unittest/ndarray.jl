@@ -161,6 +161,13 @@ function test_first()
   end
 end  # function test_first
 
+function test_endof()
+  info("NDArray::endof")
+  let A = [1 2; 3 4; 5 6], x = mx.NDArray(A)
+    @test endof(A) == endof(x)
+  end
+end  # function test_endof
+
 function test_plus()
   dims   = rand_dims()
   t1, a1 = rand_tensors(dims)
@@ -789,6 +796,7 @@ end  # function test_size()
   test_slice()
   test_linear_idx()
   test_first()
+  test_endof()
   test_plus()
   test_minus()
   test_mul()
