@@ -23,13 +23,15 @@ import argparse, os
 
 parser = argparse.ArgumentParser(description="Run factorization machine with criteo dataset",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data', type=str, default="./data/",
-                    help='training LibSVM files to use.')
+parser.add_argument('--data-train', type=str, default=None,
+                    help='training dataset in LibSVM format.')
+parser.add_argument('--data-test', type=str, default=None,
+                    help='test dataset in LibSVM format.')
 parser.add_argument('--num-epoch', type=int, default=1,
                     help='number of epochs to train')
 parser.add_argument('--batch-size', type=int, default=1000,
                     help='number of examples per batch')
-parser.add_argument('--input-size', type=int, default=2000000,
+parser.add_argument('--input-size', type=int, default=1000000,
                     help='number of features in the input')
 parser.add_argument('--factor-size', type=int, default=16,
                     help='number of latent variables')
@@ -70,12 +72,16 @@ if __name__ == '__main__':
     factor_size = args.factor_size
     num_features = args.input_size
     log_interval = args.log_interval
+    assert(args.data_train is not None)
+    assert(args.data_test is not None)
 
     # create kvstore
     kv = mx.kvstore.create(kvstore)
     # data iterator
-    train_data = mx.io.LibSVMIter(data_libsvm=args.data, data_shape=(num_features,),
+    train_data = mx.io.LibSVMIter(data_libsvm=args.data_train, data_shape=(num_features,),
                                   batch_size=batch_size)
+    eval_data = mx.io.LibSVMIter(data_libsvm=args.data_test, data_shape=(num_features,),
+                                 batch_size=batch_size)
     # model
     lr_config = {'v': args.factor_lr, 'w': args.linear_lr, 'w0': args.bias_lr}
     wd_config = {'v': args.factor_wd, 'w': args.linear_wd, 'w0': args.bias_wd}
@@ -103,11 +109,12 @@ if __name__ == '__main__':
     v_param = mod._exec_group.param_arrays[v_index]
 
     logging.info('Training started ...')
-    data_iter = iter(train_data)
+    train_iter = iter(train_data)
+    eval_iter = iter(eval_data)
     for epoch in range(num_epoch):
         nbatch = 0
         metric.reset()
-        for batch in data_iter:
+        for batch in train_iter:
             nbatch += 1
             # manually pull sparse weights from kvstore so that _square_sum
             # only computes the rows necessary
@@ -122,6 +129,14 @@ if __name__ == '__main__':
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=metric, locals=locals())
             speedometer(speedometer_param)
+
+        # pull all updated rows before validation
+        kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
+        kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
+        # evaluate metric on validation dataset
+        score = mod.score(eval_iter, ['log_loss'])
+        logging.info("epoch %d, eval log loss = %s" % (epoch, score[0][1]))
         # reset the iterator for next pass of data
-        data_iter.reset()
+        train_iter.reset()
+        eval_iter.reset()
     logging.info('Training completed.')
