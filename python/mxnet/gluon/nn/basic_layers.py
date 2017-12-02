@@ -418,6 +418,7 @@ class LeakyReLU(HybridBlock):
 
 class PReLU(HybridBlock):
     r"""Parametric leaky version of a Rectified Linear Unit.
+    <https://arxiv.org/abs/1502.01852>`_ paper.
 
     It learns a gradient when the unit is not active
 
