@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
     # construct the module
     # map the ctx_group attribute to the context assignment
-    group2ctxs={'dev1':mx.cpu(), 'dev2':[mx.gpu(i) for i in range(num_gpus)]}
+    group2ctxs={'dev1':[mx.cpu()]*num_gpus, 'dev2':[mx.gpu(i) for i in range(num_gpus)]}
     mod = mx.module.Module(symbol=net, context=[mx.cpu()]*num_gpus, data_names=['user', 'item'],
         label_names=['score'], group2ctxs=group2ctxs)
     

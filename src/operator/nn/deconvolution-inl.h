@@ -66,9 +66,11 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (h, w) or (d, h, w). "
                   "This is same as the kernel size used for the corresponding convolution");
     DMLC_DECLARE_FIELD(stride).set_default(TShape())
-        .describe("The stride used for the corresponding convolution: (h, w) or (d, h, w).");
+        .describe("The stride used for the corresponding convolution: (h, w) or (d, h, w). "
+                  "Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(dilate).set_default(TShape())
-        .describe("Dilation factor for each dimension of the input: (h, w) or (d, h, w).");
+        .describe("Dilation factor for each dimension of the input: (h, w) or (d, h, w). "
+                  "Defaults to 1 for each dimension.");
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
         .describe("The amount of implicit zero padding added during convolution for each "
                   "dimension of the input: "
@@ -76,7 +78,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
                   "``(kernel-1)/2`` is usually a good choice. "
                   "If `target_shape` is set, "
                   "`pad` will be ignored and a padding that will generate the target shape "
-                  "will be used.");
+                  "will be used. Defaults to no padding.");
     DMLC_DECLARE_FIELD(adj).set_default(TShape())
         .describe("Adjustment for output shape: (h, w) or (d, h, w). "
                   "If `target_shape` is set, "
