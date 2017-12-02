@@ -51,20 +51,19 @@ def run_random(func, func_expect, data_in, n=100, ratio_same=0.5, ratio_delta=0.
     ratio = num_same * 1.0 / n
     assert ratio >= ratio_same - ratio_delta and ratio <= ratio_same + ratio_delta
 
-def test_random_horizontal_flip():
-    f = transforms.RandomHorizontalFlip()
+def test_random_left_right_flip():
     def f_expect(img):
         pil_img = Image.fromarray(img).transpose(Image.FLIP_LEFT_RIGHT)
         return np.array(pil_img)
-    run_random(transforms.RandomHorizontalFlip(),
+    run_random(transforms.RandomLeftRightFlip(),
         f_expect,
         np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8))
 
-def test_random_vertical_flip():
+def test_random_top_bottom_flip():
     def f_expect(img):
         pil_img = Image.fromarray(img).transpose(Image.FLIP_TOP_BOTTOM)
         return np.array(pil_img)
-    run_random(transforms.RandomVerticalFlip(),
+    run_random(transforms.RandomTopBottomFlip(),
         f_expect,
         np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8))
 

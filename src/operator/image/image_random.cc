@@ -65,13 +65,13 @@ NNVM_REGISTER_OP(_image_normalize)
 .add_arguments(NormalizeParam::__FIELDS__());
 
 
-MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_horizontal_flip)
+MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_left_right_flip)
 .describe(R"code()code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", RandomHorizontalFlip);
+.set_attr<FCompute>("FCompute<cpu>", RandomLeftRightFlip);
 
-MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_vertical_flip)
+MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_top_bottom_flip)
 .describe(R"code()code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", RandomVerticalFlip);
+.set_attr<FCompute>("FCompute<cpu>", RandomTopBottomFlip);
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_brightness)
 .describe(R"code()code" ADD_FILELINE)

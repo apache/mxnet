@@ -190,7 +190,7 @@ void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   }
 }
 
-void RandomHorizontalFlip(
+void RandomLeftRightFlip(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -211,7 +211,7 @@ void RandomHorizontalFlip(
   });
 }
 
-void RandomVerticalFlip(
+void RandomTopBottomFlip(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
