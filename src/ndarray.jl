@@ -128,18 +128,17 @@ Base.cconvert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
 # NDArray functions exported to the users
 ################################################################################
 """
-    context(arr :: NDArray)
+    context(arr::NDArray)
 
 Get the context that this `NDArray` lives on.
 """
-function context(arr :: NDArray)
+function context(arr::NDArray)
   ref_typeid = Ref{Cint}(0)
   ref_devid  = Ref{Cint}(0)
   @mxcall(:MXNDArrayGetContext, (MX_handle, Ref{Cint}, Ref{Cint}),
           arr, ref_typeid, ref_devid)
   return Context(ref_typeid[], ref_devid[])
 end
-
 
 """
     empty(DType, dims[, ctx::Context = cpu()])
@@ -148,26 +147,19 @@ end
 
 Allocate memory for an uninitialized `NDArray` with a specified type.
 """
-empty(::Type{T}, dims::NTuple{N, Int}, ctx::Context = cpu()) where {N,T<:DType} =
+empty(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType} =
   NDArray{T, N}(_ndarray_alloc(T, dims, ctx, false))
 empty(::Type{T}, dims::Int...) where {T<:DType} = empty(T, dims)
 
 """
-    empty(shape :: Tuple, ctx :: Context)
-    empty(shape :: Tuple)
+    empty(dims::Tuple[, ctx::Context = cpu()])
     empty(dim1, dim2, ...)
 
 Allocate memory for an uninitialized `NDArray` with specific shape of type Float32.
 """
-function empty(shape :: NTuple{N, Int}) where N
-  empty(shape, cpu())
-end
-function empty(shape :: NTuple{N, Int}, ctx :: Context) where N
-  NDArray(_ndarray_alloc(shape, ctx, false))
-end
-function empty(shape :: Int...)
-  empty(shape)
-end
+empty(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
+  NDArray(_ndarray_alloc(dims, ctx, false))
+empty(dims::Int...) = empty(dims)
 
 """
     similar(x::NDArray)
@@ -184,7 +176,7 @@ Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
 
 Create zero-ed `NDArray` with specific shape and type.
 """
-function zeros(::Type{T}, dims::NTuple{N, Int}, ctx::Context = cpu()) where {N,T<:DType}
+function zeros(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
   arr = empty(T, dims, ctx)
   arr[:] = zero(T)
   arr
@@ -200,46 +192,35 @@ Create zero-ed `NDArray` with specific shape.
 """
 zeros(dims::NTuple{N, Int}, ctx::Context = cpu()) where N =
   zeros(MX_float, dims, ctx)
-
 zeros(dims::Int...) = zeros(dims)
 
 """
-    ones(DType, shape :: Tuple, ctx :: Context)
-    ones(DType, shape :: Tuple)
-    ones(DType, dim1, dim2, ...)
+    ones(DType, dims::Tuple[, ctx::Context = cpu()])
+    ones(DType, dim1, dim2...)
 
 Create an `NDArray` with specific shape & type, and initialize with 1.
 """
-function ones(:: Type{T}, shape :: NTuple{N, Int}) where {N,T<:DType}
-  ones(T, shape, cpu())
-end
-function ones(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context) where {N,T<:DType}
-  arr = empty(T, shape, ctx)
+function ones(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
+  arr = empty(T, dims, ctx)
   arr[:] = one(T)
-  return arr
-end
-function ones(:: Type{T}, shape :: Int...) where T<:DType
-  ones(T, shape)
+  arr
 end
 
+ones(::Type{T}, dims::Int...) where T<:DType = ones(T, dims)
+
 """
-    ones(shape :: Tuple, ctx :: Context)
-    ones(shape :: Tuple)
+    ones(dims::Tuple[, ctx::Context = cpu()])
     ones(dim1, dim2, ...)
 
 Create an `NDArray` with specific shape and initialize with 1.
 """
-function ones(shape :: NTuple{N, Int}) where N
-  ones(shape, cpu())
-end
-function ones(shape :: NTuple{N, Int}, ctx :: Context) where N
-  arr = empty(shape, ctx)
+function ones(dims::NTuple{N,Int}, ctx::Context = cpu()) where N
+  arr = empty(dims, ctx)
   arr[:] = 1
-  return arr
+  arr
 end
-function ones(shape :: Int...)
-  ones(shape)
-end
+
+ones(dims::Int...) = ones(dims)
 
 import Base: size, length, ndims, eltype
 
