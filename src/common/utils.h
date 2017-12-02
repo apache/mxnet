@@ -214,7 +214,9 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
   }
 }
 
-
+/*! \brief Pick rows specified by user input index array from a row sparse ndarray
+ *         and save them in the output sparse ndarray.
+ */
 template<typename xpu>
 void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
                                      const NDArray& input_nd,
@@ -222,6 +224,8 @@ void SparseRetainOpForwardRspWrapper(mshadow::Stream<xpu> *s,
                                      const OpReqType req,
                                      NDArray* output_nd);
 
+/* \brief Casts tensor storage type to the new type.
+ */
 template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 

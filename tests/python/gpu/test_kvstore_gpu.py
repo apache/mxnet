@@ -37,10 +37,12 @@ def init_kv_with_str(stype='default', kv_type='local'):
 
 
 def test_rsp_push_pull():
-    def check_rsp_push_pull(kv_type):
+    def check_rsp_push_pull(kv_type, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
         kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
-        kv.push('e', [mx.nd.ones(shape, ctx=mx.gpu(i)).tostype('row_sparse') for i in range(2)])
+        push_ctxs = [mx.cpu(i) if is_push_cpu else mx.gpu(i) for i in range(2)]
+        kv.push('e', [mx.nd.ones(shape, ctx=context).tostype('row_sparse') for context in push_ctxs])
+
         def check_rsp_pull(kv, count, ctxs):
             num_rows = shape[0]
             vals = []
@@ -63,9 +65,13 @@ def test_rsp_push_pull():
                     assert_almost_equal(retained[row], expected_val)
 
         check_rsp_pull(kv, 1, [mx.gpu(0)])
+        check_rsp_pull(kv, 1, [mx.cpu(0)])
         check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)])
+        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)])
+
     check_rsp_push_pull('local')
     check_rsp_push_pull('device')
+    check_rsp_push_pull('device', is_push_cpu=False)
 
 if __name__ == '__main__':
     test_rsp_push_pull()
