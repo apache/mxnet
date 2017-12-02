@@ -120,7 +120,7 @@ class CorpusIter(mx.io.DataIter):
             return False
         self._next_data = self._source[i:i+self._bptt]
         self._next_label = self._source[i+1:i+1+self._bptt].astype(np.float32)
-        self._next_sample = mx.nd.random.multinomial(self._unigram, shape=(self._k,)).astype(np.float32)
+        self._next_sample = mx.nd.random.multinomial(self._unigram, shape=(self._k,))
         self._index += self._bptt
         return True
 
