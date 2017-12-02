@@ -619,9 +619,9 @@ class CommDevice : public Comm {
         } else {
           const bool is_diff_ctx = out->ctx() != src.ctx();
           NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
-              out->ctx(), true, out->dtype(), out->aux_types()) : *out;
+              src.ctx(), true, out->dtype(), out->aux_types()) : *out;
 
-          NDArray row_id_gpu = NDArray(row_id.shape(), out->ctx(), false, mshadow::kInt64);
+          NDArray row_id_gpu = NDArray(row_id.shape(), src.ctx(), false, mshadow::kInt64);
           const TBlob& indices = row_id_gpu.data();
           CopyFromTo(row_id, &row_id_gpu, priority);
 
