@@ -30,9 +30,19 @@
 namespace mxnet {
 namespace op {
 
-
-// compute the number of elements of every row
+/*!
+ * \brief Compute the number of elements of every row.
+ */
 struct SliceMarkCsrIndPtr {
+  /*! 
+   * \brief
+   * \param i           the i-th row of the output csr ndarray
+   * \param prefix_sum  indptr array of the output csr ndarray
+   * \param in_idx      indices array of the input csr ndarray
+   * \param in_indptr   indptr array of the input csr ndarray
+   * \param begin_col   starting indice
+   * \param end_col     ending indice
+   */
   template<typename IType, typename RType>
   MSHADOW_XINLINE static void Map(int i,
                                   RType* prefix_sum,
