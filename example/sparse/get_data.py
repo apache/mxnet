@@ -20,7 +20,7 @@ import sys
 import mxnet as mx
 
 class DummyIter(mx.io.DataIter):
-    "A dummy iterator that always returns the same batch, used for speed testing"
+    "A dummy iterator that always return the same batch, used for speed testing"
     def __init__(self, real_iter):
         super(DummyIter, self).__init__()
         self.real_iter = real_iter
