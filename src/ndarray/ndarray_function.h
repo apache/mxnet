@@ -189,14 +189,20 @@ void ElementwiseSum(mshadow::Stream<xpu>* s,
 template<typename xpu>
 void SetValueRspImpl(mshadow::Stream<xpu> *s,
                      const real_t val, NDArray *dst) {
-  mxnet::op::PopulateFullIdxRspImpl(s, dst);
-  dst->CheckAndAllocData(dst->shape());
-  mxnet::op::Fill<false>(s, dst->data(), kWriteTo, val);
+  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
+  using namespace mxnet::op;
+  nnvm::dim_t nnr = dst->shape()[0];
+  dst->CheckAndAlloc({mshadow::Shape1(nnr)});
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(rowsparse::kIdx), IType, {
+    IType* idx = dst->aux_data(rowsparse::kIdx).dptr<IType>();
+    mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
+  });
+  Fill<false>(s, dst->data(), kWriteTo, val);
 }
 
 template<typename xpu>
-void SetValueRsp(mshadow::Stream<xpu> *s,
-                 const real_t val, const NDArray& dst);
+void Eval(mshadow::Stream<xpu> *s,
+          const real_t val, const NDArray& dst);
 
 // broadcasting
 template <typename Device>

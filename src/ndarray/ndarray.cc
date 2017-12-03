@@ -310,53 +310,33 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
   // important: callback must always capture by value
   NDArray ret = *out;
   const NDArrayStorageType stype = ret.storage_type();
-  if (stype == kDefaultStorage) {
-    switch (ret.ctx().dev_mask()) {
-      case cpu::kDevMask: {
-        Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-            CHECK(ret.storage_type() == kDefaultStorage);
-            TBlob tmp = ret.data();
+  Engine::Get()->PushSync([rhs, ret, stype](RunContext ctx) {
+      TBlob tmp = ret.data();
+      switch (ret.ctx().dev_mask()) {
+        case cpu::kDevMask: {
+          if (stype == kDefaultStorage) {
             ndarray::Eval<cpu>(rhs, &tmp, ctx);
-          }, ret.ctx(), {}, {ret.var()},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-        break;
-      }
-#if MXNET_USE_CUDA
-      case gpu::kDevMask: {
-        Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-            TBlob tmp = ret.data();
-            ndarray::Eval<gpu>(rhs, &tmp, ctx);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
-          }, ret.ctx(), {}, {ret.var()},
-          FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-        break;
-      }
-#endif
-      default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-    }
-  } else if (stype == kRowSparseStorage) {
-    Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-        switch (ret.ctx().dev_mask()) {
-          case cpu::kDevMask: {
-            ndarray::SetValueRsp(ctx.get_stream<cpu>(), rhs, ret);
-            break;
+          } else {
+            ndarray::Eval(ctx.get_stream<cpu>(), rhs, ret);
           }
-#if MXNET_USE_CUDA
-          case gpu::kDevMask: {
-            ndarray::SetValueRsp(ctx.get_stream<gpu>(), rhs, ret);
-            // Wait GPU kernel to complete
-            ctx.get_stream<gpu>()->Wait();
-            break;
-          }
-#endif
-          default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+          break;
         }
-      }, ret.ctx(), {}, {ret.var()},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-  } else {
-    LOG(FATAL) << "Not implemented for " << stype;
-  }
+#if MXNET_USE_CUDA
+        case gpu::kDevMask: {
+          if (stype == kDefaultStorage) {
+            ndarray::Eval<gpu>(rhs, &tmp, ctx);
+          } else {
+            ndarray::Eval(ctx.get_stream<gpu>(), rhs, ret);
+          }
+          // Wait GPU kernel to complete
+          ctx.get_stream<gpu>()->Wait();
+          break;
+        }
+#endif
+        default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      }
+    }, ret.ctx(), {}, {ret.var()},
+  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
 }
 
 /*!

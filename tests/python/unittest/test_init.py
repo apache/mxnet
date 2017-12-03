@@ -51,7 +51,7 @@ def test_rsp_const_init():
         weight = mx.symbol.Variable("weight", shape=(shape[1], 2),
                                     init=init, stype='row_sparse')
         dot = mx.symbol.sparse.dot(x, weight)
-        mod = mx.mod.Module(dot)
+        mod = mx.mod.Module(dot, label_names=None)
         mod.bind(data_shapes=[('data', shape)])
         mod.init_params()
         assert (list(mod.get_params()[0].values())[0].asnumpy() == val).all()

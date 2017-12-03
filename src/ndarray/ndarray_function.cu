@@ -204,10 +204,15 @@ void ElementwiseSum<gpu>(mshadow::Stream<gpu>* s,
 }
 
 template<>
-void SetValueRsp<gpu>(mshadow::Stream<gpu> *s,
-                      const real_t val, const NDArray& dst) {
+void Eval<gpu>(mshadow::Stream<gpu> *s,
+               const real_t val, const NDArray& dst) {
   NDArray temp = dst;
-  SetValueRspImpl(s, val, &temp);
+  const NDArrayStorageType stype = temp.storage_type();
+  if (stype == kRowSparseStorage) {
+    SetValueRspImpl(s, val, &temp);
+  } else {
+    LOG(FATAL) << "Not implemented for storage type" << stype;
+  }
 }
 
 }  // namespace ndarray
