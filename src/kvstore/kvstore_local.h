@@ -223,13 +223,8 @@ class KVStoreLocal : public KVStore {
                << "PullRowSparse expects row_sparse src NDArray";
       auto &target_val_rowids = grouped_val_rowids[i];
       const size_t num_vals = target_val_rowids.size();
-
-      bool is_same_rowid = true;
-      for (size_t i = 1; i < num_vals; i++) {
-        if (target_val_rowids[i].second.var() != target_val_rowids[0].second.var()) {
-          is_same_rowid = false;
-        }
-      }
+      // whether the indices are the same
+      const bool is_same_rowid = CheckSameRowid(target_val_rowids);
 
       for (size_t i = 0; i < num_vals; i++) {
         if (is_same_rowid && i != 0) {

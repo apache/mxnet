@@ -580,12 +580,7 @@ class CommDevice : public Comm {
       << "BroadcastRowSparse expects row-sparse src NDArray";
 
     // whether the indices are the same
-    bool is_same_rowid = true;
-    for (size_t i = 1; i < dst.size(); ++i) {
-      if (dst[i].second.var() != dst[0].second.var()) {
-        is_same_rowid = false;
-      }
-    }
+    const bool is_same_rowid = CheckSameRowid(dst);
 
     for (size_t i = 0; i < dst.size(); ++i) {
       // the result can be copied to other devices without invoking sparse retain operator

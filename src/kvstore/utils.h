@@ -25,6 +25,8 @@
 #define MXNET_KVSTORE_UTILS_H_
 
 #include <dmlc/logging.h>
+#include <utility>
+#include <vector>
 #include "mxnet/ndarray.h"
 
 namespace mxnet {
@@ -32,8 +34,8 @@ namespace kvstore {
 
 /*!
  * \brief When src is a rsp with full rows,
- * simply copy retained rows directly from cpu to gpu
- * without invoking sparse_retain op.
+ *        simply copy retained rows directly
+ *        without invoking sparse_retain op.
  */
 template<typename from_xpu, typename to_xpu>
 void CopyRetainedRowsImpl(mshadow::Stream<to_xpu>* to_stream,
@@ -82,6 +84,11 @@ void CopyRetainedRowsImpl(mshadow::Stream<to_xpu>* to_stream,
   })
 }
 
+/*!
+ * \brief When src is a rsp with full rows,
+ *        simply copy retained rows directly
+ *        without invoking sparse_retain op.
+ */
 void CopyRetainedRows(RunContext rctx,
                       const NDArray& src,
                       const NDArray& indices,
@@ -103,6 +110,18 @@ void CopyRetainedRows(RunContext rctx,
 #else
   LOG(FATAL) << "GPU not enabled";
 #endif
+}
+
+/*! \brief Check whether the indices is the same.
+ */
+inline bool CheckSameRowid(const std::vector<std::pair<NDArray*, NDArray>>& val_rowids) {
+  bool is_same_rowid = true;
+  for (size_t i = 1; i < val_rowids.size(); ++i) {
+    if (val_rowids[i].second.var() != val_rowids[0].second.var()) {
+      is_same_rowid = false;
+    }
+  }
+  return is_same_rowid;
 }
 
 }  // namespace kvstore

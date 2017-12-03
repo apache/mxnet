@@ -43,15 +43,18 @@ def test_rsp_push_pull():
         push_ctxs = [mx.cpu(i) if is_push_cpu else mx.gpu(i) for i in range(2)]
         kv.push('e', [mx.nd.ones(shape, ctx=context).tostype('row_sparse') for context in push_ctxs])
 
-        def check_rsp_pull(kv, count, ctxs):
+        def check_rsp_pull(kv, count, ctxs, is_same_rowid=False):
             num_rows = shape[0]
-            vals = []
             row_ids = []
             all_row_ids = np.arange(num_rows)
-            for i in range(count):
-                vals.append(mx.nd.zeros(shape, ctx=ctxs[i]).tostype('row_sparse'))
+            vals = [mx.nd.sparse.zeros(shape=shape, ctx=ctxs[i], stype='row_sparse') for i in range(count)]
+            if is_same_rowid:
                 row_id = np.random.randint(num_rows, size=num_rows)
-                row_ids.append(mx.nd.array(row_id, dtype='int64'))
+                row_ids = [mx.nd.array(row_id, dtype='int64')] * count
+            else:
+                for i in range(count):
+                    row_id = np.random.randint(num_rows, size=num_rows)
+                    row_ids.append(mx.nd.array(row_id, dtype='int64'))
             row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
             vals_to_pull = vals[0] if len(vals) == 1 else vals
 
@@ -67,7 +70,9 @@ def test_rsp_push_pull():
         check_rsp_pull(kv, 1, [mx.gpu(0)])
         check_rsp_pull(kv, 1, [mx.cpu(0)])
         check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)])
+        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], is_same_rowid=True)
         check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)])
+        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], is_same_rowid=True)
 
     check_rsp_push_pull('local')
     check_rsp_push_pull('device')
