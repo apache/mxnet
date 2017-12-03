@@ -121,12 +121,10 @@ try {
     stage("Sanity Check") {
       timeout(time: max_time, unit: 'MINUTES') {
         node('mxnetlinux-cpu') {
-          ws('workspace/sanity') {
             init_git()
             sh "python tools/license_header.py check"
             make('lint', 'cpplint rcpplint jnilint')
             make('lint', 'pylint')
-          }
         }
       }
     }
@@ -134,7 +132,6 @@ try {
     stage('Build') {
       parallel 'CPU: Openblas': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-cpu') {
             init_git()
             def flag = """ \
     DEV=1                         \
@@ -145,12 +142,10 @@ try {
     """
             make("cpu", flag)
             pack_lib('cpu')
-          }
         }
       },
       'CPU: MKLML': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-mklml-cpu') {
             init_git()
             def flag = """ \
     DEV=1                         \
@@ -163,12 +158,10 @@ try {
     """
             make("cpu_mklml", flag)
             pack_lib('mklml_cpu')
-          }
         }
       },
       'GPU: MKLML': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-mklml-gpu') {
             init_git()
             def flag = """ \
     DEV=1                         \
@@ -184,12 +177,10 @@ try {
     """
             make("build_cuda", flag)
             pack_lib('mklml_gpu')
-          }
         }
       },
       'GPU: CUDA8.0+cuDNN5': {
         node('mxnetlinux-cpu') {
-          ws('workspace/build-gpu') {
             init_git()
             def flag = """ \
     DEV=1                         \
@@ -204,25 +195,20 @@ try {
             make('build_cuda', flag)
             pack_lib('gpu')
             stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
-          }
         }
       },
       'Amalgamation MIN': {
         node('mxnetlinux-cpu') {
-          ws('workspace/amalgamationmin') {
             init_git()
             make('cpu', '-C amalgamation/ clean')
             make('cpu', '-C amalgamation/ USE_BLAS=openblas MIN=1')
-          }
         }
       },
       'Amalgamation': {
         node('mxnetlinux-cpu') {
-          ws('workspace/amalgamation') {
             init_git()
             make('cpu', '-C amalgamation/ clean')
             make('cpu', '-C amalgamation/ USE_BLAS=openblas')
-          }
         }
       }
     }
@@ -230,113 +216,90 @@ try {
     stage('Unit Test') {
       parallel 'Python2: CPU': {
         node('mxnetlinux-cpu') {
-          ws('workspace/ut-python2-cpu') {
             init_git()
             unpack_lib('cpu')
             python2_ut('cpu')
-          }
         }
       },
       'Python3: CPU': {
         node('mxnetlinux-cpu') {
-          ws('workspace/ut-python3-cpu') {
             init_git()
             unpack_lib('cpu')
             python3_ut('cpu')
-          }
         }
       },
       'Python2: GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/ut-python2-gpu') {
             init_git()
             unpack_lib('gpu', mx_lib)
             python2_gpu_ut('gpu')
-          }
         }
       },
       'Python3: GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/ut-python3-gpu') {
             init_git()
             unpack_lib('gpu', mx_lib)
             python3_gpu_ut('gpu')
-          }
         }
       },
       'Python2: MKLML-CPU': {
         node('mxnetlinux-cpu') {
-          ws('workspace/ut-python2-mklml-cpu') {
             init_git()
             unpack_lib('mklml_cpu')
             python2_ut('cpu_mklml')
-          }
         }
       },
       'Python2: MKLML-GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/ut-python2-mklml-gpu') {
             init_git()
             unpack_lib('mklml_gpu')
             python2_gpu_ut('gpu_mklml')
-          }
         }
       },
       'Python3: MKLML-CPU': {
         node('mxnetlinux-cpu') {
-          ws('workspace/ut-python3-mklml-cpu') {
             init_git()
             unpack_lib('mklml_cpu')
             python3_ut('cpu_mklml') 
-          }
         }
       },
       'Python3: MKLML-GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/ut-python3-mklml-gpu') {
             init_git()
             unpack_lib('mklml_gpu')
             python3_gpu_ut('gpu_mklml')
-          }
         }
       },
       'Scala: CPU': {
         node('mxnetlinux-cpu') {
-          ws('workspace/ut-scala-cpu') {
             init_git()
             unpack_lib('cpu')
             timeout(time: max_time, unit: 'MINUTES') {
               sh "${docker_run} cpu make scalapkg USE_BLAS=openblas"
               sh "${docker_run} cpu make scalatest USE_BLAS=openblas"
             }
-          }
         }
       },
       'Perl: CPU': {
             node('mxnetlinux-cpu') {
-                ws('workspace/ut-perl-cpu') {
                     init_git()
                     unpack_lib('cpu')
                     timeout(time: max_time, unit: 'MINUTES') {
                         sh "${docker_run} cpu ./perl-package/test.sh"
                     }
-                }
             }
       },
       'Perl: GPU': {
             node('mxnetlinux-gpu') {
-                ws('workspace/ut-perl-gpu') {
                     init_git()
                     unpack_lib('gpu')
                     timeout(time: max_time, unit: 'MINUTES') {
                         sh "${docker_run} gpu ./perl-package/test.sh"
                     }
-                }
             }
       },
       'R: CPU': {
         node('mxnetlinux-cpu') {
-          ws('workspace/ut-r-cpu') {
             init_git()
             unpack_lib('cpu')
             timeout(time: max_time, unit: 'MINUTES') {
@@ -346,12 +309,10 @@ try {
               sh "${docker_run} cpu R CMD INSTALL --library=/workspace/ut-r-cpu/site-library R-package"
               sh "${docker_run} cpu make rpkgtest R_LIBS=/workspace/ut-r-cpu/site-library"
             }
-          }
         }
       },
       'R: GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/ut-r-gpu') {
             init_git()
             unpack_lib('gpu')
             timeout(time: max_time, unit: 'MINUTES') {
@@ -361,7 +322,6 @@ try {
               sh "${docker_run} gpu R CMD INSTALL --library=/workspace/ut-r-gpu/site-library R-package"
               sh "${docker_run} gpu make rpkgtest R_LIBS=/workspace/ut-r-gpu/site-library R_GPU_ENABLE=1"
             }
-          }
         }
       }
     }
@@ -369,49 +329,41 @@ try {
     stage('Integration Test') {
       parallel 'Python GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/it-python-gpu') {
             init_git()
             unpack_lib('gpu')
             timeout(time: max_time, unit: 'MINUTES') {
               sh "${docker_run} gpu --dockerbinary nvidia-docker PYTHONPATH=./python/ python example/image-classification/test_score.py"
             }
-          }
         }
       },
       'Caffe GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/it-caffe') {
             init_git()
             unpack_lib('gpu')
             timeout(time: max_time, unit: 'MINUTES') {
               sh "${docker_run} caffe_gpu --dockerbinary nvidia-docker PYTHONPATH=/caffe/python:./python python tools/caffe_converter/test_converter.py"
             }
-          }
         }
       },
       'cpp-package GPU': {
         node('mxnetlinux-gpu') {
-          ws('workspace/it-cpp-package') {
             init_git()
             unpack_lib('gpu')
             unstash 'cpp_test_score'
             timeout(time: max_time, unit: 'MINUTES') {
               sh "${docker_run} gpu --dockerbinary nvidia-docker cpp-package/tests/ci_test.sh"
             }
-          }
         }
       }
     }
 
     stage('Deploy') {
       node('mxnetlinux-cpu') {
-        ws('workspace/docs') {
           if (env.BRANCH_NAME == "master") {
             init_git()
             sh "make clean"
             sh "make docs"
           }
-        }
       }
     }
   // set build status to success at the end
