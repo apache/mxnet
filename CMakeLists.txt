@@ -187,7 +187,7 @@ endforeach()
 
 include_directories("include")
 include_directories("mshadow")
-include_directories("cub")
+include_directories("3rdparty/cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 include_directories("dlpack/include")
