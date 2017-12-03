@@ -116,6 +116,7 @@ List of Contributors
 * [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
 * [Mingjie Xing](https://github.com/EricFisher)
 * [Sebastian Bodenstein](https://github.com/sbodenstein)
+* [Taliesin Beynon](https://github.com/taliesinb)
 * [Chi Zhang](https://github.com/WellyZhang)
 * [Wei Wu](https://github.com/lazyparser)
 * [Shishi Duan](https://github.com/burness)
