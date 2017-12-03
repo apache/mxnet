@@ -36,7 +36,7 @@ def factorization_machine_model(factor_size, num_features,
 
     # squared terms for subtracting self interactions
     v_s = mx.symbol._internal._square_sum(data=v, axis=1, keepdims=True)
-    x_s = mx.symbol.square(data=x)
+    x_s = x.square()
     bd_sum = mx.sym.dot(x_s, v_s)
 
     # interactions
@@ -45,9 +45,9 @@ def factorization_machine_model(factor_size, num_features,
 
     # putting everything together
     w_all = mx.symbol.Concat(w1, w2_squared, dim=1)
-    sum1 = mx.symbol.sum(data=w_all, axis=1, keepdims=True)
-    sum2 = 0.5 * mx.symbol.negative(bd_sum)
-    model = mx.sym.elemwise_add(sum1, sum2)
+    sum1 = w_all.sum(axis=1, keepdims=True)
+    sum2 = -0.5 * bd_sum
+    model = sum1 + sum2
 
     y = mx.symbol.Variable("softmax_label")
     model = mx.symbol.LogisticRegressionOutput(data=model, label=y)
