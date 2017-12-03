@@ -284,9 +284,9 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
-CUSRC = $(wildcard src/*/*/*.cu src/*/*.cu src/*.cu)
+CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
@@ -327,7 +327,7 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/cub
+	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda -lcufft -lnvrtc
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
