@@ -146,3 +146,6 @@ List of Contributors
 * [Xizhou Zhu](https://github.com/einsiedler0408/)
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
 * [Kenta Kubo](https://github.com/kkk669/)
+* [Manu Seth](https://github.com/mseth10/)
+* [Calum Leslie](https://github.com/calumleslie)
+* [Andre Tamm](https://github.com/andretamm)
