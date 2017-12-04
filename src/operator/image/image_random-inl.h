@@ -190,7 +190,31 @@ void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   }
 }
 
-void RandomLeftRightFlip(
+void FlipLeftRight(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    FlipImpl<DType, 1>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                       outputs[0].dptr<DType>());
+  });
+}
+
+void FlipTopBottom(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    FlipImpl<DType, 0>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                       outputs[0].dptr<DType>());
+  });
+}
+
+void RandomFlipLeftRight(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -211,7 +235,7 @@ void RandomLeftRightFlip(
   });
 }
 
-void RandomTopBottomFlip(
+void RandomFlipTopBottom(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,

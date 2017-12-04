@@ -51,21 +51,17 @@ def run_random(func, func_expect, data_in, n=100, ratio_same=0.5, ratio_delta=0.
     ratio = num_same * 1.0 / n
     assert ratio >= ratio_same - ratio_delta and ratio <= ratio_same + ratio_delta
 
-def test_random_left_right_flip():
-    def f_expect(img):
-        pil_img = Image.fromarray(img).transpose(Image.FLIP_LEFT_RIGHT)
-        return np.array(pil_img)
-    run_random(transforms.RandomLeftRightFlip(),
-        f_expect,
-        np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8))
+def test_flip_left_right():
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    pil_img = Image.fromarray(data_in).transpose(Image.FLIP_LEFT_RIGHT)
+    data_trans = transforms.FlipLeftRight()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
 
-def test_random_top_bottom_flip():
-    def f_expect(img):
-        pil_img = Image.fromarray(img).transpose(Image.FLIP_TOP_BOTTOM)
-        return np.array(pil_img)
-    run_random(transforms.RandomTopBottomFlip(),
-        f_expect,
-        np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8))
+def test_flip_top_bottom():
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    pil_img = Image.fromarray(data_in).transpose(Image.FLIP_TOP_BOTTOM)
+    data_trans = transforms.FlipTopBottom()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
 
 if __name__ == '__main__':
     import nose
