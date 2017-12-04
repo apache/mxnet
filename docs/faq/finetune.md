@@ -145,8 +145,8 @@ def get_fine_tune_model(symbol, arg_params, num_classes, layer_name='flatten0'):
     return (net, new_args)
 ```
 
-Now we create a module. We first call `init_params` to randomly initialize parameters, next use `set_params` to replace all parameters except for the last fully-connected layer with pretrained model.
-
+Now we create a module. Note we pass the existing parameters from the loaded model via the `arg_params` argument.
+The parameters of the last fully-connected layer will be randomly initialized by the `initializer`.
 
 ```python
 import logging

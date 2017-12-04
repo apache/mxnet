@@ -135,7 +135,7 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
         // Get the resource of temporal space
         std::vector<TShape> inputShapes;
         for (size_t x = 0, n = shape_input_vec_.size(); x < n; ++x) {
-          inputShapes.push_back(shape_input_vec_[x]);
+          inputShapes.emplace_back(shape_input_vec_[x]);
         }
         allocateResources(opProp.ForwardResource(inputShapes));
 
@@ -408,11 +408,11 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
 
     std::vector<std::vector<TBlob> *> all_blob_vects_;
     inline OpData() {
-      all_blob_vects_.push_back(&blob_input_vec_);
-      all_blob_vects_.push_back(&blob_output_vec_);
-      all_blob_vects_.push_back(&blob_aux_states_);
-      all_blob_vects_.push_back(&blob_in_grad_);
-      all_blob_vects_.push_back(&blob_out_grad_);  // Remaining err (loss) pushing back upstream
+      all_blob_vects_.emplace_back(&blob_input_vec_);
+      all_blob_vects_.emplace_back(&blob_output_vec_);
+      all_blob_vects_.emplace_back(&blob_aux_states_);
+      all_blob_vects_.emplace_back(&blob_in_grad_);
+      all_blob_vects_.emplace_back(&blob_out_grad_);  // Remaining err (loss) pushing back upstream
     }
     virtual ~OpData() {}
   };
@@ -495,14 +495,14 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     for (const ResourceRequest& req : reqs) {
       if (req.type == ResourceRequest::kTempSpace) {
         if (cached_temp.count(ctx) != 0) {
-          opContext_.requested.push_back(cached_temp.at(ctx));
+          opContext_.requested.emplace_back(cached_temp.at(ctx));
         } else {
           Resource r = ResourceManager::Get()->Request(ctx, req);
-          opContext_.requested.push_back(r);
+          opContext_.requested.emplace_back(r);
           cached_temp[ctx] = r;
         }
       } else if (req.type == ResourceRequest::kRandom) {
-        opContext_.requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
       } else {
         LOG(FATAL) << "resource type not yet supported";
       }
@@ -517,8 +517,8 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
                              const int dtype) {
     test::StandaloneBlob *blob = new test::StandaloneBlob(shape, isGPU, dtype);
     CHECK_NE(blob, static_cast<TBlob *>(nullptr));
-    standalone_blobs->push_back(std::unique_ptr<test::StandaloneBlob>(blob));
-    (*dest).push_back(*blob);
+    standalone_blobs->emplace_back(std::unique_ptr<test::StandaloneBlob>(blob));
+    (*dest).emplace_back(*blob);
     return blob;
   }
 

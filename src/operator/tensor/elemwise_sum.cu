@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cu
  * \brief elementwise sum operator
 */

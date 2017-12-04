@@ -164,7 +164,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
       DCHECK_EQ(lvalue.shape_.Size(), rvalue.shape_.Size());
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        SerialLaunchCPU<mxnet_op::op_with_req<OP, Req>>(
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
           s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_, rvalue.dptr_);
       });
       num_common_rows++;
@@ -175,7 +175,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
       Tensor<cpu, 1, DType> lvalue = !lhs_is_dense ? data_l[iter_l++] : data_l[idx_l];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        SerialLaunchCPU<MissingRValueOp<OP, Req>>(
+        mxnet_op::Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
           s, lvalue.shape_.Size(), out[iter_out].dptr_, lvalue.dptr_);
       });
     } else {
@@ -189,7 +189,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       }
       Tensor<cpu, 1, DType> rvalue = !rhs_is_dense ? data_r[iter_r++] : data_r[idx_r];
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-        SerialLaunchCPU<MissingLValueOp<OP, Req>>(
+        mxnet_op::Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
           s, rvalue.shape_.Size(), out[iter_out].dptr_, rvalue.dptr_);
       });
     }
@@ -205,7 +205,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     }
     Tensor<cpu, 1, DType> lvalue = data_l[iter_l++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      SerialLaunchCPU<MissingRValueOp<OP, Req>>(
+      mxnet_op::Kernel<MissingRValueOp<OP, Req>, cpu>::Launch(
         s, lvalue.shape_.Size(), out[iter_out++].dptr_, lvalue.dptr_);
     });
   }
@@ -218,7 +218,7 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
     }
     Tensor<cpu, 1, DType> rvalue = data_r[iter_r++];
     MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      SerialLaunchCPU<MissingLValueOp<OP, Req>>(
+      mxnet_op::Kernel<MissingLValueOp<OP, Req>, cpu>::Launch(
         s, rvalue.shape_.Size(), out[iter_out++].dptr_, rvalue.dptr_);
     });
   }

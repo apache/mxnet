@@ -30,6 +30,7 @@ except ImportError:
 
 import ctypes
 import warnings
+from array import array as native_array
 
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
            "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
@@ -37,7 +38,7 @@ __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
-from ..base import c_array, mx_real_t, integer_types
+from ..base import c_array_buf, mx_real_t, integer_types
 from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
@@ -87,16 +88,16 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     num_aux = mx_uint(len(aux_types))
     check_call(_LIB.MXNDArrayCreateSparseEx(
         ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
-        c_array(mx_uint, shape),
+        c_array_buf(mx_uint, native_array('I', shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         num_aux,
-        c_array(ctypes.c_int, aux_type_ids),
-        c_array(mx_uint, aux_shape_lens),
-        c_array(mx_uint, aux_shapes),
+        c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
+        c_array_buf(mx_uint, native_array('I', aux_shape_lens)),
+        c_array_buf(mx_uint, native_array('I', aux_shapes)),
         ctypes.byref(hdl)))
     return hdl
 
@@ -221,6 +222,17 @@ class BaseSparseNDArray(NDArray):
             return _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
+
+    def check_format(self, full_check=True):
+        """Check whether the NDArray format is valid.
+
+        Parameters
+        ----------
+        full_check : bool, optional
+            If `True`, rigorous check, O(N) operations. Otherwise
+            basic check, O(1) operations (default True).
+        """
+        check_call(_LIB.MXNDArraySyncCheckFormat(self.handle, ctypes.c_bool(full_check)))
 
     def _data(self):
         """A deep copy NDArray of the data array associated with the BaseSparseNDArray.
@@ -493,6 +505,27 @@ class CSRNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def asscipy(self):
+        """Returns a ``scipy.sparse.csr.csr_matrix`` object with value copied from this array
+
+        Examples
+        --------
+        >>> x = mx.nd.sparse.zeros('csr', (2,3))
+        >>> y = x.asscipy()
+        >>> type(y)
+        <type 'scipy.sparse.csr.csr_matrix'>
+        >>> y
+        <2x3 sparse matrix of type '<type 'numpy.float32'>'
+        with 0 stored elements in Compressed Sparse Row format>
+        """
+        data = self.data.asnumpy()
+        indices = self.indices.asnumpy()
+        indptr = self.indptr.asnumpy()
+        if not spsp:
+            raise ImportError("scipy is not available. \
+                               Please check if the scipy python bindings are installed.")
+        return spsp.csr_matrix((data, indices, indptr), shape=self.shape, dtype=self.dtype)
+
 # pylint: disable=abstract-method
 class RowSparseNDArray(BaseSparseNDArray):
     """A sparse representation of a set of NDArray row slices at given indices.
@@ -715,6 +748,13 @@ class RowSparseNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def retain(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`retain`.
+
+        The arguments are the same as for :py:func:`retain`, with
+        this array as data.
+        """
+        return retain(self, *args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.
@@ -799,10 +839,30 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
             The default dtype is ``data.dtype`` if ``data`` is an NDArray or numpy.ndarray, \
             float32 otherwise.
 
+    - csr_matrix((data, (row, col)))
+        to construct a CSRNDArray based on the COOrdinate format \
+        using three seperate arrays, \
+        where ``row[i]`` is the row index of the element, \
+        ``col[i]`` is the column index of the element \
+        and ``data[i]`` is the data corresponding to the element. All the missing \
+        elements in the input are taken to be zeroes.
+            - **data** (*array_like*) - An object exposing the array interface, which \
+            holds all the non-zero entries of the matrix in COO format.
+            - **row** (*array_like*) - An object exposing the array interface, which \
+            stores the row index for each non zero element in ``data``.
+            - **col** (*array_like*) - An object exposing the array interface, which \
+            stores the col index for each non zero element in ``data``.
+            - **shape** (*tuple of int, optional*) - The shape of the array. The default \
+            shape is inferred from the ``row`` and ``col`` arrays.
+            - **ctx** (*Context, optional*) - Device context \
+            (default is the current default context).
+            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+            The default dtype is float32.
+
     Parameters
     ----------
-    arg1: NDArray, CSRNDArray, numpy.ndarray, scipy.sparse.csr.csr_matrix, tuple of int or tuple \
-    of array_like
+    arg1: tuple of int, tuple of array_like, array_like, CSRNDArray, scipy.sparse.csr_matrix, \
+    scipy.sparse.coo_matrix, tuple of int or tuple of array_like
         The argument to help instantiate the csr matrix. See above for further details.
     shape : tuple of int, optional
         The shape of the csr matrix.
@@ -833,9 +893,24 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
     if isinstance(arg1, tuple):
         arg_len = len(arg1)
         if arg_len == 2:
-            # empty matrix with shape
-            _check_shape(arg1, shape)
-            return empty('csr', arg1, ctx=ctx, dtype=dtype)
+            # construct a sparse csr matrix from
+            # scipy coo matrix if input format is coo
+            if isinstance(arg1[1], tuple) and len(arg1[1]) == 2:
+                data, (row, col) = arg1
+                if isinstance(data, NDArray):
+                    data = data.asnumpy()
+                if isinstance(row, NDArray):
+                    row = row.asnumpy()
+                if isinstance(col, NDArray):
+                    col = col.asnumpy()
+                coo = spsp.coo_matrix((data, (row, col)), shape=shape)
+                _check_shape(coo.shape, shape)
+                csr = coo.tocsr()
+                return array(csr, ctx=ctx, dtype=dtype)
+            else:
+                # empty matrix with shape
+                _check_shape(arg1, shape)
+                return empty('csr', arg1, ctx=ctx, dtype=dtype)
         elif arg_len == 3:
             # data, indices, indptr
             return _csr_matrix_from_definition(arg1[0], arg1[1], arg1[2], shape=shape,

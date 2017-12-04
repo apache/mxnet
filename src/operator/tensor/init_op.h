@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file init_op.h
  * \brief Function definition of initialization op
  */
@@ -33,6 +34,7 @@
 #include <string>
 #include <limits>
 #include <algorithm>
+#include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
@@ -375,7 +377,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
       // Optimize common use-case of filling with ones
       MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_to_int<1>, Req>, xpu>::Launch(
+          mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::set_one, Req>, xpu>::Launch(
             s, b.Size(), b.dptr<DType>());
         });
       });
@@ -411,10 +413,10 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 0);
   CHECK_EQ(outputs.size(), 1U);
   const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
-  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
+  Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
-struct PopulateFullIdxRspKernel {
+struct PopulateFullIdxRspKernel : public mxnet_op::tunable {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, IType* out) {
     KERNEL_ASSIGN(out[i], kWriteTo, i);

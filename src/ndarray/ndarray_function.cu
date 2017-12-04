@@ -27,6 +27,7 @@
 #include <dmlc/logging.h>
 #include "../operator/mxnet_op.h"
 #include "../operator/tensor/init_op.h"
+#include "../operator/tensor/util/tensor_util-inl.h"
 #include "../operator/tensor/util/tensor_util-inl.cuh"
 #include "../common/cuda_utils.h"
 #include "./ndarray_function.h"

@@ -67,6 +67,7 @@
  *
  ***************** END Caffe Copyright Notice and Disclaimer ********************
  *
+ * Copyright (c) 2017 by Contributors
  * \file im2col.h
  * \brief Function definitions of converting an image to
  * column matrix based on kernel, padding, and dilation.

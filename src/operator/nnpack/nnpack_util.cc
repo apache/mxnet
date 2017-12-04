@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file nnpack_util.cc
  * \brief
  * \author Wei Wu

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2014 by Contributors
  * \file tensor_blob.h
  * \brief TBlob class that holds common representation of
  *  arbirary dimension tensor, can be used to transformed

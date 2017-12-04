@@ -22,6 +22,7 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
            'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
            'Lambda', 'HybridLambda']
 import warnings
+import numpy as np
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
@@ -67,7 +68,7 @@ class Sequential(Block):
     def __len__(self):
         return len(self._children)
 
-    def hybridize(self, active=True):
+    def hybridize(self, active=True, **kwargs):
         """Activates or deactivates `HybridBlock`s recursively. Has no effect on
         non-hybrid children.
 
@@ -75,11 +76,13 @@ class Sequential(Block):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
+        **kwargs : string
+            Additional flags for hybridized operator.
         """
         if self._children and all(isinstance(c, HybridBlock) for c in self._children):
             warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
                           'using HybridSequential for the best performance.')
-        super(Sequential, self).hybridize(active)
+        super(Sequential, self).hybridize(active, **kwargs)
 
 
 class HybridSequential(HybridBlock):
@@ -207,10 +210,10 @@ class Dense(HybridBlock):
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
+        shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
                         act=self.act if self.act else 'linear',
-                        layout='{0} -> {1}'.format(self._in_units, self._units) if self._in_units
-                        else self._units)
+                        layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
 class Activation(HybridBlock):
@@ -354,14 +357,19 @@ class BatchNorm(HybridBlock):
                                            allow_deferred_init=True,
                                            differentiable=False)
 
+    def cast(self, dtype):
+        if np.dtype(dtype).name == 'float16':
+            dtype = 'float32'
+        super(BatchNorm, self).cast(dtype)
+
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
                            name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}({content}'
-        if hasattr(self, 'in_channels'):
-            s += ', in_channels={0}'.format(self.in_channels)
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels if in_channels else None)
         s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
@@ -490,8 +498,8 @@ class Lambda(Block):
     Output:
         - ** *outputs **: one or more output data. Their shapes depend on the function.
     """
-    def __init__(self, function):
-        super(Lambda, self).__init__()
+    def __init__(self, function, prefix=None):
+        super(Lambda, self).__init__(prefix=prefix)
         if isinstance(function, str):
             assert hasattr(nd, function), \
                    "Function name %s is not found in ndarray." % function
@@ -534,14 +542,17 @@ class HybridLambda(HybridBlock):
     Output:
         - ** *outputs **: one or more output data. Their shapes depend on the function.
     """
-    def __init__(self, function):
-        super(HybridLambda, self).__init__()
+    def __init__(self, function, prefix=None):
+        super(HybridLambda, self).__init__(prefix=prefix)
         if isinstance(function, str):
             assert hasattr(nd, function) and hasattr(sym, function), \
                    "Function name %s is not found in symbol/ndarray." % function
-            self._func = lambda F, *args: getattr(F, function)(*args)
+            func_dict = {sym: getattr(sym, function), nd: getattr(nd, function)}
+            self._func = lambda F, *args: func_dict[F](*args)
+            self._func_name = function
         elif callable(function):
             self._func = function
+            self._func_name = function.__name__
         else:
             raise ValueError(
                 "Unrecognized function in lambda: {} of type {}"
@@ -552,4 +563,4 @@ class HybridLambda(HybridBlock):
 
     def __repr__(self):
         return '{name}({function})'.format(name=self.__class__.__name__,
-                                           function=self._func_impl.__name__)
+                                           function=self._func_name)

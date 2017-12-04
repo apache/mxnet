@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file attach_op_execs_pass.cc
  * \brief Operator executor to execute each operator.
  */
