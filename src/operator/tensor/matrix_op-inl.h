@@ -537,7 +537,6 @@ struct SliceDimTwoCsrAssign {
   }
 };
 
-
 /*
  * Slice a CSR NDArray for two dimensions
  */
