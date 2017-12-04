@@ -565,11 +565,11 @@ end
 
 Add a bunch of arguments into `dst`. Inplace updating.
 """
-function add_to!(dst::NDArray{T}, args::NDArrayOrReal...) where T
+function add_to!(dst::NDArray, args::NDArrayOrReal...)
   @assert dst.writable
   for arg in args
     if isa(arg, Real)
-      _plus_scalar(dst, scalar = convert(T, arg), out = dst)
+      _plus_scalar(dst, scalar = arg, out = dst)
     else
       _plus!(dst, arg)
     end

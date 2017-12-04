@@ -220,6 +220,15 @@ function test_plus()
     @test copy(x .+ 42) == [43 44; 45 46]
     @test copy(0 .+ x .+ y .+ 41) == [43 44; 45 46]
   end
+
+  info("NDArray::plus::scalar::type convert")
+  let x = mx.NDArray([1, 2, 3])
+    y = x .+ 0.5
+    @test copy(y) == copy(x)
+
+    y = x .+ 2.9
+    @test copy(y) == [3, 4, 5]
+  end
 end
 
 function test_minus()
