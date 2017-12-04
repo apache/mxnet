@@ -566,6 +566,15 @@ struct PopulateCsrForNNC {
  * \brief CPU Impl of dot(dns, csr) = csr
  */
 struct DotDnsCsrCsrByRowBlocks {
+  /*!
+   * \brief
+   * \param i the i-th thread
+   * \param num_rows_r number of rows in rhs
+   * \param num_rows_l number of rows in lhs
+   * \param num_cols number of columns in output
+   * \param nnc number of non zero columns
+   */
+
   template <typename DType, typename IType, typename CType>
   MSHADOW_CINLINE static void Map(
       int i, DType* out, const DType* data_l, const IType* indptr_r,
