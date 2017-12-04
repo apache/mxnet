@@ -963,7 +963,6 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx, const cpu& cpu_dev,
             indptr_r.dptr<IType>(), col_idx_r.dptr<CType>(),
             data_r.dptr<DType>(), seg_len, num_rows_r, num_rows_l, num_cols_out,
             nnc, prefix_sum);
-
       });
     });
   });
