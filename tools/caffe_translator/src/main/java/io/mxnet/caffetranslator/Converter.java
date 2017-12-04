@@ -157,19 +157,24 @@ public class Converter {
             // If the translator cannot translate this layer to an MXNet layer,
             // use CaffeOp or CaffeLoss instead.
             if (generator == null) {
-                if (layer.getType().toLowerCase().endsWith("loss")) {
+                if (layer.getType().toLowerCase().endsWith("loss") && !(layer.getType().equalsIgnoreCase("Accuracy"))) {
                     generator = generators.getGenerator("CaffePluginLossLayer");
-                } else {
+                } else if (!layer.getType().equalsIgnoreCase("Accuracy")) {
                     generator = generators.getGenerator("PluginIntLayerGenerator");
                 }
             }
 
-            GeneratorOutput out = generator.generate(layer, mlModel);
-            String segment = out.code;
-            code.append(segment);
-            code.append(NL);
+            if (generator != null) {
+                GeneratorOutput out = generator.generate(layer, mlModel);
+                String segment = out.code;
+                code.append(segment);
+                code.append(NL);
+                layerIndex += out.numLayersTranslated;
+            } else {
+                layerIndex ++;
+            }
 
-            layerIndex += out.numLayersTranslated;
+
         }
 
         String loss = getLoss(mlModel, code);
@@ -304,50 +309,8 @@ public class Converter {
     }
 
     private String generateOptimizer() {
-        String caffeOptimizer = solver.getProperty("type", "sgd").toLowerCase();
-        ST st;
-
-        String lr = solver.getProperty("base_lr");
-        String momentum = solver.getProperty("momentum", "0.9");
-        String wd = solver.getProperty("weight_decay", "0.0005");
-
-        switch (caffeOptimizer) {
-            case "adadelta":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "AdaDelta");
-                st.add("epsilon", solver.getProperty("delta"));
-                break;
-            case "adagrad":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "AdaGrad");
-                break;
-            case "adam":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "Adam");
-                break;
-            case "nesterov":
-                st = gh.getTemplate("opt_sgd");
-                st.add("opt_name", "NAG");
-                st.add("momentum", momentum);
-                break;
-            case "rmsprop":
-                st = gh.getTemplate("opt_default");
-                st.add("opt_name", "RMSProp");
-                break;
-            default:
-                if (!caffeOptimizer.equals("sgd")) {
-                    System.err.println("Unknown optimizer. Will use SGD instead.");
-                }
-
-                st = gh.getTemplate("opt_sgd");
-                st.add("opt_name", "SGD");
-                st.add("momentum", momentum);
-                break;
-        }
-        st.add("lr", lr);
-        st.add("wd", wd);
-
-        return st.render();
+        Optimizer optimizer = new Optimizer(solver);
+        return optimizer.generateInitCode();
     }
 
     private String generateInitializer() {
