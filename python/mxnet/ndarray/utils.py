@@ -26,6 +26,8 @@ from .ndarray import array as _array
 from .ndarray import empty as _empty_ndarray
 from .ndarray import zeros as _zeros_ndarray
 from .sparse import zeros as _zeros_sparse_ndarray
+from .ndarray import eye as _eye_ndarray
+from .sparse import eye as _eye_sparse_ndarray
 from .sparse import empty as _empty_sparse_ndarray
 from .sparse import array as _sparse_array
 from .sparse import _ndarray_cls
@@ -34,7 +36,55 @@ try:
 except ImportError:
     spsp = None
 
-__all__ = ['zeros', 'empty', 'array', 'load', 'save']
+__all__ = ['zeros', 'empty', 'array', 'load', 'save', 'eye']
+
+
+def eye(N, M=0, k=0, ctx=None, dtype=None, stype=None, **kwargs):
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    Parameters
+    ----------
+    N: int
+        Number of rows in the output.
+    M: int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k: int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx: Context, optional
+        An optional device context (default is the current default context)
+    dtype: str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+
+    Returns
+    -------
+    NDArray or CSRNDArray
+        A created array
+
+    Examples
+    --------
+    >>> mx.nd.eye(2)
+
+    [[ 1.  0.]
+     [ 0.  1.]]
+    <NDArray 2x2 @cpu(0)>
+    >>> mx.nd.eye(2, 3, 1)
+
+    [[ 0.  1.  0.]
+     [ 0.  0.  1.]]
+    <NDArray 2x3 @cpu(0)>
+    >>> mx.nd.eye(2, stype='csr').asnumpy()
+    array([[ 1.,  0.],
+           [ 0.,  1.]], dtype=float32)
+    >>> mx.nd.eye(2, 3, 1, stype='csr').asnumpy()
+    array([[ 0.,  1.,  0.],
+           [ 0.,  0.,  1.]], dtype=float32)
+    """
+    if stype is None or stype == 'default':
+        return _eye_ndarray(N, M, k, ctx, dtype, **kwargs)
+    else:
+        return _eye_sparse_ndarray(stype, N, M, k, ctx, dtype, **kwargs)
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, **kwargs):

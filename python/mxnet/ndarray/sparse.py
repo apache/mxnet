@@ -52,6 +52,7 @@ from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
+from .ndarray import eye as _eye_ndarray
 from .ndarray import array as _array
 
 
@@ -1150,6 +1151,62 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
 _set_ndarray_class(_ndarray_cls)
 
 
+def _init_op(ndarray_op, internal_op, stype, shape,
+             ctx, dtype, *args, **kwargs):
+    """Common interface to initialize the NDArray."""
+    if stype == 'default':
+        return ndarray_op(*args, ctx=ctx, dtype=dtype, **kwargs)
+    if ctx is None:
+        ctx = Context.default_ctx
+    dtype = mx_real_t if dtype is None else dtype
+    if stype == 'row_sparse' or stype == 'csr':
+        aux_types = _STORAGE_AUX_TYPES[stype]
+    else:
+        raise ValueError("unknown storage type" + stype)
+    out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
+    return internal_op(*args, ctx=ctx, dtype=dtype, out=out, **kwargs)
+
+
+def eye(stype, N, M=0, k=0, ctx=None, dtype=None, **kwargs):
+    """Return a 2-D array with ones on the diagonal and zeros elsewhere
+       of given shape and type.
+
+    Parameters
+    ----------
+    stype: string
+        The storage type of the return array, such as 'row_sparse', 'csr', etc
+    N: int
+        Number of rows in the output.
+    M : int, optional
+        Number of columns in the output. If 0, defaults to N.
+    k : int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    ctx : Context, optional
+        An optional device context (default is the current default context)
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `float32`)
+
+    Returns
+    -------
+    NDArray or CSRNDArray
+        A created array
+    Examples
+    --------
+    >>> mx.nd.sparse.eye('csr', 2).asnumpy()
+    array([[ 1.,  0.],
+           [ 0.,  1.]], dtype=float32)
+    >>> mx.nd.sparse.eye('csr', 2, 3, 1).asnumpy()
+    array([[ 0.,  1.,  0.],
+           [ 0.,  0.,  1.]], dtype=float32)
+    """
+    ncols = M if M > 0 else N
+    shape = (N, ncols)
+    return _init_op(_eye_ndarray, _internal._eye, stype, shape,
+                    ctx, dtype, N, M, k, **kwargs)
+
+
 def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
@@ -1175,17 +1232,8 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     >>> mx.nd.sparse.zeros('row_sparse', (1,2), ctx=mx.cpu(), dtype='float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
-    if stype == 'default':
-        return _zeros_ndarray(shape, ctx=ctx, dtype=dtype, **kwargs)
-    if ctx is None:
-        ctx = Context.default_ctx
-    dtype = mx_real_t if dtype is None else dtype
-    if stype == 'row_sparse' or stype == 'csr':
-        aux_types = _STORAGE_AUX_TYPES[stype]
-    else:
-        raise ValueError("unknown storage type" + stype)
-    out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
+    return _init_op(_zeros_ndarray, _internal._zeros, stype, shape,
+                    ctx, dtype, shape, **kwargs)
 
 
 def empty(stype, shape, ctx=None, dtype=None):

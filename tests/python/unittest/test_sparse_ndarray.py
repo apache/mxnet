@@ -705,6 +705,20 @@ def test_create_sparse_nd_empty():
     check_rsp_empty(shape, dtype, ctx)
     check_rsp_empty(shape_3d, dtype, ctx)
 
+    
+def test_sparse_eye():
+    stypes = ['csr', 'row_sparse', 'default']
+    for stype in stypes:
+        N_array = np.random.randint(1, high=3, size=3)
+        M_array = np.random.randint(1, high=3, size=3)
+        k_array = np.random.randint(-5, high=5, size=3)
+        for i in range(3):
+            N = N_array[i]
+            M = M_array[i]
+            k = k_array[i]
+            same(mx.nd.sparse.eye(stype, N, M, k).asnumpy(), np.eye(N, M, k))
+
+
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):
         """Test power law distribution

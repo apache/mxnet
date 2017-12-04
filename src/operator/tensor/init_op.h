@@ -33,6 +33,7 @@
 #include <vector>
 #include <string>
 #include <limits>
+#include <algorithm>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -40,6 +41,155 @@
 
 namespace mxnet {
 namespace op {
+
+struct EyeParam : public dmlc::Parameter<EyeParam> {
+  nnvm::dim_t N;
+  nnvm::dim_t M;
+  nnvm::dim_t k;
+  std::string ctx;
+  int dtype;
+
+  DMLC_DECLARE_PARAMETER(EyeParam) {
+    DMLC_DECLARE_FIELD(N)
+    .describe("Number of rows in the output.");
+    DMLC_DECLARE_FIELD(M)
+    .set_default(0)
+    .describe("Number of columns in the output. If 0, defaults to N");
+    DMLC_DECLARE_FIELD(k)
+    .set_default(0)
+    .describe("Index of the diagonal. 0 (the default) refers to the main diagonal."
+              "A positive value refers to an upper diagonal."
+              "A negative value to a lower diagonal.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .add_enum("int64", mshadow::kInt64)
+    .describe("Target data type.");
+  }
+};
+
+template<typename ParamType>
+inline bool InitEyeShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(param.N, param.M > 0 ? param.M : param.N));
+  return true;
+}
+
+template<int req>
+struct eye_dns_fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t num_cols,
+                                  const nnvm::dim_t k) {
+    if ((i % num_cols) == ((i / num_cols) + k)) {
+      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(1));
+    } else {
+      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(0));
+    }
+  }
+};
+
+template<typename xpu>
+void EyeFill(const nnvm::NodeAttrs& attrs,
+             const OpContext& ctx,
+             const std::vector<TBlob>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
+  const TBlob& out_data = outputs[0];
+  const nnvm::dim_t num_cols = param.M > 0 ? param.M : param.N;
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<eye_dns_fill<req_type>, xpu>::Launch(
+          s, out_data.Size(), out_data.dptr<DType>(),
+          num_cols, param.k);
+    });
+  });
+}
+
+// fill indptr array of eye in CSR format
+struct eye_csr_indptr_fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t nnz,
+                                  const nnvm::dim_t init_row) {
+    const nnvm::dim_t data = (i - init_row) > 0 ? (i - init_row) : 0;
+    out_data[i] = static_cast<DType>(data <= nnz ? data : nnz);
+  }
+};
+
+// fill indices array of eye in CSR format
+struct eye_csr_idx_fill {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const nnvm::dim_t init_col) {
+    out_data[i] = static_cast<DType>(i + init_col);
+  }
+};
+
+
+template<typename xpu>
+void EyeFillCsrImpl(mshadow::Stream<xpu> *s, const NDArray& out,
+                    const nnvm::dim_t N, const nnvm::dim_t M, const nnvm::dim_t k) {
+  const nnvm::dim_t num_cols = M > 0 ? M : N;
+  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(k), (nnvm::dim_t)0);
+  const nnvm::dim_t rnnz = std::max(N - std::abs(k), (nnvm::dim_t)0);
+  const nnvm::dim_t nnz = k > 0 ? std::min(cnnz, N) :
+                                  std::min(rnnz, num_cols);
+  using namespace mxnet_op;
+  out.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(N + 1));
+  out.CheckAndAllocAuxData(csr::kIdx, mshadow::Shape1(nnz));
+  out.CheckAndAllocData(mshadow::Shape1(nnz));
+
+  MSHADOW_IDX_TYPE_SWITCH(out.aux_type(csr::kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(out.aux_type(csr::kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
+        Kernel<eye_csr_indptr_fill, xpu>::Launch(
+          s, N + 1, out.aux_data(csr::kIndPtr).dptr<RType>(),
+          nnz, std::abs(std::min((nnvm::dim_t)0, k)));
+        Kernel<eye_csr_idx_fill, xpu>::Launch(
+          s, nnz, out.aux_data(csr::kIdx).dptr<IType>(),
+          std::max(std::min(k, num_cols-1), (nnvm::dim_t)0));
+        Kernel<set_to_int<1>, xpu>::Launch(
+          s, nnz, out.data().dptr<DType>());
+      });
+    });
+  });
+}
+
+template<typename xpu>
+void EyeFillEx(const nnvm::NodeAttrs& attrs,
+               const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(outputs.size(), 1);
+  auto stype = outputs[0].storage_type();
+  const EyeParam& param = nnvm::get<EyeParam>(attrs.parsed);
+  if (req[0] == kNullOp) return;
+  CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for EyeFillEx";
+  if (stype == kCSRStorage) {
+    EyeFillCsrImpl<xpu>(s, outputs[0], param.N, param.M, param.k);
+  } else {
+    LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
+  }
+}
 
 struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   TShape shape;
