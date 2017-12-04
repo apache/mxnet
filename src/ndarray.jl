@@ -680,9 +680,10 @@ end
 
 Elementwise divide a scalar by an `NDArray`. Inplace updating.
 """
-function rdiv_from!(x::Real, y::NDArray{T}) where {T}
+function rdiv_from!(x::Real, y::NDArray)
   @assert y.writable
-  _rdiv_scalar(y, scalar = convert(T, x), out = y)
+  _rdiv_scalar(y, scalar = x, out = y)
+  y
 end
 
 import Base: /

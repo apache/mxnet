@@ -417,6 +417,13 @@ function test_rdiv()
     y = 1 ./ Float32[1 2; 3 4]
     @test copy(x) ≈ y
   end
+
+  info("NDArray:rdiv::type convert")
+  let x = mx.NDArray([1, 2, 3])
+    y = 5.5 ./ x
+    @test eltype(y) == Int  # this differs from julia
+    @test copy(y) == [5, 2, 1]
+  end
 end  # function test_rdiv
 
 
