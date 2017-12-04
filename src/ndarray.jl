@@ -630,13 +630,14 @@ broadcast_(::typeof(-), x::Real, y::NDArray)          = x - y
 Elementwise multiplication into `dst` of either a scalar or an `NDArray` of the same shape.
 Inplace updating.
 """
-function mul_to!(dst::NDArray{T}, arg::NDArrayOrReal) where T
+function mul_to!(dst::NDArray, arg::NDArrayOrReal)
   @assert dst.writable
   if isa(arg, Real)
-    _mul_scalar(dst, scalar = convert(T, arg), out = dst)
+    _mul_scalar(dst, scalar = arg, out = dst)
   else
     _mul(dst, arg, out = dst)
   end
+  dst
 end
 
 import Base: *

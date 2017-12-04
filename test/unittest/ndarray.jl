@@ -329,6 +329,13 @@ function test_mul()
     y = x .* x
     @test copy(y) == [1. 4.]
   end
+
+  info("NDArray::mul::scalar::type convert")
+  let x = mx.NDArray([1, 2, 3])
+    y = x .* π
+    @test eltype(x) == Int
+    @test copy(y) == [3, 6, 9]
+  end
 end
 
 function test_div()
