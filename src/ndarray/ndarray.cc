@@ -309,9 +309,12 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
         if (this->ptr_->Mkl_mem_->get_primitive_desc().desc().data.format != def_format) {
           ret.ptr_->Mkl_mem_ = Reorder2Default(this->ptr_->Mkl_mem_);
         }
-
+        else {
+          ret.ptr_->Mkl_mem_ = this->ptr_->Mkl_mem_;
+        }
     }, ctx(), {this->var()}, {ret.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncMKLDNN2Default"));
+    ret.WaitToRead();
     return ret;
   }
 #endif
