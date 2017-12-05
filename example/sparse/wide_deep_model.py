@@ -46,7 +46,6 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
                         input_dim=input_dims[i], output_dim=hidden_units[0]))
 
     hidden = mx.symbol.concat(*features, dim=1)
-    #hidden = mx.symbol.BatchNorm(data=hidden)
     hidden = mx.symbol.FullyConnected(data=hidden, num_hidden=hidden_units[1])
     hideen = mx.symbol.Activation(data=hidden, act_type='relu')
     hidden = mx.symbol.FullyConnected(data=hidden, num_hidden=hidden_units[2])
