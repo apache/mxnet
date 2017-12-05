@@ -157,6 +157,7 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
+    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
     ${PRE_COMMAND} \
