@@ -71,7 +71,7 @@ static bool PoolingType(const nnvm::NodeAttrs& attrs,
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param)) {
     CHECK_GT(out_attrs->size(), 1U);
-    out_attrs->at(1) = mshadow::kFloat32;
+    out_attrs->at(1) = mshadow::kInt32;
   }
 #endif
   return true;
