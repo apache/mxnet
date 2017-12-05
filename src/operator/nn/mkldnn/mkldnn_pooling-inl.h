@@ -36,6 +36,20 @@ static inline bool SupportMKLDNNPooling(const PoolingParam &param) {
           || param.pool_type == pool_enum::kAvgPooling);
 }
 
+static inline bool SupportMKLDNNPooling(const PoolingParam &param,
+                                        const TShape &dshape) {
+  auto ret = SupportMKLDNNPooling(param);
+  if (!ret)
+    return false;
+  if (param.pooling_convention == pool_enum::kValid)
+    return true;
+  if ((dshape[2] + 2 * param.pad[0] - param.kernel[0]) % param.stride[0] == 0
+      && (dshape[3] + 2 * param.pad[1] - param.kernel[1]) % param.stride[1] == 0)
+    return true;
+  else
+    return false;
+}
+
 static inline algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   switch (param.pool_type) {
     case pool_enum::kMaxPooling:
