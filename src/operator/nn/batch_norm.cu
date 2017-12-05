@@ -21,7 +21,7 @@
  * Copyright (c) 2017 by Contributors
  * \file batch_norm.cu
  * \brief CUDA Batch Normalization code
- * \author Chris Olivier, Bing Xu
+ * \author Chris Olivier, Bing Xu, Da Zheng
  * Adapted from Torch
 */
 #include <cuda_runtime_api.h>
@@ -579,13 +579,13 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
   flags |= ctx.is_train ? IS_TRAINING_FLAG : 0;
   flags |= params.fix_gamma ? FIX_GAMMA_FLAG : 0;
   flags |= params.use_global_stats ? USE_GLOBAL_STATS_FLAG : 0;
-  if (BatchNormOp<xpu, DType, AccReal>::IsWriting(req[batchnorm::kData])) {
+  if (IsBNWriting(req[batchnorm::kData])) {
     flags |= WRITE_DATA_FLAG;
   }
-  if (BatchNormOp<xpu, DType, AccReal>::IsWriting(req[batchnorm::kGamma])) {
+  if (IsBNWriting(req[batchnorm::kGamma])) {
     flags |= WRITE_GAMMA_FLAG;
   }
-  if (BatchNormOp<xpu, DType, AccReal>::IsWriting(req[batchnorm::kBeta])) {
+  if (IsBNWriting(req[batchnorm::kBeta])) {
     flags |= WRITE_BETA_FLAG;
   }
   return flags;
@@ -593,12 +593,12 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
 
 /*! \brief Forward batch-norm pass on GPU */
 template<typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<gpu> *stream,
-                                                 const OpContext &ctx,
-                                                 const std::vector<TBlob> &in_data,
-                                                 const std::vector<OpReqType> &req,
-                                                 const std::vector<TBlob> &out_data,
-                                                 const std::vector<TBlob> &aux_states) {
+void DoBNForward(mshadow::Stream<gpu> *stream,
+                 const OpContext &ctx, const BatchNormParam& param_,
+                 const std::vector<TBlob> &in_data,
+                 const std::vector<OpReqType> &req,
+                 const std::vector<TBlob> &out_data,
+                 const std::vector<TBlob> &aux_states) {
   batchnorm::cuda::BatchNormalizationUpdateOutput<DType, AccReal>(
     stream,
     ctx,
@@ -614,14 +614,14 @@ void BatchNormOp<xpu, DType, AccReal>::DoForward(mshadow::Stream<gpu> *stream,
 
 /*! \brief Backward batch-norm pass on GPU */
 template<typename xpu, typename DType, typename AccReal>
-void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
-                                                  const OpContext &ctx,
-                                                  const std::vector<TBlob> &out_grad,
-                                                  const std::vector<TBlob> &in_data,
-                                                  const std::vector<TBlob> &out_data,
-                                                  const std::vector<OpReqType> &req,
-                                                  const std::vector<TBlob> &in_grad,
-                                                  const std::vector<TBlob> &aux_states) {
+void DoBNBackward(mshadow::Stream<gpu> *stream,
+                  const OpContext &ctx, const BatchNormParam& param_,
+                  const std::vector<TBlob> &out_grad,
+                  const std::vector<TBlob> &in_data,
+                  const std::vector<TBlob> &out_data,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &in_grad,
+                  const std::vector<TBlob> &aux_states) {
   batchnorm::cuda::BatchNormalizationBackward<DType, AccReal>(
     stream,
     ctx,
@@ -637,30 +637,92 @@ void BatchNormOp<xpu, DType, AccReal>::DoBackward(mshadow::Stream<gpu> *stream,
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormOp_DoBackward_gpu);
 }
 
-/*! \brief Create GPU operator for batch normalization */
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
+template<typename DType>
+static CuDNNBatchNormOp<DType> &GetCuDNNOp(const BatchNormParam& param) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local CuDNNBatchNormOp<DType> op;
+#else
+  static MX_THREAD_LOCAL CuDNNBatchNormOp<DType> op;
+#endif
+  op.Init(param);
+  return op;
+}
+#endif
+
 template<>
-Operator *CreateOp<gpu>(BatchNormParam param, const int dtype, const TShape& shape) {
+void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 5U);
+  std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
+  std::vector<TBlob> aux_states(inputs.begin() + 3, inputs.end());
+  int dtype = inputs[0].type_flag_;
+  TShape shape = inputs[0].shape_;
+
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
-  Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      op = new CuDNNBatchNormOp<DType>(param);
+      GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states);
     })
   } else {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
-      op = new BatchNormOp<gpu, DType, AccReal>(param);
+      BNForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
     })
   }
 #else
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype,
-                              DType,
-                              AccReal,
-                              { op = new BatchNormOp<gpu, DType, AccReal>(param); });
+  MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
+    BNForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
+  });
 #endif
-  return op;
 }
+
+template<>
+void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 11U);
+  BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
+  std::vector<TBlob> out_grad(1, inputs[0]);
+  std::vector<TBlob> in_data(inputs.begin() + 3, inputs.begin() + 6);
+  std::vector<TBlob> aux_states(inputs.begin() + 6, inputs.begin() + 8);
+  std::vector<TBlob> out_data(inputs.begin() + 8, inputs.end());
+  std::vector<TBlob> in_grad(outputs.begin(), outputs.begin() + 3);
+  int dtype = inputs[0].type_flag_;
+  TShape shape = inputs[0].shape_;
+
+  param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+  if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
+      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
+    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+      GetCuDNNOp<DType>(param).Backward(ctx, out_grad, in_data, out_data,
+        req, in_grad, aux_states);
+    })
+  } else {
+    MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
+      BNBackward<gpu, DType, AccReal>(ctx, param, out_grad,
+          in_data, out_data, req, in_grad, aux_states);
+    })
+  }
+#else
+  MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
+    BNBackward<gpu, DType, AccReal>(ctx, param, out_grad,
+        in_data, out_data, req, in_grad, aux_states);
+  });
+#endif
+}
+
+NNVM_REGISTER_OP(BatchNorm)
+.set_attr<FCompute>("FCompute<gpu>", BatchNormCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_BatchNorm)
+.set_attr<FCompute>("FCompute<gpu>", BatchNormGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

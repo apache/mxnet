@@ -42,9 +42,19 @@ namespace op {
  * \brief The Operator used to perform convolution using cuDNN kernels.
  */
 template<typename DType>
-class CuDNNConvolutionOp : public Operator {
+class CuDNNConvolutionOp {
  public:
-  explicit CuDNNConvolutionOp(const ConvolutionParam& param,
+  CuDNNConvolutionOp() {
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&bias_desc_));
+    CUDNN_CALL(cudnnCreateFilterDescriptor(&filter_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
+    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
+  }
+
+  void Init(const ConvolutionParam& param,
                               int forward_compute_type,
                               int backward_compute_type,
                               const std::vector<TShape>& in_shape,
@@ -57,8 +67,6 @@ class CuDNNConvolutionOp : public Operator {
     auto cudnn_backward_compute_type = convertToCuDNNDataType(backward_compute_type);
     // convert MB to words
     param_.workspace = (param_.workspace << 20) / sizeof(DType);
-    init_cudnn_ = false;
-    init_temp_size_ = false;
     dtype_ = DataType<DType>::kCudnnFlag;
     // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
     cudnn_tensor_core_ = DataType<DType>::kFlag == kFloat16 && GetEnvAllowTensorCore();
@@ -92,22 +100,19 @@ class CuDNNConvolutionOp : public Operator {
   }
 
   ~CuDNNConvolutionOp() {
-    if (init_cudnn_) {
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(bias_desc_));
-      CUDNN_CALL(cudnnDestroyFilterDescriptor(filter_desc_));
-      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
-      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
-      CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
-    }
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(in_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(out_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(bias_desc_));
+    CUDNN_CALL(cudnnDestroyFilterDescriptor(filter_desc_));
+    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
+    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
+    CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
   }
 
-  virtual void Forward(const OpContext &ctx,
+  void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+                       const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     size_t expected = param_.no_bias ? 2 : 3;
     DType *data_ptr = NULL;
@@ -183,13 +188,11 @@ class CuDNNConvolutionOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
+  void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
                         const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+                        const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     size_t expected = param_.no_bias == 0 ? 3 : 2;
@@ -199,7 +202,8 @@ class CuDNNConvolutionOp : public Operator {
     DType *data_ptr = NULL;
     DType *gdata_ptr = NULL;
     CHECK_EQ(out_grad.size(), 1U);
-    CHECK(in_data.size() == expected && in_grad.size() == expected);
+    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(in_grad.size(), expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     if (param_.kernel.ndim() == 2) {
       Tensor<gpu, 4, DType> grad = out_grad[conv::kOut].get<gpu, 4, DType>(s);
@@ -224,6 +228,7 @@ class CuDNNConvolutionOp : public Operator {
       data_ptr = data.dptr_;
       gdata_ptr = gdata.dptr_;
     }
+    GetTempSize(ctx);
     Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte_);
     size_t workspace_size = TensorSizeBytes(workspace);
     for (uint32_t g = 0; g < param_.num_group; ++g) {
@@ -361,13 +366,6 @@ class CuDNNConvolutionOp : public Operator {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_shape.size(), expected);
     CHECK_EQ(out_shape.size(), 1U);
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&in_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
-    CUDNN_CALL(cudnnCreateTensorDescriptor(&bias_desc_));
-    CUDNN_CALL(cudnnCreateFilterDescriptor(&filter_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
-    CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
 
     TShape dshape = in_shape[conv::kData];
     TShape wshape = in_shape[conv::kWeight];
@@ -573,7 +571,6 @@ class CuDNNConvolutionOp : public Operator {
                                           &bias_shape[0],
                                           &bias_stride[0]));
     }
-    init_cudnn_ = true;
   }
 
   void SelectAlgo(const Context& ctx,
@@ -817,7 +814,6 @@ class CuDNNConvolutionOp : public Operator {
   }
 
   void GetTempSize(const OpContext& ctx) {
-    if (init_temp_size_) return;
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     size_t back_size = 0, back_size_w = 0;
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(s->dnn_handle_,
@@ -842,8 +838,6 @@ class CuDNNConvolutionOp : public Operator {
                out_desc_,
                forward_algo_.AlgoNumber(),
                &forward_workspace_byte_));
-
-    init_temp_size_ = true;
   }
 
   int *CastTShapeToIntPtr(const TShape& s, std::vector<int> *buffer) {
@@ -876,8 +870,6 @@ class CuDNNConvolutionOp : public Operator {
   std::vector<int> param_dilate_;
   std::vector<int> param_pad_;
 
-  bool init_cudnn_;
-  bool init_temp_size_;
   // Temp workspace size in bytes needed for Forward() operation.
   size_t forward_workspace_byte_;
   // Temp workspace size in bytes needed for Backward() operation.

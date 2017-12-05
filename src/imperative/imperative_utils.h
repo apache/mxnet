@@ -600,6 +600,7 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev
     }
     if (match) return true;
   }
+  g.attrs.erase("dispatch_mode");
   g.attrs.erase("storage_type");
   g.attrs.erase("storage_type_inputs");
   if (node_range.second > node_range.first) {

@@ -327,17 +327,7 @@ inline std::string dispatch_mode_string(const DispatchMode x) {
 
 
 /*! \brief get string representation of storage_type */
-inline std::string stype_string(const int x) {
-  switch (x) {
-    case kDefaultStorage:
-      return "default";
-    case kCSRStorage:
-      return "csr";
-    case kRowSparseStorage:
-      return "row_sparse";
-  }
-  return "unknown";
-}
+std::string stype_string(const int x);
 
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
