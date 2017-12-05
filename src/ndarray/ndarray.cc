@@ -222,7 +222,8 @@ static inline mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc)
   }
 }
 
-static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem) {
+static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem,
+                                             bool submit_now = true) {
   auto format = GetDefaultFormat(mem->get_primitive_desc().desc());
   if (format == mem->get_primitive_desc().desc().data.format)
     return mem;
@@ -239,11 +240,32 @@ static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem) {
           pd.get_engine())));
 
   MKLDNNStream &stream = MKLDNNStream::Instance();
+  stream.RegisterMem(mem);
   stream.RegisterMem(def_mem);
   stream.RegisterPrim(mkldnn::reorder(*mem, *def_mem));
-  // TODO do I have to submit it here?
-  stream.Submit();
+  if (submit_now)
+    stream.Submit();
   return def_mem;
+}
+
+NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
+  CHECK(!is_none()) << "NDArray is not initialized";
+  CHECK_GE(shape_.Size(), shape.Size())
+    << "NDArray.Reshape: target shape size is larger current shape";
+  if (storage_type() == kDefaultStorage) {
+    NDArray ret = this->Detach();
+    ret.shape_ = shape;
+    return ret;
+  } else if (storage_type() == kMKLDNNStorage) {
+    NDArray ret(kMKLDNNStorage, shape, ctx(), ptr_->delay_alloc, dtype());
+    CHECK(ptr_->Mkl_mem_ != nullptr);
+    // We shouldn't submit the reorder primitive here because submit will
+    // be called in operators.
+    ret.ptr_->Mkl_mem_ = Reorder2Default(ptr_->Mkl_mem_, false);
+    return ret;
+  }
+  LOG(FATAL) << "Reshape for storage type " << storage_type() << " is not implemented yet";
+  return NDArray();
 }
 
 #endif
@@ -258,10 +280,20 @@ NDArray NDArray::Reshape(const TShape &shape) const {
     return ret;
 #if MXNET_USE_MKLDNN == 1
   } else if (storage_type() == kMKLDNNStorage) {
-    NDArray ret = this->Detach();
-    ret.shape_ = shape;
-    if (ret.ptr_->Mkl_mem_)
-      ret.ptr_->Mkl_mem_ = Reorder2Default(ret.ptr_->Mkl_mem_);
+    NDArray ret(kMKLDNNStorage, shape, ctx(), ptr_->delay_alloc, dtype());
+    // We need to convert the MKL memory to the default layout.
+    Engine::Get()->PushSync([&](RunContext ctx) {
+        if (this->ptr_->Mkl_mem_) {
+          auto def_format = GetDefaultFormat(this->ptr_->Mkl_mem_->get_primitive_desc().desc());
+          if (this->ptr_->Mkl_mem_->get_primitive_desc().desc().data.format != def_format) {
+            ret.ptr_->Mkl_mem_ = Reorder2Default(this->ptr_->Mkl_mem_);
+          }
+          else
+            ret.ptr_->Mkl_mem_ = this->ptr_->Mkl_mem_;
+        }
+    }, ctx(), {this->var()}, {ret.var()},
+    FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncMKLDNN2Default"));
+    ret.WaitToRead();
     return ret;
 #endif
   }
