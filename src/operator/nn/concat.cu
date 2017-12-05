@@ -28,14 +28,12 @@
 
 namespace mxnet {
 namespace op {
-template<>
-Operator* CreateOp<gpu>(ConcatParam param, int dtype, std::vector<TShape> *in_shape) {
-  Operator *op = NULL;
-  MSHADOW_TYPE_SWITCH(dtype, DType, {
-    op = new ConcatOp<gpu, DType>(param);
-  });
-  return op;
-}
+
+NNVM_REGISTER_OP(Concat)
+.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_Concat)
+.set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
