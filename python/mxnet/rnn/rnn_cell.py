@@ -1093,7 +1093,7 @@ class BidirectionalCell(BaseRNNCell):
 
 class BaseConvRNNCell(BaseRNNCell):
     """Abstract base class for Convolutional RNN cells"""
-    def __init__(self, input_shape, num_hidden,
+    def __init__(self, input_shape, num_hidden,num_filter,
                  h2h_kernel, h2h_dilate,
                  i2h_kernel, i2h_stride,
                  i2h_pad, i2h_dilate,
@@ -1112,6 +1112,7 @@ class BaseConvRNNCell(BaseRNNCell):
         self._i2h_stride = i2h_stride
         self._i2h_pad = i2h_pad
         self._i2h_dilate = i2h_dilate
+        self._num_filter = num_filter
 
         self._num_hidden = num_hidden
         self._input_shape = input_shape
@@ -1121,7 +1122,7 @@ class BaseConvRNNCell(BaseRNNCell):
         # Infer state shape
         data = symbol.Variable('data')
         self._state_shape = symbol.Convolution(data=data,
-                                               num_filter=self._num_hidden,
+                                               num_filter=self._num_filter,
                                                kernel=self._i2h_kernel,
                                                stride=self._i2h_stride,
                                                pad=self._i2h_pad,
@@ -1149,7 +1150,7 @@ class BaseConvRNNCell(BaseRNNCell):
 
         i2h = symbol.Convolution(name='%si2h'%name,
                                  data=inputs,
-                                 num_filter=self._num_hidden*self._num_gates,
+                                 num_filter=self._num_filter*self._num_gates,
                                  kernel=self._i2h_kernel,
                                  stride=self._i2h_stride,
                                  pad=self._i2h_pad,
@@ -1160,7 +1161,7 @@ class BaseConvRNNCell(BaseRNNCell):
 
         h2h = symbol.Convolution(name='%sh2h'%name,
                                  data=states[0],
-                                 num_filter=self._num_hidden*self._num_gates,
+                                 num_filter=self._num_filter*self._num_gates,
                                  kernel=self._h2h_kernel,
                                  dilate=self._h2h_dilate,
                                  pad=self._h2h_pad,
@@ -1214,7 +1215,7 @@ class ConvRNNCell(BaseConvRNNCell):
     conv_layout : str, , default 'NCHW'
         Layout of ConvolutionOp
     """
-    def __init__(self, input_shape, num_hidden,
+    def __init__(self, input_shape, num_hidden,num_filter,
                  h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1),
                  i2h_pad=(1, 1), i2h_dilate=(1, 1),
@@ -1222,7 +1223,7 @@ class ConvRNNCell(BaseConvRNNCell):
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvRNN_', params=None, conv_layout='NCHW'):
-        super(ConvRNNCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+        super(ConvRNNCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,num_filter=num_filter,
                                           h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
                                           i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                           i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -1294,7 +1295,7 @@ class ConvLSTMCell(BaseConvRNNCell):
     conv_layout : str, , default 'NCHW'
         Layout of ConvolutionOp
     """
-    def __init__(self, input_shape, num_hidden,
+    def __init__(self, input_shape, num_hidden,num_filter,
                  h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1),
                  i2h_pad=(1, 1), i2h_dilate=(1, 1),
@@ -1303,7 +1304,7 @@ class ConvLSTMCell(BaseConvRNNCell):
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvLSTM_', params=None,
                  conv_layout='NCHW'):
-        super(ConvLSTMCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+        super(ConvLSTMCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,num_filter=num_filter,
                                            h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
                                            i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                            i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
@@ -1386,7 +1387,7 @@ class ConvGRUCell(BaseConvRNNCell):
     conv_layout : str, , default 'NCHW'
         Layout of ConvolutionOp
     """
-    def __init__(self, input_shape, num_hidden,
+    def __init__(self, input_shape, num_hidden,num_filter,
                  h2h_kernel=(3, 3), h2h_dilate=(1, 1),
                  i2h_kernel=(3, 3), i2h_stride=(1, 1),
                  i2h_pad=(1, 1), i2h_dilate=(1, 1),
@@ -1394,7 +1395,7 @@ class ConvGRUCell(BaseConvRNNCell):
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
                  activation=functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2),
                  prefix='ConvGRU_', params=None, conv_layout='NCHW'):
-        super(ConvGRUCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,
+        super(ConvGRUCell, self).__init__(input_shape=input_shape, num_hidden=num_hidden,num_filter=num_filter,
                                           h2h_kernel=h2h_kernel, h2h_dilate=h2h_dilate,
                                           i2h_kernel=i2h_kernel, i2h_stride=i2h_stride,
                                           i2h_pad=i2h_pad, i2h_dilate=i2h_dilate,
