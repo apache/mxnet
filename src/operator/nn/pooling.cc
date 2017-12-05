@@ -216,17 +216,18 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     CHECK_GT(outputs.size(), 1U);
     workspace = &outputs[1];
   }
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNPooling_Forward(ctx, param, inputs[0], req[0], outputs[0],
-                            workspace);
-      return;
+  if (SupportMKLDNN(inputs[0])
+      && SupportMKLDNNPooling(param, inputs[0].shape())) {
+    MKLDNNPooling_Forward(ctx, param, inputs[0], req[0], outputs[0],
+                          workspace);
+    return;
   }
 #endif
   // TODO I need to convert format.
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
-  std::vector<TBlob> out_blobs(outputs.size());
+  // We know pooling has only one output.
+  std::vector<TBlob> out_blobs(1);
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
   PoolingCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
@@ -254,16 +255,27 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     in_data = &inputs[1];
   }
   const NDArray &in_grad = outputs[0];
-  switch (inputs[0].dtype()) {
-    case mshadow::kFloat32:
-      MKLDNNPooling_Backward(ctx, param, out_grad, *in_data, workspace,
-                             req[0], in_grad);
-      return;
+  if (SupportMKLDNN(inputs[0])
+      && SupportMKLDNNPooling(param, inputs[0].shape())) {
+    MKLDNNPooling_Backward(ctx, param, out_grad, *in_data, workspace,
+                           req[0], in_grad);
+    return;
   }
 #endif
   // TODO I need to convert format.
-  std::vector<TBlob> in_blobs(inputs.size());
-  for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
+  std::vector<TBlob> in_blobs(3);
+  // In this case, there isn't workspace in the input arrays.
+  if (inputs.size() == 3) {
+    for (size_t i = 0; i < in_blobs.size(); i++)
+      in_blobs[i] = inputs[i].data();
+  }
+  else {
+    // There is workspace among the input arrays. One for out_grad and one for
+    // input.
+    in_blobs[0] = inputs[0].data(); // out grad
+    in_blobs[1] = inputs[2].data(); // in data
+    in_blobs[2] = inputs[3].data(); // out data
+  }
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
