@@ -1183,6 +1183,8 @@ class ConvRNNCell(BaseConvRNNCell):
         Shape of input in single timestep.
     num_hidden : int
         Number of units in output symbol.
+    num_filter : int 
+        Number of Convolution filter(channel)
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
@@ -1263,6 +1265,8 @@ class ConvLSTMCell(BaseConvRNNCell):
         Shape of input in single timestep.
     num_hidden : int
         Number of units in output symbol.
+    num_filter : int 
+        Number of Convolution filter(channel)
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
@@ -1355,6 +1359,8 @@ class ConvGRUCell(BaseConvRNNCell):
         Shape of input in single timestep.
     num_hidden : int
         Number of units in output symbol.
+    num_filter : int 
+        Number of Convolution filter(channel)
     h2h_kernel : tuple of int, default (3, 3)
         Kernel of Convolution operator in state-to-state transitions.
     h2h_dilate : tuple of int, default (1, 1)
