@@ -267,7 +267,7 @@ ifeq ($(CUDA_ARCH),)
 	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
 						 echo $(COMPRESS))
 endif
-@echo "Running CUDA_ARCH: $(CUDA_ARCH)"
+echo "Running CUDA_ARCH: $(CUDA_ARCH)"
 endif
 
 # ps-lite
