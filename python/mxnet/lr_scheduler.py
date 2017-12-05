@@ -154,22 +154,24 @@ class PolyScheduler(LRScheduler):
 
     """
 
-    def __init__(self, num_update, max_update, base_lr=0.01, pwr = 2):
+    def __init__(self, num_update, max_update, base_lr=0.01, pwr=2):
         super(PolyScheduler, self).__init__(base_lr)
         assert isinstance(max_update, int)
         if max_update < 1:
-                raise ValueError("maximum number of updates must be strictly positive")
+            raise ValueError("maximum number of updates must be strictly positive")
         self.base_lr_orig = self.base_lr
         self.max_update = max_update
         self.power = pwr
         self.count = num_update
         if num_update <= max_update:
-            self.base_lr = self.base_lr_orig*pow(1.0 - float(num_update)/float(self.max_update), self.power)
+            self.base_lr = self.base_lr_orig * pow(1.0 - float(num_update) / float(self.max_update),
+                                                   self.power)
         else:
             self.base_lr = self.base_lr_orig
 
     def __call__(self, num_update):
         if num_update <= self.max_update:
-            self.base_lr = self.base_lr_orig*pow(1.0 - float(num_update)/float(self.max_update), self.power)
+            self.base_lr = self.base_lr_orig * pow(1.0 - float(num_update) / float(self.max_update),
+                                                   self.power)
         self.count += 1
         return self.base_lr
