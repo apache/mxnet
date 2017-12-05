@@ -229,7 +229,7 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/apache/incubator-mxnet 
+$ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd incubator-mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
@@ -704,11 +704,9 @@ More details and verified installation instructions for macOS, with GPUs, coming
 
 <div class="cloud">
 
-AWS Marketplace distributes AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch an Amazon EC2 instance with one of the below AMIs:
-1. Deep Learning AMI (Amazon Machine Image) for [Ubuntu](https://aws.amazon.com/marketplace/pp/B06VSPXKDX)
-2. Deep Learning AMI for [Amazon Linux](https://aws.amazon.com/marketplace/pp/B01M0AXXQB)
+AWS Marketplace distributes Deep Learning AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch one of these Deep Learning AMIs by following instructions in the [AWS Deep Learning AMI Developer Guide](http://docs.aws.amazon.com/dlami/latest/devguide/what-is-dlami.html).
 
-You could also run distributed deeplearning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
+You can also run distributed deep learning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
 
 </div>
 
@@ -1077,7 +1075,7 @@ Clone the MXNet source code repository using the following ```git``` command in 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 ```bash
     cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk    
+    echo "USE_CUDA=1" >> config.mk
     echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
     echo "USE_CUDNN=1" >> config.mk
 ```
@@ -1110,7 +1108,7 @@ Add the mxnet folder to the path:
 
 ```bash
     cd ..
-    export MXNET_HOME=$(pwd)                       
+    export MXNET_HOME=$(pwd)
     echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
     source ~/.bashrc
 ```
