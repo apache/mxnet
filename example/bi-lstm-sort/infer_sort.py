@@ -38,18 +38,9 @@ def MakeInput(char, vocab, arr):
     tmp[0] = idx
     arr[:] = tmp
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Inference on the trained BiLSTM model",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--nums', type=str, default='', help="comma seperated list of digits to sort")
-    return parser.parse_args()
-
 def main():
-    args = parse_args()
-    nums = args.nums
-
-    tks = [x for x in nums.split(',')]
-    assert len(tks) == 5, "Please provide 5 numbers for sorting as sequence length is 5"
+    tks = sys.argv[1:]
+    assert len(tks) >= 5, "Please provide 5 numbers for sorting as sequence length is 5"
     batch_size = 1
     buckets = []
     num_hidden = 300
@@ -60,7 +51,7 @@ def main():
     learning_rate = 0.1
     momentum = 0.9
 
-    contexts = [mx.context.gpu(i) for i in range(1)]
+    contexts = [mx.context.cpu(i) for i in range(1)]
 
     vocab = default_build_vocab(os.path.join(DATA_DIR, TRAIN_FILE))
     rvocab = {}
@@ -75,7 +66,6 @@ def main():
                                  num_hidden=num_hidden, num_embed=num_embed,
                                  num_label=len(vocab), arg_params=arg_params, ctx=contexts, dropout=0.0)
 
-    #tks = sys.argv[1:]
     data = np.zeros((1, len(tks)))
     for k in range(len(tks)):
         data[0][k] = vocab[tks[k]]
