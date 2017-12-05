@@ -27,7 +27,7 @@
 #include <mxnet/tensor_blob.h>
 #include "../include/test_op_runner.h"
 #include "../include/test_legacy_op.h"
-#include "../../src/operator/activation-inl.h"
+#include "../../src/operator/nn/activation-inl.h"
 
 using namespace mxnet;
 

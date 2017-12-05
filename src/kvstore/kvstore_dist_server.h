@@ -247,7 +247,12 @@ class KVStoreDistServer {
             NDArray rsp = stored;
             stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
             mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-            op::PopulateFullIdxRspImpl(s, &rsp);
+            using namespace mxnet::op;
+            nnvm::dim_t nnr = rsp.shape()[0];
+            MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
+              IType* idx = rsp.aux_data(rowsparse::kIdx).dptr<IType>();
+              mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
+            });
             mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
                           recved.data().FlatTo1D<cpu, float>(), s);
             on_complete();
