@@ -41,6 +41,9 @@ if minimum != 0:
 if platform.system() != 'Darwin':
   blacklist.append('TargetConditionals.h')
 
+if platform.system() != 'Windows':
+  blacklist.append('windows.h')
+
 def pprint(lst):
     for item in lst:
         print item
