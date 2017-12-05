@@ -342,7 +342,7 @@ def test_dot_synthetic(data_dict):
                       distribution="uniform"):
 
         if rhs_density > 1 or rhs_density < 0:
-            raise ValueError("Value other than csr for lhs not supported")
+            raise ValueError("rhs_density has to be between 0 and 1")
 
         print_benchmark_info(lhs, rhs, lhs_trans, fw)
 

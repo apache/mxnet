@@ -536,6 +536,8 @@ struct DotCsrTransRspRspByRowBlocks {
 /*!
  * \brief CPU Kernel of PopulateCsrForNNC
  * Parallelization by individual rows
+ * Populates the indptr and indices array
+ * based on number of non zero columns
  */
 struct PopulateCsrForNNC {
   /*!
