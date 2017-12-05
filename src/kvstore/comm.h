@@ -22,6 +22,7 @@
  */
 #ifndef MXNET_KVSTORE_COMM_H_
 #define MXNET_KVSTORE_COMM_H_
+#define NVLINK_SUPPORT 4
 #include <dmlc/omp.h>
 #include <algorithm>
 #include <limits>
@@ -674,7 +675,7 @@ class CommDevice : public Comm {
       CopyFromTo(src, (dst[dev_id]), priority);
       for (size_t i = 0; i < dst.size(); ++i) {
         if (i != static_cast<size_t>(dev_id)) {
-          CopyFromTo(*dst[dev_id], (dst[i]), priority);
+          CopyFromTo(*dst[dev_id], dst[i], priority);
         }
       }
     } else {
@@ -909,6 +910,7 @@ class CommDevice : public Comm {
     std::vector<NDArray> compressed_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
+  /// \brief the small buffer for partially merged data
   std::unordered_map<int, BufferEntry> stage_buf_;
   bool inited_;
 };
