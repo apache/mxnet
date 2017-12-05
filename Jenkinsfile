@@ -180,7 +180,6 @@ try {
               USE_CUDA=1                    \
               USE_CUDA_PATH=/usr/local/cuda \
               USE_CUDNN=1                   \
-              CUDA_ARCH=\\'-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all\\' \
               -j\$(nproc)
               """
             make("build_cuda", flag)
@@ -200,7 +199,6 @@ try {
               USE_CUDA_PATH=/usr/local/cuda \
               USE_CUDNN=1                   \
               USE_CPP_PACKAGE=1             \
-              CUDA_ARCH=\\'-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all\\' \
               -j\$(nproc)
               """
             make('build_cuda', flag)
