@@ -52,12 +52,12 @@ def init_git_win() {
 def make(docker_type, make_flag) {
   timeout(time: max_time, unit: 'MINUTES') {
     try {
-      sh "${docker_run} ${docker_type} --dockerbinary docker make ${make_flag} CUDA_ARCH=\\'-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all\\'"
+      sh "${docker_run} ${docker_type} --dockerbinary docker make ${make_flag}"
     } catch (exc) {
       echo 'Incremental compilation failed with ${exc}. Fall back to build from scratch'
       sh "${docker_run} ${docker_type} --dockerbinary docker sudo make clean"
       sh "${docker_run} ${docker_type} --dockerbinary docker sudo make -C amalgamation/ clean"
-      sh "${docker_run} ${docker_type} --dockerbinary docker make ${make_flag} CUDA_ARCH=\\'-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all\\'"
+      sh "${docker_run} ${docker_type} --dockerbinary docker make ${make_flag}"
     }
   }
 }
@@ -180,6 +180,7 @@ try {
               USE_CUDA=1                    \
               USE_CUDA_PATH=/usr/local/cuda \
               USE_CUDNN=1                   \
+              CUDA_ARCH=\\'-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all\\' \
               -j\$(nproc)
               """
             make("build_cuda", flag)
@@ -199,6 +200,7 @@ try {
               USE_CUDA_PATH=/usr/local/cuda \
               USE_CUDNN=1                   \
               USE_CPP_PACKAGE=1             \
+              CUDA_ARCH=\\'-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all\\' \
               -j\$(nproc)
               """
             make('build_cuda', flag)
