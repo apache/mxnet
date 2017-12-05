@@ -57,16 +57,17 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
 };  // struct ConcatParam
 
 template<typename xpu, typename DType>
-class ConcatOp : public Operator {
+class ConcatOp {
  public:
-  explicit ConcatOp(ConcatParam param)
-    : size_(param.num_args), dimension_(param.dim) {}
+  void Init(const ConcatParam &param) {
+    this->size_ = param.num_args;
+    this->dimension_ = param.dim;
+  }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(static_cast<int>(in_data.size()), size_);
@@ -93,13 +94,10 @@ class ConcatOp : public Operator {
     Concatenate(data, &out, 1, req[concat_enum::kOut]);
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_states) {
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1U);
@@ -132,132 +130,31 @@ class ConcatOp : public Operator {
 };  // class ConcatOp
 
 template<typename xpu>
-Operator *CreateOp(ConcatParam param, int dtype, std::vector<TShape> *in_shape);
+void ConcatCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
+  MSHADOW_TYPE_SWITCH(inputs[concat_enum::kData0].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(param);
+    op.Forward(ctx, inputs, req, outputs);
+  });
+}
 
-#if DMLC_USE_CXX11
-class ConcatProp : public OperatorProperty {
- public:
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    param_.Init(kwargs);
-  }
+template<typename xpu>
+void ConcatGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
+  MSHADOW_TYPE_SWITCH(inputs[concat_enum::kOut].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(param);
+    op.Backward(ctx, inputs, req, outputs);
+  });
+}
 
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
-
-  std::vector<std::string> ListArguments() const override {
-    std::vector<std::string> ret;
-    for (int i = 0; i < param_.num_args; ++i) {
-      ret.push_back(std::string("arg") + std::to_string(i));
-    }
-    return ret;
-  }
-
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
-    using namespace mshadow;
-    CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-    TShape dshape;
-    index_t size = 0;
-    bool has_zero = false;
-    int axis = -1;
-    for (int i = 0; i < param_.num_args; ++i) {
-      TShape tmp = (*in_shape)[i];
-      if (tmp.ndim()) {
-        axis = CheckAxis(param_.dim, tmp.ndim());
-        has_zero = tmp[axis] == 0 || has_zero;
-        size += tmp[axis];
-        tmp[axis] = 0;
-        shape_assign(&dshape, tmp);
-      }
-    }
-
-    TShape tmp = (*out_shape)[0];
-    if (tmp.ndim()) {
-      axis = CheckAxis(param_.dim, tmp.ndim());
-      tmp[axis] = 0;
-      shape_assign(&dshape, tmp);
-    }
-
-    if (dshape.ndim() == 0) return false;
-
-    for (int i = 0; i < param_.num_args; ++i) {
-      CHECK(shape_assign(&(*in_shape)[i], dshape))
-        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
-    }
-
-    if (!has_zero) dshape[axis] = size;
-    CHECK(shape_assign(&(*out_shape)[0], dshape))
-      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
-
-    return dshape.Size() != 0;
-  }
-
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    int dtype = -1;
-
-    for (size_t i = 0; i < in_type->size(); ++i) {
-      if (dtype == -1) {
-        dtype = in_type->at(i);
-      } else {
-        CHECK(in_type->at(i) == dtype ||
-              in_type->at(i) == -1) <<
-              "Non-uniform data type in Concat";
-      }
-    }
-
-    if (dtype == -1) {
-      LOG(FATAL) << "Not enough information to infer type in Concat.";
-      return false;
-    }
-
-    size_t nin = this->ListArguments().size();
-    in_type->clear();
-    for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
-
-    size_t naux = this->ListAuxiliaryStates().size();
-    aux_type->clear();
-    for (size_t i = 0; i < naux; ++i) aux_type->push_back(dtype);
-
-    size_t nout = this->ListOutputs().size();
-    out_type->clear();
-    for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
-
-    return true;
-  }
-
-  OperatorProperty* Copy() const override {
-    auto ptr = new ConcatProp();
-    ptr->param_ = param_;
-    return ptr;
-  }
-
-  std::string TypeString() const override {
-    return "Concat";
-  }
-
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    return out_grad;
-  }
-
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not implemented";
-    return NULL;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                             std::vector<int> *in_type) const override;
-
- private:
-  ConcatParam param_;
-};  // class ConcatProp
-#endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
 

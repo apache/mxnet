@@ -25,51 +25,96 @@
 */
 
 #include "./concat-inl.h"
-#if MXNET_USE_MKL2017 == 1
-#include <mkl_memory.h>
-#include "./mkl/mkl_memory-inl.h"
-#include "./mkl/mkl_concat-inl.h"
-#endif  // MXNET_USE_MKL2017
 
 namespace mxnet {
 namespace op {
-template<>
-Operator* CreateOp<cpu>(ConcatParam param, int dtype, std::vector<TShape> *in_shape) {
-  Operator *op = NULL;
-#if MXNET_USE_MKL2017 == 1
-  // MKL supports 4D input tensors only for concat operation
-  // 2D/3D input tensors are reshaped to 4D in mkl_concat-inl.h
-  // hence MKL supports 2D/3D/4D input tensors for concat operation
-  size_t dims = (*in_shape)[0].ndim();
-  bool supportedDim = (dims >= 2 && dims <= 4);
-  if ((1 == param.dim) && supportedDim &&
-    (param.num_args < (dnnResourceMultipleDst - dnnResourceMultipleSrc))) {
-    switch (dtype) {
-      case mshadow::kFloat32:
-      return new MKLConcatOp<cpu, float>(param);
-    case mshadow::kFloat64:
-      return new MKLConcatOp<cpu, double>(param);
-    default:
-      break;
+
+static bool ConcatShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape) {
+  using namespace mshadow;
+  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+  TShape dshape;
+  index_t size = 0;
+  bool has_zero = false;
+  int axis = -1;
+  for (int i = 0; i < param_.num_args; ++i) {
+    TShape tmp = (*in_shape)[i];
+    if (tmp.ndim()) {
+      axis = CheckAxis(param_.dim, tmp.ndim());
+      has_zero = tmp[axis] == 0 || has_zero;
+      size += tmp[axis];
+      tmp[axis] = 0;
+      shape_assign(&dshape, tmp);
     }
   }
-  if (enableMKLWarnGenerated())
-    LOG(INFO) << MKLConcatOp<cpu, float>::getName() << " Skip MKL optimization";
-#endif
-  MSHADOW_TYPE_SWITCH(dtype, DType, {
-    op = new ConcatOp<cpu, DType>(param);
-  });
-  return op;
+
+  TShape tmp = (*out_shape)[0];
+  if (tmp.ndim()) {
+    axis = CheckAxis(param_.dim, tmp.ndim());
+    tmp[axis] = 0;
+    shape_assign(&dshape, tmp);
+  }
+
+  if (dshape.ndim() == 0) return false;
+
+  for (int i = 0; i < param_.num_args; ++i) {
+    CHECK(shape_assign(&(*in_shape)[i], dshape))
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+  }
+
+  if (!has_zero) dshape[axis] = size;
+  CHECK(shape_assign(&(*out_shape)[0], dshape))
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+
+  return dshape.Size() != 0;
 }
 
-Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
-                                       std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0), in_shape);
+static bool ConcatType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int> *in_type,
+                       std::vector<int> *out_type) {
+  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  int dtype = -1;
+
+  for (size_t i = 0; i < in_type->size(); ++i) {
+    if (dtype == -1) {
+      dtype = in_type->at(i);
+    } else {
+      CHECK(in_type->at(i) == dtype ||
+            in_type->at(i) == -1) <<
+          "Non-uniform data type in Concat";
+    }
+  }
+
+  if (dtype == -1) {
+    LOG(FATAL) << "Not enough information to infer type in Concat.";
+    return false;
+  }
+
+  size_t nin = param_.num_args;
+  in_type->clear();
+  for (size_t i = 0; i < nin; ++i) in_type->push_back(dtype);
+
+  out_type->clear();
+  out_type->push_back(dtype);
+
+  return true;
 }
+
+struct ConcatGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    const ConcatParam& param = nnvm::get<ConcatParam>(n->attrs.parsed);
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
 
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
-MXNET_REGISTER_OP_PROPERTY(Concat, ConcatProp)
+NNVM_REGISTER_OP(Concat)
 .describe(R"code(Joins input arrays along a given axis.
 
 .. note:: `Concat` is deprecated. Use `concat` instead.
@@ -102,11 +147,39 @@ Example::
                          [ 5.,  5.,  8.,  8.]]
 
 )code" ADD_FILELINE)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  std::vector<std::string> ret;
+  for (int i = 0; i < params.num_args; ++i) {
+    ret.push_back(std::string("arg") + std::to_string(i));
+  }
+  return ret;
+})
+.set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
+.set_attr<nnvm::FInferType>("FInferType", ConcatType)
+.set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ConcatGrad{"_backward_Concat"})
+.set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
-.add_arguments(ConcatParam::__FIELDS__())
-.set_key_var_num_args("num_args");
+.add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Concat).add_alias("concat");
+
+NNVM_REGISTER_OP(_backward_Concat)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
