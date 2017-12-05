@@ -575,6 +575,12 @@ class NDArray {
   void CopyFrom(const mkldnn::memory &mem);
   std::shared_ptr<mkldnn::memory> CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
+
+  /*
+   * This function is used inside operators to reshape an array.
+   * It's used by FullyConnected right now.
+   */
+  NDArray ReshapeMKLDNN(const TShape &shape) const;
 #endif
 
   /*!
