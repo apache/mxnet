@@ -40,7 +40,6 @@ parser.add_argument('--log-interval', type=int, default=100,
 
 # Related to feature engineering, please see preprocess in get_data.py
 ADULT = {
-    'num_features': 2400,
     'train': 'adult.data',
     'test': 'adult.test',
     'url': 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/',
@@ -67,7 +66,6 @@ if __name__ == '__main__':
     lr = args.lr
 
     # dataset    
-    num_features = ADULT['num_features']
     data_dir = os.path.join(os.getcwd(), 'data')
     train_data = os.path.join(data_dir, ADULT['train'])
     val_data = os.path.join(data_dir, ADULT['test'])
