@@ -21,6 +21,7 @@ from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal, default_context
 import unittest
 
+
 def test_loss_ndarray():
     output = mx.nd.array([1, 2, 3, 4])
     label = mx.nd.array([1, 3, 5, 7])
