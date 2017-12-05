@@ -45,6 +45,14 @@
 namespace mxnet {
 namespace op {
 
+static inline bool SupportMKLDNNAct(const ActivationParam& param) {
+  // We don't include tanh for now. It seems MKLDNN tanh has some precision
+  // problems.
+  return param.act_type == activation::kReLU
+      || param.act_type == activation::kSigmoid
+      || param.act_type == activation::kSoftReLU;
+}
+
 static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   switch (param.act_type) {
     case activation::kReLU:
