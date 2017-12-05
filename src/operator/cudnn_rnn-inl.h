@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file cudnn_rnn-inl.h
  * \brief
  * \author Sebastian Bodenstein

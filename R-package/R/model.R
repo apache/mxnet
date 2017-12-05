@@ -91,7 +91,7 @@ mx.model.extract.model <- function(symbol, train.execs) {
 mx.model.create.kvstore <- function(kvstore, arg.params, ndevice, verbose=TRUE) {
   if (is.MXKVStore(kvstore)) return (kvstore)
   if (!is.character(kvstore)) {
-    stop("kvstore msut be either MXKVStore or a string")
+    stop("kvstore must be either MXKVStore or a string")
   }
   if (ndevice == 1) return (NULL)
   if (kvstore == "local") {

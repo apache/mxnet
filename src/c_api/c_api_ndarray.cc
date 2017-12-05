@@ -157,7 +157,25 @@ int MXCreateCachedOp(SymbolHandle handle,
 
   API_BEGIN();
   *out = new std::shared_ptr<Imperative::CachedOp>(
-      new Imperative::CachedOp(*sym));
+      new Imperative::CachedOp(
+        *sym, std::vector<std::pair<std::string, std::string> >()));
+  API_END();
+}
+
+int MXCreateCachedOpEx(SymbolHandle handle,
+                       int num_params,
+                       const char** keys,
+                       const char** vals,
+                       CachedOpHandle *out) {
+  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
+
+  API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (int i = 0; i < num_params; ++i) {
+    kwargs.push_back({keys[i], vals[i]});
+  }
+  *out = new std::shared_ptr<Imperative::CachedOp>(
+      new Imperative::CachedOp(*sym, kwargs));
   API_END();
 }
 
@@ -198,16 +216,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     }
   }
 
-  OpStatePtr state = op->Forward(ndinputs, ndoutputs);
-  if (Imperative::Get()->is_recording()) {
-    nnvm::NodeAttrs attrs;
-    attrs.op = cached_op;
-    attrs.name = "_cachedop";
-    attrs.parsed = op;
-    Imperative::Get()->RecordOp(
-        std::move(attrs), ndinputs, ndoutputs, state,
-        &op->save_inputs(), &op->save_outputs());
-  }
+  op->Forward(op, ndinputs, ndoutputs);
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();

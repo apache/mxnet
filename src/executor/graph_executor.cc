@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file graph_executor.cc
  * \brief graph executor
  */
@@ -320,6 +321,7 @@ Graph AssignContext(Graph g,
                     const std::vector<Context>& in_arg_ctxes,
                     const std::vector<Context>& arg_grad_ctxes,
                     const std::vector<Context>& aux_state_ctxes,
+                    const std::vector<OpReqType>& grad_req_types,
                     size_t num_forward_inputs,
                     size_t num_forward_outputs) {
   const auto& idx = g.indexed_graph();
@@ -384,9 +386,15 @@ Graph AssignContext(Graph g,
 
   // loop through backward input nodes and populate maps and lists
   // the backward input nodes is the gradient of the loss wrt the output
-  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i) {
+  size_t arg_grad_offset = 0;
+  // keep an offset into the arg_grad_ctxes vector,
+  // since g.outputs exclude arg_grad whose req == null
+  CHECK_GE(grad_req_types.size(), g.outputs.size() - num_forward_outputs)
+           << "insufficient number of grad_reqs";
+  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i, ++arg_grad_offset) {
+    while (grad_req_types[arg_grad_offset] == kNullOp) ++arg_grad_offset;
     const uint32_t nid = idx.outputs()[i].node_id;
-    Context ctx = arg_grad_ctxes[i - num_forward_outputs];
+    Context ctx = arg_grad_ctxes[arg_grad_offset];
     if (ctx2id.count(ctx) == 0) {
       ctx2id[ctx] = static_cast<int>(ctx_list.size());
       ctx_list.push_back(ctx);
@@ -416,9 +424,11 @@ Graph AssignContext(Graph g,
   // if the assigned device of gradient node
   // corresponds to storage of grads
   auto &new_idx = g.indexed_graph();
-  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i) {
+  arg_grad_offset = 0;
+  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i, ++arg_grad_offset) {
+    while (grad_req_types[arg_grad_offset] == kNullOp) ++arg_grad_offset;
     const uint32_t nid = new_idx.outputs()[i].node_id;
-    Context ctx = arg_grad_ctxes[i - num_forward_outputs];
+    Context ctx = arg_grad_ctxes[arg_grad_offset];
     CHECK(ctx == vcontext[nid])
       << "Trying to save gradient to " << ctx
       << " while its source node \"" << new_idx[nid].source->attrs.name
@@ -591,7 +601,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   }
 
   g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(arg_stypes));
-  g = InferStorageType(std::move(g), std::move(StorageTypeVector()), "");
+  g = InferStorageType(std::move(g), StorageTypeVector(), "");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));
@@ -1054,6 +1064,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                     in_arg_ctxes,
                     arg_grad_ctxes,
                     aux_state_ctxes,
+                    grad_req_types,
                     num_forward_inputs_,
                     num_forward_outputs_);
 

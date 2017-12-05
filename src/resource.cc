@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file resource.cc
  * \brief Implementation of resource manager.
  */
@@ -112,14 +113,14 @@ class ResourceManagerImpl : public ResourceManager {
 
   // request resources
   Resource Request(Context ctx, const ResourceRequest &req) override {
-    if (ctx.dev_mask() == cpu::kDevMask) {
+    if (ctx.dev_mask() == Context::kCPU) {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
-      CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
+      CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
       switch (req.type) {
         case ResourceRequest::kRandom: {

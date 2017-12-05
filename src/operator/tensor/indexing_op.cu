@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.cu
  * \brief
  * \author Siyi Li, Chi Zhang

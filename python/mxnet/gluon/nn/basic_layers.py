@@ -22,6 +22,7 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
            'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
            'Lambda', 'HybridLambda']
 import warnings
+import numpy as np
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
@@ -67,7 +68,7 @@ class Sequential(Block):
     def __len__(self):
         return len(self._children)
 
-    def hybridize(self, active=True):
+    def hybridize(self, active=True, **kwargs):
         """Activates or deactivates `HybridBlock`s recursively. Has no effect on
         non-hybrid children.
 
@@ -75,11 +76,13 @@ class Sequential(Block):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
+        **kwargs : string
+            Additional flags for hybridized operator.
         """
         if self._children and all(isinstance(c, HybridBlock) for c in self._children):
             warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
                           'using HybridSequential for the best performance.')
-        super(Sequential, self).hybridize(active)
+        super(Sequential, self).hybridize(active, **kwargs)
 
 
 class HybridSequential(HybridBlock):
@@ -185,11 +188,11 @@ class Dense(HybridBlock):
             self._units = units
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          dtype=None, init=weight_initializer,
+                                          init=weight_initializer,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            dtype=None, init=bias_initializer,
+                                            init=bias_initializer,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
@@ -336,23 +339,28 @@ class BatchNorm(HybridBlock):
             self.in_channels = in_channels
 
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), dtype=None,
-                                     init=gamma_initializer, allow_deferred_init=True,
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True,
                                      differentiable=scale)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), dtype=None,
-                                    init=beta_initializer, allow_deferred_init=True,
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True,
                                     differentiable=center)
         self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(in_channels,), dtype=None,
+                                            shape=(in_channels,),
                                             init=running_mean_initializer,
                                             allow_deferred_init=True,
                                             differentiable=False)
         self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(in_channels,), dtype=None,
+                                           shape=(in_channels,),
                                            init=running_variance_initializer,
                                            allow_deferred_init=True,
                                            differentiable=False)
+
+    def cast(self, dtype):
+        if np.dtype(dtype).name == 'float16':
+            dtype = 'float32'
+        super(BatchNorm, self).cast(dtype)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
@@ -437,7 +445,7 @@ class Embedding(HybridBlock):
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      dtype=None, init=weight_initializer,
+                                      init=weight_initializer,
                                       allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, weight):

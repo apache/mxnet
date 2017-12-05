@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file base.h
  * \brief configuation of mxnet as well as basic data structure.
  */

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file regression_output.cc
  * \brief regression output operator
 */
@@ -32,11 +33,11 @@ Operator *CreateRegressionOutputOp<cpu>(reg_enum::RegressionOutputType type,
                                         RegressionOutputParam param) {
   switch (type) {
     case reg_enum::kLinear:
-      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow::op::minus>(param);
+      return new RegressionOutputOp<cpu, op::mshadow_op::identity, op::mshadow_op::minus>(param);
     case reg_enum::kLogistic:
-      return new RegressionOutputOp<cpu, mshadow_op::sigmoid, mshadow::op::minus>(param);
+      return new RegressionOutputOp<cpu, mshadow_op::sigmoid, op::mshadow_op::minus>(param);
     case reg_enum::kMAE:
-      return new RegressionOutputOp<cpu, mshadow::op::identity, mshadow_op::minus_sign>(param);
+      return new RegressionOutputOp<cpu, op::mshadow_op::identity, mshadow_op::minus_sign>(param);
     default:
       LOG(FATAL) << "unknown activation type " << type;
   }

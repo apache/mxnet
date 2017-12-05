@@ -18,6 +18,7 @@
  */
 
 /*!
+* Copyright (c) 2016 by Contributors
 * \file elemwise_op_common.h
 * \brief common function used for broadcasting and reducing
 * \author Xingjian Shi

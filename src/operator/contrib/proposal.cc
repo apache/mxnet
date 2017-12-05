@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file proposal.cc
  * \brief
  * \author Piotr Teterwak, Bing Xu, Jian Guo

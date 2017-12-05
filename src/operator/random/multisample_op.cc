@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file multisample_op.cc
  * \brief CPU-implementation of multi-sampling operators
  */

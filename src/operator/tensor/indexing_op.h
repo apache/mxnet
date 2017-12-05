@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
  * \brief
  * \author Bing Xu, Siyi Li, Chi Zhang

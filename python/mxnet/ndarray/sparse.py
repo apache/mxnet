@@ -747,6 +747,13 @@ class RowSparseNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def retain(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`retain`.
+
+        The arguments are the same as for :py:func:`retain`, with
+        this array as data.
+        """
+        return retain(self, *args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.

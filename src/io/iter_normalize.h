@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file iter_normalize.h
  * \brief Iterator that subtracts mean and do a few augmentations.
  */

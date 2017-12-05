@@ -2759,7 +2759,7 @@ def full(shape, val, dtype=None, **kwargs):
     """
     if dtype is None:
         dtype = _numpy.float32
-    return _internal._full(shape=shape, dtype=dtype, value=val, **kwargs)
+    return _internal._full(shape=shape, dtype=dtype, value=float(val), **kwargs)
 
 # pylint: disable=redefined-outer-name
 def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):

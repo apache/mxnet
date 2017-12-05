@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  */
 #include <mxnet/storage.h>
 #include <mshadow/tensor.h>

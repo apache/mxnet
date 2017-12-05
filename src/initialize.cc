@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file initialize.cc
  * \brief initialize mxnet library
  */

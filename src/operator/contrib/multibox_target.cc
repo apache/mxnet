@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file multibox_target.cc
  * \brief MultiBoxTarget op
  * \author Joshua Zhang

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file init_op.cc
  * \brief CPU Implementation of init op
  */

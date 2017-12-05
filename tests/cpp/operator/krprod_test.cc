@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2017 by Contributors
  *  \file krprod_test.cc
  *  \brief Test Khatri-Rao product
  *  \author Jencir Lee

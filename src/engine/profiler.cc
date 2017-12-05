@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file profiler.cc
  * \brief implements profiler
  */
@@ -30,7 +31,12 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <thread>
 #include "./profiler.h"
+
+#if MXNET_USE_CUDA
+#include "../common/cuda_utils.h"
+#endif
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #include <Windows.h>
@@ -44,9 +50,7 @@ Profiler::Profiler()
   : state_(kNotRunning), enable_output_(false), filename_("profile.json") {
   this->init_time_ = NowInUsec();
 
-  // TODO(ziheng) get device number during execution
-  int kMaxNumCpus = 64;
-  this->cpu_num_ = kMaxNumCpus;
+  this->cpu_num_ = std::thread::hardware_concurrency();
 #if MXNET_USE_CUDA
   int kMaxNumGpus = 32;
   this->gpu_num_ = kMaxNumGpus;

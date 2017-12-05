@@ -229,8 +229,8 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
-$ cd mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet 
+$ cd incubator-mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
@@ -457,8 +457,8 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
-$ cd mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
+$ cd incubator-mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
@@ -785,8 +785,8 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
-$ cd mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
+$ cd incubator-mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
@@ -857,8 +857,8 @@ $ sudo apt-get install -y libopencv-dev
 **Step 4** Download MXNet sources and build MXNet core shared library.
 
 ```bash
-$ git clone --recursive https://github.com/dmlc/mxnet
-$ cd mxnet
+$ git clone --recursive https://github.com/apache/incubator-mxnet
+$ cd incubator-mxnet
 $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
@@ -988,8 +988,8 @@ Install these dependencies using the following commands in any directory:
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
-    cd mxnet
+    git clone https://github.com/apache/incubator-mxnet.git --recursive
+    cd incubator-mxnet
 ```
 
 If you aren't processing images with MXNet on the Raspberry Pi, you can minimize the size of the compiled library by building MXNet without the Open Source Computer Vision (OpenCV) library with the following commands:
@@ -1070,8 +1070,8 @@ Install these dependencies using the following commands in any directory:
 
 Clone the MXNet source code repository using the following ```git``` command in your home directory:
 ```bash
-    git clone https://github.com/dmlc/mxnet.git --recursive
-    cd mxnet
+    git clone https://github.com/apache/incubator-mxnet.git --recursive
+    cd incubator-mxnet
 ```
 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
@@ -1499,7 +1499,7 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet).
+1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet).
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
@@ -1508,7 +1508,7 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 
 &nbsp;
 Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
-- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](http://www.graphviz.org/Download_windows.php).
+- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
 **Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
 
 
