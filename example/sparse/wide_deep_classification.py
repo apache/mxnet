@@ -29,7 +29,7 @@ parser.add_argument('--num-epoch', type=int, default=10,
                     help='number of epochs to train')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
-parser.add_argument('--lr', type=float, default=0.01,
+parser.add_argument('--lr', type=float, default=0.001,
                     help='learning rate')
 parser.add_argument('--optimizer', type=str, default='adam',
                     help='what optimizer to use',
@@ -44,7 +44,7 @@ ADULT = {
     'train': 'adult.data',
     'test': 'adult.test',
     'url': 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/',
-    'num_linear_features': 2000,
+    'num_linear_features': 3000,
     'num_embed_features': 2,
     'num_cont_features': 38,
     'embed_input_dims': [1000, 1000],
@@ -74,8 +74,9 @@ if __name__ == '__main__':
     train_csr, train_dns, train_label = get_uci_adult(data_dir, ADULT['train'], ADULT['url'])
     val_csr, val_dns, val_label = get_uci_adult(data_dir, ADULT['test'], ADULT['url'])
 
-    model = wide_deep_model(ADULT['num_linear_features'], ADULT['num_embed_features'], ADULT['num_cont_features'],
-                            ADULT['embed_input_dims'], ADULT['hidden_units'])
+    model = wide_deep_model(ADULT['num_linear_features'], ADULT['num_embed_features'],
+                            ADULT['num_cont_features'], ADULT['embed_input_dims'],
+                            ADULT['hidden_units'])
 
     # data iterator
     train_data = mx.io.NDArrayIter({'csr_data': train_csr, 'dns_data': train_dns},
@@ -86,7 +87,8 @@ if __name__ == '__main__':
                                   shuffle=True, last_batch_handle='discard')
     
     # module
-    mod = mx.mod.Module(symbol=model, data_names=['csr_data', 'dns_data'], label_names=['softmax_label'])
+    mod = mx.mod.Module(symbol=model, data_names=['csr_data', 'dns_data'],
+                        label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
     optim = mx.optimizer.create(optimizer, learning_rate=lr, rescale_grad=1.0/batch_size)

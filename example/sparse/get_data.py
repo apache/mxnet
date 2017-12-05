@@ -71,9 +71,8 @@ def get_uci_adult(data_dir, data_name, url):
 
 
 def preprocess_uci_adult(data_name):
-    """Some tricks of feature engineering are adapted from tensorflow's wide and deep tutorial.
-    A bucket column of age, and a crossed column of age_bucket, education, occupation
-    are not included in the features
+    """Some tricks of feature engineering are adapted
+    from tensorflow's wide and deep tutorial.
     """
     csv_columns = [
         "age", "workclass", "fnlwgt", "education", "education_num",
@@ -108,8 +107,10 @@ def preprocess_uci_adult(data_name):
     # wide columns
     crossed_columns = [
         ["education", "occupation"],
-        ["native_country", "occupation"]
+        ["native_country", "occupation"],
+        ["age_buckets", "education", "occupation"],
     ]
+    age_boundaries = [18, 25, 30, 35, 40, 45, 50, 55, 60, 65]
     # deep columns
     indicator_columns = ['workclass', 'education', 'gender', 'relationship']
     
@@ -135,8 +136,14 @@ def preprocess_uci_adult(data_name):
             label_list.append(labels.index(row['income_bracket'].strip()[0]))
 
             for i, cols in enumerate(crossed_columns):
-                s = '_'.join([row[col].strip() for col in cols])
-                csr_list.append((i * hash_bucket_size + hash(s) % hash_bucket_size, 1.0))
+                if cols[0] == "age_buckets":
+                    age_bucket = np.digitize(float(row["age"]), age_boundaries)
+                    s = '_'.join([row[col].strip() for col in cols[1:]])
+                    s += '_' + str(age_bucket)
+                    csr_list.append((i * hash_bucket_size + hash(s) % hash_bucket_size, 1.0))
+                else:
+                    s = '_'.join([row[col].strip() for col in cols])
+                    csr_list.append((i * hash_bucket_size + hash(s) % hash_bucket_size, 1.0))
             
             dns_row = [0] * dns_ncols
             dns_dim = 0
@@ -156,7 +163,7 @@ def preprocess_uci_adult(data_name):
 
     data_list = [item[1] for item in csr_list]
     indices_list = [item[0] for item in csr_list]
-    indptr_list = range(0, len(indices_list) + 1, 2)
+    indptr_list = range(0, len(indices_list) + 1, len(crossed_columns))
     # convert to ndarrays
     csr = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list),
                                   shape=(len(label_list), hash_bucket_size * len(crossed_columns)))
