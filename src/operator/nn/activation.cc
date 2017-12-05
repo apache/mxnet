@@ -64,8 +64,7 @@ static void ActivationComputeEx_CPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 #endif
-  _ActivationCompute<cpu>(param, ctx, inputs[0].data(), req[0],
-      outputs[0].data());
+  _ActivationCompute<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
 }
 
 void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
@@ -99,7 +98,7 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -122,7 +121,7 @@ inline static bool backward_ActStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
