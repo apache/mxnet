@@ -187,7 +187,6 @@ def test_ctc_loss():
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
 
-@unittest.skip
 def test_ctc_loss_train():
     np.random.seed(1234)
     N = 20

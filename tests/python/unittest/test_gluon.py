@@ -567,7 +567,6 @@ def test_fill_shape_deferred():
     assert net[1].gamma.shape[0] == 64, net[1].gamma.shape[0]
     assert net[2].weight.shape[1] == 3072, net[2].weight.shape[1]
 
-# @unittest.skip("mabreu: fails https://issues.amazon.com/issues/V4599990")
 def test_dtype():
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
