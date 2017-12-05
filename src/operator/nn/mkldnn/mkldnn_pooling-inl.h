@@ -158,9 +158,17 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
 
   auto alg = GetMKLDNNPoolAlgo(param);
 
+  int kernel_h_, kernel_w_;
+  if (param.global_pool) {
+    kernel_h_ = data_md.data.dims[2];
+    kernel_w_ = data_md.data.dims[3];
+  } else {
+    kernel_h_ = param.kernel[0];
+    kernel_w_ = param.kernel[1];
+  }
   pooling_backward::desc desc(
       alg, diff_in_md, diff_md, {(int)param.stride[0], (int)param.stride[1]},
-      {(int)param.kernel[0], (int)param.kernel[1]}, {(int)param.pad[0], (int)param.pad[1]},
+      {kernel_h_, kernel_w_}, {(int)param.pad[0], (int)param.pad[1]},
       {(int)param.pad[0], (int)param.pad[1]}, padding_kind::zero);
   pooling_backward::primitive_desc pdesc(desc, cpu_engine, pdesc_fwd);
 
