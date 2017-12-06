@@ -38,6 +38,7 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
    :maxdepth: 1
 
    basic/ndarray
+   basic/ndarray_indexing
    basic/symbol
    basic/module
    basic/data
