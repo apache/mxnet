@@ -13,3 +13,9 @@ RUN wget --no-check-certificate -O /tmp/mklml.tgz https://github.com/01org/mkl-d
 RUN tar -zxvf /tmp/mklml.tgz && cp -rf mklml_*/* /usr/local/ && rm -rf mklml_*
 
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+
+# Note: ln -s /dev/null /dev/raw1394 is to prevent error on python's
+#   cv2 during import: "libdc1394 error: Failed to initialize libdc1394"
+#   So, if you want to run another command, just update your CMD to start
+#   with this script, followed by whatever you want. (Not cute, but works)
+RUN ln /dev/null /dev/raw1394

@@ -23,3 +23,5 @@ RUN cd caffe; make all pycaffe -j$(nproc)
 RUN cd caffe/python; for req in $(cat requirements.txt); do pip2 install $req; done
 
 ENV PYTHONPATH=${PYTHONPATH}:/caffe/python
+
+RUN ln /dev/null /dev/raw1394
