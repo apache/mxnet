@@ -24,6 +24,7 @@
 #include <mxnet/base.h>
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -108,12 +109,59 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>);
 
 // copy
+static void CopyEx(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<NDArray>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+#if MXNET_USE_MKLDNN == 1
+  if (in_stype == kMKLDNNStorage) {
+    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  // This happens if inputs are supposed to be in MKLDNN format
+  // but MKLDNN doesn't support the data type or the shape. We're
+  // forced to convert it to the default format.
+  else if (inputs[0].storage_type() == kDefaultStorage) {
+    std::vector<TBlob> in_blobs(1);
+    std::vector<TBlob> out_blobs(1);
+    in_blobs[0] = inputs[0].data();
+    out_blobs[0] = outputs[0].data();
+    UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    return;
+  }
+#endif
+  UnaryOp::IdentityComputeEx<cpu>(attrs, ctx, inputs, req, outputs);
+}
+
+static inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+#if MXNET_USE_MKLDNN == 1
+  if (in_attrs->at(0) == kMKLDNNStorage && dev_mask == mshadow::cpu::kDevMask) {
+    out_attrs->at(0) = kMKLDNNStorage;
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    return true;
+  } else
+#endif
+    return ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
+                                                        in_attrs, out_attrs);
+}
+
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")
 .add_alias("identity")
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", CopyStorageType)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", CopyEx)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
@@ -128,9 +176,9 @@ NNVM_REGISTER_OP(_backward_copy)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
+.set_attr<FInferStorageType>("FInferStorageType", CopyStorageType)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", CopyEx)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};

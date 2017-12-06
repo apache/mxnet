@@ -71,6 +71,11 @@ void MKLDNNSoftmax_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 void MKLDNNSum_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &inputs, const OpReqType &req, const NDArray &out_data);
 
+/* For copy */
+void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                const NDArray &in_data, const OpReqType &req,
+                const NDArray &out_data);
+
 }
 }
 #endif  // MXNET_USE_MKLDNN == 1
