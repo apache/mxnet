@@ -52,7 +52,7 @@ class ConnectionWrapper(object):
     NDArray via shared memory."""
 
     def __init__(self, conn):
-        self.conn = conn
+        self._conn = conn
 
     def send(self, obj):
         """Send object"""
@@ -67,7 +67,8 @@ class ConnectionWrapper(object):
 
     def __getattr__(self, name):
         """Emmulate conn"""
-        return getattr(self.conn, name)
+        attr = self.__dict__.get('_conn', None)
+        return getattr(attr,name)
 
 
 class Queue(multiprocessing.queues.Queue):
@@ -188,9 +189,6 @@ class DataLoader(object):
                              "not be specified if batch_sampler is specified.")
 
         self._batch_sampler = batch_sampler
-        if num_workers > 0 and os.name == 'nt':
-            warnings.warn("DataLoader does not support num_workers > 0 on Windows yet.")
-            num_workers = 0
         self._num_workers = num_workers
         if batchify_fn is None:
             if num_workers > 0:
