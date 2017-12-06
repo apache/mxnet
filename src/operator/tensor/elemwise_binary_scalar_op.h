@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_scalar_op.h
  * \brief Function definition of elementwise binary scalar operators
  */
@@ -33,49 +34,6 @@
 
 namespace mxnet {
 namespace op {
-
-inline bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
-                                    const int dev_mask,
-                                    DispatchMode* dispatch_mode,
-                                    std::vector<int> *in_attrs,
-                                    std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
-  const auto in_stype = in_attrs->at(0);
-  auto &out_stype = out_attrs->at(0);
-  bool dispatched = false;
-  if (!dispatched && in_stype == kDefaultStorage) {
-    // dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  }
-  if (!dispatched && in_stype == kRowSparseStorage) {
-    // rsp -> rsp
-    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-    // FComputeEx can handle dns output on cpu, too
-    if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
-      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-      dispatched = true;
-    }
-  }
-  if (!dispatched && in_stype == kCSRStorage) {
-    // csr -> csr
-    dispatched = storage_type_assign(&out_stype, kCSRStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-    // FComputeEx can handle dns output on cpu, too
-    if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
-      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-      dispatched = true;
-    }
-  }
-  if (!dispatched) {
-    dispatch_fallback(out_attrs, dispatch_mode);
-    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
-  }
-  return true;
-}
-
 
 class BinaryScalarOp : public UnaryOp {
   /*! \brief Tensor operation against a scalar with a dense result */
@@ -109,7 +67,7 @@ class BinaryScalarOp : public UnaryOp {
         const int64_t dense_block_count = next_input_row - output_row;
         if (dense_block_count > 0) {
           MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-            mxnet_op::Kernel<OpBase::SetToScalar<Req>, cpu>::Launch(
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, cpu>::Launch(
               stream,
               items_per_row * dense_block_count,
               output_data.dptr_ + items_per_row * output_row,
@@ -184,8 +142,8 @@ class BinaryScalarOp : public UnaryOp {
     const size_t item_count = column_indexes.Size();
 
     // Pre-fill dense with 0-input/output value
-    FillDense<cpu, DType>(stream, output.shape().Size(), dense_fill_val,
-                          req, output.data().dptr<DType>());
+    FillDense<DType>(stream, output.shape().Size(), dense_fill_val,
+                     req, output.data().dptr<DType>());
 
     mshadow::Tensor<cpu, 2, DType> out = AsRowise2D<DType>(stream, output.data());
     if (item_count) {
@@ -280,11 +238,8 @@ class BinaryScalarOp : public UnaryOp {
     const double alpha = nnvm::get<double>(attrs.parsed);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s,
-                                                                      inputs[0].Size(),
-                                                                      outputs[0].dptr<DType>(),
-                                                                      inputs[0].dptr<DType>(),
-                                                                      DType(alpha));
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha));
       });
     });
   }
@@ -299,12 +254,14 @@ class BinaryScalarOp : public UnaryOp {
     DCHECK_EQ(outputs.size(), 1);
     const auto in_stype = inputs[0].storage_type();
     const auto out_stype = outputs[0].storage_type();
-    if (req[0] == kNullOp) return;
+    if (req[0] == kNullOp) {
+      return;
+    }
     if ((in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) ||
         (in_stype == kCSRStorage && out_stype == kCSRStorage)) {
       // csr -> csr, or rsp -> rsp
       UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
-    } else if (out_stype == kDefaultStorage && typeid(xpu) == typeid(cpu) &&
+    } else if (out_stype == kDefaultStorage &&
               (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
       MSHADOW_TYPE_SWITCH(outputs[0].data().type_flag_, DType, {
         MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
@@ -327,10 +284,13 @@ class BinaryScalarOp : public UnaryOp {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const double alpha = nnvm::get<double>(attrs.parsed);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> ograd = inputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> lhs = inputs[1].FlatTo1D<xpu, DType>(s);
-      ASSIGN_DISPATCH(igrad, req[0], ograd * F<OP>(lhs, scalar<DType>(DType(alpha))));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
+          mxnet::op::mxnet_op::backward_grad_tuned<OP>, Req>, xpu>::
+          Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                 inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                 DType(alpha));
+      });
     });
   }
 };

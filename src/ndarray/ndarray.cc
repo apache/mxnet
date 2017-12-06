@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ndarray.cc
  * \brief ndarry module of mxnet
  */
@@ -65,10 +66,10 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 NDArray NDArray::Reshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
-  CHECK(storage_type() == kDefaultStorage) << "Reshape for storage type " <<
-        storage_type() << " is not implemented yet";
+  auto stype = storage_type();
+  // reshape is not supported for non-default ndarray with dismatching shapes
+  CHECK((shape_ == shape) || stype == kDefaultStorage)
+    << "Reshape for storage type " << stype << " is not implemented yet";
   CHECK_GE(shape_.Size(), shape.Size())
     << "NDArray.Reshape: target shape size is larger current shape";
   NDArray ret = this->Detach();
@@ -80,8 +81,8 @@ NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
   NDArray ret = this->Reshape(shape);
   if (!Imperative::Get()->is_recording()) return ret;
 
-  CHECK_GE(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape must have must have the same size as "
+  CHECK_EQ(shape_.Size(), shape.Size())
+    << "NDArray.Reshape: target shape must have the same size as "
     << "current shape when recording with autograd.";
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("Reshape");;
@@ -308,30 +309,34 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
   CHECK_NE(out->is_none(), true) << "Set value target must not be empty";
   // important: callback must always capture by value
   NDArray ret = *out;
-  switch (ret.ctx().dev_mask()) {
-    case cpu::kDevMask: {
-      Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          CHECK(ret.storage_type() == kDefaultStorage);
-          TBlob tmp = ret.data();
-          ndarray::Eval<cpu>(rhs, &tmp, ctx);
-        }, ret.ctx(), {}, {ret.var()},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+  const NDArrayStorageType stype = ret.storage_type();
+  Engine::Get()->PushSync([rhs, ret, stype](RunContext ctx) {
+      TBlob tmp = ret.data();
+      switch (ret.ctx().dev_mask()) {
+        case cpu::kDevMask: {
+          if (stype == kDefaultStorage) {
+            ndarray::Eval<cpu>(rhs, &tmp, ctx);
+          } else {
+            ndarray::Eval(ctx.get_stream<cpu>(), rhs, ret);
+          }
+          break;
+        }
 #if MXNET_USE_CUDA
-    case gpu::kDevMask: {
-      Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          TBlob tmp = ret.data();
-          ndarray::Eval<gpu>(rhs, &tmp, ctx);
+        case gpu::kDevMask: {
+          if (stype == kDefaultStorage) {
+            ndarray::Eval<gpu>(rhs, &tmp, ctx);
+          } else {
+            ndarray::Eval(ctx.get_stream<gpu>(), rhs, ret);
+          }
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), {}, {ret.var()},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+          break;
+        }
 #endif
-    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-  }
+        default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      }
+    }, ret.ctx(), {}, {ret.var()},
+  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
 }
 
 /*!
@@ -402,7 +407,7 @@ inline void CopyFromToCsrImpl(const NDArray& from, const NDArray& to, RunContext
   // if source storage is not initialized, fill destination with zeros
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosCsrImpl<to_xpu>(s, to);
+    op::FillZerosCsrImpl(s, to);
     return;
   }
   // Allocate storage
@@ -428,7 +433,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
   // if source is zeros, fill destination with zeros, too
   auto s = ctx.get_stream<to_xpu>();
   if (!from.storage_initialized()) {
-    op::FillZerosRspImpl<to_xpu>(s, to);
+    op::FillZerosRspImpl(s, to);
     return;
   }
   auto aux_shape = from.aux_shape(rowsparse::kIdx);
@@ -453,25 +458,22 @@ inline void CopyFromToDnsImpl(const NDArray& from, const NDArray& to, RunContext
 
 // Make a copy of an NDArray based on storage type
 template<typename from_xpu, typename to_xpu>
-void CopyFromToImpl(const NDArray& from, const NDArray& to, RunContext rctx) {
+void CopyFromToImpl(const NDArray& from, const NDArray& to,
+                    RunContext rctx, const std::vector<Resource>& requested) {
   using namespace std;
   using namespace mshadow;
   // if storage type doesn't match, cast the storage first
-  auto from_stype = from.storage_type();
-  auto to_stype = to.storage_type();
+  const NDArrayStorageType from_stype = from.storage_type();
+  const NDArrayStorageType to_stype = to.storage_type();
   CHECK(from_stype == kDefaultStorage
       || to_stype == kDefaultStorage
       || from_stype == to_stype)
     << "Copying ndarray of stype = " << from_stype
     << " to stype = " << to_stype << " is not supported";
-  const auto from_ctx = from.ctx();
-  const auto to_ctx = to.ctx();
+  const Context from_ctx = from.ctx();
+  const Context to_ctx = to.ctx();
   bool is_train = Imperative::Get()->is_training();
-  std::vector<Resource> requested;
-  if (is_same<from_xpu, mshadow::gpu>::value && from_stype != to_stype) {
-    requested.push_back(ResourceManager::Get()->Request(from_ctx,
-        ResourceRequest(ResourceRequest::kTempSpace)));
-  }
+
   OpContext opctx{is_train,
                   rctx,
                   engine::CallbackOnComplete(),
@@ -504,10 +506,6 @@ void CopyFromToImpl(const NDArray& from, const NDArray& to, RunContext rctx) {
       LOG(FATAL) << "unknown storage type" << to_stype;
     }
   }
-  if (is_same<from_xpu, mshadow::gpu>::value || is_same<to_xpu, mshadow::gpu>::value) {
-    // Wait GPU kernel to complete
-    rctx.get_stream<gpu>()->Wait();
-  }
 }
 
 void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
@@ -521,32 +519,57 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   CHECK(from.shape().ndim() != 0)
       << "source operands have zero dimension shape";
   // important: callback must always capture by value
-  int a = from.ctx().dev_mask();
-  int b = to.ctx().dev_mask();
+  const Context from_ctx = from.ctx();
+  const int a = from_ctx.dev_mask();
+  const int b = to.ctx().dev_mask();
   std::vector<Engine::VarHandle> const_vars;
   if (from.var() != to.var()) const_vars.push_back(from.var());
 
+  const NDArrayStorageType from_stype = from.storage_type();
+  const NDArrayStorageType to_stype = to.storage_type();
+
+  std::vector<Engine::VarHandle> mutable_vars(1, to.var());
+
+  std::vector<Resource> requested;
+  if (a == gpu::kDevMask && from_stype != to_stype) {
+    Resource rsc = ResourceManager::Get()->Request(from_ctx,
+        ResourceRequest(ResourceRequest::kTempSpace));
+    requested.push_back(rsc);
+    mutable_vars.push_back(rsc.var);
+  }
+
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
-    Engine::Get()->PushSync([from, to](RunContext ctx) {
-        CopyFromToImpl<cpu, cpu>(from, to, ctx);
-      }, from.ctx(), const_vars, {to.var()},
+    Engine::Get()->PushAsync(
+      [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+        CopyFromToImpl<cpu, cpu>(from, to, ctx, requested);
+        on_complete();
+      }, from.ctx(), const_vars, mutable_vars,
       FnProperty::kNormal, priority, PROFILER_MESSAGE("CopyCPU2CPU"));
   } else {
 #if MXNET_USE_CUDA
     if (a == cpu::kDevMask && b == gpu::kDevMask) {
-      Engine::Get()->PushSync([from, to](RunContext ctx) {
-          CopyFromToImpl<cpu, gpu>(from, to, ctx);
-        }, to.ctx(), const_vars, {to.var()},
+      Engine::Get()->PushAsync(
+        [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          CopyFromToImpl<cpu, gpu>(from, to, ctx, requested);
+          ctx.get_stream<gpu>()->Wait();
+          on_complete();
+        }, to.ctx(), const_vars, mutable_vars,
         FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("CopyCPU2GPU"));
     } else if (a == gpu::kDevMask && b == cpu::kDevMask) {
-      Engine::Get()->PushSync([from, to](RunContext ctx) {
-          CopyFromToImpl<gpu, cpu>(from, to, ctx);
-        }, from.ctx(), const_vars, {to.var()},
+      Engine::Get()->PushAsync(
+        [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          CopyFromToImpl<gpu, cpu>(from, to, ctx, requested);
+          ctx.get_stream<gpu>()->Wait();
+          on_complete();
+        }, from.ctx(), const_vars, mutable_vars,
         FnProperty::kCopyFromGPU, priority, PROFILER_MESSAGE("CopyGPU2CPU"));
     } else if (a == gpu::kDevMask && b == gpu::kDevMask) {
-      Engine::Get()->PushSync([from, to](RunContext ctx) {
-          CopyFromToImpl<gpu, gpu>(from, to, ctx);
-        }, from.ctx(), const_vars, {to.var()},
+      Engine::Get()->PushAsync(
+        [from, to, requested](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+          CopyFromToImpl<gpu, gpu>(from, to, ctx, requested);
+          ctx.get_stream<gpu>()->Wait();
+          on_complete();
+        }, from.ctx(), const_vars, mutable_vars,
         from.dtype() != to.dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
         priority, PROFILER_MESSAGE("CopyGPU2GPU"));
     } else {
@@ -559,7 +582,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
 }
 
 
-void CopyFromTo(const NDArray& from, NDArray *to, int priority) {
+void CopyFromTo(const NDArray& from, const NDArray *to, int priority) {
   CopyFromTo(from, *to, priority);
 }
 
@@ -572,8 +595,8 @@ void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priori
     }
     CHECK_EQ(source[i].shape() , out->shape())
         << "operands shape mismatch";
-    if (out->ctx().dev_mask() == cpu::kDevMask) {
-      CHECK_EQ(source[i].ctx().dev_mask(),  cpu::kDevMask)
+    if (out->ctx().dev_mask() == Context::kCPU) {
+      CHECK_EQ(source[i].ctx().dev_mask(), Context::kCPU)
           << "operands context mismatch";
     } else {
       CHECK(source[i].ctx() == out->ctx())
@@ -1077,12 +1100,14 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
-    Engine::Get()->PushSync([&](RunContext rctx) {
+    Engine::Get()->PushAsync(
+      [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         TBlob dst = this->data();
         ndarray::Copy<cpu, gpu>(src, &dst,
                                 Context::CPU(), this->ctx(), rctx);
         // Wait GPU kernel to complete
         rctx.get_stream<gpu>()->Wait();
+        on_complete();
       }, this->ctx(), {}, {this->var()},
       FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyCPU2GPU"));
     this->WaitToRead();
@@ -1145,27 +1170,33 @@ void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
   } else {
 #if MXNET_USE_CUDA
     if (src_dev_mask == cpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
-      Engine::Get()->PushSync([&](RunContext rctx) {
+      Engine::Get()->PushAsync(
+        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
           TBlob dst_data = get_dst_data(src_data.shape_);
           ndarray::Copy<cpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
           rctx.get_stream<gpu>()->Wait();
+          on_complete();
         }, this->ctx(), const_vars, {this->var()},
         FnProperty::kCopyToGPU, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayCPU2GPU"));
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == cpu::kDevMask) {
-      Engine::Get()->PushSync([&](RunContext rctx) {
+      Engine::Get()->PushAsync(
+        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
           TBlob dst_data = get_dst_data(src_data.shape_);
           ndarray::Copy<gpu, cpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
           rctx.get_stream<gpu>()->Wait();
+          on_complete();
         }, this->ctx(), const_vars, {this->var()},
         FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyFromNDArrayGPU2CPU"));
     } else if (src_dev_mask == gpu::kDevMask && dst_dev_mask == gpu::kDevMask) {
-      Engine::Get()->PushSync([&](RunContext rctx) {
+      Engine::Get()->PushAsync(
+        [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob src_data = (i >= 0? src.aux_data(i) : src.data());
           TBlob dst_data = get_dst_data(src_data.shape_);
           ndarray::Copy<gpu, gpu>(src_data, &dst_data, src.ctx(), this->ctx(), rctx);
           rctx.get_stream<gpu>()->Wait();
+          on_complete();
         }, this->ctx(), const_vars, {this->var()},
         src.dtype() != this->dtype() ? FnProperty::kNormal : FnProperty::kCopyFromGPU,
         0, PROFILER_MESSAGE("SyncCopyFromNDArrayGPU2GPU"));
@@ -1200,11 +1231,13 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
                             Context::CPU(), Context::CPU(), rctx);
   } else {
 #if MXNET_USE_CUDA
-    Engine::Get()->PushSync([&](RunContext rctx) {
+    Engine::Get()->PushAsync(
+      [&](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         ndarray::Copy<gpu, cpu>(this->data(), &dst,
                                 this->ctx(), Context::CPU(), rctx);
         // Wait GPU kernel to complete
         rctx.get_stream<gpu>()->Wait();
+        on_complete();
       }, this->ctx(), {this->var()}, {},
       FnProperty::kCopyFromGPU, 0, PROFILER_MESSAGE("SyncCopyGPU2CPU"));
     this->WaitToWrite();
@@ -1212,6 +1245,40 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
     LOG(FATAL) << "GPU is not enabled";
 #endif
   }
+}
+
+void NDArray::SyncCheckFormat(const bool full_check) const {
+  int32_t err = kNormalErr;
+  TBlob err_cpu(&err, mshadow::Shape1(1), cpu::kDevMask, 0);
+  if (this->ctx().dev_mask() == cpu::kDevMask) {
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        common::CheckFormatWrapper<cpu>(rctx, *this, err_cpu, full_check);
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+  } else {
+#if MXNET_USE_CUDA
+    Engine::Get()->PushSync([&](RunContext rctx) {
+        common::CheckFormatWrapper<gpu>(rctx, *this, err_cpu, full_check);
+        rctx.get_stream<gpu>()->Wait();
+      }, this->ctx(), {this->var()}, {},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("CheckFormat"));
+#else
+    LOG(FATAL) << "GPU is not enabled";
+#endif
+  }
+  this->WaitToWrite();
+  CHECK_NE(err, kCSRShapeErr) << "Shape mismatch of this csr NDArray";
+  CHECK_NE(err, kCSRIndPtrErr)
+           << "IndPtr of csr NDArray should be non-negative, in non-decreasing order, "
+           << "start with 0, and end with value equal with size of indices.";
+  CHECK_NE(err, kCSRIdxErr)
+           << "Indices of csr NDArray should be non-negative, in ascending order per row "
+           << " and less than the number of columns.";
+  CHECK_NE(err, kRSPShapeErr) << "Shape mismatch of this row_sparse NDArray";
+  CHECK_NE(err, kRSPIdxErr)
+          << "Indices of row_sparse NDArray should be non-negative, "
+          << "less than the size of first dimension and in ascending order";
+  CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
 }
 
 #if MXNET_PREDICT_ONLY == 0
@@ -1309,7 +1376,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     CHECK_EQ(ret->shape().ndim(), 4U);
     buff = ret->Slice(index, index+1);
   }
-  CHECK_EQ(buff.ctx().dev_mask(), cpu::kDevMask);
+  CHECK_EQ(buff.ctx().dev_mask(), Context::kCPU);
   CHECK_EQ(n_channels, buff.shape()[1]);
   CHECK_EQ(y1-y0, buff.shape()[2]);
   CHECK_EQ(x1-x0, buff.shape()[3]);
@@ -1329,7 +1396,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     })
   } else {
     CHECK_EQ(mean.dtype(), buff.dtype());
-    CHECK_EQ(mean.ctx().dev_mask(), cpu::kDevMask);
+    CHECK_EQ(mean.ctx().dev_mask(), Context::kCPU);
     CHECK_EQ(mean.shape()[0], buff.shape()[1]);
     CHECK_EQ(mean.shape()[1], buff.shape()[2]);
     CHECK_EQ(mean.shape()[2], buff.shape()[3]);

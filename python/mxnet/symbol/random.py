@@ -102,8 +102,6 @@ def poisson(lam=1, shape=_Null, dtype=_Null, **kwargs):
     Samples are distributed according to a Poisson distribution parametrized
     by *lambda* (rate). Samples will always be returned as a floating point data type.
 
-    .. note:: poisson is not implemented for GPU yet.
-
     Parameters
     ----------
     lam : float or Symbol
@@ -130,8 +128,6 @@ def exponential(scale=1, shape=_Null, dtype=_Null, **kwargs):
     for x > 0 and 0 elsewhere. \beta is the scale parameter, which is the
     inverse of the rate parameter \lambda = 1/\beta.
 
-    .. note:: exponential is not implemented for GPU yet.
-
     Parameters
     ----------
     scale : float or Symbol
@@ -153,8 +149,6 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, **kwargs):
 
     Samples are distributed according to a gamma distribution parametrized
     by *alpha* (shape) and *beta* (scale).
-
-    .. note:: gamma is not implemented for GPU yet.
 
     Parameters
     ----------
@@ -183,8 +177,6 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, **kwargs):
     probability in each experiment). Samples will always be returned as a
     floating point data type.
 
-    .. note:: negative_binomial is not implemented for GPU yet.
-
     Parameters
     ----------
     k : float or Symbol
@@ -212,8 +204,6 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, **kwa
     *alpha* is defined as *1/k* where *k* is the failure limit of the
     number of unsuccessful experiments (generalized to real numbers).
     Samples will always be returned as a floating point data type.
-
-    .. note:: negative_binomial is not implemented for GPU yet.
 
     Parameters
     ----------

@@ -46,6 +46,17 @@ exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinf
 LIB_PATH = libinfo['find_lib_path']()
 __version__ = libinfo['__version__']
 
+sys.path.insert(0, CURRENT_DIR)
+
+# Try to generate auto-complete code
+try:
+    from mxnet.base import _generate_op_module_signature
+    from mxnet.ndarray.register import _generate_ndarray_function_code
+    from mxnet.symbol.register import _generate_symbol_function_code
+    _generate_op_module_signature('mxnet', 'symbol', _generate_symbol_function_code)
+    _generate_op_module_signature('mxnet', 'ndarray', _generate_ndarray_function_code)
+except: # pylint: disable=bare-except
+    pass
 
 def config_cython():
     """Try to configure cython and return cython configuration"""

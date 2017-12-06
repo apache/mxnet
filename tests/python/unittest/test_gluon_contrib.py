@@ -94,6 +94,13 @@ def test_convgru():
     check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
+def test_conv_fill_shape():
+    cell = contrib.rnn.Conv1DLSTMCell((0, 7), 10, (3,), (3,))
+    cell.hybridize()
+    check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
+    assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
+
+
 def test_vardrop():
     def check_vardrop(drop_inputs, drop_states, drop_outputs):
         cell = contrib.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100, prefix='rnn_'),

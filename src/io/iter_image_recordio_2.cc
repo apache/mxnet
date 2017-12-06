@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2017 by Contributors
  * \file iter_image_recordio_2.cc
  * \brief new version of recordio data iterator
  */
@@ -33,6 +34,9 @@
 #include <dmlc/common.h>
 #include <dmlc/timer.h>
 #include <type_traits>
+#if MXNET_USE_LIBJPEG_TURBO
+#include <turbojpeg.h>
+#endif
 #include "./image_recordio.h"
 #include "./image_augmenter.h"
 #include "./image_iter_common.h"
@@ -62,7 +66,17 @@ class ImageRecordIOParser2 {
   inline bool ParseNext(DataBatch *out);
 
  private:
-  inline void ParseChunk(dmlc::InputSplit::Blob * chunk);
+#if MXNET_USE_OPENCV
+  template<int n_channels>
+  void ProcessImage(const cv::Mat& res,
+    mshadow::Tensor<cpu, 3, DType>* data_ptr, const bool is_mirrored, const float contrast_scaled,
+    const float illumination_scaled);
+#if MXNET_USE_LIBJPEG_TURBO
+  cv::Mat TJimdecode(cv::Mat buf, int color);
+#endif
+#endif
+  inline unsigned ParseChunk(DType* data_dptr, real_t* label_dptr, const unsigned current_size,
+    dmlc::InputSplit::Blob * chunk);
   inline void CreateMeanImg(void);
 
   // magic number to seed prng
@@ -100,6 +114,9 @@ class ImageRecordIOParser2 {
   std::vector<size_t> unit_size_;
   /*! \brief mean image, if needed */
   mshadow::TensorContainer<cpu, 3> meanimg_;
+  // whether to use legacy shuffle
+  // (without IndexedRecordIO support)
+  bool legacy_shuffle_;
   // whether mean image is ready.
   bool meanfile_ready_;
 };
@@ -153,34 +170,48 @@ inline void ImageRecordIOParser2<DType>::Init(
     LOG(INFO) << "ImageRecordIOParser2: " << param_.path_imgrec
               << ", use " << threadget << " threads for decoding..";
   }
-  source_.reset(dmlc::InputSplit::Create(
-      param_.path_imgrec.c_str(), param_.part_index,
-      param_.num_parts, "recordio"));
-  if (param_.shuffle_chunk_size > 0) {
-    if (param_.shuffle_chunk_size > 4096) {
-      LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
-                 << " MB which is larger than 4096 MB, please set "
-                    "smaller chunk size";
-    }
-    if (param_.shuffle_chunk_size < 4) {
-      LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
-                 << " MB which is less than 4 MB, please set "
-                    "larger chunk size";
-    }
-    // 1.1 ratio is for a bit more shuffle parts to avoid boundary issue
-    unsigned num_shuffle_parts =
-        std::ceil(source_->GetTotalSize() * 1.1 /
-                  (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
-
-    if (num_shuffle_parts > 1) {
-      source_.reset(dmlc::InputSplitShuffle::Create(
-          param_.path_imgrec.c_str(), param_.part_index,
-          param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
-    }
-    source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
+  legacy_shuffle_ = false;
+  if (param_.path_imgidx.length() != 0) {
+    source_.reset(dmlc::InputSplit::Create(
+        param_.path_imgrec.c_str(),
+        param_.path_imgidx.c_str(),
+        param_.part_index,
+        param_.num_parts, "indexed_recordio",
+        record_param_.shuffle,
+        record_param_.seed,
+        batch_param_.batch_size));
   } else {
-    // use 64 MB chunk when possible
-    source_->HintChunkSize(8 << 20UL);
+    source_.reset(dmlc::InputSplit::Create(
+        param_.path_imgrec.c_str(), param_.part_index,
+        param_.num_parts, "recordio"));
+    if (record_param_.shuffle)
+      legacy_shuffle_ = true;
+    if (param_.shuffle_chunk_size > 0) {
+      if (param_.shuffle_chunk_size > 4096) {
+        LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
+                   << " MB which is larger than 4096 MB, please set "
+                      "smaller chunk size";
+      }
+      if (param_.shuffle_chunk_size < 4) {
+        LOG(INFO) << "Chunk size: " << param_.shuffle_chunk_size
+                   << " MB which is less than 4 MB, please set "
+                      "larger chunk size";
+      }
+      // 1.1 ratio is for a bit more shuffle parts to avoid boundary issue
+      unsigned num_shuffle_parts =
+          std::ceil(source_->GetTotalSize() * 1.1 /
+                    (param_.num_parts * (param_.shuffle_chunk_size << 20UL)));
+
+      if (num_shuffle_parts > 1) {
+        source_.reset(dmlc::InputSplitShuffle::Create(
+            param_.path_imgrec.c_str(), param_.part_index,
+            param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
+      }
+      source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
+    } else {
+      // use 64 MB chunk when possible
+      source_->HintChunkSize(64 << 20UL);
+    }
   }
   // Normalize init
   if (!std::is_same<DType, uint8_t>::value) {
@@ -211,6 +242,9 @@ inline void ImageRecordIOParser2<DType>::Init(
         meanimg_.Resize(src.shape_);
         mshadow::Copy(meanimg_, src);
         meanfile_ready_ = true;
+        if (param_.verbose) {
+          LOG(INFO) << "Load mean image from " << normalize_param_.mean_img << " completed";
+        }
       }
     }
   }
@@ -221,35 +255,66 @@ inline void ImageRecordIOParser2<DType>::Init(
 
 template<typename DType>
 inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
-  if (overflow)
+  if (overflow) {
     return false;
+  }
   CHECK(source_ != nullptr);
   dmlc::InputSplit::Blob chunk;
   unsigned current_size = 0;
   out->index.resize(batch_param_.batch_size);
+
+  // InitBatch
+  if (out->data.size() == 0) {
+    // This assumes that DataInst given by
+    // InstVector contains only 2 elements in
+    // data vector (operator[] implementation)
+    out->data.resize(2);
+    unit_size_.resize(2);
+
+    std::vector<index_t> shape_vec;
+    shape_vec.push_back(batch_param_.batch_size);
+    for (index_t dim = 0; dim < param_.data_shape.ndim(); ++dim) {
+      shape_vec.push_back(param_.data_shape[dim]);
+    }
+    TShape data_shape(shape_vec.begin(), shape_vec.end());
+
+    shape_vec.clear();
+    shape_vec.push_back(batch_param_.batch_size);
+    shape_vec.push_back(param_.label_width);
+    TShape label_shape(shape_vec.begin(), shape_vec.end());
+
+    out->data.at(0) = NDArray(data_shape, Context::CPUPinned(0), false,
+      mshadow::DataType<DType>::kFlag);
+    out->data.at(1) = NDArray(label_shape, Context::CPUPinned(0), false,
+      mshadow::DataType<real_t>::kFlag);
+    unit_size_[0] = param_.data_shape.Size();
+    unit_size_[1] = param_.label_width;
+  }
+
   while (current_size < batch_param_.batch_size) {
-    int n_to_copy;
+    // int n_to_copy;
+    unsigned n_to_out = 0;
     if (n_parsed_ == 0) {
-      if (source_->NextChunk(&chunk)) {
+      if (source_->NextBatch(&chunk, batch_param_.batch_size)) {
         inst_order_.clear();
         inst_index_ = 0;
-        ParseChunk(&chunk);
-        unsigned n_read = 0;
-        for (unsigned i = 0; i < temp_.size(); ++i) {
-          const InstVector<DType>& tmp = temp_[i];
-          for (unsigned j = 0; j < tmp.Size(); ++j) {
-            inst_order_.push_back(std::make_pair(i, j));
-          }
-          n_read += tmp.Size();
+        DType* data_dptr = static_cast<DType*>(out->data[0].data().dptr_);
+        real_t* label_dptr = static_cast<real_t*>(out->data[1].data().dptr_);
+        if (!legacy_shuffle_) {
+          n_to_out = ParseChunk(data_dptr, label_dptr, current_size, &chunk);
+        } else {
+          n_to_out = ParseChunk(NULL, NULL, batch_param_.batch_size, &chunk);
         }
-        n_to_copy = std::min(n_read, batch_param_.batch_size - current_size);
-        n_parsed_ = n_read - n_to_copy;
+        // Count number of parsed images that do not fit into current out
+        n_parsed_ = inst_order_.size();
         // shuffle instance order if needed
-        if (record_param_.shuffle != 0) {
+        if (legacy_shuffle_) {
           std::shuffle(inst_order_.begin(), inst_order_.end(), rnd_);
         }
       } else {
-        if (current_size == 0) return false;
+        if (current_size == 0) {
+          return false;
+        }
         CHECK(!overflow) << "number of input images must be bigger than the batch size";
         if (batch_param_.round_batch != 0) {
           overflow = true;
@@ -258,81 +323,209 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
           current_size = batch_param_.batch_size;
         }
         out->num_batch_padd = batch_param_.batch_size - current_size;
-        n_to_copy = 0;
+        n_to_out = 0;
       }
     } else {
-      n_to_copy = std::min(n_parsed_, batch_param_.batch_size - current_size);
+      int n_to_copy = std::min(n_parsed_, batch_param_.batch_size - current_size);
       n_parsed_ -= n_to_copy;
-    }
-
-    // InitBatch
-    if (out->data.size() == 0 && n_to_copy != 0) {
-      std::pair<unsigned, unsigned> place = inst_order_[inst_index_];
-      const DataInst& first_batch = temp_[place.first][place.second];
-      out->data.resize(first_batch.data.size());
-      unit_size_.resize(first_batch.data.size());
-      for (size_t i = 0; i < out->data.size(); ++i) {
-        TShape src_shape = first_batch.data[i].shape_;
-        int src_type_flag = first_batch.data[i].type_flag_;
-        // init object attributes
-        std::vector<index_t> shape_vec;
-        shape_vec.push_back(batch_param_.batch_size);
-        for (index_t dim = 0; dim < src_shape.ndim(); ++dim) {
-          shape_vec.push_back(src_shape[dim]);
+      // Copy
+      #pragma omp parallel for num_threads(param_.preprocess_threads)
+      for (int i = 0; i < n_to_copy; ++i) {
+        std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
+        const DataInst& batch = temp_[place.first][place.second];
+        for (unsigned j = 0; j < batch.data.size(); ++j) {
+          CHECK_EQ(unit_size_[j], batch.data[j].Size());
+          MSHADOW_TYPE_SWITCH(out->data[j].data().type_flag_, dtype, {
+          mshadow::Copy(
+              out->data[j].data().FlatTo1D<cpu, dtype>().Slice((current_size + i) * unit_size_[j],
+                (current_size + i + 1) * unit_size_[j]),
+              batch.data[j].get_with_shape<cpu, 1, dtype>(mshadow::Shape1(unit_size_[j])));
+          });
         }
-        TShape dst_shape(shape_vec.begin(), shape_vec.end());
-        out->data.at(i) = NDArray(dst_shape, Context::CPUPinned(0), false, src_type_flag);
-        unit_size_[i] = src_shape.Size();
       }
+      n_to_out = n_to_copy;
+      inst_index_ += n_to_copy;
     }
 
-    // Copy
-    #pragma omp parallel for num_threads(param_.preprocess_threads)
-    for (int i = 0; i < n_to_copy; ++i) {
-      std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
-      const DataInst& batch = temp_[place.first][place.second];
-      for (unsigned j = 0; j < batch.data.size(); ++j) {
-        CHECK_EQ(unit_size_[j], batch.data[j].Size());
-        MSHADOW_TYPE_SWITCH(out->data[j].data().type_flag_, dtype, {
-        mshadow::Copy(
-            out->data[j].data().FlatTo1D<cpu, dtype>().Slice((current_size + i) * unit_size_[j],
-              (current_size + i + 1) * unit_size_[j]),
-            batch.data[j].get_with_shape<cpu, 1, dtype>(mshadow::Shape1(unit_size_[j])));
-        });
-      }
-    }
-    inst_index_ += n_to_copy;
-    current_size += n_to_copy;
+    current_size += n_to_out;
   }
   return true;
 }
 
+#if MXNET_USE_OPENCV
 template<typename DType>
-inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chunk) {
+template<int n_channels>
+void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
+  mshadow::Tensor<cpu, 3, DType>* data_ptr, const bool is_mirrored, const float contrast_scaled,
+  const float illumination_scaled) {
+  float RGBA_MULT[4] = { 0 };
+  float RGBA_BIAS[4] = { 0 };
+  float RGBA_MEAN[4] = { 0 };
+  mshadow::Tensor<cpu, 3, DType>& data = (*data_ptr);
+  if (!std::is_same<DType, uint8_t>::value) {
+    RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
+    RGBA_MULT[1] = contrast_scaled / normalize_param_.std_g;
+    RGBA_MULT[2] = contrast_scaled / normalize_param_.std_b;
+    RGBA_MULT[3] = contrast_scaled / normalize_param_.std_a;
+    RGBA_BIAS[0] = illumination_scaled / normalize_param_.std_r;
+    RGBA_BIAS[1] = illumination_scaled / normalize_param_.std_g;
+    RGBA_BIAS[2] = illumination_scaled / normalize_param_.std_b;
+    RGBA_BIAS[3] = illumination_scaled / normalize_param_.std_a;
+    if (!meanfile_ready_) {
+      RGBA_MEAN[0] = normalize_param_.mean_r;
+      RGBA_MEAN[1] = normalize_param_.mean_g;
+      RGBA_MEAN[2] = normalize_param_.mean_b;
+      RGBA_MEAN[3] = normalize_param_.mean_a;
+    }
+  }
+
+  int swap_indices[n_channels]; // NOLINT(*)
+  if (n_channels == 1) {
+    swap_indices[0] = 0;
+  } else if (n_channels == 3) {
+    swap_indices[0] = 2;
+    swap_indices[1] = 1;
+    swap_indices[2] = 0;
+  } else if (n_channels == 4) {
+    swap_indices[0] = 2;
+    swap_indices[1] = 1;
+    swap_indices[2] = 0;
+    swap_indices[3] = 3;
+  }
+
+  DType RGBA[n_channels] = {};
+  for (int i = 0; i < res.rows; ++i) {
+    const uchar* im_data = res.ptr<uchar>(i);
+    for (int j = 0; j < res.cols; ++j) {
+      for (int k = 0; k < n_channels; ++k) {
+        RGBA[k] = im_data[swap_indices[k]];
+      }
+      if (!std::is_same<DType, uint8_t>::value) {
+        // normalize/mirror here to avoid memory copies
+        // logic from iter_normalize.h, function SetOutImg
+        for (int k = 0; k < n_channels; ++k) {
+          if (meanfile_ready_) {
+            RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
+          } else {
+            RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
+          }
+        }
+      }
+      for (int k = 0; k < n_channels; ++k) {
+        // mirror here to avoid memory copies
+        // logic from iter_normalize.h, function SetOutImg
+        if (is_mirrored) {
+          data[k][i][res.cols - j - 1] = RGBA[k];
+        } else {
+          data[k][i][j] = RGBA[k];
+        }
+      }
+      im_data += n_channels;
+    }
+  }
+}
+
+#if MXNET_USE_LIBJPEG_TURBO
+
+bool is_jpeg(unsigned char * file) {
+  if ((file[0] == 255) && (file[1] == 216)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename DType>
+cv::Mat ImageRecordIOParser2<DType>::TJimdecode(cv::Mat image, int color) {
+  unsigned char* jpeg = image.ptr();
+  size_t jpeg_size = image.rows * image.cols;
+
+  if (!is_jpeg(jpeg)) {
+    // If it is not JPEG then fall back to OpenCV
+    return cv::imdecode(image, color);
+  }
+
+  tjhandle handle = tjInitDecompress();
+  int h, w, subsamp;
+  int err = tjDecompressHeader2(handle,
+                                jpeg,
+                                jpeg_size,
+                                &w, &h, &subsamp);
+  if (err != 0) {
+    // If it is a malformed JPEG then fall back to OpenCV
+    return cv::imdecode(image, color);
+  }
+  cv::Mat ret = cv::Mat(h, w, color ? CV_8UC3 : CV_8UC1);
+  err = tjDecompress2(handle,
+                      jpeg,
+                      jpeg_size,
+                      ret.ptr(),
+                      w,
+                      0,
+                      h,
+                      color ? TJPF_BGR : TJPF_GRAY,
+                      0);
+  if (err != 0) {
+    // If it is a malformed JPEG then fall back to OpenCV
+    return cv::imdecode(image, color);
+  }
+  tjDestroy(handle);
+  return ret;
+}
+#endif
+#endif
+
+// Returns the number of images that are put into output
+template<typename DType>
+inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* label_dptr,
+  const unsigned current_size, dmlc::InputSplit::Blob * chunk) {
   temp_.resize(param_.preprocess_threads);
 #if MXNET_USE_OPENCV
   // save opencv out
+  dmlc::RecordIOChunkReader reader(*chunk, 0, 1);
+  unsigned gl_idx = current_size;
   #pragma omp parallel num_threads(param_.preprocess_threads)
   {
     CHECK(omp_get_num_threads() == param_.preprocess_threads);
-    int tid = omp_get_thread_num();
-    dmlc::RecordIOChunkReader reader(*chunk, tid, param_.preprocess_threads);
+    unsigned int tid = omp_get_thread_num();
+    // dmlc::RecordIOChunkReader reader(*chunk, tid, param_.preprocess_threads);
     ImageRecordIO rec;
     dmlc::InputSplit::Blob blob;
     // image data
-    InstVector<DType> &out = temp_[tid];
-    out.Clear();
-    while (reader.NextRecord(&blob)) {
+    InstVector<DType> &out_tmp = temp_[tid];
+    out_tmp.Clear();
+    while (true) {
+      bool reader_has_data;
+      unsigned idx;
+      #pragma omp critical
+      {
+        reader_has_data = reader.NextRecord(&blob);
+        if (reader_has_data) {
+          idx = gl_idx++;
+          if (idx >= batch_param_.batch_size) {
+            inst_order_.push_back(std::make_pair(tid, out_tmp.Size()));
+          }
+        }
+      }
+      if (!reader_has_data) break;
       // Opencv decode and augments
       cv::Mat res;
       rec.Load(blob.dptr, blob.size);
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
       switch (param_.data_shape[0]) {
        case 1:
+#if MXNET_USE_LIBJPEG_TURBO
+        res = TJimdecode(buf, 0);
+#else
         res = cv::imdecode(buf, 0);
+#endif
         break;
        case 3:
+#if MXNET_USE_LIBJPEG_TURBO
+        res = TJimdecode(buf, 1);
+#else
         res = cv::imdecode(buf, 1);
+#endif
         break;
        case 4:
         // -1 to keep the number of channel of the encoded image, and not force gray or color.
@@ -348,28 +541,23 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
       for (auto& aug : augmenters_[tid]) {
         res = aug->Process(res, nullptr, prnds_[tid].get());
       }
-      out.Push(static_cast<unsigned>(rec.image_index()),
-               mshadow::Shape3(n_channels, res.rows, res.cols),
-               mshadow::Shape1(param_.label_width));
-
-      mshadow::Tensor<cpu, 3, DType> data = out.data().Back();
-
-      // For RGB or RGBA data, swap the B and R channel:
-      // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
-      std::vector<int> swap_indices;
-      if (n_channels == 1) swap_indices = {0};
-      if (n_channels == 3) swap_indices = {2, 1, 0};
-      if (n_channels == 4) swap_indices = {2, 1, 0, 3};
+      mshadow::Tensor<cpu, 3, DType> data;
+      if (idx < batch_param_.batch_size) {
+        data = mshadow::Tensor<cpu, 3, DType>(data_dptr + idx*unit_size_[0],
+          mshadow::Shape3(n_channels, res.rows, res.cols));
+      } else {
+        out_tmp.Push(static_cast<unsigned>(rec.image_index()),
+                 mshadow::Shape3(n_channels, res.rows, res.cols),
+                 mshadow::Shape1(param_.label_width));
+        data = out_tmp.data().Back();
+      }
 
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       std::bernoulli_distribution coin_flip(0.5);
       bool is_mirrored = (normalize_param_.rand_mirror && coin_flip(*(prnds_[tid])))
                          || normalize_param_.mirror;
-      float contrast_scaled;
-      float illumination_scaled;
-      float RGBA_MULT[4];
-      float RGBA_BIAS[4];
-      float RGBA_MEAN[4];
+      float contrast_scaled = 1;
+      float illumination_scaled = 0;
       if (!std::is_same<DType, uint8_t>::value) {
         contrast_scaled =
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_contrast * 2
@@ -377,53 +565,25 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
         illumination_scaled =
           (rand_uniform(*(prnds_[tid])) * normalize_param_.max_random_illumination * 2
           - normalize_param_.max_random_illumination) * normalize_param_.scale;
-        RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
-        RGBA_MULT[1] = contrast_scaled / normalize_param_.std_g;
-        RGBA_MULT[2] = contrast_scaled / normalize_param_.std_b;
-        RGBA_MULT[3] = contrast_scaled / normalize_param_.std_a;
-        RGBA_BIAS[0] = illumination_scaled / normalize_param_.std_r;
-        RGBA_BIAS[1] = illumination_scaled / normalize_param_.std_g;
-        RGBA_BIAS[2] = illumination_scaled / normalize_param_.std_b;
-        RGBA_BIAS[3] = illumination_scaled / normalize_param_.std_a;
-        if (!meanfile_ready_) {
-          RGBA_MEAN[0] = normalize_param_.mean_r;
-          RGBA_MEAN[1] = normalize_param_.mean_g;
-          RGBA_MEAN[2] = normalize_param_.mean_b;
-          RGBA_MEAN[3] = normalize_param_.mean_a;
-        }
       }
-      DType RGBA[4] = {};
-      for (int i = 0; i < res.rows; ++i) {
-        uchar* im_data = res.ptr<uchar>(i);
-        for (int j = 0; j < res.cols; ++j) {
-          for (int k = 0; k < n_channels; ++k) {
-            RGBA[k] = im_data[swap_indices[k]];
-          }
-          if (!std::is_same<DType, uint8_t>::value) {
-            // normalize/mirror here to avoid memory copies
-            // logic from iter_normalize.h, function SetOutImg
-            for (int k = 0; k < n_channels; ++k) {
-              if (meanfile_ready_) {
-                RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
-              } else {
-                RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
-              }
-            }
-          }
-          for (int k = 0; k < n_channels; ++k) {
-            // mirror here to avoid memory copies
-            // logic from iter_normalize.h, function SetOutImg
-            if (is_mirrored) {
-              data[k][i][res.cols - j - 1] = RGBA[k];
-            } else {
-              data[k][i][j] = RGBA[k];
-            }
-          }
-          im_data += n_channels;
-        }
+      // For RGB or RGBA data, swap the B and R channel:
+      // OpenCV store as BGR (or BGRA) and we want RGB (or RGBA)
+      if (n_channels == 1) {
+        ProcessImage<1>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
+      } else if (n_channels == 3) {
+        ProcessImage<3>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
+      } else if (n_channels == 4) {
+        ProcessImage<4>(res, &data, is_mirrored, contrast_scaled, illumination_scaled);
       }
 
-      mshadow::Tensor<cpu, 1> label = out.label().Back();
+      mshadow::Tensor<cpu, 1, real_t> label;
+      if (idx < batch_param_.batch_size) {
+        label = mshadow::Tensor<cpu, 1, real_t>(label_dptr + idx*unit_size_[1],
+          mshadow::Shape1(param_.label_width));
+      } else {
+        label = out_tmp.label().Back();
+      }
+
       if (label_map_ != nullptr) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
       } else if (rec.label != NULL) {
@@ -441,8 +601,10 @@ inline void ImageRecordIOParser2<DType>::ParseChunk(dmlc::InputSplit::Blob * chu
       res.release();
     }
   }
+  return (std::min(batch_param_.batch_size, gl_idx) - current_size);
 #else
-      LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
+  LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
+  return 0;
 #endif
 }
 
@@ -457,14 +619,9 @@ inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
     dmlc::InputSplit::Blob chunk;
     size_t imcnt = 0;  // NOLINT(*)
     while (source_->NextChunk(&chunk)) {
-      ParseChunk(&chunk);
       inst_order_.clear();
-      for (unsigned i = 0; i < temp_.size(); ++i) {
-        const InstVector<DType>& tmp = temp_[i];
-        for (unsigned j = 0; j < tmp.Size(); ++j) {
-          inst_order_.push_back(std::make_pair(i, j));
-        }
-      }
+      // Parse chunk w/o putting anything in out
+      ParseChunk(NULL, NULL, batch_param_.batch_size, &chunk);
       for (unsigned i = 0; i < inst_order_.size(); ++i) {
         std::pair<unsigned, unsigned> place = inst_order_[i];
         mshadow::Tensor<cpu, 3> outimg =

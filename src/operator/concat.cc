@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file concat.cc
  * \brief
  * \author Bing Xu
@@ -33,10 +34,15 @@
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
+Operator* CreateOp<cpu>(ConcatParam param, int dtype, std::vector<TShape> *in_shape) {
   Operator *op = NULL;
 #if MXNET_USE_MKL2017 == 1
-  if ((1 == param.dim) &&
+  // MKL supports 4D input tensors only for concat operation
+  // 2D/3D input tensors are reshaped to 4D in mkl_concat-inl.h
+  // hence MKL supports 2D/3D/4D input tensors for concat operation
+  size_t dims = (*in_shape)[0].ndim();
+  bool supportedDim = (dims >= 2 && dims <= 4);
+  if ((1 == param.dim) && supportedDim &&
     (param.num_args < (dnnResourceMultipleDst - dnnResourceMultipleSrc))) {
     switch (dtype) {
       case mshadow::kFloat32:
@@ -58,7 +64,7 @@ Operator* CreateOp<cpu>(ConcatParam param, int dtype) {
 
 Operator* ConcatProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                        std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0), in_shape);
 }
 
 DMLC_REGISTER_PARAMETER(ConcatParam);

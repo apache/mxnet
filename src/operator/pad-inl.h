@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file pad-inl.h
  * \brief
  * \author Sebastian Bodenstien

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file spatial_transformer.cc
  * \brief
  * \author Wei Wu

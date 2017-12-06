@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */
@@ -26,6 +27,7 @@
 #include <thread>
 #include "./engine_impl.h"
 #include "./profiler.h"
+#include "./openmp.h"
 
 namespace mxnet {
 namespace engine {

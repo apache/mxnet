@@ -65,13 +65,11 @@ class MobileNet(HybridBlock):
                 self.features.add(nn.GlobalAvgPool2D())
                 self.features.add(nn.Flatten())
 
-            self.classifier = nn.HybridSequential(prefix='')
-            with self.classifier.name_scope():
-                self.classifier.add(nn.Dense(classes))
+            self.output = nn.Dense(classes)
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 # Constructor

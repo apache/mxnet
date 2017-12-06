@@ -1047,10 +1047,10 @@ method hybrid_forward(GluonClass $F, GluonInput $inputs, GluonInput $states)
     if($p_states != 0)
     {
         my @tmp;
-        zip(sub {
-            my ($new_s, $old_s) = @_;
+        for(zip($next_states, $states)) {
+            my ($new_s, $old_s) = @$_;
             push @tmp, $F->where($mask->($p_states, $new_s), $new_s, $old_s);
-        }, $next_states, $states);
+        }
         $states = \@tmp;
     }
     else
@@ -1109,10 +1109,10 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
     else
     {
         my @tmp;
-        zip(sub {
-            my ($i, $j) = @_;
+        for(zip($outputs, $inputs)) {
+            my ($i, $j) = @$_;
             push @tmp, $F->elemwise_add($i, $j);
-        }, $outputs, $inputs);
+        }
         $outputs = \@tmp;
     }
     return ($outputs, $states);

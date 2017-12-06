@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2017 by Contributors
  * \file image_iter_common.h
  * \brief common types used by image data iterators
  */
@@ -102,6 +103,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   std::string path_imglist;
   /*! \brief path to image recordio */
   std::string path_imgrec;
+  /*! \brief path to index file */
+  std::string path_imgidx;
   /*! \brief a sequence of names of image augmenters, seperated by , */
   std::string aug_seq;
   /*! \brief label-width */
@@ -129,6 +132,9 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
                   "<index of record>\t<one or more labels>\t<relative path from root folder>.");
     DMLC_DECLARE_FIELD(path_imgrec).set_default("")
         .describe("Path to the image RecordIO (.rec) file or a directory path. "\
+                  "Created with tools/im2rec.py.");
+    DMLC_DECLARE_FIELD(path_imgidx).set_default("")
+        .describe("Path to the image RecordIO index (.idx) file. "\
                   "Created with tools/im2rec.py.");
     DMLC_DECLARE_FIELD(aug_seq).set_default("aug_default")
         .describe("The augmenter names to represent"\

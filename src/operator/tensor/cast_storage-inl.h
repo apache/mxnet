@@ -371,7 +371,6 @@ inline bool CastStorageInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_NE(param.stype, kUndefinedStorage)
     << "dst ndarray's storage type must be specified";
   const auto& in_stype = in_attrs->at(0);
-  auto& out_stype = out_attrs->at(0);
   const auto& param_stype = static_cast<NDArrayStorageType>(param.stype);
   bool dispatched = false;
   // dns -> dns, dns -> rsp, dns -> csr

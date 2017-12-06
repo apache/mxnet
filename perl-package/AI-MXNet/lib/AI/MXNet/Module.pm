@@ -809,12 +809,12 @@ method forward(
         else
         {
             $new_dshape = [];
-            zip(sub {
-                my ($i, $shape) = @_;
+            for(zip($self->data_shapes, \@new_data_shapes)) {
+                my ($i, $shape) = @$_;
                 push @{ $new_dshape }, AI::MXNet::DataDesc->new(
                     $i->name, $shape, $i->dtype, $i->layout
                 );
-            }, $self->data_shapes, \@new_data_shapes);
+            }
         }
         my $new_lshape;
         if($data_batch->can('provide_label') and $data_batch->provide_label)
@@ -824,12 +824,12 @@ method forward(
         elsif($data_batch->can('label') and $data_batch->label)
         {
             $new_lshape = [];
-            zip(sub {
-                my ($i, $j) = @_;
+            for(zip($self->label_shapes, $data_batch->label)) {
+                my ($i, $j) = @$_;
                 push @{ $new_lshape }, AI::MXNet::DataDesc->new(
                     $i->name, $j->shape, $i->dtype, $i->layout
                 );
-            }, $self->label_shapes, $data_batch->label);
+            }
         }
         $self->reshape(data_shapes => $new_dshape, label_shapes => $new_lshape);
     }

@@ -333,10 +333,10 @@ method grad(
     );
 
     my @ret;
-    zip(sub {
-        my ($handle, $stype) = @_;
+    for(zip($grad_vars, $grad_stypes)) {
+        my ($handle, $stype) = @$_;
         push @ret, AI::MXNet::NDArray->new(handle => $handle, stype => $stype);
-    }, $grad_vars, $grad_stypes);
+    }
     if(blessed $variables)
     {
         return $ret[0];
