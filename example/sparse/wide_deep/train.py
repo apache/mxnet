@@ -17,8 +17,8 @@
 
 import mxnet as mx
 from mxnet.test_utils import *
-from get_data import *
-from wide_deep_model import *
+from data import *
+from model import *
 import argparse
 import os
 
@@ -40,7 +40,7 @@ parser.add_argument('--log-interval', type=int, default=100,
                     help='number of batches to wait before logging training status')
 
 
-# Related to feature engineering, please see preprocess in get_data.py
+# Related to feature engineering, please see preprocess in data.py
 ADULT = {
     'train': 'adult.data',
     'test': 'adult.test',

@@ -20,6 +20,7 @@ import mxnet as mx
 
 def wide_deep_model(num_linear_features, num_embed_features, num_cont_features, 
                     input_dims, hidden_units):
+    # wide model
     csr_data = mx.symbol.Variable("csr_data", stype='csr')
     label = mx.symbol.Variable("softmax_label")
 
@@ -30,12 +31,13 @@ def wide_deep_model(num_linear_features, num_embed_features, num_cont_features,
     bias = mx.symbol.Variable("linear_bias", shape=(2,))
     dot = mx.symbol.sparse.dot(csr_data, weight)
     linear_out = mx.symbol.broadcast_add(dot, bias)
-
+    # deep model
     dns_data = mx.symbol.Variable("dns_data")
+    # embedding features
     x = mx.symbol.slice(data=dns_data, begin=(0, 0),
                         end=(None, num_embed_features))
     embeds = mx.symbol.split(data=x, num_outputs=num_embed_features, squeeze_axis=1)
-
+    # continuous features
     x = mx.symbol.slice(data=dns_data, begin=(0, num_embed_features),
                         end=(None, num_embed_features + num_cont_features))
     features = [x]

@@ -19,11 +19,3 @@ The example demonstrates the basic usage of the SparseEmbedding operator in MXNe
 
 - `python matrix_factorization.py`
 - To compare the train speed with (dense) Embedding, run `python matrix_factorization.py --use-dense`
-
-## Wide and Deep Learning
-
-The example demonstrates how to jointly train wide linear models and deep neural networks. The [Census Income Data Set](https://archive.ics.uci.edu/ml/datasets/Census+Income) that this example uses for training is hosted by the [UC Irvine Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/).
-
-The final accuracy should be around 85%.
-
-- `python wide_deep_classification`
