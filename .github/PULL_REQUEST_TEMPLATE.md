@@ -5,9 +5,14 @@
 ### Essentials ###
 - [ ] Passed code style checking (`make lint`)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
-- [ ] All changes have test coverage
-- [ ] For user-facing API changes, API doc string has been updated. For new C++ functions in header files, their functionalities and arguments are well-documented. 
-- [ ] To my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
+- [ ] All changes have test coverage:
+- Unit tests are added for small changes to verify correctness (e.g. adding a new operator)
+- Nightly tests are added for complicated/long-running ones (e.g. changing distributed kvstore)
+- Build tests will be added for build configuration changes (e.g. adding a new build option with NCCL)
+- [ ] Code is well-documented: 
+- For user-facing API changes, API doc string has been updated. 
+- For new C++ functions in header files, their functionalities and arguments are documented. 
+- [ ] To the my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
 
 ### Changes ###
 - [ ] Feature1, tests, (and when applicable, API doc)
