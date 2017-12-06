@@ -84,6 +84,7 @@ def check_countsketch(in_dim,out_dim,n):
                 a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
 
+
 def test_countsketch():
     np.random.seed(0)
     nrepeat = 2
@@ -97,6 +98,7 @@ def test_countsketch():
         out_dim = np.random.randint(minoutdim, maxoutdim)
         n = np.random.randint(1,maxn)
         check_countsketch(in_dim, out_dim, n)
+
 
 def check_ifft(shape):
     shape_old = shape
@@ -179,6 +181,7 @@ def test_ifft():
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_ifft(shape)
 
+
 def check_fft(shape):
     sym = mx.sym.contrib.fft(name='fft', compute_size = 128)
     if len(shape) == 2:
@@ -257,6 +260,7 @@ def check_fft(shape):
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
 
+
 def test_fft():
     np.random.seed(0)
     nrepeat = 2
@@ -265,6 +269,7 @@ def test_fft():
         for order in [2,4]:
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
+
 
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
@@ -374,12 +379,14 @@ def test_batchnorm_versions():
 
     check_consistency(sym_list, ctx_list)
 
+
   def test_1d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 20)
     test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
 
   def test_2d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 10, 10)
@@ -388,6 +395,7 @@ def test_batchnorm_versions():
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+
 
   def test_3d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 3, 5, 5)
@@ -446,11 +454,13 @@ def test_convolution_with_type():
     # test ability to turn off training on bias
     check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, tol=tol)
 
+
 # Apply N symbols against each of M contexts, checking that all NxM combinations match.
 def check_consistency_NxM(sym_list, ctx_list):
     # e.g. if sym_list=[sym1, sym2] and ctx_list=[ctx1, ctx2, ctx3], then resulting lists are:
     # sym_list=[sym1, sym1, sym1, sym2, sym2, sym2] and ctx_list=[ctx1, ctx2, ctx3, ctx1, ctx2, ctx3]
     check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list))
+
 
 def test_convolution_options():
     # 1D convolution
@@ -517,6 +527,7 @@ def test_convolution_options():
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+
 def test_convolution_versions():
     # 2D convolution NCHW
     ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
@@ -542,6 +553,7 @@ def test_convolution_versions():
     syms = [conv_cudnn, conv_cpu, conv_gpu]
     check_consistency(syms, ctx_list)
 
+
 def test_pooling_with_type():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
@@ -556,6 +568,7 @@ def test_pooling_with_type():
 
     sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
     check_consistency(sym, ctx_list)
+
 
 def test_deconvolution_with_type():
     sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
@@ -572,6 +585,7 @@ def test_deconvolution_with_type():
                np.dtype(np.int32): 0}
     check_consistency(sym, ctx_list, tol=tol)
     check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+
 
 def test_deconvolution_options():
 
@@ -613,6 +627,7 @@ def test_deconvolution_options():
     sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), dilate=(2,2), cudnn_off=True, name='deconv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+
 #    # 3D convolution (not yet enabled)
 #    ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
 #                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
@@ -645,6 +660,7 @@ def test_bilinear_sampler_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
+
 def test_grid_generator_with_type():
     data = mx.sym.Variable('data')
     sym = mx.sym.GridGenerator(data=data, transform_type='affine', target_shape=(20, 20))
@@ -657,6 +673,7 @@ def test_grid_generator_with_type():
                 {'ctx': mx.cpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}}]
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
+
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7645")
 def test_spatial_transformer_with_type():
@@ -672,6 +689,7 @@ def test_spatial_transformer_with_type():
                 {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float32}}]
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
+
 
 # Checking max pooling consistency over the data sets of different float types is problematic
 # as one max value in a float32 data set may not be the max value in a float16 data set.
@@ -747,6 +765,7 @@ def test_pooling_versions():
                                                name='pool'))
         check_consistency(sym_list, ctx_list)
 
+
     def test_1d_pooling(pool_type):
         data = (2, 3, 20)
         kernel = (4,)
@@ -777,6 +796,7 @@ def test_pooling_versions():
         test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
                                      data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
                                      global_pool=True)
+
 
     def test_2d_pooling(pool_type):
         data = (2, 3, 20, 20)
@@ -1141,6 +1161,7 @@ def test_bidirectional():
     check_rnn_consistency(fused, stack)
     check_rnn_consistency(stack, fused)
 
+
 def test_unfuse():
     for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
         fused = mx.rnn.FusedRNNCell(
@@ -1153,6 +1174,7 @@ def test_unfuse():
 
         check_rnn_consistency(fused, stack)
         check_rnn_consistency(stack, fused)
+
 
 def test_psroipooling_with_type():
     np.random.seed(1234)
@@ -1210,6 +1232,7 @@ def test_deformable_psroipooling_with_type():
     check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
                                                'deformable_psroipool_rois': 'null',
                                                'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
+
 
 def test_deformable_convolution_with_type():
     np.random.seed(1234)
@@ -1315,6 +1338,9 @@ def test_deformable_convolution_options():
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
                                                name='deformable_conv')
 
+
+# Test crashing, see: https://github.com/apache/incubator-mxnet/issues/8564
+@attr('crashing')
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
             mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
@@ -1333,6 +1359,7 @@ def test_residual_fused():
                            rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
     expected_outputs = np.ones((10, 2, 50))+5
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
+
 
 def check_rnn_layer(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
@@ -1363,6 +1390,7 @@ def test_rnn_layer():
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
+
 @unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8211")
 def test_autograd_save_memory():
     x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
@@ -1373,6 +1401,7 @@ def test_autograd_save_memory():
             x = x + 1
             x.wait_to_read()
     x.backward()
+
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()

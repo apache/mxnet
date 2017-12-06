@@ -23,6 +23,7 @@ from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
 from common import assertRaises
 from collections import namedtuple
+from nose.plugins.attrib import attr
 
 import numpy.random as rnd
 
@@ -546,6 +547,7 @@ def test_executor_group():
         check_shared_exec_group(opt)
 
 
+@attr('nightly')
 def test_factorization_machine_module(verbose=False):
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):

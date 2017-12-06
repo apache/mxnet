@@ -139,9 +139,12 @@ echo "Running '${COMMAND[@]}' inside ${DOCKER_IMG_NAME}..."
 # By default we cleanup - remove the container once it finish running (--rm)
 # and share the PID namespace (--pid=host) so the process inside does not have
 # pid 1 and SIGKILL is propagated to the process inside (jenkins can kill it).
+# We're passing the cuda archs specifically for the SMs needed by the CI.
 ${DOCKER_BINARY} run --rm --pid=host \
     -v ${WORKSPACE}:/workspace \
     -w /workspace \
+    -e "CUDA_ARCH=-gencode arch=compute_30,code=sm_30 -gencode arch=compute_52,code=[sm_52,compute_52]" \
+    -e "MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0" \
     -e "CI_BUILD_HOME=${WORKSPACE}" \
     -e "CI_BUILD_USER=$(id -u -n)" \
     -e "CI_BUILD_UID=$(id -u)" \
