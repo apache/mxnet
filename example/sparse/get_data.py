@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
 import os, gzip
 import sys
 import mxnet as mx
@@ -39,7 +38,6 @@ class DummyIter(mx.io.DataIter):
 
     def next(self):
         return self.the_batch
-
 
 def get_libsvm_data(data_dir, data_name, url):
     if not os.path.isdir(data_dir):
