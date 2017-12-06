@@ -183,5 +183,18 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
   }
 }
 
+
+template<>
+void Eval<cpu>(mshadow::Stream<cpu> *s,
+               const real_t val, const NDArray& dst) {
+  NDArray temp = dst;
+  const NDArrayStorageType stype = temp.storage_type();
+  if (stype == kRowSparseStorage) {
+    SetValueRspImpl(s, val, &temp);
+  } else {
+    LOG(FATAL) << "Not implemented for storage type" << stype;
+  }
+}
+
 }  // namespace ndarray
 }  // namespace mxnet

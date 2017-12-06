@@ -21,6 +21,9 @@
 
 apt-get update && apt-get install -y \
     build-essential git libopenblas-dev liblapack-dev libopencv-dev \
-    libcurl4-openssl-dev libgtest-dev cmake wget unzip
+    libcurl4-openssl-dev libgtest-dev cmake wget unzip sudo  
+
+# Link Openblas to Cblas as this link does not exist on ubuntu16.04
+ln -s /usr/lib/libopenblas.so /usr/lib/libcblas.so
 
 cd /usr/src/gtest && cmake CMakeLists.txt && make && cp *.a /usr/lib
