@@ -31,6 +31,8 @@ parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
 parser.add_argument('--lr', type=float, default=0.001,
                     help='learning rate')
+parser.add_argument('--cuda', action='store_true', default=False,
+                    help='Train on GPU with CUDA')
 parser.add_argument('--optimizer', type=str, default='adam',
                     help='what optimizer to use',
                     choices=["ftrl", "sgd", "adam"])
@@ -64,6 +66,7 @@ if __name__ == '__main__':
     optimizer = args.optimizer
     log_interval = args.log_interval
     lr = args.lr
+    ctx = mx.gpu(0) if args.cuda else mx.cpu()
 
     # dataset    
     data_dir = os.path.join(os.getcwd(), 'data')
@@ -85,7 +88,7 @@ if __name__ == '__main__':
                                   shuffle=True, last_batch_handle='discard')
     
     # module
-    mod = mx.mod.Module(symbol=model, data_names=['csr_data', 'dns_data'],
+    mod = mx.mod.Module(symbol=model, context=ctx ,data_names=['csr_data', 'dns_data'],
                         label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
