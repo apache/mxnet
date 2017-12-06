@@ -3,7 +3,6 @@ FROM nvidia/cuda:8.0-cudnn5-devel
 # which is required due to OpenBLAS being incompatible with ubuntu14.04
 # the reason we used a gpu base container because we are going to test MKLDNN
 # operator implementation against GPU implementation
-# This is a hybrid Dockerfile, able to run on CPU and GPU 
 
 COPY install/ubuntu_install_core.sh /install/
 RUN /install/ubuntu_install_core.sh

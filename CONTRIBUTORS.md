@@ -151,4 +151,4 @@ List of Contributors
 * [Calum Leslie](https://github.com/calumleslie)
 * [Andre Tamm](https://github.com/andretamm)
 * [Marco de Abreu](https://github.com/marcoabreu)
- - Marco is the current maintainer of the MXNet CI.
+ - Marco is the creator of the current MXNet CI.
