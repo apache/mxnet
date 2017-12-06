@@ -38,7 +38,7 @@ mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and foun
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON AND NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
-mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
+mxnet_option(USE_PROFILER         "Build with Profiler support"   ON)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
