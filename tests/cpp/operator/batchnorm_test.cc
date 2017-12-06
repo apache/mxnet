@@ -26,7 +26,7 @@
 
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
-#include "../../src/operator/batch_norm-inl.h"
+#include "../../src/operator/nn/batch_norm-inl.h"
 #include "../../src/operator/batch_norm_v1-inl.h"
 #include "./test_legacy_op.h"
 #include "executor/exec_pass.h"

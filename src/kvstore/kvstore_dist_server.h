@@ -247,7 +247,12 @@ class KVStoreDistServer {
             NDArray rsp = stored;
             stored.CheckAndAlloc({mshadow::Shape1(recved.shape()[0])});
             mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-            op::PopulateFullIdxRspImpl(s, &rsp);
+            using namespace mxnet::op;
+            nnvm::dim_t nnr = rsp.shape()[0];
+            MSHADOW_IDX_TYPE_SWITCH(rsp.aux_type(rowsparse::kIdx), IType, {
+              IType* idx = rsp.aux_data(rowsparse::kIdx).dptr<IType>();
+              mxnet_op::Kernel<PopulateFullIdxRspKernel, cpu>::Launch(s, nnr, idx);
+            });
             mshadow::Copy(rsp.data().FlatTo1D<cpu, float>(),
                           recved.data().FlatTo1D<cpu, float>(), s);
             on_complete();
@@ -301,7 +306,7 @@ class KVStoreDistServer {
           using namespace mshadow;
           Engine::Get()->PushAsync(
             [recved, merged, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-              op::ElemwiseBinaryOp::ComputeEx<cpu, mshadow::op::plus>(
+              op::ElemwiseBinaryOp::ComputeEx<cpu, op::mshadow_op::plus>(
                 {}, {}, {recved, merged.array}, {kWriteTo}, {out});
               on_complete();
             }, recved.ctx(), const_vars, {out.var()},

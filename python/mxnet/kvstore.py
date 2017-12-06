@@ -408,10 +408,13 @@ class KVStore(object):
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """
-        ckeys, cvals = _ctype_dict(compression_params)
-        check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
-                                                        mx_uint(len(compression_params)),
-                                                        ckeys, cvals))
+        if ('device' in self.type) or ('dist' in self.type):
+            ckeys, cvals = _ctype_dict(compression_params)
+            check_call(_LIB.MXKVStoreSetGradientCompression(self.handle,
+                                                            mx_uint(len(compression_params)),
+                                                            ckeys, cvals))
+        else:
+            raise Exception('Gradient compression is not supported for this type of kvstore')
 
     def set_optimizer(self, optimizer):
         """ Registers an optimizer with the kvstore.
@@ -451,7 +454,7 @@ class KVStore(object):
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
-                optim_str = pickle.dumps(optimizer, 0)
+                optim_str = py_str(pickle.dumps(optimizer, 0))
             except:
                 raise
             self._send_command_to_servers(0, optim_str)

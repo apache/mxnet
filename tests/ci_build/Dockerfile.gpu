@@ -1,4 +1,6 @@
-FROM nvidia/cuda:7.5-cudnn5-devel
+FROM nvidia/cuda:8.0-cudnn5-devel
+# cuda8.0 has to be used because this is the first ubuntu16.04 container
+# which is required due to OpenBLAS being incompatible with ubuntu14.04
 
 COPY install/ubuntu_install_core.sh /install/
 RUN /install/ubuntu_install_core.sh

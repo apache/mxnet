@@ -288,8 +288,6 @@ void Imperative::RunGraph(
   DTypeVector arg_dtypes;
   std::vector<OpReqType> req;
 
-  int prev_bulk_size = Engine::Get()->set_bulk_size(10);
-
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) continue;
@@ -353,8 +351,6 @@ void Imperative::RunGraph(
       if (ref_count[eid] == 0) arrays[eid]->ptr_.reset();
     }
   }
-
-  Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
 
@@ -367,6 +363,7 @@ std::vector<NDArray*> Imperative::Backward(
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
+  static const Op* copy_op = Op::Get("_copy");
 
   // Construct forward graph
   Graph graph;
@@ -439,7 +436,14 @@ std::vector<NDArray*> Imperative::Backward(
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto &e : g_graph.outputs) {
-    graph.outputs.push_back(e);
+    if (e.node->op() == nullptr) {
+      auto node = Node::Create();
+      node->attrs.op = copy_op;
+      node->inputs.push_back(e);
+      graph.outputs.push_back(NodeEntry{node, 0, 0});
+    } else {
+      graph.outputs.push_back(e);
+    }
   }
   const auto& idx = graph.indexed_graph();
   // get number of nodes used in forward pass
@@ -575,10 +579,12 @@ std::vector<NDArray*> Imperative::Backward(
 
   bool prev_recording = set_is_recording(create_graph);
   bool prev_training = set_is_training(is_train);
+  int prev_bulk_size = Engine::Get()->set_bulk_size(backward_bulk_size_);
 
   RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes);
 
+  Engine::Get()->set_bulk_size(prev_bulk_size);
   set_is_recording(prev_recording);
   set_is_training(prev_training);
 

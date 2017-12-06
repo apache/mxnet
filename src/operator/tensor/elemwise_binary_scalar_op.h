@@ -286,7 +286,7 @@ class BinaryScalarOp : public UnaryOp {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
-          mxnet::op::mxnet_op::backward_grad<OP>, Req>, xpu>::
+          mxnet::op::mxnet_op::backward_grad_tuned<OP>, Req>, xpu>::
           Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
                  inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
                  DType(alpha));

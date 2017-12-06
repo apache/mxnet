@@ -74,7 +74,7 @@ CudaModule::Chunk::~Chunk() {
 CUfunction CudaModule::Chunk::GetFunction(
     const std::string& mangled_name,
     const Context& ctx) {
-  CHECK_EQ(ctx.dev_mask(), gpu::kDevMask)
+  CHECK_EQ(ctx.dev_mask(), Context::kGPU)
       << "CUDA Runtime compilation only supports Nvidia GPU.";
   auto iter = mod_.find(ctx.dev_id);
   CUmodule module;

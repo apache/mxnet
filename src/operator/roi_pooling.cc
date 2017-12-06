@@ -62,7 +62,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     int roi_end_w = round(bottom_rois[3] * spatial_scale_);
     int roi_end_h = round(bottom_rois[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
-    assert(roi_batch_ind < data.size(0) /* batch size */);
+    assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
 
     // force malformed ROIs to be 1 * 1
     int roi_height = max(roi_end_h - roi_start_h + 1, 1);

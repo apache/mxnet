@@ -38,7 +38,7 @@ mxnet_option(USE_MKL_EXPERIMENTAL "Use experimental MKL (if MKL enabled and foun
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON AND NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
-mxnet_option(USE_PROFILER         "Build with Profiler support"   OFF)
+mxnet_option(USE_PROFILER         "Build with Profiler support"   ON)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
@@ -54,10 +54,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
 
+if(MSVC)
+  set(SYSTEM_ARCHITECTURE x86_64)
+else()
+  EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
+endif()
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
-
-
-
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -184,7 +187,7 @@ endforeach()
 
 include_directories("include")
 include_directories("mshadow")
-include_directories("cub")
+include_directories("3rdparty/cub")
 include_directories("nnvm/include")
 include_directories("dmlc-core/include")
 include_directories("dlpack/include")
@@ -263,11 +266,13 @@ endif()
 # ---[ OpenMP
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/openmp/CMakeLists.txt)
+  # This should build on Windows, but there's some problem and I don't have a Windows box, so
+  # could a Windows user please fix?
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt AND SYSTEM_ARCHITECTURE STREQUAL "x86_64" AND NOT MSVC)
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
-    set(LIBOMP_ENABLE_SHARED FALSE)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/openmp)
+    set(LIBOMP_ENABLE_SHARED TRUE)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
     list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
     list(APPEND mxnet_LINKER_LIBS omp)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
