@@ -187,7 +187,7 @@ def test_ctc_loss():
     l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
-
+@unittest.skip("flaky test. https://github.com/apache/incubator-mxnet/issues/8892")
 def test_ctc_loss_train():
     np.random.seed(1234)
     N = 20
