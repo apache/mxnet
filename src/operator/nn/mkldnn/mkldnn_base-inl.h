@@ -169,7 +169,8 @@ class MKLDNNStream {
   void RegisterMem(mkldnn_mem_const_ptr mem) { mem_holder.push_back(mem); }
 
   void Submit() {
-    mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
+    if (!net.empty())
+      mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
     net.clear();
     mem_holder.clear();
   }
