@@ -1,0 +1,7 @@
+CaffePluginIntLayer(var, tops, num_data, num_weight, num_out, data, prototxt, name) ::= "<var> = mx.symbol.CaffeOp(<if(data)><data>, <endif><if(num_data)>num_data=<num_data>, <endif><if(num_out)>num_out=<num_out>, <endif><if(num_weight)>num_weight=<num_weight>, <endif>prototxt='<prototxt>', name='<name>')
+<if(tops)><tops:{top|<top_assign(top, var, i0)>};separator=\"\n\"> <endif>"
+
+CaffePluginLossLayer(var, tops, num_data, data, prototxt, name) ::= "<var> = mx.symbol.CaffeLoss(<data><if(num_data)>, num_data=<num_data><endif>, prototxt='<prototxt>', name='<name>')
+<if(tops)><tops:{top|<top_assign(top, var, i0)>};separator=\"\n\"> <endif>"
+
+top_assign(top, var, index) ::= "<top> = <var>[<index>]"

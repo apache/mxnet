@@ -55,6 +55,12 @@ if [[ "$1" == "-it" ]]; then
     shift 1
 fi
 
+if [[ "$1" == "--dockerbinary" ]]; then
+    DOCKER_BINARY="$2"
+    echo "Using custom Docker Engine: ${DOCKER_BINARY}"
+    shift 2
+fi
+
 if [[ ! -f "${DOCKERFILE_PATH}" ]]; then
     echo "Invalid Dockerfile path: \"${DOCKERFILE_PATH}\""
     exit 1
@@ -73,11 +79,15 @@ if [ "$#" -lt 1 ] || [ ! -e "${SCRIPT_DIR}/Dockerfile.${CONTAINER_TYPE}" ]; then
       exit 1
 fi
 
-# Use nvidia-docker if the container is GPU.
-if [[ "${CONTAINER_TYPE}" == *"gpu"* ]]; then
-    DOCKER_BINARY="nvidia-docker"
-else
-    DOCKER_BINARY="docker"
+# Only set docker binary automatically if it has not been specified
+if [[ -z "${DOCKER_BINARY}" ]]; then
+    # Use nvidia-docker if the container is GPU.
+    if [[ "${CONTAINER_TYPE}" == *"gpu"* ]]; then
+        DOCKER_BINARY="nvidia-docker"
+    else
+        DOCKER_BINARY="docker"
+    fi
+    echo "Automatically assuming ${DOCKER_BINARY} as docker binary"
 fi
 
 # Helper function to traverse directories up until given file is found.
@@ -147,6 +157,7 @@ ${DOCKER_BINARY} run --rm --pid=host \
     -e "CI_BUILD_UID=$(id -u)" \
     -e "CI_BUILD_GROUP=$(id -g -n)" \
     -e "CI_BUILD_GID=$(id -g)" \
+    -e "CUDA_ARCH=-gencode arch=compute_52,code=[sm_52,compute_52] --fatbin-options -compress-all" \
     ${CI_DOCKER_EXTRA_PARAMS[@]} \
     ${DOCKER_IMG_NAME} \
     ${PRE_COMMAND} \
