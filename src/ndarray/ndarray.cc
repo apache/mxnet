@@ -594,9 +594,31 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
   if (ptr_->Mkl_mem_.get() == &mem)
     return;
 
-  // TODO if the shape mismatches.
+  if (mem.get_primitive_desc().get_size() != shape().Size() * GetTypeSize(dtype_)) {
+    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
+    return;
+  }
+
+  MKLDNNStream &stream = MKLDNNStream::Instance();
   ptr_->SetMKLMem(shape_, dtype_);
-  MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
+  auto from_desc = mem.get_primitive_desc().desc();
+  auto this_desc = ptr_->Mkl_mem_->get_primitive_desc().desc();
+  // It's possible that the memory and the NDArray don't have the same shape.
+  if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)) {
+    // In this case, we can simply create a new MKLDNN memory for the required
+    // shape.
+    // TODO let's just hope it's the default format for now.
+    CHECK_EQ(GetDefaultFormat(from_desc), from_desc.data.format);
+    mkldnn::memory::dims dims(this_desc.data.dims, this_desc.data.dims + this_desc.data.ndims);
+    mkldnn::memory::desc data_md(dims, static_cast<mkldnn::memory::data_type>(this_desc.data.data_type),
+                                 static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc)));
+    mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
+    mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
+    stream.RegisterMem(tmp_mem);
+    stream.RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->Mkl_mem_));
+  }
+  else
+    stream.RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
 }
 
 std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
