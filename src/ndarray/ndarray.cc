@@ -309,30 +309,34 @@ void SetValueOp(const real_t &rhs, NDArray *out) {
   CHECK_NE(out->is_none(), true) << "Set value target must not be empty";
   // important: callback must always capture by value
   NDArray ret = *out;
-  switch (ret.ctx().dev_mask()) {
-    case cpu::kDevMask: {
-      Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          CHECK(ret.storage_type() == kDefaultStorage);
-          TBlob tmp = ret.data();
-          ndarray::Eval<cpu>(rhs, &tmp, ctx);
-        }, ret.ctx(), {}, {ret.var()},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+  const NDArrayStorageType stype = ret.storage_type();
+  Engine::Get()->PushSync([rhs, ret, stype](RunContext ctx) {
+      TBlob tmp = ret.data();
+      switch (ret.ctx().dev_mask()) {
+        case cpu::kDevMask: {
+          if (stype == kDefaultStorage) {
+            ndarray::Eval<cpu>(rhs, &tmp, ctx);
+          } else {
+            ndarray::Eval(ctx.get_stream<cpu>(), rhs, ret);
+          }
+          break;
+        }
 #if MXNET_USE_CUDA
-    case gpu::kDevMask: {
-      Engine::Get()->PushSync([rhs, ret](RunContext ctx) {
-          TBlob tmp = ret.data();
-          ndarray::Eval<gpu>(rhs, &tmp, ctx);
+        case gpu::kDevMask: {
+          if (stype == kDefaultStorage) {
+            ndarray::Eval<gpu>(rhs, &tmp, ctx);
+          } else {
+            ndarray::Eval(ctx.get_stream<gpu>(), rhs, ret);
+          }
           // Wait GPU kernel to complete
           ctx.get_stream<gpu>()->Wait();
-        }, ret.ctx(), {}, {ret.var()},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
-      break;
-    }
+          break;
+        }
 #endif
-    default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-  }
+        default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      }
+    }, ret.ctx(), {}, {ret.var()},
+  FnProperty::kNormal, 0, PROFILER_MESSAGE_FUNCNAME);
 }
 
 /*!

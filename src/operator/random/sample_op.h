@@ -428,13 +428,17 @@ void SampleComputeEx_(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<NDArray>& outputs,
                       SampleMaster<xpu, Sampler> sample_master) {
+  using namespace mxnet::op;
   NDArray output = outputs[0];
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (output.storage_type() == kRowSparseStorage) {
     // indices
     nnvm::dim_t nnr = output.shape()[0];
     output.CheckAndAlloc({mshadow::Shape1(nnr)});
-    PopulateFullIdxRspImpl(s, &output);
+    MSHADOW_IDX_TYPE_SWITCH(output.aux_type(rowsparse::kIdx), IType, {
+      IType* idx = output.aux_data(rowsparse::kIdx).dptr<IType>();
+      mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
+    });
     // data
     TBlob out_blob = output.data();
     sample_master.op(attrs, ctx, req[0], &out_blob);
