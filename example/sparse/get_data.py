@@ -18,7 +18,6 @@
 import os, gzip
 import sys
 import mxnet as mx
-import numpy as np
 
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always return the same batch, used for speed testing"
