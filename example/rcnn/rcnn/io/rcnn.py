@@ -75,7 +75,7 @@ def get_rcnn_batch(roidb):
     assert config.TRAIN.BATCH_ROIS % config.TRAIN.BATCH_IMAGES == 0, \
         'BATCHIMAGES {} must divide BATCH_ROIS {}'.format(config.TRAIN.BATCH_IMAGES, config.TRAIN.BATCH_ROIS)
     rois_per_image = config.TRAIN.BATCH_ROIS / config.TRAIN.BATCH_IMAGES
-    fg_rois_per_image = np.round(config.TRAIN.FG_FRACTION * rois_per_image).astype(int)
+    fg_rois_per_image = np.round(config.TRAIN.FG_FRACTION * rois_per_image).astype(np.int)
 
     rois_array = list()
     labels_array = list()
