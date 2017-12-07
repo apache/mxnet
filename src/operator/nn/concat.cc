@@ -25,6 +25,7 @@
 */
 
 #include "./concat-inl.h"
+#include "./mkldnn/mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -102,12 +103,104 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                 const int dev_mask,
+                                 DispatchMode* dispatch_mode,
+                                 std::vector<int> *in_attrs,
+                                 std::vector<int> *out_attrs) {
+  CHECK(!in_attrs->empty());
+  CHECK_EQ(out_attrs->size(), 1U);
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    (*out_attrs)[0] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  (*out_attrs)[0] = kDefaultStorage;
+  return true;
+}
+
+inline static bool backward_ConcatStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
+#if MXNET_USE_MKLDNN == 1
+  CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    for (size_t i = 0; i < out_attrs->size(); i++)
+      (*out_attrs)[i] = kMKLDNNStorage;
+    return true;
+  }
+#endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
+  return true;
+}
+
+void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& op_ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+#if MXNET_USE_MKLDNN == 1
+  //MKLDNN support 2D and 4D concat
+  if (inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4) {
+    if(inputs[0].dtype() == mshadow::kFloat32) { 
+      MKLDNNConcat_Forward(attrs, op_ctx, inputs, req, outputs);
+    }
+  }
+  else {
+    // TODO I need to convert format.
+    std::vector<TBlob> in_blobs(inputs.size());
+    for (size_t i = 0; i < in_blobs.size(); i++)
+      in_blobs[i] = inputs[i].data();
+    std::vector<TBlob> out_blobs(outputs.size());
+    for (size_t i = 0; i < out_blobs.size(); i++)
+      out_blobs[i] = outputs[i].data();
+    ConcatCompute<cpu>(attrs, op_ctx, in_blobs, req, out_blobs);
+  }
+#endif
+}
+
+static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx, const std::vector<NDArray>& inputs,
+    const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
+#if MXNET_USE_MKLDNN == 1
+  if (inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4) {
+    if(inputs[0].dtype() == mshadow::kFloat32) { 
+      MKLDNNConcat_Backward(attrs, ctx, inputs, req, outputs);
+    }
+  }
+  else {
+    // TODO I need to convert format.
+    std::vector<TBlob> in_blobs(1);
+    in_blobs[0] = inputs[0].data();
+    std::vector<TBlob> out_blobs(outputs.size());
+    for (size_t i = 0; i < out_blobs.size(); i++)
+      out_blobs[i] = outputs[i].data();
+    ConcatGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+  }
+#endif
+}
+
 struct ConcatGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
-    const ConcatParam& param = nnvm::get<ConcatParam>(n->attrs.parsed);
+    CHECK_EQ(ograds.size(), 1);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    for (size_t i = 0; i < n->inputs.size(); i++) {
+      heads.push_back(n->inputs[i]);
+    }
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -164,7 +257,9 @@ Example::
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
+.set_attr<FInferStorageType>("FInferStorageType", ConcatForwardInferStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConcatComputeExCPU)
 .set_attr<nnvm::FGradient>("FGradient", ConcatGrad{"_backward_Concat"})
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
@@ -179,7 +274,9 @@ NNVM_REGISTER_OP(_backward_Concat)
 })
 .set_attr_parser(ParamParser<ConcatParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType", backward_ConcatStorageType)
+.set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU);
 
 }  // namespace op
 }  // namespace mxnet
