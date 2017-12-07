@@ -16,7 +16,7 @@
 # under the License.
 
 import argparse
-import cPickle
+import _pickle as cPickle
 import os
 import mxnet as mx
 

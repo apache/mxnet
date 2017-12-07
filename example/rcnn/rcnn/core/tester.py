@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import cPickle
+import _pickle as cPickle
 import os
 import time
 import mxnet as mx
