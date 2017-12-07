@@ -25,6 +25,7 @@
 // this will be invoked by gcc and compile CPU version
 #include "./matrix_op-inl.h"
 #include "./elemwise_unary_op.h"
+#include "../nn/mkldnn/mkldnn_ops-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -180,6 +181,56 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
+static void FlattenEx(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<NDArray>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  const auto in_stype = inputs[0].storage_type();
+  const auto out_stype = outputs[0].storage_type();
+#if MXNET_USE_MKLDNN == 1
+  if (in_stype == kMKLDNNStorage) {
+    NDArray data = inputs[0];
+    if (data.shape().ndim() != 2) {
+      const TShape& oshape = outputs[0].shape();
+      data = data.ReshapeMKLDNN(mshadow::Shape2(oshape[0], oshape[1]));
+    }
+    MKLDNNCopy(attrs, ctx, data, req[0], outputs[0]);
+    return;
+  }
+  // This happens if inputs are supposed to be in MKLDNN format
+  // but MKLDNN doesn't support the data type or the shape. We're
+  // forced to convert it to the default format.
+  else if (in_stype == kDefaultStorage) {
+    std::vector<TBlob> in_blobs(1);
+    std::vector<TBlob> out_blobs(1);
+    in_blobs[0] = inputs[0].data();
+    out_blobs[0] = outputs[0].data();
+    UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    return;
+  }
+#endif
+}
+
+static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+#if MXNET_USE_MKLDNN == 1
+  if (in_attrs->at(0) == kMKLDNNStorage && dev_mask == mshadow::cpu::kDevMask) {
+    out_attrs->at(0) = kMKLDNNStorage;
+    *dispatch_mode = DispatchMode::kFComputeEx;
+    return true;
+  } else
+#endif
+    return ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
+                                                        in_attrs, out_attrs);
+}
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
@@ -210,8 +261,10 @@ Example::
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
