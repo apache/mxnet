@@ -82,8 +82,8 @@ class DECModel(model.MXModel):
 
     def setup(self, X, num_centers, alpha, save_to='dec_model'):
         sep = X.shape[0]*9/10
-        X_train = X[:sep]
-        X_val = X[sep:]
+        X_train = X[:int(sep)]
+        X_val = X[int(sep):]
         ae_model = AutoEncoderModel(self.xpu, [X.shape[1],500,500,2000,10], pt_dropout=0.2)
         if not os.path.exists(save_to+'_pt.arg'):
             ae_model.layerwise_pretrain(X_train, 256, 50000, 'sgd', l_rate=0.1, decay=0.0,
