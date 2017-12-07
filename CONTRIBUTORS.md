@@ -150,3 +150,5 @@ List of Contributors
 * [Manu Seth](https://github.com/mseth10/)
 * [Calum Leslie](https://github.com/calumleslie)
 * [Andre Tamm](https://github.com/andretamm)
+* [Marco de Abreu](https://github.com/marcoabreu)
+ - Marco is the creator of the current MXNet CI.
