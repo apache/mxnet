@@ -188,16 +188,11 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
                       const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
+#if MXNET_USE_MKLDNN == 1
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
-#if MXNET_USE_MKLDNN == 1
   if (in_stype == kMKLDNNStorage) {
-    NDArray data = inputs[0];
-    if (data.shape().ndim() != 2) {
-      const TShape& oshape = outputs[0].shape();
-      data = data.ReshapeMKLDNN(mshadow::Shape2(oshape[0], oshape[1]));
-    }
-    MKLDNNCopy(attrs, ctx, data, req[0], outputs[0]);
+    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   // This happens if inputs are supposed to be in MKLDNN format
