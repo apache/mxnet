@@ -56,9 +56,9 @@ using [a MXNet fork, based on MXNet 0.9.1 nnvm pre-release](https://github.com/p
 
 ## Prerequisites
 * Pip, Python-dev, Unzip
-* Some python packages are required: Cython, Scikit-image and Easydict`
+* Some python packages are required: Cython, Scikit-image, Easydict, Matplot, OpenCV, Six`
 * On debian, you can usually run `sudo apt install python-pip python-dev unzip`
-* And the python packages can be installed by running `sudo pip install cython scikit-image easydict matplotlib opencv-python`
+* And the python packages can be installed by running `sudo pip install cython scikit-image easydict matplotlib opencv-python six`
 * MXNet version v0.9.5 or higher with Python interface installed. Open `python` type `import mxnet` to confirm.
 
 ## Getting started

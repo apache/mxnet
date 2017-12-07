@@ -23,7 +23,7 @@ function. Results are written as the Pascal VOC format. Evaluation is based on m
 criterion.
 """
 
-import _pickle as cPickle
+from six.moves import cPickle
 import cv2
 import os
 import numpy as np

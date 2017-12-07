@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import _pickle as cPickle
+from six.moves import cPickle
 import cv2
 import os
 import json

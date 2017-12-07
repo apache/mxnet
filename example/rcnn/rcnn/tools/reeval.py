@@ -16,7 +16,7 @@
 # under the License.
 
 import argparse
-import _pickle as cPickle
+from six.moves import cPickle
 import os
 import mxnet as mx
 

@@ -22,7 +22,7 @@ given a pascal voc imdb, compute mAP
 from ..logger import logger
 import numpy as np
 import os
-import _pickle as cPickle
+from six.moves import cPickle
 
 
 def parse_voc_rec(filename):
