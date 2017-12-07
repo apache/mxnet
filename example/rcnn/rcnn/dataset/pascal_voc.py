@@ -23,7 +23,7 @@ function. Results are written as the Pascal VOC format. Evaluation is based on m
 criterion.
 """
 
-import pickle
+import _pickle as cPickle
 import cv2
 import os
 import numpy as np
@@ -94,13 +94,13 @@ class PascalVOC(IMDB):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = pickle.load(fid)
+                roidb = cPickle.load(fid)
             logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self.load_pascal_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
-            pickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
         logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb

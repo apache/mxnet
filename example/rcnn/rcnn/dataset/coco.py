@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import pickle
+import _pickle as cPickle
 import cv2
 import os
 import json
