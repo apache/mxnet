@@ -122,8 +122,8 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   int fid = -1;
   bool is_new = false;
   size_t size = handle->size + alignment_;
-  void* ptr = nullptr;
-#ifdef _WIN32
+  void *ptr = nullptr;
+  #ifdef _WIN32
   CheckAndRealFree();
   HANDLE map_handle = nullptr;
   unsigned long error = 0;
@@ -134,29 +134,26 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
       handle->shared_id = dis(rand_gen_);
       auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
       map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-        NULL, PAGE_READWRITE, 0, size, filename.c_str());
-      if ((error = GetLastError()) == ERROR_SUCCESS)
-      {
+                                     NULL, PAGE_READWRITE, 0, size, filename.c_str());
+      if ((error = GetLastError()) == ERROR_SUCCESS) {
         break;;
       }
     }
-  }
-  else {
+  } else {
     auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
     map_handle = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE,
-      FALSE, filename.c_str());
+                                 FALSE, filename.c_str());
     error = GetLastError();
   }
 
   if (error != ERROR_SUCCESS && map_handle == nullptr) {
     LOG(FATAL) << "Failed to open shared memory. CreateFileMapping failed with error "
-      << error;
-}
-
+               << error;
+  }
 
   ptr = MapViewOfFile(map_handle, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
-  CHECK_NE(ptr, (void*)0)
-    << "Failed to map shared memory. MapViewOfFile failed with error " << GetLastError();
+  CHECK_NE(ptr, (void *)0)
+      << "Failed to map shared memory. MapViewOfFile failed with error " << GetLastError();
   map_handle_map_[ptr] = map_handle;
 #else
   if (handle->shared_id == -1 && handle->shared_pid == -1) {
