@@ -281,6 +281,11 @@ function test_minus()
   @test t6 - scalar_small ≈ copy(a6 .- scalar_small)
   @test t6 - scalar_large ≈ copy(a6 .- scalar_large)
 
+  info("NDArray::minus::scalar::type convert")
+  let x = mx.NDArray([1, 2, 3])
+    @test copy(x .- π) ≈ [-2, -1, 0]
+  end
+
   info("NDArray::minus::type stablility")
   let x = mx.zeros(dims), y = mx.ones(dims)
     @inferred x - y

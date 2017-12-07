@@ -598,13 +598,14 @@ broadcast_(::typeof(+), x::Real, y::NDArray)          = x + y
 
 Subtract a bunch of arguments from `dst`. Inplace updating.
 """
-function sub_from!(dst::NDArray{T}, arg::NDArrayOrReal) where T
+function sub_from!(dst::NDArray, arg::NDArrayOrReal)
   @assert dst.writable
   if isa(arg, Real)
-    _minus_scalar(dst, scalar = convert(T, arg), out = dst)
+    _minus_scalar(dst, scalar = arg, out = dst)
   else
     _minus!(dst, arg)
   end
+  dst
 end
 
 import Base: -
