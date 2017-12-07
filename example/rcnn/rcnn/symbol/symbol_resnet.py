@@ -16,8 +16,6 @@
 # under the License.
 
 import mxnet as mx
-import proposal
-import proposal_target
 from rcnn.config import config
 
 eps = 2e-5

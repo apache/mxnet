@@ -15,14 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import cPickle
+import pickle
 import cv2
 import os
 import json
 import numpy as np
 
 from ..logger import logger
-from imdb import IMDB
+from .imdb import IMDB
 
 # coco api
 from ..pycocotools.coco import COCO

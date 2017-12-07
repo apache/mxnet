@@ -28,7 +28,7 @@ basic format [image_index]
 
 from ..logger import logger
 import os
-import cPickle
+import pickle
 import numpy as np
 from ..processing.bbox_transform import bbox_overlaps
 
