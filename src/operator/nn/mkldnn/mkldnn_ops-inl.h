@@ -77,8 +77,16 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                 const NDArray &in_data, const OpReqType &req,
                 const NDArray &out_data);
 
-}  // namespace op
-}  // namespace mxnet
+/* For concat */
+void MKLDNNConcat_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+    const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
+    const std::vector<NDArray> &out_data);
+void MKLDNNConcat_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+    const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+    const std::vector<NDArray>& outputs);
+
+}
+}
 #endif  // MXNET_USE_MKLDNN == 1
 
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
