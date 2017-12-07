@@ -147,10 +147,10 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     # foreground RoI with FG_THRESH overlap
     fg_indexes = np.where(overlaps >= config.TRAIN.FG_THRESH)[0]
     # guard against the case when an image has fewer than fg_rois_per_image foreground RoIs
-    fg_rois_per_this_image = np.minimum(fg_rois_per_image, fg_indexes.size)
+    fg_rois_per_this_image = int(np.minimum(fg_rois_per_image, fg_indexes.size))
     # Sample foreground regions without replacement
     if len(fg_indexes) > fg_rois_per_this_image:
-        fg_indexes = npr.choice(fg_indexes, size=fg_rois_per_this_image, replace=False).astype(np.int)
+        fg_indexes = npr.choice(fg_indexes, size=fg_rois_per_this_image, replace=False)
 
     # Select background RoIs as those within [BG_THRESH_LO, BG_THRESH_HI)
     bg_indexes = np.where((overlaps < config.TRAIN.BG_THRESH_HI) & (overlaps >= config.TRAIN.BG_THRESH_LO))[0]
@@ -159,7 +159,7 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     bg_rois_per_this_image = np.minimum(bg_rois_per_this_image, bg_indexes.size)
     # Sample foreground regions without replacement
     if len(bg_indexes) > bg_rois_per_this_image:
-        bg_indexes = npr.choice(bg_indexes, size=bg_rois_per_this_image, replace=False).astype(np.int)
+        bg_indexes = npr.choice(bg_indexes, size=bg_rois_per_this_image, replace=False)
 
     # indexes selected
     keep_indexes = np.append(fg_indexes, bg_indexes)
@@ -168,7 +168,7 @@ def sample_rois(rois, fg_rois_per_image, rois_per_image, num_classes,
     # pad more to ensure a fixed minibatch size
     while keep_indexes.shape[0] < rois_per_image:
         gap = np.minimum(len(neg_rois), rois_per_image - keep_indexes.shape[0])
-        gap_indexes = npr.choice(range(len(neg_rois)), size=gap, replace=False).astype(np.int)
+        gap_indexes = npr.choice(range(len(neg_rois)), size=gap, replace=False)
         keep_indexes = np.append(keep_indexes, neg_idx[gap_indexes])
 
     # select labels
