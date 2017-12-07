@@ -154,27 +154,33 @@ public class Converter {
             Layer layer = layers.get(layerIndex);
             SymbolGenerator generator = generators.getGenerator(layer.getType());
 
-            // If the translator cannot translate this layer to an MXNet layer,
-            // use CaffeOp or CaffeLoss instead.
+            // Handle layers for which there is no Generator
             if (generator == null) {
-                if (layer.getType().toLowerCase().endsWith("loss") && !(layer.getType().equalsIgnoreCase("Accuracy"))) {
+                if (layer.getType().equalsIgnoreCase("Accuracy")) {
+                    // We handle accuracy layers at a later stage. Do nothing for now.
+                } else if (layer.getType().toLowerCase().endsWith("loss")) {
+                    // This is a loss layer we don't have a generator for. Wrap it in CaffeLoss.
                     generator = generators.getGenerator("CaffePluginLossLayer");
-                } else if (!layer.getType().equalsIgnoreCase("Accuracy")) {
+                } else {
+                    // This is a layer we don't have a generator for. Wrap it in CaffeOp.
                     generator = generators.getGenerator("PluginIntLayerGenerator");
                 }
             }
 
-            if (generator != null) {
+            if (generator != null) { // If we have a generator
+                // Generate code
                 GeneratorOutput out = generator.generate(layer, mlModel);
                 String segment = out.code;
                 code.append(segment);
                 code.append(NL);
+
+                // Update layerIndex depending on how many layers we ended up translating
                 layerIndex += out.numLayersTranslated;
-            } else {
-                layerIndex ++;
+            } else { // If we don't have a generator
+                // We've decided to skip this layer. Generate no code. Just increment layerIndex
+                // by 1 and move on to the next layer.
+                layerIndex++;
             }
-
-
         }
 
         String loss = getLoss(mlModel, code);
