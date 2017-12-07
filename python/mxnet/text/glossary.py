@@ -34,6 +34,8 @@ from ..gluon.utils import download
 from .. import ndarray as nd
 from .. import io
 
+from tqdm import tqdm
+
 
 class Glossary(object):
 
@@ -45,10 +47,11 @@ class Glossary(object):
     def __init__(self, counter, top_k_freq=None, min_freq=1,
                  specials=['<unk>'], embeds=None):
         # Sanity checks.
-        assert min_freq > 0, '`min_freq` must be set to a positive value.'
-        assert len(specials) > 0, '`specials` must be an non-empty list whose ' \
-                                 'first element is the string representation ' \
-                                 'for unknown tokens, such as "<unk>".'
+        assert min_freq > 0, 'min_freq must be set to a positive value.'
+        assert len(specials) > 0, 'specials must be an non-empty list whose ' \
+                                  'first element is the string ' \
+                                  'representation for unknown tokens, such ' \
+                                  'as "<unk>".'
 
         # Initialize attributes.
         self._init_attrs(counter, specials)
@@ -139,9 +142,9 @@ class Glossary(object):
     # tokens is a str or a list of strs.
     def update_idx_to_vec(self, tokens, new_vectors):
         assert self.idx_to_vec is not None, \
-            'Glossary._idx_to_vec has not been initialized.  Use ' \
-            'Glossary.__init__() or Glossary.set_idx_to_embed() to ' \
-            'initialize it.'
+            'mxnet.text.Glossary._idx_to_vec has not been initialized.  Use ' \
+            'mxnet.text.Glossary.__init__() or ' \
+            'mxnet.text.Glossary.set_idx_to_embed() to initialize it.'
 
         if not isinstance(tokens, list):
             tokens = [tokens]
@@ -173,7 +176,8 @@ class Embedding(object):
     embed_registry = {}
 
     def __init__(self, pretrain_file, url=None, embed_name='my_embed',
-                 embed_root='~/.mxnet/embeddings/', special_init_vec=nd.zeros):
+                 embed_root='~/.mxnet/embeddings/', special_init_vec=nd.zeros,
+                 token_delim=' '):
 
         pretrain_file = os.path.expanduser(pretrain_file)
         embed_root = os.path.expanduser(embed_root)
@@ -186,28 +190,90 @@ class Embedding(object):
                              'url.')
         if url is not None:
             assert embed_name in Embedding.embed_registry, \
-                'To load a pretrained embedding file from url, use Embedding.' \
-                'create_embedding(embed_name, **kwargs) or manually download ' \
-                'it and specify its path via pretrain_file.'
+                'To load a pretrained embedding file from url, use ' \
+                'mxnet.text.Embedding.create_embedding(embed_name, **kwargs) ' \
+                'or manually download it and specify its path via pretrain_' \
+                'file.'
             assert not os.path.isfile(pretrain_file), \
                 'When pretrain_file is a path to a user-provided pretrained ' \
-                'embedding file, url must  be set to None; when url to ' \
+                'embedding file, url must be set to None; when url to the ' \
                 'pretrained embedding file(s) is specified, such as when ' \
-                'embedding is created by Embedding.create_embedding(' \
-                'embed_name, **kwargs), pretrain_file must be the name ' \
-                'rather than the path of the pretrained embedding file. This ' \
-                'is to avoid confusion over the source pretrained embedding ' \
-                'file to load.'
+                'embedding is created by ' \
+                'mxnet.text.Embedding.create_embedding(embed_name, ' \
+                '**kwargs), pretrain_file must be the name rather than the ' \
+                'path of the pretrained embedding file. This is to avoid ' \
+                'confusion over the source pretrained embedding file to ' \
+                'load. Call ' \
+                'mxnet.text.Embedding.show_embed_names_and_pretrain_files() ' \
+                'to see the available embed_name and pretrain_file.'
 
         self._special_init_vec = special_init_vec
 
+        pretrain_file_path = Embedding._get_pretrain_file(pretrain_file, url,
+                                                          embed_name,
+                                                          embed_root)
+
+        with open(pretrain_file_path, 'r', encoding='utf8') as f:
+            lines = f.readlines()
+
+        logging.info('Loading pretrained embedding vectors from %s'
+                     % pretrain_file_path)
+
+        vec_len = None
+        all_elems = []
+        idx_to_token = []
+        for line in tqdm(lines, total=len(lines)):
+            elems = line.rstrip().split(token_delim)
+
+            assert len(elems) > 1, 'The data format of the pretrained ' \
+                                   'embedding file %s is unexpected.' \
+                                   % pretrain_file_path
+
+            # The expected data format.
+            token, elems = elems[0].decode('utf8'), [float(i)
+                                                     for i in elems[1:]]
+
+            if len(elems) == 1:
+                logging.warning('WARNING: Token %s with 1-dimensional vector '
+                                '%s is likely a header and is skipped.'
+                                % (token, elems))
+                continue
+            else:
+                if vec_len is None:
+                    vec_len = len(elems)
+                else:
+                    assert len(elems) == vec_len, \
+                        'The dimension of token %s is %d but the dimension ' \
+                        'of previous tokens is %d. Dimensions of all the ' \
+                        'tokens must be the same.' % (token, len(elems),
+                                                      vec_len)
+
+            all_elems.extend(elems)
+            idx_to_token.append(token)
+
+        self._vec_len = vec_len
+        self._idx_to_token = idx_to_token
+        self._token_to_idx = {token: idx for idx, token in
+                              enumerate(self.idx_to_token)}
+
+        all_elems.extend([0] * self.vec_len)
+        self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
+        self._idx_to_vec[-1] = self.special_init_vec(shape=self.vec_len)
+
+        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token) \
+            == len(self._token_to_idx), \
+            'The extra (last) row of self._idx_to_vec is the initialized ' \
+            'embedding vector for a special, such as an unknown token.'
+
+    @staticmethod
+    def _get_pretrain_file(pretrain_file, url, embed_name, embed_root):
         # User specifies pretrained embedding file at the path of pretrain_file.
         if os.path.isfile(pretrain_file):
             pretrain_file_path = pretrain_file
 
-        # The pretrained embedding file is to be downloaded from url if it has
-        # not been downloaded yet or the existing file fails to match the file
-        # to be downloaded in their sha1 hash.
+        # The pretrained embedding file will be downloaded from url if it has
+        # not been downloaded yet or the existing file fails to match the
+        # expected SHA-1 hash.
         else:
             embed_dir = os.path.join(embed_root, embed_name)
             pretrain_file_path = os.path.join(embed_dir, pretrain_file)
@@ -223,55 +289,38 @@ class Embedding(object):
             else:
                 expected_download_hash = expected_file_hash
 
-            # The specified pretrained embedding file does not exist.
-            if not os.path.isfile(pretrain_file_path):
-                download(url, download_file_path,
-                         sha1_hash=expected_download_hash)
-            # The specified pretrained embedding file exists but fails to match
-            # its expected sha1sum hash.
-            elif not check_sha1(pretrain_file_path, expected_file_hash):
-                logging.warning('WARNING: the existing pretrained embedding '
-                                'file %s is broken or obsolete. Updating...'
-                                % pretrain_file_path)
+            # The specified pretrained embedding file does not exist or fails to
+            # match its expected SHA-1 hash.
+            if not os.path.isfile(pretrain_file_path) or \
+                    not check_sha1(pretrain_file_path, expected_file_hash):
+                # If download_file_path exists and matches
+                # expected_download_hash, there is no need to download.
                 download(url, download_file_path,
                          sha1_hash=expected_download_hash)
 
+            # If the downloaded file does not match its expected SHA-1 hash,
+            # we do not encourage to load embeddings from it in case that its
+            # data format is changed.
             assert check_sha1(download_file_path, expected_download_hash), \
-                'The downloaded file %s does not match the expected SHA-1 ' \
+                'The downloaded file %s does not match its expected SHA-1 ' \
                 'hash. This is caused by the changes at the externally ' \
-                'hosted pretrained embedding file(s). Please manually ' \
-                'download the changed pretrained embedding file and ' \
-                'specify its path via pretrain_file of mxnet.text.' \
-                'glossary.Embedding to use the changed embedding.' \
-                % download_file_path
+                'hosted pretrained embedding file(s). Since its data format ' \
+                'may also be changed, it is discouraged to continue to use ' \
+                'mxnet.text.Embedding.create_embedding(%s, **kwargs) to load ' \
+                'the pretrained embedding %s. If you still wish to load the ' \
+                'changed embedding file, please specify its path %s via ' \
+                'pretrain_file of mxnet.text.Embedding(). It will be loaded ' \
+                'only if its data format remains unchanged.' % \
+                (download_file_path, embed_name, embed_name, download_file_path)
 
             ext = os.path.splitext(download_file)[1]
             if ext == '.zip':
-                with zipfile.ZipFile(download_file_path, "r") as zf:
+                with zipfile.ZipFile(download_file_path, 'r') as zf:
                     zf.extractall(embed_dir)
             elif ext == '.gz':
                 with tarfile.open(download_file_path, 'r:gz') as tar:
                     tar.extractall(path=embed_dir)
-
-            assert os.path.isfile(pretrain_file_path), \
-                'The pretrained embedding file %s does not exist.' \
-                % pretrain_file_path
-            assert check_sha1(pretrain_file_path, expected_file_hash), \
-                'The pretrained embedding file %s does not match the ' \
-                'expected SHA-1 hash. This is caused by the changes at the ' \
-                'externally hosted pretrained embedding file(s). Please ' \
-                'manually download the changed pretrained embedding file and ' \
-                'specify its path via pretrain_file of mxnet.text.' \
-                'glossary.Embedding to use the changed embedding.' \
-                % pretrain_file_path
-
-            #TODO(@astonzhang): load embedding.
-
-
-        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token) \
-               == len(self._token_to_idx), \
-            'The extra (last) row of self._idx_to_vec is the initialized ' \
-            'embedding vector for a special, such as an unknown token.'
+        return pretrain_file_path
 
 
     def __len__(self):
@@ -403,7 +452,7 @@ class GloVe(Embedding):
 
 @Embedding.register
 class FastText(Embedding):
-    pretrain_name_sha1 = \
+    pretrain_file_sha1 = \
         {'wiki.en.vec': 'c1e418f144ceb332b4328d27addf508731fa87df',
          'wiki.simple.vec': '55267c50fbdf4e4ae0fbbda5c73830a379d68795',
          'wiki.zh.vec': '117ab34faa80e381641fbabf3a24bc8cfba44050'}
