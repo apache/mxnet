@@ -20,6 +20,7 @@ import os
 import time
 import mxnet as mx
 import numpy as np
+from builtins import range
 
 from module import MutableModule
 from rcnn.logger import logger
@@ -168,8 +169,8 @@ def pred_eval(predictor, test_data, imdb, vis=False, thresh=1e-3):
     # all detections are collected into:
     #    all_boxes[cls][image] = N x 5 array of detections in
     #    (x1, y1, x2, y2, score)
-    all_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(imdb.num_classes)]
+    all_boxes = [[[] for _ in range(num_images)]
+                 for _ in range(imdb.num_classes)]
 
     i = 0
     t = time.time()
