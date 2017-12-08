@@ -39,13 +39,9 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
                                                      int backward_compute_type,
                                                      const std::vector<TShape>& in_shape,
                                                      const std::vector<TShape>& out_shape,
-                                                     const Context& ctx, bool backward) {
-  // Convolution forward has to be called before backward for this operator.
-  // So we can't make this operator thread local. backward might be called
-  // in another thread.
-  static CuDNNDeconvolutionOp<DType> op;
-  if (!backward)
-    op.Init(param, forward_compute_type, backward_compute_type, in_shape, out_shape, ctx);
+                                                     const Context& ctx) {
+  static thread_local CuDNNDeconvolutionOp<DType> op;
+  op.Init(param, forward_compute_type, backward_compute_type, in_shape, out_shape, ctx);
   return op;
 }
 #endif
@@ -82,7 +78,7 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
         in_shape[i] = inputs[i].shape_;
       }
       GetCuDNNDeconvOp<DType>(param, compute_type, compute_type,
-          in_shape, out_shape, ctx.run_ctx.ctx, false).Forward(ctx, inputs, req, outputs);
+          in_shape, out_shape, ctx.run_ctx.ctx).Forward(ctx, inputs, req, outputs);
     }
   })
 #else
@@ -129,7 +125,7 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
         in_shape[i] = in_data[i].shape_;
       }
       GetCuDNNDeconvOp<DType>(param, compute_type, compute_type,
-          in_shape, out_shape, ctx.run_ctx.ctx, true).Backward(ctx,
+          in_shape, out_shape, ctx.run_ctx.ctx).Backward(ctx,
             std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     }
   })
