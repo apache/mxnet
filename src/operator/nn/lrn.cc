@@ -25,9 +25,6 @@
 */
 
 #include "./lrn-inl.h"
-#if MXNET_USE_CUDNN == 1
-#include "./cudnn_lrn-inl.h"
-#endif
 
 namespace mxnet {
 namespace op {
