@@ -23,14 +23,15 @@
 *
 *******************************************************************************/
 
-#ifndef MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
-#define MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
+#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
+#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
 #include <iterator>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <utility>
 #include "mkldnn.hpp"
 using namespace mkldnn;
 namespace mxnet {
@@ -142,9 +143,11 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
     return GetMemDesc(arr);
   } else {
     CHECK_EQ(arr.shape().ndim(), 4U);
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-        num_groups, (int)arr.shape()[0] / num_groups, (int)arr.shape()[1],
-        (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
+      static_cast<int>(arr.shape()[0] / num_groups),
+      static_cast<int>(arr.shape()[1]),
+      static_cast<int>(arr.shape()[2]),
+      static_cast<int>(arr.shape()[3])};
     return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
                                 mkldnn::memory::format::any};
   }
@@ -178,7 +181,7 @@ class MKLDNNStream {
 
 inline static mkldnn_mem_ptr CreateMKLDNNMem(
     const mkldnn::memory::primitive_desc &desc) {
-  // TODO allocate memory more efficiently.
+  // TODO(zhengda) allocate memory more efficiently.
   std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
   MKLDNNStream::Instance().RegisterMem(ret);
   return ret;
@@ -195,9 +198,9 @@ typedef std::pair<OutDataOp, mkldnn_mem_ptr> mkldnn_output_t;
 static inline mkldnn_output_t CreateMKLDNNMem(
     const NDArray &arr, const mkldnn::memory::primitive_desc &desc,
     OpReqType req) {
-  if (kAddTo == req)
+  if (kAddTo == req) {
     return mkldnn_output_t(OutDataOp::AddBack, CreateMKLDNNMem(desc));
-  else {
+  } else {
     mkldnn_mem_ptr mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
     if (mem == nullptr)
       return mkldnn_output_t(OutDataOp::CopyBack, CreateMKLDNNMem(desc));
@@ -213,10 +216,9 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
 
 static inline void CommitOutput(const NDArray &arr,
                                 const mkldnn_output_t &res) {
-  if (res.first == CopyBack)
+  if (res.first == CopyBack) {
     const_cast<NDArray &>(arr).CopyFrom(*res.second);
-  else if (res.first == AddBack) {
-    // TODO I might need to reorder.
+  } else if (res.first == AddBack) {
     mkldnn_mem_const_ptr mem =
         arr.GetMKLDNNData(res.second->get_primitive_desc());
     CHECK(mem != nullptr);
@@ -236,26 +238,28 @@ inline static mkldnn_mem_const_ptr GetWeights(
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   auto engine = CpuEngine::Instance().get_engine();
   if (arr.shape().ndim() == 2) {
-    mkldnn::memory::dims tz =
-        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1])};
     mkldnn::memory::desc md =
         mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
     mkldnn::memory::primitive_desc pd =
         mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
   } else if (arr.shape().ndim() == 4 && num_groups == 1) {
-    mkldnn::memory::dims tz =
-        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1],
-                             (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1]),
+          static_cast<int>(arr.shape()[2]), static_cast<int>(arr.shape()[3])};
     mkldnn::memory::desc md =
         mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
     mkldnn::memory::primitive_desc pd =
         mkldnn::memory::primitive_desc{md, engine};
     mem = arr.GetMKLDNNData(pd);
   } else if (arr.shape().ndim() == 4) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-        num_groups, (int)arr.shape()[0] / num_groups, (int)arr.shape()[1],
-        (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
+      static_cast<int>(arr.shape()[0] / num_groups),
+      static_cast<int>(arr.shape()[1]),
+      static_cast<int>(arr.shape()[2]),
+      static_cast<int>(arr.shape()[3])};
     mkldnn::memory::desc md =
         mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
     mkldnn::memory::primitive_desc pd =
@@ -277,26 +281,28 @@ inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
                                               int num_groups = 1) {
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   if (arr.shape().ndim() == 2) {
-    mkldnn::memory::dims tz =
-        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1])};
     mkldnn::memory::desc md =
         mkldnn::memory::desc{tz, type, mkldnn::memory::format::oi};
     mkldnn::memory::primitive_desc pd =
         mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
   } else if (arr.shape().ndim() == 4 && num_groups == 1) {
-    mkldnn::memory::dims tz =
-        mkldnn::memory::dims{(int)arr.shape()[0], (int)arr.shape()[1],
-                             (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{
+      static_cast<int>(arr.shape()[0]), static_cast<int>(arr.shape()[1]),
+          static_cast<int>(arr.shape()[2]), static_cast<int>(arr.shape()[3])};
     mkldnn::memory::desc md =
         mkldnn::memory::desc{tz, type, mkldnn::memory::format::oihw};
     mkldnn::memory::primitive_desc pd =
         mkldnn::memory::primitive_desc{md, engine};
     return arr.GetMKLDNNData(pd);
   } else if (arr.shape().ndim() == 4) {
-    mkldnn::memory::dims tz = mkldnn::memory::dims{
-        num_groups, (int)arr.shape()[0] / num_groups, (int)arr.shape()[1],
-        (int)arr.shape()[2], (int)arr.shape()[3]};
+    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
+      static_cast<int>(arr.shape()[0] / num_groups),
+      static_cast<int>(arr.shape()[1]),
+      static_cast<int>(arr.shape()[2]),
+      static_cast<int>(arr.shape()[3])};
     mkldnn::memory::desc md =
         mkldnn::memory::desc{tz, type, mkldnn::memory::format::goihw};
     mkldnn::memory::primitive_desc pd =
@@ -310,4 +316,4 @@ inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
 
 }  // namespace mxnet
 #endif
-#endif  // MXNET_OPERATOR_MKL_MKLDNN_BASE_INL_H_
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_

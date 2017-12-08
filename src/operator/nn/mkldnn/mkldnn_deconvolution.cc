@@ -50,8 +50,7 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwd_(
         mkldnn::algorithm::convolution_direct, out_md, weights_md, data_md, strides,
         dilates, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
-  }
-  else {
+  } else {
     auto bias_md = GetBiasDesc(data_md);
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
         mkldnn::algorithm::convolution_direct, out_md, weights_md, bias_md,
@@ -143,8 +142,7 @@ static mkldnn::convolution_backward_weights::primitive_desc GetDeconvBwdWeights(
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, data_md, strides, dilate, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
-  }
-  else {
+  } else {
     auto bias_md = GetBiasDesc(data_md);
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, bias_md, data_md, strides, dilate, padding, padding,
@@ -232,7 +230,7 @@ void MKLDNNDeconvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext 
   }
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 1

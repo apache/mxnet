@@ -122,11 +122,10 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
   if (in_stype == kMKLDNNStorage) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
-  }
-  // This happens if inputs are supposed to be in MKLDNN format
-  // but MKLDNN doesn't support the data type or the shape. We're
-  // forced to convert it to the default format.
-  else if (inputs[0].storage_type() == kDefaultStorage) {
+  } else if (inputs[0].storage_type() == kDefaultStorage) {
+    // This happens if inputs are supposed to be in MKLDNN format
+    // but MKLDNN doesn't support the data type or the shape. We're
+    // forced to convert it to the default format.
     std::vector<TBlob> in_blobs(1);
     std::vector<TBlob> out_blobs(1);
     in_blobs[0] = inputs[0].data();
@@ -150,10 +149,10 @@ static inline bool CopyStorageType(const nnvm::NodeAttrs& attrs,
     out_attrs->at(0) = kMKLDNNStorage;
     *dispatch_mode = DispatchMode::kFComputeEx;
     return true;
-  } else
+  }
 #endif
-    return ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
-                                                        in_attrs, out_attrs);
+  return ElemwiseStorageType<1, 1, false, true, true>(attrs, dev_mask, dispatch_mode,
+                                                      in_attrs, out_attrs);
 }
 
 MXNET_OPERATOR_REGISTER_UNARY(_copy)

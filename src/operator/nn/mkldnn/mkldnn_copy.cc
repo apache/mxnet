@@ -46,13 +46,12 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     MKLDNNStream::Instance().RegisterMem(sum_res);
     Sum(*in_mem, *out_mem, *sum_res);
     const_cast<NDArray &>(out_data).CopyFrom(*sum_res);
-  }
-  else {
+  } else {
     const_cast<NDArray &>(out_data).CopyFrom(*in_mem);
   }
   MKLDNNStream::Instance().Submit();
 }
 
-}
-}
+}   // namespace op
+}   // namespace mxnet
 #endif

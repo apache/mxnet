@@ -53,15 +53,13 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwd(
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
-  }
-  else if (param.dilate.ndim() == 0) {
+  } else if (param.dilate.ndim() == 0) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
         data_md, weight_md, bias_md, out_md, strides, padding, padding,
         mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
-  }
-  else {
+  } else {
     mkldnn::memory::dims dilates{0, 0};
     if (param.dilate.ndim() == 2) {
       dilates[0] = param.dilate[0] - 1;
@@ -72,12 +70,12 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwd(
           data_md, weight_md, out_md, strides, dilates, padding, padding,
           mkldnn::padding_kind::zero);
       return mkldnn::convolution_forward::primitive_desc(desc, engine);
-    }
-    else {
+    } else {
       auto bias_md = GetMemDesc(*bias);
       mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-	  data_md, weight_md, bias_md, out_md, strides, dilates, padding, padding,
-	  mkldnn::padding_kind::zero);
+                                             data_md, weight_md, bias_md, out_md, strides,
+                                             dilates, padding, padding,
+                                             mkldnn::padding_kind::zero);
       return mkldnn::convolution_forward::primitive_desc(desc, engine);
     }
   }
@@ -104,8 +102,7 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
-  }
-  else {
+  } else {
     mkldnn::memory::dims dilates{0, 0};
     if (param.dilate.ndim() == 2) {
       dilates[0] = param.dilate[0] - 1;
@@ -140,15 +137,13 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
-  }
-  else if (param.dilate.ndim() == 0) {
+  } else if (param.dilate.ndim() == 0) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, bias_md, out_md, strides, padding, padding,
         mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
-  }
-  else {
+  } else {
     mkldnn::memory::dims dilates{0, 0};
     if (param.dilate.ndim() == 2) {
       dilates[0] = param.dilate[0] - 1;
@@ -159,20 +154,21 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
           data_md, weight_md, out_md, strides, dilates, padding, padding,
           mkldnn::padding_kind::zero);
       return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
-    }
-    else {
+    } else {
       auto bias_md = GetMemDesc(*bias);
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
-          data_md, weight_md, bias_md, out_md, strides, dilates, padding, padding,
-	  mkldnn::padding_kind::zero);
+                                                      data_md, weight_md, bias_md, out_md,
+                                                      strides, dilates, padding, padding,
+                                                      mkldnn::padding_kind::zero);
       return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
     }
   }
 }
 
 void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
-    const std::vector<NDArray> &out_data) {
+                               const std::vector<NDArray> &in_data,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<NDArray> &out_data) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwd(param,
       ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
@@ -223,24 +219,27 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
   }
   if (req[conv::kWeight]) {
     mkldnn::convolution_backward_weights::primitive_desc bwdWeights_pd
-      = GetConvBwdWeights(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1], 
-          param.no_bias ? nullptr : &inputs[conv::kBias + 1], inputs[conv::kOut], fwd_pd);
+        = GetConvBwdWeights(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1],
+                            param.no_bias ? nullptr : &inputs[conv::kBias + 1],
+                            inputs[conv::kOut], fwd_pd);
     auto out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
         bwdWeights_pd.diff_dst_primitive_desc());
     auto data_mem = inputs[conv::kData + 1].GetMKLDNNDataReorder(
         bwdWeights_pd.src_primitive_desc());
     auto in_grad_weight = CreateMKLDNNMem(in_grad[conv::kWeight],
-        bwdWeights_pd.diff_weights_primitive_desc(), req[conv::kWeight]);
+                                          bwdWeights_pd.diff_weights_primitive_desc(),
+                                          req[conv::kWeight]);
     mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
       MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
-            bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second));
+              bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second));
     } else {
       in_grad_bias = CreateMKLDNNMem(in_grad[conv::kBias],
-          bwdWeights_pd.diff_bias_primitive_desc(), req[conv::kBias]);
+                                     bwdWeights_pd.diff_bias_primitive_desc(),
+                                     req[conv::kBias]);
       MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
-            bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second,
-            *in_grad_bias.second));
+              bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second,
+              *in_grad_bias.second));
     }
     CommitOutput(in_grad[conv::kWeight], in_grad_weight);
     CommitOutput(in_grad[conv::kBias], in_grad_bias);
@@ -248,7 +247,7 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
   MKLDNNStream::Instance().Submit();
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
-#endif // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_USE_MKLDNN == 1

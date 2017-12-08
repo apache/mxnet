@@ -23,8 +23,8 @@
  * \author Da Zheng
 */
 
-#ifndef MXNET_OPERATOR_MKL_MKLDNN_ACT_INL_H_
-#define MXNET_OPERATOR_MKL_MKLDNN_ACT_INL_H_
+#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
+#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
 
 
 #include <dmlc/logging.h>
@@ -80,10 +80,10 @@ void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
 
   auto alg = GetMKLDNNActAlgo(param);
   mkldnn::eltwise_forward::desc desc = ctx.is_train
-    ? mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_training,
-        alg, data_md, alpha)
-    : mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
-	alg, data_md, alpha);
+      ? mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_training,
+                                      alg, data_md, alpha)
+      : mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
+                                      alg, data_md, alpha);
   mkldnn::eltwise_forward::primitive_desc pdesc(desc, cpu_engine);
 
   std::shared_ptr<const mkldnn::memory> output_memory
@@ -128,4 +128,4 @@ void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
 }  // namespace mxnet
 
 #endif
-#endif  // MXNET_OPERATOR_MKL_MKLDNN_ACT_INL_H_
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_

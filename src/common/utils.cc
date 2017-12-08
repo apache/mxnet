@@ -50,8 +50,8 @@ std::string stype_string(const int x) {
     case kRowSparseStorage:
       return "row_sparse";
 #if MXNET_USE_MKLDNN == 1
-	case kMKLDNNStorage:
-	  return "mkldnn";
+    case kMKLDNNStorage:
+      return "mkldnn";
 #endif
   }
   return "unknown";

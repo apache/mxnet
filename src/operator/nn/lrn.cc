@@ -70,7 +70,7 @@ struct LRNGrad {
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
-    heads.push_back(ograds[0]); // out_grad
+    heads.push_back(ograds[0]);  // out_grad
     heads.push_back(n->inputs[lrn_enum::kData]);
     heads.emplace_back(nnvm::NodeEntry{n, lrn_enum::kTmpNorm, 0});
     return MakeGradNode(op_name, n, heads, n->attrs.dict);

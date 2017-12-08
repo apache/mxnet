@@ -23,7 +23,6 @@
  * \author Da Zheng
 */
 
-#include <mkldnn.hpp>
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
@@ -31,6 +30,8 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
+#include <vector>
+#include <mkldnn.hpp>
 
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
@@ -76,8 +77,8 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                 const NDArray &in_data, const OpReqType &req,
                 const NDArray &out_data);
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1
 
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_

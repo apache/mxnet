@@ -57,7 +57,6 @@ static void ConvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 #endif
-  // TODO I need to convert format.
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++)
     in_blobs[i] = inputs[i].data();
@@ -76,7 +75,6 @@ static void ConvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     return;
   }
 #endif
-  // TODO I need to convert format.
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++)
     in_blobs[i] = inputs[i].data();
