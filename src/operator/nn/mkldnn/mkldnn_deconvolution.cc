@@ -172,13 +172,15 @@ void MKLDNNDeconvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &
         deconvFwd_pd, *data_mem, *weight_mem, *out_mem.second));
   CommitOutput(out_data[deconv::kOut], out_mem);
   MKLDNNStream::Instance().Submit();
+  // add bias, broadcast bias to dim 1: channel
   if (!param.no_bias) {
-    // add bias, broadcast bias to dim 1: channel
-    // TODO this is problematic if the layout isn't expected.
-    // we need to handle the type correctly.
+    // MKLDNN only supports float right now.
     typedef float DType;
     Stream<cpu> *s = ctx.get_stream<cpu>();
     Tensor<cpu, 1, DType> bias = in_data[deconv::kBias].data().get<cpu, 1, DType>(s);
+    // If the output data is stored in a special MKLDNN format, data()
+    // automatically converts its format to the default format.
+    // Unfortunately, MKLDNN doesn't support broadcast.
     Tensor<cpu, 4, DType> out_cpu = out_data[deconv::kOut].data().get<cpu, 4, DType>(s);
     out_cpu += mshadow::expr::broadcast<1>(bias, out_cpu.shape_);
   }
@@ -217,12 +219,17 @@ void MKLDNNDeconvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext 
     MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
           bwdWeights_pd, *out_grad_mem, *data_mem, *in_grad_weight.second));
     CommitOutput(in_grad[deconv::kWeight], in_grad_weight);
-//    if (!param_.no_bias) {
-//      Tensor<xpu, 1, DType> gbias = in_grad[deconv::kBias].get<xpu, 1, DType>(s);
-//      Assign(gbias, req[deconv::kBias], sumall_except_dim<1>(grad));
-//    }
   }
   MKLDNNStream::Instance().Submit();
+  if (!param.no_bias) {
+    typedef float DType;
+    Stream<cpu> *s = ctx.get_stream<cpu>();
+    Tensor<cpu, 1, DType> gbias = in_grad[deconv::kBias].data().get<cpu, 1, DType>(s);
+    // If there is bias, the out grad has already been converted to the default
+    // format, so this shouldn't cause any performance issues.
+    Tensor<cpu, 4, DType> grad = inputs[deconv::kOut].data().get<cpu, 4, DType>(s);
+    Assign(gbias, req[deconv::kBias], mshadow::expr::sumall_except_dim<1>(grad));
+  }
 }
 
 }
