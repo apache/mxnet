@@ -29,10 +29,8 @@ MXNet engines and parallelization for object detection.
 * If you value simplicity. Technical details are *very complicated* in MXNet.
   This is by design to attain maximum possible performance instead of patching fixes after fixes.
   Performance and parallelization are more than a change of parameter.
-* If you want to do CPU training, be advised that it has not been verified yet.
-  You will not encounter NOT_IMPLEMENTED_ERROR so it is still possible.
-* If you are on Windows or Python3, some people reported it was possible with some modifications.
-  But they have disappeared.
+* If you want to do CPU training, be advised that it has not been verified properly yet. You can change the `ctx` variable in `train_end2end.py` or `train_alternate.py` scripts to `mx.cpu` and run these scripts directly to test it.
+* If you are on Windows some people reported it was possible with some modifications. But they have disappeared.
 
 ## Experiments
 | Method | Network | Training Data | Testing Data | Reference | Result |
@@ -52,7 +50,7 @@ using [a MXNet fork, based on MXNet 0.9.1 nnvm pre-release](https://github.com/p
 * Prepare: `bash script/additional_deps.sh`
 * Download training data: `bash script/get_voc.sh`
 * Download pretrained model: `bash script/get_pretrained_model.sh`
-* Training and testing: `bash script/vgg_voc07.sh 0,1` (use gpu 0 and 1)
+* Training and testing: `bash script/vgg_voc07.sh 0,1` (this means to use gpu 0 and 1)
 
 ## Prerequisites
 * Pip, Python-dev, Unzip
