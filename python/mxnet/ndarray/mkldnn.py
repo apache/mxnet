@@ -52,13 +52,6 @@ class MKLNDArray(NDArray):
     """The base class of an NDArray stored in a MKLDNN storage format.
     """
 
-    def __repr__(self):
-        """Returns a string representation of the sparse array."""
-        shape_info = 'x'.join(['%d' % x for x in self.shape])
-        # The data content is not displayed since the array usually has big shape
-        return '\n<%s %s @%s>' % (self.__class__.__name__,
-                                  shape_info, self.context)
-
     def _at(self, idx):
         raise NotSupportedForMKLNDArray(self._at, '[idx]', idx)
 
