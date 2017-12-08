@@ -12,6 +12,7 @@
 - [ ] Code is well-documented: 
 - For user-facing API changes, API doc string has been updated. 
 - For new C++ functions in header files, their functionalities and arguments are documented. 
+- For new examples, README.md is added to explain the what the example does, the source of the dataset, expected performance on test set and reference to the original paper if applicable
 - [ ] To the my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
 
 ### Changes ###
