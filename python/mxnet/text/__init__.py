@@ -21,6 +21,3 @@
 
 from . import text
 from .text import *
-
-from . import glossary
-from .glossary import *
