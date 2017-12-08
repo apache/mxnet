@@ -19,39 +19,74 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os
-import random
 import logging
-import json
-import numpy as np
-
+import os
 import tarfile
 import zipfile
 
-from ..base import numeric_types
 from ..gluon.utils import check_sha1
 from ..gluon.utils import download
 from .. import ndarray as nd
-from .. import io
 
 from tqdm import tqdm
 
 
 class Glossary(object):
+    """Indexing and embedding for text and special tokens in a glossary.
 
-    #TODO(@astonzhang): proper docstrings
-    ## keys of counter cannot contain special tokens.
-    ## counter cannot be None.
-    ## special tokens first, then token are sort by frequency/entropy,
-    ##  then alphabetically
+    For each indexed text or special token (e.g., an unknown token) in a
+    glossary, an embedding vector will be associated with the token. Such
+    embedding vectors can be loaded from externally pre-trained embeddings,
+    such as via mxnet.text.Embedding instances.
+
+
+    Parameters
+    ----------
+    counter : collections.Counter
+        Counts text token frequencies in the text data.
+    top_k_freq : None or int, default None
+        The number of top frequent tokens in the keys of `counter` that will be
+        indexed. If None, all the tokens in the keys of `counter` will be
+        indexed.
+    min_freq : int, default 1
+        The minimum frequency required for a token in the keys of `counter` to
+        be indexed.
+    specials : list of strs, default ['<unk>']
+        A list of special tokens to be indexed. It must be an non-empty list
+        whose first element is the string representation for unknown tokens,
+        such as '<unk>'. It cannot contain any token from the keys of `counter`.
+    embeds : an mxnet.text.Embedding instance, a list of mxnet.text.Embedding
+             instances, or None, default None
+        Pre-trained embeddings to load from. If None, there is nothing to load.
+
+
+    Properties
+    ----------
+    counter : collections.Counter
+        Counts text and special token frequencies in the text data, where
+        special token frequency is clear to zero.
+    token_to_idx : dict
+        A dict mapping each token to its index integer.
+    idx_to_token : list
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this glossary, this NDArray maps each
+        token's index to an embedding vector.
+    vec_len : int
+        The length of the embedding vector for any token.
+    specials:
+        A list of special tokens to be indexed. It must be an non-empty list
+        whose first element is the string representation for unknown tokens,
+        such as '<unk>'. It excludes all the tokens from the keys of `counter`.
+    """
     def __init__(self, counter, top_k_freq=None, min_freq=1,
                  specials=['<unk>'], embeds=None):
         # Sanity checks.
         assert min_freq > 0, 'min_freq must be set to a positive value.'
-        assert len(specials) > 0, 'specials must be an non-empty list whose ' \
-                                  'first element is the string ' \
-                                  'representation for unknown tokens, such ' \
-                                  'as "<unk>".'
+        assert len(specials) > 0, \
+            'specials must be an non-empty list whose first element is the ' \
+            'string representation for unknown tokens, such as "<unk>".'
 
         # Initialize attributes.
         self._init_attrs(counter, specials)
@@ -75,7 +110,7 @@ class Glossary(object):
         # Update _counter to include special specials, such as '<unk>'.
         self._counter.update({token: 0 for token in specials})
         assert len(self._counter) == len(counter) + len(specials), 'specials ' \
-            'cannot contain any token from keys of counter.'
+            'cannot contain any token from the keys of `counter`.'
 
         token_freqs = sorted(self._counter.items(), key=lambda x: x[0])
         token_freqs.sort(key=lambda x: x[1], reverse=True)
@@ -117,7 +152,7 @@ class Glossary(object):
         return self._specials
 
     @staticmethod
-    def _unk_idx():
+    def unk_idx():
         return 0
 
     def set_idx_to_vec(self, embeds):
@@ -165,8 +200,9 @@ class Glossary(object):
                 raise ValueError('Token %s is unknown to the glossary. To '
                                  'update the embedding vector for an unknown '
                                  'token, please specify it explicitly as the '
-                                 'unknown special token %s in tokens.' %
-                                 (token, self.specials[Glossary._unk_idx()]))
+                                 'unknown special token %s in tokens. This is '
+                                 'to avoid unintended updates.' %
+                                 (token, self.idx_to_token[Glossary.unk_idx()]))
         self._idx_to_vec[nd.array(indices)] = new_vectors
 
 
@@ -213,52 +249,7 @@ class Embedding(object):
                                                           embed_name,
                                                           embed_root)
 
-        with open(pretrain_file_path, 'r', encoding='utf8') as f:
-            lines = f.readlines()
-
-        logging.info('Loading pretrained embedding vectors from %s'
-                     % pretrain_file_path)
-
-        vec_len = None
-        all_elems = []
-        idx_to_token = []
-        for line in tqdm(lines, total=len(lines)):
-            elems = line.rstrip().split(token_delim)
-
-            assert len(elems) > 1, 'The data format of the pretrained ' \
-                                   'embedding file %s is unexpected.' \
-                                   % pretrain_file_path
-
-            # The expected data format.
-            token, elems = elems[0].decode('utf8'), [float(i)
-                                                     for i in elems[1:]]
-
-            if len(elems) == 1:
-                logging.warning('WARNING: Token %s with 1-dimensional vector '
-                                '%s is likely a header and is skipped.'
-                                % (token, elems))
-                continue
-            else:
-                if vec_len is None:
-                    vec_len = len(elems)
-                else:
-                    assert len(elems) == vec_len, \
-                        'The dimension of token %s is %d but the dimension ' \
-                        'of previous tokens is %d. Dimensions of all the ' \
-                        'tokens must be the same.' % (token, len(elems),
-                                                      vec_len)
-
-            all_elems.extend(elems)
-            idx_to_token.append(token)
-
-        self._vec_len = vec_len
-        self._idx_to_token = idx_to_token
-        self._token_to_idx = {token: idx for idx, token in
-                              enumerate(self.idx_to_token)}
-
-        all_elems.extend([0] * self.vec_len)
-        self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
-        self._idx_to_vec[-1] = self.special_init_vec(shape=self.vec_len)
+        self._load_embedding(pretrain_file_path, token_delim)
 
         assert len(self._idx_to_vec) - 1 == len(self._idx_to_token) \
             == len(self._token_to_idx), \
@@ -322,6 +313,52 @@ class Embedding(object):
                     tar.extractall(path=embed_dir)
         return pretrain_file_path
 
+    def _load_embedding(self, pretrain_file_path, token_delim):
+        with open(pretrain_file_path, 'r', encoding='utf8') as f:
+            lines = f.readlines()
+
+        logging.info('Loading pretrained embedding vectors from %s'
+                     % pretrain_file_path)
+
+        vec_len = None
+        all_elems = []
+        idx_to_token = []
+        for line in tqdm(lines, total=len(lines)):
+            elems = line.rstrip().split(token_delim)
+
+            assert len(elems) > 1, 'The data format of the pretrained ' \
+                                   'embedding file %s is unexpected.' \
+                                   % pretrain_file_path
+
+            token, elems = elems[0].decode('utf8'), [float(i)
+                                                     for i in elems[1:]]
+
+            if len(elems) == 1:
+                logging.warning('WARNING: Token %s with 1-dimensional vector '
+                                '%s is likely a header and is skipped.'
+                                % (token, elems))
+                continue
+            else:
+                if vec_len is None:
+                    vec_len = len(elems)
+                else:
+                    assert len(elems) == vec_len, \
+                        'The dimension of token %s is %d but the dimension ' \
+                        'of previous tokens is %d. Dimensions of all the ' \
+                        'tokens must be the same.' % (token, len(elems),
+                                                      vec_len)
+
+            all_elems.extend(elems)
+            idx_to_token.append(token)
+
+        self._vec_len = vec_len
+        self._idx_to_token = idx_to_token
+        self._token_to_idx = {token: idx for idx, token in
+                              enumerate(self.idx_to_token)}
+
+        all_elems.extend([0] * self.vec_len)
+        self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
+        self._idx_to_vec[-1] = self.special_init_vec(shape=self.vec_len)
 
     def __len__(self):
         return len(self.idx_to_token)
@@ -356,13 +393,8 @@ class Embedding(object):
             tokens = [tokens]
             to_reduce = True
 
-        indices = []
-        for token in tokens:
-            if token in self.token_to_idx:
-                indices.append(self.token_to_idx[token])
-            # A special token, such as an unknown token.
-            else:
-                indices.append(self._idx_to_vec_special_idx())
+        indices = [self.token_to_idx[token] if token in self.token_to_idx
+                   else self._idx_to_vec_special_idx() for token in tokens]
 
         vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
                             self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
