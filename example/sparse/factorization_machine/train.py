@@ -72,8 +72,8 @@ if __name__ == '__main__':
     factor_size = args.factor_size
     num_features = args.input_size
     log_interval = args.log_interval
-    assert(args.data_train is not None)
-    assert(args.data_test is not None)
+    assert(args.data_train is not None and args.data_test is not None), \
+          "dataset for training or test is missing"
 
     # create kvstore
     kv = mx.kvstore.create(kvstore)
