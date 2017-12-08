@@ -737,7 +737,7 @@ end
 
 Create an `NDArray` filled with the value `x`, like `Base.fill`.
 """
-function fill(x, dims::NTuple{N, Integer}, ctx::Context=cpu()) where N
+function fill(x, dims::NTuple{N,Integer}, ctx::Context=cpu()) where N
   arr = empty(typeof(x), dims, ctx)
   arr[:] = x
   arr
@@ -1224,6 +1224,9 @@ function _get_ndarray_function_def(name :: String)
 end
 
 const _op_import_bl = [  # import black list; do not import these funcs
+    "_full",   # we already have `mx.fill`
+    "_ones",   # we already have `mx.ones`
+    "_zeros",  # we already have `mx.zeros`
     "mean",
     "reshape",
     "sum",
