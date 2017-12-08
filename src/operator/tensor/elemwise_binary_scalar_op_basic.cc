@@ -65,11 +65,12 @@ static bool BinaryScalarStorageTypeWithDenseResultStorageType(const NodeAttrs& a
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
                                        : DispatchMode::kFComputeEx;
   const double alpha = nnvm::get<double>(attrs.parsed);
-  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage,
 #if MXNET_USE_MKLDNN == 1
-        kMKLDNNStorage, nullptr
+  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage,
+                                  kMKLDNNStorage, nullptr)) {
+#else
+  if (common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
 #endif
-        )) {
     dispatched = storage_type_assign(&out_attrs[0],
       kDefaultStorage, dispatch_mode, DispatchMode::kFCompute);
   }

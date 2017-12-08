@@ -55,7 +55,11 @@ GraphExecutor::~GraphExecutor() {
 }
 
 inline bool SharableStorage(NDArrayStorageType stype) {
-  return stype == kDefaultStorage || stype == kMKLDNNStorage;
+  bool ret = stype == kDefaultStorage;
+#if MXNET_USE_MKLDNN == 1
+  ret = ret || stype == kMKLDNNStorage;
+#endif
+  return ret;
 }
 
 inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
