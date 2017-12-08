@@ -64,6 +64,7 @@ def count_tokens_from_str(tokens, token_delim=' ', seq_delim='\n',
     >>> count_tokens_from_str(token_line, ' ', '\n', True)
     Counter({'!': 1, '.': 1, 'good': 1, 'great': 1, 'is': 2, 'life': 2})
     """
+
     tokens = filter(None,
                     re.split(token_delim + '|' + seq_delim, tokens))
     if to_lower:
@@ -109,6 +110,7 @@ def count_tokens_from_path(path, token_delim=' ', seq_delim='\n',
     --------
     >>> See `count_tokens_from_str`.
     """
+
     if os.path.isdir(path):
         files = [os.path.join(path, f) for f in os.listdir(path)
                  if os.path.isfile(os.path.join(path, f))]

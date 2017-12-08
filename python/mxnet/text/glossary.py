@@ -57,7 +57,7 @@ class Glossary(object):
         such as '<unk>'. It cannot contain any token from the keys of `counter`.
     embeds : an mxnet.text.Embedding instance, a list of mxnet.text.Embedding
              instances, or None, default None
-        Pre-trained embeddings to load from. If None, there is nothing to load.
+        Pre-trained embeddings to load. If None, there is nothing to load.
 
 
     Properties
@@ -65,9 +65,9 @@ class Glossary(object):
     counter : collections.Counter
         Counts text and special token frequencies in the text data, where
         special token frequency is clear to zero.
-    token_to_idx : dict
+    token_to_idx : dict mapping str to int
         A dict mapping each token to its index integer.
-    idx_to_token : list
+    idx_to_token : list of strs
         A list of indexed tokens where the list indices and the token indices
         are aligned.
     idx_to_vec : mxnet.ndarray.NDArray
@@ -75,30 +75,27 @@ class Glossary(object):
         token's index to an embedding vector.
     vec_len : int
         The length of the embedding vector for any token.
-    specials:
-        A list of special tokens to be indexed. It must be an non-empty list
-        whose first element is the string representation for unknown tokens,
-        such as '<unk>'. It excludes all the tokens from the keys of `counter`.
+    specials: list of strs
+        A list of special tokens to be indexed. It is an non-empty list whose
+        first element is the string representation for unknown tokens, such as
+        '<unk>'. It excludes all the tokens from the keys of `counter`.
     """
     def __init__(self, counter, top_k_freq=None, min_freq=1,
                  specials=['<unk>'], embeds=None):
         # Sanity checks.
-        assert min_freq > 0, 'min_freq must be set to a positive value.'
+        assert min_freq > 0, '`min_freq` must be set to a positive value.'
         assert len(specials) > 0, \
-            'specials must be an non-empty list whose first element is the ' \
+            '`specials` must be an non-empty list whose first element is the ' \
             'string representation for unknown tokens, such as "<unk>".'
 
-        # Initialize attributes.
         self._init_attrs(counter, specials)
-
-        # Set self._idx_to_token and self._token_to_idx according to specified
-        # frequency thresholds.
         self._set_idx_and_token(counter, specials, top_k_freq, min_freq)
 
         if embeds is not None:
             self.set_idx_to_vec(embeds)
 
     def _init_attrs(self, counter, specials):
+        """Initiates class attributes."""
         self._counter = counter.copy()
         self._token_to_idx = {token: idx for idx, token in enumerate(specials)}
         self._idx_to_token = specials.copy()
@@ -107,6 +104,7 @@ class Glossary(object):
         self._specials = specials.copy()
 
     def _set_idx_and_token(self, counter, specials, top_k_freq, min_freq):
+        """Indexes tokens according to specified frequency thresholds."""
         # Update _counter to include special specials, such as '<unk>'.
         self._counter.update({token: 0 for token in specials})
         assert len(self._counter) == len(counter) + len(specials), 'specials ' \
@@ -153,9 +151,20 @@ class Glossary(object):
 
     @staticmethod
     def unk_idx():
+        """The index for unknown tokens (the first token in `specials`)."""
         return 0
 
     def set_idx_to_vec(self, embeds):
+        """Sets the mapping between token indices and token embedding vectors.
+
+
+        Parameters
+        ----------
+        embeds : mxnet.text.Embedding or list of mxnet.text.Embedding. If it
+            is a list of mxnet.text.Embedding instances, their embedding vectors
+            are concatenated for each token.
+        """
+
         # Sanity check.
         if isinstance(embeds, list):
             for loaded_embed in embeds:
@@ -176,6 +185,20 @@ class Glossary(object):
 
     # tokens is a str or a list of strs.
     def update_idx_to_vec(self, tokens, new_vectors):
+        """Updates embedding vectors for tokens.
+
+
+        Parameters
+        ----------
+        tokens : str or a list of strs.
+            A token or a list of tokens whose embedding vector are to be
+            updated.
+        new_vectors : mxnet.ndarray.NDArray
+            A 2-D NDArray to be assigned to the embedding vectors of `tokens`.
+            Its length must be equal to the number of `tokens` and its width
+            must be equal to the dimension of embeddings of the glossary.
+        """
+
         assert self.idx_to_vec is not None, \
             'mxnet.text.Glossary._idx_to_vec has not been initialized.  Use ' \
             'mxnet.text.Glossary.__init__() or ' \
@@ -207,6 +230,65 @@ class Glossary(object):
 
 
 class Embedding(object):
+    """The base class inherited by all pre-trained text embeddings.
+
+    To load embeddings from an externally hosted pre-trained file, such as
+    pre-trained embedding files of GloVe and FastText, use
+    Embedding.create_embedding(embed_name, pretrain_file). To view all the
+    available `embed_name` and `pretrain_file`, call
+    Embedding.show_embed_names_and_pretrain_files().
+
+    Alternatively, to load embeddings from a local pre-trained file, specify its
+    local path via `pretrain_file` and set url to None.
+
+    For the same token, its index and embedding vector may vary across different
+    instances of mxnet.text.Embedding.
+
+
+    Parameters
+    ----------
+    pretrain_file : str
+        The name or path of the pre-trained embedding file. If the pre-trained
+        embedding file is externally hosted at `url`, `pretrain_file` must be
+        the name of the pre-trained embedding file; if the pre-trained embedding
+        file is local, `pretrain_file` must be the path of the pre-trained
+        embedding file and `url` must be set to None.
+    url : str or None, default None
+        The url where the pre-trained embedding file is externally hosted. If
+        the pre-trained embedding file is externally hosted at `url`,
+        `pretrain_file` must be the name of the pre-trained embedding file; if
+        the pre-trained embedding file is local, `pretrain_file` must be the
+        path of the pre-trained embedding file and `url` must be set to None.
+    embed_name : str, default 'my_embed'
+        The name space for embedding, such as 'glove' and 'fasttext'.
+    embed_root : str, default '~/.mxnet/embeddings/'
+        The root directory for storing embedding-related files.
+    special_init_vec : callback, default mxnet.ndarray.zeros
+        The callback used to initialize the embedding vector for every special
+        token, such as an unknown token and a padding token.
+    token_delim : str, default ' '
+        The delimiter for splitting a token and every embedding vector element
+        value on the same line of the pre-trained embedding file.
+
+
+    Properties
+    ----------
+    vec_len : int
+        The length of the embedding vector for each token.
+    special_init_vec : callback
+        The callback used to initialize the embedding vector for every special
+        token.
+    token_to_idx : dict mapping str to int
+        A dict mapping each token to its index integer.
+    idx_to_token : list of strs
+        A list of indexed tokens where the list indices and the token indices
+        are aligned.
+    idx_to_vec : mxnet.ndarray.NDArray
+        For all the indexed tokens in this embedding, this NDArray maps each
+        token's index to an embedding vector. The largest valid index maps
+        to the initialized embedding vector for every special token, such as an
+        unknown token and a padding token.
+    """
 
     # Key-value pairs for embedding name in lower case and embedding class.
     embed_registry = {}
@@ -245,9 +327,14 @@ class Embedding(object):
 
         self._special_init_vec = special_init_vec
 
-        pretrain_file_path = Embedding._get_pretrain_file(pretrain_file, url,
-                                                          embed_name,
-                                                          embed_root)
+        # User specifies pretrained embedding file at the path of pretrain_file.
+        if os.path.isfile(pretrain_file):
+            pretrain_file_path = pretrain_file
+        else:
+            pretrain_file_path = \
+                Embedding._get_pretrain_file_path_from_url(pretrain_file, url,
+                                                           embed_name,
+                                                           embed_root)
 
         self._load_embedding(pretrain_file_path, token_delim)
 
@@ -257,63 +344,68 @@ class Embedding(object):
             'embedding vector for a special, such as an unknown token.'
 
     @staticmethod
-    def _get_pretrain_file(pretrain_file, url, embed_name, embed_root):
-        # User specifies pretrained embedding file at the path of pretrain_file.
-        if os.path.isfile(pretrain_file):
-            pretrain_file_path = pretrain_file
+    def _get_pretrain_file_path_from_url(pretrain_file, url, embed_name,
+                                         embed_root):
+        """Get the local path to the pre-trained file from the url.
 
-        # The pretrained embedding file will be downloaded from url if it has
-        # not been downloaded yet or the existing file fails to match the
-        # expected SHA-1 hash.
+        The pretrained embedding file will be downloaded from url if it has not
+        been downloaded yet or the existing file fails to match its expected
+        SHA-1 hash.
+        """
+        embed_dir = os.path.join(embed_root, embed_name)
+        pretrain_file_path = os.path.join(embed_dir, pretrain_file)
+        download_file = os.path.basename(url)
+        download_file_path = os.path.join(embed_dir, download_file)
+
+        embed_cls = Embedding.embed_registry[embed_name]
+        expected_file_hash = embed_cls.pretrain_file_sha1[pretrain_file]
+
+        if hasattr(embed_cls, 'pretrain_archive_sha1'):
+            expected_download_hash = \
+                embed_cls.pretrain_archive_sha1[download_file]
         else:
-            embed_dir = os.path.join(embed_root, embed_name)
-            pretrain_file_path = os.path.join(embed_dir, pretrain_file)
-            download_file = os.path.basename(url)
-            download_file_path = os.path.join(embed_dir, download_file)
+            expected_download_hash = expected_file_hash
 
-            embed_cls = Embedding.embed_registry[embed_name]
-            expected_file_hash = embed_cls.pretrain_file_sha1[pretrain_file]
+        # The specified pretrained embedding file does not exist or fails to
+        # match its expected SHA-1 hash.
+        if not os.path.isfile(pretrain_file_path) or \
+                not check_sha1(pretrain_file_path, expected_file_hash):
+            # If download_file_path exists and matches
+            # expected_download_hash, there is no need to download.
+            download(url, download_file_path,
+                     sha1_hash=expected_download_hash)
 
-            if hasattr(embed_cls, 'pretrain_archive_sha1'):
-                expected_download_hash = \
-                    embed_cls.pretrain_archive_sha1[download_file]
-            else:
-                expected_download_hash = expected_file_hash
+        # If the downloaded file does not match its expected SHA-1 hash,
+        # we do not encourage to load embeddings from it in case that its
+        # data format is changed.
+        assert check_sha1(download_file_path, expected_download_hash), \
+            'The downloaded file %s does not match its expected SHA-1 ' \
+            'hash. This is caused by the changes at the externally ' \
+            'hosted pretrained embedding file(s). Since its data format ' \
+            'may also be changed, it is discouraged to continue to use ' \
+            'mxnet.text.Embedding.create_embedding(%s, **kwargs) to load ' \
+            'the pretrained embedding %s. If you still wish to load the ' \
+            'changed embedding file, please specify its path %s via ' \
+            'pretrain_file of mxnet.text.Embedding(). It will be loaded ' \
+            'only if its data format remains unchanged.' % \
+            (download_file_path, embed_name, embed_name, download_file_path)
 
-            # The specified pretrained embedding file does not exist or fails to
-            # match its expected SHA-1 hash.
-            if not os.path.isfile(pretrain_file_path) or \
-                    not check_sha1(pretrain_file_path, expected_file_hash):
-                # If download_file_path exists and matches
-                # expected_download_hash, there is no need to download.
-                download(url, download_file_path,
-                         sha1_hash=expected_download_hash)
-
-            # If the downloaded file does not match its expected SHA-1 hash,
-            # we do not encourage to load embeddings from it in case that its
-            # data format is changed.
-            assert check_sha1(download_file_path, expected_download_hash), \
-                'The downloaded file %s does not match its expected SHA-1 ' \
-                'hash. This is caused by the changes at the externally ' \
-                'hosted pretrained embedding file(s). Since its data format ' \
-                'may also be changed, it is discouraged to continue to use ' \
-                'mxnet.text.Embedding.create_embedding(%s, **kwargs) to load ' \
-                'the pretrained embedding %s. If you still wish to load the ' \
-                'changed embedding file, please specify its path %s via ' \
-                'pretrain_file of mxnet.text.Embedding(). It will be loaded ' \
-                'only if its data format remains unchanged.' % \
-                (download_file_path, embed_name, embed_name, download_file_path)
-
-            ext = os.path.splitext(download_file)[1]
-            if ext == '.zip':
-                with zipfile.ZipFile(download_file_path, 'r') as zf:
-                    zf.extractall(embed_dir)
-            elif ext == '.gz':
-                with tarfile.open(download_file_path, 'r:gz') as tar:
-                    tar.extractall(path=embed_dir)
+        ext = os.path.splitext(download_file)[1]
+        if ext == '.zip':
+            with zipfile.ZipFile(download_file_path, 'r') as zf:
+                zf.extractall(embed_dir)
+        elif ext == '.gz':
+            with tarfile.open(download_file_path, 'r:gz') as tar:
+                tar.extractall(path=embed_dir)
         return pretrain_file_path
 
     def _load_embedding(self, pretrain_file_path, token_delim):
+        """Load embedding vectors from the pre-trained embedding file.
+
+        The largest valid index of idx_to_vec maps to the initialized embedding
+        vector for every special token, such as an unknown token and a padding
+        token.
+        """
         with open(pretrain_file_path, 'r', encoding='utf8') as f:
             lines = f.readlines()
 
@@ -384,10 +476,26 @@ class Embedding(object):
         return self._idx_to_vec
 
     def _idx_to_vec_special_idx(self):
+        """The index that maps every special token to its embedding vector."""
         return len(self._idx_to_vec) - 1
 
-    # tokens is a str or a list of strs
     def __getitem__(self, tokens):
+        """The getter.
+
+        Parameters
+        ----------
+        tokens : str or list of strs
+            A token or a list of tokens.
+
+
+        Returns
+        -------
+        mxnet.ndarray.NDArray:
+            The embedding vector(s) of the token(s). According to numpy
+            conventions, if `tokens` is a string, returns a 1-D NDArray of shape
+            `self.vec_len`; if `tokens` is a list of strings, returns a 2-D
+            NDArray of shape=(len(tokens), self.vec_len).
+        """
         to_reduce = False
         if not isinstance(tokens, list):
             tokens = [tokens]
@@ -398,13 +506,28 @@ class Embedding(object):
 
         vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
                             self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
-        # By numpy conventions:
-        # Embedding['token'] returns 1-D NDArray of shape=vec_len;
-        # Embedding[['token']] returns 2-D NDArray of shape=(1, vec_len).
+
         return vecs[0] if to_reduce else vecs
 
     @staticmethod
     def register(embed_cls):
+        """Registers a new embedding.
+
+        Once an embedding is registered, we can create an instance of this
+        embedding with `create_embedding` later.
+
+
+        Examples
+        --------
+        >>> @mxnet.text.Embedding.register
+        ... class MyEmbedding(mxnet.text.Embedding):
+        ...     def __init__(self, pretrain_file='my_pretrain_file'):
+        ...         pass
+        >>> embed = mxnet.text.Embedding.create_embedding('MyEmbedding')
+        >>> print(type(embed))
+        <class '__main__.MyEmbedding'>
+        """
+
         assert(isinstance(embed_cls, type))
         embed_name = embed_cls.__name__.lower()
         if embed_name in Embedding.embed_registry:
@@ -418,6 +541,26 @@ class Embedding(object):
 
     @staticmethod
     def create_embedding(embed_name, **kwargs):
+        """Creates an Embedding instance.
+
+        Creates an embedding instance by loading embeddings from an externally
+        hosted pre-trained file, such as pre-trained embedding files of GloVe
+        and FastText. To view all the available `embed_name` and
+        `pretrain_file`, call Embedding.show_embed_names_and_pretrain_files().
+
+
+        Parameters
+        ----------
+        embed_name : str
+            The embedding name (case-insensitive).
+
+
+        Returns
+        -------
+        mxnet.text.Embedding:
+            An embedding instance that loads embeddings from an externally
+            hosted pre-trained file.
+        """
         if embed_name.lower() in Embedding.embed_registry:
             return Embedding.embed_registry[embed_name.lower()](**kwargs)
         else:
@@ -427,6 +570,17 @@ class Embedding(object):
 
     @staticmethod
     def check_pretrain_files(pretrain_file, embed_name):
+        """Checks if a pre-trained file name is valid for an embedding.
+
+
+        Parameters
+        ----------
+        pretrain_file : str
+            The pre-trained file name.
+        embed_name : str
+            The embedding name (case-insensitive).
+        """
+        embed_name = embed_name.lower()
         embed_cls = Embedding.embed_registry[embed_name]
         if pretrain_file not in embed_cls.pretrain_file_sha1:
             raise KeyError('Cannot find pretrain file %s for embedding %s. '
@@ -471,7 +625,7 @@ class GloVe(Embedding):
     def __init__(self, pretrain_file='glove.840B.300d.txt', **kwargs):
         cls = self.__class__
 
-        Embedding.check_pretrain_files(pretrain_file, cls.__name__.lower())
+        Embedding.check_pretrain_files(pretrain_file, cls.__name__)
 
         src_archive = {archive.split('.')[1]: archive for archive in
                        cls.pretrain_archive_sha1.keys()}
@@ -493,7 +647,7 @@ class FastText(Embedding):
     def __init__(self, pretrain_file='wiki.en.vec', **kwargs):
         cls = self.__class__
 
-        Embedding.check_pretrain_files(pretrain_file, cls.__name__.lower())
+        Embedding.check_pretrain_files(pretrain_file, cls.__name__)
         url = cls.url_prefix + pretrain_file
 
         super(cls, self).__init__(pretrain_file=pretrain_file, url=url,
