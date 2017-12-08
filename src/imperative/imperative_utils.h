@@ -419,7 +419,7 @@ inline void PushOperator(const OpStatePtr& state,
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
-  bool is_train = Imperative::Get()->is_training();
+  const bool is_train = Imperative::Get()->is_training();
   ExecType exec_type = ExecType::kSync;
   if (fexec_type.count(op)) {
     exec_type = fexec_type[op](attrs);
@@ -453,7 +453,7 @@ inline void PushOperator(const OpStatePtr& state,
         << "for stateful operator " << op->name;
     CHECK(exec_type == ExecType::kSync || exec_type == ExecType::kAsync);
     Engine::Get()->PushSync(
-      [state, fcompute, inputs, outputs, requested, is_train, exec_type, mutate_idx, req](
+      [&state, fcompute, &inputs, &outputs, &requested, is_train, exec_type, &mutate_idx, &req](
           RunContext rctx) {
         OpContext opctx{is_train, rctx, engine::CallbackOnComplete(), requested};
 
@@ -467,7 +467,7 @@ inline void PushOperator(const OpStatePtr& state,
                                &pre_temp_src, &pre_temp_dst, &post_temp_src, &post_temp_dst,
                                &in_temp_idx_map, mutate_idx);
         // setup contexts
-        bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
+        const bool is_gpu = rctx.get_ctx().dev_mask() == gpu::kDevMask;
         // pre-fcompute fallback
         CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
         fcompute(state, opctx, input_blobs, req, output_blobs);
