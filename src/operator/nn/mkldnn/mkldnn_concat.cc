@@ -38,13 +38,13 @@ void MKLDNNConcat_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   int concat_dim = param.dim;
   std::vector<mkldnn::memory::primitive_desc> data_md;
   std::vector<mkldnn::primitive::at> data_mem;
-  for(int i =0; i < num_in_data; i++) {
+  for (int i =0; i < num_in_data; i++) {
       std::shared_ptr<const mkldnn::memory> tmp_mem = in_data[i].GetMKLDNNData();
       auto tmp_pd = tmp_mem->get_primitive_desc();
       data_md.push_back(tmp_pd);
       data_mem.push_back(*tmp_mem);
   }
-  mkldnn::concat::primitive_desc fwd_pd(concat_dim, data_md); 
+  mkldnn::concat::primitive_desc fwd_pd(concat_dim, data_md);
   auto engine = CpuEngine::Instance().get_engine();
   auto out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
       fwd_pd.dst_primitive_desc(), req[concat_enum::kOut]);
@@ -61,25 +61,28 @@ void MKLDNNConcat_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   int axis_ = param.dim;
   auto engine = CpuEngine::Instance().get_engine();
   std::shared_ptr<const mkldnn::memory>gz_mem = inputs[0].GetMKLDNNData();
-  mkldnn::memory::primitive_desc gz_pd = gz_mem->get_primitive_desc(); 
+  mkldnn::memory::primitive_desc gz_pd = gz_mem->get_primitive_desc();
   /* init the offset */
   mkldnn::memory::dims offsets = {0, 0, 0, 0};
   for (int i = 0; i < num_in_data; i++) {
-      mkldnn::memory::dims diff_src_tz = {inputs[i+1].shape()[0], inputs[i+1].shape()[1], inputs[i+1].shape()[2], inputs[i+1].shape()[3]};
+      mkldnn::memory::dims diff_src_tz = {inputs[i+1].shape()[0], inputs[i+1].shape()[1],
+          inputs[i+1].shape()[2], inputs[i+1].shape()[3]};
       auto diff_src_mpd = inputs[i+1].GetMKLDNNData()->get_primitive_desc();
       auto gradi_mem_ = CreateMKLDNNMem(outputs[i], diff_src_mpd, req[i]);
       // create view from gy to gxs[i]
       std::shared_ptr<mkldnn::view::primitive_desc> view_pd;
       view_pd.reset(new mkldnn::view::primitive_desc(gz_pd, diff_src_tz, offsets));
       // create reorder primitive from gy to gxs[i]
-      mkldnn::reorder::primitive_desc reorder_pd(view_pd.get()->dst_primitive_desc(), diff_src_mpd);
+      mkldnn::reorder::primitive_desc reorder_pd(
+          view_pd.get()->dst_primitive_desc(), diff_src_mpd);
       offsets[axis_] += diff_src_tz[axis_];
-      MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(reorder_pd, *gz_mem, *gradi_mem_.second));
+      MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(
+          reorder_pd, *gz_mem, *gradi_mem_.second));
       CommitOutput(outputs[i], gradi_mem_);
   }
   MKLDNNStream::Instance().Submit();
 }
 
-}//op
-}//mxnet
+}  // namespace op
+}  // namespace mxnet
 #endif
