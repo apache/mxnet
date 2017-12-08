@@ -29,8 +29,7 @@ def load_mnist(training_num=50000):
             'https://github.com/sxjscience/mxnet/raw/master/example/bayesian-methods/mnist.npz'
         )
         print('Downloading data from %s to %s' % (origin, data_path))
-        context = ssl._create_unverified_context()
-        urllib.request.urlretrieve(origin, data_path, context=context)
+        urllib.request.urlretrieve(origin, data_path)
         print('Done!')
     dat = numpy.load(data_path)
     X = (dat['X'][:training_num] / 126.0).astype('float32')
