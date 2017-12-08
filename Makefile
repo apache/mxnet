@@ -237,7 +237,8 @@ ifneq ($(ADD_LDFLAGS), NONE)
 endif
 
 ifneq ($(USE_CUDA_PATH), NONE)
-	NVCC=$(USE_CUDA_PATH)/bin/nvcc
+	NVCC = $(USE_CUDA_PATH)/bin/nvcc
+	LDFLAGS += -L$(USE_CUDA_PATH)/lib64 -L$(USE_CUDA_PATH)/lib
 endif
 
 # Sets 'CUDA_ARCH', which determines the GPU architectures supported
