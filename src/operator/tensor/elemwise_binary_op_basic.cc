@@ -41,12 +41,11 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
       || inputs[1].storage_type() == kMKLDNNStorage) {
     MKLDNNSum_Forward(attrs, ctx, inputs, req[0], outputs[0]);
     return;
-  }
-  // This happens if inputs are supposed to be in MKLDNN format
-  // but MKLDNN doesn't support the data type or the shape. We're
-  // forced to convert it to the default format.
-  else if (inputs[0].storage_type() == kDefaultStorage
-           || inputs[1].storage_type() == kDefaultStorage) {
+  } else if (inputs[0].storage_type() == kDefaultStorage
+             || inputs[1].storage_type() == kDefaultStorage) {
+    // This happens if inputs are supposed to be in MKLDNN format
+    // but MKLDNN doesn't support the data type or the shape. We're
+    // forced to convert it to the default format.
     std::vector<TBlob> in_blobs(2);
     std::vector<TBlob> out_blobs(1);
     in_blobs[0] = inputs[0].data();
@@ -74,10 +73,10 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
     out_attrs->at(0) = kMKLDNNStorage;
     *dispatch_mode = DispatchMode::kFComputeEx;
     return true;
-  } else
+  }
 #endif
-    return ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                       in_attrs, out_attrs);
+  return ElemwiseStorageType<2, 1, true, true, true>(attrs, dev_mask, dispatch_mode,
+                                                     in_attrs, out_attrs);
 }
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
@@ -115,10 +114,11 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   if (inputs[0].storage_type() == kMKLDNNStorage) {
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNNCopy(attrs, ctx, inputs[0], req[1], outputs[1]);
-  } else
+    return;
+  }
 #endif
-    ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity, mshadow_op::identity>(
-        attrs, ctx, inputs, req, outputs);
+  ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity, mshadow_op::identity>(
+      attrs, ctx, inputs, req, outputs);
 }
 
 static inline bool _backward_ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
@@ -134,10 +134,10 @@ static inline bool _backward_ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs
     out_attrs->at(1) = kMKLDNNStorage;
     *dispatch_mode = DispatchMode::kFComputeEx;
     return true;
-  } else
+  }
 #endif
-    return ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
-                                                       in_attrs, out_attrs);
+  return ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
+                                                     in_attrs, out_attrs);
 }
 
 NNVM_REGISTER_OP(_backward_add)

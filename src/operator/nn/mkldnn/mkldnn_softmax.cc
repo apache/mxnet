@@ -50,6 +50,6 @@ void MKLDNNSoftmax_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   stream.Submit();
 }
 
-}
-}
+}   // namespace op
+}   // namespace mxnet
 #endif
