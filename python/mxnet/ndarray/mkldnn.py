@@ -59,14 +59,12 @@ class MKLNDArray(NDArray):
         return '\n<%s %s @%s>' % (self.__class__.__name__,
                                   shape_info, self.context)
 
-    # TODO
     def _at(self, idx):
         raise NotSupportedForMKLNDArray(self._at, '[idx]', idx)
 
     def _slice(self, start, stop):
         return op.slice(self, begin=start, end=stop)
 
-    # TODO
     def astype(self, dtype):
         """Returns a copy of the array after casting to a specified type.
         Parameters
@@ -85,7 +83,6 @@ class MKLNDArray(NDArray):
         self.copyto(res)
         return res
 
-    # TODO
     def copyto(self, other):
         """Copies the value of this array to another array.
 
