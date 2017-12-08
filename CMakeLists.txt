@@ -315,6 +315,15 @@ if(USE_JEMALLOC)
 endif()
 
 include(CTest)
+set(GTEST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/googletest/googletest")
+set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
+#set(GTEST_BOTH_LIBRARIES gtest gtest_main)
+set(GTEST_LIBRARIES gtest gtest_main)
+set(GTEST_MAIN_LIBRARY gtest_main)
+set(GTEST_LIBRARY gtest)
+
+add_subdirectory(${GTEST_ROOT})
+find_package(GTest REQUIRED)
 
 # cudnn detection
 if(USE_CUDNN AND USE_CUDA)
