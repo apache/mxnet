@@ -11,8 +11,8 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
   function(iteration, nbatch, env, verbose=TRUE) {
     if (nbatch %% period == 0 && !is.null(env$metric)) {
       result <- env$metric$get(env$train.metric)
-      if (nbatch != 0 & verbose)
-        message(paste0("Batch [", nbatch, "] Train-", result$name, "=", result$value))
+      if (nbatch != 0 && verbose)
+        message("Batch [", nbatch, "] Train-", result$name, "=", result$value)
       if (!is.null(logger)) {
         if (class(logger) != "mx.metric.logger") {
           stop("Invalid mx.metric.logger.")
@@ -20,8 +20,8 @@ mx.callback.log.train.metric <- function(period, logger=NULL) {
         logger$train <- c(logger$train, result$value)
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
-          if (nbatch != 0 & verbose)
-            message(paste0("Batch [", nbatch, "] Validation-", result$name, "=", result$value))
+          if (nbatch != 0 && verbose)
+            message("Batch [", nbatch, "] Validation-", result$name, "=", result$value)
           logger$eval <- c(logger$eval, result$value)
         }
       }
@@ -48,9 +48,9 @@ mx.callback.log.speedometer <- function(batch.size, frequency=50){
         time <- as.double(difftime(Sys.time(), env$tic, units = "secs"))
         speed <- frequency*batch.size/time
         result <- env$metric$get(env$train.metric)
-        if (nbatch != 0 & verbose)
-          message(paste0("Batch [", nbatch, "] Speed: ", speed, " samples/sec Train-",
-                     result$name, "=", result$value))
+        if (nbatch != 0 && verbose)
+          message("Batch [", nbatch, "] Speed: ", speed, " samples/sec Train-",
+                     result$name, "=", result$value)
         env$tic = Sys.time()
       }      
     } else {
@@ -95,7 +95,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
     if (!is.null(env$metric)) {
       if (!is.null(train.metric)) {
         result <- env$metric$get(env$train.metric)
-        if ((maximize == F & result$value < train.metric) | (maximize == TRUE & result$value > train.metric)) {
+        if ((! maximize && result$value < train.metric) || (maximize && result$value > train.metric)) {
           return(FALSE)
         }
       }
@@ -104,7 +104,7 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
       if (!is.null(eval.metric)) {
         if (!is.null(env$eval.metric)) {
           result <- env$metric$get(env$eval.metric)
-          if ((maximize == F & result$value < eval.metric) | (maximize == TRUE & result$value > eval.metric)) {
+          if ((!maximize && result$value < eval.metric) || (maximize && result$value > eval.metric)) {
             return(FALSE)
           }
         }
@@ -135,11 +135,11 @@ mx.callback.early.stop <- function(train.metric = NULL, eval.metric = NULL, bad.
         
         result <- env$metric$get(env$eval.metric)
         
-        if ((maximize == F & result$value > mx.best.score) | (maximize == TRUE & result$value < mx.best.score)) {
+        if ((! maximize && result$value > mx.best.score) || (maximize && result$value < mx.best.score)) {
           
           if (mx.best.iter == bad.steps) {
             if (verbose) {
-              message(paste0("Best score=", mx.best.score, ", iteration [", iteration - bad.steps, "]"))
+              message("Best score=", mx.best.score, ", iteration [", iteration - bad.steps, "]")
             }
             return(FALSE)
           } else {

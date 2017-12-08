@@ -1,5 +1,18 @@
 MXNet Change Log
 ================
+## 0.12.1
+### Bug-fixes
+  - Added GPU support for the `syevd` operator which ensures that there is GPU support for all linalg-operators.
+  - Bugfix for `syevd` on CPU such that it works for `float32`.
+  - Fixed API call when `OMP_NUM_THREADS` environment variable is set. 
+  - Fixed `MakeNonlossGradNode` bug.
+  - Fixed bug related to passing `dtype` to `array()`. 
+  - Fixed some minor bugs for sparse distributed training.
+  - Fixed a bug on `Slice` accessing uninitialized memory in `param.begin` in the file `matrix_op-inl.h`. 
+  - Fixed `gluon.data.RecordFileDataset`.
+  - Fixed a bug that caused `autograd` to crash on some networks.
+  
+  
 ## 0.12.0
 ### Performance
   - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training CNNs is up to 3.5x faster than Pascal when using float16 precision.
