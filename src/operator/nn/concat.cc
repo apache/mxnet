@@ -194,9 +194,11 @@ struct ConcatGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     CHECK_EQ(ograds.size(), 1);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+#if MXNET_USE_MKLDNN == 1
     for (size_t i = 0; i < n->inputs.size(); i++) {
       heads.push_back(n->inputs[i]);
     }
+#endif
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
