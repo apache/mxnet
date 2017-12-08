@@ -21,8 +21,11 @@
  * \file mkldnn_pooling.cc
  * \brief
 */
+#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
+#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+
 #include <mkldnn.hpp>
 #include "../pooling-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -100,10 +103,15 @@ inline static pooling_forward::primitive_desc GetPoolingFwd(
   if (is_train && alg != algorithm::pooling_avg) {
     kind = prop_kind::forward_training;
   }
-  pooling_forward::desc poolingFwd_desc(
-      kind, alg, data_md, out_md, {(int)stride_h_, (int)stride_w_},
-      {kernel_h_, kernel_w_}, {(int)pad_t_, (int)pad_l_}, {(int)pad_b_, (int)pad_r_},
-      padding_kind::zero);
+  pooling_forward::desc poolingFwd_desc(kind, alg, data_md, out_md,
+                                        {static_cast<int>(stride_h_),
+                                        static_cast<int>(stride_w_)},
+                                        {kernel_h_, kernel_w_},
+                                        {static_cast<int>(pad_t_),
+                                        static_cast<int>(pad_l_)},
+                                        {static_cast<int>(pad_b_),
+                                        static_cast<int>(pad_r_)},
+                                        padding_kind::zero);
   return mkldnn::pooling_forward::primitive_desc(poolingFwd_desc, engine);
 }
 
@@ -119,7 +127,8 @@ void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
   auto data_md = data_mpd.desc();
 
   memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
-                       (int)out_data.shape()[2], (int)out_data.shape()[3]};
+                       static_cast<int>(out_data.shape()[2]),
+                       static_cast<int>(out_data.shape()[3])};
   memory::desc out_md({dims},
                       static_cast<memory::data_type>(data_md.data.data_type),
                       static_cast<memory::format>(data_md.data.format));
@@ -156,7 +165,8 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
-                       (int)out_grad.shape()[2], (int)out_grad.shape()[3]};
+                       static_cast<int>(out_grad.shape()[2]),
+                       static_cast<int>(out_grad.shape()[3])};
   memory::desc out_md({dims},
                       static_cast<memory::data_type>(data_md.data.data_type),
                       static_cast<memory::format>(data_md.data.format));
@@ -164,7 +174,8 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
 
   mkldnn::memory::desc diff_md = diff_dst_mem->get_primitive_desc().desc();
   memory::dims dims1 = {diff_md.data.dims[0], diff_md.data.dims[1],
-                        (int)in_grad.shape()[2], (int)in_grad.shape()[3]};
+                        static_cast<int>(in_grad.shape()[2]),
+                        static_cast<int>(in_grad.shape()[3])};
   memory::desc diff_in_md(
       {dims1}, static_cast<memory::data_type>(diff_md.data.data_type),
       static_cast<memory::format>(diff_md.data.format));
@@ -180,10 +191,15 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
     kernel_h_ = param.kernel[0];
     kernel_w_ = param.kernel[1];
   }
-  pooling_backward::desc desc(
-      alg, diff_in_md, diff_md, {(int)param.stride[0], (int)param.stride[1]},
-      {kernel_h_, kernel_w_}, {(int)param.pad[0], (int)param.pad[1]},
-      {(int)param.pad[0], (int)param.pad[1]}, padding_kind::zero);
+  pooling_backward::desc desc(alg, diff_in_md, diff_md,
+                              {static_cast<int>(param.stride[0]),
+                              static_cast<int>(param.stride[1])},
+                              {kernel_h_, kernel_w_},
+                              {static_cast<int>(param.pad[0]),
+                              static_cast<int>(param.pad[1])},
+                              {static_cast<int>(param.pad[0]),
+                              static_cast<int>(param.pad[1])},
+                              padding_kind::zero);
   pooling_backward::primitive_desc pdesc(desc, cpu_engine, pdesc_fwd);
 
   auto diff_src_mem =
@@ -203,6 +219,7 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
   CommitOutput(in_grad, diff_src_mem);
   MKLDNNStream::Instance().Submit();
 }
-}
-}
+}  // namespace op
+}  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_POOLING_INL_H_

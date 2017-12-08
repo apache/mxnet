@@ -114,7 +114,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
     if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
-      out_shape->push_back(oshape); // for workspace
+      out_shape->push_back(oshape);   // for workspace
 #endif
   } else if (param_.kernel.ndim() == 2) {
     CHECK_EQ(dshape.ndim(), 4U)
@@ -153,7 +153,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
     if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
-      out_shape->push_back(oshape); // for workspace
+      out_shape->push_back(oshape);   // for workspace
 #endif
   } else if (param_.kernel.ndim() == 3) {
     CHECK_EQ(dshape.ndim(), 5U)
@@ -199,7 +199,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
     if (MKLDNNRequireWorkspace(param_) && SupportMKLDNNPooling(param_))
-      out_shape->push_back(oshape); // for workspace
+      out_shape->push_back(oshape);   // for workspace
 #endif
   }
   return true;
@@ -223,7 +223,6 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 #endif
-  // TODO I need to convert format.
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
   // We know pooling has only one output.
@@ -249,8 +248,7 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     CHECK_EQ(inputs.size(), 5U);
     in_data = &inputs[2];
     workspace = &inputs[4];
-  }
-  else {
+  } else {
     CHECK_EQ(inputs.size(), 3U);
     in_data = &inputs[1];
   }
@@ -262,19 +260,17 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 #endif
-  // TODO I need to convert format.
   std::vector<TBlob> in_blobs(3);
   // In this case, there isn't workspace in the input arrays.
   if (inputs.size() == 3) {
     for (size_t i = 0; i < in_blobs.size(); i++)
       in_blobs[i] = inputs[i].data();
-  }
-  else {
+  } else {
     // There is workspace among the input arrays. One for out_grad and one for
     // input.
-    in_blobs[0] = inputs[0].data(); // out grad
-    in_blobs[1] = inputs[2].data(); // in data
-    in_blobs[2] = inputs[3].data(); // out data
+    in_blobs[0] = inputs[0].data();   // out grad
+    in_blobs[1] = inputs[2].data();   // in data
+    in_blobs[2] = inputs[3].data();   // out data
   }
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++)

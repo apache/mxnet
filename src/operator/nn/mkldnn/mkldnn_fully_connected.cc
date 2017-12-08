@@ -41,8 +41,7 @@ inline static mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     mkldnn::inner_product_forward::desc ipFwd_desc(mkldnn::prop_kind::forward_training,
         data_md, weight_md, bias_md, out_md);
     return mkldnn::inner_product_forward::primitive_desc(ipFwd_desc, engine);
-  }
-  else {
+  } else {
     mkldnn::inner_product_forward::desc ipFwd_desc(mkldnn::prop_kind::forward_training,
         data_md, weight_md, out_md);
     return mkldnn::inner_product_forward::primitive_desc(ipFwd_desc, engine);
@@ -73,8 +72,7 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
         weight_md, bias_md, out_md);
     return mkldnn::inner_product_backward_weights::primitive_desc(
         ipBwdWeights_desc, engine, ipFwd_pd);
-  }
-  else {
+  } else {
     mkldnn::inner_product_backward_weights::desc ipBwdWeights_desc(data_md,
         weight_md, out_md);
     return mkldnn::inner_product_backward_weights::primitive_desc(
@@ -94,16 +92,14 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   if (data.shape().ndim() != 2 && !param.flatten) {
     data = data.ReshapeMKLDNN(Shape2(ishape.ProdShape(0, ishape.ndim()-1),
                                      ishape[ishape.ndim()-1]));
-    // TODO this can potentially be a problem when casting the type.
-    mkldnn::memory::dims out_dims{(int) oshape.ProdShape(0, oshape.ndim()-1),
-      (int) oshape[ishape.ndim()-1]};
+    mkldnn::memory::dims out_dims{static_cast<int>(oshape.ProdShape(0, oshape.ndim()-1)),
+      static_cast<int>(oshape[ishape.ndim()-1])};
     out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data[fullc::kOut].dtype()),
       mkldnn::memory::format::any);
-  }
-  else if (data.shape().ndim() != 2) {
+  } else if (data.shape().ndim() != 2) {
     data = data.ReshapeMKLDNN(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
-    // TODO this can potentially be a problem when casting the type.
-    mkldnn::memory::dims out_dims{(int) oshape[0], (int) oshape.ProdShape(1, oshape.ndim())};
+    mkldnn::memory::dims out_dims{static_cast<int>(oshape[0]),
+      static_cast<int>(oshape.ProdShape(1, oshape.ndim()))};
     out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data[fullc::kOut].dtype()),
       mkldnn::memory::format::any);
   }
@@ -192,6 +188,6 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   MKLDNNStream::Instance().Submit();
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1

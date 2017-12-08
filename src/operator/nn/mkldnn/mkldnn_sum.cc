@@ -43,6 +43,7 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
   scales[1] = 1;
   inputs.push_back(arr1);
   inputs.push_back(arr2);
+  // TODO(zhengda) I need to reorder memory here.
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
   MKLDNNStream::Instance().RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
 }
@@ -68,6 +69,6 @@ void MKLDNNSum_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   stream.Submit();
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 #endif

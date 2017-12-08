@@ -97,11 +97,12 @@ static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
   const auto in_stype = in_attrs->at(0);
   auto &out_stype = out_attrs->at(0);
   bool dispatched = false;
-  if (!dispatched && (in_stype == kDefaultStorage
 #if MXNET_USE_MKLDNN == 1
-        || in_stype == kMKLDNNStorage
+  if (!dispatched && (in_stype == kDefaultStorage
+                      || in_stype == kMKLDNNStorage)) {
+#else
+  if (!dispatched && (in_stype == kDefaultStorage)) {
 #endif
-        )) {
     // dns -> dns
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
