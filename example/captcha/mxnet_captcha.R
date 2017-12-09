@@ -32,8 +32,8 @@ data.shape <- c(80, 30, 3)
 batch_size <- 40
 
 train <- mx.io.ImageRecordIter(
-  path.imgrec     = "train.rec",
-  path.imglist    = "train.lst",
+  path.imgrec     = "captcha_train.rec",
+  path.imglist    = "captcha_train.lst",
   batch.size      = batch_size,
   label.width     = 4,
   data.shape      = data.shape,
@@ -41,8 +41,8 @@ train <- mx.io.ImageRecordIter(
 )
 
 val <- mx.io.ImageRecordIter(
-  path.imgrec     = "test.rec",
-  path.imglist    = "test.lst",
+  path.imgrec     = "captcha_test.rec",
+  path.imglist    = "captcha_test.lst",
   batch.size      = batch_size,
   label.width     = 4,
   data.shape      = data.shape,
