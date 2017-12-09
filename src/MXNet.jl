@@ -26,6 +26,7 @@ include("base.jl")
 
 include("context.jl")
 include("util.jl")
+include("broadcast.jl")
 
 include("ndarray.jl")
 include("random.jl")

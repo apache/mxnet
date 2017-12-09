@@ -32,6 +32,22 @@
 
   ```
 
+## API Changes
+
+### `NDArray`
+
+* Please use dot-call on following trigonometric functions.
+  Also, the `arc*` has been renamed to keep consistent with `Base`.
+  (#TBD)
+
+    * `sin.(x)`
+    * `cos.(x)`
+    * `tan.(x)`
+    * `arcsin(x)` -> `asin.(x)`
+    * `arccos(x)` -> `acos.(x)`
+    * `arctan(x)` -> `atan.(x)`
+
+
 # v0.3.0 (2017.11.16)
 
 * Update `libmxnet` to

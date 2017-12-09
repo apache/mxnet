@@ -993,7 +993,11 @@ end
 
 const _mxsig = Dict{Symbol,Expr}()
 
-function _autoimport(name::Symbol)
+function _autoimport(name::Symbol, sig::Expr)
+  if name == :broadcast_
+    name = _broadcast_target(sig)
+  end
+
   if isdefined(Base, name)
     :(import Base: $name)
   else
@@ -1010,11 +1014,28 @@ function _outexpr(name::Symbol, x #= the first arg of `sig` =#)
   end
 end
 
+_broadcast_target(sig::Expr) = sig.args[2].args[].args[end]
+
+"""
+Generate docstring from function signature
+"""
+function _docsig(fname::Symbol, sig::Expr)
+  if fname !== :broadcast_
+    "    $sig"
+  else
+    name = _broadcast_target(sig)
+    sig_ = Expr(:call, Symbol(name, "."), sig.args[3:end]...)
+    str = "    $sig_"
+    @eval @doc $str $name
+    ""
+  end
+end
+
 macro _remap(sig::Expr, imp::Expr)
   fname = (sig.head == :call) ? sig.args[1] : sig.args[1].args[1]  # case of `where`
   opname = string(imp.args[1])
 
-  import_expr = _autoimport(fname)
+  import_expr = _autoimport(fname, sig)
 
   if isa(imp.args[2], Expr) && imp.args[2].head == :parameters
     ndin = imp.args[3:end]
@@ -1055,7 +1076,7 @@ macro _remap(sig::Expr, imp::Expr)
     $retexpr
   end
 
-  docstr = "    $sig"
+  docstr = _docsig(fname, sig)
   func_def = Expr(:function, sig, func_body)
 
   esc(quote
@@ -1098,6 +1119,14 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 
 @_remap prod(arr::NDArray)       prod(arr)
 @_remap prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
+
+# trigonometric functions, remap to keep consistent with Base
+@_remap broadcast_(::typeof(sin),  x::NDArray) sin(x)
+@_remap broadcast_(::typeof(cos),  x::NDArray) cos(x)
+@_remap broadcast_(::typeof(tan),  x::NDArray) tan(x)
+@_remap broadcast_(::typeof(asin), x::NDArray) arcsin(x)
+@_remap broadcast_(::typeof(acos), x::NDArray) arccos(x)
+@_remap broadcast_(::typeof(atan), x::NDArray) arctan(x)
 
 ################################################################################
 # remapping to solving type unstablility
@@ -1227,19 +1256,29 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "_full",   # we already have `mx.fill`
     "_ones",   # we already have `mx.ones`
     "_zeros",  # we already have `mx.zeros`
-    "mean",
-    "reshape",
-    "sum",
-    "max",
-    "max_axis",
-    "min",
-    "min_axis",
-    "dot",
-    "transpose",
-    "prod",
 
+    # arithmetic
     "_plus",
     "_minus",
+
+    "dot",
+    "max",
+    "max_axis",
+    "mean",
+    "min",
+    "min_axis",
+    "prod",
+    "reshape",
+    "sum",
+    "transpose",
+
+    # trigonometric
+    "sin",
+    "cos",
+    "tan",
+    "arcsin",
+    "arccos",
+    "arctan",
 ]
 
 macro _import_ndarray_functions()

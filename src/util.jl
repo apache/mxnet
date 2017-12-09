@@ -210,7 +210,15 @@ function _firstarg(sig::Expr)
   if sig.head ∈ (:where, :(::))
     _firstarg(sig.args[1])
   elseif sig.head == :call
-    i = (sig.args[2] isa Expr && sig.args[2].head == :parameters) ? 3 : 2
+    i = if sig.args[2] isa Expr && sig.args[2].head == :parameters
+      # there are some keyward arguments locate at args[2]
+      3
+    elseif sig.args[1] === :broadcast_
+      # case of broadcasting, skip the first arg `::typeof(...)`
+      3
+    else
+      2
+    end
     _firstarg(sig.args[i])
   end
 end

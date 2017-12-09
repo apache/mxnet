@@ -814,6 +814,27 @@ function test_size()
   end
 end  # function test_size()
 
+function check_trigonometric(f)
+  info("NDArray::$f")
+  let A = [.1 .2; .3 .4], x = mx.NDArray(A)
+    B = f.(A)
+    y = f.(x)
+    @test copy(y) ≈ B
+  end
+
+  let A = Float32[.1 .2; .3 .4], x = mx.NDArray(A)
+    B = f.(A)
+    y = f.(x)
+    @test copy(y) ≈ B
+  end
+end  # function check_trigonometric
+
+function test_trigonometric()
+  for f ∈ [sin, cos, tan, asin, acos, atan]
+    check_trigonometric(f)
+  end
+end  # function test_trigonometric
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -848,6 +869,7 @@ end  # function test_size()
   test_transpose()
   test_show()
   test_size()
+  test_trigonometric()
 end
 
 end
