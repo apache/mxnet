@@ -726,10 +726,23 @@ class ImageDetIter(ImageIter):
                 %(str(raw.shape), obj_width)
             raise RuntimeError(msg)
         out = np.reshape(raw[header_width:], (-1, obj_width))
-        # remove bad ground-truths
-        valid = np.where(np.logical_and(out[:, 3] > out[:, 1], out[:, 4] > out[:, 2]))[0]
+
+        # remove invalid ground-truths
+        if ((obj_width - 1) / 4) == 1:
+            # x1 > x0 and y1 > y0
+            valid = np.where(np.logical_and(out[:, 3] > out[:, 1], out[:, 4] > out[:, 2]))[0]
+        elif ((obj_width - 1) / 4) == 2:
+            # x1 > x0 and x2 > x3
+            check_x = np.logical_and(out[:, 3] > out[:, 1], out[:, 5] > out[:, 7])
+            # y2 > y1 and y3 > y0
+            check_y = np.logical_and(out[:, 6] > out[:, 4], out[:, 8] > out[:, 2])
+            valid = np.where(np.logical_and(check_x, check_y))[0]
+        else:
+            raise RuntimeError('Object width is not valid.')
+
         if valid.size < 1:
             raise RuntimeError('Encounter sample with no valid label.')
+
         return out[valid, :]
 
     def reshape(self, data_shape=None, label_shape=None):
