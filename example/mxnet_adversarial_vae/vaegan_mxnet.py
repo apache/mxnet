@@ -265,10 +265,6 @@ def fill_buf(buf, i, img, shape):
     sy = (i//m)*shape[0]
     sx = int(sx)
     sy = int(sy)
-    if (i == 57):
-        print("img_shape is " + str(img.shape))
-        print("i is " + str(i))
-        print("shape is " + str(buf.shape))
     buf[sy:sy+shape[0], sx:sx+shape[1], :] = img
 
 def visual(title, X, activation):
