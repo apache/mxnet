@@ -25,6 +25,7 @@
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -73,33 +74,6 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
-static inline bool ContainStorage(const std::vector<int> &storages,
-                                  NDArrayStorageType type) {
-  for (const auto& i : storages) {
-    if (i == type)
-      return true;
-  }
-  return false;
-}
-
-static inline bool ContainStorage(const std::vector<NDArray>& inputs,
-                                  NDArrayStorageType type) {
-  for (const auto &i : inputs) {
-    if (i.storage_type() == type)
-      return true;
-  }
-  return false;
-}
-
-static inline bool ContainOnlyStorage(const std::vector<NDArray>& inputs,
-                                  NDArrayStorageType type) {
-  for (const auto &i : inputs) {
-    if (i.storage_type() != type)
-      return false;
-  }
-  return true;
-}
-
 bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
                                            DispatchMode* dispatch_mode,
@@ -109,7 +83,7 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask
-      && ContainStorage(*in_attrs, kMKLDNNStorage)) {
+      && common::ContainsStorage(*in_attrs, kMKLDNNStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -136,10 +110,10 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
-  } else if (ContainStorage(inputs, kMKLDNNStorage)) {
+  } else if (common::ContainsStorage(inputs, kMKLDNNStorage)) {
     MKLDNNSum_Forward(attrs, op_ctx, inputs, req[0], outputs[0]);
 #endif
-  } else if (ContainOnlyStorage(inputs, kDefaultStorage)) {
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     // This case happens when we want to create an MKLDNN NDArray but the type
     // or the shape isn't supported by MKLDNN. In this case, NDArray falls back
     // to the default storage type and, thus, we have to handle the default

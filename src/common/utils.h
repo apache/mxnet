@@ -217,6 +217,28 @@ void CheckFormatImpl(const RunContext &rctx, const NDArray &input,
 template<typename xpu>
 void CastStorageDispatch(const OpContext& ctx, const NDArray& input, const NDArray& output);
 
+/*! \brief returns true if one of storage types in `inputs` is the same as target `stype`.
+ */
+inline bool ContainsStorage(const std::vector<NDArray>& inputs,
+                            NDArrayStorageType type) {
+  for (const auto &i : inputs) {
+    if (i.storage_type() == type)
+      return true;
+  }
+  return false;
+}
+
+/*! \brief returns true if one of storage types in `vstorage` is the same as target `stype`.
+ */
+inline bool ContainsStorage(const std::vector<int> &vstorages,
+                            NDArrayStorageType type) {
+  for (const auto& i : vstorages) {
+    if (i == type)
+      return true;
+  }
+  return false;
+}
+
 /*! \brief returns true if all storage types in `vstorage` are the same as target `stype`.
  *         false is returned for empty inputs.
  */
