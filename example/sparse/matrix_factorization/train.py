@@ -20,9 +20,8 @@ import logging
 import time
 import mxnet as mx
 import numpy as np
-from get_data import get_movielens_iter, get_movielens_data
-from matrix_fact_model import matrix_fact_net
-
+from data import get_movielens_iter, get_movielens_data
+from model import matrix_fact_net
 
 logging.basicConfig(level=logging.DEBUG)
 

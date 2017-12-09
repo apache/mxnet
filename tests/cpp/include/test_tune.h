@@ -102,7 +102,7 @@ class TuningTester {
       CHECK(res.find(this_run_shapes) == res.end());
       res[this_run_shapes] = tmap;
     }
-    return std::move(res);
+    return res;
   }
 
   using tuned_timing_t = std::map<
@@ -237,7 +237,7 @@ class TuningTester {
         results[shapes] = result;
       }
     }
-    return std::move(results);
+    return results;
   }
 
   /*!

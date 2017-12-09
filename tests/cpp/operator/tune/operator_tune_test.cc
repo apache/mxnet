@@ -58,7 +58,7 @@ static std::vector<std::vector<TShape>> tuning_shapes() {
       {{50, 3, 18, 32}}
     };
   }
-  return std::move(shapes);
+  return shapes;
 }
 
 /*!
