@@ -16,6 +16,9 @@
  specific language governing permissions and limitations
  under the License.
 !>
-lr = optimizer_params['learning_rate']
-lr *= gamma
-optimizer_params['learning_rate'] = lr
+<if(solver.base_lr)>
+base_lr = <solver.base_lr>
+<endif>
+<if(solver.wd)>
+wd = <solver.wd>
+<endif>
