@@ -63,6 +63,9 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 NNVM_REGISTER_OP(reshape_like)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+NNVM_REGISTER_OP(split_like)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
 
