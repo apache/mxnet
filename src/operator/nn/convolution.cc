@@ -293,17 +293,22 @@ static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   uint32_t in_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask
+      // We should allow MKLDNN conv to apply to the default storage as well.
+      // Even with format conversion, MKLDNN conv should still be faster than
+      // the native implementation.
+      && (in_attrs->at(0) == kMKLDNNStorage
+          || in_attrs->at(0) == kDefaultStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -326,7 +331,12 @@ inline static bool backward_ConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), out_expected);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask
+      // We should allow MKLDNN conv to apply to the default storage as well.
+      // Even with format conversion, MKLDNN conv should still be faster than
+      // the native implementation.
+      && (in_attrs->at(0) == kMKLDNNStorage
+          || in_attrs->at(0) == kDefaultStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
       (*out_attrs)[i] = kMKLDNNStorage;
