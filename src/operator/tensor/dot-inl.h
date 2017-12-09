@@ -234,8 +234,11 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
       !param.transpose_a && !param.transpose_b) {
     // dns, csr -> csr
+    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+    const DispatchMode dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
+                                                 : DispatchMode::kFComputeEx;
     dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
-                                     DispatchMode::kFComputeEx);
+                                     dispatch_ex);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
@@ -898,9 +901,10 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx, const cpu& cpu_dev,
                              const TBlob& lhs, const NDArray& rhs,
                              const OpReqType req, NDArray* ret) {
   if (kNullOp == req) return;
-  CHECK_EQ(rhs.storage_type(), kCSRStorage);
-  if (!rhs.storage_initialized()) return;
 
+  CHECK_EQ(req, kWriteTo);
+
+  CHECK_EQ(rhs.storage_type(), kCSRStorage);
   using namespace mshadow;
   using namespace mshadow::expr;
   using nnvm::dim_t;
@@ -912,6 +916,11 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx, const cpu& cpu_dev,
   const TBlob data_r = rhs.data();
   const TBlob indptr_r = rhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_r = rhs.aux_data(csr::kIdx);
+  const dim_t out_data_size = lhs.shape_[0] * rhs.shape()[1];
+  if (!rhs.storage_initialized()) {
+      FillZerosCsrImpl(s, *ret);
+  }
+
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_r.type_flag_, DType, {     // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_r.type_flag_, IType, {     // indptr type
@@ -965,8 +974,8 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx, const cpu& cpu_dev,
           return;
         }
 
-        dim_t num_threads = mxnet_op::get_num_threads<cpu>(num_rows_l);
-        dim_t seg_len = (num_rows_l + num_threads - 1) / num_threads;
+        const dim_t num_threads = mxnet_op::get_num_threads<cpu>(num_rows_l);
+        const dim_t seg_len = (num_rows_l + num_threads - 1) / num_threads;
 
         IType num_rows_r = rhs.shape()[0];
         mxnet_op::Kernel<DotDnsCsrCsrByRowBlocks, cpu>::Launch(
