@@ -22,31 +22,16 @@
 
 from __future__ import absolute_import
 from __future__ import division
-try:
-    from __builtin__ import slice as py_slice
-    from __builtin__ import sum as py_sum
-except ImportError:
-    from builtins import slice as py_slice
-    from builtins import sum as py_sum
 
-import ctypes
 import warnings
 
-__all__ = ["_ndarray_cls", "MKLNDArray"]
+__all__ = ["MKLNDArray"]
 
-import numpy as np
-from ..base import _LIB, numeric_types
-from ..base import c_array, mx_real_t, integer_types
-from ..base import mx_uint, NDArrayHandle, check_call
 from ..context import Context
 from . import _internal
 from . import op
-from ._internal import _set_ndarray_class
-from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
-from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_MKLDNN
-from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
-from .ndarray import zeros as _zeros_ndarray
-from .ndarray import array as _array
+from .ndarray import NDArray
+from .sparse import _ndarray_cls
 
 class MKLNDArray(NDArray):
     """The base class of an NDArray stored in a MKLDNN storage format.
@@ -100,4 +85,3 @@ class MKLNDArray(NDArray):
             return _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
-
