@@ -149,3 +149,8 @@ List of Contributors
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
 * [Kenta Kubo](https://github.com/kkk669/)
 * [Manu Seth](https://github.com/mseth10/)
+* [Calum Leslie](https://github.com/calumleslie)
+* [Andre Tamm](https://github.com/andretamm)
+* [Marco de Abreu](https://github.com/marcoabreu)
+ - Marco is the creator of the current MXNet CI.
+* [Julian Salazar](https://github.com/JulianSlzr)
