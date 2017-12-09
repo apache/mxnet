@@ -26,6 +26,7 @@
 
 #include "./concat-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -111,7 +112,9 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask
+      // There must be at least one array that are in MKLDNN format.
+      && common::ContainsStorage(*in_attrs, kMKLDNNStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -129,7 +132,8 @@ inline static bool backward_ConcatStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *out_attrs) {
 #if MXNET_USE_MKLDNN == 1
   CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask
+      && in_attrs->at(0) == kMKLDNNStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
       (*out_attrs)[i] = kMKLDNNStorage;
