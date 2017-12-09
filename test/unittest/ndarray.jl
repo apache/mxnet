@@ -285,12 +285,6 @@ function test_minus()
   let x = mx.NDArray([1, 2, 3])
     @test copy(x .- π) ≈ [-2, -1, 0]
   end
-
-  info("NDArray::minus::type stablility")
-  let x = mx.zeros(dims), y = mx.ones(dims)
-    @inferred x - y
-    @inferred x .- y
-  end
 end
 
 function test_mul()

@@ -620,9 +620,10 @@ import Base: -
 Subtraction `x - y`, of scalar types or `NDArray`.
 Or create the negative of `x`.
 """
--(x::NDArray) = _mul_scalar(x, scalar=-one(eltype(x)))
--(x::NDArray, y::NDArrayOrReal) = sub_from!(copy(x, context(x)), y)
--(x::Real, y::NDArray) = -y .+ x
+-(x::NDArray) = _mul_scalar(x, scalar = -one(eltype(x)))
+-(x::NDArray, y::NDArray) = _minus(x, y)
+-(x::NDArray, y::Real)    = _minus_scalar(x, scalar = y)
+-(y::Real, x::NDArray)    = _rminus_scalar(x, scalar = y)
 
 broadcast_(::typeof(-), x::NDArray, y::NDArrayOrReal) = x - y
 broadcast_(::typeof(-), x::Real, y::NDArray)          = x - y
