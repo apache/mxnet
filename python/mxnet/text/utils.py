@@ -19,11 +19,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .glossary import Glossary
-
 from collections import Counter
 import os
 import re
+
+from .glossary import Glossary
 
 
 def count_tokens_from_str(tokens, token_delim=' ', seq_delim='\n',

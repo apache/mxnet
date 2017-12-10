@@ -20,6 +20,4 @@
 """Text utilities."""
 
 from . import utils
-from .utils import *
 from . import glossary
-from .glossary import *

@@ -23,8 +23,8 @@ import os
 
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
-from mxnet.text import Glossary
-from mxnet.text import Embedding
+from mxnet.text.glossary import Glossary
+from mxnet.text.glossary import TextEmbed
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -138,9 +138,6 @@ def test_count_tokens_from_path():
     path = os.path.join('./data', 'test_texts')
     _test_count_tokens_from_path_with_delims(path, ' ', '\n')
     _test_count_tokens_from_path_with_delims(path, 'IS', 'LIFE')
-
-
-
 
 
 if __name__ == '__main__':
