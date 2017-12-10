@@ -31,7 +31,7 @@ def find_lib_path():
     """
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     api_path = os.path.join(curr_path, '../../lib/')
-    cmake_build_path = os.path.join(curr_path, '../../build/Release/')
+    cmake_build_path = os.path.join(curr_path, '../../build/')
     dll_path = [curr_path, api_path, cmake_build_path]
     if os.name == 'nt':
         dll_path.append(os.path.join(curr_path, '../../build'))
@@ -61,4 +61,4 @@ def find_lib_path():
 
 
 # current version
-__version__ = "0.12.1"
+__version__ = "1.0.0"

@@ -23,7 +23,8 @@ sys.path.insert(0, "../../python/")
 import mxnet as mx
 import numpy as np
 import numpy.random as rnd
-import time
+from mxnet.test_utils import assert_almost_equal
+from test_kvstore import compute_expected_2bit_quantization
 
 def check_diff_to_scalar(A, x, rank=None):
     """ assert A == x"""
@@ -39,6 +40,7 @@ init_test_keys_device_big = [str(i) for i in range(500,600)]
 
 rate = 2
 shape = (2, 3)
+irregular_shape = (1211,1211)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
 kv = mx.kv.create('dist_sync')
@@ -56,6 +58,17 @@ def init_kv():
     # init updater on servers
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
     return kv, my_rank, nworker
+
+def init_kv_compressed(kv):
+    threshold = 0.5
+    kv.set_gradient_compression({'type': '2bit', 'threshold':threshold})
+    # init kv compression keys
+    kv.init('11221', mx.nd.zeros(big_shape))
+    kv.init('112221', mx.nd.zeros(irregular_shape))
+    kv.init('1121', mx.nd.zeros(shape))
+    # to test inactive mode
+    kv.init('1122', mx.nd.ones(shape))
+    return kv, threshold
 
 def test_sync_push_pull():
     kv, my_rank, nworker = init_kv()
@@ -173,11 +186,114 @@ def test_sync_push_pull():
                 expected[row] = updated_val[row]
             check_diff_to_scalar(val, expected, rank=my_rank)
 
+    def check_compr_residual(kv, threshold, nworker):
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
+            # doesn't meet threshold
+            kv.push(k, mx.nd.ones(s)*0.4)
+            val=mx.nd.zeros(s)
+            kv.pull(k,val)
+            check_diff_to_scalar(val, 0)
+
+            # just meets threshold with residual
+            kv.push(k, mx.nd.ones(s)*(threshold - 0.4))
+            val2 = mx.nd.zeros(s)
+            kv.pull(k,val2)
+            curval = threshold * rate * nworker
+            check_diff_to_scalar(val2, curval)
+
+            # doesn't meet threshold
+            kv.push(k, mx.nd.ones(s)*0.2)
+            val3= mx.nd.zeros(s)
+            kv.pull(k, val3)
+            check_diff_to_scalar(val3, curval)
+
+            # exceeds again
+            kv.push(k, mx.nd.ones(s)*(threshold-0.2))
+            val4 = mx.nd.zeros(s)
+            kv.pull(k,val4)
+            curval += threshold*rate*nworker
+            check_diff_to_scalar(val4, curval)
+            # residual is 0 now
+
+    def check_compr_ones(kv, threshold, nworker):
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
+            val = mx.nd.zeros(s)
+            kv.pull(k, val)
+            curval = val[0][0].asnumpy()[0]
+            kv.push(k,mx.nd.ones(s)*threshold)
+            val2 = mx.nd.zeros(s)
+            kv.pull(k, val2)
+            newval = curval + rate*nworker*threshold
+            check_diff_to_scalar(val2, newval)
+            # residual = 0  again
+
+    def check_compr_pull_before_push(kv):
+        for k,s in [('1121', shape),('112221',irregular_shape),
+                    ('11221', big_shape), ('1122',shape)]:
+            if k=='1122':
+                # tests that GC is not used for init of a key
+                val = mx.nd.zeros(s)
+                kv.pull(k, val)
+                check_diff_to_scalar(val, 1)
+            else:
+                val = mx.nd.ones(s)
+                kv.pull(k, val)
+                check_diff_to_scalar(val, 0)
+
+    def check_compr_zero(kv):
+        for k,s in [('1121', shape),('112221',irregular_shape),('11221', big_shape)]:
+            kv.push(k, mx.nd.zeros(s))
+            # to check that all are set to 0s
+            val = mx.nd.ones(s)
+            kv.pull(k, val)
+            check_diff_to_scalar(val, 0)
+
+    def check_compr_random(kv, threshold, nworker):
+        # set a seed so all workers generate same data. knowing this helps
+        # calculate expected value after pull
+        mx.random.seed(123)
+        rnd.seed(123)
+        nrepeat = 5
+        compr_random_keys_shapes = [('2121', shape),('212221',irregular_shape),('21221', big_shape)]
+        # use new keys so residual is 0 for calculation of expected
+        for k,s in compr_random_keys_shapes:
+            kv.init(k, mx.nd.zeros(s))
+        for k,s in compr_random_keys_shapes:
+            curr_residual = np.zeros(s)
+            for l in range(nrepeat):
+                orig_val = mx.nd.zeros(s)
+                kv.pull(k, orig_val)
+
+                grad = mx.nd.array(rnd.rand(s[0], s[1]))
+                # creates a copy because push changes grad because of assignment
+                grad_cpy = mx.nd.array(grad)
+                kv.push(k, grad)
+                val = mx.nd.zeros(s)
+                kv.pull(k, val)
+
+                diff = val - orig_val
+
+                # compute expected by using simulation of operator
+                compr, curr_residual, decompr = compute_expected_2bit_quantization(grad_cpy, curr_residual, threshold)
+                decompr *= nworker * rate
+                assert_almost_equal(diff.asnumpy(), decompr)
+
+    print ('worker '+str(my_rank)+' started with non compression tests')
     check_default_keys(kv, my_rank, nworker)
     check_row_sparse_keys(kv, my_rank, nworker)
     check_row_sparse_keys_with_zeros(kv, my_rank, nworker)
     check_big_row_sparse_keys(kv, my_rank, nworker)
-    print('worker ' + str(my_rank) + ' is done')
+    print('worker ' + str(my_rank) + ' is done with non compression tests')
+
+    # don't run non compressed keys after this as kvstore now is set to compressed
+    print ('worker '+str(my_rank)+' started with compression tests')
+    kv, threshold = init_kv_compressed(kv)
+    check_compr_pull_before_push(kv)
+    check_compr_zero(kv)
+    check_compr_residual(kv, threshold, nworker)
+    check_compr_ones(kv, threshold, nworker)
+    check_compr_random(kv, threshold, nworker)
+    print('worker ' + str(my_rank) + ' is done with compression tests')
 
 def test_sync_init():
     def check_init(kv, cur_keys, cur_shape, device=False):

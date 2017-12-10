@@ -632,11 +632,11 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
       CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
       vctx[i] = vctx[idx[fwd_nid].inputs[0].node_id];
     } else if (idx[i].control_deps.size() &&
-               vctx[idx[i].control_deps[0]].dev_type != -1) {
+               vctx[idx[i].control_deps[0]].dev_type != static_cast<Context::DeviceType>(-1)) {
       vctx[i] = vctx[idx[i].control_deps[0]];
     } else {
       for (const auto& in : idx[i].inputs) {
-        if (vctx[in.node_id].dev_type == -1) continue;
+        if (vctx[in.node_id].dev_type == static_cast<Context::DeviceType>(-1)) continue;
         vctx[i] = vctx[in.node_id];
         break;
       }
@@ -644,10 +644,10 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
   }
   // backward pass
   for (int i = idx.num_nodes() - 1; i >= 0; --i) {
-    if (vctx[i].dev_type == -1) continue;
+    if (vctx[i].dev_type == static_cast<Context::DeviceType>(-1)) continue;
     if (idx[i].source->op() == _copyto) {
       auto in_nid = idx[i].inputs[0].node_id;
-      if (vctx[in_nid].dev_type != -1) continue;
+      if (vctx[in_nid].dev_type != static_cast<Context::DeviceType>(-1)) continue;
       CHECK_GT(idx[i].source->control_deps.size(), 0);
       auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());
       CHECK_EQ(idx[fwd_nid].source->op(), _copyto);
@@ -655,7 +655,7 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
       continue;
     }
     for (const auto& j : idx[i].inputs) {
-      if (vctx[j.node_id].dev_type != -1) continue;
+      if (vctx[j.node_id].dev_type != static_cast<Context::DeviceType>(-1)) continue;
       vctx[j.node_id] = vctx[i];
     }
   }

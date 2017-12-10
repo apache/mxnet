@@ -263,10 +263,10 @@ void InitFillWithScalarCompute(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 0);
   CHECK_EQ(outputs.size(), 1U);
   const auto& param = nnvm::get<InitOpWithScalarParam>(attrs.parsed);
-  Fill<true>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
+  Fill<false>(ctx.get_stream<xpu>(), outputs[0], req[0], param.value);
 }
 
-struct PopulateFullIdxRspKernel {
+struct PopulateFullIdxRspKernel : public mxnet_op::tunable {
   template<typename IType>
   MSHADOW_XINLINE static void Map(int i, IType* out) {
     KERNEL_ASSIGN(out[i], kWriteTo, i);
@@ -288,19 +288,6 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
     Fill<true>(s, dst->data(), kWriteTo, 0);
     auto idx = dst->aux_data(kIdx).FlatTo1D<xpu, IType>(s);
     Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, num_rows, idx.dptr_);
-  });
-}
-
-// Fill full indices NDArray with zeros by updating the aux shape.
-template<typename xpu>
-void PopulateFullIdxRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
-  using namespace rowsparse;
-  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
-  nnvm::dim_t nnr = dst->shape()[0];
-  dst->CheckAndAllocAuxData(kIdx, mshadow::Shape1(nnr));
-  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(kIdx), IType, {
-    IType* idx = dst->aux_data(kIdx).dptr<IType>();
-    mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
   });
 }
 

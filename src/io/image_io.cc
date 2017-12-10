@@ -156,7 +156,10 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   } else {
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
                 out->data().dptr_);
-#if (CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >=4))
+#if (CV_MAJOR_VERSION > 3 || (CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION >= 3))
+    cv::imdecode(buf, flag | cv::IMREAD_IGNORE_ORIENTATION, &dst);
+    CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
+#elif(CV_MAJOR_VERSION > 2 || (CV_MAJOR_VERSION == 2 && CV_MINOR_VERSION >= 4))
     cv::imdecode(buf, flag, &dst);
     CHECK(!dst.empty()) << "Decoding failed. Invalid image file.";
 #else

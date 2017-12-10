@@ -601,7 +601,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   }
 
   g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(arg_stypes));
-  g = InferStorageType(std::move(g), std::move(StorageTypeVector()), "");
+  g = InferStorageType(std::move(g), StorageTypeVector(), "");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
                                 g.GetAttr<StorageTypeVector>("storage_type"));

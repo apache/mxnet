@@ -55,7 +55,6 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #ifndef _WIN32
     pthread_atfork(
       []() {
-        Engine::Get()->WaitForAll();
         Engine::Get()->Stop();
       },
       []() {
@@ -71,10 +70,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #endif
   }
   ~ThreadedEnginePerDevice() noexcept(false) {
-    this->Stop();
+    this->StopNoWait();
   }
 
-  void Stop() override {
+  void StopNoWait() {
     SignalQueuesForKill();
     gpu_normal_workers_.Clear();
     gpu_copy_workers_.Clear();
@@ -82,16 +81,24 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     cpu_priority_worker_.reset(nullptr);
   }
 
+  void Stop() override {
+    if (is_worker_) return;
+    WaitForAll();
+    StopNoWait();
+  }
+
   void Start() override {
+    if (is_worker_) return;
     gpu_worker_nthreads_ = common::GetNumThreadPerGPU();
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
     // create CPU task
     int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
     cpu_priority_worker_.reset(new ThreadWorkerBlock<kPriorityQueue>());
     cpu_priority_worker_->pool.reset(new ThreadPool(
-        cpu_priority_nthreads, [this]() {
-          this->CPUWorker(Context(), cpu_priority_worker_.get());
-        }));
+        cpu_priority_nthreads,
+        [this](std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+          this->CPUWorker(Context(), cpu_priority_worker_.get(), ready_event);
+        }, true));
     // GPU tasks will be created lazily
   }
 
@@ -116,9 +123,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           auto ptr =
           cpu_normal_workers_.Get(dev_id, [this, ctx, nthread]() {
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
-              blk->pool.reset(new ThreadPool(nthread, [this, ctx, blk] () {
-                    this->CPUWorker(ctx, blk);
-                  }));
+              blk->pool.reset(new ThreadPool(nthread,
+                  [this, ctx, blk](std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+                    this->CPUWorker(ctx, blk, ready_event);
+                  }, true));
               return blk;
             });
           if (ptr) {
@@ -196,6 +204,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     ~ThreadWorkerBlock() noexcept(false) {}
   };
 
+  /*! \brief whether this is a worker thread. */
+  static MX_THREAD_LOCAL bool is_worker_;
   /*! \brief number of concurrent thread cpu worker uses */
   int cpu_worker_nthreads_;
   /*! \brief number of concurrent thread each gpu worker uses */
@@ -219,6 +229,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
                         bool is_copy_worker,
                         ThreadWorkerBlock<type> *block,
                         std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+    this->is_worker_ = true;
 #if MXNET_USE_CUDA
     mshadow::Stream<gpu> *stream;
     do {
@@ -250,11 +261,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
    */
   template<dmlc::ConcurrentQueueType type>
   inline void CPUWorker(Context ctx,
-                        ThreadWorkerBlock<type> *block) {
+                        ThreadWorkerBlock<type> *block,
+                        std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+    this->is_worker_ = true;
     auto* task_queue = &(block->task_queue);
     RunContext run_ctx{ctx, nullptr};
     // execute task
     OprBlock* opr_block;
+    ready_event->signal();
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
@@ -303,5 +317,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 Engine *CreateThreadedEnginePerDevice() {
   return new ThreadedEnginePerDevice();
 }
+
+MX_THREAD_LOCAL bool ThreadedEnginePerDevice::is_worker_ = false;
+
 }  // namespace engine
 }  // namespace mxnet

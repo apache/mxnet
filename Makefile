@@ -131,6 +131,10 @@ ifeq ($(USE_MKL2017), 1)
 	LDFLAGS +=  -liomp5
 endif
 
+ifeq ($(USE_OPERATOR_TUNING), 1)
+	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
+endif
+
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -141,8 +145,10 @@ ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 	USE_LAPACK = 0
+endif
 endif
 endif
 endif
@@ -263,6 +269,7 @@ ifeq ($(CUDA_ARCH),)
 	CUDA_ARCH += $(shell $(NVCC) -cuda $(COMPRESS) --x cu /dev/null -o /dev/null >/dev/null 2>&1 && \
 						 echo $(COMPRESS))
 endif
+$(info Running CUDA_ARCH: $(CUDA_ARCH))
 endif
 
 # ps-lite
@@ -280,9 +287,9 @@ endif
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-SRC = $(wildcard src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
-CUSRC = $(wildcard src/*/*/*.cu src/*/*.cu src/*.cu)
+CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 # extra operators
@@ -323,12 +330,26 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/cub
+	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcuda -lcufft -lnvrtc
+	# Make sure to add stubs as fallback in order to be able to build 
+	# without full CUDA install (especially if run without nvidia-docker)
+	LDFLAGS += -L/usr/local/cuda/lib64/stubs
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
+	ifeq ($(USE_NCCL), 1)
+		ifneq ($(USE_NCCL_PATH), NONE)
+			CFLAGS += -I$(USE_NCCL_PATH)/include
+			LDFLAGS += -L$(USE_NCCL_PATH)/lib
+		endif
+		LDFLAGS += -lnccl
+		CFLAGS += -DMXNET_USE_NCCL=1
+	else
+		CFLAGS += -DMXNET_USE_NCCL=0
+	endif
 else
 	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
+	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
 ifeq ($(USE_LIBJPEG_TURBO), 1)
@@ -420,7 +441,7 @@ test: $(TEST)
 lint: cpplint rcpplint jnilint pylint
 
 cpplint:
-	python2 dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
@@ -452,7 +473,7 @@ cyclean:
 
 # R related shortcuts
 rcpplint:
-	python2 dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
 	mkdir -p R-package/inst
@@ -510,7 +531,7 @@ scaladeploy:
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 jnilint:
-	python2 dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: cyclean $(EXTRA_PACKAGES_CLEAN)

@@ -31,6 +31,7 @@
 #include <tuple>
 #include <thread>
 #include "mxnet/ndarray.h"
+#include "gradient_compression.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
 namespace mxnet {
@@ -80,8 +81,18 @@ class Comm {
     return pinned_ctx_;
   }
 
+  /**
+   * \brief Sets gradient compression parameters to be able to
+   * perform reduce with compressed gradients
+   */
+  void SetGradientCompression(std::shared_ptr<GradientCompression> gc) {
+    gc_ = gc;
+  }
+
  protected:
   Context pinned_ctx_;
+
+  std::shared_ptr<GradientCompression> gc_;
 };
 
 /**
@@ -240,6 +251,8 @@ class CommCPU : public Comm {
             [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
               CopyRetainedRowsToGPU(rctx.get_stream<cpu>(), rctx.get_stream<gpu>(),
                                     src, row_id, out);
+              // wait for GPU operations to complete
+              rctx.get_stream<gpu>()->Wait();
               on_complete();
             }, out->ctx(), {src.var(), row_id.var()}, {out->var()},
             FnProperty::kCopyToGPU, priority, PROFILER_MESSAGE("KVStoreCopyRetainedRowsToGPU"));
@@ -485,14 +498,7 @@ class CommDevice : public Comm {
     }
   }
 
-  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
-                        int priority) override {
-    // avoid extra copy for single device, but it may bring problems for
-    // abnormal usage of kvstore
-    if (src.size() == 1) {
-      return src[0];
-    }
-
+  void InitBuffersAndComm(const std::vector<NDArray>& src) {
     if (!inited_) {
       std::vector<Context> devs;
       for (const auto& a : src) {
@@ -503,7 +509,23 @@ class CommDevice : public Comm {
         EnableP2P(devs);
       }
     }
+  }
 
+  const NDArray& Reduce(int key, const std::vector<NDArray>& src,
+                        int priority) override {
+    // when this reduce is called from kvstore_dist, gc is not set
+    // we don't do compression twice in dist_sync_device
+    if ((gc_ != nullptr) && (gc_->get_type() != CompressionType::kNone)) {
+      return ReduceCompressed(key, src, priority);
+    }
+
+    // avoid extra copy for single device, but it may bring problems for
+    // abnormal usage of kvstore
+    if (src.size() == 1) {
+      return src[0];
+    }
+
+    InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
     CopyFromTo(src[0], &(buf.merged), priority);
@@ -526,7 +548,52 @@ class CommDevice : public Comm {
     }
 
     ElementwiseSum(reduce, &buf.merged);
+    return buf.merged;
+  }
 
+  const NDArray& ReduceCompressed(int key, const std::vector<NDArray>& src,
+                                  int priority) {
+    InitBuffersAndComm(src);
+    auto& buf = merge_buf_[key];
+    std::vector<NDArray> reduce(src.size());
+    if (buf.copy_buf.empty()) {
+      // one buf for each context
+      buf.copy_buf.resize(src.size());
+      buf.compressed_recv_buf.resize(src.size());
+      buf.compressed_send_buf.resize(src.size());
+      buf.residual.resize(src.size());
+
+      for (size_t i = 0; i < src.size(); ++i) {
+        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(),
+                                  false, buf.merged.dtype());
+        buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(),
+                                  false, buf.merged.dtype());
+        buf.residual[i] = 0;
+        int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
+        buf.compressed_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
+                                        false, buf.merged.dtype());
+        buf.compressed_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
+                                        false, buf.merged.dtype());
+      }
+    }
+
+    for (size_t i = 0; i < src.size(); ++i) {
+      // compress before copy
+      // this is done even if the data is on same context as copy_buf because
+      // we don't want the training to be biased towards data on this GPU
+      gc_->Quantize(src[i], &(buf.compressed_send_buf[i]), &(buf.residual[i]), priority);
+
+      if (buf.compressed_send_buf[i].ctx() != buf.compressed_recv_buf[i].ctx()) {
+        CopyFromTo(buf.compressed_send_buf[i], &(buf.compressed_recv_buf[i]), priority);
+      } else {
+        // avoid memory copy when they are on same context
+        buf.compressed_recv_buf[i] = buf.compressed_send_buf[i];
+      }
+
+      gc_->Dequantize(buf.compressed_recv_buf[i], &(buf.copy_buf[i]), priority);
+      reduce[i] = buf.copy_buf[i];
+    }
+    ElementwiseSum(reduce, &buf.merged);
     return buf.merged;
   }
 
@@ -639,6 +706,12 @@ class CommDevice : public Comm {
     NDArray merged;
     /// \brief the gpu buffer
     std::vector<NDArray> copy_buf;
+    /// \brief the residual buffer for gradient compression
+    std::vector<NDArray> residual;
+    /// \brief the small buffer for compressed data in sender
+    std::vector<NDArray> compressed_send_buf;
+    /// \brief the small buffer for compressed data in receiver
+    std::vector<NDArray> compressed_recv_buf;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
   bool inited_;

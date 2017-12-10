@@ -525,7 +525,7 @@ NNVM_REGISTER_OP(tile)
 .describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
-there cases:
+three cases:
 
 - **n=d**. Repeat *i*-th dimension of the input by ``reps[i]`` times::
 

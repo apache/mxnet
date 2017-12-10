@@ -32,6 +32,7 @@
 #include <mxnet/ndarray.h>
 #include <vector>
 #include "../operator/mshadow_op.h"
+#include "../operator/tensor/init_op.h"
 
 namespace mxnet {
 /*! \brief namespace to support all possible Ndarray operator */
@@ -46,19 +47,19 @@ struct BinaryBase {
 
 // operators
 struct Plus : public BinaryBase {
-  typedef mshadow::op::plus mshadow_op;
+  typedef op::mshadow_op::plus mshadow_op;
 };
 
 struct Minus : public BinaryBase {
-  typedef mshadow::op::minus mshadow_op;
+  typedef op::mshadow_op::minus mshadow_op;
 };
 
 struct Mul : public BinaryBase {
-  typedef mshadow::op::mul mshadow_op;
+  typedef op::mshadow_op::mul mshadow_op;
 };
 
 struct Div : public BinaryBase {
-  typedef mshadow::op::div mshadow_op;
+  typedef op::mshadow_op::div mshadow_op;
 };
 
 struct Mod : public BinaryBase {
@@ -178,6 +179,30 @@ void ElementwiseSum(mshadow::Stream<xpu>* s,
                     const Resource& rsc,
                     const std::vector<NDArray>& nds,
                     NDArray* out);
+
+/*!
+ * \brief Set a row_sparse NDArray with val
+ * \param s - The device stream
+ * \param val - The value to be set
+ * \param dst - NDArray which is to be set to val
+ */
+template<typename xpu>
+void SetValueRspImpl(mshadow::Stream<xpu> *s,
+                     const real_t val, NDArray *dst) {
+  CHECK_EQ(dst->storage_type(), kRowSparseStorage);
+  using namespace mxnet::op;
+  nnvm::dim_t nnr = dst->shape()[0];
+  dst->CheckAndAlloc({mshadow::Shape1(nnr)});
+  MSHADOW_IDX_TYPE_SWITCH(dst->aux_type(rowsparse::kIdx), IType, {
+    IType* idx = dst->aux_data(rowsparse::kIdx).dptr<IType>();
+    mxnet_op::Kernel<PopulateFullIdxRspKernel, xpu>::Launch(s, nnr, idx);
+  });
+  Fill<false>(s, dst->data(), kWriteTo, val);
+}
+
+template<typename xpu>
+void Eval(mshadow::Stream<xpu> *s,
+          const real_t val, const NDArray& dst);
 
 // broadcasting
 template <typename Device>

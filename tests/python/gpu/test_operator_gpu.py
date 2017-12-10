@@ -37,7 +37,8 @@ from test_gluon_rnn import *
 from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sparse_nd_slice
 from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse
 from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
-from test_sparse_ndarray import test_sparse_nd_check_format
+from test_sparse_ndarray import test_sparse_nd_check_format, test_sparse_nd_copy
+from test_sparse_ndarray import test_sparse_nd_setitem
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -1421,6 +1422,15 @@ def test_cuda_rtc():
 
     saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
     assert (y.asnumpy() == 12).all()
+
+
+def test_global_norm_clip_multi_device():
+    x1 = mx.nd.ones((3,3), ctx=mx.gpu(0))
+    x2 = mx.nd.ones((4,4), ctx=mx.cpu(0))
+    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+    assert norm == 5.0
+    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
+    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
 
 
 def test_cross_device_autograd():

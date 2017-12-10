@@ -107,8 +107,8 @@ class Parameter(object):
         self._differentiable = differentiable
         self._allow_deferred_init = allow_deferred_init
         self._grad_req = None
+        self._shape = shape
         self.name = name
-        self.shape = shape
         self.dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
@@ -117,7 +117,7 @@ class Parameter(object):
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
-        return s.format(**self.__dict__)
+        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
     @property
     def grad_req(self):
@@ -138,6 +138,23 @@ class Parameter(object):
         elif self._data is not None:
             self._init_grad()
 
+    @property
+    def shape(self):
+        return self._shape
+
+    @shape.setter
+    def shape(self, new_shape):
+        if self._shape is None:
+            self._shape = new_shape
+            return
+
+        assert len(self._shape) == len(new_shape) and \
+            all(j == 0 or i == j for i, j in zip(new_shape, self._shape)), \
+            "Expected shape %s is incompatible with given shape %s."%(
+                str(new_shape), str(self._shape))
+
+        self._shape = new_shape
+
     def _check_and_get(self, arr_list, ctx):
         if arr_list is not None:
             if ctx is list:
@@ -147,9 +164,12 @@ class Parameter(object):
                     return arr_list[0]
                 else:
                     ctx = context.current_context()
-            idx = self._ctx_map[ctx.device_typeid][ctx.device_id]
-            if idx is not None:
-                return arr_list[idx]
+            if ctx.device_typeid < len(self._ctx_map):
+                ctx_list = self._ctx_map[ctx.device_typeid]
+                if ctx.device_id < len(ctx_list):
+                    idx = ctx_list[ctx.device_id]
+                    if idx is not None:
+                        return arr_list[idx]
             raise RuntimeError(
                 "Parameter %s was not initialized on context %s. "
                 "It was only initialized on %s."%(
@@ -203,7 +223,7 @@ class Parameter(object):
         """Finishes deferred initialization."""
         if not self._deferred_init:
             return
-        init, ctx, default_init = self._deferred_init
+        init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
         assert self.shape is not None and np.prod(self.shape) > 0, \
             "Cannot initialize Parameter %s because it has " \
@@ -212,10 +232,11 @@ class Parameter(object):
                 self.name, str(self.shape))
 
         with autograd.pause():
-            data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                 ctx=context.cpu())
-            initializer.create(default_init)(
-                initializer.InitDesc(self.name, {'__init__': init}), data)
+            if data is None:
+                data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
+                                     ctx=context.cpu())
+                initializer.create(default_init)(
+                    initializer.InitDesc(self.name, {'__init__': init}), data)
 
             self._init_impl(data, ctx)
 
@@ -306,14 +327,14 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if self.dtype is None or not self.shape or np.prod(self.shape) <= 0:
+        if not self.shape or np.prod(self.shape) <= 0:
             if self._allow_deferred_init:
-                self._deferred_init = (init, ctx, default_init)
+                self._deferred_init = (init, ctx, default_init, None)
                 return
             raise ValueError("Cannot initialize Parameter %s because it has " \
                              "invalid shape: %s."%(self.name, str(self.shape)))
 
-        self._deferred_init = (init, ctx, default_init)
+        self._deferred_init = (init, ctx, default_init, None)
         self._finish_deferred_init()
 
     def reset_ctx(self, ctx):
@@ -332,21 +353,25 @@ class Parameter(object):
             with autograd.pause():
                 self._init_impl(data, ctx)
         elif self._deferred_init:
-            init, _, default_init = self._deferred_init
-            self._deferred_init = (init, ctx, default_init)
+            init, _, default_init, data = self._deferred_init
+            self._deferred_init = (init, ctx, default_init, data)
         else:
             raise ValueError("Cannot reset context for Parameter %s because it "
                              "has not been initialized."%self.name)
 
 
     def set_data(self, data):
-        """Sets this parameter's value on all contexts to data."""
-        assert self._data is not None, \
-            "Parameter %s has not been initialized"%self.name
+        """Sets this parameter's value on all contexts."""
+        self.shape = data.shape
+
+        if self._data is None:
+            assert self._deferred_init is not None, \
+                "Parameter %s has not been initialized"%self.name
+            self._deferred_init = self._deferred_init[:3] + (data,)
+            return
+
         for arr in self.list_data():
             arr[:] = data
-        if not self.shape or np.prod(self.shape) <= 0:
-            self.shape = data.shape
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
@@ -414,6 +439,24 @@ class Parameter(object):
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init)
         return self._var
+
+    def cast(self, dtype):
+        """Cast data and gradient of this Parameter to a new data type.
+
+        Parameters
+        ----------
+        dtype : str or numpy.dtype
+            The new data type.
+        """
+        self.dtype = dtype
+        if self._data is None:
+            return
+        with autograd.pause():
+            self._data = [i.astype(dtype) for i in self._data]
+            if self._grad is None:
+                return
+            self._grad = [i.astype(dtype) for i in self._grad]
+            autograd.mark_variables(self._data, self._grad, self.grad_req)
 
 
 class ParameterDict(object):
