@@ -118,7 +118,7 @@ struct NormalInitializer <: AbstractInitializer
   σ :: AbstractFloat
 end
 """
-    NormalIninitializer(; mu=0, sigma=0.01)
+    NormalInitializer(; mu=0, sigma=0.01)
 
 Construct a `NormalInitializer` with mean `mu` and variance `sigma`.
 """
@@ -156,7 +156,8 @@ struct XavierInitializer <: AbstractInitializer
   magnitude :: Float64
 end
 
-XavierInitializer(; distribution = xv_uniform, regularization = xv_avg, magnitude = 3.0) = XavierInitializer(distribution, regularization, magnitude)
+XavierInitializer(; distribution = xv_uniform, regularization = xv_avg, magnitude = 3.0) =
+  XavierInitializer(distribution, regularization, magnitude)
 
 function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: NDArray)
   dims    = size(array)

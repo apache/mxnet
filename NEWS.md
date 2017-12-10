@@ -1,5 +1,62 @@
 # v0.4.0 (#TBD)
 
+* Following material from `mx` module got exported (#TBD):
+    * `NDArray`
+        * `context()`
+        * `empty()`
+
+    * `SymbolicNode`
+        * `Variable`
+        * `@var`
+
+    * `Context`
+        * `cpu()`
+        * `gpu()`
+
+    * `AbstractModel`
+        * `FeedForward`
+        * `predict()`
+
+    * `MLP`
+
+    * `Executor`
+        * `bind()`
+        * `simple_bind()`
+        * `forward()`
+        * `backward()`
+
+    * `AbstractEvalMetric`
+        * `ACE`
+        * `Accuracy`
+        * `MSE`
+        * `MultiACE`
+        * `MultiMetric`
+        * `NMSE`
+        * `SeqMetric`
+
+    * `KVStore`
+
+    * `AbstractInitializer`
+        * `UniformInitializer`
+        * `NormalInitializer`
+        * `XavierInitializer`
+
+    * `AbstractOptimizer`
+        * `AdaDelta`
+        * `AdaGrad`
+        * `ADAM`
+        * `AdaMax`
+        * `Nadam`
+        * `RMSProp`
+        * `SGD`
+
+    * `AbstractDataProvider`
+        * `AbstractDataBatch`
+        * `ArrayDataProvider`
+        * `ArrayDataBatch`
+
+    * `to_graphviz()`
+
 ## New APIs
 
 ### `SymbolicNode`

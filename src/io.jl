@@ -25,7 +25,7 @@ abstract type AbstractDataProvider end
 
 Returns the mini-batch size of the provided data. All the provided data should have the same mini-batch size (i.e. the last dimension).
 """
-function get_batch_size end
+get_batch_size
 
 """
     provide_data(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
@@ -36,7 +36,7 @@ function get_batch_size end
 Returns a vector of (name, shape) pairs describing the names of the data it provides, and the corresponding shapes.
 
 """
-function provide_data end
+provide_data
 
 """
     provide_label(provider) -> Vector{Tuple{Base.Symbol, Tuple}}
@@ -46,7 +46,7 @@ function provide_data end
 
 Returns a vector of (name, shape) pairs describing the names of the labels it provides, and the corresponding shapes.
 """
-function provide_label end
+provide_label
 
 """
     AbstractDataProviderState
@@ -81,7 +81,7 @@ abstract type AbstractDataBatch end
 Returns the number of samples in this batch. This number should be greater than 0, but less than or equal to the batch size. This is used to indicate at the end of the data set, there might not be enough samples for a whole mini-batch.
 
 """
-function count_samples end
+count_samples
 
 """
     get_data(provider, batch) -> Vector{NDArray}
@@ -94,7 +94,7 @@ Returns a vector of data in this batch, should be in the same order as declared 
 
 The last dimension of each `NDArray` should always match the batch_size, even when `count_samples` returns a value less than the batch size. In this case,      the data provider is free to pad the remaining contents with any value.
 """
-function get_data end
+get_data
 
 """
     get_label(provider, batch) -> Vector{NDArray}
@@ -105,7 +105,7 @@ function get_data end
 
 Returns a vector of labels in this batch. Similar to [`get_data`](@ref).
 """
-function get_label end
+get_label
 
 """
     DataBatch
@@ -547,7 +547,7 @@ function _get_iter_name(hdr :: MX_handle)
   return Symbol(unsafe_string(ref_name[]))
 end
 
-const _iter_creator_cache = Dict{Symbol, MX_handle}()
+const _iter_creator_cache = Dict{Symbol,MX_handle}()
 function _populate_iter_creator_cache!()
   empty!(_iter_creator_cache)
   h_creators = _get_iter_creators()

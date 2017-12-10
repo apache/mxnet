@@ -62,7 +62,6 @@ function get_learning_rate end
 ################################################################################
 # The learning rate module
 module LearningRate
-using Compat
 import ..mx: AbstractLearningRateScheduler, OptimizationState, get_learning_rate
 
 """
@@ -138,7 +137,6 @@ end
 ################################################################################
 # The Momentum module
 module Momentum
-using Compat
 import ..mx: AbstractMomentumScheduler, OptimizationState, get_momentum
 
 """
@@ -226,9 +224,9 @@ store all the states needed for each weights.
 
 * `optimizer::AbstractOptimizer`: the underlying optimizer.
 """
-function get_updater(optimizer :: AbstractOptimizer)
+function get_updater(optimizer::AbstractOptimizer)
   states = Dict{Int,Any}()
-  function updater(index :: Int, grad :: NDArray, weight :: NDArray)
+  function updater(index::Int, grad::NDArray, weight::NDArray)
     if !haskey(states, index)
       states[index] = create_state(optimizer, index, weight)
     end

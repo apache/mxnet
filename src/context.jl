@@ -12,9 +12,8 @@ end
 Context(dev_type :: Union{CONTEXT_TYPE, Int}, dev_id :: Int = 0) =
     Context(convert(CONTEXT_TYPE, dev_type), dev_id)
 
-function Base.show(io :: IO, ctx :: Context)
+Base.show(io::IO, ctx::Context) =
   print(io, "$(ctx.device_type)$(ctx.device_id)")
-end
 
 """
     cpu(dev_id)
@@ -25,9 +24,7 @@ operations when no context is specified.
 # Arguments
 * `dev_id::Int = 0`: the CPU id.
 """
-function cpu(dev_id::Int=0)
-  return Context(CPU, dev_id)
-end
+cpu(dev_id::Int = 0) = Context(CPU, dev_id)
 
 """
     gpu(dev_id)
@@ -37,6 +34,4 @@ Get a GPU context with a specific id. The K GPUs on a node is typically numbered
 # Arguments
 * `dev_id :: Int = 0` the GPU device id.
 """
-function gpu(dev_id::Int=0)
-  return Context(GPU, dev_id)
-end
+gpu(dev_id::Int = 0) = return Context(GPU, dev_id)

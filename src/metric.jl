@@ -106,7 +106,7 @@ To calculate both mean-squared error [`Accuracy`](@ref) and log-loss [`ACE`](@re
   mx.fit(..., eval_metric = mx.MultiMetric([mx.Accuracy(), mx.ACE()]))
 ```
 """
-mutable struct MultiMetric <: mx.AbstractEvalMetric
+mutable struct MultiMetric <: AbstractEvalMetric
     metrics :: Vector{mx.AbstractEvalMetric}
 end
 
@@ -122,7 +122,7 @@ function reset!(metric :: MultiMetric)
     nothing
 end
 
-get(metric :: MultiMetric) = mapreduce(get, append!, metric.metrics)
+get(metric::MultiMetric) = mapreduce(get, append!, metric.metrics)
 
 """
     SeqMetric(metrics::Vector{AbstractEvalMetric})
@@ -136,8 +136,8 @@ and log-loss [`ACE`](@ref) for the second output:
   mx.fit(..., eval_metric = mx.SeqMetric([mx.Accuracy(), mx.ACE()]))
 ```
 """
-mutable struct SeqMetric <: mx.AbstractEvalMetric
-    metrics :: Vector{mx.AbstractEvalMetric}
+mutable struct SeqMetric <: AbstractEvalMetric
+    metrics :: Vector{AbstractEvalMetric}
 end
 
 function update!(metric::SeqMetric, labels::VecOfNDArray, preds::VecOfNDArray)
