@@ -401,9 +401,7 @@ which furthur translates into
     create a **copy** of the sub-array for Julia `Array`, while for `NDArray`, this is
     a *slice* that shares the memory.
 """
-function getindex(arr::NDArray, ::Colon)
-  return arr
-end
+getindex(arr::NDArray, ::Colon) = arr
 
 """
 Shortcut for [`slice`](@ref).
@@ -411,9 +409,7 @@ Shortcut for [`slice`](@ref).
 copy of the sub-array, while here we simply call `slice`,
 which shares the underlying memory.
 """
-function getindex(arr::NDArray, idx::UnitRange{Int})
-  slice(arr, idx)
-end
+getindex(arr::NDArray, idx::UnitRange{Int}) = slice(arr, idx)
 
 getindex(arr::NDArray) = _first(arr)
 
@@ -502,6 +498,9 @@ copy(x::NDArray{T,D}, ctx::Context) where {T,D} =
 # Create copy: Julia Array -> NDArray in a given context
 copy(x::Array{T}, ctx::Context) where {T<:DType} =
   copy!(empty(T, size(x), ctx), x)
+
+copy(x::AbstractArray, ctx::Context) =
+  copy!(empty(eltype(x), size(x), ctx), collect(x))
 
 """
     convert(::Type{Array{<:Real}}, x::NDArray)

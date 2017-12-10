@@ -44,6 +44,17 @@ function test_copy()
   array2  = copy(array, mx.cpu())
   tensor2 = copy(array2)
   @test tensor ≈ tensor2
+
+  info("NDArray::copy::AbstractArray")
+  let x = copy(1:4, mx.cpu())
+    @test eltype(x) == Int
+    @test copy(x) == [1, 2, 3, 4]
+  end
+
+  let x = copy(1.:4, mx.cpu())
+    @test eltype(x) == Float64
+    @test copy(x) ≈ [1., 2, 3, 4]
+  end
 end
 
 function test_deepcopy()

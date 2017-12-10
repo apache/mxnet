@@ -32,6 +32,24 @@
 
   ```
 
+* `copy(AbstractArray, context)` is implemented now. (#TBD)
+
+  ```julia
+  julia> copy(1:4, mx.cpu())
+  4 mx.NDArray{Int64,1} @ CPU0:
+   1
+   2
+   3
+   4
+
+  julia> copy(1.:4, mx.cpu())
+  4 mx.NDArray{Float64,1} @ CPU0:
+   1.0
+   2.0
+   3.0
+   4.0
+  ```
+
 ## API Changes
 
 ### `NDArray`
