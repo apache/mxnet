@@ -598,53 +598,38 @@ class CommDevice : public Comm {
         CHECK_EQ(out->storage_type(), kRowSparseStorage)
                  << "BroadcastRowSparse expects row_sparse dst NDArray";
 
-        const bool use_sparse_retain = (src.shape()[0] != src.storage_shape()[0])
-          || (row_id.dtype() != out->aux_type(rowsparse::kIdx))
-          || (src.ctx().dev_mask() == Context::kCPU && out->ctx().dev_mask() == Context::kCPU);
+        const bool is_diff_ctx = out->ctx() != src.ctx();
+        NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
+            src.ctx(), true, out->dtype(), out->aux_types()) : *out;
 
-        if (!use_sparse_retain) {
-          const Context gpu_ctx = out->ctx().dev_mask() == Context::kGPU ? out->ctx() : src.ctx();
-          Engine::Get()->PushAsync(
-            [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-              CopyRetainedRows(rctx, src, row_id, out);
-              rctx.get_stream<gpu>()->Wait();
-              on_complete();
-            }, gpu_ctx, {src.var(), row_id.var()}, {out->var()},
-            FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreCopyRetainedRows"));
-        } else {
-          const bool is_diff_ctx = out->ctx() != src.ctx();
-          NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
-              src.ctx(), true, out->dtype(), out->aux_types()) : *out;
+        NDArray row_id_gpu = NDArray(row_id.shape(), src.ctx(), false, mshadow::kInt64);
+        const TBlob& indices = row_id_gpu.data();
+        CopyFromTo(row_id, &row_id_gpu, priority);
 
-          NDArray row_id_gpu = NDArray(row_id.shape(), src.ctx(), false, mshadow::kInt64);
-          const TBlob& indices = row_id_gpu.data();
-          CopyFromTo(row_id, &row_id_gpu, priority);
-
-          Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-              NDArray temp = out_gpu;
-              switch (temp.ctx().dev_mask()) {
-                case cpu::kDevMask: {
-                  mxnet::common::SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
-                      src, indices, kWriteTo, &temp);
-                  break;
-                }
-#if MXNET_USE_CUDA
-                case gpu::kDevMask: {
-                  mxnet::common::SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
-                      src, indices, kWriteTo, &temp);
-                  // wait for GPU operations to complete
-                  rctx.get_stream<gpu>()->Wait();
-                  break;
-                }
-#endif
-                default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+        Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+            NDArray temp = out_gpu;
+            switch (temp.ctx().dev_mask()) {
+              case cpu::kDevMask: {
+                mxnet::common::SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
+                    src, indices, kWriteTo, &temp);
+                break;
               }
-              on_complete();
-            }, out_gpu.ctx(), {src.var(), row_id_gpu.var()}, {out_gpu.var()},
-          FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
-          if (is_diff_ctx) {
-            CopyFromTo(out_gpu, out, priority);
-          }
+#if MXNET_USE_CUDA
+              case gpu::kDevMask: {
+                mxnet::common::SparseRetainOpForwardRspWrapper<gpu>(rctx.get_stream<gpu>(),
+                    src, indices, kWriteTo, &temp);
+                // wait for GPU operations to complete
+                rctx.get_stream<gpu>()->Wait();
+                break;
+              }
+#endif
+              default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+            }
+            on_complete();
+          }, out_gpu.ctx(), {src.var(), row_id_gpu.var()}, {out_gpu.var()},
+        FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
+        if (is_diff_ctx) {
+          CopyFromTo(out_gpu, out, priority);
         }
       }
     }
