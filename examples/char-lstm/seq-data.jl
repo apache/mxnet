@@ -60,7 +60,7 @@ end
 #--/provide
 
 #--eachbatch-part1
-function mx.eachbatch(p :: CharSeqProvider)
+function mx.eachbatch(p::CharSeqProvider)
   data_all  = [mx.zeros(shape) for (name, shape) in mx.provide_data(p)]
   label_all = [mx.zeros(shape) for (name, shape) in mx.provide_label(p)]
 
@@ -73,7 +73,7 @@ function mx.eachbatch(p :: CharSeqProvider)
 
   #--eachbatch-part2
   #...
-  function _text_iter()
+  function _text_iter(c::Channel)
     text = p.text
 
     n_batch = floor(Int, length(text) / p.batch_size / p.seq_len)
@@ -100,11 +100,11 @@ function mx.eachbatch(p :: CharSeqProvider)
         copy!(label_all[i], label_jl[i])
       end
 
-      produce(batch)
+      put!(c, batch)
     end
   end
 
-  return Task(_text_iter)
+  return Channel(_text_iter)
 end
 #--/eachbatch-part2
 

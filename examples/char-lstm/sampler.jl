@@ -1,6 +1,6 @@
-include(joinpath(dirname(@__FILE__), "config.jl"))
-include(joinpath(dirname(@__FILE__), "lstm.jl"))
-include(joinpath(dirname(@__FILE__), "seq-data.jl"))
+include(joinpath(@__DIR__, "config.jl"))
+include(joinpath(@__DIR__, "lstm.jl"))
+include(joinpath(@__DIR__, "seq-data.jl"))
 
 using StatsBase
 using MXNet

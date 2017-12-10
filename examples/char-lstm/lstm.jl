@@ -123,12 +123,12 @@ mutable struct NLL <: mx.AbstractEvalMetric
   NLL() = new(0.0, 0)
 end
 
-function mx.update!(metric :: NLL, labels :: Vector{mx.NDArray}, preds :: Vector{mx.NDArray})
+function mx.update!(metric::NLL, labels::Vector{<:mx.NDArray}, preds::Vector{<:mx.NDArray})
   @assert length(labels) == length(preds)
   nll = 0.0
   for (label, pred) in zip(labels, preds)
     @mx.nd_as_jl ro=(label, pred) begin
-      nll -= sum(log(max(broadcast_getindex(pred, round(Int,label+1), 1:length(label)), 1e-20)))
+      nll -= sum(log.(max.(broadcast_getindex(pred, round.(Int,label+1), 1:length(label)), 1e-20)))
     end
   end
 

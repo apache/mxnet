@@ -1,6 +1,6 @@
-include(joinpath(dirname(@__FILE__), "config.jl"))
-include(joinpath(dirname(@__FILE__), "lstm.jl"))
-include(joinpath(dirname(@__FILE__), "seq-data.jl"))
+include(joinpath(@__DIR__, "config.jl"))
+include(joinpath(@__DIR__, "lstm.jl"))
+include(joinpath(@__DIR__, "seq-data.jl"))
 
 # build vocabulary
 vocab   = build_vocabulary(INPUT_FILE, VOCAB_FILE)
@@ -29,7 +29,7 @@ data_val  = CharSeqProvider(text_val, BATCH_SIZE, SEQ_LENGTH, vocab, NAME,
 if USE_GPU
   context = [mx.gpu(i) for i = 0:N_GPU-1]
 else
-  context = [mx.cpu()]
+  context = mx.cpu()
 end
 
 #--train
