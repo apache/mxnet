@@ -491,7 +491,7 @@ class Symbol(SymbolBase):
             Indexing key
 
         """
-        output_count = self.output_count()
+        output_count = len(self)
         if isinstance(index, py_slice):
             start = 0 if index.start is None else index.start
             stop = output_count if index.stop is None else index.stop
@@ -747,7 +747,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(size), ctypes.byref(sarr)))
         return [py_str(sarr[i]) for i in range(size.value)]
 
-    def output_count(self):
+    def __len__(self):
         """Get number of outputs for the symbol.
 
         Example
@@ -755,15 +755,15 @@ class Symbol(SymbolBase):
         >>> a = mx.sym.var('a')
         >>> b = mx.sym.var('b')
         >>> c = a + b
-        >>> c.output_count()
+        >>> len(c)
 
         Returns
         -------
-        output_count: Number of outputs
+        len(self): Number of outputs
             Number of outputs
         """
         output_count = mx_uint()
-        check_call(_LIB.MXSymbolGetOutputCount(self.handle, ctypes.byref(output_count)))
+        check_call(_LIB.MXSymbolGetNumOutputs(self.handle, ctypes.byref(output_count)))
         return int(output_count.value)
 
     def list_auxiliary_states(self):

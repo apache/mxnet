@@ -1058,7 +1058,7 @@ MXNET_DLL int MXSymbolListOutputs(SymbolHandle symbol,
  * \param out_size number of outputs
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSymbolGetOutputCount(SymbolHandle symbol,
+MXNET_DLL int MXSymbolGetNumOutputs(SymbolHandle symbol,
                                      mx_uint *output_count);
 
 /*!
