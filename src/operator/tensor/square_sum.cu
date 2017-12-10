@@ -18,8 +18,8 @@
  */
 
 /*!
- * \file square_sum.cc
- * \brief CPU Implementation of square_sum op.
+ * \file square_sum.cu
+ * \brief GPU Implementation of square_sum op.
  */
 #include "./square_sum-inl.h"
 
@@ -27,7 +27,7 @@ namespace mxnet {
 namespace op {
 
 template<>
-void CheckSameIdx<cpu>(mshadow::Stream<cpu>* s,
+void CheckSameIdx<gpu>(mshadow::Stream<gpu>* s,
                        const TBlob ograd_row_idx,
                        const TBlob in_row_idx) {
   MSHADOW_IDX_TYPE_SWITCH(ograd_row_idx.type_flag_, IType, {
@@ -35,38 +35,26 @@ void CheckSameIdx<cpu>(mshadow::Stream<cpu>* s,
     const IType* in_idx = in_row_idx.dptr<IType>();
     const nnvm::dim_t idx_size = ograd_row_idx.Size();
     int32_t is_same = 0;
-    mxnet_op::Kernel<CheckSameIdxKernel, cpu>::Launch(s, idx_size, ograd_idx, in_idx, &is_same);
+    int32_t* is_same_ptr = NULL;
+    CUDA_CALL(cudaMalloc(&is_same_ptr, sizeof(int32_t)));
+    mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, 1, is_same_ptr);
+    mxnet_op::Kernel<CheckSameIdxKernel, gpu>::Launch(s, idx_size, ograd_idx, in_idx, &is_same);
+    CUDA_CALL(cudaMemcpy(&is_same, is_same_ptr, sizeof(int32_t), cudaMemcpyDeviceToHost));
     CHECK_EQ(is_same, 0) << "SquareSumRspGradImpl only supports"
                             " equal ograd_row_idx and input_row_idx"
                             " when ograd and input are both"
                             " row-sparse and input data is not a full"
                             " row-sparse matrix";
+    CUDA_CALL(cudaFree(is_same_ptr));
   })
 }
 
 
-MXNET_OPERATOR_REGISTER_REDUCE(_square_sum)
-.describe(R"code(Computes the square sum of array elements over a given axis
-for row-sparse matrix. This is a temporary solution for fusing ops square and
-sum together for row-sparse matrix to save memory for storing gradients.
-It will become deprecated once the functionality of fusing operators is finished
-in the future.
+NNVM_REGISTER_OP(_square_sum)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SquareSumOpForwardEx<gpu>);
 
-Example::
-
-  dns = mx.nd.array([[0, 0], [1, 2], [0, 0], [3, 4], [0, 0]])
-  rsp = dns.tostype('row_sparse')
-  sum = mx.nd._internal._square_sum(rsp, axis=1)
-  sum = [0, 5, 0, 25, 0]
-)code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", SquareSumForwardInferStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SquareSumOpForwardEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square_sum"});
-
-MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_square_sum)
-.set_num_inputs(2)
-.set_attr<FInferStorageType>("FInferStorageType", SquareSumBackwardInferStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SquareSumOpBackwardEx<cpu>);
+NNVM_REGISTER_OP(_backward_square_sum)
+.set_attr<FComputeEx>("FComputeEx<gpu>", SquareSumOpBackwardEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
