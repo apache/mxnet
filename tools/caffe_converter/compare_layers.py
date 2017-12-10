@@ -18,13 +18,13 @@
 """Test converted models layer by layer
 """
 import argparse
-import cv2
 import logging
-import mxnet as mx
-import numpy as np
 import os
 import warnings
 
+import cv2
+import mxnet as mx
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 
