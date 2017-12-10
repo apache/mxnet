@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# coding: utf-8
+
 """Provide text utilities."""
 from __future__ import absolute_import
 from __future__ import print_function

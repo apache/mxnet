@@ -16,7 +16,8 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=not-callable
+# pylint: disable=not-callable, invalid-encoded-data, dangerous-default-value
+# pylint: disable=logging-not-lazy, consider-iterating-dictionary
 
 """Read text files and load embeddings."""
 from __future__ import absolute_import
