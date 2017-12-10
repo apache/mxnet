@@ -95,9 +95,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
     cpu_priority_worker_.reset(new ThreadWorkerBlock<kPriorityQueue>());
     cpu_priority_worker_->pool.reset(new ThreadPool(
-        cpu_priority_nthreads, [this]() {
-          this->CPUWorker(Context(), cpu_priority_worker_.get());
-        }));
+        cpu_priority_nthreads,
+        [this](std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+          this->CPUWorker(Context(), cpu_priority_worker_.get(), ready_event);
+        }, true));
     // GPU tasks will be created lazily
   }
 
@@ -122,9 +123,10 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           auto ptr =
           cpu_normal_workers_.Get(dev_id, [this, ctx, nthread]() {
               auto blk = new ThreadWorkerBlock<kWorkerQueue>();
-              blk->pool.reset(new ThreadPool(nthread, [this, ctx, blk] () {
-                    this->CPUWorker(ctx, blk);
-                  }));
+              blk->pool.reset(new ThreadPool(nthread,
+                  [this, ctx, blk](std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
+                    this->CPUWorker(ctx, blk, ready_event);
+                  }, true));
               return blk;
             });
           if (ptr) {
@@ -259,12 +261,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
    */
   template<dmlc::ConcurrentQueueType type>
   inline void CPUWorker(Context ctx,
-                        ThreadWorkerBlock<type> *block) {
+                        ThreadWorkerBlock<type> *block,
+                        std::shared_ptr<ThreadPool::SimpleEvent> ready_event) {
     this->is_worker_ = true;
     auto* task_queue = &(block->task_queue);
     RunContext run_ctx{ctx, nullptr};
     // execute task
     OprBlock* opr_block;
+    ready_event->signal();
     while (task_queue->Pop(&opr_block)) {
       this->ExecuteOprBlock(run_ctx, opr_block);
     }
