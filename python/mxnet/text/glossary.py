@@ -29,8 +29,6 @@ import tarfile
 import warnings
 import zipfile
 
-from tqdm import tqdm
-
 from ..gluon.utils import check_sha1
 from ..gluon.utils import download
 from .. import ndarray as nd
@@ -415,7 +413,7 @@ class TextEmbed(object):
         vec_len = None
         all_elems = []
         idx_to_token = []
-        for line in tqdm(lines, total=len(lines)):
+        for line in lines:
             elems = line.rstrip().split(token_delim)
 
             assert len(elems) > 1, 'The data format of the pretrained ' \
