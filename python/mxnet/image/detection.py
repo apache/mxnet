@@ -24,6 +24,7 @@ import random
 import logging
 import json
 import numpy as np
+import warnings
 
 from ..base import numeric_types
 from .. import ndarray as nd
@@ -193,10 +194,10 @@ class DetRandomCropAug(DetAugmenter):
         self.area_range = area_range
         self.enabled = False
         if (area_range[1] <= 0 or area_range[0] > area_range[1]):
-            logging.warn('Skip DetRandomCropAug due to invalid area_range: %s', area_range)
+            warnings.warn('Skip DetRandomCropAug due to invalid area_range: %s', area_range)
         elif (aspect_ratio_range[0] > aspect_ratio_range[1] or aspect_ratio_range[0] <= 0):
-            logging.warn('Skip DetRandomCropAug due to invalid aspect_ratio_range: %s',
-                         aspect_ratio_range)
+            warnings.warn('Skip DetRandomCropAug due to invalid aspect_ratio_range: %s',
+                          aspect_ratio_range)
         else:
             self.enabled = True
 
@@ -359,10 +360,10 @@ class DetRandomPadAug(DetAugmenter):
         self.max_attempts = max_attempts
         self.enabled = False
         if (area_range[1] <= 1.0 or area_range[0] > area_range[1]):
-            logging.warn('Skip DetRandomPadAug due to invalid parameters: %s', area_range)
+            warnings.warn('Skip DetRandomPadAug due to invalid parameters: %s', area_range)
         elif (aspect_ratio_range[0] <= 0 or aspect_ratio_range[0] > aspect_ratio_range[1]):
-            logging.warn('Skip DetRandomPadAug due to invalid aspect_ratio_range: %s',
-                         aspect_ratio_range)
+            warnings.warn('Skip DetRandomPadAug due to invalid aspect_ratio_range: %s',
+                          aspect_ratio_range)
         else:
             self.enabled = True
 
@@ -840,7 +841,7 @@ class ImageDetIter(ImageIter):
         try:
             import cv2
         except ImportError as e:
-            logging.warn('Unable to import cv2, skip drawing: %s', str(e))
+            warnings.warn('Unable to import cv2, skip drawing: %s', str(e))
             raise StopIteration
         count = 0
         try:
