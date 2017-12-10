@@ -919,7 +919,6 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx,
   const TBlob data_r = rhs.data();
   const TBlob indptr_r = rhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_r = rhs.aux_data(csr::kIdx);
-  const dim_t out_data_size = lhs.shape_[0] * rhs.shape()[1];
   if (!rhs.storage_initialized()) {
     FillZerosCsrImpl(s, *ret);
     return;
