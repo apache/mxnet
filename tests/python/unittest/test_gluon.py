@@ -70,6 +70,23 @@ def test_parameter_sharing():
     net3.load_params('net1.params', mx.cpu())
 
 
+def test_parameter_str():
+    class Net(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.dense0 = nn.Dense(10, in_units=5, use_bias=False)
+
+    net = Net(prefix='net1_')
+    lines = str(net.collect_params()).splitlines()
+
+    assert lines[0] == 'net1_ ('
+    assert 'net1_dense0_weight' in lines[1]
+    assert '(10, 5)' in lines[1]
+    assert 'numpy.float32' in lines[1]
+    assert lines[2] == ')'
+
+
 def test_basic():
     model = nn.Sequential()
     model.add(nn.Dense(128, activation='tanh', in_units=10, flatten=False))

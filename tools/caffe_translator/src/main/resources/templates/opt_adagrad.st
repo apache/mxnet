@@ -16,6 +16,13 @@
  specific language governing permissions and limitations
  under the License.
 !>
-lr = optimizer_params['learning_rate']
-lr *= gamma
-optimizer_params['learning_rate'] = lr
+<opt_vars(solver)>
+<if(solver.delta)>
+epsilon = <solver.delta>
+<endif>
+
+optimizer_params={'learning_rate':base_lr<\\>
+<if(solver.wd)>, 'wd':wd<endif><\\>
+<if(solver.delta)>, 'epsilon':epsilon<endif>}<\\>
+
+module.init_optimizer(optimizer='AdaGrad', optimizer_params=optimizer_params)

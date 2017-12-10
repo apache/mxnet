@@ -152,3 +152,4 @@ List of Contributors
 * [Andre Tamm](https://github.com/andretamm)
 * [Marco de Abreu](https://github.com/marcoabreu)
  - Marco is the creator of the current MXNet CI.
+* [Julian Salazar](https://github.com/JulianSlzr)
