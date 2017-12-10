@@ -116,6 +116,7 @@ List of Contributors
 * [Miguel Gonzalez-Fierro](https://github.com/miguelgfierro)
 * [Mingjie Xing](https://github.com/EricFisher)
 * [Sebastian Bodenstein](https://github.com/sbodenstein)
+* [Taliesin Beynon](https://github.com/taliesinb)
 * [Chi Zhang](https://github.com/WellyZhang)
 * [Wei Wu](https://github.com/lazyparser)
 * [Shishi Duan](https://github.com/burness)
@@ -147,3 +148,8 @@ List of Contributors
 * [Jean Kossaifi](https://github.com/JeanKossaifi/)
 * [Kenta Kubo](https://github.com/kkk669/)
 * [Manu Seth](https://github.com/mseth10/)
+* [Calum Leslie](https://github.com/calumleslie)
+* [Andre Tamm](https://github.com/andretamm)
+* [Marco de Abreu](https://github.com/marcoabreu)
+ - Marco is the creator of the current MXNet CI.
+* [Julian Salazar](https://github.com/JulianSlzr)

@@ -284,7 +284,7 @@ inline std::vector<TShape> ShapesOf(const std::vector<NDArray>& arrays) {
   for (const NDArray& ar : arrays) {
     res.emplace_back(ar.shape());
   }
-  return std::move(res);
+  return res;
 }
 
 }  // namespace op

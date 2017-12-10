@@ -17,7 +17,7 @@
 
 import mxnet as mx
 from mxnet.test_utils import *
-from get_data import get_libsvm_data
+from data import get_avazu_data
 from linear_model import *
 import argparse
 import os
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     data_dir = os.path.join(os.getcwd(), 'data')
     train_data = os.path.join(data_dir, AVAZU['train'])
     val_data = os.path.join(data_dir, AVAZU['test'])
-    get_libsvm_data(data_dir, AVAZU['train'], AVAZU['url'])
-    get_libsvm_data(data_dir, AVAZU['test'], AVAZU['url'])
+    get_avazu_data(data_dir, AVAZU['train'], AVAZU['url'])
+    get_avazu_data(data_dir, AVAZU['test'], AVAZU['url'])
 
     # data iterator
     train_data = mx.io.LibSVMIter(data_libsvm=train_data, data_shape=(num_features,),
@@ -100,11 +100,10 @@ if __name__ == '__main__':
     speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
-    data_iter = iter(train_data)
     for epoch in range(num_epoch):
         nbatch = 0
         metric.reset()
-        for batch in data_iter:
+        for batch in train_data:
             nbatch += 1
             # for distributed training, we need to manually pull sparse weights from kvstore
             if kv:
@@ -129,5 +128,6 @@ if __name__ == '__main__':
         save_optimizer_states = 'dist' not in kv.type if kv else True
         mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=save_optimizer_states)
         # reset the iterator for next pass of data
-        data_iter.reset()
+        train_data.reset()
+        eval_data.reset()
     logging.info('Training completed.')

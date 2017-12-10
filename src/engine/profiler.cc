@@ -24,12 +24,8 @@
  */
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
+#include <dmlc/omp.h>
 #include <mxnet/base.h>
-#include <set>
-#include <map>
-#include <mutex>
-#include <chrono>
-#include <iostream>
 #include <fstream>
 #include <thread>
 #include "./profiler.h"
@@ -44,7 +40,6 @@
 
 namespace mxnet {
 namespace engine {
-const int INITIAL_SIZE = 1024;
 
 Profiler::Profiler()
   : state_(kNotRunning), enable_output_(false), filename_("profile.json") {
@@ -59,14 +54,13 @@ Profiler::Profiler()
 #endif
 
   this->profile_stat = new DevStat[cpu_num_ + gpu_num_ + 1];
-  this->profile_stat->opr_exec_stats.reserve(INITIAL_SIZE);
   for (unsigned int i = 0; i < cpu_num_; ++i) {
-    profile_stat[i].dev_name = "cpu/" + std::to_string(i);
+    profile_stat[i].dev_name_ = "cpu/" + std::to_string(i);
   }
   for (unsigned int i = 0; i < gpu_num_; ++i) {
-    profile_stat[cpu_num_ + i].dev_name = "gpu/" + std::to_string(i);
+    profile_stat[cpu_num_ + i].dev_name_ = "gpu/" + std::to_string(i);
   }
-  profile_stat[cpu_num_ + gpu_num_].dev_name = "cpu pinned/";
+  profile_stat[cpu_num_ + gpu_num_].dev_name_ = "cpu pinned/";
 
   mode_ = (ProfilerMode)dmlc::GetEnv("MXNET_PROFILER_MODE", static_cast<int>(kOnlySymbolic));
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
@@ -99,7 +93,7 @@ void Profiler::SetConfig(ProfilerMode mode, std::string output_filename) {
 }
 
 OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
-  OprExecStat* opr_stat = new OprExecStat;
+  std::unique_ptr<OprExecStat> opr_stat(new OprExecStat);
   opr_stat->dev_type = dev_type;
   opr_stat->dev_id   = dev_id;
   opr_stat->opr_name[sizeof(opr_stat->opr_name)-1] = '\0';
@@ -116,16 +110,13 @@ OprExecStat *Profiler::AddOprStat(int dev_type, uint32_t dev_id) {
       idx = cpu_num_ + gpu_num_;
       break;
     default:
-      LOG(FATAL) << "Unkown dev_type";
+      LOG(FATAL) << "Unknown dev_type: " << dev_type;
       return NULL;
   }
 
   DevStat& dev_stat = profile_stat[idx];
-  {
-    std::lock_guard<std::mutex> lock{dev_stat.m_};
-    dev_stat.opr_exec_stats.push_back(opr_stat);
-  }
-  return opr_stat;
+  dev_stat.opr_exec_stats_->enqueue(opr_stat.get());
+  return opr_stat.release();
 }
 
 void Profiler::EmitPid(std::ostream *os, const std::string& name, uint32_t pid) {
@@ -167,19 +158,17 @@ void Profiler::DumpProfile() {
 
   for (uint32_t i = 0; i < dev_num; ++i) {
     const DevStat &d = profile_stat[i];
-    this->EmitPid(&file, d.dev_name, i);
+    this->EmitPid(&file, d.dev_name_, i);
     file << ",\n";
   }
 
   bool first_flag = true;
   for (uint32_t i = 0; i < dev_num; ++i) {
     DevStat &d = profile_stat[i];
-    std::lock_guard<std::mutex> lock(d.m_);
-    uint32_t opr_num = d.opr_exec_stats.size();
-
-    for (uint32_t j = 0; j < opr_num; ++j) {
-      const OprExecStat* opr_stat = d.opr_exec_stats[j];
-
+    OprExecStat *_opr_stat;
+    while (d.opr_exec_stats_->try_dequeue(_opr_stat)) {
+      CHECK_NOTNULL(_opr_stat);
+      std::unique_ptr<OprExecStat> opr_stat(_opr_stat);  // manage lifecycle
       uint32_t pid = i;
       uint32_t tid = opr_stat->thread_id;
 
@@ -190,10 +179,10 @@ void Profiler::DumpProfile() {
       }
       file << std::endl;
       this->EmitEvent(&file, opr_stat->opr_name, "category", "B",
-            opr_stat->opr_start_rel_micros, pid, tid);
+                      opr_stat->opr_start_rel_micros, pid, tid);
       file << ",\n";
       this->EmitEvent(&file, opr_stat->opr_name, "category", "E",
-            opr_stat->opr_end_rel_micros, pid, tid);
+                      opr_stat->opr_end_rel_micros, pid, tid);
     }
   }
 
