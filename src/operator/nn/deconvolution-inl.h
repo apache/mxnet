@@ -331,7 +331,7 @@ class DeconvolutionOp {
     // TODO(bing): check the BLAS Handle, be careful
     CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
-    CHECK_EQ(in_data.size(), 2U);
+    CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(in_grad.size(), expected);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[deconv::kWeight].CheckContiguous(), true);
