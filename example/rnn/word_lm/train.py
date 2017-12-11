@@ -98,7 +98,7 @@ if __name__ == '__main__':
             nbatch += 1
         data_iter.reset()
         loss = total_loss / bptt / batch_size / nbatch
-        logging.info('Iter[%d] %s loss: %.7f, Perplexity: %.7f' % \
+        logging.info('Iter[%d] %s loss:\t%.7f, Perplexity: %.7f' % \
                      (epoch, mode, loss, math.exp(loss)))
         return loss
 
