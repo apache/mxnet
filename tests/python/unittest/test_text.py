@@ -63,7 +63,7 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
     cnt2 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
                                     to_lower=True)
     assert cnt2 == Counter(
-        {'life': 3, 'is': 2, '.': 2, 'great': 1, 'ᑌᑎiᑕoᗪᕮ_文本': 1, 'good': 1,
+        {'life': 3, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
     counter_to_add = Counter({'life': 2})
@@ -79,7 +79,7 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
                                     to_lower=True,
                                     counter_to_add=counter_to_add)
     assert cnt4 == Counter(
-        {'life': 5, 'is': 2, '.': 2, 'great': 1, 'ᑌᑎiᑕoᗪᕮ_文本': 1, 'good': 1,
+        {'life': 5, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
 
@@ -101,7 +101,7 @@ def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
     cnt2 = tu.count_tokens_from_path(path, token_delim=token_delim,
                                      seq_delim=seq_delim, to_lower=True)
     assert cnt2 == Counter(
-        {'life': 9, 'is': 6, '.': 6, 'great': 3, 'ᑌᑎiᑕoᗪᕮ_文本': 3, 'good': 3,
+        {'life': 9, 'is': 6, '.': 6, 'great': 3, '!': 3, 'good': 3,
          "isn't": 3, 'bad': 3})
 
     cnt3 = tu.count_tokens_from_path(file1, token_delim=token_delim,
@@ -123,7 +123,7 @@ def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
                                      seq_delim=seq_delim, to_lower=True,
                                      counter_to_add=counter_to_add)
     assert cnt5 == Counter(
-        {'life': 10, 'is': 6, '.': 6, 'great': 3, 'ᑌᑎiᑕoᗪᕮ_文本': 3, 'good': 3,
+        {'life': 10, 'is': 6, '.': 6, 'great': 3, '!': 3, 'good': 3,
          "isn't": 3, 'bad': 3, 'Life': 1})
 
     cnt6 = tu.count_tokens_from_path(file1, token_delim=token_delim,
@@ -138,6 +138,15 @@ def test_count_tokens_from_path():
     path = os.path.join('./data', 'test_texts')
     _test_count_tokens_from_path_with_delims(path, ' ', '\n')
     _test_count_tokens_from_path_with_delims(path, 'IS', 'LIFE')
+
+
+def test_check_pretrain_files():
+    for embed_name, embed_cls in TextEmbed.embed_registry.items():
+        for pretrain_file in embed_cls.pretrain_file_sha1.keys():
+            TextEmbed.check_pretrain_files(pretrain_file, embed_name)
+
+
+
 
 
 if __name__ == '__main__':
