@@ -42,6 +42,7 @@ namespace op {
 
 namespace concat_enum {
 enum ConcatOpInputs {kData0, kData1, kData2, kData3, kData4};
+enum ConcatOpResource {kTempSpace};
 enum ConcatOpOutputs {kOut};
 }  // namespace concat_enum
 

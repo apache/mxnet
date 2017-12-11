@@ -83,6 +83,7 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
 void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &out_data) {
+  TmpMemMgr::Instance().Init(ctx.requested[fullc::kTempSpace]);
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const TShape& ishape = in_data[fullc::kData].shape();
   const TShape& oshape = out_data[fullc::kOut].shape();
@@ -125,6 +126,7 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &outputs) {
+  TmpMemMgr::Instance().Init(ctx.requested[fullc::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const TShape& ishape = inputs[fullc::kData + 1].shape();

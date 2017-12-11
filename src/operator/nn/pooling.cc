@@ -387,48 +387,53 @@ For 3-D pooling, an additional *depth* dimension is added before
 height, width)*.
 
 )code" ADD_FILELINE)
-    .set_num_inputs(1)
-    .set_num_outputs([](const NodeAttrs& attrs) {
+.set_num_inputs(1)
+.set_num_outputs([](const NodeAttrs& attrs) {
 #if MXNET_USE_MKLDNN == 1
-        const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-        return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
 #else
-        return 1;
+  return 1;
 #endif
-        })
+})
 #if MXNET_USE_MKLDNN == 1
-    .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
-                                        [](const NodeAttrs& attrs) { return 1; })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+                                    [](const NodeAttrs& attrs) { return 1; })
 #endif
-    .set_attr_parser(PoolingParamParser)
-    .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
-    .set_attr<nnvm::FInferType>("FInferType", PoolingType)
-    .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
-    .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingCompute_CPU)
-    .set_attr<nnvm::FGradient>("FGradient",
-                               ElemwiseGradUseInOut{"_backward_Pooling"})
-    .add_argument("data", "NDArray-or-Symbol",
-                  "Input data to the pooling operator.")
-    .add_arguments(PoolingParam::__FIELDS__());
+.set_attr_parser(PoolingParamParser)
+.set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
+.set_attr<nnvm::FInferType>("FInferType", PoolingType)
+.set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
+.set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", PoolingCompute_CPU)
+.set_attr<nnvm::FGradient>("FGradient",
+                           ElemwiseGradUseInOut{"_backward_Pooling"})
+.add_argument("data", "NDArray-or-Symbol",
+              "Input data to the pooling operator.")
+.add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Pooling)
-    .set_num_outputs(1)
-    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-    .set_attr<nnvm::FInplaceOption>(
-        "FInplaceOption",
-        [](const NodeAttrs &attrs) {
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>(
+    "FInplaceOption",
+    [](const NodeAttrs &attrs) {
 #if MXNET_USE_CUDNN == 1
-          return std::vector<std::pair<int, int> >();
+  return std::vector<std::pair<int, int> >();
 #else
-          return std::vector<std::pair<int, int> >{{1, 0}};
+  return std::vector<std::pair<int, int> >{{1, 0}};
 #endif
-        })
-    .set_attr<FInferStorageType>("FInferStorageType",
-                                 backward_PoolingStorageType)
-    .set_attr_parser(PoolingParamParser)
-    .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>)
-    .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradCompute_CPU);
+})
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
+.set_attr<FInferStorageType>("FInferStorageType",
+                             backward_PoolingStorageType)
+.set_attr_parser(PoolingParamParser)
+.set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradCompute_CPU);
 
 }  // namespace op
 }  // namespace mxnet

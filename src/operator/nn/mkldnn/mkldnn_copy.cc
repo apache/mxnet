@@ -36,13 +36,14 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                 const NDArray &out_data) {
   auto in_mem = in_data.GetMKLDNNData();
   if (req == kAddTo) {
+    TmpMemMgr::Instance().Init(ctx.requested[0]);
     // We should try and force the output memory has the same format
     // as the input memory. If not, we'll have to reorder memory.
     auto out_mem = out_data.GetMKLDNNData(in_mem->get_primitive_desc());
     if (out_mem == nullptr)
       out_mem = out_data.GetMKLDNNData();
-    mkldnn_mem_ptr sum_res(
-        new mkldnn::memory(out_mem->get_primitive_desc()));
+    mkldnn_mem_ptr sum_res
+        = TmpMemMgr::Instance().Alloc(out_mem->get_primitive_desc());
     MKLDNNStream::Instance().RegisterMem(sum_res);
     Sum(*in_mem, *out_mem, *sum_res);
     const_cast<NDArray &>(out_data).CopyFrom(*sum_res);

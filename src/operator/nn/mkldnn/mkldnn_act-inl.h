@@ -71,7 +71,8 @@ static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
 
 template<typename Dtype>
 void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
-    const NDArray &in_data, const OpReqType &req, const NDArray &out_data) {
+                       const NDArray &in_data, const OpReqType &req,
+                       const NDArray &out_data) {
   std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
@@ -95,8 +96,8 @@ void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
 
 template<typename Dtype>
 void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
-    const NDArray &out_grad, const NDArray &in_data, const OpReqType &req,
-    const NDArray &in_grad) {
+                        const NDArray &out_grad, const NDArray &in_data,
+                        const OpReqType &req, const NDArray &in_grad) {
   if (req == kNullOp) {
     return;
   }
@@ -108,6 +109,7 @@ void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
   mkldnn::memory::desc diff_md = diff_dst_memory->get_primitive_desc().desc();
   auto cpu_engine = data_mpd.get_engine();
   Dtype alpha = 0;
+  TmpMemMgr::Instance().Init(ctx.requested[activation::kTempSpace]);
 
   auto alg = GetMKLDNNActAlgo(param);
   mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,

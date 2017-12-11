@@ -257,6 +257,11 @@ Example::
   }
   return ret;
 })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<FInferStorageType>("FInferStorageType", ConcatForwardInferStorageType)
@@ -275,6 +280,11 @@ NNVM_REGISTER_OP(_backward_Concat)
   return params.num_args;
 })
 .set_attr_parser(ParamParser<ConcatParam>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", backward_ConcatStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>)

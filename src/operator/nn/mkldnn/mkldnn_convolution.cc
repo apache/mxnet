@@ -169,6 +169,7 @@ void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ct
                                const std::vector<NDArray> &in_data,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &out_data) {
+  TmpMemMgr::Instance().Init(ctx.requested[conv::kTempSpace]);
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwd(param,
       ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
@@ -195,6 +196,7 @@ void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ct
 void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
     const std::vector<NDArray>& outputs) {
+  TmpMemMgr::Instance().Init(ctx.requested[conv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   auto engine = CpuEngine::Instance().get_engine();
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);

@@ -500,13 +500,6 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   }
 }
 
-static int GetTypeSize(int dtype) {
-  MSHADOW_TYPE_SWITCH(dtype, DType, {
-    return sizeof(DType);
-  });
-  return -1;
-}
-
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
@@ -566,8 +559,7 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
     stream.RegisterMem(ret);
     return ret;
   } else {
-    // TODO(zhengda) we should manage the memory allocation here.
-    mkldnn_mem_ptr ret(new mkldnn::memory(desc));
+    mkldnn_mem_ptr ret = TmpMemMgr::Instance().Alloc(desc);
     stream.RegisterMem(ret);
     stream.RegisterPrim(mkldnn::reorder(*ptr_->Mkl_mem_, *ret));
     return ret;
@@ -649,7 +641,8 @@ std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
     return ptr_->Mkl_mem_;
   }
 
-  ptr_->Mkl_mem_ = CreateMKLDNNMem(desc);
+  ptr_->Mkl_mem_ = mkldnn_mem_ptr(new mkldnn::memory(desc));
+  MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
   return ptr_->Mkl_mem_;
 }
 #endif

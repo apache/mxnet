@@ -39,6 +39,7 @@
 *         deepthi.karkada@intel.com
 *         louis.feng@intel.com
 *         adam.d.straw@intel.com
+*         zhengda1936@gmail.com
 *
 *******************************************************************************/
 
@@ -129,6 +130,17 @@ static inline bool SupportMKLDNNConv(const NDArray &input) {
   return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
 }
 
+static int GetTypeSize(int dtype) {
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+    return sizeof(DType);
+  });
+  return -1;
+}
+
+static inline size_t GetArraySize(const NDArray &arr) {
+  return arr.shape().Size() * GetTypeSize(arr.dtype());
+}
+
 static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   switch (dtype) {
     case mshadow::kFloat32:
@@ -175,6 +187,67 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
 typedef std::shared_ptr<mkldnn::memory> mkldnn_mem_ptr;
 typedef std::shared_ptr<const mkldnn::memory> mkldnn_mem_const_ptr;
 
+class TmpMemMgr {
+  // This points to the memory buffer where we can allocate temp memory.
+  char *curr_mem;
+  // The total size of the temp memory.
+  size_t mem_size;
+  // This contains the current available memory size.
+  size_t curr_size;
+  // This estimate the required temp memory size in an operator.
+  size_t est_size;
+ public:
+  static TmpMemMgr &Instance() {
+    static thread_local TmpMemMgr mgr;
+    return mgr;
+  }
+
+  TmpMemMgr() {
+    Reset();
+    est_size = 0;
+    mem_size = 0;
+  }
+
+  void Reset() {
+    curr_mem = nullptr;
+    curr_size = 0;
+    // We don't reset est_size and mem_size because est_size contains the
+    // estimated temp memory size from the last run and mem_size contains the
+    // memroy size allocated in the last run.
+  }
+
+  void Init(const Resource &r) {
+    // If the last time, if we estimate that we need more memory, we should the
+    // larger memory size.
+    mem_size = std::max(mem_size, est_size);
+    if (mem_size > 0) {
+      // Let's allocate some extra memory. If we don't use some of them all the time,
+      // the OS won't physically allocate pages for them any way.
+      this->curr_mem = static_cast<char *>(r.get_host_space_internal(mem_size * 2));
+      this->curr_size = mem_size * 2;
+    }
+    // reset est_size, so we can start to estimate the temp memory size.
+    this->est_size = 0;
+  }
+
+  mkldnn_mem_ptr Alloc(const mkldnn::memory::primitive_desc &pd) {
+    this->est_size += pd.get_size();
+    if (pd.get_size() <= this->curr_size) {
+      // The memory is allocated from the temporary memory space in the
+      // operator. It'll only become invalid after we exit from the operator.
+      // TODO I need to make sure memory allocated here is aligned.
+      mkldnn_mem_ptr ret(new mkldnn::memory(pd, this->curr_mem));
+      this->curr_size -= pd.get_size();
+      this->curr_mem += pd.get_size();
+      return ret;
+    } else {
+      LOG(WARNING) << "Allocate " << pd.get_size()
+          << " bytes with malloc directly";
+      return mkldnn_mem_ptr(new mkldnn::memory(pd));
+    }
+  }
+};
+
 class MKLDNNStream {
   std::vector<mkldnn::primitive> net;
   // Here we hold all memory related to the operators in the stream.
@@ -195,13 +268,13 @@ class MKLDNNStream {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
     net.clear();
     mem_holder.clear();
+    TmpMemMgr::Instance().Reset();
   }
 };
 
-inline static mkldnn_mem_ptr CreateMKLDNNMem(
+inline static mkldnn_mem_ptr CreateMKLDNNTempMem(
     const mkldnn::memory::primitive_desc &desc) {
-  // TODO(zhengda) allocate memory more efficiently.
-  std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(desc));
+  mkldnn_mem_ptr ret = TmpMemMgr::Instance().Alloc(desc);
   MKLDNNStream::Instance().RegisterMem(ret);
   return ret;
 }
@@ -218,13 +291,18 @@ static inline mkldnn_output_t CreateMKLDNNMem(
     const NDArray &arr, const mkldnn::memory::primitive_desc &desc,
     OpReqType req) {
   if (kAddTo == req) {
-    return mkldnn_output_t(OutDataOp::AddBack, CreateMKLDNNMem(desc));
+    auto tmp = TmpMemMgr::Instance().Alloc(desc);
+    MKLDNNStream::Instance().RegisterMem(tmp);
+    return mkldnn_output_t(OutDataOp::AddBack, tmp);
   } else {
     mkldnn_mem_ptr mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
-    if (mem == nullptr)
-      return mkldnn_output_t(OutDataOp::CopyBack, CreateMKLDNNMem(desc));
-    else
+    if (mem == nullptr) {
+      auto tmp = TmpMemMgr::Instance().Alloc(desc);
+      MKLDNNStream::Instance().RegisterMem(tmp);
+      return mkldnn_output_t(OutDataOp::CopyBack, tmp);
+    } else {
       return mkldnn_output_t(OutDataOp::Noop, mem);
+    }
   }
 }
 
@@ -242,8 +320,8 @@ static inline void CommitOutput(const NDArray &arr,
         arr.GetMKLDNNData(res.second->get_primitive_desc());
     CHECK(mem != nullptr);
     // We have to allocate new memory for the sum result.
-    mkldnn_mem_ptr sum_res(
-        new mkldnn::memory(res.second->get_primitive_desc()));
+    mkldnn_mem_ptr sum_res = TmpMemMgr::Instance().Alloc(
+        res.second->get_primitive_desc());
     MKLDNNStream::Instance().RegisterMem(sum_res);
     op::Sum(*res.second, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
@@ -290,7 +368,7 @@ inline static mkldnn_mem_const_ptr GetWeights(
   }
   if (mem->get_primitive_desc() == target_pd) return mem;
 
-  std::shared_ptr<mkldnn::memory> ret = CreateMKLDNNMem(target_pd);
+  std::shared_ptr<mkldnn::memory> ret = CreateMKLDNNTempMem(target_pd);
   MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(*mem, *ret));
   return ret;
 }
