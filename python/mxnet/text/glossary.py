@@ -694,7 +694,7 @@ class FastText(TextEmbed):
     https://arxiv.org/abs/1607.01759
 
     FastText.zip: Compressing text classification models
-    Armand Joulin, Edouard Grave, Piotr Bojanowski, Matthijs Douze, Hérve Jégou,
+    Armand Joulin, Edouard Grave, Piotr Bojanowski, Matthijs Douze, Herve Jegou,
     and Tomas Mikolov
     https://arxiv.org/abs/1612.03651
 
