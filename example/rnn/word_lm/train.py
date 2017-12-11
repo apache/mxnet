@@ -79,7 +79,7 @@ if __name__ == '__main__':
     loss = softmax_ce_loss(pred)
 
     # module
-    module = StatefulModule(loss, states, state_names=state_names, context=ctx)
+    module = CustomStatefulModule(loss, states, state_names=state_names, context=ctx)
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier())
     optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=1.0/batch_size)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
             nbatch += 1
         data_iter.reset()
         loss = total_loss / bptt / batch_size / nbatch
-        logging.info('Iter[%d]\t%s loss: %.7f, Perplexity: %.7f' % \
+        logging.info('Iter[%d] %s loss: %.7f, Perplexity: %.7f' % \
                      (epoch, mode, loss, math.exp(loss)))
         return loss
 

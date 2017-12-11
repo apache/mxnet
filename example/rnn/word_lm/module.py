@@ -41,6 +41,8 @@ class CustomStatefulModule():
         Defaults to `logging`.
     context : Context or list of Context
         Defaults to ``mx.cpu()``.
+    initial_states: float or list of NDArray
+        Defaults to 0.0.
     """
     def __init__(self, loss, states, state_names, data_names=('data',), label_names=('label',),
                  context=mx.cpu(), initial_states=0.0, **kwargs):
@@ -50,7 +52,6 @@ class CustomStatefulModule():
         self._next_states = initial_states
         self._module = mx.module.Module(self._net, data_names=data_names, label_names=label_names,
                                         context=context, state_names=state_names, **kwargs)
-
 
     def backward(self, out_grads=None):
         """Backward computation.
@@ -71,25 +72,27 @@ class CustomStatefulModule():
     def bind(self, data_shapes, **kwargs):
         """Binds the symbols to construct executors. This is necessary before one
         can perform computation with the module.
-
         """
         self._module.bind(data_shapes, **kwargs)
 
-    def stateful_forward(self, data_batch, is_train=None):
-        """Forward computation.
+    def forward(self, data_batch, is_train=None, carry_state=True):
+        """Forward computation. States from previous forward computation are carried
+        to the current iteration if `carry_state` is set to `True`.
         """
         # propagate states from the previous iteration
-        if isinstance(self._next_states, (int, float)):
-            self._module.set_states(value=self._next_states)
-        else:
-            self._module.set_states(states=self._next_states)
+        if carry_state:
+            if isinstance(self._next_states, (int, float)):
+                self._module.set_states(value=self._next_states)
+            else:
+                self._module.set_states(states=self._next_states)
         self._module.forward(data_batch, is_train=is_train)
         outputs = self._module.get_outputs(merge_multi_context=False)
         self._next_states = outputs[:-1]
 
     def update(self, max_norm=None):
         """Updates parameters according to the installed optimizer and the gradients computed
-        in the previous forward-backward batch.
+        in the previous forward-backward batch. Gradients are clipped by their global norm
+        if `max_norm` is set.
 
         Parameters
         ----------
@@ -117,7 +120,6 @@ class CustomStatefulModule():
         -------
         norm_val : float
             The computed norm of the gradients.
-
         """
         assert self._module.binded and self._module.params_initialized \
                and self._module.optimizer_initialized
@@ -130,4 +132,3 @@ class CustomStatefulModule():
         """Gets the output loss of the previous forward computation.
         """
         return self._module.get_outputs(merge_multi_context=False)[-1]
-
