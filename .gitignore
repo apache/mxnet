@@ -102,7 +102,7 @@ tags
 
 # cscope
 cscope.out
-cscope/
+cscope.files
 
 # Scala package
 *.class
