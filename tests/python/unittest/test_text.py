@@ -146,6 +146,11 @@ def test_check_pretrain_files():
             TextEmbed.check_pretrain_files(pretrain_file, embed_name)
 
 
+def test_text_embed():
+    fasttext_simple = TextEmbed.create_text_embed(
+        'fasttext', pretrain_file='wiki.simple.vec')
+    assert len(fasttext_simple) == 111051
+
 
 
 

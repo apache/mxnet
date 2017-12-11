@@ -420,8 +420,7 @@ class TextEmbed(object):
                                    'embedding file %s is unexpected.' \
                                    % pretrain_file_path
 
-            token, elems = elems[0].decode('utf8'), [float(i)
-                                                     for i in elems[1:]]
+            token, elems = elems[0], [float(i) for i in elems[1:]]
 
             if len(elems) == 1:
                 warnings.warn('Token %s with 1-dimensional vector %s is '
@@ -608,8 +607,8 @@ class TextEmbed(object):
         """
         str_lst = []
         for embed_name, embed_cls in TextEmbed.embed_registry.items():
-            str_lst.append('embed_name: %s' % embed_name)
-            str_lst.append('pretrain_file: %s\n' %
+            str_lst.append('embed_name: %s\n' % embed_name)
+            str_lst.append('pretrain_file: %s\n\n' %
                            ', '.join(embed_cls.pretrain_file_sha1.keys()))
         return ''.join(str_lst)
 
