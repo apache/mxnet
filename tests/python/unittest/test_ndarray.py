@@ -15,15 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
-import mxnet as mx
-import numpy as np
 import pickle as pkl
 import unittest
 from nose.tools import raises
 from mxnet.test_utils import *
 from numpy.testing import assert_allclose
-import unittest
 import mxnet.autograd
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
