@@ -56,7 +56,7 @@ inline void check_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs A and B for gemm";
 }
 
-#if MSHADOW_USE_CBLAS == 1
+#if (MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1)
 
 #define LINALG_CPU_GEMM(fname, DType) \
 template<> inline \
@@ -98,7 +98,7 @@ void linalg_batch_gemm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<
   LOG(FATAL) << "linalg_batch_gemm not implemented by mxnet for cpu, needs cblas!"; \
 }
 
-#endif  // MSHADOW_USE_CBLAS == 1
+#endif  // MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1
 
 LINALG_CPU_GEMM(sgemm, float)
 LINALG_CPU_GEMM(dgemm, double)
@@ -253,7 +253,7 @@ inline void check_trsm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs A and B for trsm";
 }
 
-#if MSHADOW_USE_CBLAS == 1
+#if (MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1)
 
 #define LINALG_CPU_TRSM(fname, DType) \
 template<> inline \
@@ -292,7 +292,7 @@ void linalg_batch_trsm<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<
   LOG(FATAL) << "linalg_batch_trsm not implemented, needs cblas!"; \
 }
 
-#endif  // MSHADOW_USE_CBLAS == 1
+#endif  // MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1
 
 LINALG_CPU_TRSM(strsm, float)
 LINALG_CPU_TRSM(dtrsm, double)
@@ -389,7 +389,7 @@ inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
   }
 }
 
-#if MSHADOW_USE_CBLAS == 0
+#if (MSHADOW_USE_CBLAS == 0 && MSHADOW_USE_MKL == 0)
 
 // A template for a cpu linalg_gemm implementation using mshadow::dot()
 #define LINALG_CPU_GEMM_NO_CBLAS(DType) \
@@ -443,7 +443,7 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
 LINALG_CPU_GEMM_NO_CBLAS(float)
 LINALG_CPU_GEMM_NO_CBLAS(double)
 
-#endif  // (MSHADOW_USE_CBLAS == 0)
+#endif  // (MSHADOW_USE_CBLAS == 0 && MSHADOW_USE_MKL == 0)
 
 //////////////////////////////// TRMM ////////////////////////////////////////////
 
@@ -463,7 +463,7 @@ inline void check_trmm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs A and B for trmm";
 }
 
-#if MSHADOW_USE_CBLAS == 1
+#if (MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1)
 
 #define LINALG_CPU_TRMM(fname, DType) \
 template<> inline \
@@ -485,7 +485,7 @@ void linalg_trmm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
   LOG(FATAL) << "linalg_trmm not implemented, needs cblas!"; \
 }
 
-#endif  // MSHADOW_USE_CBLAS == 1
+#endif  // MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1
 
 #define LINALG_XPU_BATCH_TRMM(xpu, DType) \
 template<> inline \
@@ -735,7 +735,7 @@ void check_syrk(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
     << "Non compatible matrix dimensions between inputs A and B for syrk";
 }
 
-#if MSHADOW_USE_CBLAS == 1
+#if (MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1)
 
 #define LINALG_CPU_SYRK(fname, DType) \
 template<> inline \
@@ -758,7 +758,7 @@ void linalg_syrk<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
   LOG(FATAL) << "linalg_syrk not implemented by mxnet for cpu, needs cblas!"; \
 }
 
-#endif  // MSHADOW_USE_CBLAS == 1
+#endif  // MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1
 
 #define LINALG_XPU_BATCH_SYRK(xpu, DType) \
 template<> inline \
@@ -811,7 +811,7 @@ void check_gelqf(const Tensor<xpu, 2, DType>& A,
   // Any checking that helps user debug potential problems.
   CHECK_LE(A.size(0), A.size(1))
     << "A must have num(rows) <= num(columns)";
-  CHECK_LT(A.size(0), work.size(0))
+  CHECK_LE(A.size(0), work.size(0))
     << "Size of work is too small";
 }
 
@@ -963,6 +963,132 @@ int linalg_gelqf_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
 
 LINALG_GPU_GELQF_WORKSPACE_QUERY(S, float)
 LINALG_GPU_GELQF_WORKSPACE_QUERY(D, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// SYEVD ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "syevd"
+
+template<typename xpu, typename DType> inline
+void check_syevd(const Tensor<xpu, 2, DType>& A,
+                 const Tensor<xpu, 1, DType>& L) {
+  // Any checking that helps user debug potential problems.
+  CHECK_EQ(A.size(0), A.size(1))
+    << "A must be square symmetric matrix";
+  CHECK_EQ(A.size(0), L.size(0))
+    << "A, L have incompatible sizes";
+}
+
+#define LINALG_CPU_SYEVD(fname, DType) \
+template<> inline \
+void linalg_syevd<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& L, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  check_syevd(A, L); \
+  int liwork(0); \
+  MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                       A.dptr_, A.stride_, L.dptr_, work.dptr_, -1, &liwork, \
+                      -1); \
+  int lwork(static_cast<int>(*work.dptr_)); \
+  int *iwork = static_cast<int*>(static_cast<void*>(work.dptr_ + lwork)); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                               A.dptr_, A.stride_, L.dptr_, work.dptr_, \
+                               lwork, iwork, liwork)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+LINALG_CPU_SYEVD(ssyevd, float)
+LINALG_CPU_SYEVD(dsyevd, double)
+
+// Mangle temp storage requirements for DType and int into a single
+// request as we can only allocate one temp space per operator. We
+// partition this temp space into two chunks again when calling sseyvd.
+// Returned is the number of elements of type DType that the temp space
+// needs to accomodate. This also makes this function signature equivalent
+// to the work space query on GPU.
+#define LINALG_CPU_SYEVD_WORKSPACE_QUERY(func, DType) \
+template<> inline \
+int linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                                             const Tensor<cpu, 1, DType>& L, \
+                                             Stream<cpu> *s) { \
+  DType work(0.0); \
+  int iwork(0); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
+                      A.dptr_, A.stride_, L.dptr_, &work, -1, &iwork, \
+                      -1); \
+  iwork = (sizeof(int) * iwork + sizeof(DType) - 1) / sizeof(DType); \
+  return static_cast<int>(work) + iwork; \
+}
+LINALG_CPU_SYEVD_WORKSPACE_QUERY(ssyevd, float)
+LINALG_CPU_SYEVD_WORKSPACE_QUERY(dsyevd, double)
+
+#ifdef __CUDACC__
+
+// SYEVD only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+// Row-major vs. col-major handled by using upper triangular
+// in cusolver-call.
+#define LINALG_GPU_SYEVD(fname, DType) \
+template<> inline \
+void linalg_syevd<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                              const Tensor<gpu, 1, DType>& L, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using mshadow::gpu; \
+  CHECK_NOTNULL(s); \
+  check_syevd(A, L); \
+  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
+                CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, \
+                A.size(0), A.dptr_ , A.stride_, L.dptr_, work.dptr_, \
+                work.size(0), static_cast<int *>(info.dptr))); \
+  Storage::Get()->Free(info); \
+}
+
+#define LINALG_GPU_SYEVD_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_syevd_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                                             const Tensor<gpu, 1, DType>& L, \
+                                             Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using mshadow::gpu; \
+  int lwork(0); \
+  CUSOLVER_CALL(cusolver##fname##_bufferSize(Stream<gpu>::GetSolverHandle(s), \
+                CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, \
+                A.size(0), A.dptr_ , A.stride_, L.dptr_, &lwork)); \
+  return lwork; \
+}
+
+#else
+
+#define LINALG_GPU_SYEVD(fname, DType) \
+template<> inline \
+void linalg_syevd<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                              const Tensor<gpu, 1, DType>& L, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  LOG(FATAL) << "syevd requires CUDA version >= 8.0!"; \
+}
+
+#define LINALG_GPU_SYEVD_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_syevd_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                                             const Tensor<gpu, 1, DType>& L, \
+                                             Stream<gpu> *s) { \
+  LOG(FATAL) << "syevd requires CUDA version >= 8.0!"; \
+  return 0; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_SYEVD(DnSsyevd, float)
+LINALG_GPU_SYEVD(DnDsyevd, double)
+
+LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnSsyevd, float)
+LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnDsyevd, double)
 
 #endif  // __CUDACC__
 

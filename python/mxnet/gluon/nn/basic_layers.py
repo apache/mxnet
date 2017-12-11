@@ -18,15 +18,19 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-
+__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
+           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
+           'Lambda', 'HybridLambda']
 import warnings
+import numpy as np
 
 from ..block import Block, HybridBlock
 from ..utils import _indent
+from ... import nd, sym
 
 
 class Sequential(Block):
-    """Stacks `Block`s sequentially.
+    """Stacks Blocks sequentially.
 
     Example::
 
@@ -64,7 +68,7 @@ class Sequential(Block):
     def __len__(self):
         return len(self._children)
 
-    def hybridize(self, active=True):
+    def hybridize(self, active=True, **kwargs):
         """Activates or deactivates `HybridBlock`s recursively. Has no effect on
         non-hybrid children.
 
@@ -72,15 +76,17 @@ class Sequential(Block):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
+        **kwargs : string
+            Additional flags for hybridized operator.
         """
         if self._children and all(isinstance(c, HybridBlock) for c in self._children):
             warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
                           'using HybridSequential for the best performance.')
-        super(Sequential, self).hybridize(active)
+        super(Sequential, self).hybridize(active, **kwargs)
 
 
 class HybridSequential(HybridBlock):
-    """Stacks `HybridBlock`s sequentially.
+    """Stacks HybridBlocks sequentially.
 
     Example::
 
@@ -89,6 +95,7 @@ class HybridSequential(HybridBlock):
         with net.name_scope():
             net.add(nn.Dense(10, activation='relu'))
             net.add(nn.Dense(20))
+        net.hybridize()
     """
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
@@ -161,21 +168,16 @@ class Dense(HybridBlock):
         See document of `Block`.
 
 
-    If ``flatten`` is set to be True, then the shapes are:
-    Input shape:
-        An N-D input with shape
-        `(batch_size, x1, x2, ..., xn) with x1 * x2 * ... * xn equal to in_units`.
+    Inputs:
+        - **data**: if `flatten` is True, `data` should be a tensor with shape
+          `(batch_size, x1, x2, ..., xn)`, where x1 * x2 * ... * xn is equal to
+          `in_units`. If `flatten` is False, `data` should have shape
+          `(x1, x2, ..., xn, in_units)`.
 
-    Output shape:
-        The output would have shape `(batch_size, units)`.
-
-    If ``flatten`` is set to be false, then the shapes are:
-    Input shape:
-        An N-D input with shape
-        `(x1, x2, ..., xn, in_units)`.
-
-    Output shape:
-        The output would have shape `(x1, x2, ..., xn, units)`.
+    Outputs:
+        - **out**: if `flatten` is True, `out` will be a tensor with shape
+          `(batch_size, units)`. If `flatten` is False, `out` will have shape
+          `(x1, x2, ..., xn, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True, flatten=True,
                  weight_initializer=None, bias_initializer='zeros',
@@ -208,14 +210,14 @@ class Dense(HybridBlock):
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
+        shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
                         act=self.act if self.act else 'linear',
-                        layout='{0} -> {1}'.format(self._in_units, self._units) if self._in_units
-                        else self._units)
+                        layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
 class Activation(HybridBlock):
-    """Applies an activation function to input.
+    r"""Applies an activation function to input.
 
     Parameters
     ----------
@@ -224,11 +226,11 @@ class Activation(HybridBlock):
         See :func:`~mxnet.ndarray.Activation` for available choices.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, activation, **kwargs):
         self._act_type = activation
@@ -258,11 +260,11 @@ class Dropout(HybridBlock):
         Fraction of the input units to drop. Must be a number between 0 and 1.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
 
     References
     ----------
@@ -320,11 +322,11 @@ class BatchNorm(HybridBlock):
         and `in_channels` will be inferred from the shape of input data.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
@@ -355,14 +357,19 @@ class BatchNorm(HybridBlock):
                                            allow_deferred_init=True,
                                            differentiable=False)
 
+    def cast(self, dtype):
+        if np.dtype(dtype).name == 'float16':
+            dtype = 'float32'
+        super(BatchNorm, self).cast(dtype)
+
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
                            name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}({content}'
-        if hasattr(self, 'in_channels'):
-            s += ', in_channels={0}'.format(self.in_channels)
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels if in_channels else None)
         s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
@@ -370,12 +377,18 @@ class BatchNorm(HybridBlock):
 
 
 class LeakyReLU(HybridBlock):
-    """Leaky version of a Rectified Linear Unit.
+    r"""Leaky version of a Rectified Linear Unit.
 
-    It allows a small gradient when the unit is not active::
+    It allows a small gradient when the unit is not active
 
-        `f(x) = alpha * x for x < 0`,
-        `f(x) = x for x >= 0`.
+    .. math::
+
+        f\left(x\right) = \left\{
+            \begin{array}{lr}
+               \alpha x & : x \lt 0 \\
+                      x & : x \geq 0 \\
+            \end{array}
+        \right.\\
 
     Parameters
     ----------
@@ -383,13 +396,14 @@ class LeakyReLU(HybridBlock):
         slope coefficient for the negative half axis. Must be >= 0.
 
 
-    Input shape:
-        Arbitrary.
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
 
-    Output shape:
-        Same shape as input.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, alpha, **kwargs):
+        assert alpha >= 0, "Slope coefficient for LeakyReLU must be no less than 0."
         super(LeakyReLU, self).__init__(**kwargs)
         self._alpha = alpha
 
@@ -403,7 +417,7 @@ class LeakyReLU(HybridBlock):
 
 
 class Embedding(HybridBlock):
-    """Turns non-negative integers (indexes/tokens) into dense vectors
+    r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
 
 
@@ -419,11 +433,11 @@ class Embedding(HybridBlock):
         Initializer for the `embeddings` matrix.
 
 
-    Input shape:
-        2D tensor with shape: `(N, M)`.
+    Inputs:
+        - **data**: 2D tensor with shape: `(x1, x2)`.
 
-    Output shape:
-        3D tensor with shape: `(N, M, output_dim)`.
+    Output:
+        - **out**: 3D tensor with shape: `(x1, x2, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
                  weight_initializer=None, **kwargs):
@@ -444,13 +458,13 @@ class Embedding(HybridBlock):
 
 
 class Flatten(HybridBlock):
-    """Flattens the input to two dimensional.
+    r"""Flattens the input to two dimensional.
 
-    Input shape:
-        Arbitrary shape `(N, a, b, c, ...)`
+    Inputs:
+        - **data**: input tensor with arbitrary shape `(N, x1, x2, ..., xn)`
 
-    Output shape:
-        2D tensor with shape: `(N, a*b*c...)`
+    Output:
+        - **out**: 2D tensor with shape: `(N, x1 \cdot x2 \cdot ... \cdot xn)`
     """
     def __init__(self, **kwargs):
         super(Flatten, self).__init__(**kwargs)
@@ -460,3 +474,93 @@ class Flatten(HybridBlock):
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class Lambda(Block):
+    r"""Wraps an operator or an expression as a Block object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in ndarray. For example::
+
+            block = Lambda('tanh')
+
+        2) a function that conforms to "def function(*args)". For example::
+
+            block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
+
+    Inputs:
+        - ** *args **: one or more input data. Their shapes depend on the function.
+
+    Output:
+        - ** *outputs **: one or more output data. Their shapes depend on the function.
+    """
+    def __init__(self, function, prefix=None):
+        super(Lambda, self).__init__(prefix=prefix)
+        if isinstance(function, str):
+            assert hasattr(nd, function), \
+                   "Function name %s is not found in ndarray." % function
+            self._func_impl = getattr(nd, function)
+        elif callable(function):
+            self._func_impl = function
+        else:
+            raise ValueError(
+                "Unrecognized function in lambda: {} of type {}"
+                .format(function, type(function)))
+
+    def forward(self, *args):
+        return self._func_impl(*args)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_impl.__name__)
+
+
+class HybridLambda(HybridBlock):
+    r"""Wraps an operator or an expression as a HybridBlock object.
+
+
+    Parameters
+    ----------
+    function : str or function
+        Function used in lambda must be one of the following:
+        1) the name of an operator that is available in both symbol and ndarray. For example::
+
+            block = HybridLambda('tanh')
+
+        2) a function that conforms to "def function(F, data, *args)". For example::
+
+            block = HybridLambda(lambda F, x: F.LeakyReLU(x, slope=0.1))
+
+    Inputs:
+        - ** *args **: one or more input data. First argument must be symbol or ndarray.
+        Their shapes depend on the function.
+
+    Output:
+        - ** *outputs **: one or more output data. Their shapes depend on the function.
+    """
+    def __init__(self, function, prefix=None):
+        super(HybridLambda, self).__init__(prefix=prefix)
+        if isinstance(function, str):
+            assert hasattr(nd, function) and hasattr(sym, function), \
+                   "Function name %s is not found in symbol/ndarray." % function
+            func_dict = {sym: getattr(sym, function), nd: getattr(nd, function)}
+            self._func = lambda F, *args: func_dict[F](*args)
+            self._func_name = function
+        elif callable(function):
+            self._func = function
+            self._func_name = function.__name__
+        else:
+            raise ValueError(
+                "Unrecognized function in lambda: {} of type {}"
+                .format(function, type(function)))
+
+    def hybrid_forward(self, F, x, *args):
+        return self._func(F, x, *args)
+
+    def __repr__(self):
+        return '{name}({function})'.format(name=self.__class__.__name__,
+                                           function=self._func_name)

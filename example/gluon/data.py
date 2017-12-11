@@ -115,7 +115,7 @@ def imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-1):
 
 
 class DummyIter(mx.io.DataIter):
-    def __init__(self, batch_size, data_shape, batches = 5):
+    def __init__(self, batch_size, data_shape, batches = 100):
         super(DummyIter, self).__init__(batch_size)
         self.data_shape = (batch_size,) + data_shape
         self.label_shape = (batch_size,)
@@ -166,9 +166,9 @@ class ImagePairIter(mx.io.DataIter):
                 image = mx.nd.expand_dims(mx.nd.array(image), axis=2)
                 target = image.copy()
                 for aug in self.input_aug:
-                    image = aug(image)[0]
+                    image = aug(image)
                 for aug in self.target_aug:
-                    target = aug(target)[0]
+                    target = aug(target)
                 data.append(image)
                 label.append(target)
 

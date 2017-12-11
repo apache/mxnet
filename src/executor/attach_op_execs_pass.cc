@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2016 by Contributors
  * \file attach_op_execs_pass.cc
  * \brief Operator executor to execute each operator.
  */
@@ -27,6 +28,7 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 #include "./exec_pass.h"
 #if MXNET_USE_MKL2017 == 1
 #include <mkl_memory.h>
@@ -62,46 +64,23 @@ class StorageFallbackOpExecutor : public OpExecutor {
       pre_temp_src_.clear(); pre_temp_dst_.clear();
       post_temp_src_.clear(); post_temp_dst_.clear();
       in_temp_idx_map_.clear();
-      SetupDefaultBlobs(in_array, &in_data_, &pre_temp_src_, &pre_temp_dst_, &in_temp_idx_map_);
-      SetupDefaultBlobs(out_array, &out_data_, &post_temp_dst_, &post_temp_src_);
-      for (const auto idx : mutate_idx_) {
-        auto map_iter = in_temp_idx_map_.find(idx);
-        if (map_iter != in_temp_idx_map_.end()) {
-          post_temp_src_.push_back(pre_temp_dst_[map_iter->second]);
-          post_temp_dst_.push_back(in_array[idx]);
-        }
-      }
+      SetupDefaultBlobsInOut(in_array, out_array, &in_data_, &out_data_,
+                             &pre_temp_src_, &pre_temp_dst_,
+                             &post_temp_src_, &post_temp_dst_,
+                             &in_temp_idx_map_, mutate_idx_);
       init_ = true;
     }
   }
 
   // storage fallback before fcompute is launched
   void PreFCompute(bool is_gpu) {
-    using namespace common;
     InitBlobs();
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      CastNonDefaultStorage<gpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-    } else {
-      CastNonDefaultStorage<cpu>(pre_temp_src_, pre_temp_dst_, op_ctx);
-    }
+    common::CastNonDefaultStorage(pre_temp_src_, pre_temp_dst_, op_ctx, is_gpu);
   }
 
   // storage fallback after fcompute is completed
   void PostFCompute(bool is_gpu) {
-    using namespace common;
-    if (is_gpu) {
-#if MXNET_USE_CUDA
-      CastNonDefaultStorage<gpu>(post_temp_src_, post_temp_dst_, op_ctx);
-#else
-      LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-    } else {
-      CastNonDefaultStorage<cpu>(post_temp_src_, post_temp_dst_, op_ctx);
-    }
+    common::CastNonDefaultStorage(post_temp_src_, post_temp_dst_, op_ctx, is_gpu);
   }
 
   // default storage tensor blobs for fcompute
@@ -259,8 +238,7 @@ Graph AttachOpExecs(Graph g) {
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& saved_states = g.GetAttr<
     std::unordered_map<const nnvm::Node*, OpStatePtr> >("saved_states");
-  const auto& dispatch_stypes = g.GetAttr<StorageTypeVector>("dispatch_stypes");
-
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
   // get the graph
   const auto& idx = g.indexed_graph();
@@ -279,7 +257,7 @@ Graph AttachOpExecs(Graph g) {
     if (fexec_type.count(op)) {
       exec_type = fexec_type[op](inode.source->attrs);
     }
-
+    CHECK(dispatch_modes[i] != DispatchMode::kUndefined);
     if (fcreate_op_state.count(op)) {
       std::vector<TShape> ishape;
       std::vector<int> itype;
@@ -295,44 +273,46 @@ Graph AttachOpExecs(Graph g) {
         state = fcreate_op_state[op](
             inode.source->attrs, vctx[i], ishape, itype);
       }
-      FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
-          op, "FStatefulCompute", vctx[i]);
-      if (fcompute != nullptr) {
-        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute,
-                                                           exec_type, mutate_index);
+      FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+          op, "FStatefulComputeEx", vctx[i]);
+      // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
+      if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
+        ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
       } else {
-        FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
-            op, "FStatefulComputeEx", vctx[i]);
-        CHECK(fcompute_ex != nullptr)
+        FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
+            op, "FStatefulCompute", vctx[i]);
+        CHECK(fcompute != nullptr)
             << "One of FStatefulCompute and FStatefulComputeEx must be registered "
             << "for stateful operator " << op->name;
-        ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
+        ret[i] = std::make_shared<StatefulComputeExecutor>(state, fcompute,
+                                                           exec_type, mutate_index);
       }
     } else if (is_layer_backward.get(op, false)) {
       CHECK_GE(inode.control_deps.size(), 1);
       uint32_t fwd_id = inode.control_deps[0];
       CHECK(vctx[fwd_id] == vctx[i]);
       CHECK(ret[fwd_id] != nullptr);
-      FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
-          op, "FStatefulCompute", vctx[i]);
-      if (fcompute != nullptr) {
-        ret[i] = std::make_shared<StatefulComputeExecutor>(
-            dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
-            fcompute, exec_type, mutate_index);
-      } else {
-        FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
-            op, "FStatefulComputeEx", vctx[i]);
-        CHECK(fcompute_ex != nullptr)
-            << "One of FStatefulCompute and FStatefulComputeEx must be registered "
-            << "for stateful operator " << op->name;
+      FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
+          op, "FStatefulComputeEx", vctx[i]);
+      // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
+      if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
         ret[i] = std::make_shared<StatefulComputeExExecutor>(
             dynamic_cast<StatefulComputeExExecutor*>(ret[fwd_id].get())->state_,
             fcompute_ex, exec_type);
+      } else {
+        FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
+            op, "FStatefulCompute", vctx[i]);
+        CHECK(fcompute != nullptr)
+            << "One of FStatefulCompute and FStatefulComputeEx must be registered "
+            << "for stateful operator " << op->name;
+        ret[i] = std::make_shared<StatefulComputeExecutor>(
+            dynamic_cast<StatefulComputeExecutor*>(ret[fwd_id].get())->state_,
+            fcompute, exec_type, mutate_index);
       }
     } else {
       FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
       FComputeEx fcomp_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", vctx[i]);
-      if (fcomp_ex != nullptr && dispatch_stypes[i] != kDefaultStorage) {
+      if (fcomp_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
         ret[i] = std::make_shared<FComputeExExecutor>(
             inode.source->attrs, fcomp_ex, exec_type);
       } else if (fcompute != nullptr) {

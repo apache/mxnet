@@ -51,9 +51,6 @@ USE_CUDA_PATH = NONE
 # whether use CUDNN R3 library
 USE_CUDNN = 0
 
-# whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVRTC = 0
-
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
 # imbin iterator
@@ -69,6 +66,12 @@ USE_BLAS = apple
 # whether use lapack during compilation
 # only effective when compiled with blas versions openblas/apple/atlas/mkl
 USE_LAPACK = 1
+
+# by default, disable lapack when using MKL
+# switch on when there is a full installation of MKL available (not just MKL2017/MKL_ML)
+ifeq ($(USE_BLAS), mkl)
+USE_LAPACK = 0
+endif
 
 # add path to intel library, you may need it for MKL, if you did not add the path
 # to environment variable

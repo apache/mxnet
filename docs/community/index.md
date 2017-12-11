@@ -1,6 +1,6 @@
 # MXNet Community
 ## Questions about Using MXNet
-If you are not sure of how to use MXNet for something, or have questions about applying it to a particular kind of problem, please post a question at [Stackoverflow](http://stackoverflow.com/) with tag - ```mxnet```. You can view StackOverflow questions about mxnet [here](http://stackoverflow.com/questions/tagged/mxnet).
+If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use our [forum](https://discuss.mxnet.io).
 
 ## Issue Tracker
 We track bugs and new feature requests in the MXNet Github repo in the issues folder: [mxnet/issues](https://github.com/dmlc/mxnet/issues).

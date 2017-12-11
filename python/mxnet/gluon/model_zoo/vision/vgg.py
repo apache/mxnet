@@ -50,18 +50,17 @@ class VGG(HybridBlock):
         assert len(layers) == len(filters)
         with self.name_scope():
             self.features = self._make_features(layers, filters, batch_norm)
-            self.classifier = nn.HybridSequential(prefix='')
-            self.classifier.add(nn.Dense(4096, activation='relu',
-                                         weight_initializer='normal',
-                                         bias_initializer='zeros'))
-            self.classifier.add(nn.Dropout(rate=0.5))
-            self.classifier.add(nn.Dense(4096, activation='relu',
-                                         weight_initializer='normal',
-                                         bias_initializer='zeros'))
-            self.classifier.add(nn.Dropout(rate=0.5))
-            self.classifier.add(nn.Dense(classes,
-                                         weight_initializer='normal',
-                                         bias_initializer='zeros'))
+            self.features.add(nn.Dense(4096, activation='relu',
+                                       weight_initializer='normal',
+                                       bias_initializer='zeros'))
+            self.features.add(nn.Dropout(rate=0.5))
+            self.features.add(nn.Dense(4096, activation='relu',
+                                       weight_initializer='normal',
+                                       bias_initializer='zeros'))
+            self.features.add(nn.Dropout(rate=0.5))
+            self.output = nn.Dense(classes,
+                                   weight_initializer='normal',
+                                   bias_initializer='zeros')
 
     def _make_features(self, layers, filters, batch_norm):
         featurizer = nn.HybridSequential(prefix='')
@@ -80,7 +79,7 @@ class VGG(HybridBlock):
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 

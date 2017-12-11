@@ -48,7 +48,6 @@ parser.add_argument('--batch-size', type=int, default=32,
 parser.add_argument('--disp-batches', type=int, default=50,
                     help='show progress for every n batches')
 
-
 def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
     if not os.path.isfile(fname):
         raise IOError("Please use get_ptb_data.sh to download requied file (data/ptb.train.txt)")

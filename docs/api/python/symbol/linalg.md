@@ -37,6 +37,7 @@ In the rest of this document, we list routines provided by the `symbol.linalg` p
     sumlogdiag
     syrk
     gelqf
+    syevd
 ```
 
 ## API Reference

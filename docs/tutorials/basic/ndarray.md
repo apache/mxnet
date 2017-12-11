@@ -33,7 +33,7 @@ Each NDArray supports some important attributes that you'll often want to query:
   and `m` columns, its `shape` will be `(n, m)`.
 - **ndarray.dtype**: A `numpy` _type_ object describing the type of its
   elements.
-- **ndarray.size**: the total number of components in the array - equal to the
+- **ndarray.size**: The total number of components in the array - equal to the
   product of the components of its `shape`
 - **ndarray.context**: The device on which this array is stored, e.g. `cpu()` or
   `gpu(1)`.
@@ -81,7 +81,7 @@ We can specify the element type with the option `dtype`, which accepts a numpy
 type. By default, `float32` is used:
 
 ```python
-# float32 is used in default
+# float32 is used by default
 a = mx.nd.array([1,2,3])
 # create an int32 array
 b = mx.nd.array([1,2,3], dtype=np.int32)

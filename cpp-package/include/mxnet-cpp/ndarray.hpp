@@ -240,10 +240,10 @@ inline void NDArray::WaitToWrite() {
 }
 inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0); }
 inline void NDArray::SampleGaussian(mx_float mu, mx_float sigma, NDArray *out) {
-  Operator("_sample_normal")(mu, sigma).Invoke(*out);
+  Operator("_random_normal")(mu, sigma).Invoke(*out);
 }
 inline void NDArray::SampleUniform(mx_float begin, mx_float end, NDArray *out) {
-  Operator("_sample_uniform")(begin, end).Invoke(*out);
+  Operator("_random_uniform")(begin, end).Invoke(*out);
 }
 inline void NDArray::Load(const std::string &file_name,
                           std::vector<NDArray> *array_list,

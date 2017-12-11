@@ -27,7 +27,7 @@ try:
 except ImportError:
     h5py = None
 import sys
-from common import get_data
+from common import get_data, assertRaises
 import unittest
 
 
@@ -61,8 +61,6 @@ def test_MNISTIter():
     assert(sum(label_0 - label_1) == 0)
 
 def test_Cifar10Rec():
-    # skip-this test for saving time
-    return
     get_data.GetCifar10()
     dataiter = mx.io.ImageRecordIter(
             path_imgrec="data/cifar/train.rec",
@@ -164,6 +162,19 @@ def test_NDArrayIter_csr():
     csr, _ = rand_sparse_ndarray(shape, 'csr')
     dns = csr.asnumpy()
 
+    # CSRNDArray with last_batch_handle not equal to 'discard' will throw NotImplementedError
+    assertRaises(NotImplementedError, mx.io.NDArrayIter, {'data': csr}, dns, batch_size,
+                 last_batch_handle='pad')
+
+    # CSRNDArray with shuffle
+    csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
+                    shuffle=True, last_batch_handle='discard'))
+    num_batch = 0
+    for batch in csr_iter:
+        num_batch += 1
+
+    assert(num_batch == num_rows // batch_size)
+
     # make iterators
     csr_iter = iter(mx.io.NDArrayIter(csr, csr, batch_size, last_batch_handle='discard'))
     begin = 0
@@ -215,29 +226,28 @@ def test_LibSVMIter():
             'num_classes': 20,
             'num_examples': 3993,
         }
-        num_parts = 3
-        batch_size = 128
+        batch_size = 33
         num_examples = news_metadata['num_examples']
         data_dir = os.path.join(os.getcwd(), 'data')
         get_bz2_data(data_dir, news_metadata['name'], news_metadata['url'],
-                 news_metadata['origin_name'])
+                     news_metadata['origin_name'])
         path = os.path.join(data_dir, news_metadata['name'])
         data_train = mx.io.LibSVMIter(data_libsvm=path, data_shape=(news_metadata['feature_dim'],),
-                                      batch_size=batch_size, num_parts=num_parts, part_index=0)
-        num_batches = 0
-        iterator = iter(data_train)
-        for batch in iterator:
-            # check the range of labels
-            assert(np.sum(batch.label[0].asnumpy() > 20) == 0)
-            assert(np.sum(batch.label[0].asnumpy() <= 0) == 0)
-            num_batches += 1
-        import math
-        expected_num_batches = math.ceil(num_examples * 1.0 / batch_size / num_parts)
-        assert(num_batches == int(expected_num_batches)), (num_batches, expected_num_batches)
+                                      batch_size=batch_size)
+        for epoch in range(2):
+            num_batches = 0
+            for batch in data_train:
+                # check the range of labels
+                assert(np.sum(batch.label[0].asnumpy() > 20) == 0)
+                assert(np.sum(batch.label[0].asnumpy() <= 0) == 0)
+                num_batches += 1
+            expected_num_batches = num_examples / batch_size
+            assert(num_batches == int(expected_num_batches)), num_batches
+            data_train.reset()
 
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
-    
+
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
 def test_CSVIter():
     def check_CSVIter_synthetic():

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file image_det_aug_default.cc
  * \brief Default augmenter.
  */
@@ -315,9 +316,9 @@ class ImageDetLabel {
     }
     // check if crop_box valid
     bool valid = false;
-    if (min_crop_overlap > 0.f && max_crop_overlap < 1.f &&
-        min_crop_sample_coverage > 0.f && max_crop_sample_coverage < 1.f &&
-        min_crop_object_coverage > 0.f && max_crop_object_coverage < 1.f) {
+    if (min_crop_overlap > 0.f || max_crop_overlap < 1.f ||
+        min_crop_sample_coverage > 0.f || max_crop_sample_coverage < 1.f ||
+        min_crop_object_coverage > 0.f || max_crop_object_coverage < 1.f) {
       for (auto& obj : objects_) {
         Rect gt_box = obj.ToRect();
         if (min_crop_overlap > 0.f || max_crop_overlap < 1.f) {
@@ -483,7 +484,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     float min_ratio = std::max<float>(min_crop_aspect_ratio / img_aspect_ratio,
         new_scale * new_scale);
     float max_ratio = std::min<float>(max_crop_aspect_ratio / img_aspect_ratio,
-        1. / new_scale * new_scale);
+        1. / (new_scale * new_scale));
     float new_ratio = std::sqrt(std::uniform_real_distribution<float>(
         min_ratio, max_ratio)(*prnd));
     float new_width = std::min(1.f, new_scale * new_ratio);

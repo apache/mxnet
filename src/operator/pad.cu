@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file pad.cu
  * \brief
  * \author Sebastian Bodenstein

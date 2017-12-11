@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """Parameter optimizer."""
+__all__ = ['Trainer']
 
 from .. import optimizer as opt
 from ..model import _create_kvstore
@@ -43,6 +44,11 @@ class Trainer(object):
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
         :any:`mxnet.kvstore.create` for more information.
+    compression_params : dict
+        Specifies type of gradient compression and additional arguments depending
+        on the type of compression being used. For example, 2bit compression requires a threshold.
+        Arguments would then be {'type':'2bit', 'threshold':0.5}
+        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
 
     Properties
     ----------
@@ -50,7 +56,8 @@ class Trainer(object):
         The current learning rate of the optimizer. Given an Optimizer object
         optimizer, its learning rate can be accessed as optimizer.learning_rate.
     """
-    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device'):
+    def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
+                 compression_params=None):
         if isinstance(params, (dict, ParameterDict)):
             params = list(params.values())
         if not isinstance(params, (list, tuple)):
@@ -64,7 +71,7 @@ class Trainer(object):
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
             self._params.append(param)
-
+        self._compression_params = compression_params
         optimizer_params = optimizer_params if optimizer_params else {}
         self._scale = optimizer_params.get('rescale_grad', 1.0)
         self._contexts = self._check_contexts()
@@ -103,6 +110,8 @@ class Trainer(object):
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
         if kvstore:
+            if self._compression_params:
+                kvstore.set_gradient_compression(self._compression_params)
             if 'dist' in kvstore.type:
                 update_on_kvstore = False
             for i, param in enumerate(self._params):

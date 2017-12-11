@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cu
  * \brief elementwise sum operator
 */
@@ -42,9 +43,8 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<gpu>(s, op_ctx.requested[0], inputs, &out_nd);
   } else {
-    FCompExFallback<gpu>(attrs, op_ctx, inputs, req, outputs,
-                         ElementWiseSumComputeWithHalf2<gpu>,
-                         "ElementWiseSumComputeWithHalf2<gpu>");
+    LOG(FATAL) << "Not implemented: "
+               << operator_string(attrs, op_ctx, inputs, req, outputs);
   }
 }
 

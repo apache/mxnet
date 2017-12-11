@@ -58,7 +58,7 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, root=os.path.expanduser('~/.mxnet/models/')):
+def get_model_file(name, root='~/.mxnet/models/'):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -78,6 +78,7 @@ def get_model_file(name, root=os.path.expanduser('~/.mxnet/models/')):
     """
     file_name = '{name}-{short_hash}'.format(name=name,
                                              short_hash=short_hash(name))
+    root = os.path.expanduser(root)
     file_path = os.path.join(root, file_name+'.params')
     sha1_hash = _model_sha1[name]
     if os.path.exists(file_path):
@@ -107,7 +108,7 @@ def get_model_file(name, root=os.path.expanduser('~/.mxnet/models/')):
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')
 
-def purge(root=os.path.expanduser('~/.mxnet/models/')):
+def purge(root='~/.mxnet/models/'):
     r"""Purge all pretrained model files in local file store.
 
     Parameters
@@ -115,6 +116,7 @@ def purge(root=os.path.expanduser('~/.mxnet/models/')):
     root : str, default '~/.mxnet/models'
         Location for keeping the model parameters.
     """
+    root = os.path.expanduser(root)
     files = os.listdir(root)
     for f in files:
         if f.endswith(".params"):

@@ -182,19 +182,17 @@ class Inception3(HybridBlock):
             self.features.add(_make_C(160, 'C2_'))
             self.features.add(_make_C(160, 'C3_'))
             self.features.add(_make_C(192, 'C4_'))
+            self.features.add(_make_D('D_'))
+            self.features.add(_make_E('E1_'))
+            self.features.add(_make_E('E2_'))
+            self.features.add(nn.AvgPool2D(pool_size=8))
+            self.features.add(nn.Dropout(0.5))
 
-            self.classifier = nn.HybridSequential(prefix='')
-            self.classifier.add(_make_D('D_'))
-            self.classifier.add(_make_E('E1_'))
-            self.classifier.add(_make_E('E2_'))
-            self.classifier.add(nn.AvgPool2D(pool_size=8))
-            self.classifier.add(nn.Dropout(0.5))
-            self.classifier.add(nn.Flatten())
-            self.classifier.add(nn.Dense(classes))
+            self.output = nn.Dense(classes)
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 # Constructor

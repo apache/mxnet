@@ -18,6 +18,7 @@
  */
 
 /**
+ * Copyright (c) 2015 by Contributors
  * @file   kvstore_local.h
  * @brief  local implementation
  */
@@ -58,10 +59,12 @@ class KVStoreLocal : public KVStore {
       comm_ = new CommCPU();
     }
     pinned_ctx_ = comm_->pinned_ctx();
+    gradient_compression_ = std::make_shared<GradientCompression>();
   }
 
   virtual ~KVStoreLocal() {
     delete comm_;
+    comm_ = nullptr;
   }
 
   void Init(const std::vector<int>& keys,
@@ -135,6 +138,11 @@ class KVStoreLocal : public KVStore {
     PullRowSparseImpl(keys, val_rowids, priority);
   }
 
+  void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
+                              & kwargs) override {
+    gradient_compression_->SetParams(kwargs);
+  }
+
  private:
   virtual void InitImpl(const std::vector<int>& keys,
                         const std::vector<NDArray>& values) {
@@ -144,6 +152,7 @@ class KVStoreLocal : public KVStore {
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
+    comm_->SetGradientCompression(gradient_compression_);
   }
 
   virtual void PushImpl(const std::vector<int>& keys,
@@ -226,6 +235,7 @@ class KVStoreLocal : public KVStore {
   }
 
  protected:
+  KVStoreLocal() : KVStore() {}
   /**
    * \brief set the key type of the kvstore if haven't already.
    * If the key type is already defined, check if it matches the provided key type
@@ -238,10 +248,10 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief group values on keys for push
    */
-  void GroupKVPairsPush(const std::vector<int>& keys,
-                        const std::vector<NDArray>& values,
-                        std::vector<int> *uniq_keys,
-                        std::vector<std::vector<NDArray>> *grouped_vals) {
+  virtual void GroupKVPairsPush(const std::vector<int>& keys,
+                                const std::vector<NDArray>& values,
+                                std::vector<int> *uniq_keys,
+                                std::vector<std::vector<NDArray>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const NDArray& nd) -> bool {
       auto stype = nd.storage_type();
@@ -256,10 +266,10 @@ class KVStoreLocal : public KVStore {
   /**
    * \brief group values on keys for pull
    */
-  void GroupKVPairsPull(const std::vector<int>& keys,
-                        const std::vector<NDArray*>& values,
-                        std::vector<int> *uniq_keys,
-                        std::vector<std::vector<NDArray*>> *grouped_vals) {
+  virtual void GroupKVPairsPull(const std::vector<int>& keys,
+                                const std::vector<NDArray*>& values,
+                                std::vector<int> *uniq_keys,
+                                std::vector<std::vector<NDArray*>> *grouped_vals) {
     // check if the storage type of a value is valid
     auto validator = [this](const int key, const NDArray* nd) -> bool {
       // valid
@@ -267,22 +277,25 @@ class KVStoreLocal : public KVStore {
       // invalid, print warning messages once
       if (this->warnings_printed_.find(key) == this->warnings_printed_.end()) {
         LOG(INFO) << "Warning: non-default weights detected during kvstore pull. "
-                  << "Please make sure to use row_sparse_pull with row_ids instead.";
+                  << "This call has been ignored. "
+                  << "Please make sure to use row_sparse_pull with row_ids.";
         this->warnings_printed_.insert(key);
       }
       return false;
     };
     GroupKVPairs(keys, values, uniq_keys, grouped_vals, validator);
   }
+
+  typedef std::pair<NDArray*, NDArray> RSPVal;
   /**
    * \brief group values on keys for row_sparse_pull
    */
-  void GroupKVPairsPullRsp(const std::vector<int>& keys,
-                           const std::vector<std::pair<NDArray*, NDArray>>& values,
-                           std::vector<int> *uniq_keys,
-                           std::vector<std::vector<std::pair<NDArray*, NDArray>>> *grouped_vals) {
+  virtual void GroupKVPairsPullRsp(const std::vector<int>& keys,
+                                   const std::vector<RSPVal>& values,
+                                   std::vector<int> *uniq_keys,
+                                   std::vector<std::vector<RSPVal>> *grouped_vals) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const std::pair<NDArray*, NDArray>& val_rowid) -> bool {
+    auto validator = [this](const int key, const RSPVal& val_rowid) -> bool {
       auto val_stype = val_rowid.first->storage_type();
       auto rowid_stype = val_rowid.second.storage_type();
       // check storage types
@@ -346,7 +359,8 @@ class KVStoreLocal : public KVStore {
   void Unique(NDArray *out, int priority = 0) {
     CHECK_EQ(out->ctx().dev_mask(), pinned_ctx_.dev_mask())
              << "Unique expects input with `pinned_ctx_`";
-    Engine::Get()->PushSync([out](RunContext rctx) {
+    Engine::Get()->PushAsync(
+      [out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         NDArray *output = out;
         CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
         const auto size = out->shape()[0];
@@ -357,6 +371,7 @@ class KVStoreLocal : public KVStore {
           auto num_unique_idx = std::unique(dptr, dptr + size) - dptr;
           *output = output->Reshape(mshadow::Shape1(num_unique_idx));
         });
+        on_complete();
       }, pinned_ctx_, {}, {out->var()},
       FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreUnique"));
     out->WaitToRead();

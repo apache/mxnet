@@ -117,7 +117,7 @@ def test_unary_func():
         f_square_grad = lambda x: [2*x]
         autograd_assert(x, func=f_square, grad_func=f_square_grad)
     uniform = nd.uniform(shape=(4, 5))
-    stypes = ['default']  #,'row_sparse', 'csr']
+    stypes = ['default', 'row_sparse', 'csr']
     for stype in stypes:
         check_unary_func(uniform.tostype(stype))
 
@@ -134,7 +134,7 @@ def test_binary_func():
         autograd_assert(x, y, func=f_compose, grad_func=f_compose_grad)
     uniform_x = nd.uniform(shape=(4, 5))
     uniform_y = nd.uniform(shape=(4, 5))
-    stypes = ['default']  #,'row_sparse', 'csr']
+    stypes = ['default', 'row_sparse', 'csr']
     for stype_x in stypes:
         for stype_y in stypes:
             x = uniform_x.tostype(stype_x)
@@ -273,10 +273,10 @@ def test_attach_grad():
         with record():
             y = x * 2
             assert y.grad is None
-            y.backward()
+            y.backward(out_grad=mx.nd.ones_like(y).tostype(x.stype))
         assert (x.grad.asnumpy() == 2).all()
     zeros = mx.nd.zeros((10, 10))
-    stypes = ['default']  #, 'row_sparse', 'csr']
+    stypes = ['default', 'row_sparse', 'csr']
     for stype in stypes:
         x = zeros.tostype(stype)
         check_attach_grad(x)
@@ -377,7 +377,7 @@ def test_get_symbol():
 
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
-        x = mx.nd.zeros((1,), stype=array_stype)
+        x = mx.nd.zeros((1, 1), stype=array_stype)
         x.attach_grad(stype=grad_stype)
         # check grad attached
         assert x.grad.stype == expected_stype
@@ -385,7 +385,7 @@ def test_grad_with_stype():
         # check array detached
         assert y.stype == array_stype
 
-    stypes = ['default']  #, 'csr', 'row_sparse']
+    stypes = ['default', 'csr', 'row_sparse']
     for stype in stypes:
         # check the default stype of the gradient (same as the array stype)
         check_grad_with_stype(stype, None, stype)

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file cuda_utils.h
  * \brief CUDA debugging utilities.
  */
@@ -228,6 +229,40 @@ inline DType __device__ CudaMin(DType a, DType b) {
     CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
         << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
   }
+
+/*!
+ * \brief Protected NVRTC call.
+ * \param func Expression to call.
+ *
+ * It checks for NVRTC errors after invocation of the expression.
+ */
+#define NVRTC_CALL(x)                                   \
+  {                                                     \
+    nvrtcResult result = x;                             \
+    CHECK_EQ(result, NVRTC_SUCCESS)                     \
+      << #x " failed with error "                       \
+      << nvrtcGetErrorString(result);                   \
+  }
+
+/*!
+ * \brief Protected CUDA driver call.
+ * \param func Expression to call.
+ *
+ * It checks for CUDA driver errors after invocation of the expression.
+ */
+#define CUDA_DRIVER_CALL(func)                                          \
+  {                                                                     \
+    CUresult e = (func);                                                \
+    if (e != CUDA_SUCCESS) {                                            \
+      char const * err_msg = nullptr;                                         \
+      if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) {  \
+        LOG(FATAL) << "CUDA Driver: Unknown error " << e;               \
+      } else {                                                          \
+        LOG(FATAL) << "CUDA Driver: " << err_msg;                       \
+      }                                                                 \
+    }                                                                   \
+  }
+
 
 #if !defined(_MSC_VER)
 #define CUDA_UNROLL _Pragma("unroll")

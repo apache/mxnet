@@ -19,7 +19,8 @@
 """Utility functions for NDArray and BaseSparseNDArray."""
 import ctypes
 
-from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle, c_array
+from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle
+from ..base import c_array, c_handle_array, c_str_array
 from .ndarray import NDArray
 from .ndarray import array as _array
 from .ndarray import empty as _empty_ndarray
@@ -33,8 +34,10 @@ try:
 except ImportError:
     spsp = None
 
+__all__ = ['zeros', 'empty', 'array', 'load', 'save']
 
-def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
+
+def zeros(shape, ctx=None, dtype=None, stype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
     Parameters
@@ -47,10 +50,6 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
         An optional value type (default is `float32`)
     stype: string, optional
         The storage type of the empty array, such as 'row_sparse', 'csr', etc.
-    aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
-        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
-        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
@@ -67,10 +66,10 @@ def zeros(shape, ctx=None, dtype=None, stype=None, aux_types=None, **kwargs):
     if stype is None or stype == 'default':
         return _zeros_ndarray(shape, ctx, dtype, **kwargs)
     else:
-        return _zeros_sparse_ndarray(stype, shape, ctx, dtype, aux_types, **kwargs)
+        return _zeros_sparse_ndarray(stype, shape, ctx, dtype, **kwargs)
 
 
-def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
+def empty(shape, ctx=None, dtype=None, stype=None):
     """Returns a new array of given shape and type, without initializing entries.
 
     Parameters
@@ -83,10 +82,6 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
         An optional value type (default is `float32`).
     stype : str, optional
         An optional storage type (default is `default`).
-    aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
-        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
-        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
@@ -107,10 +102,10 @@ def empty(shape, ctx=None, dtype=None, stype=None, aux_types=None):
     if stype is None or stype == 'default':
         return _empty_ndarray(shape, ctx, dtype)
     else:
-        return _empty_sparse_ndarray(stype, shape, ctx, dtype, aux_types)
+        return _empty_sparse_ndarray(stype, shape, ctx, dtype)
 
 
-def array(source_array, ctx=None, dtype=None, aux_types=None):
+def array(source_array, ctx=None, dtype=None):
     """Creates an array from any object exposing the array interface.
 
     Parameters
@@ -123,10 +118,6 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
     dtype : str or numpy.dtype, optional
         The data type of the output array. The default dtype is ``source_array.dtype``
         if `source_array` is an `NDArray`, `float32` otherwise.
-    aux_types: list of numpy.dtype, optional
-        An optional list of types of the aux data for RowSparseNDArray or CSRNDArray.
-        The default value for CSRNDArray is [`int64`, `int64`] for `indptr` and `indices`.
-        The default value for RowSparseNDArray is [`int64`] for `indices`.
 
     Returns
     -------
@@ -148,9 +139,9 @@ def array(source_array, ctx=None, dtype=None, aux_types=None):
     <RowSparseNDArray 3x2 @cpu(0)>
     """
     if spsp is not None and isinstance(source_array, spsp.csr.csr_matrix):
-        return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
+        return _sparse_array(source_array, ctx=ctx, dtype=dtype)
     elif isinstance(source_array, NDArray) and source_array.stype != 'default':
-        return _sparse_array(source_array, ctx=ctx, dtype=dtype, aux_types=aux_types)
+        return _sparse_array(source_array, ctx=ctx, dtype=dtype)
     else:
         return _array(source_array, ctx=ctx, dtype=dtype)
 
@@ -222,27 +213,24 @@ def save(fname, data):
     """
     if isinstance(data, NDArray):
         data = [data]
-    handles = []
+        handles = c_array(NDArrayHandle, [])
     if isinstance(data, dict):
-        keys = []
-        for key, val in data.items():
-            if not isinstance(key, string_types):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            if not isinstance(val, NDArray):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            keys.append(c_str(key))
-            handles.append(val.handle)
-        keys = c_array(ctypes.c_char_p, keys)
+        str_keys = data.keys()
+        nd_vals = data.values()
+        if any(not isinstance(k, string_types) for k in str_keys) or \
+           any(not isinstance(v, NDArray) for v in nd_vals):
+            raise TypeError('save only accept dict str->NDArray or list of NDArray')
+        keys = c_str_array(str_keys)
+        handles = c_handle_array(nd_vals)
     elif isinstance(data, list):
-        for val in data:
-            if not isinstance(val, NDArray):
-                raise TypeError('save only accept dict str->NDArray or list of NDArray')
-            handles.append(val.handle)
+        if any(not isinstance(v, NDArray) for v in data):
+            raise TypeError('save only accept dict str->NDArray or list of NDArray')
         keys = None
+        handles = c_handle_array(data)
     else:
         raise ValueError("data needs to either be a NDArray, dict of str, NDArray pairs "
                          "or a list of NDarrays.")
     check_call(_LIB.MXNDArraySave(c_str(fname),
                                   mx_uint(len(handles)),
-                                  c_array(NDArrayHandle, handles),
+                                  handles,
                                   keys))

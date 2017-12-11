@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  */
 #ifndef MXNET_ENGINE_THREAD_POOL_H_
 #define MXNET_ENGINE_THREAD_POOL_H_
@@ -57,8 +58,8 @@ class ThreadPool {
 
     /*! \brief Signal event upon destruction, even for exceptions (RAII) */
     struct SetReadyOnDestroy {
-      explicit inline SetReadyOnDestroy(std::shared_ptr<SimpleEvent> event)
-        : event_(event) {
+      explicit inline SetReadyOnDestroy(std::shared_ptr<SimpleEvent> *event)
+        : event_(*event) {
       }
       inline ~SetReadyOnDestroy() {
         if (event_) {

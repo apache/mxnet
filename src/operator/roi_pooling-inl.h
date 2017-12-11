@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file roi_pooling-inl.h
  * \brief roi pooling operator and symbol
  * \author Kye-Hyeon Kim, Jian Guo

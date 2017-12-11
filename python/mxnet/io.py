@@ -29,12 +29,13 @@ except ImportError:
     h5py = None
 import numpy as np
 from .base import _LIB
-from .base import c_array, c_str, mx_uint, py_str
+from .base import c_str_array, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
 from .ndarray.sparse import CSRNDArray
+from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concatenate
@@ -513,6 +514,34 @@ def _init_data(data, allow_empty, default_name):
 
     return list(data.items())
 
+def _has_instance(data, dtype):
+    """return True if data has instance of dtype"""
+    if isinstance(data, dtype):
+        return True
+    if isinstance(data, list):
+        for v in data:
+            if isinstance(v, dtype):
+                return True
+    if isinstance(data, dict):
+        for v in data.values():
+            if isinstance(v, dtype):
+                return True
+    return False
+
+def _shuffle(data, idx):
+    """Shuffle the data."""
+    shuffle_data = []
+
+    for k, v in data:
+        if (isinstance(v, h5py.Dataset) if h5py else False):
+            shuffle_data.append((k, v))
+        elif isinstance(v, CSRNDArray):
+            shuffle_data.append((k, sparse_array(v.asscipy()[idx], v.context)))
+        else:
+            shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
+
+    return shuffle_data
+
 class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
     or ``mx.nd.sparse.CSRNDArray``.
@@ -578,8 +607,8 @@ class NDArrayIter(DataIter):
     >>> label = {'label1':np.zeros(shape=(10,1)), 'label2':np.zeros(shape=(20,1))}
     >>> dataiter = mx.io.NDArrayIter(data, label, 3, True, last_batch_handle='discard')
 
-    `NDArrayIter` also supports ``mx.nd.sparse.CSRNDArray`` with `shuffle` set to `False`
-    and `last_batch_handle` set to `discard`.
+    `NDArrayIter` also supports ``mx.nd.sparse.CSRNDArray``
+    with `last_batch_handle` set to `discard`.
 
     >>> csr_data = mx.nd.array(np.arange(40).reshape((10,4))).tostype('csr')
     >>> labels = np.ones([10, 1])
@@ -615,26 +644,19 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
+        if ((_has_instance(data, CSRNDArray) or _has_instance(label, CSRNDArray)) and
+                (last_batch_handle != 'discard')):
+            raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
+                                      " with `last_batch_handle` set to `discard`.")
         self.data = _init_data(data, allow_empty=False, default_name=data_name)
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
-        if isinstance(data, CSRNDArray) or isinstance(label, CSRNDArray):
-            assert(shuffle is False), \
-                  "`NDArrayIter` only supports ``CSRNDArray`` with `shuffle` set to `False`"
-            assert(last_batch_handle == 'discard'), "`NDArrayIter` only supports ``CSRNDArray``" \
-                                                    " with `last_batch_handle` set to `discard`."
 
         self.idx = np.arange(self.data[0][1].shape[0])
         # shuffle data
         if shuffle:
             np.random.shuffle(self.idx)
-            self.data = [(k, array(v.asnumpy()[self.idx], v.context))
-                         if not (isinstance(v, h5py.Dataset)
-                                 if h5py else False) else (k, v)
-                         for k, v in self.data]
-            self.label = [(k, array(v.asnumpy()[self.idx], v.context))
-                          if not (isinstance(v, h5py.Dataset)
-                                  if h5py else False) else (k, v)
-                          for k, v in self.label]
+            self.data = _shuffle(self.data, self.idx)
+            self.label = _shuffle(self.label, self.idx)
 
         # batching
         if last_batch_handle == 'discard':
@@ -897,11 +919,11 @@ def _make_io_iterator(handle):
         param_vals = []
 
         for k, val in kwargs.items():
-            param_keys.append(c_str(k))
-            param_vals.append(c_str(str(val)))
+            param_keys.append(k)
+            param_vals.append(str(val))
         # create atomic symbol
-        param_keys = c_array(ctypes.c_char_p, param_keys)
-        param_vals = c_array(ctypes.c_char_p, param_vals)
+        param_keys = c_str_array(param_keys)
+        param_vals = c_str_array(param_vals)
         iter_handle = DataIterHandle()
         check_call(_LIB.MXDataIterCreateIter(
             handle,

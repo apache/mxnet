@@ -48,11 +48,11 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
   // declare parameters
   DMLC_DECLARE_PARAMETER(LibSVMIterParam) {
     DMLC_DECLARE_FIELD(data_libsvm)
-        .describe("The input LibSVM file or a directory path.");
+        .describe("The input zero-base indexed LibSVM data file or a directory path.");
     DMLC_DECLARE_FIELD(data_shape)
         .describe("The shape of one example.");
     DMLC_DECLARE_FIELD(label_libsvm).set_default("NULL")
-        .describe("The input LibSVM file or a directory path. "
+        .describe("The input LibSVM label file or a directory path. "
                   "If NULL, all labels will be read from ``data_libsvm``.");
     index_t shape1[] = {1};
     DMLC_DECLARE_FIELD(label_shape).set_default(TShape(shape1, shape1 + 1))
@@ -198,30 +198,35 @@ class LibSVMIter: public SparseIIterator<DataInst> {
 DMLC_REGISTER_PARAMETER(LibSVMIterParam);
 
 MXNET_REGISTER_IO_ITER(LibSVMIter)
-.describe(R"code(Returns the libsvm file iterator which returns sparse data with `csr`
+.describe(R"code(Returns the LibSVM iterator which returns data with `csr`
 storage type. This iterator is experimental and should be used with care.
 
-The input data is stored in a format similar to libsvm file format, except that the indices
-are expected to be zero-based instead of one-based. Details of the libsvm format are available
-at `https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/`
+The input data is stored in a format similar to LibSVM file format, except that the **indices
+are expected to be zero-based instead of one-based, and the column indices for each row are
+expected to be sorted in ascending order**. Details of the LibSVM format are available
+`here. <https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/>`_
 
-In this function, the `data_shape` parameter is used to set the shape of each line of the data.
+
+The `data_shape` parameter is used to set the shape of each line of the data.
 The dimension of both `data_shape` and `label_shape` are expected to be 1.
 
-When `label_libsvm` is set to ``NULL``, both data and label are read from the same file specified
+The `data_libsvm` parameter is used to set the path input LibSVM file.
+When it is set to a directory, all the files in the directory will be read.
+
+When `label_libsvm` is set to ``NULL``, both data and label are read from the file specified
 by `data_libsvm`. In this case, the data is stored in `csr` storage type, while the label is a 1D
-dense array. Otherwise, data is read from `data_libsvm` and label from `label_libsvm`,
-in this case, both data and label are stored in csr storage type. If `data_libsvm` contains label,
-it will ignored.
+dense array.
 
-The `LibSVMIter` only support `round_batch` parameter set to ``True`` for now. So, if `batch_size`
-is 3 and there are 4 total rows in libsvm file, 2 more examples
-are consumed at the first round. If `reset` function is called after first round,
-the call is ignored and remaining examples are returned in the second round.
+The `LibSVMIter` only support `round_batch` parameter set to ``True``. Therefore, if `batch_size`
+is 3 and there are 4 total rows in libsvm file, 2 more examples are consumed at the first round.
 
-If ``data_libsvm = 'data/'`` is set, then all the files in this directory will be read.
+When `num_parts` and `part_index` are provided, the data is split into `num_parts` partitions,
+and the iterator only reads the `part_index`-th partition. However, the partitions are not
+guaranteed to be even.
 
-Examples::
+``reset()`` is expected to be called only after a complete pass of data.
+
+Example::
 
   # Contents of libsvm file ``data.t``.
   1.0 0:0.5 2:1.2
@@ -254,6 +259,16 @@ Examples::
   # The label of the second batch
   >>> second_batch.label[0].asnumpy()
   [ 4.  1. -2.]
+
+  >>> data_iter.reset()
+  # To restart the iterator for the second pass of the data
+
+When `label_libsvm` is set to the path to another LibSVM file,
+data is read from `data_libsvm` and label from `label_libsvm`.
+In this case, both data and label are stored in the csr format.
+If the label column in the `data_libsvm` file is ignored.
+
+Example::
 
   # Contents of libsvm file ``label.t``
   1.0

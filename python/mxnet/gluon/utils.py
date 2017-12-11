@@ -18,6 +18,9 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+__all__ = ['split_data', 'split_and_load', 'clip_global_norm',
+           'check_sha1', 'download']
+
 import os
 import hashlib
 import warnings
@@ -114,7 +117,8 @@ def clip_global_norm(arrays, max_norm):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
     """
     assert len(arrays) > 0
-    total_norm = ndarray.add_n(*[ndarray.dot(x, x)
+    ctx = arrays[0].context
+    total_norm = ndarray.add_n(*[ndarray.dot(x, x).as_in_context(ctx)
                                  for x in (arr.reshape((-1,)) for arr in arrays)])
     total_norm = ndarray.sqrt(total_norm).asscalar()
     if not np.isfinite(total_norm):

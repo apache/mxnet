@@ -18,11 +18,13 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file optimizer_op.cc
  * \brief Optimizer operators
  * \author Junyuan Xie
  */
 #include "./optimizer_op-inl.h"
+#include "./elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -35,6 +37,7 @@ DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 DMLC_REGISTER_PARAMETER(FtrlParam);
 
 NNVM_REGISTER_OP(sgd_update)
+MXNET_ADD_SPARSE_OP_ALIAS(sgd_update)
 .describe(R"code(Update function for Stochastic Gradient Descent (SDG) optimizer.
 
 It updates the weights using::
@@ -53,6 +56,7 @@ only the row slices whose indices appear in grad.indices are updated::
 .set_attr_parser(ParamParser<SGDParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, false, true, false>)
 .set_attr<FCompute>("FCompute<cpu>", SGDUpdate<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SGDUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
@@ -60,6 +64,7 @@ only the row slices whose indices appear in grad.indices are updated::
 .add_arguments(SGDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(sgd_mom_update)
+MXNET_ADD_SPARSE_OP_ALIAS(sgd_mom_update)
 .describe(R"code(Momentum update function for Stochastic Gradient Descent (SDG) optimizer.
 
 Momentum update has better convergence rates on neural networks. Mathematically it looks
@@ -91,6 +96,7 @@ only the row slices whose indices appear in grad.indices are updated (for both w
 .set_attr_parser(ParamParser<SGDMomParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<3, 1, false, true, false>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
@@ -138,6 +144,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .add_arguments(SGDMomParam::__FIELDS__());
 
 NNVM_REGISTER_OP(adam_update)
+MXNET_ADD_SPARSE_OP_ALIAS(adam_update)
 .describe(R"code(Update function for Adam optimizer. Adam is seen as a generalization
 of AdaGrad.
 
@@ -171,6 +178,7 @@ only the row slices whose indices appear in grad.indices are updated (for w, m a
 .set_attr_parser(ParamParser<AdamParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<4, 1, false, true, false>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3};
@@ -276,6 +284,7 @@ to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 .add_arguments(RMSPropAlexParam::__FIELDS__());
 
 NNVM_REGISTER_OP(ftrl_update)
+MXNET_ADD_SPARSE_OP_ALIAS(ftrl_update)
 .describe(R"code(Update function for Ftrl optimizer.
 Referenced from *Ad Click Prediction: a View from the Trenches*, available at
 http://dl.acm.org/citation.cfm?id=2488200.
@@ -302,6 +311,7 @@ only the row slices whose indices appear in grad.indices are updated (for w, z a
 .set_attr_parser(ParamParser<FtrlParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<4, 1, false, true, false>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3};

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
  * \brief Function definition of matrix related operators
  */
@@ -34,6 +35,8 @@
 #include "../channel_op_common.h"
 #include "../mxnet_op.h"
 #include "broadcast_reduce_op.h"
+#include "./init_op.h"
+#include "../../common/static_array.h"
 
 #if MXNET_USE_CUDA
 #include <thrust/device_vector.h>
@@ -347,7 +350,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
 
   int axis = param.axis;
   if (axis < 0) {
-    axis += indim;
+    axis += indim + 1;
   }
   CHECK(axis >= 0 && axis <= indim)
       << "axis must be in the range [" << -indim << ", " << indim << "] ("
@@ -370,122 +373,59 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
 }
 
 struct SliceParam : public dmlc::Parameter<SliceParam> {
-  nnvm::Tuple<dmlc::optional<int> > begin, end;
+  nnvm::Tuple<dmlc::optional<int>> begin, end;
+  nnvm::Tuple<dmlc::optional<int>> step;
   DMLC_DECLARE_PARAMETER(SliceParam) {
     DMLC_DECLARE_FIELD(begin)
     .describe("starting indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(end)
     .describe("ending indices for the slice operation, supports negative indices.");
+    DMLC_DECLARE_FIELD(step)
+    .set_default(nnvm::Tuple<dmlc::optional<int>>())
+    .describe("step for the slice operation, supports negative values.");
   }
 };
 
-inline TShape GetSliceShape(const SliceParam& param, const TShape& dshape) {
-  CHECK_LE(param.begin.ndim(), dshape.ndim())
-    << "Slicing axis exceeds data dimensions";
-  CHECK_LE(param.end.ndim(), dshape.ndim())
-    << "Slicing axis exceeds data dimensions";
-  CHECK_EQ(param.begin.ndim(), param.end.ndim())
-    << "begin and end must have the same length";
-
-  TShape oshape = dshape;
-  for (index_t i = 0; i < param.begin.ndim(); ++i) {
-    int s = 0, e = dshape[i];
-    if (e != 0) {
-      if (param.begin[i]) {
-        CHECK_LE(*param.begin[i], e)
-          << "Slicing begin exceeds data dimensions "
-          << param.begin << " vs " << dshape;
-        s = *param.begin[i];
-        if (s < 0) s += dshape[i];
-      }
-      if (param.end[i]) {
-        CHECK_LE(*param.end[i], e)
-          << "Slicing end exceeds data dimensions "
-          << param.end << " vs " << dshape;
-        e = *param.end[i];
-        if (e < 0) e += dshape[i];
-      }
-      CHECK(s >= 0 && s < e && e <= static_cast<int>(dshape[i]))
-        << "Invalid slicing begin " << param.begin << " and end "
-        << param.end << " for data of shape " << dshape;
-    }
-    oshape[i] = e - s;
-  }
-  return oshape;
-}
-
-inline bool SliceShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
-  const TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0) return false;
+inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int>* in_attrs,
+                                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, GetSliceShape(param, dshape));
+  const auto& in_stype = in_attrs->at(0);
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                         DispatchMode::kFComputeEx;
+  // If step = 1, no need to fallback; otherwise fallback to dense
+  bool trivial_step = false;
+  if (param.step.ndim() == 0U) {
+    trivial_step = true;
+  } else if (param.step.ndim() == 1U
+      && (!param.step[0].has_value() || param.step[0].value() == 1)) {
+    trivial_step = true;
+  }
+  if (!dispatched && in_stype == kDefaultStorage) {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+
+  if (!dispatched && in_stype == kCSRStorage && trivial_step) {
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, dispatch_ex);
+  }
+
+  if (!dispatched) {
+    dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (*dispatch_mode == DispatchMode::kFComputeFallback) {
+    LogStorageFallback(attrs, dev_mask, in_attrs, out_attrs);
+  }
+
   return true;
-}
-
-// matrix crop for multi dimensional cropping: see also slice
-template<typename xpu>
-void Slice(const nnvm::NodeAttrs& attrs,
-          const OpContext& ctx,
-          const std::vector<TBlob>& inputs,
-          const std::vector<OpReqType>& req,
-          const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  index_t N = inputs[0].ndim();
-  TShape begin(N), end(N);
-  for (index_t i = 0; i < N; ++i) {
-    int s = 0;
-    if (param.begin[i]) {
-      s = *param.begin[i];
-      if (s < 0) s += inputs[0].size(i);
-    }
-    begin[i] = s;
-    end[i] = s + outputs[0].size(i);
-  }
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    switch (inputs[0].ndim()) {
-     case 0:
-      break;
-     case 1: {
-      Tensor<xpu, 1, DType> in = inputs[0].get<xpu, 1, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-      out = slice(in, begin.get<1>(), end.get<1>());
-      break;
-     }
-     case 2: {
-      Tensor<xpu, 2, DType> in = inputs[0].get<xpu, 2, DType>(s);
-      Tensor<xpu, 2, DType> out = outputs[0].get<xpu, 2, DType>(s);
-      out = slice(in, begin.get<2>(), end.get<2>());
-      break;
-     }
-     case 3: {
-      Tensor<xpu, 3, DType> in = inputs[0].get<xpu, 3, DType>(s);
-      Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-      out = slice(in, begin.get<3>(), end.get<3>());
-      break;
-     }
-     case 4: {
-      Tensor<xpu, 4, DType> in = inputs[0].get<xpu, 4, DType>(s);
-      Tensor<xpu, 4, DType> out = outputs[0].get<xpu, 4, DType>(s);
-      out = slice(in, begin.get<4>(), end.get<4>());
-      break;
-     }
-     case 5: {
-      Tensor<xpu, 5, DType> in = inputs[0].get<xpu, 5, DType>(s);
-      Tensor<xpu, 5, DType> out = outputs[0].get<xpu, 5, DType>(s);
-      out = slice(in, begin.get<5>(), end.get<5>());
-      break;
-     }
-     default:
-      LOG(FATAL) << "slice supports at most 5 dimensions";
-      break;
-    }
-  });
 }
 
 // slice the indptr of a csr
@@ -511,45 +451,43 @@ void SliceCsrIndPtrImpl(const int begin, const int end, RunContext ctx,
 }
 
 /*
- * Slice a CSR NDArray
+ * Slice a CSR NDArray for first dimension
  * Only implemented for CPU
  */
 template<typename xpu>
-void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
-                  const NDArray &in, OpReqType req, const NDArray &out) {
+void SliceDimOneCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
+                        const NDArray &in, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
-  CHECK((std::is_same<xpu, cpu>::value)) << "Slice for CSR input only implemented for CPU";
-  if (req == kNullOp) return;
-  CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
-  CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
-  int begin = *param.begin[0];
-  int end = *param.end[0];
-  int indptr_len = end - begin + 1;
+  CHECK((std::is_same<xpu, cpu>::value)) << "SliceDimOneCsrImpl is only implemented for CPU";
+  nnvm::dim_t begin_row = begin[0];
+  nnvm::dim_t end_row = end[0];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
   out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
-  if (!in.storage_initialized()) {
-    out.set_aux_shape(kIndPtr, Shape1(0));
-    return;
-  }
   // assume idx indptr share the same type
   MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
     MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
       MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
-        auto in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-        auto out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        SliceCsrIndPtrImpl<cpu, RType>(begin, end, ctx.run_ctx, in_indptr, out_indptr);
+        RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        SliceCsrIndPtrImpl<cpu, RType>(begin_row, end_row, ctx.run_ctx, in_indptr, out_indptr);
 
         // retrieve nnz (CPU implementation)
         int nnz = out_indptr[indptr_len - 1];
+        // return csr zeros if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
         // copy indices and values
         out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
         out.CheckAndAllocData(Shape1(nnz));
-        auto in_idx = in.aux_data(kIdx).dptr<IType>();
-        auto out_idx = out.aux_data(kIdx).dptr<IType>();
-        auto in_data = in.data().dptr<DType>();
-        auto out_data = out.data().dptr<DType>();
-        int offset = in_indptr[begin];
+        IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType* in_data = in.data().dptr<DType>();
+        DType* out_data = out.data().dptr<DType>();
+        int offset = in_indptr[begin_row];
         // this is also a CPU-only implementation
         memcpy(out_idx, in_idx + offset, nnz * sizeof(IType));
         memcpy(out_data, in_data + offset, nnz * sizeof(DType));
@@ -558,18 +496,151 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   });
 }
 
+/*!
+ * \brief slice a CSRNDArray for two dimensions
+ */
+struct SliceDimTwoCsrAssign {
+  /*!
+   * \brief This function slices a CSRNDArray on axis one between begin_col and end_col
+   * \param i           loop index
+   * \param out_idx     output csr ndarray column indices
+   * \param out_data    output csr ndarray data
+   * \param out_indptr  output csr ndarray row index pointer
+   * \param in_idx      input csr ndarray column indices
+   * \param in_data     input csr ndarray data
+   * \param in_indptr   input csr ndarray row index pointer
+   * \param begin_col   begin column indice
+   * \param end_col     end column indice
+   */
+  template<typename IType, typename RType, typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  IType* out_idx, DType* out_data,
+                                  const RType* out_indptr,
+                                  const IType* in_idx, const DType* in_data,
+                                  const RType* in_indptr,
+                                  const int begin_col, const int end_col) {
+    RType ind = out_indptr[i];
+    for (RType j = in_indptr[i]; j < in_indptr[i+1]; j++) {
+      // indices of CSRNDArray are in ascending order per row
+      if (in_idx[j] >= end_col) {
+        break;
+      } else if (in_idx[j] >= begin_col) {
+        out_idx[ind] = in_idx[j] - begin_col;
+        out_data[ind] = in_data[j];
+        ind++;
+      }
+    }
+  }
+};
+
+/*
+ * Slice a CSR NDArray for two dimensions
+ * Only implemented for CPU
+ */
+template<typename xpu>
+void SliceDimTwoCsrImpl(const TShape &begin, const TShape &end, const OpContext& ctx,
+                        const NDArray &in, const NDArray &out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  CHECK((std::is_same<xpu, cpu>::value)) << "SliceDimTwoCsrImpl is only implemented for CPU";
+  nnvm::dim_t begin_row = begin[0], end_row = end[0];
+  nnvm::dim_t begin_col = begin[1], end_col = end[1];
+  nnvm::dim_t indptr_len = end_row - begin_row + 1;
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(indptr_len));
+  // assume idx indptr share the same type
+  MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(in.aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+        RType *in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+        IType *in_idx = in.aux_data(kIdx).dptr<IType>();
+        DType *in_data = in.data().dptr<DType>();
+        // retrieve nnz (CPU implementation)
+        RType *out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        int nnz = 0;
+        out_indptr[0] = 0;
+        // loop through indptr array and corresponding indices to count for nnz
+        for (nnvm::dim_t i = 0; i < indptr_len - 1; i++) {
+          out_indptr[i+1] = out_indptr[i];
+          for (RType j = in_indptr[i + begin_row];
+               j < in_indptr[i + begin_row + 1]; j++) {
+            // indices of CSRNDArray are in ascending order per row
+            if (in_idx[j] >= end_col) {
+              break;
+            } else if (in_idx[j] >= begin_col) {
+              out_indptr[i+1]++;
+              nnz++;
+            }
+          }
+        }
+        // returns zeros in csr format if nnz = 0
+        if (nnz == 0) {
+          out.set_aux_shape(kIdx, Shape1(0));
+          return;
+        }
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType *out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType *out_data = out.data().dptr<DType>();
+
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Kernel<SliceDimTwoCsrAssign, xpu>::Launch(s, indptr_len - 1, out_idx, out_data,
+                                                  out_indptr, in_idx, in_data,
+                                                  in_indptr + begin_row,
+                                                  begin_col, end_col);
+      });
+    });
+  });
+}
+
+
+template<typename xpu>
+void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
+                  const NDArray &in, OpReqType req, const NDArray &out) {
+  CHECK((std::is_same<xpu, cpu>::value)) << "Slice for CSR input only implemented for CPU";
+  if (req == kNullOp) return;
+  CHECK_NE(req, kAddTo) << "kAddTo for Slice on CSR input is not supported";
+  CHECK_NE(req, kWriteInplace) << "kWriteInplace for Slice on CSR input is not supported";
+
+  const TShape ishape = in.shape();
+  const TShape oshape = out.shape();
+
+  uint32_t N = ishape.ndim();
+  TShape begin(N), end(N);
+  for (uint32_t i = 0; i < N; ++i) {
+    int s = 0;
+    if (param.begin[i]) {
+      s = *param.begin[i];
+      if (s < 0) s += ishape[i];
+    }
+    begin[i] = s;
+    end[i] = s + oshape[i];
+  }
+  switch (N) {
+    case 1: {
+      SliceDimOneCsrImpl<xpu>(begin, end, ctx, in, out);
+      break;
+    }
+    case 2: {
+      SliceDimTwoCsrImpl<xpu>(begin, end, ctx, in, out);
+      break;
+    }
+    default:
+      LOG(FATAL) << "CSR is only for 2-D shape";
+      break;
+  }
+}
+
 template<typename xpu>
 void SliceEx(const nnvm::NodeAttrs& attrs,
-          const OpContext& ctx,
-          const std::vector<NDArray>& inputs,
-          const std::vector<OpReqType>& req,
-          const std::vector<NDArray>& outputs) {
+             const OpContext& ctx,
+             const std::vector<NDArray>& inputs,
+             const std::vector<OpReqType>& req,
+             const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), 1);
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   auto in_stype = inputs[0].storage_type();
-  CHECK_NE(in_stype, kDefaultStorage)
-           << "SliceEx is not expected to execute for input with default storage type";
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
   } else {
@@ -577,153 +648,270 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
-inline bool SliceAssignShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
-  const TShape& lshape = (*in_attrs)[0];
-  if (lshape.ndim() == 0) return false;
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, GetSliceShape(param, lshape));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, lshape);
-  return true;
-}
+template<int ndim>
+inline void GetIndexRange(const TShape& dshape,
+                          const nnvm::Tuple<dmlc::optional<int>>& param_begin,
+                          const nnvm::Tuple<dmlc::optional<int>>& param_end,
+                          const nnvm::Tuple<dmlc::optional<int>>& param_step,
+                          common::StaticArray<int, ndim>* begin,
+                          common::StaticArray<int, ndim>* end,
+                          common::StaticArray<int, ndim>* step) {
+  CHECK_NE(dshape.ndim(), 0U);
+  CHECK_NE(dshape.Size(), 0U);
+  CHECK_LE(param_begin.ndim(), dshape.ndim())
+    << "Slicing axis exceeds data dimensions";
+  CHECK_LE(param_end.ndim(), dshape.ndim())
+    << "Slicing axis exceeds data dimensions";
+  CHECK_EQ(param_begin.ndim(), param_end.ndim())
+    << "begin and end must have the same length";
+  CHECK_EQ(ndim, dshape.ndim())
+    << "Static array size=" << ndim
+    << " is not equal to data shape ndim=" << dshape.ndim();
 
-template<typename xpu>
-void SliceAssignImpl(mshadow::Stream<xpu> *s, const SliceParam& param,
-                     const TBlob& dst, const TBlob& src) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  index_t N = dst.ndim();
-  TShape begin(N), end(N);
-  for (index_t i = 0; i < N; ++i) {
-    int s = 0;
-    if (param.begin[i]) {
-      s = *param.begin[i];
-      if (s < 0) s += dst.size(i);
-    }
-    begin[i] = s;
-    end[i] = s + src.size(i);
+  if (param_step.ndim() != 0U) {
+    CHECK_EQ(param_step.ndim(), param_begin.ndim())
+      << "step and begin must have the same length";
   }
 
-  MSHADOW_TYPE_SWITCH(dst.type_flag_, DType, {
-    switch (dst.ndim()) {
-      case 0:
-        break;
-      case 1: {
-        Tensor<xpu, 1, DType> out = dst.get<xpu, 1, DType>(s);
-        Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
-        slice(out, begin.get<1>(), end.get<1>()) = in;
-        break;
+  for (index_t i = 0; i < param_begin.ndim(); ++i) {
+    int b = 0, e = dshape[i], s = 1;
+    const int len = dshape[i];
+    if (param_step.ndim() != 0U) {
+      const auto& opt_step_val = param_step[i];
+      if (opt_step_val.has_value()) {
+        s = opt_step_val.value();
+        CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
       }
-      case 2: {
-        Tensor<xpu, 2, DType> out = dst.get<xpu, 2, DType>(s);
-        Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
-        slice(out, begin.get<2>(), end.get<2>()) = in;
-        break;
+    }
+
+    if (param_begin[i].has_value()) {
+      b = param_begin[i].value();
+      if (b < 0) {
+        b += len;
+        CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
+                       << b - len << " exceeds limit of " << len;
       }
-      case 3: {
-        Tensor<xpu, 3, DType> out = dst.get<xpu, 3, DType>(s);
-        Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s);
-        slice(out, begin.get<3>(), end.get<3>()) = in;
-        break;
+    } else if (s < 0) {
+      b = len - 1;
+    }
+    CHECK_LT(b, len) << "slicing with begin[" << i << "]="
+                     << b << " exceends limit of " << len;
+
+    if (param_end[i].has_value()) {
+      e = param_end[i].value();
+      if (e < 0) {
+        e += len;
+        CHECK_GE(e, 0) << "slicing with end[" << i << "]="
+                       << e - len << " exceeds limit of " << len;
       }
-      case 4: {
-        Tensor<xpu, 4, DType> out = dst.get<xpu, 4, DType>(s);
-        Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s);
-        slice(out, begin.get<4>(), end.get<4>()) = in;
-        break;
-      }
-      case 5: {
-        Tensor<xpu, 5, DType> out = dst.get<xpu, 5, DType>(s);
-        Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s);
-        slice(out, begin.get<5>(), end.get<5>()) = in;
-        break;
-      }
-      default:
-        LOG(FATAL) << "CropAssign supports at most 5 dimensions";
-        break;
+    } else if (s < 0) {
+      e = -1;
+    }
+    CHECK_LE(e, len) << "slicing with end[" << i << "]="
+                     << e << " exceeds limit of " << len;
+
+    (*begin)[i] = b;
+    (*end)[i] = e;
+    (*step)[i] = s;
+  }
+  for (index_t i = param_begin.ndim(); i < dshape.ndim(); ++i) {
+    (*begin)[i] = 0;
+    (*end)[i] = dshape[i];
+    (*step)[i] = 1;
+  }
+}
+
+inline void SetSliceOpOutputDimSize(const index_t i, const int b,
+                                    const int e, const int s,
+                                    TShape* oshape) {
+  if (s > 0) {
+    CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                   << e << ", and step[" << i << "]=" << s << " is invalid";
+    (*oshape)[i] = (e - b - 1) / s + 1;
+  } else {
+    CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                   << e << ", and step[" << i << "]=" << s << " is invalid";
+    (*oshape)[i] = (b - e - 1) / (-s) + 1;
+  }
+}
+
+inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape>* in_attrs,
+                         std::vector<TShape>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const TShape& dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0 || dshape.Size() == 0) return false;
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  TShape oshape = dshape;
+  MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
+    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+      const int b = begin[i], e = end[i], s = step[i];
+      SetSliceOpOutputDimSize(i, b, e, s, &oshape);
     }
   });
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return oshape.ndim() != 0 && oshape.Size() != 0;
 }
 
-template<typename xpu>
-void SliceAssign(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  if (req[0] == kNullOp) {
-    return;
-  } else if (req[0] == kWriteTo) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> in = inputs[0].FlatTo1D<xpu, DType>(s);
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      Copy(out, in, s);
-    });
-  } else if (req[0] != kWriteInplace) {
-    LOG(FATAL) << "CropAssign only supports kWriteTo and kWriteInplace";
-  }
-
-  SliceAssignImpl<xpu>(s, param, outputs[0], inputs[1]);
-}
-
-template<typename xpu>
-void SliceBackward(const nnvm::NodeAttrs& attrs,
-                   const OpContext& ctx,
-                   const std::vector<TBlob>& inputs,
-                   const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  if (req[0] == kNullOp) {
-    return;
-  } else if (req[0] == kWriteTo) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      out = DType(0);
-    });
-  } else {
-    LOG(FATAL) << "CropAssign only supports kWriteTo";
-  }
-
-  SliceAssignImpl<xpu>(s, param, outputs[0], inputs[0]);
-}
-
-struct SimpleCropAssignScalarParam : public dmlc::Parameter<SimpleCropAssignScalarParam> {
-  real_t scalar;
-  TShape begin, end;
-  DMLC_DECLARE_PARAMETER(SimpleCropAssignScalarParam) {
-    DMLC_DECLARE_FIELD(scalar)
-    .set_default(0)
-    .describe("The scalar value for assignment.");
-    DMLC_DECLARE_FIELD(begin)
-    .describe("starting coordinates");
-    DMLC_DECLARE_FIELD(end)
-    .describe("ending coordinates");
+template<int ndim>
+struct slice_forward {
+  // i is the i-th row after flattening out into 2D tensor
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* data,
+                                  const OpReqType req,
+                                  const mshadow::Shape<ndim> dshape,
+                                  const mshadow::Shape<ndim> oshape,
+                                  const common::StaticArray<int, ndim> begin,
+                                  const common::StaticArray<int, ndim> step) {
+    const int data_last_dim_size = dshape[ndim-1];
+    const int out_last_dim_size = oshape[ndim-1];
+    const int step_last_dim = step[ndim-1];
+    const int begin_last_dim = begin[ndim-1];
+    int out_offset = i * out_last_dim_size;
+    for (int j = 0; j < out_last_dim_size; ++j) {
+      int irow = 0;  // row id of flattend 2D data
+      int stride = 1;
+      int idx = i;
+      #pragma unroll
+      for (int k = ndim - 2; k >= 0; --k) {
+        irow += stride * ((idx % oshape[k]) * step[k] + begin[k]);
+        idx /= oshape[k];
+        stride *= dshape[k];
+      }
+      KERNEL_ASSIGN(out[out_offset++], req,
+                    data[irow * data_last_dim_size + j * step_last_dim + begin_last_dim]);
+    }
   }
 };
 
 template<typename xpu>
-void CropAssignScalar(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+void SliceOpForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
   using namespace mshadow;
-  using namespace mshadow::expr;
-  const SimpleCropAssignScalarParam& param = nnvm::get<SimpleCropAssignScalarParam>(attrs.parsed);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob& data = inputs[0];
+  const TBlob& out = outputs[0];
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  MXNET_NDIM_SWITCH(data.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+      mxnet_op::Kernel<slice_forward<ndim>, xpu>::Launch(s, out.shape_.FlatTo2D()[0],
+          out.dptr<DType>(), data.dptr<DType>(), req[0],
+          data.shape_.get<ndim>(), out.shape_.get<ndim>(), begin, step);
+    })
+  })
+}
 
+template<int ndim>
+struct slice_assign {
+  // i is the i-th row after flattening out into 2D tensor
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* val,
+                                  const OpReqType req,
+                                  const mshadow::Shape<ndim> oshape,
+                                  const mshadow::Shape<ndim> vshape,
+                                  const common::StaticArray<int, ndim> begin,
+                                  const common::StaticArray<int, ndim> step) {
+    const int data_last_dim_size = oshape[ndim-1];
+    const int out_last_dim_size = vshape[ndim-1];
+    const int step_last_dim = step[ndim-1];
+    const int begin_last_dim = begin[ndim-1];
+    int offset = i * out_last_dim_size;
+    for (int j = 0; j < out_last_dim_size; ++j) {
+      int irow = 0;  // row id of flattend 2D out
+      int stride = 1;
+      int idx = i;
+      #pragma unroll
+      for (int k = ndim - 2; k >= 0; --k) {
+        irow += stride * ((idx % vshape[k]) * step[k] + begin[k]);
+        idx /= vshape[k];
+        stride *= oshape[k];
+      }
+      KERNEL_ASSIGN(out[irow * data_last_dim_size + j * step_last_dim + begin_last_dim],
+                    req, val[offset++]);
+    }
+  }
+};
+
+template<typename xpu>
+void SliceOpBackward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  using namespace mshadow;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  const TBlob& ograd = inputs[0];
+  const TBlob& igrad = outputs[0];
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  if (req[0] == kWriteTo) {
+    Fill(s, igrad, req[0], 0);
+  } else if (req[0] == kWriteInplace) {
+    LOG(FATAL) << "_slice_backward does not support kWriteInplace";
+  }
+  MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(igrad.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(ograd.type_flag_, DType, {
+      mxnet_op::Kernel<slice_assign<ndim>, xpu>::Launch(s, ograd.shape_.FlatTo2D()[0],
+          igrad.dptr<DType>(), ograd.dptr<DType>(), req[0],
+          igrad.shape_.get<ndim>(), ograd.shape_.get<ndim>(), begin, step);
+    })
+  })
+}
+
+inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
+                               std::vector<TShape> *in_attrs,
+                               std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const TShape& dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0U || dshape.Size() == 0U) return false;
+  TShape vshape = dshape;  // vshape is the value shape on the right hand side
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
+    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+      const int b = begin[i], e = end[i], s = step[i];
+      SetSliceOpOutputDimSize(i, b, e, s, &vshape);
+    }
+  });
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, vshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
+  return true;
+}
+
+template<typename xpu>
+void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);  // data[index] = val, data and val are two inputs
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& data = inputs[0];
+  const TBlob& val = inputs[1];
+  const TBlob& out = outputs[0];
   if (req[0] == kWriteTo) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Tensor<xpu, 1, DType> in = inputs[0].FlatTo1D<xpu, DType>(s);
@@ -731,63 +919,118 @@ void CropAssignScalar(const nnvm::NodeAttrs& attrs,
       Copy(out, in, s);
     });
   } else if (req[0] != kWriteInplace) {
-    LOG(FATAL) << "CropAssignScalar only supports kWriteTo and kWriteInplace";
+    LOG(FATAL) << "_slice_assign only supports kWriteTo and kWriteInplace";
   }
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    switch (outputs[0].shape_.ndim()) {
-      case 0:
-        break;
-      case 1: {
-        Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
-        slice(out, param.begin.get<1>(), param.end.get<1>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 2: {
-        Tensor<xpu, 2, DType> out = outputs[0].get<xpu, 2, DType>(s);
-        slice(out, param.begin.get<2>(), param.end.get<2>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 3: {
-        Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-        slice(out, param.begin.get<3>(), param.end.get<3>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 4: {
-        Tensor<xpu, 4, DType> out = outputs[0].get<xpu, 4, DType>(s);
-        slice(out, param.begin.get<4>(), param.end.get<4>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      case 5: {
-        Tensor<xpu, 5, DType> out = outputs[0].get<xpu, 5, DType>(s);
-        slice(out, param.begin.get<5>(), param.end.get<5>()) = \
-            static_cast<DType>(param.scalar);
-        break;
-      }
-      default:
-        LOG(FATAL) << "CropAssign supports at most 5 dimensions";
-        break;
-    }
-  });
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  MXNET_NDIM_SWITCH(data.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+      mxnet_op::Kernel<slice_assign<ndim>, xpu>::Launch(s, val.shape_.FlatTo2D()[0],
+          out.dptr<DType>(), val.dptr<DType>(), req[0],
+          out.shape_.get<ndim>(), val.shape_.get<ndim>(), begin, step);
+    })
+  })
 }
 
-inline bool CropAssignScalarShape(const nnvm::NodeAttrs& attrs,
-                                  std::vector<TShape> *in_attrs,
-                                  std::vector<TShape> *out_attrs) {
-  const SimpleCropAssignScalarParam& param = nnvm::get<SimpleCropAssignScalarParam>(attrs.parsed);
-  TShape& lshape = (*in_attrs)[0];
-  CHECK_EQ(lshape.ndim(), param.begin.ndim());
-  CHECK_EQ(lshape.ndim(), param.end.ndim());
-  for (index_t i = 0; i < lshape.ndim(); ++i) {
-    CHECK_LT(param.begin[i], param.end[i]);
-    CHECK_LE(param.end[i], lshape[i]);
+struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
+  real_t scalar;
+  nnvm::Tuple<dmlc::optional<int>> begin, end;
+  nnvm::Tuple<dmlc::optional<int>> step;
+  DMLC_DECLARE_PARAMETER(SliceAssignScalarParam) {
+    DMLC_DECLARE_FIELD(scalar)
+    .set_default(0)
+    .describe("The scalar value for assignment.");
+    DMLC_DECLARE_FIELD(begin)
+    .describe("starting indices for the slice operation, supports negative indices.");
+    DMLC_DECLARE_FIELD(end)
+    .describe("ending indices for the slice operation, supports negative indices.");
+    DMLC_DECLARE_FIELD(step)
+    .set_default(nnvm::Tuple<dmlc::optional<int>>())
+    .describe("step for the slice operation, supports negative values.");
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, lshape);
+};
+
+inline bool SliceAssignScalarOpShape(const nnvm::NodeAttrs& attrs,
+                                    std::vector<TShape> *in_attrs,
+                                    std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const TShape& dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0U || dshape.Size() == 0U) return false;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   return true;
+}
+
+template<int ndim>
+struct slice_assign_scalar {
+  // i is the i-th row after flattening out into 2D tensor
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType val,
+                                  const OpReqType req,
+                                  const mshadow::Shape<ndim> oshape,
+                                  const mshadow::Shape<ndim> vshape,
+                                  const common::StaticArray<int, ndim> begin,
+                                  const common::StaticArray<int, ndim> step) {
+    const int data_last_dim_size = oshape[ndim-1];
+    const int out_last_dim_size = vshape[ndim-1];
+    const int step_last_dim = step[ndim-1];
+    const int begin_last_dim = begin[ndim-1];
+    for (int j = 0; j < out_last_dim_size; ++j) {
+      int irow = 0;  // row id of flattend 2D out
+      int stride = 1;
+      int idx = i;
+      #pragma unroll
+      for (int k = ndim - 2; k >= 0; --k) {
+        irow += stride * ((idx % vshape[k]) * step[k] + begin[k]);
+        idx /= vshape[k];
+        stride *= oshape[k];
+      }
+      KERNEL_ASSIGN(out[irow * data_last_dim_size + j * step_last_dim + begin_last_dim], req, val);
+    }
+  }
+};
+
+template<typename xpu>
+void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const TBlob& data = inputs[0];
+  const TBlob& out = outputs[0];
+  if (req[0] == kWriteTo) {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Tensor<xpu, 1, DType> in = inputs[0].FlatTo1D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
+      Copy(out, in, s);
+    });
+  } else if (req[0] != kWriteInplace) {
+    LOG(FATAL) << "_crop_assign_scalar only supports kWriteTo and kWriteInplace";
+  }
+
+  TShape vshape = data.shape_;
+  const SliceAssignScalarParam& param = nnvm::get<SliceAssignScalarParam>(attrs.parsed);
+  MXNET_NDIM_SWITCH(data.ndim(), ndim, {
+    common::StaticArray<int, ndim> begin, end, step;
+    GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
+    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+      const int b = begin[i], e = end[i], s = step[i];
+      SetSliceOpOutputDimSize(i, b, e, s, &vshape);
+    }
+    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+      mxnet_op::Kernel<slice_assign_scalar<ndim>, xpu>::Launch(s, vshape.FlatTo2D()[0],
+          out.dptr<DType>(), static_cast<DType>(param.scalar), req[0],
+          out.shape_.get<ndim>(), vshape.get<ndim>(), begin, step);
+    })
+  })
 }
 
 struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
@@ -987,15 +1230,27 @@ void Clip(const nnvm::NodeAttrs& attrs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  using namespace mxnet_op;
   const ClipParam& param = nnvm::get<ClipParam>(attrs.parsed);
   CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-    inputs[0].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+    mxnet_op::Kernel<mxnet::op::clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                                   inputs[0].dptr<DType>(),
+                                                   DType(param.a_min), DType(param.a_max));
   });
+}
+
+template<typename xpu>
+void ClipEx(const nnvm::NodeAttrs& attrs,
+            const OpContext& ctx,
+            const std::vector<NDArray>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs[0].dtype(), outputs[0].dtype());
+  CHECK_EQ(inputs[0].storage_type(), outputs[0].storage_type());
+  CHECK_NE(inputs[0].storage_type(), kDefaultStorage);
+  UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Clip<xpu>);
 }
 
 template<typename xpu>

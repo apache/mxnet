@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file softmax.cc
  * \brief CPU Implementation of softmax
  */
@@ -58,7 +59,7 @@ Example::
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_softmax)
 .set_attr_parser(ParamParser<SoftmaxParam>)
-.set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, mshadow::op::mul,
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
 
 MXNET_OPERATOR_REGISTER_UNARY(log_softmax)

@@ -27,7 +27,7 @@ echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | 
 apt-get install -y oracle-java8-installer
 apt-get install -y oracle-java8-set-default
 
-apt-get install -y maven 
+apt-get install -y maven
 
 wget http://downloads.lightbend.com/scala/2.11.8/scala-2.11.8.deb
 dpkg -i scala-2.11.8.deb

@@ -18,6 +18,7 @@
  */
 
 /*!
+*  Copyright (c) 2016 by Contributors
 * \file shape.h
 * \brief definition of shape
 * \author Chuntao Hong, Zhang Chen

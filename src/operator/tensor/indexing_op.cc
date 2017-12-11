@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.cc
  * \brief
  * \author Siyi Li, Chi Zhang
@@ -26,6 +27,115 @@
 #include "./indexing_op.h"
 namespace mxnet {
 namespace op {
+
+template<>
+void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
+                                          const TBlob& data,
+                                          const NDArray& weight,
+                                          const OpReqType req,
+                                          const TBlob& output) {
+  if (req == kNullOp) return;
+  using namespace rowsparse;
+  using namespace mxnet_op;
+  // zeros weight
+  if (req == kWriteTo && !weight.storage_initialized()) {
+    size_t out_size = output.shape_.Size();
+    MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+      Fill<false>(s, TBlob(output.dptr<DType>(), mshadow::Shape1(out_size),
+          cpu::kDevMask), kWriteTo, 0);
+    })
+    return;
+  }
+  // check out-of-bound indices
+  bool is_valid = true;
+  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+    DType min = 0;
+    DType max = static_cast<DType>(weight.shape()[0] - 1);
+    // check with single thread is faster since data is small
+    DType* data_ptr = data.dptr<DType>();
+    size_t data_size = data.shape_.Size();
+    for (size_t i = 0; i < data_size; i++) {
+      if (data_ptr[i] > max || data_ptr[i] < min) is_valid = false;
+    }
+  })
+  CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
+  // the weight is actually dense
+  if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
+    EmbeddingOpForwardDnsImpl<cpu>(s, data, weight.data(), req, output);
+  } else {
+    EmbeddingOpForwardRspImpl<cpu>(s, data, weight, req, output);
+  }
+}
+
+
+template<>
+inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
+                                                  const TBlob& ograd,
+                                                  const TBlob& data,
+                                                  const OpReqType req,
+                                                  const NDArray& output) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace mshadow::expr;
+  using namespace rowsparse;
+  using nnvm::dim_t;
+  if (req == kNullOp) return;
+  CHECK_EQ(req, kWriteTo) << "SparseEmbedding layer doesn't support "
+                          << "weight gradient calculation with req != write";
+
+  // Request temporary storage for marking non-zero rows and prefix sum
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  dim_t num_rows = output.shape()[0];
+  dim_t row_length = output.shape()[1];
+  // TODO(haibin) request less storage to save space in the future
+  size_t workspace_size = 2 * (num_rows * sizeof(dim_t));
+  Tensor<cpu, 1, char> workspace =
+    ctx.requested[embedding::kTempSpace].get_space_typed<cpu, 1, char>(
+      Shape1(workspace_size), s);
+  dim_t* row_flg = reinterpret_cast<dim_t*>(workspace.dptr_);
+  dim_t* prefix_sum = row_flg + num_rows;
+  dim_t data_size = static_cast<dim_t>(data.shape_.Size());
+
+  MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
+    MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
+      MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+        // mark row flags
+        Fill<false>(s, TBlob(row_flg, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
+        Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
+        // calculate inclusive prefix sum
+        // TODO(haibin) ideally this is should be done in parallel
+        prefix_sum[0] = row_flg[0];
+        for (dim_t i = 1; i < num_rows; i++) {
+          prefix_sum[i] = prefix_sum[i - 1] + row_flg[i];
+        }
+        // total number of non-zero rows
+        dim_t nnr = prefix_sum[num_rows - 1];
+        if (nnr == 0) {
+          FillZerosRspImpl(s, output);
+          return;
+        }
+        output.CheckAndAlloc({Shape1(nnr)});
+        RType* grad_row_idx = output.aux_data(kIdx).dptr<RType>();
+        // fill row_idx array of output matrix, using the row_flg values
+        Kernel<FillRspRowIdxKernel, cpu>::Launch(s, num_rows,
+            grad_row_idx, prefix_sum, num_rows);
+        // prefill with zeros
+        DType* grad_data = output.data().dptr<DType>();
+        Fill<false>(s, TBlob(grad_data, Shape1(nnr * row_length),
+            cpu::kDevMask), kWriteTo, 0);
+        // add the final gradients
+        const int num_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+        dim_t segment_len = (nnr + num_threads - 1) / num_threads;
+        Kernel<AddTakeGradRspKernel, cpu>::Launch(s, num_threads, grad_data, prefix_sum,
+                                                  ograd.dptr<DType>(), row_length,
+                                                  data.dptr<IType>(), data_size, segment_len,
+                                                  num_rows);
+      });
+    });
+  });
+}
+
+
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
@@ -95,6 +205,76 @@ Examples::
 .add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
 .add_arguments(EmbeddingParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_contrib_SparseEmbedding)
+.describe(R"code(Maps integer indices to vector representations (embeddings).
+
+This operator maps words to real-valued vectors in a high-dimensional space,
+called word embeddings. These embeddings can capture semantic and syntactic properties of the words.
+For example, it has been noted that in the learned embedding spaces, similar words tend
+to be close to each other and dissimilar words far apart.
+
+For an input array of shape (d1, ..., dK),
+the shape of an output array is (d1, ..., dK, output_dim).
+All the input values should be integers in the range [0, input_dim).
+
+If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
+(ip0, op0).
+
+The storage type of weight must be `row_sparse`, and the gradient of the weight will be of
+`row_sparse` storage type, too.
+
+.. Note::
+
+    `SparseEmbedding` is designed for the use case where `input_dim` is very large (e.g. 100k).
+    The operator is available on both CPU and GPU.
+
+Examples::
+
+  input_dim = 4
+  output_dim = 5
+
+  // Each row in weight matrix y represents a word. So, y = (w0,w1,w2,w3)
+  y = [[  0.,   1.,   2.,   3.,   4.],
+       [  5.,   6.,   7.,   8.,   9.],
+       [ 10.,  11.,  12.,  13.,  14.],
+       [ 15.,  16.,  17.,  18.,  19.]]
+
+  // Input array x represents n-grams(2-gram). So, x = [(w1,w3), (w0,w2)]
+  x = [[ 1.,  3.],
+       [ 0.,  2.]]
+
+  // Mapped input x to its vector representation y.
+  SparseEmbedding(x, y, 4, 5) = [[[  5.,   6.,   7.,   8.,   9.],
+                                 [ 15.,  16.,  17.,  18.,  19.]],
+
+                                [[  0.,   1.,   2.,   3.,   4.],
+                                 [ 10.,  11.,  12.,  13.,  14.]]]
+
+)code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<EmbeddingParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "weight"};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape)
+.set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType)
+.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
+                               {n->inputs[0]}, n->attrs.dict);
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array to the embedding operator.")
+.add_argument("weight", "NDArray-or-Symbol", "The embedding weight matrix.")
+.add_arguments(EmbeddingParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_backward_Embedding)
 .set_num_inputs(2)
 .set_num_outputs(2)
@@ -104,6 +284,17 @@ NNVM_REGISTER_OP(_backward_Embedding)
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpBackward<cpu>);
+
+NNVM_REGISTER_OP(_backward_SparseEmbedding)
+.set_num_inputs(2)
+.set_num_outputs(2)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpBackwardStorageType)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
 .describe(R"code(Takes elements from an input array along the given axis.
@@ -322,7 +513,8 @@ Examples::
 
   data = [2, 3, 0]
   indices = [[1, 1, 0], [0, 1, 0]]
-  scatter_nd(data, indices) = [[0, 0], [2, 3]]
+  shape = (2, 2)
+  scatter_nd(data, indices, shape) = [[0, 0], [2, 3]]
 
 )code")
 .set_num_outputs(1)
@@ -355,6 +547,35 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "indices")
 .add_arguments(ScatterNDParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_scatter_set_nd)
+.describe(R"code(This operator has the same functionality as scatter_nd
+except that it does not reset the elements not indexed by the input
+index `NDArray` in the input data `NDArray`.
+
+.. note:: This operator is for internal use only.
+
+Examples::
+
+  data = [2, 3, 0]
+  indices = [[1, 1, 0], [0, 1, 0]]
+  out = [[1, 1], [1, 1]]
+  scatter_nd(data=data, indices=indices, out=out)
+  out = [[0, 1], [2, 3]]
+
+)code")
+.set_num_outputs(1)
+.set_num_inputs(2)
+.set_attr_parser(ParamParser<ScatterNDParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "indices"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
+.set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
+.set_attr<FCompute>("FCompute<cpu>", ScatterSetNDForward<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "data")
+.add_argument("indices", "NDArray-or-Symbol", "indices")
+.add_arguments(ScatterNDParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
