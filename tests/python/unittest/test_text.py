@@ -21,7 +21,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from collections import Counter
+import unittest
 
+from mxnet import ndarray as nd
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
 from mxnet.text.glossary import Glossary
@@ -145,7 +147,7 @@ def test_check_pretrain_files():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
             TextEmbed.check_pretrain_files(pretrain_file, embed_name)
 
-
+@unittest.skip("demonstrating skipping")
 def test_glove():
     glove_6b_50d = TextEmbed.create_text_embed('glove',
                                                pretrain_file='glove.6B.50d.txt')
@@ -165,8 +167,8 @@ def test_glove():
                                  '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-
-def test_fast_text():
+@unittest.skip("demonstrating skipping")
+def test_fasttext():
     fasttext_simple = TextEmbed.create_text_embed(
         'fasttext', pretrain_file='wiki.simple.vec')
 
@@ -183,6 +185,45 @@ def test_fast_text():
 
     unk_vecs_sum = fasttext_simple[['<unk$unk@unk>',
                                     '<unk$unk@unk>']].sum().asnumpy()[0]
+    assert_almost_equal(unk_vecs_sum, 0)
+
+
+def _mk_my_pretrain_file(path, token_delim, pretrain_file):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seq1 = token_delim.join(['a', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
+    seq2 = token_delim.join(['b', '0.1', '0.2', '0.3', '0.4', '0.5']) + '\n'
+    seqs = seq1 + seq2
+    with open(os.path.join(path, pretrain_file), 'w') as fout:
+        fout.write(seqs)
+
+
+def test_text_embed():
+    embed_root = os.path.expanduser('~/.mxnet/embeddings/')
+    embed_name = 'my_embed'
+    token_delim = '/t'
+    pretrain_file = os.path.expanduser('my_pretrain_file.txt')
+
+    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), token_delim,
+                         pretrain_file)
+
+    my_embed = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file),
+                         url=None, embed_name=embed_name, embed_root=embed_root,
+                         special_init_vec=nd.zeros, token_delim=token_delim)
+
+    assert len(my_embed) == 2
+    assert my_embed.vec_len == 5
+    assert my_embed.token_to_idx['a'] == 0
+    assert my_embed.idx_to_token[0] == 'a'
+
+    last_vec_sum = my_embed.idx_to_vec[2].sum().asnumpy()[0]
+    assert_almost_equal(last_vec_sum, 0)
+
+    unk_vec_sum = my_embed['<unk$unk@unk>'].sum().asnumpy()[0]
+    assert_almost_equal(unk_vec_sum, 0)
+
+    unk_vecs_sum = my_embed[['<unk$unk@unk>',
+                             '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
 
