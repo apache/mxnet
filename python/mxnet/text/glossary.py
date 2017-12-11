@@ -23,6 +23,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import io
 import logging
 import os
 import tarfile
@@ -404,7 +405,7 @@ class TextEmbed(object):
         vector for every special token, such as an unknown token and a padding
         token.
         """
-        with open(pretrain_file_path, 'r', encoding='utf8') as f:
+        with io.open(pretrain_file_path, 'r', encoding='utf8') as f:
             lines = f.readlines()
 
         logging.info('Loading pretrained embedding vectors from %s'

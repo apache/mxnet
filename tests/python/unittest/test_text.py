@@ -16,11 +16,11 @@
 # under the License.
 
 # coding: utf-8
+
 from __future__ import absolute_import
 from __future__ import print_function
 
 from collections import Counter
-import os
 
 from mxnet.test_utils import *
 from mxnet.text import utils as tu
@@ -146,12 +146,44 @@ def test_check_pretrain_files():
             TextEmbed.check_pretrain_files(pretrain_file, embed_name)
 
 
-def test_text_embed():
+def test_glove():
+    glove_6b_50d = TextEmbed.create_text_embed('glove',
+                                               pretrain_file='glove.6B.50d.txt')
+
+    assert len(glove_6b_50d) == 400000
+    assert glove_6b_50d.vec_len == 50
+    assert glove_6b_50d.token_to_idx['hi'] == 11083
+    assert glove_6b_50d.idx_to_token[11083] == 'hi'
+
+    last_vec_sum = glove_6b_50d.idx_to_vec[400000].sum().asnumpy()[0]
+    assert_almost_equal(last_vec_sum, 0)
+
+    unk_vec_sum = glove_6b_50d['<unk$unk@unk>'].sum().asnumpy()[0]
+    assert_almost_equal(unk_vec_sum, 0)
+
+    unk_vecs_sum = glove_6b_50d[['<unk$unk@unk>',
+                                 '<unk$unk@unk>']].sum().asnumpy()[0]
+    assert_almost_equal(unk_vecs_sum, 0)
+
+
+def test_fast_text():
     fasttext_simple = TextEmbed.create_text_embed(
         'fasttext', pretrain_file='wiki.simple.vec')
+
     assert len(fasttext_simple) == 111051
+    assert fasttext_simple.vec_len == 300
+    assert fasttext_simple.token_to_idx['hi'] == 3240
+    assert fasttext_simple.idx_to_token[3240] == 'hi'
 
+    last_vec_sum = fasttext_simple.idx_to_vec[111051].sum().asnumpy()[0]
+    assert_almost_equal(last_vec_sum, 0)
 
+    unk_vec_sum = fasttext_simple['<unk$unk@unk>'].sum().asnumpy()[0]
+    assert_almost_equal(unk_vec_sum, 0)
+
+    unk_vecs_sum = fasttext_simple[['<unk$unk@unk>',
+                                    '<unk$unk@unk>']].sum().asnumpy()[0]
+    assert_almost_equal(unk_vecs_sum, 0)
 
 
 if __name__ == '__main__':
