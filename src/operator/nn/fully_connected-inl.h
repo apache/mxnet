@@ -43,6 +43,7 @@ namespace op {
 // These enums are only visible within this header
 namespace fullc {
 enum FullyConnectedOpInputs {kData, kWeight, kBias};
+enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
 }  // fullc
 

@@ -170,6 +170,11 @@ NNVM_REGISTER_OP(_backward_Activation)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr_parser(ParamParser<ActivationParam>)
 .set_attr<FCompute>("FCompute<cpu>", ActivationGradCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationGradComputeEx_CPU);

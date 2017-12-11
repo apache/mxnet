@@ -154,6 +154,7 @@ static mkldnn::convolution_backward_weights::primitive_desc GetDeconvBwdWeights(
 void MKLDNNDeconvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &out_data) {
+  TmpMemMgr::Instance().Init(ctx.requested[deconv::kTempSpace]);
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
 
   mkldnn::convolution_backward_data::primitive_desc deconvFwd_pd = GetDeconvFwd(
@@ -187,6 +188,7 @@ void MKLDNNDeconvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &
 void MKLDNNDeconvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
     const std::vector<NDArray>& outputs) {
+  TmpMemMgr::Instance().Init(ctx.requested[deconv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   CHECK_NE(req[deconv::kWeight], kWriteInplace) << "cannot write weight inplace";

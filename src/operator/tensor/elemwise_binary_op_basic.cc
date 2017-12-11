@@ -149,6 +149,11 @@ NNVM_REGISTER_OP(_backward_add)
                                   return std::vector<std::pair<int, int> >{{0, 0},
                                                                            {0, 1}};
                                 })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseNone<
   cpu, mshadow_op::identity, mshadow_op::identity>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", _backward_ElemwiseAddEx)

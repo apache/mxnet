@@ -160,6 +160,7 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
     return;
   }
 
+  TmpMemMgr::Instance().Init(ctx.requested[0]);
   std::shared_ptr<const mkldnn::memory> diff_dst_mem = out_grad.GetMKLDNNData();
   std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
