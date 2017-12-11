@@ -126,6 +126,36 @@ class Glossary(object):
     def __len__(self):
         return len(self.idx_to_token)
 
+    def __getitem__(self, tokens):
+        """The getter.
+
+        Parameters
+        ----------
+        tokens : str or list of strs
+            A token or a list of tokens.
+
+
+        Returns
+        -------
+        mxnet.ndarray.NDArray:
+            The embedding vector(s) of the token(s). According to numpy
+            conventions, if `tokens` is a string, returns a 1-D NDArray of shape
+            `self.vec_len`; if `tokens` is a list of strings, returns a 2-D
+            NDArray of shape=(len(tokens), self.vec_len).
+        """
+        to_reduce = False
+        if not isinstance(tokens, list):
+            tokens = [tokens]
+            to_reduce = True
+
+        indices = [self.token_to_idx[token] if token in self.token_to_idx
+                   else self.unk_idx() for token in tokens]
+
+        vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
+                            self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
+
+        return vecs[0] if to_reduce else vecs
+
     @property
     def token_to_idx(self):
         return self._token_to_idx
@@ -337,10 +367,10 @@ class TextEmbed(object):
 
         self._load_embedding(pretrain_file_path, token_delim)
 
-        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token) \
-            == len(self._token_to_idx), \
-            'The extra (last) row of self._idx_to_vec is the initialized ' \
-            'embedding vector for a special, such as an unknown token.'
+        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token), \
+            'The extra (last) row of self._idx_to_vec should be the ' \
+            'initialized embedding vector for a special, such as an unknown ' \
+            'token.'
 
     @staticmethod
     def _get_pretrain_file_path_from_url(pretrain_file, url, embed_name,

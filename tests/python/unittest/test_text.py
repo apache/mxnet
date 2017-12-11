@@ -198,6 +198,18 @@ def _mk_my_pretrain_file(path, token_delim, pretrain_file):
         fout.write(seqs)
 
 
+def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    seq1 = token_delim.join(['a', '0.01', '0.02', '0.03', '0.04', '0.05']) \
+           + '\n'
+    seq2 = token_delim.join(['c', '0.01', '0.02', '0.03', '0.04', '0.05']) \
+           + '\n'
+    seqs = seq1 + seq2
+    with open(os.path.join(path, pretrain_file), 'w') as fout:
+        fout.write(seqs)
+
+
 def test_text_embed():
     embed_root = os.path.expanduser('~/.mxnet/embeddings/')
     embed_name = 'my_embed'
@@ -232,16 +244,104 @@ def test_all_embeds():
         print('embed_name: %s' % embed_name)
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
 
-            if not pretrain_file.startswith(
-                    'glove.840B.300d') and not pretrain_file.startswith(
-                    'glove.42B') and not pretrain_file.startswith(
-                    'glove.6B') and not pretrain_file.startswith(
-                    'glove.twitter'):
 
-                print('pretrain_file: %s' % pretrain_file)
-                te = TextEmbed.create_text_embed(embed_name,
-                                                 pretrain_file=pretrain_file)
-                print(len(te))
+            print('pretrain_file: %s' % pretrain_file)
+            te = TextEmbed.create_text_embed(embed_name,
+                                             pretrain_file=pretrain_file)
+            print(len(te))
+
+
+def test_glossary_frequency_thresholds():
+    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
+
+    g1 = Glossary(counter, top_k_freq=None, min_freq=1, specials=['<unk>'],
+                  embeds=None)
+    assert len(g1) == 5
+    assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
+                               'some_word$': 4}
+    assert g1.idx_to_token[1] == 'c'
+
+    g2 = Glossary(counter, top_k_freq=None, min_freq=2, specials=['<unk>'],
+                  embeds=None)
+    assert len(g2) == 3
+    assert g2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
+    assert g2.idx_to_token[1] == 'c'
+
+    g3 = Glossary(counter, top_k_freq=None, min_freq=100, specials=['<unk>'],
+                  embeds=None)
+    assert len(g3) == 1
+    assert g3.token_to_idx == {'<unk>': 0}
+    assert g3.idx_to_token[0] == '<unk>'
+
+    g4 = Glossary(counter, top_k_freq=2, min_freq=1, specials=['<unk>'],
+                  embeds=None)
+    assert len(g4) == 3
+    assert g4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
+    assert g4.idx_to_token[1] == 'c'
+
+    g5 = Glossary(counter, top_k_freq=3, min_freq=1, specials=['<unk>'],
+                  embeds=None)
+    assert len(g5) == 4
+    assert g5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
+    assert g5.idx_to_token[1] == 'c'
+
+    g6 = Glossary(counter, top_k_freq=100, min_freq=1, specials=['<unk>'],
+                  embeds=None)
+    assert len(g6) == 5
+    assert g6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
+                               'some_word$': 4}
+    assert g6.idx_to_token[1] == 'c'
+
+    g7 = Glossary(counter, top_k_freq=1, min_freq=2, specials=['<unk>'],
+                  embeds=None)
+    assert len(g7) == 2
+    assert g7.token_to_idx == {'<unk>': 0, 'c': 1}
+    assert g7.idx_to_token[1] == 'c'
+
+
+def test_glossary_with_one_embed():
+    embed_root = os.path.expanduser('~/.mxnet/embeddings/')
+    embed_name = 'my_embed'
+    token_delim = '/t'
+    pretrain_file = os.path.expanduser('my_pretrain_file1.txt')
+
+    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), token_delim,
+                         pretrain_file)
+
+    my_embed1 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file),
+                          url=None, embed_name=embed_name,
+                          embed_root=embed_root, special_init_vec=nd.zeros,
+                          token_delim=token_delim)
+
+    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
+
+    g1 = Glossary(counter, top_k_freq=None, min_freq=1,
+                  specials=['<unk>', '<pad>'], embeds=my_embed1)
+
+    print(g1.token_to_idx)
+
+
+def test_glossary_with_two_embeds():
+    embed_root = os.path.expanduser('~/.mxnet/embeddings/')
+    embed_name = 'my_embed'
+    token_delim = '/t'
+    pretrain_file1 = os.path.expanduser('my_pretrain_file1.txt')
+    pretrain_file2 = os.path.expanduser('my_pretrain_file2.txt')
+
+    _mk_my_pretrain_file(os.path.join(embed_root, embed_name), token_delim,
+                         pretrain_file1)
+    _mk_my_pretrain_file2(os.path.join(embed_root, embed_name), token_delim,
+                          pretrain_file2)
+
+    my_embed1 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file1),
+                          url=None, embed_name=embed_name, embed_root=embed_root,
+                          special_init_vec=nd.zeros, token_delim=token_delim)
+    my_embed2 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file2),
+                          url=None, embed_name=embed_name,
+                          embed_root=embed_root, special_init_vec=nd.zeros,
+                          token_delim=token_delim)
+
+    counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
 
 if __name__ == '__main__':
