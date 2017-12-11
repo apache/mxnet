@@ -18,11 +18,12 @@
 """Interface to runtime cuda kernel compile module."""
 from __future__ import absolute_import
 
+from array import array
 import re
 import ctypes
 import numpy as np
 
-from .base import _LIB, mx_uint, c_array, check_call
+from .base import _LIB, mx_uint, c_array, c_array_buf, c_str_array, check_call
 from .base import c_str, CudaModuleHandle, CudaKernelHandle, numeric_types, string_types
 from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, NDArray
 
@@ -100,9 +101,9 @@ class CudaModule(object):
         check_call(_LIB.MXRtcCudaModuleCreate(
             c_str(source),
             len(options),
-            c_array(ctypes.c_char_p, [c_str(opt) for opt in options]),
+            c_str_array(options),
             len(exports),
-            c_array(ctypes.c_char_p, [c_str(name) for name in exports]),
+            c_str_array(exports),
             ctypes.byref(self.handle)))
 
     def __del__(self):
@@ -162,9 +163,9 @@ class CudaModule(object):
             self.handle,
             c_str(name),
             len(dtypes),
-            c_array(ctypes.c_int, [ctypes.c_int(i) for i in is_ndarray]),
-            c_array(ctypes.c_int, [ctypes.c_int(i) for i in is_const]),
-            c_array(ctypes.c_int, [ctypes.c_int(i) for i in dtypes]),
+            c_array_buf(ctypes.c_int, array('i', is_ndarray)),
+            c_array_buf(ctypes.c_int, array('i', is_const)),
+            c_array_buf(ctypes.c_int, array('i', dtypes)),
             ctypes.byref(hdl)))
 
         return CudaKernel(hdl, name, is_ndarray, dtypes)

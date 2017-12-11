@@ -93,17 +93,17 @@ class SqueezeNet(HybridBlock):
                 self.features.add(_make_fire(48, 192, 192))
                 self.features.add(_make_fire(64, 256, 256))
                 self.features.add(_make_fire(64, 256, 256))
+            self.features.add(nn.Dropout(0.5))
 
-            self.classifier = nn.HybridSequential(prefix='')
-            self.classifier.add(nn.Dropout(0.5))
-            self.classifier.add(nn.Conv2D(classes, kernel_size=1))
-            self.classifier.add(nn.Activation('relu'))
-            self.classifier.add(nn.AvgPool2D(13))
-            self.classifier.add(nn.Flatten())
+            self.output = nn.HybridSequential(prefix='')
+            self.output.add(nn.Conv2D(classes, kernel_size=1))
+            self.output.add(nn.Activation('relu'))
+            self.output.add(nn.AvgPool2D(13))
+            self.output.add(nn.Flatten())
 
     def hybrid_forward(self, F, x):
         x = self.features(x)
-        x = self.classifier(x)
+        x = self.output(x)
         return x
 
 # Constructor

@@ -30,6 +30,7 @@ This module contains definitions for the following model architectures:
 -  `MobileNet`_
 
 You can construct a model with random weights by calling its constructor:
+
 .. code::
 
     from mxnet.gluon.model_zoo import vision
@@ -39,8 +40,8 @@ You can construct a model with random weights by calling its constructor:
     densenet = vision.densenet_161()
 
 We provide pre-trained models for all the models except ResNet V2.
-These can constructed by passing
-``pretrained=True``:
+These can constructed by passing ``pretrained=True``:
+
 .. code::
 
     from mxnet.gluon.model_zoo import vision

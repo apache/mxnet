@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file initialize.cc
  * \brief initialize mxnet library
  */
@@ -76,6 +77,11 @@ LibraryInitializer* LibraryInitializer::Get() {
   static LibraryInitializer inst;
   return &inst;
 }
+
+#ifdef __GNUC__
+// Don't print an unused variable message since this is intentional
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
 
 static LibraryInitializer* __library_init = LibraryInitializer::Get();
 }  // namespace mxnet

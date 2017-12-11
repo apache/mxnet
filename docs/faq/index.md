@@ -14,11 +14,14 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How do I visualize neural networks as computation graphs?](http://mxnet.io/how_to/visualize_graph.html)
 
 
-## Speed
-
+## Scale
 * [How can I train with multiple CPU/GPUs with data parallelism?](http://mxnet.io/how_to/multi_devices.html)
 
 * [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/how_to/model_parallel_lstm.html)
+
+
+## Speed
+* [How do I use gradient compression with distributed training?](http://mxnet.io/how_to/gradient_compression.html)
 
 * [Can I use nnpack to improve the CPU performance of MXNet?](http://mxnet.io/how_to/nnpack.html)
 
@@ -39,6 +42,9 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 * [How do I run Keras 1.2.2 with mxnet backend?](https://github.com/dmlc/keras/wiki/Installation)
 
 * [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
+
+## Security
+* [How to run MXNet securely?](http://mxnet.io/how_to/security.html)
 
 ## Extend and Contribute to MXNet
 

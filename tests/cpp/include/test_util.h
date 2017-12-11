@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file test_util.h
  * \brief unit test performance analysis functions
  * \author Chris Olivier
@@ -40,8 +41,10 @@ namespace mxnet {
 namespace test {
 
 extern bool unitTestsWithCuda;
-extern bool debugOutput;
+extern bool debug_output;
 extern bool quick_test;
+extern bool performance_run;
+extern bool csv;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
@@ -517,14 +520,17 @@ inline std::string demangle(const char *name) {
   return status ? name : res.get();
 }
 
+template<typename T>
+inline std::string type_name() { return demangle(typeid(T).name()); }
+
 #define PRINT_NDARRAYS(__ctx$, __var)  test::print(__ctx$, __FUNCTION__, #__var, __var)
 #define PRINT_OP_AND_ARRAYS(__ctx$, __op, __var)  test::print(__ctx$, __FUNCTION__, \
   static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
-  "<" << test::demangle(typeid(__op).name()) << ">"))->str(), __var)
+  "<" << type_name<__op>() << ">"))->str(), __var)
 #define PRINT_OP2_AND_ARRAYS(__ctx$, __op1, __op2, __var)  test::print(__ctx$, __FUNCTION__, \
   static_cast<std::stringstream *>(&(std::stringstream() << #__var << \
-  "<" << test::demangle(typeid(__op1).name()) << ", " \
-  << test::demangle(typeid(__op2).name()) << ">"))->str(), __var)
+  "<" << type_name<__op1>().name()) << ", " \
+  << type_name<__op2>() << ">"))->str(), __var)
 
 /*! \brief Fill blob with some pattern defined by the getNextData() callback
  * Pattern fill in the defined order (important for analysis):
@@ -533,7 +539,7 @@ inline std::string demangle(const char *name) {
  *  3D: batch item -> channel -> col
  */
 template<typename DType, typename GetNextData>
-static inline void patternFill(TBlob *blob, GetNextData getNextData) {
+static inline void patternFill(const TBlob *blob, GetNextData getNextData) {
   const size_t dim = blob->ndim();
   CHECK_LE(dim, 5U) << "Will need to handle above 3 dimensions (another for loop)";
   const size_t num = blob->size(0);
@@ -603,6 +609,84 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
   } while (num_rand - defect <= (uint64_t)x);
 
   return static_cast<ScalarType>(x / bin_size + min);
+}
+
+/*!
+ * \brief Deterministically compare TShape objects as less-than,
+ *        for use in stl sorted key such as map and set
+ * \param s1 First shape
+ * \param s2 Second shape
+ * \return true if s1 is less than s2
+ */
+inline bool operator < (const nnvm::TShape &s1, const nnvm::TShape &s2) {
+  if (s1.Size() == s2.Size()) {
+    if (s1.ndim() == s2.ndim()) {
+      for (size_t i = 0, n = s1.ndim(); i < n; ++i) {
+        if (s1[i] == s2[i]) {
+          continue;
+        }
+        return s1[i] < s2[i];
+      }
+      return false;
+    }
+    return s1.ndim() < s2.ndim();
+  }
+  return s1.Size() < s2.Size();
+}
+
+/*!
+ * \brief Deterministically compare a vector of TShape objects as less-than,
+ *        for use in stl sorted key such as map and set
+ * \param v1 First vector of shapes
+ * \param v2 Second vector of shapes
+ * \return true if v1 is less than v2
+ */
+inline bool operator < (const std::vector<nnvm::TShape>& v1, const std::vector<nnvm::TShape>& v2) {
+  if (v1.size() == v2.size()) {
+    for (size_t i = 0, n = v1.size(); i < n; ++i) {
+      if (v1[i] == v2[i]) {
+        continue;
+      }
+      return v1[i] < v2[i];
+    }
+    return false;
+  }
+  return v1.size() < v2.size();
+}
+
+/*!
+ * \brief std::less compare structure for compating vectors of shapes for stl sorted containers
+ */
+struct less_shapevect {
+  bool operator()(const std::vector<nnvm::TShape>& v1, const std::vector<nnvm::TShape>& v2) const {
+    if (v1.size() == v2.size()) {
+      for (size_t i = 0, n = v1.size(); i < n; ++i) {
+        if (v1[i] == v2[i]) {
+          continue;
+        }
+        return v1[i] < v2[i];
+      }
+      return false;
+    }
+    return v1.size() < v2.size();
+  }
+};
+
+inline std::string pretty_num(uint64_t val) {
+  if (!test::csv) {
+    std::string res, s = std::to_string(val);
+    size_t ctr = 0;
+    for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
+      if (ctr && (ctr % 3) == 0) {
+        res += ",";
+      }
+      res.push_back(s[i]);
+    }
+    std::reverse(res.begin(), res.end());
+    return res;
+  } else {
+    return std::to_string(val);
+  }
 }
 
 /*! \brief Change a value during the scope of this declaration */

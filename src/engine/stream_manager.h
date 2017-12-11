@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  */
 #ifndef MXNET_ENGINE_STREAM_MANAGER_H_
 #define MXNET_ENGINE_STREAM_MANAGER_H_
@@ -89,6 +90,8 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif  // MXNET_USE_CUDA
+    default:
+      LOG(FATAL) << "Not Reached";
     }
   }
   return ret;
@@ -116,6 +119,8 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif  // MXNET_USE_CUDA
+    default:
+      LOG(FATAL) << "Not Reached";
     }
   }
   return ret;

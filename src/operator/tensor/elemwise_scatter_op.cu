@@ -23,18 +23,19 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_scatter_elemwise_div)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseScatterBinaryOp::Compute<gpu, mshadow::op::div>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseScatterBinaryOp::ComputeEx<gpu, mshadow::op::div>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseScatterBinaryOp::Compute<gpu, op::mshadow_op::div>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseScatterBinaryOp::ComputeEx<gpu,
+  op::mshadow_op::div>);
 
 NNVM_REGISTER_OP(_scatter_plus_scalar)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseScatterBinaryScalarOp::Compute<gpu, mshadow::op::plus>)
+                    ElemwiseScatterBinaryScalarOp::Compute<gpu, op::mshadow_op::plus>)
 .set_attr<FComputeEx>("FComputeEx<gpu>",
-                      ElemwiseScatterBinaryScalarOp::ComputeEx<gpu, mshadow::op::plus>);
+                      ElemwiseScatterBinaryScalarOp::ComputeEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_scatter_minus_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow::op::minus>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, mshadow::op::minus>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::minus>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, op::mshadow_op::minus>);
 
 }  // namespace op
 }  // namespace mxnet

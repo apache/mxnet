@@ -585,8 +585,8 @@ method infer_shape(Maybe[Str|Shape] @args)
         my ($arg_shapes) = $self->_infer_shape_impl(1, @args);
         my $arg_names    = $self->list_arguments;
         my @unknowns;
-        zip(sub {
-            my ($name, $shape) = @_;
+        for(zip($arg_names, $arg_shapes)) {
+            my ($name, $shape) = @$_;
             if(not ref $shape or not @$shape or not product(@$shape))
             {
                 if(@unknowns >= 10)
@@ -599,7 +599,7 @@ method infer_shape(Maybe[Str|Shape] @args)
                     push @unknowns, "$name @shape";
                 }
             }
-        }, $arg_names, $arg_shapes);
+        }
         AI::MXNet::Logging->warning(
             "Cannot decide shape for the following arguments "
             ."(0s in shape means unknown dimensions). "

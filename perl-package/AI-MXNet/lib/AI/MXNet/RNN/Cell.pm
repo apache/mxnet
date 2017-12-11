@@ -1412,15 +1412,15 @@ method unroll(
         $r_outputs = [reverse(@{ $r_outputs })];
     }
     my $outputs = [];
-    zip(sub {
-        my ($i, $l_o, $r_o) = @_;
+    for(zip([0..@{ $l_outputs }-1], [@{ $l_outputs }], [@{ $r_outputs }])) {
+        my ($i, $l_o, $r_o) = @$_;
         push @$outputs, AI::MXNet::Symbol->Concat(
             $l_o, $r_o, dim=>(1+($merge_outputs?1:0)),
             name => $merge_outputs
                         ? sprintf('%sout', $self->_output_prefix)
                         : sprintf('%st%d', $self->_output_prefix, $i)
         );
-    }, [0..@{ $l_outputs }-1], [@{ $l_outputs }], [@{ $r_outputs }]);
+    }
     if($merge_outputs)
     {
         $outputs = @{ $outputs }[0];
@@ -1907,14 +1907,14 @@ method call(AI::MXNet::Symbol $inputs, SymbolOrArrayOfSymbols $states)
     my @states;
     if($p_states != 0)
     {
-        zip(sub {
-            my ($new_s, $old_s) = @_;
+        for(zip($next_states, $states)) {
+            my ($new_s, $old_s) = @$_;
             push @states, AI::MXNet::Symbol->where(
                 $mask->($p_states, $new_s),
                 $new_s,
                 $old_s
             );
-        }, $next_states, $states);
+        }
     }
     $self->prev_output($output);
     return ($output, @states ? \@states : $next_states);
@@ -1968,11 +1968,11 @@ method unroll(
     else
     {
         my @temp;
-        zip(sub {
-            my ($output_sym, $input_sym) = @_;
+        for(zip([@{ $outputs }], [@{ $inputs }])) {
+            my ($output_sym, $input_sym) = @$_;
             push @temp, AI::MXNet::Symbol->elemwise_add($output_sym, $input_sym,
                             name=>$output_sym->name."_plus_residual");
-        }, [@{ $outputs }], [@{ $inputs }]);
+        }
         $outputs = \@temp;
     }
     return ($outputs, $states);

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file cv_api.h
  * \brief C API for opencv
  * \author Junyuan Xie
@@ -99,7 +100,11 @@ MXNET_DLL int MXCVImdecode(const unsigned char *img, const mx_uint len,
       ndout.CheckAndAlloc();
       cv::Mat buf(1, len, CV_8U, img_cpy);
       cv::Mat dst(dims[0], dims[1], flag == 0 ? CV_8U : CV_8UC3, ndout.data().dptr_);
+#if (CV_MAJOR_VERSION > 3 || (CV_MAJOR_VERSION == 3 && CV_MINOR_VERSION >= 3))
+      cv::imdecode(buf, flag | cv::IMREAD_IGNORE_ORIENTATION, &dst);
+#else
       cv::imdecode(buf, flag, &dst);
+#endif
       CHECK(!dst.empty());
       delete[] img_cpy;
     }, ndout.ctx(), {}, {ndout.var()});

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file resource.cc
  * \brief Implementation of resource manager.
  */
@@ -112,14 +113,14 @@ class ResourceManagerImpl : public ResourceManager {
 
   // request resources
   Resource Request(Context ctx, const ResourceRequest &req) override {
-    if (ctx.dev_mask() == cpu::kDevMask) {
+    if (ctx.dev_mask() == Context::kCPU) {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
-      CHECK_EQ(ctx.dev_mask(), gpu::kDevMask);
+      CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
       switch (req.type) {
         case ResourceRequest::kRandom: {
@@ -186,9 +187,11 @@ class ResourceManagerImpl : public ResourceManager {
     inline void Seed(uint32_t global_seed) {
       uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
       mshadow::Random<xpu> *r = prnd;
-      Engine::Get()->PushSync([r, seed](RunContext rctx) {
+      Engine::Get()->PushAsync(
+        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           r->set_stream(rctx.get_stream<xpu>());
           r->Seed(seed);
+          on_complete();
         }, ctx, {}, {resource.var},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
     }

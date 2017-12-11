@@ -18,6 +18,7 @@
  */
 
 /*
+ * Copyright (c) 2016 by Contributors
  * \file sequence_reverse-inl.h
  * \brief
  * \author Sebastian Bodenstien

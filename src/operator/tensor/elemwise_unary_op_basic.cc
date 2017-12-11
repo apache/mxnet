@@ -83,13 +83,12 @@ The storage type of ``relu`` output depends upon the input storage type:
 
 )code" ADD_FILELINE)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
-  cpu, kernel_launch_op::relu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::KernelComputeEx<
-  cpu, kernel_launch_op::relu>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::relu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::ComputeEx<cpu, mshadow_op::relu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_relu"});
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu, kernel_launch_op::relu_grad);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu,
+                                               unary_bwd<mshadow_op::relu_grad>);
 
 // sigmoid
 MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
@@ -102,11 +101,11 @@ MXNET_ADD_SPARSE_OP_ALIAS(sigmoid)
 The storage type of ``sigmoid`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::KernelCompute<
-  cpu, kernel_launch_op::sigmoid>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::sigmoid>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid, kernel_launch_op::sigmoid_grad);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
+                                               unary_bwd<mshadow_op::sigmoid_grad>);
 
 // copy
 MXNET_OPERATOR_REGISTER_UNARY(_copy)
@@ -241,9 +240,9 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
-      auto lhs = MakeNonlossGradNode(
-          "_backward_copy", n, ograds, {},
-          std::unordered_map<std::string, std::string>());
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+                              std::unordered_map<std::string, std::string>());
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
@@ -284,9 +283,9 @@ NNVM_REGISTER_OP(reshape_like)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
-      auto lhs = MakeNonlossGradNode(
-          "_backward_copy", n, ograds, {},
-          std::unordered_map<std::string, std::string>());
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+                              std::unordered_map<std::string, std::string>());
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
       lhs.push_back(nnvm::NodeEntry{ng, 0, 0});

@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include "../operator_common.h"
-#include "../convolution-inl.h"
+#include "../nn/convolution-inl.h"
 #include "./mkl_util-inl.h"
 
 namespace mxnet {

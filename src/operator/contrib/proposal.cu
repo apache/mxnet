@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file proposal.cu
  * \brief Proposal Operator
  * \author Shaoqing Ren, Jian Guo

@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file MxNetCpp.h
  * \brief meta include file for mxnet.cpp
  * \author Chuntao Hong, Zhang Chen
