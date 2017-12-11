@@ -23,6 +23,11 @@
  * \author Da Zheng
 */
 
+#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
+#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
+
+#if MXNET_USE_MKLDNN == 1
+
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
@@ -33,10 +38,6 @@
 #include <vector>
 #include <mkldnn.hpp>
 
-#ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
-#define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_OPS_INL_H_
-
-#if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
