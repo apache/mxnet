@@ -290,11 +290,7 @@ inline static bool backward_DeconvStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *out_attrs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   uint32_t out_expected = param.no_bias ? 2 : 3;
-#if MXNET_USE_CUDNN == 1
   CHECK_EQ(in_attrs->size(), param.no_bias ? 3U : 4U);
-#else
-  CHECK_EQ(in_attrs->size(), 3U);
-#endif
   CHECK_EQ(out_attrs->size(), out_expected);
 
 #if MXNET_USE_MKLDNN == 1
@@ -386,11 +382,9 @@ struct DeconvolutionGrad {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.push_back(n->inputs[deconv::kData]);
     heads.push_back(n->inputs[deconv::kWeight]);
-#if MXNET_USE_CUDNN == 1
     const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(n->attrs.parsed);
     if (!param.no_bias)
       heads.push_back(n->inputs[deconv::kBias]);
-#endif
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
