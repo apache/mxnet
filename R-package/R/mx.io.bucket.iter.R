@@ -60,7 +60,7 @@ BucketIter <- setRefClass("BucketIter", fields = c("buckets", "bucket.names", "b
                             }, iter.next = function() {
                               .self$batch <- .self$batch + 1
                               .self$bucketID <- .self$bucket.plan[batch]
-                              return(.self$batch < .self$batch.per.epoch)
+                              return(.self$batch <= .self$batch.per.epoch)
                             }, value = function() {
                               # bucketID is a named integer: the integer indicates the batch id for the given
                               # bucket (used to fetch appropriate samples within the bucket) the name is a
