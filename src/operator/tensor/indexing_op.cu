@@ -91,6 +91,7 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
     Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
     CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(int32_t),
               cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaFree(is_valid_ptr));
   })
   CHECK_EQ(is_valid, 0) << "SparseEmbedding input contains data out of bound";
   // the weight is actually dense
