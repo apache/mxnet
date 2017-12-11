@@ -3648,12 +3648,6 @@ def test_custom_op():
     with mx.contrib.autograd.train_section():
         y = mx.nd.Custom(x, aux, name='sqr', op_type='sqr')
         y.backward()
-    mx.nd.waitall()
-    assert (x.grad.stype == 'csr')
-    assert (y.stype == 'csr')
-    assert (aux.stype == 'csr')
-
-
 
     # test for backward compatibility, i.e. the correctness of default implementation of
     # infer storage in custom operator
@@ -3689,7 +3683,6 @@ def test_custom_op():
     with mx.contrib.autograd.train_section():
         y = mx.nd.Custom(lhs, rhs, name='mult', op_type='mult')
         y.backward()
-    mx.nd.waitall()
     assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy())
     assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy())
 
@@ -3724,7 +3717,6 @@ def test_custom_op():
     with mx.contrib.autograd.train_section():
         y2 = mx.nd.Custom(lhs, rhs, name="mult_no_grad", op_type="mult_no_grad")
         y2.backward()
-    mx.nd.waitall()
     assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy())
     assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy())
 

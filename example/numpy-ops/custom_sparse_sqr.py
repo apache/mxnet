@@ -82,7 +82,6 @@ z = mx.nd.zeros_like(x)
 with mx.contrib.autograd.train_section():
     y = mx.nd.Custom(x, op_type='sqr')
     y.backward(out_grad=z)
-mx.nd.waitall()
 print("Original ndarray")
 print("--------------")
 print(x.asnumpy())
