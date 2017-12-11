@@ -147,7 +147,7 @@ def test_check_pretrain_files():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
             TextEmbed.check_pretrain_files(pretrain_file, embed_name)
 
-@unittest.skip("demonstrating skipping")
+
 def test_glove():
     glove_6b_50d = TextEmbed.create_text_embed('glove',
                                                pretrain_file='glove.6B.50d.txt')
@@ -167,7 +167,7 @@ def test_glove():
                                  '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
 
-@unittest.skip("demonstrating skipping")
+
 def test_fasttext():
     fasttext_simple = TextEmbed.create_text_embed(
         'fasttext', pretrain_file='wiki.simple.vec')
@@ -225,6 +225,16 @@ def test_text_embed():
     unk_vecs_sum = my_embed[['<unk$unk@unk>',
                              '<unk$unk@unk>']].sum().asnumpy()[0]
     assert_almost_equal(unk_vecs_sum, 0)
+
+
+def test_all_embeds():
+    for embed_name, embed_cls in TextEmbed.embed_registry.items():
+        print('embed_name: %s' % embed_name)
+        for pretrain_file in embed_cls.pretrain_file_sha1.keys():
+            print('pretrain_file: %s' % pretrain_file)
+            te = TextEmbed.create_text_embed(embed_name,
+                                             pretrain_file=pretrain_file)
+            print(len(te))
 
 
 if __name__ == '__main__':
