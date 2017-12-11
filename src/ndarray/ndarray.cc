@@ -98,7 +98,7 @@ NDArray NDArray::ReshapeWithRecord(const TShape &shape) {
 
 NDArray NDArray::Slice(index_t begin, index_t end) const {
   CHECK(!is_none()) << "NDArray is empty";
-  CHECK_LT(begin, end)
+  CHECK_LE(begin, end)
       << "Invalid slicing range [" << begin << ", " << end << ")";
   CHECK_GE(shape_[0], end) << "Slice end index out of range";
   CHECK_EQ(storage_type(), kDefaultStorage);
