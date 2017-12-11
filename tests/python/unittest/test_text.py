@@ -231,10 +231,17 @@ def test_all_embeds():
     for embed_name, embed_cls in TextEmbed.embed_registry.items():
         print('embed_name: %s' % embed_name)
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
-            print('pretrain_file: %s' % pretrain_file)
-            te = TextEmbed.create_text_embed(embed_name,
-                                             pretrain_file=pretrain_file)
-            print(len(te))
+
+            if not pretrain_file.startswith(
+                    'glove.840B.300d') and not pretrain_file.startswith(
+                    'glove.42B') and not pretrain_file.startswith(
+                    'glove.6B') and not pretrain_file.startswith(
+                    'glove.twitter'):
+
+                print('pretrain_file: %s' % pretrain_file)
+                te = TextEmbed.create_text_embed(embed_name,
+                                                 pretrain_file=pretrain_file)
+                print(len(te))
 
 
 if __name__ == '__main__':
