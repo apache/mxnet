@@ -15,10 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# -*- coding: utf-8 -*-
+# coding: utf-8
 from __future__ import absolute_import
 from __future__ import print_function
-from __future__ import unicode_literals
 
 from collections import Counter
 import os
@@ -30,8 +29,7 @@ from mxnet.text.glossary import TextEmbed
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
-    seq1 = token_delim + token_delim.join(['Life', 'is', 'great',
-                                           'ᑌᑎIᑕOᗪᕮ_文本']) \
+    seq1 = token_delim + token_delim.join(['Life', 'is', 'great', '!']) \
            + token_delim + seq_delim
     seq2 = token_delim + token_delim.join(['life', 'is', 'good', '.']) \
            + token_delim + seq_delim
@@ -59,8 +57,8 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
     cnt1 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
                                     to_lower=False)
     assert cnt1 == Counter(
-        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, 'ᑌᑎIᑕOᗪᕮ_文本': 1,
-         'good': 1, "isn't": 1, 'bad': 1})
+        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
+         "isn't": 1, 'bad': 1})
 
     cnt2 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
                                     to_lower=True)
@@ -74,8 +72,8 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
                                     to_lower=False,
                                     counter_to_add=counter_to_add)
     assert cnt3 == Counter(
-        {'is': 2, 'life': 4, '.': 2, 'Life': 1, 'great': 1, 'ᑌᑎIᑕOᗪᕮ_文本': 1,
-         'good': 1, "isn't": 1, 'bad': 1})
+        {'is': 2, 'life': 4, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
+         "isn't": 1, 'bad': 1})
 
     cnt4 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
                                     to_lower=True,
@@ -97,8 +95,8 @@ def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
     cnt1 = tu.count_tokens_from_path(path, token_delim=token_delim,
                                      seq_delim=seq_delim, to_lower=False)
     assert cnt1 == Counter(
-        {'is': 6, 'life': 6, '.': 6, 'Life': 3, 'great': 3, 'ᑌᑎIᑕOᗪᕮ_文本': 3,
-         'good': 3, "isn't": 3, 'bad': 3})
+        {'is': 6, 'life': 6, '.': 6, 'Life': 3, 'great': 3, '!': 3, 'good': 3,
+         "isn't": 3, 'bad': 3})
 
     cnt2 = tu.count_tokens_from_path(path, token_delim=token_delim,
                                      seq_delim=seq_delim, to_lower=True)
@@ -109,8 +107,8 @@ def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
     cnt3 = tu.count_tokens_from_path(file1, token_delim=token_delim,
                                      seq_delim=seq_delim, to_lower=False)
     assert cnt3 == Counter(
-        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, 'ᑌᑎIᑕOᗪᕮ_文本': 1,
-         'good': 1, "isn't": 1, 'bad': 1})
+        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
+         "isn't": 1, 'bad': 1})
 
     counter_to_add = Counter({'life': 1, 'Life': 1})
 
@@ -118,8 +116,8 @@ def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
                                      seq_delim=seq_delim, to_lower=False,
                                      counter_to_add=counter_to_add)
     assert cnt4 == Counter(
-        {'is': 6, 'life': 7, '.': 6, 'Life': 4, 'great': 3, 'ᑌᑎIᑕOᗪᕮ_文本': 3,
-         'good': 3, "isn't": 3, 'bad': 3})
+        {'is': 6, 'life': 7, '.': 6, 'Life': 4, 'great': 3, '!': 3, 'good': 3,
+         "isn't": 3, 'bad': 3})
 
     cnt5 = tu.count_tokens_from_path(path, token_delim=token_delim,
                                      seq_delim=seq_delim, to_lower=True,
@@ -132,8 +130,8 @@ def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
                                      seq_delim=seq_delim, to_lower=False,
                                      counter_to_add=counter_to_add)
     assert cnt6 == Counter(
-        {'is': 2, 'life': 3, '.': 2, 'Life': 2, 'great': 1, 'ᑌᑎIᑕOᗪᕮ_文本': 1,
-         'good': 1, "isn't": 1, 'bad': 1})
+        {'is': 2, 'life': 3, '.': 2, 'Life': 2, 'great': 1, '!': 1, 'good': 1,
+         "isn't": 1, 'bad': 1})
 
 
 def test_count_tokens_from_path():
