@@ -28,7 +28,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy', 'requests', 'graphviz'], 'zip_safe': False}
+    kwargs = {'install_requires': ['numpy', 'requests', 'graphviz', 'Pillow'], 'zip_safe': False}
 from setuptools import find_packages
 
 with_cython = False
