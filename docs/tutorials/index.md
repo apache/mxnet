@@ -27,9 +27,9 @@ This is a selected subset of Gluon tutorials that explains basic usage of Gluon 
 - [Fast, portable neural networks with Gluon HybridBlocks](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html)
 - [Training on multiple GPUs with gluon](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html)
 
-## MXNet
+## Low Level Interface
 
-These tutorials introduce a few fundamental concepts in deep learning and how to implement them in _MXNet_. The _Basics_ section contains tutorials on manipulating arrays, building networks, loading/preprocessing data, etc. The _Training and Inference_ section talks about implementing Linear Regression, training a Handwritten digit classifier using MLP and CNN, running inferences using a pre-trained model, and lastly, efficiently training a large scale image classifier.
+These tutorials introduce a few fundamental concepts in deep learning and how to implement them in MXNet. The _Basics_ section contains tutorials on manipulating arrays, building networks, loading/preprocessing data, etc. The _Training and Inference_ section talks about implementing Linear Regression, training a Handwritten digit classifier using MLP and CNN, running inferences using a pre-trained model, and lastly, efficiently training a large scale image classifier.
 
 ### Basics
 
@@ -68,8 +68,8 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 ```
 
 <br>
-More tutorials and examples are available in the GitHub [repository](https://github.com/dmlc/mxnet/tree/master/example).
+More tutorials and examples are available in the GitHub [repository](https://github.com/apache/incubator-mxnet/tree/master/example).
 
 ## Contributing Tutorials
 
-Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
+Want to contribute an MXNet tutorial? To get started, download the [tutorial template](https://github.com/apache/incubator-mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
