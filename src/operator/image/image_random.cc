@@ -48,7 +48,6 @@ NNVM_REGISTER_OP(_image_to_tensor)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.");
 
-
 NNVM_REGISTER_OP(_image_normalize)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -65,18 +64,27 @@ NNVM_REGISTER_OP(_image_normalize)
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(NormalizeParam::__FIELDS__());
 
-
-MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_horizontal_flip)
+MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_left_right)
 .describe(R"code()code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", RandomHorizontalFlip);
+.set_attr<FCompute>("FCompute<cpu>", FlipLeftRight);
 
+MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_flip_left_right)
+.describe(R"code()code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", RandomFlipLeftRight);
+
+MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_top_bottom)
+.describe(R"code()code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", FlipTopBottom);
+
+MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_flip_top_bottom)
+.describe(R"code()code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", RandomFlipTopBottom);
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_brightness)
 .describe(R"code()code" ADD_FILELINE)
 .set_attr_parser(ParamParser<RandomEnhanceParam>)
 .set_attr<FCompute>("FCompute<cpu>", RandomBrightness)
 .add_arguments(RandomEnhanceParam::__FIELDS__());
-
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_contrast)
 .describe(R"code()code" ADD_FILELINE)
