@@ -222,13 +222,8 @@ static inline mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc)
   }
 }
 
-static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem,
-                                             bool submit_now = true) {
-  auto format = GetDefaultFormat(mem->get_primitive_desc().desc());
-  if (format == mem->get_primitive_desc().desc().data.format)
-    return mem;
-
-  auto pd = mem->get_primitive_desc();
+static inline mkldnn::memory::primitive_desc GetPrimitiveDesc(
+    mkldnn::memory::primitive_desc pd, mkldnn_memory_format_t format) {
   mkldnn::memory::dims dims(pd.desc().data.ndims);
   for (size_t i = 0; i < dims.size(); i++)
     dims[i] = pd.desc().data.dims[i];
@@ -236,9 +231,17 @@ static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem,
   mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
       pd.desc().data.data_type);
   mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
-  mkldnn_mem_ptr def_mem(new mkldnn::memory(mkldnn::memory::primitive_desc(data_md,
-          pd.get_engine())));
+  return mkldnn::memory::primitive_desc(data_md, pd.get_engine());
+}
 
+static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem,
+                                             bool submit_now = true) {
+  auto format = GetDefaultFormat(mem->get_primitive_desc().desc());
+  if (format == mem->get_primitive_desc().desc().data.format)
+    return mem;
+
+  auto def_pd = GetPrimitiveDesc(mem->get_primitive_desc(), format);
+  mkldnn_mem_ptr def_mem(new mkldnn::memory(def_pd));
   MKLDNNStream &stream = MKLDNNStream::Instance();
   stream.RegisterMem(mem);
   stream.RegisterMem(def_mem);
@@ -595,12 +598,13 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
   ptr_->SetMKLMem(shape_, dtype_);
   auto from_desc = mem.get_primitive_desc().desc();
   auto this_desc = ptr_->Mkl_mem_->get_primitive_desc().desc();
+  auto from_def_format = GetDefaultFormat(from_desc);
   // It's possible that the memory and the NDArray don't have the same shape.
-  if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)) {
+  if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)
+      // If the source memory uses the default layout, we can reshape directly.
+      && from_def_format == from_desc.data.format) {
     // In this case, we can simply create a new MKLDNN memory for the required
     // shape.
-    // TODO(zhengda) let's just hope it's the default format for now.
-    CHECK_EQ(GetDefaultFormat(from_desc), from_desc.data.format);
     mkldnn::memory::dims dims(this_desc.data.dims,
                               this_desc.data.dims + this_desc.data.ndims);
     auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
@@ -608,6 +612,23 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     mkldnn::memory::desc data_md(dims, this_dtype, this_format);
     mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
+    stream.RegisterMem(tmp_mem);
+    stream.RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->Mkl_mem_));
+  } else if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)) {
+    // In this case, the source memory stores data in a customized layout. We
+    // need to reorganize the data in memory before we can reshape.
+    auto def_pd = GetPrimitiveDesc(mem.get_primitive_desc(), from_def_format);
+    mkldnn_mem_ptr def_mem = CreateMKLDNNTempMem(def_pd);
+    MKLDNNStream &stream = MKLDNNStream::Instance();
+    stream.RegisterPrim(mkldnn::reorder(mem, *def_mem));
+    // Now we can reshape it
+    mkldnn::memory::dims dims(this_desc.data.dims,
+                              this_desc.data.dims + this_desc.data.ndims);
+    auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
+    auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
+    mkldnn::memory::desc data_md(dims, this_dtype, this_format);
+    mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
+    mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, def_mem->get_data_handle()));
     stream.RegisterMem(tmp_mem);
     stream.RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->Mkl_mem_));
   } else {
