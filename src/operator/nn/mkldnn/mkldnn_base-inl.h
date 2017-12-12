@@ -52,6 +52,8 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+#include <algorithm>
+#include <memory>
 #include "mkldnn.hpp"
 using namespace mkldnn;
 namespace mxnet {
@@ -196,6 +198,8 @@ class TmpMemMgr {
   size_t curr_size;
   // This estimate the required temp memory size in an operator.
   size_t est_size;
+  const size_t alignment = 4096;
+
  public:
   static TmpMemMgr &Instance() {
     static thread_local TmpMemMgr mgr;
@@ -223,22 +227,25 @@ class TmpMemMgr {
     if (mem_size > 0) {
       // Let's allocate some extra memory. If we don't use some of them all the time,
       // the OS won't physically allocate pages for them any way.
-      this->curr_mem = static_cast<char *>(r.get_host_space_internal(mem_size * 2));
       this->curr_size = mem_size * 2;
+      this->curr_mem = static_cast<char *>(r.get_host_space_internal(this->curr_size));
     }
     // reset est_size, so we can start to estimate the temp memory size.
     this->est_size = 0;
   }
 
   mkldnn_mem_ptr Alloc(const mkldnn::memory::primitive_desc &pd) {
-    this->est_size += pd.get_size();
-    if (pd.get_size() <= this->curr_size) {
+    // We need to include the size of the memory used for alignment.
+    this->est_size += pd.get_size() + alignment;
+    void *this_mem = this->curr_mem;
+    void *mem = std::align(alignment, pd.get_size(), this_mem, this->curr_size);
+    if (mem) {
       // The memory is allocated from the temporary memory space in the
       // operator. It'll only become invalid after we exit from the operator.
-      // TODO I need to make sure memory allocated here is aligned.
-      mkldnn_mem_ptr ret(new mkldnn::memory(pd, this->curr_mem));
+      mkldnn_mem_ptr ret(new mkldnn::memory(pd, this_mem));
+      CHECK_EQ(this_mem, mem);
       this->curr_size -= pd.get_size();
-      this->curr_mem += pd.get_size();
+      this->curr_mem = static_cast<char *>(this_mem) + pd.get_size();
       return ret;
     } else {
       LOG(WARNING) << "Allocate " << pd.get_size()
