@@ -63,6 +63,22 @@ static void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   attrs->parsed = std::move(param_);
 }
 
+int GetNumOutputs(const PoolingParam &param) {
+#if MXNET_USE_MKLDNN == 1
+  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
+#else
+  return 1;
+#endif
+}
+
+int GetNumBackInputs(const PoolingParam &param) {
+#if MXNET_USE_MKLDNN == 1
+  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 5 : 3;
+#else
+  return 3;
+#endif
+}
+
 static bool PoolingType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
@@ -225,8 +241,7 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
 #endif
   std::vector<TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
-  // We know pooling has only one output.
-  std::vector<TBlob> out_blobs(1);
+  std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
   PoolingCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
@@ -260,18 +275,9 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 #endif
-  std::vector<TBlob> in_blobs(3);
-  // In this case, there isn't workspace in the input arrays.
-  if (inputs.size() == 3) {
-    for (size_t i = 0; i < in_blobs.size(); i++)
-      in_blobs[i] = inputs[i].data();
-  } else {
-    // There is workspace among the input arrays. One for out_grad and one for
-    // input.
-    in_blobs[0] = inputs[0].data();   // out grad
-    in_blobs[1] = inputs[2].data();   // in data
-    in_blobs[2] = inputs[3].data();   // out data
-  }
+  std::vector<TBlob> in_blobs(inputs.size());
+  for (size_t i = 0; i < in_blobs.size(); i++)
+    in_blobs[i] = inputs[i].data();
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
@@ -315,7 +321,8 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1);
 #endif
   *dispatch_mode = DispatchMode::kFCompute;
-  (*out_attrs)[0] = kDefaultStorage;
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
   return true;
 }
 
@@ -324,10 +331,11 @@ inline static bool backward_PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                                DispatchMode *dispatch_mode,
                                                std::vector<int> *in_attrs,
                                                std::vector<int> *out_attrs) {
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)
       // There is no reason to use MKLDNN pooling if the input isn't in
       // MKLDNN format.
@@ -337,8 +345,9 @@ inline static bool backward_PoolingStorageType(const nnvm::NodeAttrs &attrs,
       (*out_attrs)[i] = kMKLDNNStorage;
     return true;
   }
-#endif
+#else
   CHECK_EQ(in_attrs->size(), 3);
+#endif
   *dispatch_mode = DispatchMode::kFCompute;
   for (size_t i = 0; i < out_attrs->size(); i++)
     (*out_attrs)[i] = kDefaultStorage;
@@ -389,12 +398,8 @@ height, width)*.
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs([](const NodeAttrs& attrs) {
-#if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
-#else
-  return 1;
-#endif
+  return GetNumOutputs(param);
 })
 #if MXNET_USE_MKLDNN == 1
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
