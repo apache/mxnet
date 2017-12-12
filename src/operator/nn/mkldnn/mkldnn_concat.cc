@@ -40,7 +40,7 @@ void MKLDNNConcat_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   std::vector<mkldnn::memory::primitive_desc> data_md;
   std::vector<mkldnn::primitive::at> data_mem;
   for (int i =0; i < num_in_data; i++) {
-      std::shared_ptr<const mkldnn::memory> tmp_mem = in_data[i].GetMKLDNNData();
+      auto tmp_mem = in_data[i].GetMKLDNNData();
       auto tmp_pd = tmp_mem->get_primitive_desc();
       data_md.push_back(tmp_pd);
       data_mem.push_back(*tmp_mem);
@@ -62,7 +62,7 @@ void MKLDNNConcat_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   int num_in_data = param.num_args;
   int axis_ = param.dim;
   auto engine = CpuEngine::Instance().get_engine();
-  std::shared_ptr<const mkldnn::memory>gz_mem = inputs[0].GetMKLDNNData();
+  auto gz_mem = inputs[0].GetMKLDNNData();
   mkldnn::memory::primitive_desc gz_pd = gz_mem->get_primitive_desc();
   /* init the offset */
   mkldnn::memory::dims offsets = {0, 0, 0, 0};

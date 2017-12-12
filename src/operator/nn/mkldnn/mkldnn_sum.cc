@@ -50,20 +50,19 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
 
 void MKLDNNSum_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &inputs, const OpReqType &req, const NDArray &out_data) {
-  std::vector<mkldnn_mem_const_ptr> in_mems(inputs.size());
   std::vector<mkldnn::primitive::at> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size());
   for (size_t i = 0; i < inputs.size(); i++) {
-    in_mems[i] = inputs[i].GetMKLDNNData();
-    in_prims.push_back(*in_mems[i]);
-    in_pds[i] = in_mems[i]->get_primitive_desc();
+    auto in_mem = inputs[i].GetMKLDNNData();
+    in_prims.push_back(*in_mem);
+    in_pds[i] = in_mem->get_primitive_desc();
     scales[i] = 1;
   }
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
 
-  std::shared_ptr<const mkldnn::memory> output_memory
-    = const_cast<NDArray &>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
+  auto output_memory = const_cast<NDArray &>(out_data).CreateMKLDNNData(
+      pdesc.dst_primitive_desc());
   MKLDNNStream &stream = MKLDNNStream::Instance();
   stream.RegisterPrim(mkldnn::sum(pdesc, in_prims, *output_memory));
   stream.Submit();

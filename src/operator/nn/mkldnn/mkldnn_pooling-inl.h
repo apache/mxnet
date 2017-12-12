@@ -122,7 +122,7 @@ inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
 void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
                            const NDArray &in_data, const OpReqType &req,
                            const NDArray &out_data, const NDArray *workspace) {
-  std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
+  auto input_mem = in_data.GetMKLDNNData();
   auto data_mpd = input_mem->get_primitive_desc();
   auto data_md = data_mpd.desc();
 
@@ -135,14 +135,12 @@ void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
 
   auto pdesc = GetPoolingFwd(param, ctx.is_train, data_md, out_md);
 
-  std::shared_ptr<const mkldnn::memory> output_memory =
-      const_cast<NDArray &>(out_data).CreateMKLDNNData(
-          pdesc.dst_primitive_desc());
-  std::shared_ptr<const mkldnn::memory> workspace_mem;
+  auto output_memory = const_cast<NDArray &>(out_data).CreateMKLDNNData(
+      pdesc.dst_primitive_desc());
 
   if (ctx.is_train && MKLDNNRequireWorkspace(param)) {
     CHECK(workspace != nullptr);
-    workspace_mem = workspace->GetMKLDNNData();
+    auto workspace_mem = workspace->GetMKLDNNData();
     MKLDNNStream::Instance().RegisterPrim(
         pooling_forward(pdesc, *input_mem, *output_memory, *workspace_mem));
   } else {
@@ -161,8 +159,8 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
   }
 
   TmpMemMgr::Instance().Init(ctx.requested[0]);
-  std::shared_ptr<const mkldnn::memory> diff_dst_mem = out_grad.GetMKLDNNData();
-  std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
+  auto diff_dst_mem = out_grad.GetMKLDNNData();
+  auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
@@ -205,11 +203,10 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
 
   auto diff_src_mem =
       CreateMKLDNNMem(in_grad, pdesc.diff_src_primitive_desc(), req);
-  std::shared_ptr<const mkldnn::memory> workspace_mem;
 
   if (MKLDNNRequireWorkspace(param)) {
     CHECK(workspace != nullptr);
-    workspace_mem = workspace->GetMKLDNNData();
+    auto workspace_mem = workspace->GetMKLDNNData();
     MKLDNNStream::Instance().RegisterPrim(
         pooling_backward(pdesc, *diff_dst_mem, primitive::at(*workspace_mem),
                          *diff_src_mem.second));

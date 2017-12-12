@@ -73,7 +73,7 @@ template<typename Dtype>
 void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
                        const NDArray &in_data, const OpReqType &req,
                        const NDArray &out_data) {
-  std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
+  auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
@@ -87,8 +87,8 @@ void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
                                       alg, data_md, alpha);
   mkldnn::eltwise_forward::primitive_desc pdesc(desc, cpu_engine);
 
-  std::shared_ptr<const mkldnn::memory> output_memory
-    = const_cast<NDArray &>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
+  auto output_memory = const_cast<NDArray &>(out_data).CreateMKLDNNData(
+      pdesc.dst_primitive_desc());
   MKLDNNStream &stream = MKLDNNStream::Instance();
   stream.RegisterPrim(mkldnn::eltwise_forward(pdesc, *input_mem, *output_memory));
   stream.Submit();
@@ -102,8 +102,8 @@ void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
     return;
   }
 
-  std::shared_ptr<const mkldnn::memory> diff_dst_memory = out_grad.GetMKLDNNData();
-  std::shared_ptr<const mkldnn::memory> input_mem = in_data.GetMKLDNNData();
+  auto diff_dst_memory = out_grad.GetMKLDNNData();
+  auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   mkldnn::memory::desc diff_md = diff_dst_memory->get_primitive_desc().desc();
