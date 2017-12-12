@@ -55,6 +55,7 @@ class CrossEntropyLoss(mx.operator.CustomOp):
             p = in_data[0]  # shape=(b,d)
             y = in_data[1]
             out = y * mx.nd.log(p+self.eps) + (1.-y) * mx.nd.log((self.eps1) - p)
+            out = -out
             self.assign(out_data[0], req[0], out)
         else:
             # Just copy the predictions forward
