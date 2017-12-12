@@ -18,22 +18,39 @@ from __future__ import print_function
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy as np
+from PIL import Image
 from mxnet import gluon
-from mxnet.gluon.data.vision.transforms import AdjustLighting
+from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import almost_equal
 
-def test_adjust_lighting():
+def test_to_tensor():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    alpha_rgb = [0.05, 0.06, 0.07]
-    eigval = np.array([55.46, 4.794, 1.148])
-    eigvec = np.array([[-0.5675, 0.7192, 0.4009],
-                       [-0.5808, -0.0045, -0.8140],
-                       [-0.5808, -0.0045, -0.8140]])
-    f = AdjustLighting(alpha_rgb=alpha_rgb, eigval=eigval.ravel().tolist(), eigvec=eigvec.ravel().tolist())
-    out_nd = f(nd.array(data_in, dtype=np.uint8))
-    out_gt = np.clip(data_in.astype(np.float32)
-                     + np.dot(eigvec * alpha_rgb, eigval.reshape((3, 1))).reshape((1, 1, 3)), 0, 255).astype(np.uint8)
-    assert_almost_equal(out_nd.asnumpy(), out_gt)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(out_nd.asnumpy(), np.transpose(
+        data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
+
+def test_normalize():
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    data_in = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    out_nd = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in)
+    data_expected = data_in.asnumpy()
+    data_expected[:][:][0] = data_expected[:][:][0] / 3.0
+    data_expected[:][:][1] = (data_expected[:][:][1] - 1.0) / 2.0
+    data_expected[:][:][2] = data_expected[:][:][2] - 2.0
+    assert_almost_equal(data_expected, out_nd.asnumpy())
+
+def test_flip_left_right():
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    pil_img = Image.fromarray(data_in).transpose(Image.FLIP_LEFT_RIGHT)
+    data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
+
+def test_flip_top_bottom():
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    pil_img = Image.fromarray(data_in).transpose(Image.FLIP_TOP_BOTTOM)
+    data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
 
 if __name__ == '__main__':
     import nose

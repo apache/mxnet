@@ -85,14 +85,6 @@ void ToTensor(const nnvm::NodeAttrs &attrs,
   });
 }
 
-inline bool TensorShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
-  TShape& dshape = (*in_attrs)[0];
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
-  return true;
-}
-
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   nnvm::Tuple<float> mean;
   nnvm::Tuple<float> std;
@@ -179,16 +171,16 @@ inline bool ImageShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename DType>
-void FlipImpl(const TShape &shape, DType *src, DType *dst, int axis) {
+template<typename DType, int axis>
+void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   int head = 1, mid = shape[axis], tail = 1;
   for (int i = 0; i < axis; ++i) head *= shape[i];
   for (int i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
 
   for (int i = 0; i < head; ++i) {
-    for (int j = 0; j < (mid >>2); ++j) {
-      int idx1 = (i*mid + j)*tail;
-      int idx2 = idx1 + (mid - (j<<2))*tail;
+    for (int j = 0; j < (mid >> 1); ++j) {
+      int idx1 = (i*mid + j) * tail;
+      int idx2 = idx1 + (mid-(j << 1)-1) * tail;
       for (int k = 0; k < tail; ++k, ++idx1, ++idx2) {
         DType tmp = src[idx1];
         dst[idx1] = src[idx2];
@@ -198,23 +190,31 @@ void FlipImpl(const TShape &shape, DType *src, DType *dst, int axis) {
   }
 }
 
-void RandomHorizontalFlip(
-    const nnvm::NodeAttrs &attrs,
-    const OpContext &ctx,
-    const std::vector<TBlob> &inputs,
-    const std::vector<OpReqType> &req,
-    const std::vector<TBlob> &outputs) {
+void FlipLeftRight(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
   using namespace mshadow;
-  Stream<cpu> *s = ctx.get_stream<cpu>();
-  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
-  if (std::bernoulli_distribution()(prnd->GetRndEngine())) return;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    FlipImpl(inputs[0].shape_, inputs[0].dptr<DType>(),
-             outputs[0].dptr<DType>(), 1);
+    FlipImpl<DType, 1>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                       outputs[0].dptr<DType>());
   });
 }
 
-void RandomVerticalFlip(
+void FlipTopBottom(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    FlipImpl<DType, 0>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                       outputs[0].dptr<DType>());
+  });
+}
+
+void RandomFlipLeftRight(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -223,10 +223,36 @@ void RandomVerticalFlip(
   using namespace mshadow;
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
-  if (std::bernoulli_distribution()(prnd->GetRndEngine())) return;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    FlipImpl(inputs[0].shape_, inputs[0].dptr<DType>(),
-             outputs[0].dptr<DType>(), 0);
+    if (std::bernoulli_distribution()(prnd->GetRndEngine())) {
+      if (outputs[0].dptr_ != inputs[0].dptr_) {
+        std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
+      }
+    } else {
+      FlipImpl<DType, 1>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                         outputs[0].dptr<DType>());
+    }
+  });
+}
+
+void RandomFlipTopBottom(
+    const nnvm::NodeAttrs &attrs,
+    const OpContext &ctx,
+    const std::vector<TBlob> &inputs,
+    const std::vector<OpReqType> &req,
+    const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (std::bernoulli_distribution()(prnd->GetRndEngine())) {
+      if (outputs[0].dptr_ != inputs[0].dptr_) {
+        std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
+      }
+    } else {
+      FlipImpl<DType, 0>(inputs[0].shape_, inputs[0].dptr<DType>(),
+                         outputs[0].dptr<DType>());
+    }
   });
 }
 
