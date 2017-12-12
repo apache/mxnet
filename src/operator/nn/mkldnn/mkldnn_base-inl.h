@@ -55,6 +55,9 @@
 #include <algorithm>
 #include <memory>
 #include "mkldnn.hpp"
+#include "mxnet/ndarray.h"
+#include "mxnet/resource.h"
+#include "mxnet/op_attr_types.h"
 using namespace mkldnn;
 namespace mxnet {
 extern bool EnableMkldnnWarnGenerated();
@@ -234,31 +237,13 @@ class TmpMemMgr {
     this->est_size = 0;
   }
 
-  mkldnn_mem_ptr Alloc(const mkldnn::memory::primitive_desc &pd) {
-    // We need to include the size of the memory used for alignment.
-    this->est_size += pd.get_size() + alignment;
-    void *this_mem = this->curr_mem;
-    void *mem = std::align(alignment, pd.get_size(), this_mem, this->curr_size);
-    if (mem) {
-      // The memory is allocated from the temporary memory space in the
-      // operator. It'll only become invalid after we exit from the operator.
-      mkldnn_mem_ptr ret(new mkldnn::memory(pd, this_mem));
-      CHECK_EQ(this_mem, mem);
-      this->curr_size -= pd.get_size();
-      this->curr_mem = static_cast<char *>(this_mem) + pd.get_size();
-      return ret;
-    } else {
-      LOG(WARNING) << "Allocate " << pd.get_size()
-          << " bytes with malloc directly";
-      return mkldnn_mem_ptr(new mkldnn::memory(pd));
-    }
-  }
+  mkldnn::memory *Alloc(const mkldnn::memory::primitive_desc &pd);
 };
 
 class MKLDNNStream {
   std::vector<mkldnn::primitive> net;
   // Here we hold all memory related to the operators in the stream.
-  std::vector<mkldnn_mem_const_ptr> mem_holder;
+  std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
 
  public:
   static MKLDNNStream &Instance() {
@@ -268,7 +253,9 @@ class MKLDNNStream {
 
   void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
 
-  void RegisterMem(mkldnn_mem_const_ptr mem) { mem_holder.push_back(mem); }
+  void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
+    mem_holder.push_back(mem);
+  }
 
   void Submit() {
     if (!net.empty())
@@ -279,33 +266,24 @@ class MKLDNNStream {
   }
 };
 
-inline static mkldnn_mem_ptr CreateMKLDNNTempMem(
-    const mkldnn::memory::primitive_desc &desc) {
-  mkldnn_mem_ptr ret = TmpMemMgr::Instance().Alloc(desc);
-  MKLDNNStream::Instance().RegisterMem(ret);
-  return ret;
-}
-
 enum OutDataOp {
   Noop,
   CopyBack,
   AddBack,
 };
 
-typedef std::pair<OutDataOp, mkldnn_mem_ptr> mkldnn_output_t;
+typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 
 static inline mkldnn_output_t CreateMKLDNNMem(
     const NDArray &arr, const mkldnn::memory::primitive_desc &desc,
     OpReqType req) {
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Instance().Alloc(desc);
-    MKLDNNStream::Instance().RegisterMem(tmp);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
   } else {
-    mkldnn_mem_ptr mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
+    mkldnn::memory *mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
     if (mem == nullptr) {
       auto tmp = TmpMemMgr::Instance().Alloc(desc);
-      MKLDNNStream::Instance().RegisterMem(tmp);
       return mkldnn_output_t(OutDataOp::CopyBack, tmp);
     } else {
       return mkldnn_output_t(OutDataOp::Noop, mem);
@@ -323,22 +301,20 @@ static inline void CommitOutput(const NDArray &arr,
   if (res.first == CopyBack) {
     const_cast<NDArray &>(arr).CopyFrom(*res.second);
   } else if (res.first == AddBack) {
-    mkldnn_mem_const_ptr mem =
-        arr.GetMKLDNNData(res.second->get_primitive_desc());
+    auto mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
     CHECK(mem != nullptr);
     // We have to allocate new memory for the sum result.
-    mkldnn_mem_ptr sum_res = TmpMemMgr::Instance().Alloc(
+    auto sum_res = TmpMemMgr::Instance().Alloc(
         res.second->get_primitive_desc());
-    MKLDNNStream::Instance().RegisterMem(sum_res);
     op::Sum(*res.second, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
 
-inline static mkldnn_mem_const_ptr GetWeights(
-    const NDArray &arr, const mkldnn::memory::primitive_desc &target_pd,
-    int num_groups) {
-  mkldnn_mem_const_ptr mem;
+inline static const mkldnn::memory *GetWeights(const NDArray &arr,
+                                               const mkldnn::memory::primitive_desc &target_pd,
+                                               int num_groups) {
+  const mkldnn::memory *mem;
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   auto engine = CpuEngine::Instance().get_engine();
   if (arr.shape().ndim() == 2) {
@@ -375,14 +351,14 @@ inline static mkldnn_mem_const_ptr GetWeights(
   }
   if (mem->get_primitive_desc() == target_pd) return mem;
 
-  std::shared_ptr<mkldnn::memory> ret = CreateMKLDNNTempMem(target_pd);
+  auto ret = TmpMemMgr::Instance().Alloc(target_pd);
   MKLDNNStream::Instance().RegisterPrim(mkldnn::reorder(*mem, *ret));
   return ret;
 }
 
-inline static mkldnn_mem_const_ptr GetWeights(const NDArray &arr,
-                                              const mkldnn::engine &engine,
-                                              int num_groups = 1) {
+inline static const mkldnn::memory *GetWeights(const NDArray &arr,
+                                               const mkldnn::engine &engine,
+                                               int num_groups = 1) {
   mkldnn::memory::data_type type = get_mkldnn_type(arr.dtype());
   if (arr.shape().ndim() == 2) {
     mkldnn::memory::dims tz = mkldnn::memory::dims{
