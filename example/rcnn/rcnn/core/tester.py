@@ -15,7 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from six.moves import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import os
 import time
 import mxnet as mx
@@ -111,12 +114,12 @@ def generate_proposals(predictor, test_data, imdb, vis=False, thresh=0.):
 
     rpn_file = os.path.join(rpn_folder, imdb.name + '_rpn.pkl')
     with open(rpn_file, 'wb') as f:
-        cPickle.dump(imdb_boxes, f, cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(imdb_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     if thresh > 0:
         full_rpn_file = os.path.join(rpn_folder, imdb.name + '_full_rpn.pkl')
         with open(full_rpn_file, 'wb') as f:
-            cPickle.dump(original_boxes, f, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(original_boxes, f, pickle.HIGHEST_PROTOCOL)
 
     logger.info('wrote rpn proposals to %s' % rpn_file)
     return imdb_boxes
@@ -212,7 +215,7 @@ def pred_eval(predictor, test_data, imdb, vis=False, thresh=1e-3):
 
     det_file = os.path.join(imdb.cache_path, imdb.name + '_detections.pkl')
     with open(det_file, 'wb') as f:
-        cPickle.dump(all_boxes, f, protocol=cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(all_boxes, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     imdb.evaluate_detections(all_boxes)
 

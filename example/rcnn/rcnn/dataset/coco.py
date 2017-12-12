@@ -15,7 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from six.moves import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import cv2
 import os
 import json
@@ -85,13 +88,13 @@ class coco(IMDB):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
+                roidb = pickle.load(fid)
             logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_coco_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb
@@ -209,7 +212,7 @@ class coco(IMDB):
 
         eval_file = os.path.join(res_folder, 'detections_%s_results.pkl' % self.image_set)
         with open(eval_file, 'wb') as f:
-            cPickle.dump(coco_eval, f, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(coco_eval, f, pickle.HIGHEST_PROTOCOL)
         logger.info('eval results saved to %s' % eval_file)
 
     def _print_detection_metrics(self, coco_eval):
