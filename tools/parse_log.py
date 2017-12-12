@@ -35,9 +35,19 @@ args = parser.parse_args()
 with open(args.logfile[0]) as f:
     lines = f.readlines()
 
-res = [re.compile('.*Epoch\[(\d+)\] Train.*=([.\d]+)'),
-       re.compile('.*Epoch\[(\d+)\] Valid.*=([.\d]+)'),
-       re.compile('.*Epoch\[(\d+)\] Time.*=([.\d]+)')]
+if 'top_k' in ''.join(lines):
+    has_top_k = True
+    res = [re.compile('.*Epoch\[(\d+)\] Train-accuracy=([.\d]+)'),
+        re.compile('.*Epoch\[(\d+)\] Train-top_k_accuracy.*=([.\d]+)'),
+        re.compile('.*Epoch\[(\d+)\] Validation-accuracy=([.\d]+)'),
+        re.compile('.*Epoch\[(\d+)\] Validation-top_k_accuracy.*=([.\d]+)'),
+        re.compile('.*Epoch\[(\d+)\] Time.*=([.\d]+)')]
+
+else:
+    has_top_k = False
+    res = [re.compile('.*Epoch\[(\d+)\] Train-accuracy=([.\d]+)'),
+        re.compile('.*Epoch\[(\d+)\] Validation-accuracy=([.\d]+)'),
+        re.compile('.*Epoch\[(\d+)\] Time.*=([.\d]+)')]
 
 data = {}
 for l in lines:
@@ -61,11 +71,23 @@ for l in lines:
     data[epoch][i*2+1] += 1
 
 if args.format == 'markdown':
-    print "| epoch | train-accuracy | valid-accuracy | time |"
-    print "| --- | --- | --- | --- |"
-    for k, v in data.items():
-        print "| %2d | %f | %f | %.1f |" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5])
+    if has_top_k:
+        print "| epoch | train-accuracy | train-top_k_accuracy | validation-accuracy | validation-top_k_accuracy | time |"
+        print "| --- | --- | --- | --- | --- | --- |"
+        for k, v in data.items():
+            print "| %2d | %f | %f | %f | %f | %.1f |" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5], v[6]/v[7], v[8]/v[9])
+    else:
+        print "| epoch | train-accuracy | valid-accuracy | time |"
+        print "| --- | --- | --- | --- |"
+        for k, v in data.items():
+            print "| %2d | %f | %f | %.1f |" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5])
 elif args.format == 'none':
-    print "epoch\ttrain-accuracy\tvalid-accuracy\ttime"
-    for k, v in data.items():
-        print "%2d\t%f\t%f\t%.1f" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5])
+    if has_top_k:
+        print "epoch\ttrain-accuracy\ttrain-top_k_accuracy\tvalid-accuracy\tvalid-top_k_accuracy\ttime"
+        for k, v in data.items():
+            print "%2d\t%f\t%f\t%f\t%f\t%.1f" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5], v[6]/v[7], v[8]/v[9])
+
+    else:
+        print "epoch\ttrain-accuracy\tvalid-accuracy\ttime"
+        for k, v in data.items():
+            print "%2d\t%f\t%f\t%.1f" % (k+1, v[0]/v[1], v[2]/v[3], v[4]/v[5])
