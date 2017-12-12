@@ -18,38 +18,7 @@
 import os, gzip
 import sys
 import mxnet as mx
-
-class DummyIter(mx.io.DataIter):
-    "A dummy iterator that always return the same batch, used for speed testing"
-    def __init__(self, real_iter):
-        super(DummyIter, self).__init__()
-        self.real_iter = real_iter
-        self.provide_data = real_iter.provide_data
-        self.provide_label = real_iter.provide_label
-        self.batch_size = real_iter.batch_size
-
-        for batch in real_iter:
-            self.the_batch = batch
-            break
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        return self.the_batch
-
-def get_libsvm_data(data_dir, data_name, url):
-    if not os.path.isdir(data_dir):
-        os.mkdir(data_dir)
-    os.chdir(data_dir)
-    if (not os.path.exists(data_name)):
-        print("Dataset " + data_name + " not present. Downloading now ...")
-        import urllib
-        zippath = os.path.join(data_dir, data_name + ".bz2")
-        urllib.urlretrieve(url + data_name + ".bz2", zippath)
-        os.system("bzip2 -d %r" % data_name + ".bz2")
-        print("Dataset " + data_name + " is now present.")
-    os.chdir("..")
+from mxnet.test_utils import DummyIter
 
 def get_movielens_data(prefix):
     if not os.path.exists("%s.zip" % prefix):

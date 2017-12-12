@@ -138,7 +138,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     AccessAsCPU(array, ctx_.run_ctx, [this](const NDArray &arr) {
       test::op::OperatorDataInitializer<DType>::FillRandom(arr.data());
     });
-    return std::move(array);
+    return array;
   }
 
   /*!
@@ -154,7 +154,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     AccessAsCPU(array, ctx_.run_ctx, [this](const NDArray &arr) {
       test::op::OperatorDataInitializer<DType>::FillZero(arr.data());
     });
-    return std::move(array);
+    return array;
   }
 
   nnvm::NodePtr MakeNode() const {
