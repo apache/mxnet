@@ -168,8 +168,14 @@ inline static bool backward_FCStorageType(const nnvm::NodeAttrs& attrs,
   // overhead as well.
   if (dev_mask == mshadow::cpu::kDevMask && in_attrs->at(0) == kMKLDNNStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
+    (*out_attrs)[fullc::kData] = kMKLDNNStorage;
+    // We don't want the parameter gradients are stored in MKLDNN storage.
+    // These will be sent to the KVstore to update the global parameters.
+    // We should convert storage inside an operator so that we can take
+    // advantage of TempSpace.
+    (*out_attrs)[fullc::kWeight] = kDefaultStorage;
+    if (!param.no_bias)
+      (*out_attrs)[fullc::kBias] = kDefaultStorage;
     return true;
   }
 #endif

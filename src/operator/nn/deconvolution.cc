@@ -301,8 +301,14 @@ inline static bool backward_DeconvStorageType(const nnvm::NodeAttrs& attrs,
       && (in_attrs->at(0) == kMKLDNNStorage
           || in_attrs->at(0) == kDefaultStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
-    for (size_t i = 0; i < out_attrs->size(); i++)
-      (*out_attrs)[i] = kMKLDNNStorage;
+    (*out_attrs)[deconv::kData] = kMKLDNNStorage;
+    // We don't want the parameter gradients are stored in MKLDNN storage.
+    // These will be sent to the KVstore to update the global parameters.
+    // We should convert storage inside an operator so that we can take
+    // advantage of TempSpace.
+    (*out_attrs)[deconv::kWeight] = kDefaultStorage;
+    if (!param.no_bias)
+      (*out_attrs)[deconv::kBias] = kDefaultStorage;
     return true;
   }
 #endif
