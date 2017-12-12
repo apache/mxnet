@@ -15,10 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import mxnet as mx
+import numpy as np
+import os
 import pickle as pkl
 import unittest
 from nose.tools import raises
-from mxnet.test_utils import *
+from mxnet.test_utils import almost_equal
+from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import default_context
+from mxnet.test_utils import np_reduce
+from mxnet.test_utils import same
 from numpy.testing import assert_allclose
 import mxnet.autograd
 
