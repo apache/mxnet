@@ -555,25 +555,32 @@ class NDArray {
 
 #if MXNET_USE_MKLDNN == 1
   /*
+   * All functions below return a raw pointer to mkldnn memory. Actually there
+   * is a shared pointer that hold the memory either in NDArray or in MKLDNN
+   * stream. As long as we call these functions inside an operator, the return
+   * memory is always valid.
+   */
+
+  /*
    * This function returns mkldnn::memory with the default primitive_desc.
    */
-  std::shared_ptr<const mkldnn::memory> GetMKLDNNData() const;
+  const mkldnn::memory *GetMKLDNNData() const;
   /*
    * This function returns mkldnn::memory with the given primitive_desc
    * as long as the array size meets the required size in the given primitive_desc.
    */
-  std::shared_ptr<const mkldnn::memory> GetMKLDNNData(
+  const mkldnn::memory *GetMKLDNNData(
       const mkldnn::memory::primitive_desc &desc) const;
   /*
    * This function returns mkldnn::memory with the given primitive_desc.
    * The returned mkldnn::memory will have the same physical layout as
    * the given primitive_desc.
    */
-  std::shared_ptr<const mkldnn::memory> GetMKLDNNDataReorder(
+  const mkldnn::memory *GetMKLDNNDataReorder(
       const mkldnn::memory::primitive_desc &desc) const;
 
   void CopyFrom(const mkldnn::memory &mem);
-  std::shared_ptr<mkldnn::memory> CreateMKLDNNData(
+  mkldnn::memory *CreateMKLDNNData(
       const mkldnn::memory::primitive_desc &desc);
 
   /*
