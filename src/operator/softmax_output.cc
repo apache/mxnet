@@ -45,13 +45,13 @@ Operator *SoftmaxOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 
 MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
-.describe(R"code(Computes the gradient of cross entropy loss with respect to softmax output.
+.describe(R"code(Computes the gradient of cross entropy loss with respect to the input array `data`.
 
 - This operator computes the gradient in two steps.
   The cross entropy loss does not actually need to be computed.
 
   - Applies softmax function on the input array.
-  - Computes and returns the gradient of cross entropy loss w.r.t. the softmax output.
+  - Computes and returns the gradient of cross entropy loss w.r.t. the input array.
 
 - The softmax function, cross entropy loss and gradient is given by:
 
@@ -63,7 +63,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
 
     .. math:: \text{CE(label, output)} = - \sum_i \text{label}_i \log(\text{output}_i)
 
-  - The gradient of cross entropy loss w.r.t softmax output:
+  - The gradient of cross entropy loss w.r.t the input array:
 
     .. math:: \text{gradient} = \text{output} - \text{label}
 
@@ -82,7 +82,7 @@ MXNET_REGISTER_OP_PROPERTY(SoftmaxOutput, SoftmaxOutputProp)
   - If `multi_output` is ``true``, the softmax function will be computed along
     the second axis (`axis` = ``1``).
 
-- During backward propagation, the gradient of cross-entropy loss w.r.t softmax output array is computed.
+- During backward propagation, the gradient of cross-entropy loss w.r.t the input array is computed.
   The provided label can be a one-hot label array or a probability label array.
 
   - If the parameter `use_ignore` is ``true``, `ignore_label` can specify input instances
