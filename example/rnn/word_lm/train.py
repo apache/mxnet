@@ -39,8 +39,8 @@ parser.add_argument('--clip', type=float, default=0.2,
                     help='gradient clipping by global norm')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=20,
-                    help='batch size per gpu')
+parser.add_argument('--batch_size', type=int, default=32,
+                    help='batch size')
 parser.add_argument('--dropout', type=float, default=0.5,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
@@ -49,12 +49,25 @@ parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
 parser.add_argument('--log-interval', type=int, default=200,
                     help='report interval')
-parser.add_argument('--cuda', action='store_true',
-                    help='whether to use gpu')
+parser.add_argument('--seed', type=int, default=3,
+                    help='random seed')
 args = parser.parse_args()
 
-
 best_loss = 9999
+
+def evaluate(valid_module, data_iter, epoch, mode, bptt, batch_size):
+    total_loss = 0.0
+    nbatch = 0
+    for batch in data_iter:
+        valid_module.forward(batch, is_train=False)
+        outputs = valid_module.get_loss()
+        total_loss += mx.nd.sum(outputs[0]).asscalar()
+        nbatch += 1
+    data_iter.reset()
+    loss = total_loss / bptt / batch_size / nbatch
+    logging.info('Iter[%d] %s loss:\t%.7f, Perplexity: %.7f' % \
+                 (epoch, mode, loss, math.exp(loss)))
+    return loss
 
 if __name__ == '__main__':
     # args
@@ -62,9 +75,10 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format=head)
     args = parser.parse_args()
     logging.info(args)
-    ctx = mx.gpu(0) if args.cuda else mx.cpu()
+    ctx = mx.gpu()
     batch_size = args.batch_size
     bptt = args.bptt
+    mx.random.seed(args.seed)
 
     # data
     corpus = Corpus(args.data)
@@ -87,20 +101,6 @@ if __name__ == '__main__':
 
     # metric
     speedometer = mx.callback.Speedometer(batch_size, args.log_interval)
-
-    def evaluate(valid_module, data_iter, epoch, mode):
-        total_loss = 0.0
-        nbatch = 0
-        for batch in data_iter:
-            module.forward(batch, is_train=False)
-            outputs = module.get_loss()
-            total_loss += mx.nd.sum(outputs[0]).asscalar()
-            nbatch += 1
-        data_iter.reset()
-        loss = total_loss / bptt / batch_size / nbatch
-        logging.info('Iter[%d] %s loss:\t%.7f, Perplexity: %.7f' % \
-                     (epoch, mode, loss, math.exp(loss)))
-        return loss
 
     # train
     logging.info("Training started ... ")
@@ -125,11 +125,11 @@ if __name__ == '__main__':
                 total_loss = 0.0
             nbatch += 1
         # validation
-        valid_loss = evaluate(module, valid_data, epoch, 'Valid')
+        valid_loss = evaluate(module, valid_data, epoch, 'Valid', bptt, batch_size)
         if valid_loss < best_loss:
             best_loss = valid_loss
             # test
-            test_loss = evaluate(module, test_data, epoch, 'Test')
+            test_loss = evaluate(module, test_data, epoch, 'Test', bptt, batch_size)
         else:
             optimizer.lr *= 0.25
         train_data.reset()
