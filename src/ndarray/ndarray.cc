@@ -503,6 +503,24 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   }
 }
 
+/*
+ * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
+ * the given one. operator== can't guarantee that. == can return true even if
+ * the formats are different. I need to double check its format.
+ */
+static inline std::shared_ptr<mkldnn::memory> GetMKLDNNExact(
+    std::shared_ptr<mkldnn::memory> mem, mkldnn::memory::primitive_desc desc) {
+  auto src_desc = mem->get_primitive_desc();
+  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
+    return mem;
+  } else {
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
+            desc, mem->get_data_handle()));
+    MKLDNNStream::Instance().RegisterMem(ret);
+    return ret;
+  }
+}
+
 std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
@@ -522,9 +540,7 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNData(
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
     MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
-    mkldnn_mem_ptr ret(new mkldnn::memory(desc, ptr_->Mkl_mem_->get_data_handle()));
-    MKLDNNStream::Instance().RegisterMem(ret);
-    return ret;
+    return GetMKLDNNExact(ptr_->Mkl_mem_, desc);
   } else {
     return nullptr;
   }
@@ -548,7 +564,7 @@ std::shared_ptr<const mkldnn::memory> NDArray::GetMKLDNNDataReorder(
   // We need to make sure Mkl_mem_ is always valid as well.
   stream.RegisterMem(ptr_->Mkl_mem_);
   if (ptr_->Mkl_mem_->get_primitive_desc() == desc) {
-    return ptr_->Mkl_mem_;
+    return GetMKLDNNExact(ptr_->Mkl_mem_, desc);
   }
 
   mkldnn::memory::primitive_desc _desc = desc;
@@ -654,12 +670,12 @@ std::shared_ptr<mkldnn::memory> NDArray::CreateMKLDNNData(
   if (required_format == def_format) {
     ptr_->SetMKLMem(shape_, dtype_);
     MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
-    return ptr_->Mkl_mem_;
+    return GetMKLDNNExact(ptr_->Mkl_mem_, desc);
   }
 
   if (ptr_->Mkl_mem_ && ptr_->Mkl_mem_->get_primitive_desc() == desc) {
     MKLDNNStream::Instance().RegisterMem(ptr_->Mkl_mem_);
-    return ptr_->Mkl_mem_;
+    return GetMKLDNNExact(ptr_->Mkl_mem_, desc);
   }
 
   ptr_->Mkl_mem_ = mkldnn_mem_ptr(new mkldnn::memory(desc));
