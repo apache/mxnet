@@ -117,7 +117,7 @@ class Parameter(object):
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
-        return s.format(**self.__dict__)
+        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
     @property
     def grad_req(self):

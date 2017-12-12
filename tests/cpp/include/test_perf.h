@@ -278,6 +278,15 @@ class TimingInstrument {
       CHECK_EQ(o.nestingCount_, 0U);
     }
 
+    inline Info& operator = (const Info& o) {
+      name_ = o.name_;
+      baseTime_.store(baseTime_.load());
+      nestingCount_.store(nestingCount_.load());
+      cycleCount_.store(cycleCount_.load());
+      duration_.store(duration_.load());
+      return *this;
+    }
+
     /*!
      * \brief Return time for each operation in milliseconds
      * \return Time for each operation in milliseconds

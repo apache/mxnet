@@ -1538,3 +1538,34 @@ def discard_stderr():
     finally:
         os.dup2(old_stderr, stderr_fileno)
         bit_bucket.close()
+
+class DummyIter(mx.io.DataIter):
+    """A dummy iterator that always returns the same batch of data
+    (the first data batch of the real data iter). This is usually used for speed testing.
+
+    Parameters
+    ----------
+    real_iter: mx.io.DataIter
+        The real data iterator where the first batch of data comes from
+    """
+    def __init__(self, real_iter):
+        super(DummyIter, self).__init__()
+        self.real_iter = real_iter
+        self.provide_data = real_iter.provide_data
+        self.provide_label = real_iter.provide_label
+        self.batch_size = real_iter.batch_size
+        self.the_batch = next(real_iter)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        """Get a data batch from iterator. The first data batch of real iter is always returned.
+        StopIteration will never be raised.
+
+        Returns
+        -------
+        DataBatch
+            The data of next batch.
+        """
+        return self.the_batch
