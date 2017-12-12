@@ -26,6 +26,7 @@ import os
 import gym
 from datetime import datetime
 import time
+from importlib import reload
 
 parser = argparse.ArgumentParser(description='Traing A3C with OpenAI Gym')
 parser.add_argument('--test', action='store_true', help='run testing', default=False)
@@ -139,7 +140,7 @@ def train():
             module.save_params('%s-%04d.params'%(save_model_prefix, epoch))
 
 
-        for _ in range(epoch_size/args.t_max):
+        for _ in range(int(epoch_size/args.t_max)):
             tic = time.time()
             # clear gradients
             for exe in module._exec_group.grad_arrays:

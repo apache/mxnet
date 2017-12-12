@@ -21,7 +21,7 @@ import numpy as np
 import gym
 import cv2
 import math
-import Queue
+import queue
 from threading import Thread
 import time
 import multiprocessing
@@ -62,7 +62,7 @@ def visual(X, show=True):
     buf = np.zeros((h*n, w*n, X.shape[3]), dtype=np.uint8)
     for i in range(N):
         x = i%n
-        y = i/n
+        y = i//n
         buf[h*y:h*(y+1), w*x:w*(x+1), :] = X[i]
     if show:
         cv2.imshow('a', buf)
@@ -88,7 +88,7 @@ class RLDataIter(object):
 
         self.web_viz = web_viz
         if web_viz:
-            self.queue = Queue.Queue()
+            self.queue = queue.Queue()
             self.thread = Thread(target=make_web, args=(self.queue,))
             self.thread.daemon = True
             self.thread.start()
@@ -117,7 +117,7 @@ class RLDataIter(object):
         reward = np.asarray([i[1] for i in new], dtype=np.float32)
         done = np.asarray([i[2] for i in new], dtype=np.float32)
 
-        channels = self.state_.shape[1]/self.input_length
+        channels = self.state_.shape[1]//self.input_length
         state = np.zeros_like(self.state_)
         state[:,:-channels,:,:] = self.state_[:,channels:,:,:]
         for i, (ob, env) in enumerate(zip(new, self.env)):
@@ -151,7 +151,7 @@ class GymDataIter(RLDataIter):
         return gym.make(self.game)
 
     def visual(self):
-        data = self.state_[:4, -self.state_.shape[1]/self.input_length:, :, :]
+        data = self.state_[:4, -self.state_.shape[1]//self.input_length:, :, :]
         return visual(np.asarray(data, dtype=np.uint8), False)
 
 if __name__ == '__main__':
