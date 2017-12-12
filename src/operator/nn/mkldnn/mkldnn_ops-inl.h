@@ -86,6 +86,9 @@ void MKLDNNConcat_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
     const std::vector<NDArray>& outputs);
 
+void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
+         const mkldnn::memory &out);
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1
