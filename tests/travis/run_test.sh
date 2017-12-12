@@ -132,6 +132,11 @@ if [ ${TASK} == "python_test" ]; then
         nosetests3 -v tests/python/train || exit -1
         nosetests -v tests/python/doctest || exit -1
         nosetests3 -v tests/python/doctest || exit -1
+        python2 -m pip install flake8
+        python3 -m pip install flake8
+        # stop the build if there are Python syntax errors
+        python2 -m flake8 . --count --select=E901,E999,F822,F823 --show-source --statistics
+        python3 -m flake8 . --count --select=E901,E999,F822,F823 --show-source --statistics
     fi
     exit 0
 fi
