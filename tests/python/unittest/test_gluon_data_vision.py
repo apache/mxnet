@@ -40,27 +40,16 @@ def test_normalize():
     data_expected[:][:][2] = data_expected[:][:][2] - 2.0
     assert_almost_equal(data_expected, out_nd.asnumpy())
 
-def run_random(func, func_expect, data_in, n=100, ratio_same=0.5, ratio_delta=0.1):
-    num_same = 0
-    for i in range(n):
-        data_trans = func(nd.array(data_in, dtype='uint8')).asnumpy()
-        if almost_equal(data_trans, data_in):
-            num_same += 1
-        else:
-            assert_almost_equal(func_expect(data_in), data_trans)
-    ratio = num_same * 1.0 / n
-    assert ratio >= ratio_same - ratio_delta and ratio <= ratio_same + ratio_delta
-
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     pil_img = Image.fromarray(data_in).transpose(Image.FLIP_LEFT_RIGHT)
-    data_trans = transforms.FlipLeftRight()(nd.array(data_in, dtype='uint8'))
+    data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
 
 def test_flip_top_bottom():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     pil_img = Image.fromarray(data_in).transpose(Image.FLIP_TOP_BOTTOM)
-    data_trans = transforms.FlipTopBottom()(nd.array(data_in, dtype='uint8'))
+    data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(np.array(pil_img), data_trans.asnumpy())
 
 if __name__ == '__main__':

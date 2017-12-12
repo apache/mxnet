@@ -184,24 +184,6 @@ class Resize(Block):
         return image.imresize(x, *self._args)
 
 
-class FlipLeftRight(HybridBlock):
-    """Flip the input image left to right. """
-    def __init__(self):
-        super(FlipLeftRight, self).__init__()
-
-    def hybrid_forward(self, F, x):
-        return F.image.flip_left_right(x)
-
-
-class FlipTopBottom(HybridBlock):
-    """Flip the input image top to bottom. """
-    def __init__(self):
-        super(FlipTopBottom, self).__init__()
-
-    def hybrid_forward(self, F, x):
-        return F.image.flip_top_bottom(x)
-
-
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
     of 0.5.
