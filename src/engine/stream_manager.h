@@ -91,8 +91,6 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
       break;
 #endif  // MXNET_USE_CUDA
-    default:
-      LOG(FATAL) << "Not Reached";
     }
     default:
       LOG(FATAL) << "Undefined dev_mask " << ctx.dev_mask();
@@ -124,8 +122,6 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
       break;
 #endif  // MXNET_USE_CUDA
-    default:
-      LOG(FATAL) << "Not Reached";
     }
     default:
       LOG(FATAL) << "Undefined dev_mask " << ctx.dev_mask();
