@@ -51,6 +51,15 @@
 #endif
 
 /*!
+ *\brief whether to use __builtin_memcpy or not
+ */
+#ifdef MXNET_USE_BUILTIN_MEMCPY
+#define MXNET_MEMCPY __builtin_memcpy
+#else
+#define MXNET_MEMCPY memcpy
+#endif
+
+/*!
  *\brief whether to use cudnn library for convolution
  */
 #ifndef MXNET_USE_CUDNN

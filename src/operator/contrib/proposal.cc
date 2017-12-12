@@ -342,7 +342,7 @@ class ProposalOp : public Operator{
                            param_.ratios,
                            param_.scales,
                            &anchors);
-    std::memcpy(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
+    MXNET_MEMCPY(workspace_proposals.dptr_, &anchors[0], sizeof(float) * anchors.size());
 
     // Enumerate all shifted anchors
     for (index_t i = 0; i < static_cast<index_t>(num_anchors); ++i) {

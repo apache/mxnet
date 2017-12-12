@@ -108,7 +108,6 @@ inline void CastStorageDnsRspImpl(const OpContext& ctx,
   });
 }
 
-// TODO(haibin) Use memcopy instead will be much faster than assigning each individual element
 struct CastStorageRspDnsKernel {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i,
@@ -120,9 +119,13 @@ struct CastStorageRspDnsKernel {
     IType rid = idx[i];
     dim_t dns_offset = rid * row_length;
     dim_t rsp_offset = i * row_length;
-    for (dim_t col = 0; col < row_length; col++) {
-      dns[dns_offset + col] = data[rsp_offset + col];
-    }
+    #if defined(__CUDACC__)
+      for (dim_t col = 0; col < row_length; col++) {
+        dns[dns_offset + col] = data[rsp_offset + col];
+      }
+    #else
+      MXNET_MEMCPY(dns + dns_offset, data + rsp_offset, sizeof(DType) * row_length);
+    #endif
   }
 };
 
