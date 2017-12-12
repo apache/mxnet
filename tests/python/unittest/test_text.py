@@ -41,18 +41,6 @@ def _get_test_str_of_tokens(token_delim, seq_delim):
     return seqs
 
 
-def _mk_dir_of_files(path, token_delim, seq_delim):
-    if not os.path.exists(path):
-        os.makedirs(path)
-    seqs = _get_test_str_of_tokens(token_delim, seq_delim)
-
-    with open(os.path.join(path, '1.txt'), 'w') as fout:
-        fout.write(seqs)
-    with open(os.path.join(path, '2.txt'), 'w') as fout:
-        for _ in range(2):
-            fout.write(seqs)
-
-
 def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
     str_of_tokens = _get_test_str_of_tokens(token_delim, seq_delim)
 
@@ -68,18 +56,18 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
         {'life': 3, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-    counter_to_add = Counter({'life': 2})
+    counter_to_update = Counter({'life': 2})
 
     cnt3 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
                                     to_lower=False,
-                                    counter_to_add=counter_to_add)
+                                    counter_to_update=counter_to_update.copy())
     assert cnt3 == Counter(
         {'is': 2, 'life': 4, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
     cnt4 = tu.count_tokens_from_str(str_of_tokens, token_delim, seq_delim,
                                     to_lower=True,
-                                    counter_to_add=counter_to_add)
+                                    counter_to_update=counter_to_update.copy())
     assert cnt4 == Counter(
         {'life': 5, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
@@ -88,58 +76,6 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
 def test_count_tokens_from_str():
     _test_count_tokens_from_str_with_delims(' ', '\n')
     _test_count_tokens_from_str_with_delims('IS', 'LIFE')
-
-
-def _test_count_tokens_from_path_with_delims(path, token_delim, seq_delim):
-    _mk_dir_of_files(path, token_delim, seq_delim)
-    file1 = os.path.join(path, '1.txt')
-
-    cnt1 = tu.count_tokens_from_path(path, token_delim=token_delim,
-                                     seq_delim=seq_delim, to_lower=False)
-    assert cnt1 == Counter(
-        {'is': 6, 'life': 6, '.': 6, 'Life': 3, 'great': 3, '!': 3, 'good': 3,
-         "isn't": 3, 'bad': 3})
-
-    cnt2 = tu.count_tokens_from_path(path, token_delim=token_delim,
-                                     seq_delim=seq_delim, to_lower=True)
-    assert cnt2 == Counter(
-        {'life': 9, 'is': 6, '.': 6, 'great': 3, '!': 3, 'good': 3,
-         "isn't": 3, 'bad': 3})
-
-    cnt3 = tu.count_tokens_from_path(file1, token_delim=token_delim,
-                                     seq_delim=seq_delim, to_lower=False)
-    assert cnt3 == Counter(
-        {'is': 2, 'life': 2, '.': 2, 'Life': 1, 'great': 1, '!': 1, 'good': 1,
-         "isn't": 1, 'bad': 1})
-
-    counter_to_add = Counter({'life': 1, 'Life': 1})
-
-    cnt4 = tu.count_tokens_from_path(path, token_delim=token_delim,
-                                     seq_delim=seq_delim, to_lower=False,
-                                     counter_to_add=counter_to_add)
-    assert cnt4 == Counter(
-        {'is': 6, 'life': 7, '.': 6, 'Life': 4, 'great': 3, '!': 3, 'good': 3,
-         "isn't": 3, 'bad': 3})
-
-    cnt5 = tu.count_tokens_from_path(path, token_delim=token_delim,
-                                     seq_delim=seq_delim, to_lower=True,
-                                     counter_to_add=counter_to_add)
-    assert cnt5 == Counter(
-        {'life': 10, 'is': 6, '.': 6, 'great': 3, '!': 3, 'good': 3,
-         "isn't": 3, 'bad': 3, 'Life': 1})
-
-    cnt6 = tu.count_tokens_from_path(file1, token_delim=token_delim,
-                                     seq_delim=seq_delim, to_lower=False,
-                                     counter_to_add=counter_to_add)
-    assert cnt6 == Counter(
-        {'is': 2, 'life': 3, '.': 2, 'Life': 2, 'great': 1, '!': 1, 'good': 1,
-         "isn't": 1, 'bad': 1})
-
-
-def test_count_tokens_from_path():
-    path = os.path.join('./data', 'test_texts')
-    _test_count_tokens_from_path_with_delims(path, ' ', '\n')
-    _test_count_tokens_from_path_with_delims(path, 'IS', 'LIFE')
 
 
 def test_check_pretrain_files():
@@ -221,7 +157,7 @@ def test_text_embed():
 
     my_embed = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file),
                          url=None, embed_name=embed_name, embed_root=embed_root,
-                         special_init_vec=nd.zeros, token_delim=token_delim)
+                         reserved_init_vec=nd.zeros, token_delim=token_delim)
 
     assert len(my_embed) == 2
     assert my_embed.vec_len == 5
@@ -254,49 +190,77 @@ def test_all_embeds():
 def test_glossary_frequency_thresholds():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = Glossary(counter, top_k_freq=None, min_freq=1, specials=['<unk>'],
-                  embeds=None)
+    g1 = Glossary(counter, top_k_freq=None, min_freq=1, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g1) == 5
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g1.idx_to_token[1] == 'c'
+    assert g1.unknown == '<unk>'
+    assert g1.other_reserveds == []
+    assert g1.idx_to_vec is None
+    assert g1.vec_len == 0
 
-    g2 = Glossary(counter, top_k_freq=None, min_freq=2, specials=['<unk>'],
-                  embeds=None)
+    g2 = Glossary(counter, top_k_freq=None, min_freq=2, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g2) == 3
     assert g2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g2.idx_to_token[1] == 'c'
+    assert g2.unknown == '<unk>'
+    assert g2.other_reserveds == []
+    assert g2.idx_to_vec is None
+    assert g2.vec_len == 0
 
-    g3 = Glossary(counter, top_k_freq=None, min_freq=100, specials=['<unk>'],
-                  embeds=None)
+    g3 = Glossary(counter, top_k_freq=None, min_freq=100, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g3) == 1
     assert g3.token_to_idx == {'<unk>': 0}
     assert g3.idx_to_token[0] == '<unk>'
+    assert g3.unknown == '<unk>'
+    assert g3.other_reserveds == []
+    assert g3.idx_to_vec is None
+    assert g3.vec_len == 0
 
-    g4 = Glossary(counter, top_k_freq=2, min_freq=1, specials=['<unk>'],
-                  embeds=None)
+    g4 = Glossary(counter, top_k_freq=2, min_freq=1, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g4) == 3
     assert g4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
     assert g4.idx_to_token[1] == 'c'
+    assert g4.unknown == '<unk>'
+    assert g4.other_reserveds == []
+    assert g4.idx_to_vec is None
+    assert g4.vec_len == 0
 
-    g5 = Glossary(counter, top_k_freq=3, min_freq=1, specials=['<unk>'],
-                  embeds=None)
+    g5 = Glossary(counter, top_k_freq=3, min_freq=1, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g5) == 4
     assert g5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
     assert g5.idx_to_token[1] == 'c'
+    assert g5.unknown == '<unk>'
+    assert g5.other_reserveds == []
+    assert g5.idx_to_vec is None
+    assert g5.vec_len == 0
 
-    g6 = Glossary(counter, top_k_freq=100, min_freq=1, specials=['<unk>'],
-                  embeds=None)
+    g6 = Glossary(counter, top_k_freq=100, min_freq=1, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g6) == 5
     assert g6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
                                'some_word$': 4}
     assert g6.idx_to_token[1] == 'c'
+    assert g6.unknown == '<unk>'
+    assert g6.other_reserveds == []
+    assert g6.idx_to_vec is None
+    assert g6.vec_len == 0
 
-    g7 = Glossary(counter, top_k_freq=1, min_freq=2, specials=['<unk>'],
-                  embeds=None)
+    g7 = Glossary(counter, top_k_freq=1, min_freq=2, unknown='<unk>',
+                  other_reserveds=[], embeds=None)
     assert len(g7) == 2
     assert g7.token_to_idx == {'<unk>': 0, 'c': 1}
     assert g7.idx_to_token[1] == 'c'
+    assert g7.unknown == '<unk>'
+    assert g7.other_reserveds == []
+    assert g7.idx_to_vec is None
+    assert g7.vec_len == 0
 
 
 def test_glossary_with_one_embed():
@@ -310,19 +274,19 @@ def test_glossary_with_one_embed():
 
     my_embed1 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file),
                           url=None, embed_name=embed_name,
-                          embed_root=embed_root, special_init_vec=nd.zeros,
+                          embed_root=embed_root, reserved_init_vec=nd.zeros,
                           token_delim=token_delim)
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = Glossary(counter, top_k_freq=None, min_freq=1,
-                  specials=['<unk>', '<pad>'], embeds=my_embed1)
+    g1 = Glossary(counter, top_k_freq=None, min_freq=1, unknown='<unk>',
+                  other_reserveds=['<pad>'], embeds=my_embed1)
 
     print(g1.token_to_idx)
 
 
 def test_glossary_with_two_embeds():
-    embed_root = os.path.expanduser('~/.mxnet/embeddings/')
+    embed_root = os.path.expanduser('.')
     embed_name = 'my_embed'
     token_delim = '/t'
     pretrain_file1 = os.path.expanduser('my_pretrain_file1.txt')
@@ -334,11 +298,12 @@ def test_glossary_with_two_embeds():
                           pretrain_file2)
 
     my_embed1 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file1),
-                          url=None, embed_name=embed_name, embed_root=embed_root,
-                          special_init_vec=nd.zeros, token_delim=token_delim)
+                          url=None, embed_name=embed_name,
+                          embed_root=embed_root, reserved_init_vec=nd.zeros,
+                          token_delim=token_delim)
     my_embed2 = TextEmbed(os.path.join(embed_root, embed_name, pretrain_file2),
                           url=None, embed_name=embed_name,
-                          embed_root=embed_root, special_init_vec=nd.zeros,
+                          embed_root=embed_root, reserved_init_vec=nd.zeros,
                           token_delim=token_delim)
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])

@@ -22,117 +22,63 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from collections import Counter
-import os
 import re
 
 from .glossary import Glossary
 
 
-def count_tokens_from_str(tokens, token_delim=' ', seq_delim='\n',
-                          to_lower=False, counter_to_add=Counter()):
-    """Counts tokens, such as words and punctuations, in the specified string.
+def count_tokens_from_str(token_str, token_delim=' ', seq_delim='\n',
+                          to_lower=False, counter_to_update=None):
+    """Counts token_str, such as words and punctuations, in the specified string.
 
     For token_delim="<td>" and seq_delim="<sd>", a specified string of two
-    sequences of tokens may look like::
+    sequences of token_str may look like::
 
     <td>token1<td>token2<td>token3<td><sd><td>token4<td>token5<td><sd>
 
 
     Parameters
     ----------
-    tokens : str
+    token_str : str
         A source string of tokens.
     token_delim : str, default ' '
         A token delimiter.
     seq_delim : str, default '\n'
         A sequence delimiter.
     to_lower : bool, default False
-        Whether to convert the source tokens to the lower case.
-    counter_to_add : collections.Counter, default collections.Counter()
-        A collections.Counter instance to update the output collections.Counter
-        object.
+        Whether to convert the source token_str to the lower case.
+    counter_to_update : collections.Counter or None, default None
+        The collections.Counter instance to be updated with the token counts
+        of `token_str`. If None, return a new collections.Counter instance
+        counting tokens from `token_str`.
 
 
     Returns
     -------
     collections.Counter
-        A collections.Counter instance containing the frequency for each token
-        in the source string, after it is updated with `counter_to_add`.
+        The `counter_to_update` collections.Counter instance after being updated
+        with the token counts of `token_str`. If `counter_to_update` is None,
+        return a new collections.Counter instance counting tokens from
+        `token_str`.
 
 
     Examples
     --------
-    >>> tokens = ' Life is great ! \n life is good . \n'
+    >>> token_str = ' Life is great ! \n life is good . \n'
     >>> count_tokens_from_str(token_line, ' ', '\n', True)
     Counter({'!': 1, '.': 1, 'good': 1, 'great': 1, 'is': 2, 'life': 2})
     """
 
-    tokens = filter(None,
-                    re.split(token_delim + '|' + seq_delim, tokens))
+    token_str = filter(None,
+                       re.split(token_delim + '|' + seq_delim, token_str))
     if to_lower:
-        tokens = [t.lower() for t in tokens]
-    counter = Counter(tokens)
-    counter.update(counter_to_add)
-    return counter
+        token_str = [t.lower() for t in token_str]
 
-
-def count_tokens_from_path(path, token_delim=' ', seq_delim='\n',
-                           to_lower=False, counter_to_add=Counter()):
-    """Counts tokens, such as words and punctuations, in the specified path.
-
-    For token_delim="<td>" and seq_delim="<sd>", any file of two sequences of
-    tokens in the specified path may look like::
-
-    <td>token1<td>token2<td>token3<td><sd><td>token4<td>token5<td><sd>
-
-
-    Parameters
-    ----------
-    path : str
-        A string path to a file or multiple files of sequences of tokens.
-    token_delim : str, default ' '
-        A token delimiter.
-    seq_delim : str, default '\n'
-        A sequence delimiter.
-    to_lower : bool, default False
-        Whether to convert the source tokens to the lower case.
-    counter_to_add : collections.Counter, default collections.Counter()
-        A collections.Counter instance to update the output collections.Counter
-        instance.
-
-
-    Returns
-    -------
-    collections.Counter
-        A collections.Counter instance containing the counts for each token in
-        the source path, after it is updated with `counter_to_add`.
-
-
-    Examples
-    --------
-    >>> See `count_tokens_from_str`.
-    """
-
-    if os.path.isdir(path):
-        files = [os.path.join(path, f) for f in os.listdir(path)
-                 if os.path.isfile(os.path.join(path, f))]
-    elif os.path.isfile(path):
-        files = [path]
+    if counter_to_update is None:
+        return Counter(token_str)
     else:
-        raise IOError('%s is not a valid path to a directory of files or a '
-                      'single file.', path)
-
-    file_strs = []
-
-    for f in files:
-        try:
-            with open(f) as fin:
-                file_strs.append(fin.read())
-        except IOError:
-            raise IOError('%s contains or is a file that cannot be read.', path)
-
-    return count_tokens_from_str(''.join(file_strs), token_delim, seq_delim,
-                                 to_lower, counter_to_add)
+        counter_to_update.update(token_str)
+        return counter_to_update
 
 
 def tokens_to_indices(tokens, glossary):

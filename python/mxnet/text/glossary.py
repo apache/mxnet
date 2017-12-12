@@ -36,9 +36,9 @@ from .. import ndarray as nd
 
 
 class Glossary(object):
-    """Indexing and embedding for text and special tokens in a glossary.
+    """Indexing and embedding for text and reserved tokens in a glossary.
 
-    For each indexed text or special token (e.g., an unknown token) in a
+    For each indexed text or reserved token (e.g., an unknown token) in a
     glossary, an embedding vector will be associated with the token. Such
     embedding vectors can be loaded from externally pre-trained embeddings,
     such as via mxnet.text.glossary.TextEmbed instances.
@@ -55,10 +55,12 @@ class Glossary(object):
     min_freq : int, default 1
         The minimum frequency required for a token in the keys of `counter` to
         be indexed.
-    specials : list of strs, default ['<unk>']
-        A list of special tokens to be indexed. It must be an non-empty list
-        whose first element is the string representation for unknown tokens,
-        such as '<unk>'. It cannot contain any token from the keys of `counter`.
+    unknown : str, default '<unk>'
+        The string representation for any unknown token. It is a reserved token
+        to be indexed.
+    other_reserveds : list of strs, default []
+        A list of other reserved tokens to be indexed.  It cannot contain any
+        token from the keys of `counter`.
     embeds : an mxnet.text.glossary.TextEmbed instance, a list of
         mxnet.text.glossary.TextEmbed instances, or None, default None
         Pre-trained embeddings to load. If None, there is nothing to load.
@@ -76,46 +78,56 @@ class Glossary(object):
         token's index to an embedding vector.
     vec_len : int
         The length of the embedding vector for any token.
-    specials: list of strs
-        A list of special tokens to be indexed. It is an non-empty list whose
+    reserveds: list of strs
+        A list of reserved tokens to be indexed. It is an non-empty list whose
         first element is the string representation for unknown tokens, such as
-        '<unk>'. It excludes all the tokens from the keys of `counter`.
+        '<unk>' as specified via the `unknown` parameter. It excludes all the
+        tokens from the keys of `counter`.
     """
-    def __init__(self, counter, top_k_freq=None, min_freq=1,
-                 specials=['<unk>'], embeds=None):
+    def __init__(self, counter, top_k_freq=None, min_freq=1, unknown='<unk>',
+                 other_reserveds=[], embeds=None):
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
-        assert len(specials) > 0, \
-            '`specials` must be an non-empty list whose first element is the ' \
-            'string representation for unknown tokens, such as "<unk>".'
 
-        self._init_attrs(counter, specials)
-        self._set_idx_and_token(counter, specials, top_k_freq, min_freq)
+        self._init_attrs(counter, unknown, other_reserveds)
+        self._set_idx_and_token(counter, unknown, other_reserveds, top_k_freq, min_freq)
 
         if embeds is not None:
             self.set_idx_to_vec(embeds)
 
-    def _init_attrs(self, counter, specials):
+    def _init_attrs(self, counter, unknown, other_reserveds):
         """Initiates class attributes."""
         self._counter = counter.copy()
-        self._token_to_idx = {token: idx for idx, token in enumerate(specials)}
-        self._idx_to_token = specials.copy()
+        self._idx_to_token = [unknown]
+        self._idx_to_token.extend(other_reserveds)
+        self._token_to_idx = {token: idx for idx, token in
+                              enumerate(self._idx_to_token)}
         self._idx_to_vec = None
         self._vec_len = 0
-        self._specials = specials.copy()
+        self._unknown = unknown
+        # Python 2 does not have list.copy().
+        self._other_reserveds = other_reserveds[:]
 
-    def _set_idx_and_token(self, counter, specials, top_k_freq, min_freq):
+    def _set_idx_and_token(self, counter, unknown, other_reserveds, top_k_freq, min_freq):
         """Indexes tokens according to specified frequency thresholds."""
-        # Update _counter to include special specials, such as '<unk>'.
-        self._counter.update({token: 0 for token in specials})
-        assert len(self._counter) == len(counter) + len(specials), \
-            '`specials` cannot contain any token from the keys of `counter`.'
+        # Update self._counter to include the string representation for unknown
+        # tokens.
+        self._counter.update({unknown: 0})
+        assert len(self._counter) == len(counter) + 1, \
+            '`unknown` cannot be any token from the keys of `counter`.'
+
+        # Update self._counter to include other reserveds tokens.
+        self._counter.update({token: 0 for token in other_reserveds})
+        assert len(self._counter) == len(counter) + 1 + len(other_reserveds), \
+            '`other_reserveds` cannot contain any token from the keys of ' \
+            '`counter`.'
 
         token_freqs = sorted(self._counter.items(), key=lambda x: x[0])
         token_freqs.sort(key=lambda x: x[1], reverse=True)
 
+        # 1 is for the unknown token.
         token_cap = len(self._counter) if top_k_freq is None \
-            else len(specials) + top_k_freq
+            else 1 + len(other_reserveds) + top_k_freq
 
         for token, freq in token_freqs:
             if freq < min_freq or len(self._idx_to_token) == token_cap:
@@ -173,12 +185,16 @@ class Glossary(object):
         return self._vec_len
 
     @property
-    def specials(self):
-        return self._specials
+    def unknown(self):
+        return self._unknown
+
+    @property
+    def other_reserveds(self):
+        return self._other_reserveds
 
     @staticmethod
     def unk_idx():
-        """The index for unknown tokens (the first token in `specials`)."""
+        """The index for unknown tokens (the first token in `reserveds`)."""
         return 0
 
     def set_idx_to_vec(self, embeds):
@@ -251,7 +267,7 @@ class Glossary(object):
                 raise ValueError('Token %s is unknown to the glossary. To '
                                  'update the embedding vector for an unknown '
                                  'token, please specify it explicitly as the '
-                                 'unknown special token %s in tokens. This is '
+                                 'unknown reserved token %s in tokens. This is '
                                  'to avoid unintended updates.' %
                                  (token, self.idx_to_token[Glossary.unk_idx()]))
         self._idx_to_vec[nd.array(indices)] = new_vectors
@@ -291,8 +307,8 @@ class TextEmbed(object):
         The name space for embedding, such as 'glove' and 'fasttext'.
     embed_root : str, default '~/.mxnet/embeddings/'
         The root directory for storing embedding-related files.
-    special_init_vec : callback, default mxnet.ndarray.zeros
-        The callback used to initialize the embedding vector for every special
+    reserved_init_vec : callback, default mxnet.ndarray.zeros
+        The callback used to initialize the embedding vector for every reserved
         token, such as an unknown token and a padding token.
     token_delim : str, default ' '
         The delimiter for splitting a token and every embedding vector element
@@ -303,8 +319,8 @@ class TextEmbed(object):
     ----------
     vec_len : int
         The length of the embedding vector for each token.
-    special_init_vec : callback
-        The callback used to initialize the embedding vector for every special
+    reserved_init_vec : callback
+        The callback used to initialize the embedding vector for every reserved
         token.
     token_to_idx : dict mapping str to int
         A dict mapping each token to its index integer.
@@ -314,7 +330,7 @@ class TextEmbed(object):
     idx_to_vec : mxnet.ndarray.NDArray
         For all the indexed tokens in this embedding, this NDArray maps each
         token's index to an embedding vector. The largest valid index maps
-        to the initialized embedding vector for every special token, such as an
+        to the initialized embedding vector for every reserved token, such as an
         unknown token and a padding token.
     """
 
@@ -323,7 +339,7 @@ class TextEmbed(object):
     embed_registry = {}
 
     def __init__(self, pretrain_file, url=None, embed_name='my_embed',
-                 embed_root='~/.mxnet/embeddings/', special_init_vec=nd.zeros,
+                 embed_root='~/.mxnet/embeddings/', reserved_init_vec=nd.zeros,
                  token_delim=' '):
 
         pretrain_file = os.path.expanduser(pretrain_file)
@@ -354,7 +370,7 @@ class TextEmbed(object):
                 'get_embed_names_and_pretrain_files() to get the available ' \
                 'embed_name and pretrain_file.'
 
-        self._special_init_vec = special_init_vec
+        self._reserved_init_vec = reserved_init_vec
 
         # User specifies pretrained embedding file at the path of pretrain_file.
         if os.path.isfile(pretrain_file):
@@ -367,10 +383,11 @@ class TextEmbed(object):
 
         self._load_embedding(pretrain_file_path, token_delim)
 
-        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token), \
+        assert len(self._idx_to_vec) - 1 == len(self._idx_to_token) \
+            == len(self._token_to_idx), \
             'The extra (last) row of self._idx_to_vec should be the ' \
-            'initialized embedding vector for a special, such as an unknown ' \
-            'token.'
+            'initialized embedding vector for a reserved token, such as an ' \
+            'unknown token.'
 
     @staticmethod
     def _get_pretrain_file_path_from_url(pretrain_file, url, embed_name,
@@ -432,7 +449,7 @@ class TextEmbed(object):
         """Load embedding vectors from the pre-trained embedding file.
 
         The largest valid index of idx_to_vec maps to the initialized embedding
-        vector for every special token, such as an unknown token and a padding
+        vector for every reserved token, such as an unknown token and a padding
         token.
         """
         with io.open(pretrain_file_path, 'r', encoding='utf8') as f:
@@ -444,6 +461,7 @@ class TextEmbed(object):
         vec_len = None
         all_elems = []
         idx_to_token = []
+        tokens = set()
         for line in lines:
             elems = line.rstrip().split(token_delim)
 
@@ -453,23 +471,29 @@ class TextEmbed(object):
 
             token, elems = elems[0], [float(i) for i in elems[1:]]
 
-            if len(elems) == 1:
-                warnings.warn('Token %s with 1-dimensional vector %s is '
-                              'likely a header and is skipped.' %
-                              (token, elems))
-                continue
+            if token in tokens:
+                warnings.warn('The embedding vector for token %s has been '
+                              'loaded and a duplicate embedding for the same '
+                              'token is seen and skipped.' % token)
             else:
-                if vec_len is None:
-                    vec_len = len(elems)
+                if len(elems) == 1:
+                    warnings.warn('Token %s with 1-dimensional vector %s is '
+                                  'likely a header and is skipped.' %
+                                  (token, elems))
+                    continue
                 else:
-                    assert len(elems) == vec_len, \
-                        'The dimension of token %s is %d but the dimension ' \
-                        'of previous tokens is %d. Dimensions of all the ' \
-                        'tokens must be the same.' % (token, len(elems),
-                                                      vec_len)
+                    if vec_len is None:
+                        vec_len = len(elems)
+                    else:
+                        assert len(elems) == vec_len, \
+                            'The dimension of token %s is %d but the dimension ' \
+                            'of previous tokens is %d. Dimensions of all the ' \
+                            'tokens must be the same.' % (token, len(elems),
+                                                          vec_len)
 
-            all_elems.extend(elems)
-            idx_to_token.append(token)
+                all_elems.extend(elems)
+                idx_to_token.append(token)
+                tokens.add(token)
 
         self._vec_len = vec_len
         self._idx_to_token = idx_to_token
@@ -478,7 +502,7 @@ class TextEmbed(object):
 
         all_elems.extend([0] * self.vec_len)
         self._idx_to_vec = nd.array(all_elems).reshape((-1, self.vec_len))
-        self._idx_to_vec[-1] = self.special_init_vec(shape=self.vec_len)
+        self._idx_to_vec[-1] = self.reserved_init_vec(shape=self.vec_len)
 
     def __len__(self):
         return len(self.idx_to_token)
@@ -488,8 +512,8 @@ class TextEmbed(object):
         return self._vec_len
 
     @property
-    def special_init_vec(self):
-        return self._special_init_vec
+    def reserved_init_vec(self):
+        return self._reserved_init_vec
 
     @property
     def token_to_idx(self):
@@ -503,8 +527,8 @@ class TextEmbed(object):
     def idx_to_vec(self):
         return self._idx_to_vec
 
-    def _idx_to_vec_special_idx(self):
-        """The index that maps every special token to its embedding vector."""
+    def _idx_to_vec_reserved_idx(self):
+        """The index that maps every reserved token to its embedding vector."""
         return len(self._idx_to_vec) - 1
 
     def __getitem__(self, tokens):
@@ -530,7 +554,7 @@ class TextEmbed(object):
             to_reduce = True
 
         indices = [self.token_to_idx[token] if token in self.token_to_idx
-                   else self._idx_to_vec_special_idx() for token in tokens]
+                   else self._idx_to_vec_reserved_idx() for token in tokens]
 
         vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
                             self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
