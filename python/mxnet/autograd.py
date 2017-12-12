@@ -393,7 +393,6 @@ class Function(object):
         with mx.autograd.record():
             m = func(x)
             m.backward()
-
         dx = x.grad.asnumpy()
 
     """
