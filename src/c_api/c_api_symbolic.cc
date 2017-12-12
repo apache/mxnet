@@ -310,6 +310,11 @@ int MXSymbolListOutputs(SymbolHandle symbol,
   return NNSymbolListOutputNames(symbol, out_size, out_str_array);
 }
 
+int MXSymbolGetNumOutputs(SymbolHandle symbol,
+                           mx_uint *output_count) {
+  return NNSymbolGetNumOutputs(symbol, output_count);
+}
+
 int MXSymbolCompose(SymbolHandle sym,
                     const char *name,
                     mx_uint num_args,
