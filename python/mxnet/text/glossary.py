@@ -58,9 +58,10 @@ class Glossary(object):
     unknown : str, default '<unk>'
         The string representation for any unknown token. It is a reserved token
         to be indexed.
-    other_reserveds : list of strs, default []
+    other_reserveds : list of strs or None, default None
         A list of other reserved tokens to be indexed.  It cannot contain any
-        token from the keys of `counter`.
+        token from the keys of `counter`. If None, there is no reserved token
+        other than the reserved unknown token `unknown`.
     embeds : an mxnet.text.glossary.TextEmbed instance, a list of
         mxnet.text.glossary.TextEmbed instances, or None, default None
         Pre-trained embeddings to load. If None, there is nothing to load.
@@ -78,19 +79,22 @@ class Glossary(object):
         token's index to an embedding vector.
     vec_len : int
         The length of the embedding vector for any token.
-    reserveds: list of strs
-        A list of reserved tokens to be indexed. It is an non-empty list whose
-        first element is the string representation for unknown tokens, such as
-        '<unk>' as specified via the `unknown` parameter. It excludes all the
-        tokens from the keys of `counter`.
+    unknown : str
+        The string representation for any unknown token. It is a reserved token
+        to be indexed.
+    other_reserveds : list of strs or None
+        A list of other reserved tokens to be indexed.  It cannot contain any
+        token from the keys of `counter`. If None, there is no reserved token
+        other than the reserved unknown token `unknown`.
     """
     def __init__(self, counter, top_k_freq=None, min_freq=1, unknown='<unk>',
-                 other_reserveds=[], embeds=None):
+                 other_reserveds=None, embeds=None):
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
 
         self._init_attrs(counter, unknown, other_reserveds)
-        self._set_idx_and_token(counter, unknown, other_reserveds, top_k_freq, min_freq)
+        self._set_idx_and_token(counter, unknown, other_reserveds, top_k_freq,
+                                min_freq)
 
         if embeds is not None:
             self.set_idx_to_vec(embeds)
@@ -99,16 +103,22 @@ class Glossary(object):
         """Initiates class attributes."""
         self._counter = counter.copy()
         self._idx_to_token = [unknown]
-        self._idx_to_token.extend(other_reserveds)
+
+        if other_reserveds is not None:
+            self._idx_to_token.extend(other_reserveds)
+            # Python 2 does not support list.copy().
+            self._other_reserveds = other_reserveds[:]
+        else:
+            self._other_reserveds = other_reserveds
+
         self._token_to_idx = {token: idx for idx, token in
                               enumerate(self._idx_to_token)}
         self._idx_to_vec = None
         self._vec_len = 0
         self._unknown = unknown
-        # Python 2 does not have list.copy().
-        self._other_reserveds = other_reserveds[:]
 
-    def _set_idx_and_token(self, counter, unknown, other_reserveds, top_k_freq, min_freq):
+    def _set_idx_and_token(self, counter, unknown, other_reserveds, top_k_freq,
+                           min_freq):
         """Indexes tokens according to specified frequency thresholds."""
         # Update self._counter to include the string representation for unknown
         # tokens.
@@ -116,11 +126,13 @@ class Glossary(object):
         assert len(self._counter) == len(counter) + 1, \
             '`unknown` cannot be any token from the keys of `counter`.'
 
-        # Update self._counter to include other reserveds tokens.
-        self._counter.update({token: 0 for token in other_reserveds})
-        assert len(self._counter) == len(counter) + 1 + len(other_reserveds), \
-            '`other_reserveds` cannot contain any token from the keys of ' \
-            '`counter`.'
+        if other_reserveds is not None:
+            # Update self._counter to include other reserveds tokens.
+            self._counter.update({token: 0 for token in other_reserveds})
+            assert len(self._counter) == len(counter) + 1 + \
+                len(other_reserveds), \
+                '`other_reserveds` cannot contain any token from the keys of ' \
+                '`counter`.'
 
         token_freqs = sorted(self._counter.items(), key=lambda x: x[0])
         token_freqs.sort(key=lambda x: x[1], reverse=True)
@@ -283,7 +295,15 @@ class TextEmbed(object):
     TextEmbed.get_embed_names_and_pretrain_files().
 
     Alternatively, to load embeddings from a local pre-trained file, specify its
-    local path via `pretrain_file` and set url to None.
+    local path via `pretrain_file` and set url to None. Denote by v_ij the j-th
+    element of the text embedding vector for token_i, the expected format of a
+    local pre-trained file is:
+
+    token_1`token_delim`v_11`token_delim`v_12`token_delim`...`token_delim`v_1k\n
+    token_2`token_delim`v_21`token_delim`v_22`token_delim`...`token_delim`v_2k\n
+    ...
+
+    where k is the length of the embedding vecgor `vec_len`.
 
     For the same token, its index and embedding vector may vary across different
     instances of mxnet.text.glossary.TextEmbed.
