@@ -127,7 +127,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)
       // There is no reason to use MKLDNN activation if the input isn't in
       // MKLDNN format.
-      && in_attrs->at(0) == kMKLDNNStorage) {
+      && (in_attrs->at(0) == kMKLDNNStorage || in_attrs->at(1) == kMKLDNNStorage)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
