@@ -38,5 +38,7 @@ def test_nccl_pushpull():
             for x in range(n_gpus):
                 assert(np.sum(np.abs((res[x]-n_gpus).asnumpy()))==0)
 
+    print ("Passed")
+
 if __name__ == '__main__':
     test_nccl_pushpull()
