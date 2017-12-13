@@ -1,14 +1,14 @@
 # VAE-GAN in MXNet
 
-* Implementation of Autoencoding beyond pixels using a learned similarity metric based on the Tensorflow implementation of https://github.com/JeremyCCHsu/tf-vaegan/
+* Implementation of [Autoencoding beyond pixels using a learned similarity metric](https://arxiv.org/abs/1512.09300) based on the Tensorflow implementation: <https://github.com/JeremyCCHsu/tf-vaegan>
 
-* Please refer to their official Github for details*: https://github.com/andersbll/autoencoding_beyond_pixels
+* Please refer to their official Github for details: [Autoencoding Beyond Pixels](https://github.com/andersbll/autoencoding_beyond_pixels)
 
 * As the name indicates, VAE-GAN replaces GAN's generator with a variational auto-encoder, resulting in a model with both inference and generation components. 
 
 # Experiements
 
-* Dataset: caltech 101 silhouettes dataset from https://people.cs.umass.edu/~marlin/data.shtml
+* Dataset: caltech 101 silhouettes dataset from <https://people.cs.umass.edu/~marlin/data.shtml>
 
 # Prerequisites
 
@@ -17,7 +17,7 @@
 
 # Environment Tested On
 
-Ubuntu Deep Learning AMI, p2.8xlarge
+Deep Learning AMI (Ubuntu) - 2.0, p2.8xlarge
 
 # Usage
 
