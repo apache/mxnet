@@ -32,7 +32,7 @@ namespace mxnet {
 namespace op {
 
 void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-    const mkldnn::memory &out) {
+         const mkldnn::memory &out) {
   std::vector<mkldnn::memory::primitive_desc> input_pds(2);
   std::vector<float> scales(2);
   std::vector<mkldnn::primitive::at> inputs;
@@ -45,11 +45,12 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
   inputs.push_back(arr2);
   // TODO(zhengda) I need to reorder memory here.
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
-  MKLDNNStream::Instance().RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
+  MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
 }
 
 void MKLDNNSum_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray> &inputs, const OpReqType &req, const NDArray &out_data) {
+                       const std::vector<NDArray> &inputs, const OpReqType &req,
+                       const NDArray &out_data) {
   std::vector<mkldnn::primitive::at> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size());
@@ -63,9 +64,9 @@ void MKLDNNSum_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
   auto output_memory = const_cast<NDArray &>(out_data).CreateMKLDNNData(
       pdesc.dst_primitive_desc());
-  MKLDNNStream &stream = MKLDNNStream::Instance();
-  stream.RegisterPrim(mkldnn::sum(pdesc, in_prims, *output_memory));
-  stream.Submit();
+  MKLDNNStream *stream = MKLDNNStream::Get();
+  stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *output_memory));
+  stream->Submit();
 }
 
 }  // namespace op

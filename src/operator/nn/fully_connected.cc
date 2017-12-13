@@ -152,11 +152,11 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline static bool backward_FCStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int> *in_attrs,
-                                          std::vector<int> *out_attrs) {
+inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int> *in_attrs,
+                                         std::vector<int> *out_attrs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t out_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), 3U);
@@ -254,7 +254,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
 })
-.set_attr<FInferStorageType>("FInferStorageType", backward_FCStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradCompute_CPU);

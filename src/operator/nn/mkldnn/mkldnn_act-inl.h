@@ -70,9 +70,9 @@ static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
 }
 
 template<typename Dtype>
-void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
-                       const NDArray &in_data, const OpReqType &req,
-                       const NDArray &out_data) {
+void MKLDNNActivationForward(const OpContext &ctx, const ActivationParam& param,
+                             const NDArray &in_data, const OpReqType &req,
+                             const NDArray &out_data) {
   auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
@@ -89,15 +89,15 @@ void MKLDNNAct_Forward(const OpContext &ctx, const ActivationParam& param,
 
   auto output_memory = const_cast<NDArray &>(out_data).CreateMKLDNNData(
       pdesc.dst_primitive_desc());
-  MKLDNNStream &stream = MKLDNNStream::Instance();
-  stream.RegisterPrim(mkldnn::eltwise_forward(pdesc, *input_mem, *output_memory));
-  stream.Submit();
+  MKLDNNStream *stream = MKLDNNStream::Get();
+  stream->RegisterPrim(mkldnn::eltwise_forward(pdesc, *input_mem, *output_memory));
+  stream->Submit();
 }
 
 template<typename Dtype>
-void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
-                        const NDArray &out_grad, const NDArray &in_data,
-                        const OpReqType &req, const NDArray &in_grad) {
+void MKLDNNActivationBackward(const OpContext &ctx, const ActivationParam& param,
+                              const NDArray &out_grad, const NDArray &in_data,
+                              const OpReqType &req, const NDArray &in_grad) {
   if (req == kNullOp) {
     return;
   }
@@ -109,7 +109,7 @@ void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
   mkldnn::memory::desc diff_md = diff_dst_memory->get_primitive_desc().desc();
   auto cpu_engine = data_mpd.get_engine();
   Dtype alpha = 0;
-  TmpMemMgr::Instance().Init(ctx.requested[activation::kTempSpace]);
+  TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
 
   auto alg = GetMKLDNNActAlgo(param);
   mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
@@ -118,12 +118,14 @@ void MKLDNNAct_Backward(const OpContext &ctx, const ActivationParam& param,
   mkldnn::eltwise_backward::desc bw_desc(alg, diff_md, data_md, alpha);
   mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine, fw_pdesc);
 
-  auto diff_src_memory = CreateMKLDNNMem(in_grad, bw_pdesc.diff_src_primitive_desc(), req);
-  MKLDNNStream &stream = MKLDNNStream::Instance();
-  stream.RegisterPrim(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
-        *diff_dst_memory, *diff_src_memory.second));
+  auto diff_src_memory = CreateMKLDNNMem(in_grad,
+                                         bw_pdesc.diff_src_primitive_desc(), req);
+  MKLDNNStream *stream = MKLDNNStream::Get();
+  stream->RegisterPrim(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
+                                                *diff_dst_memory,
+                                                *diff_src_memory.second));
   CommitOutput(in_grad, diff_src_memory);
-  stream.Submit();
+  stream->Submit();
 }
 
 }  // namespace op

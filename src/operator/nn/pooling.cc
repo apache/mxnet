@@ -326,11 +326,11 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-inline static bool backward_PoolingStorageType(const nnvm::NodeAttrs &attrs,
-                                               const int dev_mask,
-                                               DispatchMode *dispatch_mode,
-                                               std::vector<int> *in_attrs,
-                                               std::vector<int> *out_attrs) {
+inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
+                                              const int dev_mask,
+                                              DispatchMode *dispatch_mode,
+                                              std::vector<int> *in_attrs,
+                                              std::vector<int> *out_attrs) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
   CHECK_EQ(out_attrs->size(), 1);
@@ -435,7 +435,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
 })
 #endif
 .set_attr<FInferStorageType>("FInferStorageType",
-                             backward_PoolingStorageType)
+                             BackwardPoolingStorageType)
 .set_attr_parser(PoolingParamParser)
 .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradCompute_CPU);

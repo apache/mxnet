@@ -101,8 +101,8 @@ void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
 }
 
 template<typename xpu>
-void _ActivationCompute(const ActivationParam &param, const OpContext &ctx,
-                        const TBlob &input, OpReqType req, const TBlob &output) {
+void ActivationComputeImpl(const ActivationParam &param, const OpContext &ctx,
+                           const TBlob &input, OpReqType req, const TBlob &output) {
   MSHADOW_REAL_TYPE_SWITCH(input.type_flag_, DType, {
     switch (param.act_type) {
       case activation::kReLU:
@@ -128,9 +128,9 @@ void _ActivationCompute(const ActivationParam &param, const OpContext &ctx,
 }
 
 template<typename xpu>
-void _ActivationGradCompute(const ActivationParam &param, const OpContext &ctx,
-                            const TBlob &out_grad, const TBlob &out_data,
-                            OpReqType req, const TBlob &output) {
+void ActivationGradComputeImpl(const ActivationParam &param, const OpContext &ctx,
+                               const TBlob &out_grad, const TBlob &out_data,
+                               OpReqType req, const TBlob &output) {
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
     switch (param.act_type) {
       case activation::kReLU:
@@ -164,7 +164,7 @@ void ActivationCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  _ActivationCompute<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+  ActivationComputeImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
 }
 
 template<typename xpu>
@@ -181,7 +181,7 @@ void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  _ActivationGradCompute<xpu>(param, ctx, inputs[0], inputs[1], req[0], outputs[0]);
+  ActivationGradComputeImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], outputs[0]);
 }
 
 }  // namespace op

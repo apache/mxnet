@@ -91,40 +91,40 @@ static inline bool IsBNWriting(const OpReqType ort) {
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void DoBNForward(mshadow::Stream<cpu> *stream,
-                 const OpContext &ctx, const BatchNormParam& param,
-                 const std::vector<TBlob> &in_data,
-                 const std::vector<OpReqType> &req,
-                 const std::vector<TBlob> &out_data,
-                 const std::vector<TBlob> &aux_states);
+void BatchNormForwardImpl(mshadow::Stream<cpu> *stream,
+                          const OpContext &ctx, const BatchNormParam& param,
+                          const std::vector<TBlob> &in_data,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &out_data,
+                          const std::vector<TBlob> &aux_states);
 
 template <typename xpu, typename DType, typename AccReal>
-void DoBNBackward(mshadow::Stream<cpu> *stream,
-                  const OpContext &ctx, const BatchNormParam& param,
-                  const std::vector<TBlob> &out_grad,
-                  const std::vector<TBlob> &in_data,
-                  const std::vector<TBlob> &out_data,
-                  const std::vector<OpReqType> &req,
-                  const std::vector<TBlob> &in_grad,
-                  const std::vector<TBlob> &aux_states);
+void BatchNormBackwardImpl(mshadow::Stream<cpu> *stream,
+                           const OpContext &ctx, const BatchNormParam& param,
+                           const std::vector<TBlob> &out_grad,
+                           const std::vector<TBlob> &in_data,
+                           const std::vector<TBlob> &out_data,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &in_grad,
+                           const std::vector<TBlob> &aux_states);
 
 #if MXNET_USE_CUDA
 template <typename xpu, typename DType, typename AccReal>
-void DoBNForward(mshadow::Stream<gpu> *stream,
-                 const OpContext &ctx, const BatchNormParam& param,
-                 const std::vector<TBlob> &in_data,
-                 const std::vector<OpReqType> &req,
-                 const std::vector<TBlob> &out_data,
-                 const std::vector<TBlob> &aux_states);
+void BatchNormForwardImpl(mshadow::Stream<gpu> *stream,
+                          const OpContext &ctx, const BatchNormParam& param,
+                          const std::vector<TBlob> &in_data,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &out_data,
+                          const std::vector<TBlob> &aux_states);
 template <typename xpu, typename DType, typename AccReal>
-void DoBNBackward(mshadow::Stream<gpu> *stream,
-                  const OpContext &ctx, const BatchNormParam& param,
-                  const std::vector<TBlob> &out_grad,
-                  const std::vector<TBlob> &in_data,
-                  const std::vector<TBlob> &out_data,
-                  const std::vector<OpReqType> &req,
-                  const std::vector<TBlob> &in_grad,
-                  const std::vector<TBlob> &aux_states);
+void BatchNormBackwardImpl(mshadow::Stream<gpu> *stream,
+                           const OpContext &ctx, const BatchNormParam& param,
+                           const std::vector<TBlob> &out_grad,
+                           const std::vector<TBlob> &in_data,
+                           const std::vector<TBlob> &out_data,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &in_grad,
+                           const std::vector<TBlob> &aux_states);
 #endif  // MXNET_USE_CUDA
 
 /*!
@@ -139,11 +139,11 @@ void DoBNBackward(mshadow::Stream<gpu> *stream,
  * \sa OpReqType, OpContext
  */
 template <typename xpu, typename DType, typename AccReal>
-void BNForward(const OpContext &ctx, const BatchNormParam& param,
-               const std::vector<TBlob> &in_data,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &out_data,
-               const std::vector<TBlob> &aux_states) {
+void BatchNormForward(const OpContext &ctx, const BatchNormParam& param,
+                      const std::vector<TBlob> &in_data,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &out_data,
+                      const std::vector<TBlob> &aux_states) {
   using namespace mshadow;
   using namespace mshadow::expr;
 
@@ -158,7 +158,8 @@ void BNForward(const OpContext &ctx, const BatchNormParam& param,
     CHECK_EQ(req[batchnorm::kOut], kWriteTo);
   }
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  DoBNForward<xpu, DType, AccReal>(s, ctx, param, in_data, req, out_data, aux_states);
+  BatchNormForwardImpl<xpu, DType, AccReal>(s, ctx, param, in_data, req,
+                                            out_data, aux_states);
 }
 
 /*!
@@ -190,20 +191,20 @@ void BNForward(const OpContext &ctx, const BatchNormParam& param,
  * \sa OperatorProperty, OpReqType, OpContext
  */
 template <typename xpu, typename DType, typename AccReal>
-void BNBackward(const OpContext &ctx, const BatchNormParam& param,
-                const std::vector<TBlob> &out_grad,
-                const std::vector<TBlob> &in_data,
-                const std::vector<TBlob> &out_data,
-                const std::vector<OpReqType> &req,
-                const std::vector<TBlob> &in_grad,
-                const std::vector<TBlob> &aux_states) {
+void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
+                       const std::vector<TBlob> &out_grad,
+                       const std::vector<TBlob> &in_data,
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &in_grad,
+                       const std::vector<TBlob> &aux_states) {
   CHECK_EQ(out_grad.size(), param.output_mean_var ? 3U : 1U);
   CHECK_EQ(in_data.size(), 3U);
   CHECK_EQ(out_data.size(), 3U);
   CHECK_EQ(in_grad.size(), 3U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  DoBNBackward<xpu, DType, AccReal>(s, ctx, param, out_grad, in_data,
-                                    out_data, req, in_grad, aux_states);
+  BatchNormBackwardImpl<xpu, DType, AccReal>(s, ctx, param, out_grad, in_data,
+                                             out_data, req, in_grad, aux_states);
 }
 
 template<typename xpu>
@@ -218,7 +219,8 @@ void BatchNormCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> aux_states(inputs.begin() + batchnorm::kInMovingMean,
                                 inputs.end());
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    BNForward<xpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
+    BatchNormForward<xpu, DType, AccReal>(ctx, param, in_data, req, outputs,
+                                          aux_states);
   });
 }
 
@@ -242,8 +244,8 @@ void BatchNormGradCompute(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> in_grad(outputs.begin(), outputs.begin() + 3);
 
   MSHADOW_REAL_TYPE_SWITCH_EX(out_grad[0].type_flag_, DType, AccReal, {
-    BNBackward<xpu, DType, AccReal>(ctx, param, out_grad, in_data, out_data, req,
-                                    in_grad, aux_states);
+    BatchNormBackward<xpu, DType, AccReal>(ctx, param, out_grad, in_data, out_data, req,
+                                           in_grad, aux_states);
   });
 }
 

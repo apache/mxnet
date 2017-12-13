@@ -257,10 +257,10 @@ static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int> *in_attrs,
+                                     std::vector<int> *out_attrs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   uint32_t in_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), in_expected);
@@ -283,11 +283,11 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline static bool backward_DeconvStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int> *in_attrs,
-                                          std::vector<int> *out_attrs) {
+inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
+                                             const int dev_mask,
+                                             DispatchMode* dispatch_mode,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   uint32_t out_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), param.no_bias ? 3U : 4U);
@@ -434,7 +434,7 @@ NNVM_REGISTER_OP(_backward_Deconvolution)
   return params.no_bias ? 2 : 3;
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", backward_DeconvStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardDeconvStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
