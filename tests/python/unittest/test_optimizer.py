@@ -198,6 +198,7 @@ class PySGD(mx.optimizer.Optimizer):
     def update_multi_precision(self, index, weight, grad, state):
         self.update(index, weight, grad, state)
 
+@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/9000")
 def test_sgd():
     mx.random.seed(0)
     opt1 = PySGD
