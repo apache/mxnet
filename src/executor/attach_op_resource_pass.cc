@@ -38,7 +38,7 @@ Graph AttachOpResources(Graph g) {
   const auto& vdispatch = g.GetAttr<DispatchModeVector>("dispatch_mode");
   const auto& idx = g.indexed_graph();
   // Use global resource pool for each executor for now.
-  std::map<Context, Resource> cached_temp;
+  std::map<Context, std::vector<Resource> > cached_temp;
   // Resource allocation
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
@@ -49,16 +49,24 @@ Graph AttachOpResources(Graph g) {
     const auto op = inode.source->op();
     if (fresource.count(op) != 0) {
       auto reqs = fresource[op](inode.source->attrs);
+      size_t i = 0;
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {
           if (cached_temp.count(ctx) != 0) {
-            requested.push_back(cached_temp.at(ctx));
+            if (i < cached_temp.at(ctx).size()) {
+              requested.push_back(cached_temp.at(ctx)[i]);
+            } else {
+              Resource r = ResourceManager::Get()->Request(ctx, req);
+              requested.push_back(r);
+              cached_temp[ctx].push_back(r);
+            }
           } else {
             Resource r = ResourceManager::Get()->Request(ctx, req);
             requested.push_back(r);
-            cached_temp[ctx] = r;
+            cached_temp[ctx] = std::vector<Resource>(1, r);
           }
+          i++;
         } else if (req.type == ResourceRequest::kRandom) {
           requested.push_back(ResourceManager::Get()->Request(ctx, req));
         } else {
