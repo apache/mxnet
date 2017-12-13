@@ -237,10 +237,11 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
       !param.transpose_a && !param.transpose_b) {
     // dns, csr -> csr
-    if (dev_mask == mshadow::cpu::kDevMask) {
-      dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
-                                       DispatchMode::kFComputeEx);
-    }
+    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+    const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
+                                         : DispatchMode::kFComputeEx;
+    dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
+                                     dispatch_ex);
   }
   if (!dispatched) {
     dispatch_fallback(out_attrs, dispatch_mode);
