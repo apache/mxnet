@@ -65,10 +65,10 @@ extern bool EnableMkldnnWarnGenerated();
 // cpu_engine singleton
 class CpuEngine {
  public:
-  static CpuEngine &Instance() {
+  static CpuEngine *Get() {
     // I's thread-safe in C++11.
     static thread_local CpuEngine myInstance;
-    return myInstance;
+    return &myInstance;
   }
   CpuEngine(CpuEngine const &) = delete;             // Copy construct
   CpuEngine(CpuEngine &&) = delete;                  // Move construct
@@ -204,9 +204,9 @@ class TmpMemMgr {
   const size_t alignment = 4096;
 
  public:
-  static TmpMemMgr &Instance() {
+  static TmpMemMgr *Get() {
     static thread_local TmpMemMgr mgr;
-    return mgr;
+    return &mgr;
   }
 
   TmpMemMgr() {
@@ -246,9 +246,9 @@ class MKLDNNStream {
   std::vector<std::shared_ptr<const mkldnn::memory> > mem_holder;
 
  public:
-  static MKLDNNStream &Instance() {
+  static MKLDNNStream *Get() {
     static thread_local MKLDNNStream stream;
-    return stream;
+    return &stream;
   }
 
   void RegisterPrim(const mkldnn::primitive &prim) { net.push_back(prim); }
@@ -262,7 +262,7 @@ class MKLDNNStream {
       mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
     net.clear();
     mem_holder.clear();
-    TmpMemMgr::Instance().Reset();
+    TmpMemMgr::Get()->Reset();
   }
 };
 

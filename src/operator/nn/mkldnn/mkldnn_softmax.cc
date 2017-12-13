@@ -45,9 +45,9 @@ void MKLDNNSoftmax_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   mkldnn::softmax_forward::primitive_desc pdesc(desc, cpu_engine);
 
   auto output_memory = out_data.GetMKLDNNData();
-  MKLDNNStream &stream = MKLDNNStream::Instance();
-  stream.RegisterPrim(mkldnn::softmax_forward(pdesc, *input_mem, *output_memory));
-  stream.Submit();
+  MKLDNNStream *stream = MKLDNNStream::Get();
+  stream->RegisterPrim(mkldnn::softmax_forward(pdesc, *input_mem, *output_memory));
+  stream->Submit();
 }
 
 }   // namespace op

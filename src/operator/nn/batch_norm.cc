@@ -90,12 +90,12 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
 
 /*! \brief Forward CPU */
 template <typename xpu, typename DType, typename AccReal>
-void DoBNForward(mshadow::Stream<cpu> *,
-                 const OpContext &ctx, const BatchNormParam& param_,
-                 const std::vector<TBlob> &in_data,
-                 const std::vector<OpReqType> &req,
-                 const std::vector<TBlob> &out_data,
-                 const std::vector<TBlob> &aux_states) {
+void BatchNormForwardImpl(mshadow::Stream<cpu> *,
+                          const OpContext &ctx, const BatchNormParam& param_,
+                          const std::vector<TBlob> &in_data,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &out_data,
+                          const std::vector<TBlob> &aux_states) {
   // Input
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
@@ -190,14 +190,14 @@ void DoBNForward(mshadow::Stream<cpu> *,
 }
 
 template <typename xpu, typename DType, typename AccReal>
-void DoBNBackward(mshadow::Stream<cpu> *,
-                  const OpContext &ctx, const BatchNormParam& param_,
-                  const std::vector<TBlob> &out_grad,
-                  const std::vector<TBlob> &in_data,
-                  const std::vector<TBlob> &out_data,
-                  const std::vector<OpReqType> &req,
-                  const std::vector<TBlob> &in_grad,
-                  const std::vector<TBlob> &aux_states) {
+void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
+                           const OpContext &ctx, const BatchNormParam& param_,
+                           const std::vector<TBlob> &out_grad,
+                           const std::vector<TBlob> &in_data,
+                           const std::vector<TBlob> &out_data,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &in_grad,
+                           const std::vector<TBlob> &aux_states) {
   // Input Data
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights   = in_data[batchnorm::kGamma];

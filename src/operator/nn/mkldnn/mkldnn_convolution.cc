@@ -38,7 +38,7 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwd(
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   mkldnn::memory::dims strides{0, 0};
   if (param.stride.ndim() == 2) {
     strides[0] = param.stride[0];
@@ -87,7 +87,7 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   mkldnn::memory::dims strides{0, 0};
   if (param.stride.ndim() == 2) {
     strides[0] = param.stride[0];
@@ -122,7 +122,7 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   mkldnn::memory::dims strides{0, 0};
   if (param.stride.ndim() == 2) {
     strides[0] = param.stride[0];
@@ -169,36 +169,36 @@ void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ct
                                const std::vector<NDArray> &in_data,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &out_data) {
-  TmpMemMgr::Instance().Init(ctx.requested[conv::kTempSpace]);
+  TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwd(param,
       ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
       param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
   auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd_pd.src_primitive_desc());
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   auto weight_mem = GetWeights(in_data[conv::kWeight],
       fwd_pd.weights_primitive_desc(), param.num_group);
   auto out_mem = CreateMKLDNNMem(out_data[conv::kOut],
       fwd_pd.dst_primitive_desc(), req[conv::kOut]);
 
   if (param.no_bias) {
-    MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_forward(fwd_pd,
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_forward(fwd_pd,
           *data_mem, *weight_mem, *out_mem.second));
   } else {
     auto bias_mem = in_data[conv::kBias].GetMKLDNNDataReorder(fwd_pd.bias_primitive_desc());
-    MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_forward(fwd_pd,
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_forward(fwd_pd,
           *data_mem, *weight_mem, *bias_mem, *out_mem.second));
   }
   CommitOutput(out_data[conv::kOut], out_mem);
-  MKLDNNStream::Instance().Submit();
+  MKLDNNStream::Get()->Submit();
 }
 
 void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
     const std::vector<NDArray>& outputs) {
-  TmpMemMgr::Instance().Init(ctx.requested[conv::kTempSpace]);
+  TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwd(param, ctx.is_train,
       inputs[conv::kData + 1], inputs[conv::kWeight + 1],
@@ -215,7 +215,7 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
         bwdData_pd.weights_primitive_desc(), param.num_group);
     auto in_grad_mem = CreateMKLDNNMem(in_grad[conv::kData],
         bwdData_pd.diff_src_primitive_desc(), req[conv::kData]);
-    MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_data(bwdData_pd,
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_backward_data(bwdData_pd,
           *out_grad_mem, *weight_mem, *in_grad_mem.second));
     CommitOutput(in_grad[conv::kData], in_grad_mem);
   }
@@ -233,20 +233,20 @@ void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &c
                                           req[conv::kWeight]);
     mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
-      MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
+      MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_backward_weights(
               bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second));
     } else {
       in_grad_bias = CreateMKLDNNMem(in_grad[conv::kBias],
                                      bwdWeights_pd.diff_bias_primitive_desc(),
                                      req[conv::kBias]);
-      MKLDNNStream::Instance().RegisterPrim(mkldnn::convolution_backward_weights(
+      MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_backward_weights(
               bwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second,
               *in_grad_bias.second));
     }
     CommitOutput(in_grad[conv::kWeight], in_grad_weight);
     CommitOutput(in_grad[conv::kBias], in_grad_bias);
   }
-  MKLDNNStream::Instance().Submit();
+  MKLDNNStream::Get()->Submit();
 }
 
 }  // namespace op

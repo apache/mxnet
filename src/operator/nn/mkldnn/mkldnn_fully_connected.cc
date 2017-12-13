@@ -35,7 +35,7 @@ inline static mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     const mkldnn::memory::desc &out_md) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   if (bias) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::inner_product_forward::desc ipFwd_desc(mkldnn::prop_kind::forward_training,
@@ -54,7 +54,7 @@ inline static mkldnn::inner_product_backward_data::primitive_desc GetIpBwdData(
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
   auto out_md = GetMemDesc(output);
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   mkldnn::inner_product_backward_data::desc desc(data_md, weight_md, out_md);
   return mkldnn::inner_product_backward_data::primitive_desc(desc, engine, ipFwd_pd);
 }
@@ -65,7 +65,7 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
   auto out_md = GetMemDesc(output);
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   if (bias) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::inner_product_backward_weights::desc ipBwdWeights_desc(data_md,
@@ -83,7 +83,7 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
 void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &out_data) {
-  TmpMemMgr::Instance().Init(ctx.requested[fullc::kTempSpace]);
+  TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const TShape& ishape = in_data[fullc::kData].shape();
   const TShape& oshape = out_data[fullc::kOut].shape();
@@ -112,21 +112,21 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
       ipFwd_pd.dst_primitive_desc(), req[fullc::kOut]);
   if (param.no_bias) {
-    MKLDNNStream::Instance().RegisterPrim(mkldnn::inner_product_forward(
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_forward(
           ipFwd_pd, *data_mem, *weight_mem, *out_mem.second));
   } else {
     auto bias_mem = in_data[fullc::kBias].GetMKLDNNDataReorder(ipFwd_pd.bias_primitive_desc());
-    MKLDNNStream::Instance().RegisterPrim(mkldnn::inner_product_forward(ipFwd_pd,
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_forward(ipFwd_pd,
           *data_mem, *weight_mem, *bias_mem, *out_mem.second));
   }
   CommitOutput(out_data[fullc::kOut], out_mem);
-  MKLDNNStream::Instance().Submit();
+  MKLDNNStream::Get()->Submit();
 }
 
 void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
     const std::vector<NDArray> &outputs) {
-  TmpMemMgr::Instance().Init(ctx.requested[fullc::kTempSpace]);
+  TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const TShape& ishape = inputs[fullc::kData + 1].shape();
@@ -160,7 +160,7 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     auto weight_mem = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_primitive_desc());
     auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
         ipBwdData_pd.diff_src_primitive_desc(), req[fullc::kData]);
-    MKLDNNStream::Instance().RegisterPrim(mkldnn::inner_product_backward_data(
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_data(
           ipBwdData_pd, *out_grad_mem, *weight_mem, *in_grad_mem.second));
     CommitOutput(in_grad[fullc::kData], in_grad_mem);
   }
@@ -175,19 +175,19 @@ void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
         ipBwdWeights_pd.diff_weights_primitive_desc(), req[fullc::kWeight]);
     mkldnn_output_t in_grad_bias;
     if (param.no_bias) {
-      MKLDNNStream::Instance().RegisterPrim(mkldnn::inner_product_backward_weights(
+      MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_weights(
             ipBwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second));
     } else {
       in_grad_bias = CreateMKLDNNMem(in_grad[fullc::kBias],
           ipBwdWeights_pd.diff_bias_primitive_desc(), req[fullc::kBias]);
-      MKLDNNStream::Instance().RegisterPrim(mkldnn::inner_product_backward_weights(
+      MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_weights(
             ipBwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second,
             *in_grad_bias.second));
     }
     CommitOutput(in_grad[fullc::kWeight], in_grad_weight);
     CommitOutput(in_grad[fullc::kBias], in_grad_bias);
   }
-  MKLDNNStream::Instance().Submit();
+  MKLDNNStream::Get()->Submit();
 }
 
 }  // namespace op

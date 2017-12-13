@@ -125,11 +125,11 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline static bool backward_ConcatStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int> *in_attrs,
-                                          std::vector<int> *out_attrs) {
+inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
+                                             const int dev_mask,
+                                             DispatchMode* dispatch_mode,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
 #if MXNET_USE_MKLDNN == 1
   CHECK_EQ(out_attrs->size(), in_attrs->size() - 1);
   if (dev_mask == mshadow::cpu::kDevMask
@@ -286,7 +286,7 @@ NNVM_REGISTER_OP(_backward_Concat)
 })
 #endif
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", backward_ConcatStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardConcatStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU);
 

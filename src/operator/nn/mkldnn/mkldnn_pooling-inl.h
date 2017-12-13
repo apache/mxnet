@@ -86,7 +86,7 @@ inline static pooling_forward::primitive_desc GetPoolingFwd(
   auto pad_l_ = param.pad[1], pad_r_ = param.pad[1];
   auto stride_h_ = param.stride[0], stride_w_ = param.stride[1];
 
-  auto engine = CpuEngine::Instance().get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
   if (param.global_pool) {
     CHECK(pad_t_ == 0 && pad_l_ == 0 && stride_h_ == 1 && stride_w_ == 1)
         << "With Global_pooling: true; only pad = 0 and stride = 1";
@@ -141,13 +141,13 @@ void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
   if (ctx.is_train && MKLDNNRequireWorkspace(param)) {
     CHECK(workspace != nullptr);
     auto workspace_mem = workspace->GetMKLDNNData();
-    MKLDNNStream::Instance().RegisterPrim(
+    MKLDNNStream::Get()->RegisterPrim(
         pooling_forward(pdesc, *input_mem, *output_memory, *workspace_mem));
   } else {
-    MKLDNNStream::Instance().RegisterPrim(
+    MKLDNNStream::Get()->RegisterPrim(
         pooling_forward(pdesc, *input_mem, *output_memory));
   }
-  MKLDNNStream::Instance().Submit();
+  MKLDNNStream::Get()->Submit();
 }
 
 void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
@@ -158,7 +158,7 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
     return;
   }
 
-  TmpMemMgr::Instance().Init(ctx.requested[0]);
+  TmpMemMgr::Get()->Init(ctx.requested[0]);
   auto diff_dst_mem = out_grad.GetMKLDNNData();
   auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
@@ -207,15 +207,15 @@ void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
   if (MKLDNNRequireWorkspace(param)) {
     CHECK(workspace != nullptr);
     auto workspace_mem = workspace->GetMKLDNNData();
-    MKLDNNStream::Instance().RegisterPrim(
+    MKLDNNStream::Get()->RegisterPrim(
         pooling_backward(pdesc, *diff_dst_mem, primitive::at(*workspace_mem),
                          *diff_src_mem.second));
   } else {
-    MKLDNNStream::Instance().RegisterPrim(
+    MKLDNNStream::Get()->RegisterPrim(
         pooling_backward(pdesc, *diff_dst_mem, *diff_src_mem.second));
   }
   CommitOutput(in_grad, diff_src_mem);
-  MKLDNNStream::Instance().Submit();
+  MKLDNNStream::Get()->Submit();
 }
 }  // namespace op
 }  // namespace mxnet

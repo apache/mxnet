@@ -60,11 +60,11 @@ static void ActivationComputeEx_CPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNAct_Forward<float>(ctx, param, inputs[0], req[0], outputs[0]);
+    MKLDNNActivationForward<float>(ctx, param, inputs[0], req[0], outputs[0]);
     return;
   }
 #endif
-  _ActivationCompute<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
+  ActivationComputeImpl<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
 }
 
 void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
@@ -80,13 +80,13 @@ void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNAct_Backward<float>(ctx, param, inputs[0], inputs[1], req[0],
-        outputs[0]);
+    MKLDNNActivationBackward<float>(ctx, param, inputs[0], inputs[1], req[0],
+                                    outputs[0]);
     return;
   }
 #endif
-  _ActivationGradCompute<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
-      req[0], outputs[0].data());
+  ActivationGradComputeImpl<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
+                                 req[0], outputs[0].data());
 }
 
 inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
@@ -111,11 +111,11 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
       dispatch_mode, in_attrs, out_attrs);
 }
 
-inline static bool backward_ActStorageType(const nnvm::NodeAttrs& attrs,
-                                           const int dev_mask,
-                                           DispatchMode* dispatch_mode,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
+inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
 #if MXNET_USE_CUDNN == 1
   CHECK_EQ(in_attrs->size(), 3U);
 #else
@@ -164,7 +164,7 @@ NNVM_REGISTER_OP(_backward_Activation)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", backward_ActStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardActStorageType)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
