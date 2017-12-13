@@ -1,6 +1,7 @@
 # VAE-GAN in MXNet
 
-* Implementation of [Autoencoding beyond pixels using a learned similarity metric](https://arxiv.org/abs/1512.09300) based on the Tensorflow implementation: <https://github.com/JeremyCCHsu/tf-vaegan>
+* Implementation of [Autoencoding beyond pixels using a learned similarity metric](https://arxiv.org/abs/1512.09300),
+  based on the Tensorflow implementation: <https://github.com/JeremyCCHsu/tf-vaegan>
 
 * Please refer to their official Github for details: [Autoencoding Beyond Pixels](https://github.com/andersbll/autoencoding_beyond_pixels)
 
