@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#if MXNET_USE_MKLDNN == 1
+
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
 
@@ -160,3 +162,5 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
 }
 
 }  // namespace mxnet
+
+#endif
