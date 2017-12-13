@@ -72,12 +72,12 @@ def _test_count_tokens_from_str_with_delims(token_delim, seq_delim):
         {'life': 5, 'is': 2, '.': 2, 'great': 1, '!': 1, 'good': 1,
          "isn't": 1, 'bad': 1})
 
-
+@unittest.skip('')
 def test_count_tokens_from_str():
     _test_count_tokens_from_str_with_delims(' ', '\n')
     _test_count_tokens_from_str_with_delims('IS', 'LIFE')
 
-
+@unittest.skip('')
 def test_check_pretrain_files():
     for embed_name, embed_cls in TextEmbed.embed_registry.items():
         for pretrain_file in embed_cls.pretrain_file_sha1.keys():
@@ -135,7 +135,7 @@ def _mk_my_pretrain_file(path, token_delim, pretrain_file):
     with open(os.path.join(path, pretrain_file), 'w') as fout:
         fout.write(seqs)
 
-
+@unittest.skip('')
 def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -147,7 +147,7 @@ def _mk_my_pretrain_file2(path, token_delim, pretrain_file):
     with open(os.path.join(path, pretrain_file), 'w') as fout:
         fout.write(seqs)
 
-
+@unittest.skip('')
 def test_text_embed():
     embed_root = os.path.expanduser('~/.mxnet/embeddings/')
     embed_name = 'my_embed'
@@ -188,7 +188,7 @@ def test_all_embeds():
                                              pretrain_file=pretrain_file)
             print(len(te))
 
-
+@unittest.skip('')
 def test_glossary_frequency_thresholds():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
@@ -264,7 +264,7 @@ def test_glossary_frequency_thresholds():
     assert g7.idx_to_vec is None
     assert g7.vec_len == 0
 
-
+@unittest.skip('')
 def test_glossary_with_one_embed():
     embed_root = os.path.expanduser('~/.mxnet/embeddings/')
     embed_name = 'my_embed'
@@ -286,7 +286,7 @@ def test_glossary_with_one_embed():
 
     print(g1.token_to_idx)
 
-
+@unittest.skip('')
 def test_glossary_with_two_embeds():
     embed_root = os.path.expanduser('.')
     embed_name = 'my_embed'
