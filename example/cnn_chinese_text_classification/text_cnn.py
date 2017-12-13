@@ -32,7 +32,7 @@ from mxnet.initializer import Xavier, Initializer
 
 import data_helpers
 
-print("Training logs are generated in ./cnn_text_classification.log")
+print("The training log can be found at ./cnn_text_classification.log")
 fmt = '%(asctime)s:filename %(filename)s: lineno %(lineno)d:%(levelname)s:%(message)s'
 logging.basicConfig(format=fmt, filemode='a+', filename='./cnn_text_classification.log', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
