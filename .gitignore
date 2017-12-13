@@ -149,10 +149,11 @@ bld
 ./tmp/*
 *.jar
 target
-
 bin/im2rec
-
 model/
+
+# VTune
+./r0*hs
 
 # generated function signature for IDE auto-complete
 python/mxnet/symbol/gen_*
