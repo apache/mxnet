@@ -234,11 +234,24 @@ function(mshadow_select_nvcc_arch_flags out_variable)
     list(APPEND nvcc_archs_readable compute_${arch})
   endforeach()
 
-  if(SUPPORT_CXX14)
-    list(APPEND nvcc_flags "-std=c++14")
-  elseif(SUPPORT_CXX11)
-    list(APPEND nvcc_flags "-std=c++11")
+  if(NOT MSVC)
+    if(SUPPORT_CXX14)
+      list(APPEND nvcc_flags "-std=c++14")
+    elseif(SUPPORT_CXX11)
+      list(APPEND nvcc_flags "-std=c++11")
+    endif()
   endif()
+
+  string (REPLACE " " ";" CMAKE_CXX_FLAGS_STR "${CMAKE_CXX_FLAGS}")
+  foreach(_flag ${CMAKE_CXX_FLAGS_STR})
+    # Remove -std=c++XX flags
+    if(NOT "${_flag}" MATCHES "-std=.+")
+      # Remove link flags
+      if(NOT "${_flag}" MATCHES "-Wl,.+")
+        list(APPEND nvcc_flags "-Xcompiler ${_flag}")
+      endif()
+    endif()
+  endforeach()
 
   string(REPLACE ";" " " nvcc_archs_readable "${nvcc_archs_readable}")
   set(${out_variable}          ${nvcc_flags}          PARENT_SCOPE)
