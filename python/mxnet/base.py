@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 

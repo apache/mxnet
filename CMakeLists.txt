@@ -47,6 +47,7 @@ mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
+mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
 
 
@@ -87,6 +88,9 @@ else(MSVC)
   check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
   check_cxx_compiler_flag("-msse2"       SUPPORT_MSSE2)
   set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
+    set(CMAKE_C_FLAGS "-Wno-braced-scalar-init")
+  endif()
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g")
   elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
@@ -569,6 +573,10 @@ install(TARGETS ${MXNET_INSTALL_TARGETS}
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if (INSTALL_EXAMPLES)
   install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+endif()
+
+if (USE_SIGNAL_HANDLER)
+	add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
 endif()
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
