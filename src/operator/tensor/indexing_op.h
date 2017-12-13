@@ -364,7 +364,7 @@ inline void EmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
 
 // Embedding forward implementation with row_sparse weight
 template<typename xpu>
-void SparseEmbeddingOpForwardRspImpl(mshadow::Stream<xpu>* s,
+void SparseEmbeddingOpForwardRspImpl(const OpContext& ctx,
                                      const TBlob& data,
                                      const NDArray& weight,
                                      const OpReqType req,
@@ -406,10 +406,9 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   const auto data_stype = data.storage_type();
   const auto weight_stype = weight.storage_type();
   const auto out_stype = out.storage_type();
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (data_stype == kDefaultStorage && weight_stype == kRowSparseStorage &&
       out_stype == kDefaultStorage) {
-    SparseEmbeddingOpForwardRspImpl<xpu>(s, data.data(), weight, req[0], out.data());
+    SparseEmbeddingOpForwardRspImpl<xpu>(ctx, data.data(), weight, req[0], out.data());
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }
