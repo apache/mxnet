@@ -43,8 +43,31 @@ void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, TBlob* dns)
   CHECK_EQ(src.dtype(), dns->type_flag_);
   // This converts the source data to the default format and copy the data to
   // the destination.
-  const TBlob &src_blob = src.data();
-  memcpy(dns->dptr_, src_blob.dptr_, src.shape().Size() * get_type_size(dns->type_flag_));
+  std::vector<mkldnn::primitive> net;
+  auto src_mkldnn = src.GetMKLDNNData();
+  auto src_pd = src_mkldnn->get_primitive_desc();
+  mkldnn::memory::dims dims(dns->shape_.ndim());
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = dns->shape_[i];
+  mkldnn::memory::format format = mkldnn::memory::format::format_undef;
+  switch (dims.size()) {
+    case 1: format = mkldnn::memory::format::x; break;
+    case 2: format = mkldnn::memory::format::nc; break;
+    case 4: format = mkldnn::memory::format::nchw; break;
+    // This isn't the right layout when the data has 5 dimensions in MXNet.
+    // MXNet interprets 5 dimensions as ncdhw, but MKLDNN doesn't have
+    // a corresponding format.
+    case 5: format = mkldnn::memory::format::goihw; break;
+  }
+  CHECK_NE(format, mkldnn::memory::format::format_undef);
+  mkldnn::memory::format cpp_format = static_cast<mkldnn::memory::format>(format);
+  mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
+      src_pd.desc().data.data_type);
+  mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
+  mkldnn::memory::primitive_desc dst_pd(data_md, src_pd.get_engine());
+  mkldnn::memory dst_mkldnn(dst_pd, dns->dptr_);
+  net.push_back(mkldnn::reorder(*src_mkldnn, dst_mkldnn));
+  mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
 }
 
 void CastStorageDnsMKLImpl(const OpContext& ctx, const NDArray& src, const NDArray &dst) {
