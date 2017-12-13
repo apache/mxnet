@@ -23,6 +23,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from collections import Counter
 import io
 import logging
 import os
@@ -35,10 +36,10 @@ from ..gluon.utils import download
 from .. import ndarray as nd
 
 
-class Glossary(object):
+class TextIndexer(object):
     """Indexing and embedding for text and reserved tokens in a glossary.
 
-    For each indexed text or reserved token (e.g., an unknown token) in a
+    For each indexed text or reserved token (e.g., an unknown_token token) in a
     glossary, an embedding vector will be associated with the token. Such
     embedding vectors can be loaded from externally pre-trained embeddings,
     such as via mxnet.text.glossary.TextEmbed instances.
@@ -48,20 +49,22 @@ class Glossary(object):
     ----------
     counter : collections.Counter
         Counts text token frequencies in the text data.
-    top_k_freq : None or int, default None
+    most_freq_count : None or int, default None
         The number of top frequent tokens in the keys of `counter` that will be
         indexed. If None or larger than the cardinality of the keys of
         `counter`, all the tokens in the keys of `counter` will be indexed.
     min_freq : int, default 1
         The minimum frequency required for a token in the keys of `counter` to
         be indexed.
-    unknown : str, default '<unk>'
-        The string representation for any unknown token. It is a reserved token
-        to be indexed.
+    unknown_token : str, default '<unk>'
+        The string representation for any unknown_token token. It is a reserved
+        token to be indexed. It cannot be any token to be indexed from the keys
+        of `counter` or any token in `other_reserveds`.
     other_reserveds : list of strs or None, default None
         A list of other reserved tokens to be indexed.  It cannot contain any
-        token from the keys of `counter`. If None, there is no reserved token
-        other than the reserved unknown token `unknown`.
+        token to be indexed from the keys of `counter`, `unknown_token`, or
+        duplicate reserved tokens. If None, there is no reserved token other
+        than the reserved unknown token `unknown_token`.
     embeds : an mxnet.text.glossary.TextEmbed instance, a list of
         mxnet.text.glossary.TextEmbed instances, or None, default None
         Pre-trained embeddings to load. If None, there is nothing to load.
@@ -74,111 +77,88 @@ class Glossary(object):
     idx_to_token : list of strs
         A list of indexed tokens where the list indices and the token indices
         are aligned.
-    idx_to_vec : mxnet.ndarray.NDArray
-        For all the indexed tokens in this glossary, this NDArray maps each
-        token's index to an embedding vector.
-    vec_len : int
-        The length of the embedding vector for any token.
-    unknown : str
-        The string representation for any unknown token. It is a reserved token
-        to be indexed.
-    other_reserveds : list of strs or None
+    unknown_token : str, default '<unk>'
+        The string representation for any unknown_token token. It is a reserved
+        token to be indexed. It cannot be any token to be indexed from the keys
+        of `counter` or any token in `other_reserveds`.
+    unknown_idx : int
+        The index for any unknown token (`unknown_token`).
+    other_reserveds : list of strs or None, default None
         A list of other reserved tokens to be indexed.  It cannot contain any
-        token from the keys of `counter`. If None, there is no reserved token
-        other than the reserved unknown token `unknown`.
+        token to be indexed from the keys of `counter`, `unknown_token`, or
+        duplicate reserved tokens. If None, there is no reserved token other
+        than the reserved unknown token `unknown_token`.
     """
-    def __init__(self, counter, top_k_freq=None, min_freq=1, unknown='<unk>',
-                 other_reserveds=None, embeds=None):
+    def __init__(self, counter, most_freq_count=None, min_freq=1,
+                 unknown_token='<unk>', other_reserveds=None):
         # Sanity checks.
         assert min_freq > 0, '`min_freq` must be set to a positive value.'
 
-        self._init_attrs(counter, unknown, other_reserveds)
-        self._set_idx_and_token(counter, unknown, other_reserveds, top_k_freq,
-                                min_freq)
-
-        if embeds is not None:
-            self.set_idx_to_vec(embeds)
-
-    def _init_attrs(self, counter, unknown, other_reserveds):
-        """Initiates class attributes."""
-        self._counter = counter.copy()
-        self._idx_to_token = [unknown]
-
         if other_reserveds is not None:
+            for other_reserved in other_reserveds:
+                assert other_reserved != unknown_token, \
+                    '`other_reserved` cannot contain `unknown_token`.'
+
+            assert len(set(other_reserveds)) == len(other_reserveds), \
+                '`other_reserved` cannot contain duplicate reserved tokens.'
+
+        self._index_reserved_tokens(unknown_token, other_reserveds)
+
+        if counter is not None:
+            self._index_counter_keys(counter, unknown_token, other_reserveds,
+                                     most_freq_count, min_freq)
+
+    def _index_reserved_tokens(self, unknown_token, other_reserveds):
+        """Indexes reserved tokens, such as the unknown token."""
+        self._idx_to_token = [unknown_token]
+
+        if other_reserveds is None:
+            self._other_reserveds = None
+        else:
             self._idx_to_token.extend(other_reserveds)
             # Python 2 does not support list.copy().
             self._other_reserveds = other_reserveds[:]
-        else:
-            self._other_reserveds = other_reserveds
 
         self._token_to_idx = {token: idx for idx, token in
                               enumerate(self._idx_to_token)}
-        self._idx_to_vec = None
-        self._vec_len = 0
-        self._unknown = unknown
+        self._unknown_token = unknown_token
 
-    def _set_idx_and_token(self, counter, unknown, other_reserveds, top_k_freq,
-                           min_freq):
-        """Indexes tokens according to specified frequency thresholds."""
-        # Update self._counter to include the string representation for unknown
-        # tokens.
-        self._counter.update({unknown: 0})
-        assert len(self._counter) == len(counter) + 1, \
-            '`unknown` cannot be any token from the keys of `counter`.'
+    def _index_counter_keys(self, counter, unknown_token, other_reserveds,
+                            most_freq_count, min_freq):
+        """Indexes keys of `counter`.
+
+        Indexes keys of `counter according to frequency thresholds such as
+        `most_freq_count` and `min_freq`.
+        """
+        assert isinstance(counter, Counter), \
+            '`counter` must be a collections.Counter instance.'
+
+        reserveds = set(unknown_token)
 
         if other_reserveds is not None:
-            # Update self._counter to include other reserveds tokens.
-            self._counter.update({token: 0 for token in other_reserveds})
-            assert len(self._counter) == len(counter) + 1 + \
-                len(other_reserveds), \
-                '`other_reserveds` cannot contain any token from the keys of ' \
-                '`counter`.'
+            reserveds = reserveds.union(other_reserveds)
 
-        token_freqs = sorted(self._counter.items(), key=lambda x: x[0])
+        token_freqs = sorted(counter.items(), key=lambda x: x[0])
         token_freqs.sort(key=lambda x: x[1], reverse=True)
 
-        # 1 is for the unknown token.
-        token_cap = len(self._counter) if top_k_freq is None \
-            else 1 + len(other_reserveds) + top_k_freq
+        if most_freq_count is None:
+            token_cap = len(reserveds) + len(counter)
+        else:
+            token_cap = len(reserveds) + most_freq_count
 
         for token, freq in token_freqs:
             if freq < min_freq or len(self._idx_to_token) == token_cap:
                 break
-            self._idx_to_token.append(token)
-            self._token_to_idx[token] = len(self._idx_to_token) - 1
+            if token in reserveds:
+                raise(ValueError, 'Reserved tokens, such as `unknown_token` '
+                                  'and `other_reserveds`, cannot contain any '
+                                  'token to be indexed from keys of `counter`.')
+            else:
+                self._idx_to_token.append(token)
+                self._token_to_idx[token] = len(self._idx_to_token) - 1
 
     def __len__(self):
         return len(self.idx_to_token)
-
-    def __getitem__(self, tokens):
-        """The getter.
-
-        Parameters
-        ----------
-        tokens : str or list of strs
-            A token or a list of tokens.
-
-
-        Returns
-        -------
-        mxnet.ndarray.NDArray:
-            The embedding vector(s) of the token(s). According to numpy
-            conventions, if `tokens` is a string, returns a 1-D NDArray of shape
-            `self.vec_len`; if `tokens` is a list of strings, returns a 2-D
-            NDArray of shape=(len(tokens), self.vec_len).
-        """
-        to_reduce = False
-        if not isinstance(tokens, list):
-            tokens = [tokens]
-            to_reduce = True
-
-        indices = [self.token_to_idx[token] if token in self.token_to_idx
-                   else self.unk_idx() for token in tokens]
-
-        vecs = nd.Embedding(nd.array(indices), self.idx_to_vec,
-                            self.idx_to_vec.shape[0], self.idx_to_vec.shape[1])
-
-        return vecs[0] if to_reduce else vecs
 
     @property
     def token_to_idx(self):
@@ -189,103 +169,19 @@ class Glossary(object):
         return self._idx_to_token
 
     @property
-    def idx_to_vec(self):
-        return self._idx_to_vec
-
-    @property
-    def vec_len(self):
-        return self._vec_len
-
-    @property
-    def unknown(self):
-        return self._unknown
+    def unknown_token(self):
+        return self._unknown_token
 
     @property
     def other_reserveds(self):
         return self._other_reserveds
 
-    @staticmethod
-    def unk_idx():
-        """The index for unknown tokens (the first token in `reserveds`)."""
-        return 0
-
-    def set_idx_to_vec(self, embeds):
-        """Sets the mapping between token indices and token embedding vectors.
+    @property
+    def unknown_idx(self):
+        return self.token_to_idx[self.unknown_token]
 
 
-        Parameters
-        ----------
-        embeds : mxnet.text.glossary.TextEmbed or list of
-            mxnet.text.glossary.TextEmbed instances. If it is a list of
-            mxnet.text.glossary.TextEmbed instances, their embedding vectors
-            are concatenated for each token.
-        """
-
-        # Sanity check.
-        if isinstance(embeds, list):
-            for loaded_embed in embeds:
-                assert isinstance(loaded_embed, TextEmbed)
-        else:
-            assert isinstance(embeds, TextEmbed)
-            embeds = [embeds]
-
-        self._vec_len = sum(embed.vec_len for embed in embeds)
-        self._idx_to_vec = nd.zeros(shape=(len(self), self.vec_len))
-
-        col_start = 0
-        # Concatenate all the embedding vectors in embeds.
-        for embed in embeds:
-            col_end = col_start + embed.vec_len
-            self._idx_to_vec[:, col_start:col_end] = embed[self.idx_to_token]
-            col_start = col_end
-
-    def update_idx_to_vec(self, tokens, new_vectors):
-        """Updates embedding vectors for tokens.
-
-
-        Parameters
-        ----------
-        tokens : str or a list of strs.
-            A token or a list of tokens whose embedding vector are to be
-            updated.
-        new_vectors : mxnet.ndarray.NDArray
-            A 2-D NDArray to be assigned to the embedding vectors of `tokens`.
-            Its length must be equal to the number of `tokens` and its width
-            must be equal to the dimension of embeddings of the glossary.
-        """
-
-        assert self.idx_to_vec is not None, \
-            'The property idx_to_vec of mxnet.text.glossary.Glossary has not ' \
-            'been property set. Use mxnet.text.glossary.Glossary.__init__() ' \
-            'or mxnet.text.glossary.Glossary.set_idx_to_embed() to ' \
-            'initialize or set it.'
-
-        if not isinstance(tokens, list):
-            tokens = [tokens]
-
-        assert isinstance(new_vectors, nd.NDArray) and \
-               len(new_vectors.shape) == 2, 'new_vectors must be a 2-D NDArray.'
-        assert new_vectors.shape[0] == len(tokens), \
-            'The length of new_vectors must be equal to the number of tokens.'
-        assert new_vectors.shape[1] == self.vec_len, \
-            'The width of new_vectors must be equal to the dimension of ' \
-            'embeddings of the glossary.'
-
-        indices = []
-        for token in tokens:
-            if token in self.token_to_idx:
-                indices.append(self.token_to_idx[token])
-            else:
-                raise ValueError('Token %s is unknown to the glossary. To '
-                                 'update the embedding vector for an unknown '
-                                 'token, please specify it explicitly as the '
-                                 'unknown reserved token %s in tokens. This is '
-                                 'to avoid unintended updates.' %
-                                 (token, self.idx_to_token[Glossary.unk_idx()]))
-        self._idx_to_vec[nd.array(indices)] = new_vectors
-
-
-class TextEmbed(object):
+class TextEmbed(TextIndexer):
     """The base class inherited by all pre-trained text embeddings.
 
     To load text embeddings from an externally hosted pre-trained file, such as
@@ -329,7 +225,7 @@ class TextEmbed(object):
         The root directory for storing embedding-related files.
     reserved_init_vec : callback, default mxnet.ndarray.zeros
         The callback used to initialize the embedding vector for every reserved
-        token, such as an unknown token and a padding token.
+        token, such as an unknown_token token and a padding token.
     token_delim : str, default ' '
         The delimiter for splitting a token and every embedding vector element
         value on the same line of the pre-trained embedding file.
@@ -351,7 +247,7 @@ class TextEmbed(object):
         For all the indexed tokens in this embedding, this NDArray maps each
         token's index to an embedding vector. The largest valid index maps
         to the initialized embedding vector for every reserved token, such as an
-        unknown token and a padding token.
+        unknown_token token and a padding token.
     """
 
     # Key-value pairs for text embedding name in lower case and text embedding
@@ -360,7 +256,7 @@ class TextEmbed(object):
 
     def __init__(self, pretrain_file, url=None, embed_name='my_embed',
                  embed_root='~/.mxnet/embeddings/', reserved_init_vec=nd.zeros,
-                 token_delim=' '):
+                 token_delim=' ', unknown_token='<unk>', other_reserveds=None):
 
         pretrain_file = os.path.expanduser(pretrain_file)
         embed_root = os.path.expanduser(embed_root)
@@ -407,7 +303,7 @@ class TextEmbed(object):
             == len(self._token_to_idx), \
             'The extra (last) row of self._idx_to_vec should be the ' \
             'initialized embedding vector for a reserved token, such as an ' \
-            'unknown token.'
+            'unknown_token token.'
 
     @staticmethod
     def _get_pretrain_file_path_from_url(pretrain_file, url, embed_name,
@@ -469,7 +365,7 @@ class TextEmbed(object):
         """Load embedding vectors from the pre-trained embedding file.
 
         The largest valid index of idx_to_vec maps to the initialized embedding
-        vector for every reserved token, such as an unknown token and a padding
+        vector for every reserved token, such as an unknown_token token and a padding
         token.
         """
         with io.open(pretrain_file_path, 'r', encoding='utf8') as f:
@@ -581,6 +477,51 @@ class TextEmbed(object):
 
         return vecs[0] if to_reduce else vecs
 
+    def update_idx_to_vec(self, tokens, new_vectors):
+        """Updates embedding vectors for tokens.
+
+
+        Parameters
+        ----------
+        tokens : str or a list of strs.
+            A token or a list of tokens whose embedding vector are to be
+            updated.
+        new_vectors : mxnet.ndarray.NDArray
+            A 2-D NDArray to be assigned to the embedding vectors of `tokens`.
+            Its length must be equal to the number of `tokens` and its width
+            must be equal to the dimension of embeddings of the glossary.
+        """
+
+        assert self.idx_to_vec is not None, \
+            'The property idx_to_vec of mxnet.text.glossary.Glossary has not ' \
+            'been property set. Use mxnet.text.glossary.Glossary.__init__() ' \
+            'or mxnet.text.glossary.Glossary.set_idx_to_embed() to ' \
+            'initialize or set it.'
+
+        if not isinstance(tokens, list):
+            tokens = [tokens]
+
+        assert isinstance(new_vectors, nd.NDArray) and \
+               len(new_vectors.shape) == 2, 'new_vectors must be a 2-D NDArray.'
+        assert new_vectors.shape[0] == len(tokens), \
+            'The length of new_vectors must be equal to the number of tokens.'
+        assert new_vectors.shape[1] == self.vec_len, \
+            'The width of new_vectors must be equal to the dimension of ' \
+            'embeddings of the glossary.'
+
+        indices = []
+        for token in tokens:
+            if token in self.token_to_idx:
+                indices.append(self.token_to_idx[token])
+            else:
+                raise ValueError('Token %s is unknown_token to the glossary. To '
+                                 'update the embedding vector for an unknown_token '
+                                 'token, please specify it explicitly as the '
+                                 'unknown_token reserved token %s in tokens. This is '
+                                 'to avoid unintended updates.' %
+                                 (token, self.idx_to_token[Glossary.unk_idx()]))
+        self._idx_to_vec[nd.array(indices)] = new_vectors
+
     @staticmethod
     def register(embed_cls):
         """Registers a new embedding.
@@ -686,6 +627,100 @@ class TextEmbed(object):
             str_lst.append('pretrain_file: %s\n\n' %
                            ', '.join(embed_cls.pretrain_file_sha1.keys()))
         return ''.join(str_lst)
+
+
+class Glossary(TextEmbed):
+    """Indexing and embedding for text and reserved tokens in a glossary.
+
+    For each indexed text or reserved token (e.g., an unknown_token token) in a
+    glossary, an embedding vector will be associated with the token. Such
+    embedding vectors can be loaded from externally pre-trained embeddings,
+    such as via mxnet.text.glossary.TextEmbed instances.
+
+
+    Parameters
+    ----------
+    counter : collections.Counter
+        Counts text token frequencies in the text data.
+    most_freq_count : None or int, default None
+        The number of most frequent tokens in the keys of `counter` that will be
+        indexed. If None or larger than the cardinality of the keys of
+        `counter`, all the tokens in the keys of `counter` will be indexed.
+    min_freq : int, default 1
+        The minimum frequency required for a token in the keys of `counter` to
+        be indexed.
+    unknown_token : str, default '<unk>'
+        The string representation for any unknown_token token. It is a reserved token
+        to be indexed.
+    other_reserveds : list of strs or None, default None
+        A list of other reserved tokens to be indexed.  It cannot contain any
+        token from the keys of `counter`. If None, there is no reserved token
+        other than the reserved unknown_token token `unknown_token`.
+    embeds : an mxnet.text.glossary.TextEmbed instance, a list of
+        mxnet.text.glossary.TextEmbed instances, or None, default None
+        Pre-trained embeddings to load. If None, there is nothing to load.
+    """
+    def __init__(self, counter, embeds, most_freq_count=None, min_freq=1,
+                 unknown_token='<unk>', other_reserveds=None):
+
+        if not isinstance(embeds, list):
+            embeds = [embeds]
+
+        # Sanity checks.
+        for embed in embeds:
+            assert isinstance(embed, TextEmbed), \
+                'The parameter `embeds` must be a ' \
+                'mxnet.text.glossary.TextEmbed instance or a list of ' \
+                'mxnet.text.glossary.TextEmbed instances whose embedding ' \
+                'vectors will be loaded or concatenated then loaded to map ' \
+                'to the indexed tokens from keys of `counter`.'
+
+        # Index tokens from keys of `counter` and reserved tokens.
+        TextIndexer.__init__(counter=counter, most_freq_count=most_freq_count,
+                             min_freq=min_freq, unknown_token=unknown_token,
+                             other_reserveds=other_reserveds)
+
+        # Set idx_to_vec so that indices of tokens from keys of `counter` are
+        # associated with text embedding vectors from `embeds`.
+        self.set_idx_to_vec_by_embeds(embeds)
+
+    def set_idx_to_vec_by_embeds(self, embeds):
+        """Sets the mapping between token indices and token embedding vectors.
+
+
+        Parameters
+        ----------
+        embeds : mxnet.text.glossary.TextEmbed or list of
+            mxnet.text.glossary.TextEmbed instances. If it is a list of
+            mxnet.text.glossary.TextEmbed instances, their embedding vectors
+            are concatenated for each token.
+        """
+
+        if not isinstance(embeds, list):
+            embeds = [embeds]
+
+        # Sanity check.
+        for embed in embeds:
+            assert isinstance(embed, TextEmbed), \
+                'The parameter `embeds` must be a ' \
+                'mxnet.text.glossary.TextEmbed instance or a list of ' \
+                'mxnet.text.glossary.TextEmbed instances whose embedding ' \
+                'vectors will be loaded or concatenated then loaded to map ' \
+                'to the indexed tokens from keys of `counter`.'
+
+            assert self.unknown_token == embed.unknown_token, \
+                'The `unknown_token` of the mxnet.text.glossary.TextEmbed instance %s must be the same'
+
+
+        self._vec_len = sum(embed.vec_len for embed in embeds)
+        self._idx_to_vec = nd.zeros(shape=(len(self), self.vec_len))
+
+        col_start = 0
+        # Concatenate all the embedding vectors in embeds.
+        for embed in embeds:
+            col_end = col_start + embed.vec_len
+            self._idx_to_vec[:, col_start:col_end] = embed[self.idx_to_token]
+            col_start = col_end
 
 
 @TextEmbed.register

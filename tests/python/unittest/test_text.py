@@ -192,7 +192,7 @@ def test_all_embeds():
 def test_glossary_frequency_thresholds():
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = Glossary(counter, top_k_freq=None, min_freq=1, unknown='<unk>',
+    g1 = Glossary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g1) == 5
     assert g1.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
@@ -203,7 +203,7 @@ def test_glossary_frequency_thresholds():
     assert g1.idx_to_vec is None
     assert g1.vec_len == 0
 
-    g2 = Glossary(counter, top_k_freq=None, min_freq=2, unknown='<unk>',
+    g2 = Glossary(counter, most_freq_count=None, min_freq=2, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g2) == 3
     assert g2.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
@@ -213,7 +213,7 @@ def test_glossary_frequency_thresholds():
     assert g2.idx_to_vec is None
     assert g2.vec_len == 0
 
-    g3 = Glossary(counter, top_k_freq=None, min_freq=100, unknown='<unk>',
+    g3 = Glossary(counter, most_freq_count=None, min_freq=100, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g3) == 1
     assert g3.token_to_idx == {'<unk>': 0}
@@ -223,7 +223,7 @@ def test_glossary_frequency_thresholds():
     assert g3.idx_to_vec is None
     assert g3.vec_len == 0
 
-    g4 = Glossary(counter, top_k_freq=2, min_freq=1, unknown='<unk>',
+    g4 = Glossary(counter, most_freq_count=2, min_freq=1, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g4) == 3
     assert g4.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2}
@@ -233,7 +233,7 @@ def test_glossary_frequency_thresholds():
     assert g4.idx_to_vec is None
     assert g4.vec_len == 0
 
-    g5 = Glossary(counter, top_k_freq=3, min_freq=1, unknown='<unk>',
+    g5 = Glossary(counter, most_freq_count=3, min_freq=1, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g5) == 4
     assert g5.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3}
@@ -243,7 +243,7 @@ def test_glossary_frequency_thresholds():
     assert g5.idx_to_vec is None
     assert g5.vec_len == 0
 
-    g6 = Glossary(counter, top_k_freq=100, min_freq=1, unknown='<unk>',
+    g6 = Glossary(counter, most_freq_count=100, min_freq=1, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g6) == 5
     assert g6.token_to_idx == {'<unk>': 0, 'c': 1, 'b': 2, 'a': 3,
@@ -254,7 +254,7 @@ def test_glossary_frequency_thresholds():
     assert g6.idx_to_vec is None
     assert g6.vec_len == 0
 
-    g7 = Glossary(counter, top_k_freq=1, min_freq=2, unknown='<unk>',
+    g7 = Glossary(counter, most_freq_count=1, min_freq=2, unknown_token='<unk>',
                   other_reserveds=[], embeds=None)
     assert len(g7) == 2
     assert g7.token_to_idx == {'<unk>': 0, 'c': 1}
@@ -281,7 +281,7 @@ def test_glossary_with_one_embed():
 
     counter = Counter(['a', 'b', 'b', 'c', 'c', 'c', 'some_word$'])
 
-    g1 = Glossary(counter, top_k_freq=None, min_freq=1, unknown='<unk>',
+    g1 = Glossary(counter, most_freq_count=None, min_freq=1, unknown_token='<unk>',
                   other_reserveds=['<pad>'], embeds=my_embed1)
 
     print(g1.token_to_idx)
