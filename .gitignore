@@ -100,6 +100,10 @@ input.txt*
 # ctags
 tags
 
+# cscope
+cscope.out
+cscope.files
+
 # Scala package
 *.class
 scala-package/*/target/

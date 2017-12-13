@@ -312,8 +312,12 @@ class DataParallelExecutorGroup private[module](
     if (labelShapes != None) decideSlices(labelShapes.get)
     else null
 
-  private val outputLayouts = symbol.listOutputs().map(name =>
-    DataDesc.getBatchAxis(symbol.get(name).attr("__layout__"))
+  private val outputLayouts = symbol.listOutputs().map(name => {
+    val sym = symbol.get(name)
+    val layout = sym.attr("__layout__")
+    sym.dispose()
+    DataDesc.getBatchAxis(layout)
+  }
   )
   bindExec(dataShapes, labelShapes, sharedGroup)
 
@@ -599,7 +603,15 @@ class DataParallelExecutorGroup private[module](
             label
           }
         }
+
       evalMetric.update(labelsSlice, texec.outputs)
+
+      // Clear up any slices we created (sometimes we don't slice so check for this)
+      (labels zip labelsSlice).foreach { case (label, labelSlice) =>
+        if (label ne labelSlice) {
+          labelSlice.dispose()
+        }
+      }
     }
   }
 

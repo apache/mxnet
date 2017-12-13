@@ -81,7 +81,7 @@ class DECModel(model.MXModel):
             return ['data', 'mu', 'label']
 
     def setup(self, X, num_centers, alpha, save_to='dec_model'):
-        sep = X.shape[0]*9/10
+        sep = X.shape[0]*9//10
         X_train = X[:sep]
         X_val = X[sep:]
         ae_model = AutoEncoderModel(self.xpu, [X.shape[1],500,500,2000,10], pt_dropout=0.2)
