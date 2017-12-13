@@ -285,6 +285,11 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::engine &engine,
                                  int num_groups = 1);
 
+mkldnn_memory_format_t GetDefaultFormat(mkldnn::memory::desc desc);
+mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
+                                                mkldnn_memory_format_t format);
+
+
 }  // namespace mxnet
 #endif
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
