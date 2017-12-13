@@ -1351,8 +1351,9 @@ void GraphExecutor::InitOpSegs() {
   // The maximum number of node in a segment executed in bulk
   size_t num_nodes_threshold = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
   if (prefer_bulk_exec_inference && num_forward_nodes_ == total_num_nodes) {
-    // bulk the whole graph for inference
-    num_nodes_threshold = std::numeric_limits<size_t>::max();
+    // Bulk the whole graph for inference
+    cached_seg_opr_[0] = this->CreateCachedSegOpr(0, num_forward_nodes_);
+    return;
   }
 
   if (prefer_bulk_exec) {
