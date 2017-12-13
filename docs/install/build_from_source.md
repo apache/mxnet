@@ -346,6 +346,9 @@ make -j"$(nproc)"
 @unittest.skip("Test requires NCCL library installed and enabled during build")
 ```
 - Run test_nccl.py script as follows. The test should complete. It does not produce any output.
+``` bash
+nosetests --verbose tests/python/gpu/test_nccl.py
+```
 
 ## Recommendation for best performance
 It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when using NCCL version 2.1 or newer.
