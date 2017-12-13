@@ -358,18 +358,19 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
  */
 struct CheckSameIdxKernel {
   template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* ograd_idx, IType* in_idx, int32_t* is_same) {
+  MSHADOW_XINLINE static void Map(int i, IType* ograd_idx,
+                                  IType* in_idx, int32_t* is_diff) {
     if (ograd_idx[i] != in_idx[i]){
-      *is_same = 1;
+      *is_diff = 1;
     }
   }
 };
 
 
 template<typename xpu>
-void CheckSameIdx(mshadow::Stream<xpu>* s,
-                  const TBlob ograd_row_idx,
-                  const TBlob in_row_idx);
+void CheckSameIdx(const OpContext& ctx,
+                  const TBlob& ograd_row_idx,
+                  const TBlob& in_row_idx);
 
 /*!\brief
  * This function only supports the following three situations:
@@ -379,7 +380,7 @@ void CheckSameIdx(mshadow::Stream<xpu>* s,
  */
 template<typename xpu>
 void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
-                          mshadow::Stream<xpu>* s,
+                          const OpContext& ctx,
                           const NDArray& ograd,
                           const NDArray& input,
                           const OpReqType req,
@@ -393,6 +394,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(input.storage_type(), kRowSparseStorage);
   CHECK_EQ(igrad->storage_type(), kRowSparseStorage);
   CHECK_EQ(req, kWriteTo);
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   if (!input.storage_initialized()
       || (ograd.storage_type() == kRowSparseStorage && !ograd.storage_initialized())) {
     FillZerosRspImpl(s, *igrad);
@@ -450,7 +452,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
                                                              " input are both row-sparse and"
                                                              " input data is not a full"
                                                              " row-sparse matrix";
-        CheckSameIdx(s, ograd_row_idx, in_row_idx);
+        CheckSameIdx<xpu>(ctx, ograd_row_idx, in_row_idx);
       }
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
@@ -504,7 +506,6 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
   const NDArrayStorageType ograd_stype = inputs[0].storage_type();
   const NDArrayStorageType input_stype = inputs[1].storage_type();
   if (input_stype == kRowSparseStorage &&
@@ -512,7 +513,7 @@ void SquareSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs[1].shape().ndim(), 2U) << "_square_sum op only supports"
                                               " 2D ndarray as input";
     NDArray output = outputs[0];
-    SquareSumRspGradImpl(attrs, s, inputs[0], inputs[1], req[0], &output);
+    SquareSumRspGradImpl<xpu>(attrs, ctx, inputs[0], inputs[1], req[0], &output);
   } else {
     LOG(FATAL) << "Not implemented: " << operator_string(attrs, ctx, inputs, req, outputs);
   }

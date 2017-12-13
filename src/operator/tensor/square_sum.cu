@@ -27,25 +27,27 @@ namespace mxnet {
 namespace op {
 
 template<>
-void CheckSameIdx<gpu>(mshadow::Stream<gpu>* s,
-                       const TBlob ograd_row_idx,
-                       const TBlob in_row_idx) {
+void CheckSameIdx<gpu>(const OpContext& ctx,
+                       const TBlob& ograd_row_idx,
+                       const TBlob& in_row_idx) {
   MSHADOW_IDX_TYPE_SWITCH(ograd_row_idx.type_flag_, IType, {
+    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
     const IType* ograd_idx = ograd_row_idx.dptr<IType>();
     const IType* in_idx = in_row_idx.dptr<IType>();
     const nnvm::dim_t idx_size = ograd_row_idx.Size();
-    int32_t is_same = 0;
-    int32_t* is_same_ptr = NULL;
-    CUDA_CALL(cudaMalloc(&is_same_ptr, sizeof(int32_t)));
-    mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, 1, is_same_ptr);
-    mxnet_op::Kernel<CheckSameIdxKernel, gpu>::Launch(s, idx_size, ograd_idx, in_idx, &is_same);
-    CUDA_CALL(cudaMemcpy(&is_same, is_same_ptr, sizeof(int32_t), cudaMemcpyDeviceToHost));
-    CHECK_EQ(is_same, 0) << "SquareSumRspGradImpl only supports"
+    int32_t is_diff = 0;
+    mshadow::Tensor<gpu, 1, char> workspace = ctx.requested[0]
+        .get_space_typed<gpu, 1, char>(mshadow::Shape1(sizeof(int32_t)), s);
+    int32_t* is_diff_ptr = reinterpret_cast<int32_t*>(workspace.dptr_);
+    mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, 1, is_diff_ptr);
+    mxnet_op::Kernel<CheckSameIdxKernel, gpu>::Launch(s, idx_size,
+      ograd_idx, in_idx, is_diff_ptr);
+    CUDA_CALL(cudaMemcpy(&is_diff, is_diff_ptr, sizeof(int32_t), cudaMemcpyDeviceToHost));
+    CHECK_EQ(is_diff, 0) << "SquareSumRspGradImpl only supports"
                             " equal ograd_row_idx and input_row_idx"
                             " when ograd and input are both"
                             " row-sparse and input data is not a full"
                             " row-sparse matrix";
-    CUDA_CALL(cudaFree(is_same_ptr));
   })
 }
 
