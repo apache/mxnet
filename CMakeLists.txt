@@ -302,12 +302,12 @@ elseif(UNIX)
 endif()
 
 # ---[ LAPack
-if(USE_LAPACK)
-  add_definitions(-DMXNET_USE_LAPACK=1)
-  list(APPEND mxnet_LINKER_LIBS lapack)
-elseif(NOT MSVC)
-  # Workaround for Windows until using new Jenkinsfile.
-  if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
+if(NOT MSVC)
+  if(USE_LAPACK)
+    add_definitions(-DMXNET_USE_LAPACK=1)
+    list(APPEND mxnet_LINKER_LIBS lapack)
+  elseif(LAS STREQUAL "Open" OR BLAS STREQUAL "open")
+    # Workaround for Windows until using new Jenkinsfile.
     add_definitions(-DMXNET_USE_LAPACK=1)
   endif()
 endif()
