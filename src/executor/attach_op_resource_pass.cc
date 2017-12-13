@@ -49,9 +49,9 @@ Graph AttachOpResources(Graph g) {
     const auto op = inode.source->op();
     if (fresource.count(op) != 0) {
       auto reqs = fresource[op](inode.source->attrs);
+      size_t i = 0;
       // Get the resource of temporal space.
-      for (size_t i=0; i < reqs.size(); i++) {
-        const ResourceRequest& req = reqs[i];
+      for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {
           if (cached_temp.count(ctx) != 0) {
             if (i < cached_temp.at(ctx).size()) {
@@ -66,6 +66,7 @@ Graph AttachOpResources(Graph g) {
             requested.push_back(r);
             cached_temp[ctx] = std::vector<Resource>(1, r);
           }
+          i++;
         } else if (req.type == ResourceRequest::kRandom) {
           requested.push_back(ResourceManager::Get()->Request(ctx, req));
         } else {
