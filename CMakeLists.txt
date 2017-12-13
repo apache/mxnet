@@ -238,8 +238,8 @@ endif()
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
-  if(USE_GPERFTOOLS)
-    message(ERROR "Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
+  if(GPERFTOOLS_FOUND)
+    message(ERROR " Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
   endif()
   find_package(JeMalloc)
   if(JEMALLOC_FOUND)
@@ -302,12 +302,14 @@ elseif(UNIX)
 endif()
 
 # ---[ LAPack
-if(USE_LAPACK AND NOT MSVC)
+if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   list(APPEND mxnet_LINKER_LIBS lapack)
-elseif(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
+else(USE_LAPACK)
   # Workaround for Windows until using new Jenkinsfile.
-  add_definitions(-DMXNET_USE_LAPACK=1)
+  if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open")
+    add_definitions(-DMXNET_USE_LAPACK=1)
+  endif()
 endif()
 
 # ---[ jemalloc
