@@ -26,7 +26,11 @@ import os
 import gym
 from datetime import datetime
 import time
-from importlib import reload
+import sys
+try:
+    from importlib import reload
+except ImportError:
+    pass
 
 parser = argparse.ArgumentParser(description='Traing A3C with OpenAI Gym')
 parser.add_argument('--test', action='store_true', help='run testing', default=False)
