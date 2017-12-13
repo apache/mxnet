@@ -973,10 +973,6 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx,
             s, num_rows_l, nnc_idx, indptr_out, col_idx_out, nnc, num_rows_l);
         mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, nnz, data_out);
 
-        if (nnc == 0) {
-          return;
-        }
-
         const dim_t num_threads = mxnet_op::get_num_threads<cpu>(num_rows_l);
         const dim_t seg_len = (num_rows_l + num_threads - 1) / num_threads;
 
