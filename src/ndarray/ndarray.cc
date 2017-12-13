@@ -193,6 +193,8 @@ NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
   } else if (storage_type() == kMKLDNNStorage) {
     NDArray ret(kMKLDNNStorage, shape, ctx(), ptr_->delay_alloc, dtype());
     CHECK(ptr_->Mkl_mem_ != nullptr);
+    // This doesn't work on sliced NDArray yet.
+    CHECK_EQ(byte_offset_, 0);
     // We shouldn't submit the reorder primitive here because submit will
     // be called in operators.
     auto format = GetDefaultFormat(ptr_->Mkl_mem_->get_primitive_desc().desc());
@@ -239,6 +241,8 @@ NDArray NDArray::Reshape(const TShape &shape) const {
           } else {
             ret.ptr_->Mkl_mem_ = this->ptr_->Mkl_mem_;
           }
+          // We should make sure slice still works.
+          ret.byte_offset_ = this->byte_offset_;
         }
     }, ctx(), {this->var()}, {ret.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncMKLDNN2Default"));
@@ -485,6 +489,8 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
   if (ptr_->Mkl_mem_->get_primitive_desc() == desc
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
+    // This doesn't work on sliced NDArray yet.
+    CHECK_EQ(byte_offset_, 0);
     MKLDNNStream::Get()->RegisterMem(ptr_->Mkl_mem_);
     return GetMKLDNNExact(ptr_->Mkl_mem_.get(), desc);
   } else {
@@ -498,6 +504,8 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
   }
+  // This doesn't work on sliced NDArray yet.
+  CHECK_EQ(byte_offset_, 0);
   if (ptr_->storage_type == kDefaultStorage) {
     ptr_->SetMKLMem(shape_, dtype_);
   }
@@ -535,7 +543,33 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   ptr_->SetMKLMem(shape_, dtype_);
   if (ptr_->Mkl_mem_) {
     MKLDNNStream::Get()->RegisterMem(ptr_->Mkl_mem_);
-    return ptr_->Mkl_mem_.get();
+    if (byte_offset_ > 0) {
+      // Slice only works on the default layout and Slice() turns an array into
+      // the default layout.
+      auto pd = ptr_->Mkl_mem_->get_primitive_desc();
+      CHECK_EQ(GetDefaultFormat(pd.desc()), pd.desc().data.format);
+      void *off_addr = static_cast<char *>(ptr_->Mkl_mem_->get_data_handle())
+          + byte_offset_;
+
+      // Create the primitive desc for the new mkldnn memory.
+      mkldnn::memory::dims dims(pd.desc().data.ndims);
+      // The first dimension has been sliced.
+      dims[0] = shape()[0];
+      for (size_t i = 1; i < dims.size(); i++)
+        dims[i] = pd.desc().data.dims[i];
+      mkldnn::memory::format cpp_format = static_cast<mkldnn::memory::format>(
+          pd.desc().data.format);
+      mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
+          pd.desc().data.data_type);
+      mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
+      mkldnn::memory::primitive_desc new_pd(data_md, pd.get_engine());
+
+      std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(new_pd, off_addr));
+      MKLDNNStream::Get()->RegisterMem(ret);
+      return ret.get();
+    } else {
+      return ptr_->Mkl_mem_.get();
+    }
   } else {
     // We don't support converting sparse format.
     return nullptr;
@@ -555,6 +589,8 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     return;
   }
 
+  // This doesn't work on sliced NDArray yet.
+  CHECK_EQ(byte_offset_, 0);
   MKLDNNStream *stream = MKLDNNStream::Get();
   ptr_->SetMKLMem(shape_, dtype_);
   stream->RegisterMem(ptr_->Mkl_mem_);
