@@ -1,8 +1,8 @@
-# Generative Adversarial Networks (GAN)
+# Generative Adversarial Network (GAN)
 
-GANs are an application of unsupervised learning - you don't need labels for your dataset in order to train a GAN.
+Generative Adversarial Networks (GANs) are a class of algorithms used in unsupervised learning - you don't need labels for your dataset in order to train a GAN.
 
-The GAN framework composes of two neural networks: a Generator network and a Discriminator network.
+The GAN framework is composed of two neural networks: a Generator network and a Discriminator network.
 
 The Generator's job is to take a set of random numbers and produce the data (such as images or text).
 
@@ -37,7 +37,7 @@ Apart from creating a DCGAN, you'll also learn:
 
 ## Prerequisites
 
-This tutorial assumes you are familiar with the concepts of CNN's and have implemented one in MXNet. You should also be familiar with the concept of logistic regression. Having a basic understanding for MXNet data iterators helps, since we'll create a custom Data Iterator to iterate though random numbers as inputs to the Generator network.
+This tutorial assumes you are familiar with the concepts of CNNs and have implemented one in MXNet. You should also be familiar with the concept of logistic regression. Having a basic understanding of MXNet data iterators helps, since we will create a custom data iterator to iterate though random numbers as inputs to the Generator network.
 
 This example is designed to be trained on a single GPU. Training this network on CPU can be slow, so it's recommended that you use a GPU for training.
 
@@ -65,13 +65,14 @@ The MNIST dataset contains 70,000 images of handwritten digits. Each image is 28
 
 ### 1. Preparing the MNSIT dataset
 
-Let us start by preparing the handwritten digits from the MNIST dataset. We import the fetch_mldata function from scikit-learn, and use it to get the MNSIT dataset. Notice that it's shape is 70000x784. This contains the 70000 images on every row and 784 pixels of each image in the columns of each row. Each image is 28x28 pixels, but has been flattened so that all 784 images are represented in a single list.
+Let us start by preparing the handwritten digits from the MNIST dataset. We import the fetch_mldata function from scikit-learn, and use it to get the MNSIT dataset. Notice that it's shape is 70000x784. This contains 70000 images, one per row and 784 pixels of each image in the columns of each row. Each image is 28x28 pixels, but has been flattened so that all 784 pixels are represented in a single list.
+
 ```python
 from sklearn.datasets import fetch_mldata
 mnist = fetch_mldata('MNIST original')
 ```
 
-Next, we'll randomize the handwritten digits by using numpy to create random permutations on the dataset on the rows (images). We will then reshape the dataset from 70000x786 to 70000x28x28, so that every image in the dataset is arranged into a 28x28 grid, where each cell in the grid represents 1 pixel of the image.
+Next, we will randomize the handwritten digits by using numpy to create random permutations on the dataset on the rows (images). We will then reshape the dataset from 70000x786 to 70000x28x28, so that every image in the dataset is arranged into a 28x28 grid, where each cell in the grid represents 1 pixel of the image.
 
 ```python
 import numpy as np
@@ -81,22 +82,23 @@ p = np.random.permutation(mnist.data.shape[0])
 X = mnist.data[p]
 X = X.reshape((70000, 28, 28))
 ```
-Since the DCGAN that we're creating takes in a 64x64 image as the input, we'll use OpenCV to resize the each 28x28 image to 64x64 images:
+Since the DCGAN that we're creating takes in a 64x64 image as the input, we will use OpenCV to resize the each 28x28 image to 64x64 images:
 ```python
 import cv2
 X = np.asarray([cv2.resize(x, (64,64)) for x in X])
 ```
-Each pixel in the 64x64 image is represented by a number between 0-255, that represents the intensity of the pixel. However, we want to input numbers between -1 and 1 into the DCGAN, as suggested by the research paper. To rescale the pixels to be in the range of -1 to 1, we'll divide each pixel by (255/2). This put the images on a scale of 0-2. We can then subtract by 1, to get them in the range of -1 to 1.
+Each pixel in the 64x64 image is represented by a number between 0-255, that represents the intensity of the pixel. However, we want to input numbers between -1 and 1 into the DCGAN, as suggested by the [research paper](https://arxiv.org/abs/1511.06434). To rescale the pixel values, we will divide it by (255/2). This changes the scale to 0-2. We then subtract by 1 to get them in the range of -1 to 1.
+
 ```python
 X = X.astype(np.float32)/(255.0/2) - 1.0
 ```
-Ultimately, images are inputted into the neural net from a 70000x3x64x64 array, and they are currently in a 70000x64x64 array. We need to add 3 channels to the images. Typically when we are working with images, the 3 channels represent the red, green, and blue components of each image. Since the MNIST dataset is grayscale, we only need 1 channel to represent the dataset. We will pad the other channels with 0's:
+Ultimately, images are fed into the neural net through a 70000x3x64x64 array but they are currently in a 70000x64x64 array. We need to add 3 channels to the images. Typically, when we are working with the images, the 3 channels represent the red, green, and blue (RGB) components of each image. Since the MNIST dataset is grayscale, we only need 1 channel to represent the dataset. We will pad the other channels with 0's:
 
 ```python
 X = X.reshape((70000, 1, 64, 64))
 X = np.tile(X, (1, 3, 1, 1))
 ```
-Finally, we will put the images into MXNet's NDArrayIter, which will allow MXNet to easily iterate through the images during training. We will also split up them images into a batches, with 64 images in each batch. Every time we iterate, we'll get a 4 dimensional array with size (64, 3, 64, 64), representing a batch of 64 images.
+Finally, we will put the images into MXNet's NDArrayIter, which will allow MXNet to easily iterate through the images during training. We will also split them up into batches of 64 images each. Every time we iterate, we will get a 4 dimensional array with size (64, 3, 64, 64), representing a batch of 64 images.
 ```python
 import mxnet as mx
 batch_size = 64
@@ -104,7 +106,8 @@ image_iter = mx.io.NDArrayIter(X, batch_size=batch_size)
 ```
 ### 2. Preparing Random Numbers
 
-We need to input random numbers from a normal distribution to the Generator network, so we'll create an MXNet DataIter that produces random numbers for each training batch. The DataIter is the base class of MXNet's Data Loading API. Below, we create a class called RandIter which is a subclass of DataIter. We use MXNet's built in mx.random.normal function in order to return the normally distributed random numbers every time we iterate.
+We need to input random numbers from a normal distribution to the Generator network, so we will create an MXNet DataIter that produces random numbers for each training batch. The DataIter is the base class of MXNet's Data Loading API. Below, we create a class called RandIter which is a subclass of DataIter. We use MXNet's built-in mx.random.normal function to return the random numbers from a normal distribution during the iteration.
+
 ```python
 class RandIter(mx.io.DataIter):
     def __init__(self, batch_size, ndim):
@@ -121,7 +124,7 @@ class RandIter(mx.io.DataIter):
         #with mean=0 and standard deviation = 1
         return [mx.random.normal(0, 1.0, shape=(self.batch_size, self.ndim, 1, 1))]
 ```
-When we initialize the RandIter, we need to provide two numbers: the batch size and how many random numbers we want to produce a single image from. This number is referred to as Z, and we'll set this to 100. This value comes from the research paper on the topic. Every time we iterate and get a batch of random numbers, we will get a 4 dimensional array with shape: (batch_size, Z, 1, 1), which in the example is (64, 100, 1, 1).
+When we initialize the RandIter, we need to provide two numbers: the batch size and how many random numbers we want in order to produce a single image from. This number is referred to as Z, and we will set this to 100. This value comes from the research paper on the topic. Every time we iterate and get a batch of random numbers, we will get a 4 dimensional array with shape: (batch_size, Z, 1, 1), which in the example is (64, 100, 1, 1).
 ```python
 Z = 100
 rand_iter = RandIter(batch_size, Z)
@@ -132,7 +135,7 @@ The model has two networks that we will train together - the Generator network a
 
 ### The Generator
 
-Let's start off by defining the Generator network, which uses Deconvolutional layers (also called as fractionally strided layers) to generate an image form random numbers :
+Let us start off by defining the Generator network, which uses Deconvolution layers (also called as fractionally strided layers) to generate an image form random numbers :
 ```python
 no_bias = True
 fix_gamma = True
@@ -163,7 +166,7 @@ generatorSymbol = mx.sym.Activation(g5, name='gact5', act_type='tanh')
 The Generator image starts with random numbers that will be obtained from the RandIter we created earlier, so we created the rand variable for this input.
 We then start creating the model starting with a Deconvolution layer (sometimes called 'fractionally strided layer'). We apply batch normalization and ReLU activation after the Deconvolution layer.
 
-We repeat this process 4 times, applying a (2,2) stride and (1,1) pad at each Deconvolutional layer, which doubles the size of the image at each layer. By creating these layers, the Generator network will have to learn to upsample the input vector of random numbers, Z at each layer, so that network output a final image. We also reduce half the number of filters at each layer, reducing dimensionality at each layer. Ultimately, the output layer is a 64x64x3 layer, representing the size and channels of the image. We use tanh activation instead of relu on the last layer, as recommended by the research on DCGANs. The output of neurons in the final gout layer represent the pixels of generated image.
+We repeat this process 4 times, applying a (2,2) stride and (1,1) pad at each Deconvolution layer, which doubles the size of the image at each layer. By creating these layers, the Generator network will have to learn to upsample the input vector of random numbers, Z at each layer, so that network output a final image. We also reduce by half the number of filters at each layer, reducing dimensionality at each layer. Ultimately, the output layer is a 64x64x3 layer, representing the size and channels of the image. We use tanh activation instead of relu on the last layer, as recommended by the research on DCGANs. The output of neurons in the final gout layer represent the pixels of generated image.
 
 Notice we used 3 parameters to help us create the model: no_bias, fixed_gamma, and epsilon. Neurons in the network won't have a bias added to them, this seems to work better in practice for the DCGAN. In the batch norm layer, we set fixed_gamma=True, which means gamma=1 for all of the batch norm layers. epsilon is a small number that gets added to the batch norm so that we don't end up dividing by zero. By default, CuDNN requires that this number is greater than 1e-5, so we add a small number to this value, ensuring this values stays small.
 
