@@ -251,6 +251,11 @@ static inline mkldnn_mem_ptr Reorder2Default(mkldnn_mem_ptr mem,
   return def_mem;
 }
 
+struct EmptyMKLDNNDeleter {
+  void operator()(mkldnn::memory *mem) {
+  }
+};
+
 NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_.Size(), shape.Size())
@@ -264,7 +269,22 @@ NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
     CHECK(ptr_->Mkl_mem_ != nullptr);
     // We shouldn't submit the reorder primitive here because submit will
     // be called in operators.
-    ret.ptr_->Mkl_mem_ = Reorder2Default(ptr_->Mkl_mem_, false);
+    auto format = GetDefaultFormat(ptr_->Mkl_mem_->get_primitive_desc().desc());
+    if (format == ptr_->Mkl_mem_->get_primitive_desc().desc().data.format) {
+      ret.ptr_->Mkl_mem_ = ptr_->Mkl_mem_;
+    } else {
+      auto def_pd = GetPrimitiveDesc(ptr_->Mkl_mem_->get_primitive_desc(), format);
+      auto def_mem = TmpMemMgr::Get()->Alloc(def_pd);
+      MKLDNNStream *stream = MKLDNNStream::Get();
+      stream->RegisterMem(ptr_->Mkl_mem_);
+      stream->RegisterPrim(mkldnn::reorder(*ptr_->Mkl_mem_, *def_mem));
+      // def_mem points to a memory region in the temp space. It's only valid
+      // inside an operator. As such, the returned NDArray can only be valid
+      // inside an operator and the shared point doesn't need to do anything
+      // when it's destroyed.
+      ret.ptr_->Mkl_mem_ = std::shared_ptr<mkldnn::memory>(def_mem,
+                                                           EmptyMKLDNNDeleter());
+    }
     return ret;
   }
   LOG(FATAL) << "Reshape for storage type " << storage_type() << " is not implemented yet";
