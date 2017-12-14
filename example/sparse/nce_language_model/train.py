@@ -20,9 +20,9 @@ import mxnet as mx
 import argparse
 from data import Corpus, CorpusIter, DummyIter
 from model import rnn, nce_loss, ce_loss
-import os
+import os, math
 
-parser = argparse.ArgumentParser(description='PennTreeBank RNN/LSTM Language Model with Noice Contrastive Estimation')
+parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model with Noice Contrastive Estimation')
 parser.add_argument('--data', type=str, default='./data/ptb.',
                     help='location of the data corpus')
 parser.add_argument('--emsize', type=int, default=1500,
@@ -33,13 +33,8 @@ parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=0.1,
                     help='initial learning rate')
-parser.add_argument('--mom', type=float, default=0.0,
-                    help='momentum for sgd')
-parser.add_argument('--wd', type=float, default=0.0,
-                    help='weight decay for sgd')
-# TODO perform clip global norm
-parser.add_argument('--clip', type=float, default=15,
-                    help='gradient clipping')
+parser.add_argument('--clip', type=float, default=0.2,
+                    help='gradient clipping by global norm')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=32,
@@ -62,17 +57,22 @@ parser.add_argument('--use-full-softmax', action='store_true',
                     help='use full softmax ce loss instead of noise contrastive estimation')
 parser.add_argument('--log-interval', type=int, default=200,
                     help='report interval')
+parser.add_argument('--lr-decay', type=float, default=0.25,
+                    help='learning rate decay')
 parser.add_argument('--num-gpus', type=int, default=1,
                     help='number of gpus to use')
+parser.add_argument('--gpu', type=int, default=1,
+                    help='which gpu')
 parser.add_argument('--profile', action='store_true',
                     help='whether to use profiler')
 parser.add_argument('--kvstore', type=str, default=None,
                     help='type of kvstore to use')
 parser.add_argument('--dummy-iter', action='store_true',
                     help='whether to dummy data iterator')
-#parser.add_argument('--save', type=str, default='model.params',
-#                    help='path to save the final model')
 args = parser.parse_args()
+
+
+best_val = 100000
 
 if __name__ == '__main__':
     import logging
@@ -80,66 +80,105 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format=head)
     args = parser.parse_args()
     logging.info(args)
-    ctx = [mx.gpu(i) for i in range(args.num_gpus)] if args.num_gpus > 0 else mx.cpu()
+    ctx = [mx.gpu(args.gpu) for i in range(args.num_gpus)] if args.num_gpus > 0 else mx.cpu()
     full_softmax = args.use_full_softmax
     batch_size = args.batch_size if args.num_gpus == 0 else args.batch_size * args.num_gpus
 
     # data
     corpus = Corpus(args.data)
-    ntokens = len(corpus.dictionary) * args.scale
+    ntokens = len(corpus.dictionary) / args.scale
     # TODO dict should be the unigram for train?
     train_data = CorpusIter(corpus.train, batch_size, args.bptt, args.k, corpus.dictionary.unigram())
+    eval_data = CorpusIter(corpus.valid, batch_size, args.bptt, args.k, corpus.dictionary.unigram())
+    test_data = CorpusIter(corpus.test, batch_size, args.bptt, args.k, corpus.dictionary.unigram())
+
     if args.dummy_iter:
         train_data = DummyIter(train_data)
+        eval_data = DummyIter(eval_data)
     #val_data = mx.io.PrefetchingIter(CorpusIter(corpus.valid, batch_size, args.bptt, args.k))
     # model
-    on_cpu = True
-    group2ctxs={'cpu_dev':[mx.cpu(0) for i in range(args.num_gpus)], 'gpu_dev':ctx} if on_cpu else None
-    rnn_out = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                  args.nlayers, args.dropout, args.use_dense, on_cpu)
-    model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu) if not full_softmax else ce_loss(rnn_out, ntokens)
-    state_names = ['sample'] if not full_softmax else None
+    on_cpu = False
+    #group2ctxs={'cpu_dev':[mx.cpu(0) for i in range(args.num_gpus)], 'gpu_dev':ctx} if on_cpu else None
+    rnn_out, weight, last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
+                          args.nlayers, args.dropout, args.use_dense, on_cpu, batch_size)
+    logging.debug(str(last_states))
+    if full_softmax:
+        model = ce_loss(rnn_out, ntokens, args.tied, weight)
+    else:
+        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu, batch_size, args.bptt, decoder_w=weight)
+    state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1']
     # module
-    module = mx.mod.Module(symbol=model, context=ctx, state_names=state_names,
-                           data_names=['data'], label_names=['label'], group2ctxs=group2ctxs)
+    last_states.append(model)
+    module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx, state_names=(state_names + ['sample']) if not full_softmax else state_names,
+                           data_names=['data'], label_names=['label'])#, group2ctxs=group2ctxs)
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
-    module.init_params(initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
+    module.init_params(initializer=mx.init.Xavier())
 
-    kvstore = None if args.kvstore is None else mx.kv.create(args.kvstore)
-    optimizer_params=(('learning_rate', args.lr), ('wd', args.wd), ('momentum', args.mom),
-                      ('clip_gradient', args.clip))
-    module.init_optimizer(optimizer='sgd', optimizer_params=optimizer_params, kvstore=kvstore)
-    # use accuracy as the metric
-    metric = mx.metric.Perplexity(ignore_label=None)
+    kvstore = None #if args.kvstore is None else mx.kv.create(args.kvstore)
+    optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=1.0/batch_size)
+    module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(batch_size, args.log_interval)
 
+    ############### eval model ####################
+    eval_rnn_out, eval_weight, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
+                                                      args.nlayers, 0, args.use_dense, on_cpu, batch_size)
+    eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, eval_weight)
+    eval_last_states.append(eval_model)
+    ############### eval module ####################
+    eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data'],
+                                label_names=['label'], state_names=state_names)
+    eval_module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label, shared_module=module, for_training=False)
+    ############### eval module ####################
+
     # get the sparse weight parameter
-    encoder_w_index = module._exec_group.param_names.index('encoder_weight')
-    encoder_w_param = module._exec_group.param_arrays[encoder_w_index]
-    if not full_softmax:
-        decoder_w_index = module._exec_group.param_names.index('decoder_weight')
-        decoder_w_param = module._exec_group.param_arrays[decoder_w_index]
+    if kvstore:
+        assert(False)
+        encoder_w_index = module._exec_group.param_names.index('encoder_weight')
+        encoder_w_param = module._exec_group.param_arrays[encoder_w_index]
+        if not full_softmax:
+            decoder_w_index = module._exec_group.param_names.index('decoder_weight')
+            decoder_w_param = module._exec_group.param_arrays[decoder_w_index]
 
     if args.profile:
         config = ['scale', args.scale, 'nhid', args.nhid, 'k', args.k, 'nlayers', args.nlayers,
-                  'use_dense', args.use_dense, 'use_full_softmax', args.use_full_softmax]
+                  'use_dense', args.use_dense, 'use_full_softmax', args.use_full_softmax, 'ngpu', args.num_gpus]
         config_str = map(lambda x: str(x), config)
         filename = '-'.join(config_str) + '.json'
         mx.profiler.profiler_set_config(mode='all', filename=filename)
         mx.profiler.profiler_set_state('run')
 
+    def evaluate(eval_module, data_iter, epoch, mode):
+        total_L = 0.0
+        nbatch = 0
+        eval_module.set_states(value=0)
+        for batch in data_iter:
+            eval_module.forward(batch, is_train=False)
+            outputs = eval_module.get_outputs(merge_multi_context=False)
+            state_cache = outputs[:-1]
+            total_L += mx.nd.sum(outputs[-1][0]).asscalar()
+            eval_module.set_states(states=state_cache)
+            nbatch += 1
+        data_iter.reset()
+        loss = total_L / args.bptt / batch_size / nbatch
+        print('[Epoch %d] valid loss %.7f, %s ppl %.7f'%(epoch, loss, mode, math.exp(loss)))
+        return loss
+
     # train
     logging.info("Training started ... ")
     for epoch in range(args.epochs):
+        total_L = 0.0
         nbatch = 0
-        metric.reset()
+        module.set_states(value=0)
+        state_cache = module.get_states(merge_multi_context=False)[:-1]
         for batch in train_data:
-            nbatch += 1
             if not full_softmax:
                 samples = batch.data[1]
-                module.set_states(value=samples.astype(np.float32))
+                state_cache.append([samples.astype(np.float32)])
+                module.set_states(states=state_cache)
+            '''
             if kvstore:
                 # TODO use kvstore
+                assert(False)
                 data = batch.data[0].reshape((-1, ))
                 kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[data for i in range(args.num_gpus)],
                                         priority=-encoder_w_index)
@@ -149,14 +188,37 @@ if __name__ == '__main__':
                     row_ids = mx.nd.concat(data, label, sample, dim=0)
                     kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(args.num_gpus)],
                                             priority=-decoder_w_index)
-            module.forward_backward(batch)
+            '''
+            module.forward(batch)
+            outputs = module.get_outputs(merge_multi_context=False)
+            state_cache = (outputs[:-1])
+            module.backward()
+            total_L += mx.nd.sum(outputs[-1][0]).asscalar()
             # update all parameters (including the weight parameter)
+            module.clip_by_global_norm(max_norm=args.clip * args.bptt * batch_size)
             module.update()
-            # update training metric
-            module.update_metric(metric, batch.label)
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                       eval_metric=metric, locals=locals())
-            speedometer(speedometer_param)
+                                                       eval_metric=None, locals=locals())
+            #speedometer(speedometer_param)
+            # update training metric
+            if nbatch % args.log_interval == 0 and nbatch > 0:
+                cur_L = total_L / args.bptt / batch_size / args.log_interval
+                print('[Epoch %d Batch %d] loss %.7f, ppl %.7f'%(
+                    epoch, nbatch, cur_L, math.exp(cur_L)))
+                total_L = 0.0
+            nbatch += 1
+        if kvstore:
+            assert(False)
+        val_L = evaluate(eval_module, eval_data, epoch, 'eval')
+        if val_L < best_val:
+            best_val = val_L
+            test_L = evaluate(eval_module, test_data, epoch, 'test')
+            #model.collect_params().save(args.save)
+            #print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
+        else:
+            optimizer.lr *= args.lr_decay
+            logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))
+        eval_data.reset()
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:

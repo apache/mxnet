@@ -26,6 +26,7 @@ import warnings
 
 from .. import context as ctx
 from .. import optimizer as opt
+from .. import gluon
 
 from .executor_group import DataParallelExecutorGroup
 from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
@@ -35,6 +36,44 @@ from ..io import DataDesc
 from ..ndarray import zeros
 
 from .base_module import BaseModule, _check_input_names, _parse_data_desc
+
+import mxnet.ndarray as nd
+
+def nd_global_norm(t_list):
+    """Computes the global norm of multiple tensors.
+    Given a tuple or list of tensors t_list, this operation returns the global norm of the elements
+     in all tensors in t_list. The global norm is computed as:
+    ``global_norm = sqrt(sum([l2norm(t)**2 for t in t_list]))``
+    Any entries in t_list that are of type None are ignored.
+    Parameters
+    ----------
+    t_list: list or tuple
+        The NDArray list
+    Returns
+    -------
+    ret: NDArray
+        The global norm. The shape of the NDArray will be (1,)
+    Examples
+    --------
+    >>> x = mx.nd.ones((2, 3))
+    >>> y = mx.nd.ones((5, 6))
+    >>> z = mx.nd.ones((4, 2, 3))
+    >>> print(nd_global_norm([x, y, z]).asscalar())
+    7.74597
+    >>> xnone = None
+    >>> ret = nd_global_norm([x, y, z, xnone])
+    >>> print(ret.asscalar())
+    7.74597
+    """
+    ret = None
+    for arr in t_list:
+        if arr is not None:
+            if ret is None:
+                ret = nd.square(nd.norm(arr)).copyto(ctx.cpu())
+            else:
+                ret += nd.square(nd.norm(arr)).copyto(ctx.cpu())
+    ret = nd.sqrt(ret)
+    return ret
 
 class Module(BaseModule):
     """Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -791,3 +830,65 @@ class Module(BaseModule):
         """Installs monitor on all executors. """
         assert self.binded
         self._exec_group.install_monitor(mon)
+
+    def clip_by_global_norm(self, max_norm=1.0):
+        """Clips gradient norm.
+        The norm is computed over all gradients together, as if they were
+         concatenated into a single vector. Gradients are modified in-place.
+        The method is first used in
+         `[ICML2013] On the difficulty of training recurrent neural networks`
+        Parameters
+        ----------
+        max_norm : float or int
+            The maximum clipping threshold of the gradient norm.
+        Returns
+        -------
+        norm_val : float
+            The computed norm of the gradients.
+        Examples
+        --------
+        An example of using clip_grad_norm to clip the gradient before updating the parameters::
+            >>> #Get the gradient via back-propagation
+            >>> net.forward_backward(data_batch=data_batch)
+            >>> norm_val = net.clip_by_global_norm(max_norm=1.0)
+            >>> net.update()
+        """
+        assert self.binded and self.params_initialized and self.optimizer_initialized
+        grad_array = []
+        for grad in self._exec_group.grad_arrays:
+            grad_array += grad
+        #gluon.utils.clip_global_norm(grad_array, max_norm)
+        norm_val = self.global_grad_norm()
+        if norm_val > max_norm:
+            ratio = max_norm / float(norm_val)
+            for grads in self._exec_group.grad_arrays:
+                for grad in grads:
+                    grad *= ratio
+       
+        return None
+
+    def global_grad_norm(self):
+        """Calculate global gradient norm.
+        The L2 norm is computed over all gradients together, as if they were
+         concatenated into a single vector.
+        Could be used to debug the optimization process.
+         See http://videolectures.net/deeplearning2015_goodfellow_network_optimization/
+        Returns
+        -------
+        norm_val : float
+            The computed norm of the gradients.
+        Examples
+        --------
+        An example of using global_norm to calculate the gradient norm after back-propgation::
+            >>> #Get the gradient via back-propagation
+            >>> net.forward_backward(data_batch=data_batch)
+            >>> norm_val = net.global_grad_norm()
+            >>> print(norm_val)
+        """
+        assert self.binded and self.params_initialized and self.optimizer_initialized
+        # The code in the following will cause the estimated norm to be different for multiple gpus
+        norm_val = 0.0
+        for exe in self._exec_group.execs:
+            norm_val += nd_global_norm(exe.grad_arrays).asscalar()
+        norm_val /= float(len(self._exec_group.execs))
+        return norm_val
