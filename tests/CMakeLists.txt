@@ -20,8 +20,8 @@ if(NOT MSVC)
   set(UNITTEST_STATIC_LINK ON)
 endif()
 
-if(GTEST_FOUND)
-
+# FIXME MSVC unit test linking issue
+if(GTEST_FOUND AND NOT MSVC)
   enable_testing()
 
   file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
