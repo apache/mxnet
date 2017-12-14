@@ -18,7 +18,7 @@
 package ml.dmlc.mxnet.io
 
 import ml.dmlc.mxnet.Base._
-import ml.dmlc.mxnet.{DataPack, DataBatch, DataIter, NDArray, Shape}
+import ml.dmlc.mxnet.{DataBatch, DataIter, DataPack, NDArray, Shape, WarnIfNotDisposed}
 import ml.dmlc.mxnet.IO._
 import org.slf4j.LoggerFactory
 
@@ -29,10 +29,11 @@ import scala.collection.mutable.ListBuffer
  * DataIter built in MXNet.
  * @param handle the handle to the underlying C++ Data Iterator
  */
-// scalastyle:off finalize
 private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
                                 dataName: String = "data",
-                                labelName: String = "label") extends DataIter {
+                                labelName: String = "label")
+  extends DataIter with WarnIfNotDisposed {
+
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
   // use currentBatch to implement hasNext
@@ -57,9 +58,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     }
 
   private var disposed = false
-  override protected def finalize(): Unit = {
-    dispose()
-  }
+  protected def isDisposed = disposed
 
   /**
    * Release the native memory.
@@ -169,7 +168,6 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   override def batchSize: Int = _batchSize
 }
 
-// scalastyle:on finalize
 private[mxnet] class MXDataPack(iterName: String, params: Map[String, String]) extends DataPack {
   /**
     * get data iterator
