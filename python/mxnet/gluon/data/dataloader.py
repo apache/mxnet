@@ -68,7 +68,7 @@ class ConnectionWrapper(object):
     def __getattr__(self, name):
         """Emmulate conn"""
         attr = self.__dict__.get('_conn', None)
-        return getattr(attr,name)
+        return getattr(attr, name)
 
 
 class Queue(multiprocessing.queues.Queue):
