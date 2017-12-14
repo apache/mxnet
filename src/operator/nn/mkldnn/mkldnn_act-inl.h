@@ -104,6 +104,10 @@ void MKLDNNActivationBackward(const OpContext &ctx, const ActivationParam& param
 
   auto diff_dst_memory = out_grad.GetMKLDNNData();
   auto input_mem = in_data.GetMKLDNNData();
+  // We need to make sure the two inputs to eltwise_backward has the same memory
+  // descriptor. Otherwise, the perf will suffer.
+  if (input_mem->get_primitive_desc() != diff_dst_memory->get_primitive_desc())
+    input_mem = in_data.GetMKLDNNDataReorder(diff_dst_memory->get_primitive_desc());
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   mkldnn::memory::desc diff_md = diff_dst_memory->get_primitive_desc().desc();
