@@ -267,12 +267,7 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
-      // We should allow MKLDNN conv to apply to the default storage as well.
-      // Even with format conversion, MKLDNN conv should still be faster than
-      // the native implementation.
-      && (in_attrs->at(0) == kMKLDNNStorage
-          || in_attrs->at(0) == kDefaultStorage)) {
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -294,12 +289,7 @@ inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), out_expected);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
-      // We should allow MKLDNN conv to apply to the default storage as well.
-      // Even with format conversion, MKLDNN conv should still be faster than
-      // the native implementation.
-      && (in_attrs->at(0) == kMKLDNNStorage
-          || in_attrs->at(0) == kDefaultStorage)) {
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[deconv::kData] = kMKLDNNStorage;
     // We don't want the parameter gradients are stored in MKLDNN storage.

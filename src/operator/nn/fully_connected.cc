@@ -138,10 +138,7 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  // The native implementation uses BLAS. It shouldn't be slower than MKLDNN
-  // FC. If the input data has the default format, there is format conversion
-  // overhead as well.
-  if (dev_mask == mshadow::cpu::kDevMask && in_attrs->at(0) == kMKLDNNStorage) {
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -163,10 +160,7 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), out_expected);
 
 #if MXNET_USE_MKLDNN == 1
-  // The native implementation uses BLAS. It shouldn't be slower than MKLDNN
-  // FC. If the input data has the default format, there is format conversion
-  // overhead as well.
-  if (dev_mask == mshadow::cpu::kDevMask && in_attrs->at(0) == kMKLDNNStorage) {
+  if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[fullc::kData] = kMKLDNNStorage;
     // We don't want the parameter gradients are stored in MKLDNN storage.
