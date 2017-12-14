@@ -25,9 +25,7 @@ import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
 import pickle
 import io
-import os
 import sys
-import warnings
 import numpy as np
 
 from . import sampler as _sampler
