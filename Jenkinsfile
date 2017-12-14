@@ -16,7 +16,7 @@ def init_git() {
   deleteDir()
   retry(5) {
     try {
-      timeout(time: 2, unit: 'MINUTES') {
+      timeout(time: 15, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
         sh 'git clean -d -f'        
