@@ -102,6 +102,7 @@ void MKLDNNActivationBackward(const OpContext &ctx, const ActivationParam& param
     return;
   }
 
+  TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
   auto diff_dst_memory = out_grad.GetMKLDNNData();
   auto input_mem = in_data.GetMKLDNNData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
@@ -113,7 +114,6 @@ void MKLDNNActivationBackward(const OpContext &ctx, const ActivationParam& param
   mkldnn::memory::desc diff_md = diff_dst_memory->get_primitive_desc().desc();
   auto cpu_engine = data_mpd.get_engine();
   Dtype alpha = 0;
-  TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
 
   auto alg = GetMKLDNNActAlgo(param);
   mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
