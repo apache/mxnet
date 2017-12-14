@@ -98,10 +98,7 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)
-      // There is no reason to use MKLDNN activation if the input isn't in
-      // MKLDNN format.
-      && in_attrs->at(0) == kMKLDNNStorage) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -124,10 +121,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)
-      // There is no reason to use MKLDNN activation if the input isn't in
-      // MKLDNN format.
-      && (in_attrs->at(0) == kMKLDNNStorage || in_attrs->at(1) == kMKLDNNStorage)) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;

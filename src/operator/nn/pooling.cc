@@ -306,12 +306,7 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
 
 #if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  auto expected = MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
-  CHECK_EQ(out_attrs->size(), expected);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)
-      // There is no reason to use MKLDNN pooling if the input isn't in
-      // MKLDNN format.
-      && in_attrs->at(0) == kMKLDNNStorage) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
       (*out_attrs)[i] = kMKLDNNStorage;
@@ -336,10 +331,7 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)
-      // There is no reason to use MKLDNN pooling if the input isn't in
-      // MKLDNN format.
-      && in_attrs->at(0) == kMKLDNNStorage) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
       (*out_attrs)[i] = kMKLDNNStorage;
