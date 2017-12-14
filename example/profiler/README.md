@@ -2,7 +2,8 @@
 
 This folder contains examples of using MXNet profiler to generate profiling results in json files.
 Please refer to [this link](http://mxnet.incubator.apache.org/faq/perf.html?highlight=profiler#profiler)
-for visualizing profiling results.
+for visualizing profiling results and make sure that you have installed a version of MXNet compiled
+with `USE_PROFILER=1`.
 
 - profiler_executor.py. To run this example, simply type `python profiler_executor.py` in terminal.
 It will generate a json file named `profile_executor_5iter.json`.
