@@ -21,8 +21,9 @@ This produces a library called ```libmxnet.dll```.
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
-1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
+
+1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.s
+2. Download and Install [CMake GUI version](https://cmake.org/download/) if it is not already installed.
 3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
 4. Unzip the OpenCV package.
 5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory```.
@@ -33,9 +34,19 @@ To build and install MXNet yourself, you need the following dependencies. Instal
 After you have installed all of the required dependencies, build the MXNet source code:
 
 1. Download the MXNet source code from [GitHub](https://github.com/dmlc/mxnet).
-2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
-3. In Visual Studio, open the solution file,```.sln```, and compile it.
-These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
+2. Open native tools command prompt for Visual Studio 2015 ( choose x64 or x86 native as required)
+3. Start CMake GUI tool installed previously, from within this command prompt
+4. In the CMake tool UI, "Browse Source" button and navigate to folder where MXNet source is downloaded. For example -"<github_parent_dir>/GitHub/incubator-mxnet"
+5. Create a folder under "<github_parent_dir>/GitHub/incubator-mxnet", say releasex64
+6. Click "Browse Build.." and choose folder created above
+7. Click "Configure" button, a dialog prompt appears for choosing generator 
+8. Choose appropriate generator, for example Visual Studio 2015 Win64, if building for x64 
+9. Retain "use default native compilers" option 
+10. Click Finish
+11. Click "Open Project" to open the generated project in Visual Studio IDE 
+12. Choose "ALL_BUILD" and build the configuration that you want to build
+13. Find libmxnet.dll under the folder created in step 5 above for example "<github_parent_dir>\GitHub\incubator-mxnet\releasex64\Debug\libmxnet.dll"
+ 
 
 
 
