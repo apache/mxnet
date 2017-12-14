@@ -16,6 +16,8 @@ def init_git() {
   deleteDir()
   retry(5) {
     try {
+      // Make sure wait long enough for quote. Important: Don't increase the amount of 
+      // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
