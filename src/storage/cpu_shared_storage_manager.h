@@ -97,7 +97,7 @@ class CPUSharedStorageManager final : public StorageManager {
 
   std::recursive_mutex mutex_;
   std::mt19937 rand_gen_;
-  std::unordered_map<void*, Storage::Handle> pool_; 
+  std::unordered_map<void*, Storage::Handle> pool_;
 #ifdef _WIN32
   std::unordered_map<void*, Storage::Handle> is_free_;
   std::unordered_map<void*, HANDLE> map_handle_map_;
@@ -126,7 +126,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   #ifdef _WIN32
   CheckAndRealFree();
   HANDLE map_handle = nullptr;
-  unsigned long error = 0;
+  uint32_t error = 0;
   if (handle->shared_id == -1 && handle->shared_pid == -1) {
     is_new = true;
     handle->shared_pid = _getpid();
@@ -211,32 +211,25 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
 }
 
 #ifdef _WIN32
-inline void CPUSharedStorageManager::CheckAndRealFree()
-{
-
+inline void CPUSharedStorageManager::CheckAndRealFree() {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  for (auto it = std::begin(is_free_); it != std::end(is_free_);)
-  {
+  for (auto it = std::begin(is_free_); it != std::end(is_free_);) {
     void* ptr = static_cast<char*>(it->second.dptr) - alignment_;
     std::atomic<int>* counter = reinterpret_cast<std::atomic<int>*>(
       static_cast<char*>(it->second.dptr) - alignment_);
-    if ((*counter) == 0)
-    {
+    if ((*counter) == 0) {
       CHECK_NE(UnmapViewOfFile(ptr), 0)
         << "Failed to UnmapViewOfFile shared memory ";
       CHECK_NE(CloseHandle(map_handle_map_[ptr]), 0)
         << "Failed to CloseHandle shared memory ";
       map_handle_map_.erase(ptr);
       it = is_free_.erase(it);
-    }
-    else
-    {
+    } else {
       ++it;
     }
   }
 }
-#endif // _WIN32
-
+#endif  // _WIN32
 }  // namespace storage
 }  // namespace mxnet
 
