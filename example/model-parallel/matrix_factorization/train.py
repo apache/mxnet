@@ -21,7 +21,7 @@ import time
 import mxnet as mx
 import numpy as np
 from get_data import get_movielens_iter, get_movielens_data
-from matrix_fact_parallel_model import matrix_fact_model_parallel_net
+from model import matrix_fact_model_parallel_net
 
 
 logging.basicConfig(level=logging.DEBUG)
