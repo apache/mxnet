@@ -11,11 +11,11 @@ It will generate a json file named `profile_executor_5iter.json`.
 which is an image dataset file before running this example.
 Please follow
 [this tutorial](https://mxnet.incubator.apache.org/faq/recordio.html?highlight=rec%20file#create-a-dataset-using-recordio)
-on how to create `.rec` files using a existing tool in MXNet. After you created 'test.rec',
+on how to create `.rec` files using an existing tool in MXNet. After you created 'test.rec',
 type `python profiler_imageiter.py` in terminal. It will generate `profile_imageiter.json`.
 
-- profiler_matmul.py. This example profiles matrix multiplication on GPU. Please make sure
-that you installed a GPU enabled version of MXNet before running this example. Type
+- profiler_matmul.py. This example profiles matrix multiplications on GPU. Please make sure
+that you have installed a GPU enabled version of MXNet before running this example. Type
 `python profiler_matmul.py` and it will generate `profile_matmul_20iter.json`.
 
 - profiler_ndarray.py. This examples profiles a series of `NDArray` operations. Simply type
