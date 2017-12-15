@@ -63,7 +63,7 @@ optimizer = mx.ADAM()
 trainprovider, evalprovider = data_source(#= batchsize =# 200)
 mx.fit(model, optimizer, trainprovider,
        initializer = mx.NormalInitializer(0.0, 0.1),
-       eval_metric = mx.MSE{mx.NDArray{Float32,1}}(),
+       eval_metric = mx.MSE(),
        eval_data = evalprovider,
        n_epoch = 20,
        callbacks = [mx.speedometer()])
@@ -71,7 +71,7 @@ mx.fit(model, optimizer, trainprovider,
 trainprovider, evalprovider = data_source(#= batchsize =# samplesize)
 mx.fit(model, optimizer, trainprovider,
        initializer = mx.NormalInitializer(0.0, 0.1),
-       eval_metric = mx.MSE{mx.NDArray{Float32,1}}(),
+       eval_metric = mx.MSE(),
        eval_data = evalprovider,
        n_epoch = 500,  # previous setting is batchsize = 200, epoch = 20
                        # implies we did (5000 / 200) * 20 times update in previous `fit`
