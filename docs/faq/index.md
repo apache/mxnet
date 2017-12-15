@@ -58,8 +58,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I set MXNet's environmental variables?](http://mxnet.io/how_to/env_var.html)
 
-* [How do I use MXNet as a front end for Torch?](http://mxnet.io/how_to/torch.html)
-
 ## Questions about Using MXNet
 If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use our [forum](https://discuss.mxnet.io).
 

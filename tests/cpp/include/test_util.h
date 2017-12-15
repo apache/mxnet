@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <random>
 
 #if MXNET_USE_VTUNE
 #include <ittnotify.h>
@@ -512,12 +513,16 @@ inline void print(const RunContext& ctx,
 }
 
 inline std::string demangle(const char *name) {
+#if defined(__GLIBCXX__) || defined(_LIBCPP_VERSION)
   int status = -4;  // some arbitrary value to eliminate the compiler warning
   std::unique_ptr<char, void(*)(void*)> res {
     abi::__cxa_demangle(name, nullptr, nullptr, &status),
     &std::free
   };
   return status ? name : res.get();
+#else
+  return name;
+#endif
 }
 
 template<typename T>
@@ -605,7 +610,7 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
     defect   = num_rand % num_bins;
   ScalarType x;
   do {
-    x = random();
+    x = std::rand();
   } while (num_rand - defect <= (uint64_t)x);
 
   return static_cast<ScalarType>(x / bin_size + min);

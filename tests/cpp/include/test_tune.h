@@ -26,7 +26,12 @@
 #ifndef TEST_TUNE_H_
 #define TEST_TUNE_H_
 
+#ifndef _WIN32
 #include <sys/time.h>
+#else
+#include <Windows.h>
+#endif
+
 #include <dmlc/logging.h>
 #include <iomanip>
 #include <iostream>
