@@ -16,3 +16,10 @@
 @deprecate arcsin(x::NDArray) asin.(x)
 @deprecate arccos(x::NDArray) acos.(x)
 @deprecate arctan(x::NDArray) atan.(x)
+
+@deprecate sinh(x::NDArray)    sinh.(x)
+@deprecate cosh(x::NDArray)    cosh.(x)
+@deprecate tanh(x::NDArray)    tanh.(x)
+@deprecate arcsinh(x::NDArray) asinh.(x)
+@deprecate arccosh(x::NDArray) acosh.(x)
+@deprecate arctanh(x::NDArray) atanh.(x)

@@ -840,6 +840,32 @@ function test_trigonometric()
   end
 end  # function test_trigonometric
 
+function check_hyperbolic(f, A)
+  info("NDArray::$f")
+  let x = NDArray(A)
+    B = f.(A)
+    y = f.(x)
+    @test copy(y) ≈ B
+  end
+
+  let A = Float32.(A), x = NDArray(A)
+    B = f.(A)
+    y = f.(x)
+    @test copy(y) ≈ B
+  end
+end  # function check_hyperbolic
+
+function test_hyperbolic()
+  for f ∈ [sinh, cosh, tanh, asinh, acosh, atanh]
+    A = if f == acosh
+      [1.1, 1.2, 1.3, 1.4]
+    else
+      [.1, .2, .3, .4]
+    end
+    check_hyperbolic(f, A)
+  end
+end  # function test_hyperbolic
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -875,6 +901,7 @@ end  # function test_trigonometric
   test_show()
   test_size()
   test_trigonometric()
+  test_hyperbolic()
 end
 
 end

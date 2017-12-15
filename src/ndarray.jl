@@ -1128,6 +1128,14 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap broadcast_(::typeof(acos), x::NDArray) arccos(x)
 @_remap broadcast_(::typeof(atan), x::NDArray) arctan(x)
 
+# hyperbolic funcs, remap to keep consistent with Base
+@_remap broadcast_(::typeof(sinh),  x::NDArray) sinh(x)
+@_remap broadcast_(::typeof(cosh),  x::NDArray) cosh(x)
+@_remap broadcast_(::typeof(tanh),  x::NDArray) tanh(x)
+@_remap broadcast_(::typeof(asinh), x::NDArray) arcsinh(x)
+@_remap broadcast_(::typeof(acosh), x::NDArray) arccosh(x)
+@_remap broadcast_(::typeof(atanh), x::NDArray) arctanh(x)
+
 ################################################################################
 # remapping to solving type unstablility
 ################################################################################
@@ -1275,6 +1283,14 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "arcsin",
     "arccos",
     "arctan",
+
+    # hyperbolic
+    "sinh",
+    "cosh",
+    "tanh",
+    "arcsinh",
+    "arccosh",
+    "arctanh",
 ]
 
 macro _import_ndarray_functions()

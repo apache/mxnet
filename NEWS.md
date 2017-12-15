@@ -122,6 +122,16 @@
     * `arccos(x)` -> `acos.(x)`
     * `arctan(x)` -> `atan.(x)`
 
+* Please use dot-call on following hyperbolic functions.
+  Also, the `arc*` has been renamed to keep consistent with `Base`.
+  (#TBD)
+
+    * `sinh.(x)`
+    * `cosh.(x)`
+    * `tanh.(x)`
+    * `arcsinh(x)` -> `asinh.(x)`
+    * `arccosh(x)` -> `acosh.(x)`
+    * `arctanh(x)` -> `atanh.(x)`
 
 # v0.3.0 (2017.11.16)
 
