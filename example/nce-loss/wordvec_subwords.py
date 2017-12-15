@@ -15,20 +15,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint:skip-file
+# pylint: disable=invalid-name, missing-docstring, too-many-arguments, deprecated-module
+# pylint: disable=too-many-locals, len-as-condition, too-many-instance-attributes
+from __future__ import print_function
+
+from collections import Counter
 import logging
-import sys, random, time, math
+import math
+from optparse import OptionParser
+import random
+
 import mxnet as mx
 import numpy as np
-from nce import *
-from operator import itemgetter
-from optparse import OptionParser
-from collections import Counter
+from nce import nce_loss_subwords, NceAuc
 
-import logging
-head = head = '%(asctime)-15s %(message)s'
+
+head = '%(asctime)-15s %(message)s'
 logging.basicConfig(level=logging.INFO, format=head)
-
 
 # ----------------------------------------------------------------------------------------
 EMBEDDING_SIZE = 100
@@ -42,7 +45,7 @@ PADDING_CHAR = '</s>'
 
 
 # ----------------------------------------------------------------------------------------
-def get_net(vocab_size, num_input, num_label):
+def get_net(vocab_size, num_input, num_label_):
     data = mx.sym.Variable('data')
     mask = mx.sym.Variable('mask')  # use mask to handle variable-length input.
     label = mx.sym.Variable('label')
@@ -77,7 +80,7 @@ def get_net(vocab_size, num_input, num_label):
                              embed_weight=embed_weight,
                              vocab_size=vocab_size,
                              num_hidden=EMBEDDING_SIZE,
-                             num_label=num_label)
+                             num_label=num_label_)
 
 
 def get_subword_units(token, gram=GRAMS):
@@ -99,7 +102,7 @@ def get_subword_representation(wid, vocab_inv, units_vocab, max_len):
 
 def prepare_subword_units(tks):
     # statistics on units
-    units_vocab = {PADDING_CHAR:1}
+    units_vocab = {PADDING_CHAR: 1}
     max_len = 0
     unit_set = set()
     logging.info('grams: %d', GRAMS)
@@ -115,13 +118,13 @@ def prepare_subword_units(tks):
             continue
         if unit not in units_vocab:
             units_vocab[unit] = len(units_vocab)
-        uid = units_vocab[unit]
+        # uid = units_vocab[unit]
     return units_vocab, max_len
 
 
 def load_data_as_subword_units(name):
     tks = []
-    fread = open(name, 'r')
+    fread = open(name, 'rb')
     logging.info('reading corpus from file...')
     for line in fread:
         line = line.strip().decode('utf-8')
@@ -196,18 +199,18 @@ class SimpleBatch(object):
 
 
 class DataIter(mx.io.DataIter):
-    def __init__(self, fname, batch_size, num_label):
+    def __init__(self, fname, batch_size_, num_label_):
         super(DataIter, self).__init__()
-        self.batch_size = batch_size
+        self.batch_size = batch_size_
         self.data, self.units, self.weights, self.negative_units, self.negative_weights, \
-        self.vocab, self.units_vocab, self.freq, self.max_len = load_data_as_subword_units(fname)
+            self.vocab, self.units_vocab, self.freq, self.max_len = load_data_as_subword_units(fname)
         self.vocab_size = len(self.units_vocab)
-        self.num_label = num_label
-        self.provide_data = [('data', (batch_size, num_label - 1, self.max_len)),
-                             ('mask', (batch_size, num_label - 1, self.max_len, 1))]
-        self.provide_label = [('label', (self.batch_size, num_label, self.max_len)),
-                              ('label_weight', (self.batch_size, num_label)),
-                              ('label_mask', (self.batch_size, num_label, self.max_len, 1))]
+        self.num_label = num_label_
+        self.provide_data = [('data', (batch_size_, num_label_ - 1, self.max_len)),
+                             ('mask', (batch_size_, num_label_ - 1, self.max_len, 1))]
+        self.provide_label = [('label', (self.batch_size, num_label_, self.max_len)),
+                              ('label_weight', (self.batch_size, num_label_)),
+                              ('label_mask', (self.batch_size, num_label_, self.max_len, 1))]
 
     def sample_ne(self):
         # a negative sample.
@@ -225,18 +228,18 @@ class DataIter(mx.io.DataIter):
         batch_label_weight = []
         start = random.randint(0, self.num_label - 1)
         for i in range(start, len(self.units) - self.num_label - start, self.num_label):
-            context_units = self.units[i: i + self.num_label / 2] + \
-                            self.units[i + 1 + self.num_label / 2: i + self.num_label]
-            context_mask = self.weights[i: i + self.num_label / 2] + \
-                           self.weights[i + 1 + self.num_label / 2: i + self.num_label]
-            target_units = self.units[i + self.num_label / 2]
-            target_word = self.data[i + self.num_label / 2]
+            context_units = self.units[i: i + self.num_label // 2] + \
+                            self.units[i + 1 + self.num_label // 2: i + self.num_label]
+            context_mask = self.weights[i: i + self.num_label // 2] + \
+                           self.weights[i + 1 + self.num_label // 2: i + self.num_label]
+            target_units = self.units[i + self.num_label // 2]
+            target_word = self.data[i + self.num_label // 2]
             if self.freq[target_word] < MIN_COUNT:
                 continue
             indices = self.sample_ne_indices()
             target = [target_units] + [self.negative_units[i] for i in indices]
             target_weight = [1.0] + [0.0 for _ in range(self.num_label - 1)]
-            target_mask = [self.weights[i + self.num_label / 2]] + [self.negative_weights[i] for i in indices]
+            target_mask = [self.weights[i + self.num_label // 2]] + [self.negative_weights[i] for i in indices]
 
             batch_data.append(context_units)
             batch_data_mask.append(context_mask)
@@ -271,6 +274,7 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("-g", "--gpu", action="store_true", dest="gpu", default=False,
                       help="use gpu")
+    options, args = parser.parse_args()
 
     batch_size = BATCH_SIZE
     num_label = NUM_LABEL
@@ -279,20 +283,25 @@ if __name__ == '__main__':
 
     network = get_net(data_train.vocab_size, num_label - 1, num_label)
 
-    options, args = parser.parse_args()
-    # devs = mx.cpu()
-    devs = [mx.cpu(i) for i in range(4)]
-    if options.gpu == True:
+    devs = mx.cpu()
+    if options.gpu:
         devs = mx.gpu()
-    model = mx.model.FeedForward(ctx=devs,
-                                 symbol=network,
-                                 num_epoch=NUM_EPOCH,
-                                 learning_rate=0.3,
-                                 momentum=0.9,
-                                 wd=0.0000,
-                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
 
+    model = mx.mod.Module(
+        symbol=network,
+        data_names=[x[0] for x in data_train.provide_data],
+        label_names=[y[0] for y in data_train.provide_label],
+        context=[devs]
+    )
+
+    print("Training on {}".format("GPU" if options.gpu else "CPU"))
     metric = NceAuc()
-    model.fit(X=data_train,
-              eval_metric=metric,
-              batch_end_callback=mx.callback.Speedometer(batch_size, 50), )
+    model.fit(
+        train_data=data_train,
+        num_epoch=NUM_EPOCH,
+        optimizer='sgd',
+        optimizer_params={'learning_rate': 0.3, 'momentum': 0.9, 'wd': 0.0000},
+        initializer=mx.init.Xavier(factor_type='in', magnitude=2.34),
+        eval_metric=metric,
+        batch_end_callback=mx.callback.Speedometer(batch_size, 50)
+    )

@@ -15,17 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint:skip-file
+# pylint: disable=invalid-name, missing-docstring, too-many-arguments, deprecated-module
+# pylint: disable=too-many-locals, len-as-condition, too-many-instance-attributes
 from __future__ import print_function
-import logging
-import sys, random, time, math
-sys.path.insert(0, "../../python")
-import mxnet as mx
-import numpy as np
+
 from collections import namedtuple
-from nce import *
-from operator import itemgetter
+import logging
+import math
 from optparse import OptionParser
+import random
+
+import mxnet as mx
+from nce import nce_loss, NceLSTMAuc
+
 
 LSTMState = namedtuple("LSTMState", ["c", "h"])
 LSTMParam = namedtuple("LSTMParam", ["i2h_weight", "i2h_bias",
@@ -35,19 +37,20 @@ LSTMModel = namedtuple("LSTMModel", ["rnn_exec", "symbol",
                                      "seq_data", "seq_labels", "seq_outputs",
                                      "param_blocks"])
 
-def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
+
+def lstm(num_hidden_, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     """LSTM Cell symbol"""
     if dropout > 0.:
         indata = mx.sym.Dropout(data=indata, p=dropout)
     i2h = mx.sym.FullyConnected(data=indata,
                                 weight=param.i2h_weight,
                                 bias=param.i2h_bias,
-                                num_hidden=num_hidden * 4,
+                                num_hidden=num_hidden_ * 4,
                                 name="t%d_l%d_i2h" % (seqidx, layeridx))
     h2h = mx.sym.FullyConnected(data=prev_state.h,
                                 weight=param.h2h_weight,
                                 bias=param.h2h_bias,
-                                num_hidden=num_hidden * 4,
+                                num_hidden=num_hidden_ * 4,
                                 name="t%d_l%d_h2h" % (seqidx, layeridx))
     gates = i2h + h2h
     slice_gates = mx.sym.SliceChannel(gates, num_outputs=4,
@@ -61,10 +64,10 @@ def lstm(num_hidden, indata, prev_state, param, seqidx, layeridx, dropout=0.):
     return LSTMState(c=next_c, h=next_h)
 
 
-def get_net(vocab_size, seq_len, num_label, num_lstm_layer, num_hidden):
+def get_net(vocab_size, seq_len_, num_label_, num_lstm_layer_, num_hidden_):
     param_cells = []
     last_states = []
-    for i in range(num_lstm_layer):
+    for i in range(num_lstm_layer_):
         param_cells.append(LSTMParam(i2h_weight=mx.sym.Variable("l%d_i2h_weight" % i),
                                      i2h_bias=mx.sym.Variable("l%d_i2h_bias" % i),
                                      h2h_weight=mx.sym.Variable("l%d_h2h_weight" % i),
@@ -78,37 +81,37 @@ def get_net(vocab_size, seq_len, num_label, num_lstm_layer, num_hidden):
     label_weight = mx.sym.Variable('label_weight')
     embed_weight = mx.sym.Variable('embed_weight')
     label_embed_weight = mx.sym.Variable('label_embed_weight')
-    data_embed = mx.sym.Embedding(data = data, input_dim = vocab_size,
-                                  weight = embed_weight,
-                                  output_dim = 100, name = 'data_embed')
-    datavec = mx.sym.SliceChannel(data = data_embed,
-                                  num_outputs = seq_len,
-                                  squeeze_axis = True, name = 'data_slice')
-    labelvec = mx.sym.SliceChannel(data = label,
-                                   num_outputs = seq_len,
-                                   squeeze_axis = True, name = 'label_slice')
-    labelweightvec = mx.sym.SliceChannel(data = label_weight,
-                                         num_outputs = seq_len,
-                                         squeeze_axis = True, name = 'label_weight_slice')
+    data_embed = mx.sym.Embedding(data=data, input_dim=vocab_size,
+                                  weight=embed_weight,
+                                  output_dim=100, name='data_embed')
+    datavec = mx.sym.SliceChannel(data=data_embed,
+                                  num_outputs=seq_len_,
+                                  squeeze_axis=True, name='data_slice')
+    labelvec = mx.sym.SliceChannel(data=label,
+                                   num_outputs=seq_len_,
+                                   squeeze_axis=True, name='label_slice')
+    labelweightvec = mx.sym.SliceChannel(data=label_weight,
+                                         num_outputs=seq_len_,
+                                         squeeze_axis=True, name='label_weight_slice')
     probs = []
-    for seqidx in range(seq_len):
+    for seqidx in range(seq_len_):
         hidden = datavec[seqidx]
 
-        for i in range(num_lstm_layer):
-            next_state = lstm(num_hidden, indata = hidden,
-                              prev_state = last_states[i],
-                              param = param_cells[i],
-                              seqidx = seqidx, layeridx = i)
+        for i in range(num_lstm_layer_):
+            next_state = lstm(num_hidden_, indata=hidden,
+                              prev_state=last_states[i],
+                              param=param_cells[i],
+                              seqidx=seqidx, layeridx=i)
             hidden = next_state.h
             last_states[i] = next_state
 
-        probs.append(nce_loss(data = hidden,
-                              label = labelvec[seqidx],
-                              label_weight = labelweightvec[seqidx],
-                              embed_weight = label_embed_weight,
-                              vocab_size = vocab_size,
-                              num_hidden = 100,
-                              num_label = num_label))
+        probs.append(nce_loss(data=hidden,
+                              label=labelvec[seqidx],
+                              label_weight=labelweightvec[seqidx],
+                              embed_weight=label_embed_weight,
+                              vocab_size=vocab_size,
+                              num_hidden=100,
+                              num_label=num_label_))
     return mx.sym.Group(probs)
 
 
@@ -135,6 +138,7 @@ def load_data(name):
         negative += [i for _ in range(v)]
     return data, negative, vocab, freq
 
+
 class SimpleBatch(object):
     def __init__(self, data_names, data, label_names, label):
         self.data = data
@@ -152,26 +156,25 @@ class SimpleBatch(object):
 
 
 class DataIter(mx.io.DataIter):
-    def __init__(self, name, batch_size, seq_len, num_label, init_states):
+    def __init__(self, name, batch_size_, seq_len_, num_label_, init_states_):
         super(DataIter, self).__init__()
-        self.batch_size = batch_size
+        self.batch_size = batch_size_
         self.data, self.negative, self.vocab, self.freq = load_data(name)
         self.vocab_size = 1 + len(self.vocab)
-        print(self.vocab_size)
-        self.seq_len = seq_len
-        self.num_label = num_label
-        self.init_states = init_states
+        print("Vocabulary Size: {}".format(self.vocab_size))
+        self.seq_len = seq_len_
+        self.num_label = num_label_
+        self.init_states = init_states_
         self.init_state_names = [x[0] for x in self.init_states]
-        self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states]
-        self.provide_data = [('data', (batch_size, seq_len))] + init_states
-        self.provide_label = [('label', (self.batch_size, seq_len, num_label)),
-                              ('label_weight', (self.batch_size, seq_len, num_label))]
+        self.init_state_arrays = [mx.nd.zeros(x[1]) for x in init_states_]
+        self.provide_data = [('data', (batch_size_, seq_len_))] + init_states_
+        self.provide_label = [('label', (self.batch_size, seq_len_, num_label_)),
+                              ('label_weight', (self.batch_size, seq_len_, num_label_))]
 
     def sample_ne(self):
         return self.negative[random.randint(0, len(self.negative) - 1)]
 
     def __iter__(self):
-        print('begin')
         batch_data = []
         batch_label = []
         batch_label_weight = []
@@ -200,13 +203,16 @@ class DataIter(mx.io.DataIter):
     def reset(self):
         pass
 
+
 if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
     parser = OptionParser()
-    parser.add_option("-g", "--gpu", action = "store_true", dest = "gpu", default = False,
-                      help = "use gpu")
+    parser.add_option("-g", "--gpu", action="store_true", dest="gpu", default=False,
+                      help="use gpu")
+    options, args = parser.parse_args()
+
     batch_size = 1024
     seq_len = 5
     num_label = 6
@@ -217,25 +223,30 @@ if __name__ == '__main__':
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_states = init_c + init_h
 
-
     data_train = DataIter("./data/text8", batch_size, seq_len, num_label,
                           init_states)
 
     network = get_net(data_train.vocab_size, seq_len, num_label, num_lstm_layer, num_hidden)
-    options, args = parser.parse_args()
+
     devs = mx.cpu()
-    if options.gpu == True:
+    if options.gpu:
         devs = mx.gpu()
-    model = mx.model.FeedForward(ctx = devs,
-                                 symbol = network,
-                                 num_epoch = 20,
-                                 learning_rate = 0.3,
-                                 momentum = 0.9,
-                                 wd = 0.0000,
-                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
 
+    model = mx.mod.Module(
+        symbol=network,
+        data_names=[x[0] for x in data_train.provide_data],
+        label_names=[y[0] for y in data_train.provide_label],
+        context=[devs]
+    )
+
+    print("Training on {}".format("GPU" if options.gpu else "CPU"))
     metric = NceLSTMAuc()
-    model.fit(X = data_train,
-              eval_metric = metric,
-              batch_end_callback = mx.callback.Speedometer(batch_size, 50),)
-
+    model.fit(
+        train_data=data_train,
+        num_epoch=20,
+        optimizer='sgd',
+        optimizer_params={'learning_rate': 0.3, 'momentum': 0.9, 'wd': 0.0000},
+        initializer=mx.init.Xavier(factor_type='in', magnitude=2.34),
+        eval_metric=metric,
+        batch_end_callback=mx.callback.Speedometer(batch_size, 50)
+    )

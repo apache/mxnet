@@ -15,29 +15,33 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint:skip-file
+# pylint: disable=invalid-name, missing-docstring, too-many-arguments
+from __future__ import print_function
+
 import logging
-import sys, random, time
-sys.path.insert(0, "../../python")
+import random
+
 import mxnet as mx
 import numpy as np
-from collections import namedtuple
-from nce import *
+from nce import nce_loss, NceAccuracy
 
-def get_net(vocab_size, num_label):
+
+def get_net(vocab_size_, num_label_):
     data = mx.sym.Variable('data')
     label = mx.sym.Variable('label')
     label_weight = mx.sym.Variable('label_weight')
     embed_weight = mx.sym.Variable('embed_weight')
-    pred = mx.sym.FullyConnected(data = data, num_hidden = 100)
-    ret = nce_loss(data = pred,
-                    label = label,
-                    label_weight = label_weight,
-                    embed_weight = embed_weight,
-                    vocab_size = vocab_size,
-                    num_hidden = 100,
-                    num_label = num_label)
+    pred = mx.sym.FullyConnected(data=data, num_hidden=100)
+    ret = nce_loss(
+        data=pred,
+        label=label,
+        label_weight=label_weight,
+        embed_weight=embed_weight,
+        vocab_size=vocab_size_,
+        num_hidden=100,
+        num_label=num_label_)
     return ret
+
 
 class SimpleBatch(object):
     def __init__(self, data_names, data, label_names, label):
@@ -56,16 +60,16 @@ class SimpleBatch(object):
 
 
 class DataIter(mx.io.DataIter):
-    def __init__(self, count, batch_size, vocab_size, num_label, feature_size):
+    def __init__(self, count, batch_size_, vocab_size_, num_label_, feature_size_):
         super(DataIter, self).__init__()
-        self.batch_size = batch_size
+        self.batch_size = batch_size_
         self.count = count
-        self.vocab_size = vocab_size
-        self.num_label = num_label
-        self.feature_size = feature_size
-        self.provide_data = [('data', (batch_size, feature_size))]
-        self.provide_label = [('label', (self.batch_size, num_label)),
-                              ('label_weight', (self.batch_size, num_label))]
+        self.vocab_size = vocab_size_
+        self.num_label = num_label_
+        self.feature_size = feature_size_
+        self.provide_data = [('data', (batch_size_, feature_size_))]
+        self.provide_label = [('label', (self.batch_size, num_label_)),
+                              ('label_weight', (self.batch_size, num_label_))]
 
     def mock_sample(self):
         ret = np.zeros(self.feature_size)
@@ -82,11 +86,11 @@ class DataIter(mx.io.DataIter):
         return ret, la
 
     def __iter__(self):
-        for _ in range(self.count / self.batch_size):
+        for _ in range(self.count // self.batch_size):
             data = []
             label = []
             label_weight = []
-            for i in range(self.batch_size):
+            for _ in range(self.batch_size):
                 d, l = self.mock_sample()
                 data.append(d)
                 label.append(l)
@@ -99,6 +103,7 @@ class DataIter(mx.io.DataIter):
 
     def reset(self):
         pass
+
 
 if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
@@ -113,17 +118,21 @@ if __name__ == '__main__':
     data_test = DataIter(1000, batch_size, vocab_size, num_label, feature_size)
 
     network = get_net(vocab_size, num_label)
-    devs = [mx.cpu()]
-    model = mx.model.FeedForward(ctx = devs,
-                                 symbol = network,
-                                 num_epoch = 20,
-                                 learning_rate = 0.03,
-                                 momentum = 0.9,
-                                 wd = 0.00001,
-                                 initializer=mx.init.Xavier(factor_type="in", magnitude=2.34))
+    model = mx.mod.Module(
+        symbol=network,
+        data_names=[x[0] for x in data_train.provide_data],
+        label_names=[y[0] for y in data_train.provide_label],
+        context=[mx.cpu()]
+    )
 
     metric = NceAccuracy()
-    model.fit(X = data_train, eval_data = data_test,
-              eval_metric = metric,
-              batch_end_callback = mx.callback.Speedometer(batch_size, 50),)
-
+    model.fit(
+        train_data=data_train,
+        eval_data=data_test,
+        num_epoch=20,
+        optimizer='sgd',
+        optimizer_params={'learning_rate': 0.03, 'momentum': 0.9, 'wd': 0.00001},
+        initializer=mx.init.Xavier(factor_type='in', magnitude=2.34),
+        eval_metric=metric,
+        batch_end_callback=mx.callback.Speedometer(batch_size, 50)
+    )
