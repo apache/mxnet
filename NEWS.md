@@ -107,6 +107,17 @@
    4.0
   ```
 
+* modulo operator. (#TBD)
+
+  ```julia
+  x = NDArray(...)
+  y = NDArray(...)
+
+  x .% y
+  x .% 2
+  2 .% x
+  ```
+  
 * Transposing a column `NDArray` to a row `NDArray` is supported now. (#TBD)
 
   ```julia

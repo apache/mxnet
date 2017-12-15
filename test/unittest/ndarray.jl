@@ -437,6 +437,37 @@ function test_rdiv()
 end  # function test_rdiv
 
 
+function test_mod()
+  info("NDArray::mod")
+  const A = [1 2; 3 4]
+  const B = [1 1; 3 3]
+
+  let x = NDArray(A), y = NDArray(B)
+    C = A .% B
+    D = B .% A
+
+    w = x .% y
+    z = y .% x
+
+    @test copy(w) ≈ C
+    @test copy(z) ≈ D
+  end
+
+  let x = NDArray(A)
+    C = A .% 2
+    y = x .% 2
+    @test copy(y) ≈ C
+  end
+
+  info("NDArray::rmod")
+  let x = NDArray(A)
+    C = 11 .% A
+    y = 11 .% x
+    @test copy(y) ≈ C
+  end
+end  # function test_mod
+
+
 function test_gd()
   dims   = rand_dims()
   tw, aw = rand_tensors(dims)
@@ -888,6 +919,7 @@ end  # function test_hyperbolic
   test_mul()
   test_div()
   test_rdiv()
+  test_mod()
   test_gd()
   test_saveload()
   test_clip()

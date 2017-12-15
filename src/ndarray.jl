@@ -709,17 +709,32 @@ broadcast_(::typeof(/), x::NDArray, y::NDArray) = _div(x, y)
 broadcast_(::typeof(/), x::NDArray, y::Real)    = _div_scalar(x, scalar = y)
 broadcast_(::typeof(/), y::Real, x::NDArray)    = _rdiv_scalar(x, scalar = y)
 
+import Base: %
+
+"""
+    .%(x::NDArray, y::NDArray)
+    .%(x::NDArray, y::Real)
+    .%(x::Real, y::NDArray)
+
+Elementwise modulo for `NDArray`.
+"""
+%(x::NDArray, y::Real) = _mod_scalar(x, scalar = y)
+
+broadcast_(::typeof(%), x::NDArray, y::NDArray) = _mod(x, y)
+broadcast_(::typeof(%), x::NDArray, y::Real)    = _mod_scalar(x, scalar = y)
+broadcast_(::typeof(%), y::Real, x::NDArray)    = _rmod_scalar(x, scalar = y)
+
 import Base: ^
 
 # document of `.^` is merged into SymbolicNode's
 
 broadcast_(::typeof(^), x::NDArray, y::NDArray) = _power(x, y)
-broadcast_(::typeof(^), x::NDArray, s::Real) = _power_scalar(x, scalar = s)
-broadcast_(::typeof(^), s::Real, x::NDArray) = _rpower_scalar(x, scalar = s)
+broadcast_(::typeof(^), x::NDArray, s::Real)    = _power_scalar(x, scalar = s)
+broadcast_(::typeof(^), s::Real, x::NDArray)    = _rpower_scalar(x, scalar = s)
 
 broadcast_(::typeof(^), ::Irrational{:e}, x::NDArray) = exp(x)
-broadcast_(::typeof(^), x::NDArray, s::Irrational) = _power_scalar(x, scalar = s)
-broadcast_(::typeof(^), s::Irrational, x::NDArray) = _rpower_scalar(x, scalar = s)
+broadcast_(::typeof(^), x::NDArray, s::Irrational)    = _power_scalar(x, scalar = s)
+broadcast_(::typeof(^), s::Irrational, x::NDArray)    = _rpower_scalar(x, scalar = s)
 
 """
     fill!(arr::NDArray, x)
@@ -1147,6 +1162,9 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap _minus(x::NDArray, y::NDArray)  _minus(x, y)
 @_remap _minus!(x::NDArray, y::NDArray) _minus(x, y)
 
+@_remap _mod(x::NDArray, y::NDArray)  _mod(x, y)
+@_remap _mod!(x::NDArray, y::NDArray) _mod(x, y)
+
 ################################################################################
 # NDArray functions dynamically imported from libmxnet
 ################################################################################
@@ -1265,6 +1283,7 @@ const _op_import_bl = [  # import black list; do not import these funcs
     # arithmetic
     "_plus",
     "_minus",
+    "_mod",
 
     "dot",
     "max",

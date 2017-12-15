@@ -1,6 +1,7 @@
 using TakingBroadcastSeriously: Broadcasted, unwrap
 
-for f in :[tan, asin, acos, atan,
+for f in :[%,
+           tan, asin, acos, atan,
            sinh, cosh, tanh, asinh, acosh, atanh].args
   # copy from TakingBroadcastSeriously
   @eval Base.$f(a::Broadcasted...) = Broadcasted(broadcast_($f, unwrap.(a)...))
