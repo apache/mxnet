@@ -218,20 +218,12 @@ function _defstruct_impl(is_immutable, name, fields)
   if isa(name, Symbol)
     name       = esc(name)
     super_name = :Any
-  elseif VERSION >= v"0.5-"
+  else
     @assert(isa(name, Expr) && name.head == :(<:) && length(name.args) == 2 &&
             isa(name.args[1], Symbol) && isa(name.args[2], Symbol),
             "name must be of form 'Name <: SuperType'")
 
     super_name = esc(name.args[2])
-    name       = esc(name.args[1])
-  else
-    @assert(isa(name, Expr) && name.head == :comparison &&
-            length(name.args) == 3 && name.args[2] == :(<:) &&
-            isa(name.args[1], Symbol) && isa(name.args[3], Symbol),
-            "name must be of form 'Name <: SuperType'")
-
-    super_name = esc(name.args[3])
     name       = esc(name.args[1])
   end
 
