@@ -440,13 +440,18 @@ Building *MXNet* from source is a 2 step process.
 $ sudo apt-get update
 $ sudo apt-get install -y build-essential git
 ```
-**Step 2** Install OpenBLAS.
+**Step 2** Install BLAS.
 
-*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
+*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl).
+To install OpenBLAS and LAPACK, run the following.
 ```bash
 $ sudo apt-get install -y libopenblas-dev liblapack-dev
 ```
-
+To install MKL, you can run the script prepare_mkl.sh in the root folder of MXNet as following
+```
+$ sh prepare_mkl.sh mkl_dir
+```
+You can also install ATLAS instead.
 **Step 3** Install OpenCV.
 
 *MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
