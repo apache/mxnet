@@ -139,7 +139,7 @@ const std::unordered_map<std::string, NDArray>& GraphExecutor::aux_state_map() c
   return aux_state_map_;
 }
 
-nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
+static nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
   static const Op* id_like = Op::Get("_identity_with_attr_like_rhs");
   nnvm::NodePtr n = nnvm::Node::Create();
   n->attrs.op = id_like;
@@ -310,7 +310,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
  * \brief Assign context to the graph.
  * This is triggered by both simple_bind and bind flows.
  */
-Graph AssignContext(Graph g,
+static Graph AssignContext(Graph g,
                     const Context& default_ctx,
                     const std::map<std::string, Context>& ctx_map,
                     const std::vector<Context>& in_arg_ctxes,
@@ -435,7 +435,7 @@ Graph AssignContext(Graph g,
   return g;
 }
 
-void HandleInferShapeError(const size_t num_forward_inputs,
+static void HandleInferShapeError(const size_t num_forward_inputs,
                            const nnvm::IndexedGraph& idx,
                            const nnvm::ShapeVector& inferred_shapes) {
   int cnt = 10;
@@ -458,7 +458,7 @@ void HandleInferShapeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
-void HandleInferTypeError(const size_t num_forward_inputs,
+static void HandleInferTypeError(const size_t num_forward_inputs,
                           const nnvm::IndexedGraph& idx,
                           const nnvm::DTypeVector& inferred_dtypes) {
   int cnt = 10;
@@ -481,7 +481,7 @@ void HandleInferTypeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
-void HandleInferStorageTypeError(const size_t num_forward_inputs,
+static void HandleInferStorageTypeError(const size_t num_forward_inputs,
                                  const nnvm::IndexedGraph& idx,
                                  const StorageTypeVector& inferred_stypes) {
   int cnt = 10;
@@ -686,7 +686,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
  * Shareable storages include both default storage and row_sparse storage
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
-NDArray ReshapeOrCreate(const std::string& name,
+static NDArray ReshapeOrCreate(const std::string& name,
                         const TShape& dest_arg_shape,
                         const int dest_arg_dtype,
                         const NDArrayStorageType dest_arg_stype,
