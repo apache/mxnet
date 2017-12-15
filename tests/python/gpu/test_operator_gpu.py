@@ -460,19 +460,19 @@ def test_convolution_options():
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float32}}]
     # Pad > 0
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(3,), pad=(1,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Stride > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(3,), stride=(2,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # Dilate > 1
-    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(3,), dilate=(2,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
     # 1x1 convolution
-    sym = mx.sym.Convolution(num_filter=3, kernel=(1,), pad=(0,), name='conv')
+    sym = mx.sym.Convolution(layout='NCW', num_filter=3, kernel=(1,), pad=(0,), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,), pad=(0,), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
@@ -558,6 +558,24 @@ def test_pooling_with_type():
     check_consistency(sym, ctx_list)
 
 def test_deconvolution_with_type():
+    # Test basic deconvolution without exercising stride, pad or dilation.
+    # 1D deconvolution
+    sym = mx.sym.Deconvolution(num_filter=3, kernel=(3,), name='deconv')
+    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}}]
+    # wider tolerance needed for true-fp16 test above
+    tol = {np.dtype(np.float16): 0.3,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0}
+    check_consistency(sym, ctx_list, tol=tol)
+    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+
+    # 2D deconvolution
     sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
     ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
                 {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}},
@@ -575,24 +593,24 @@ def test_deconvolution_with_type():
 
 def test_deconvolution_options():
 
-#    # 1D convolution  (not yet enabled)
-#    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
-#                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float32}},
-#                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float16}},
-#                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
-#                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float32}}]
-#    # Pad > 0
-#    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), name='conv')
-#    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), pad=(1,), cudnn_off=True, name='conv')
-#    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
-#    # Stride > 1
-#    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), name='conv')
-#    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), stride=(2,), cudnn_off=True, name='conv')
-#    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
-#    # Dilate > 1
-#    sym = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), name='conv')
-#    sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,), dilate=(2,), cudnn_off=True, name='conv')
-#    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+    # 1D deconvolution
+    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 7), 'type_dict': {'deconv_data': np.float32}}]
+    # Pad > 0
+    sym = mx.sym.Deconvolution(layout='NCW', num_filter=3, kernel=(3,), pad=(1,), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=3, kernel=(3,), pad=(1,), cudnn_off=True, name='deconv')
+    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+    # Stride > 1
+    sym = mx.sym.Deconvolution(layout='NCW', num_filter=3, kernel=(3,), stride=(2,), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=3, kernel=(3,), stride=(2,), cudnn_off=True, name='deconv')
+    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+    # Dilate > 1
+    sym = mx.sym.Deconvolution(layout='NCW', num_filter=3, kernel=(3,), dilate=(2,), name='deconv')
+    sym_no_cudnn = mx.sym.Deconvolution(num_filter=3, kernel=(3,), dilate=(2,), cudnn_off=True, name='deconv')
+    check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
     # 2D deconvolution
     ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
@@ -613,7 +631,7 @@ def test_deconvolution_options():
     sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), dilate=(2,2), cudnn_off=True, name='deconv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
-#    # 3D convolution (not yet enabled)
+#    # 3D deconvolution (not yet enabled)
 #    ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
 #                {'ctx': mx.cpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},
 #                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 5, 7, 7), 'type_dict': {'conv_data': np.float64}},

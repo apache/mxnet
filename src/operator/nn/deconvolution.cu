@@ -38,13 +38,7 @@ Operator* CreateOp<gpu>(DeconvolutionParam param, int dtype,
                         Context ctx) {
   // Logic here parallels that in Convolution.cu
   Operator *op = NULL;
-  // If 1D deconvolution, use MXNet implementation
-  if (param.kernel.ndim() == 1) {
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      op = new DeconvolutionOp<gpu, DType>(param);
-    })
-    return op;
-  }
+
 #if MXNET_USE_CUDNN == 1
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
   int compute_type = (dtype == mshadow::kFloat16) ? mshadow::kFloat32 : dtype;
