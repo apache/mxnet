@@ -717,6 +717,11 @@ broadcast_(::typeof(/), x::NDArray, y::NDArray) = _div(x, y)
 broadcast_(::typeof(/), x::NDArray, y::Real)    = _div_scalar(x, scalar = y)
 broadcast_(::typeof(/), y::Real, x::NDArray)    = _rdiv_scalar(x, scalar = y)
 
+function broadcast_(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
+  @assert(round(T, y) != zero(T), "Integer divided by zero")
+  _div_scalar(x, scalar = y)
+end
+
 import Base: %
 
 """
