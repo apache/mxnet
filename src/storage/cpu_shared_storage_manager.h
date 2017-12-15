@@ -67,7 +67,9 @@ class CPUSharedStorageManager final : public StorageManager {
     for (const auto& kv : pool_) {
       FreeImpl(kv.second);
     }
+#ifdef _WIN32
     CheckAndRealFree();
+#endif
   }
 
   void Alloc(Storage::Handle* handle) override;
