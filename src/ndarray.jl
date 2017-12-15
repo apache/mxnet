@@ -1114,7 +1114,8 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap dot(x::NDArray{T,N}, y::NDArray{S,N}) where {T,S,N} dot(y, x)
 
 # See https://github.com/dmlc/MXNet.jl/pull/123
-@_remap transpose(arr::NDArray) transpose(_only2d(arr))
+@_remap transpose(arr::NDArray{T,1}) where T reshape(arr; shape = (1, length(arr)), reverse = true)
+@_remap transpose(arr::NDArray{T,2}) where T transpose(arr)
 @_remap permutedims(arr::NDArray, axes) transpose(arr; axes = length(axes) .- tuple(axes...))
 
 @_remap prod(arr::NDArray)       prod(arr)

@@ -775,7 +775,13 @@ function test_fill()
 end  # function test_fill
 
 function test_transpose()
-  info("NDArray::transpose")
+  info("NDArray::transpose::1D")
+  let A = rand(Float32, 4), x = NDArray(A)
+    @test size(x) == (4,)
+    @test size(x') == (1, 4)
+  end
+
+  info("NDArray::transpose::2D")
   let A = rand(Float32, 2, 3), x = mx.NDArray(A)
     @test size(x) == (2, 3)
     @test size(x') == (3, 2)

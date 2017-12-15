@@ -107,6 +107,21 @@
    4.0
   ```
 
+* Transposing a column `NDArray` to a row `NDArray` is supported now. (#TBD)
+
+  ```julia
+  julia> x = NDArray(Float32[1, 2, 3, 4])
+  4 mx.NDArray{Float32,1} @ CPU0:
+   1.0
+   2.0
+   3.0
+   4.0
+
+  julia> x'
+  1×4 mx.NDArray{Float32,2} @ CPU0:
+   1.0  2.0  3.0  4.0
+  ```
+
 ## API Changes
 
 ### `NDArray`

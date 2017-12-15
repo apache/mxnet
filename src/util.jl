@@ -163,11 +163,6 @@ function _format_signature(narg::Int, arg_names::Ref{char_pp})
   return join([unsafe_string(name) for name in arg_names] , ", ")
 end
 
-@inline function _only2d(x)
-  @assert ndims(x) == 2
-  x
-end
-
 """
 libmxnet operators signature checker.
 
