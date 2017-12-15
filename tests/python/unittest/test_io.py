@@ -19,6 +19,7 @@
 import mxnet as mx
 from mxnet.test_utils import *
 import numpy as np
+from flaky import flaky
 import os, gzip
 import pickle as pickle
 import time
@@ -248,8 +249,10 @@ def test_LibSVMIter():
     check_libSVMIter_synthetic()
     check_libSVMIter_news_data()
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7826")
+@flaky(max_runs=3)
 def test_CSVIter():
+    """test_io.test_CSVIter.
+    Flaky. Tracked at https://github.com/apache/incubator-mxnet/issues/7826"""
     def check_CSVIter_synthetic():
         cwd = os.getcwd()
         data_path = os.path.join(cwd, 'data.t')

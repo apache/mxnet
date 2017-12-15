@@ -33,8 +33,8 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install ImageMagick
     brew install swig
     if [ ${TASK} == "python_test" ]; then
-        python -m pip install --user nose numpy cython scipy
-        python3 -m pip install --user nose numpy cython scipy
+        python -m pip install --user nose flaky numpy cython scipy
+        python3 -m pip install --user nose flaky numpy cython scipy
     fi
 fi
 

@@ -18,8 +18,8 @@
 import mxnet as mx
 import numpy as np
 import os
+from flaky import flaky
 import pickle as pkl
-import unittest
 from nose.tools import raises
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal
@@ -680,8 +680,10 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8049")
+@flaky(max_runs=3)
 def test_cached():
+    """test_ndarray.test_cached.
+    Flaky. Tracked at https://github.com/apache/incubator-mxnet/issues/8049"""
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
     data = mx.nd.ones((3, 4, 10, 10))

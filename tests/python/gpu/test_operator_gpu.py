@@ -18,10 +18,9 @@
 import sys
 import os
 import time
-import unittest
 import mxnet as mx
 import numpy as np
-import unittest
+import flaky
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from numpy.testing import assert_allclose
 
@@ -658,8 +657,10 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/7645")
+@flaky(max_runs=3)
 def test_spatial_transformer_with_type():
+    """test_operator_gpu.test_spatial_transformer_with_type.
+    Flaky. Tracked at https://github.com/apache/incubator-mxnet/issues/7645"""
     np.random.seed(1234)
     data = mx.sym.Variable('data')
     loc = mx.sym.Flatten(data)
@@ -1364,16 +1365,36 @@ def test_rnn_layer():
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
-@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8211")
 def test_autograd_save_memory():
-    x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
+    """test_autograd_save_memory.
+    Flaky, may cause OOM. Tracked at https://github.com/apache/incubator-mxnet/issues/8211"""
+    import platform
+
+    def get_mem():
+        import os
+        import subprocess
+        """get memory usage in MB"""
+        res = subprocess.check_output(['ps', 'u', '-p', str(os.getpid())])
+        return int(str(res).split()[15])/1e3
+
+    mem_usage = 0
+
+    if platform.system() == 'Linux':
+        mem_usage = get_mem()
+
+    x = mx.nd.zeros((128, 256, 256), ctx=mx.gpu(0))
     x.attach_grad()
 
     with mx.autograd.record():
         for i in range(200):
             x = x + 1
             x.wait_to_read()
+
     x.backward()
+
+    if platform.system() == 'Linux':
+        mem_usage = get_mem() - mem_usage
+        assert mem_usage < 128
 
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()

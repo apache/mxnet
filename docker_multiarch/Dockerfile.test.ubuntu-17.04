@@ -26,6 +26,8 @@ RUN valgrind build/tests/cpp/mxnet_test
 ############################
 # Python tests
 WORKDIR /work/mxnet/python
+RUN pip3 install flaky
+RUN pip install flaky
 RUN pip3 install -e .
 RUN pip install -e .
 
