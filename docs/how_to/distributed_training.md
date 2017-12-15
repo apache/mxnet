@@ -36,23 +36,44 @@ Note that we need to compile MXNet with the build flag `USE_DIST_KVSTORE=1` to u
 ### Launch.py
 MXNet provides a script tools/launch.py to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`. If you don't already have a cluster, an easy way to set up a cluster of EC2 instances for distributed deep learning is using an [AWS CloudFormation template](https://github.com/awslabs/deeplearning-cfn).
 
-Let's start with an example on how to use this. Assume we are in mxnet/example/image-classification and want to train LeNet to classify MNIST images with the script train_mnist.py.
+Let's start with an example on how to use this. Assume we are in `mxnet/example/image-classification` and want to train LeNet to classify MNIST images with the script train_mnist.py.
 On a single machine we can run the following to use 2 GPUs on a single machine with batch size of 128 on each GPU. Note that these command line arguments are specific to this script, and are not generic to any MXNet training script.
 
 ```
-python train_mnist.py --network lenet --batch-size 256 --gpus 0,1 --kv-store device
+python train_mnist.py --network lenet --gpus 0,1 --kv-store device
 ```
 
-Now suppose we have 4 machines which are ssh-able, meaning that they can ssh into each other without a password. We need to put the IPs of these machines into a file say `hosts`. For example the contents would be something like
- ```
- $ cat hosts
- 172.30.0.172
- 172.31.0.173
- 172.30.1.174
- 172.32.0.174
- ```
+If the mxnet directory which contains launch.py and train_mnist.py are accessible to all machines in the cluster (for example if they are on a network file system), we can run the following
+```
+../../tools/launch.py -n 4 --launcher ssh -H hosts python train_mnist.py --network lenet --gpus 0,1 --kv-store dist_sync_device
+```
 
-If the mxnet directory which contains launch.py and train_mnist.py
+Here, launch.py is used to submit the distributed training job. It takes the following options
+- -n denotes number of worker nodes to be launched
+- -s denotes number of server nodes to be launched. If it is not specified, it is taken to be equal to the number of worker nodes.
+- --launcher denotes the mode of communication. The options are
+    - `ssh` if machines can communicate through ssh
+    - `mpi` if Open MPI is available
+    - `sge` for Sun Grid Engine
+    - `yarn` for Apache Yarm
+    - `local` for launching all processes on the same local machine. This can be used for debugging purposes.
+- -H requires the path of hosts file. <br/>
+  This file contains IPs of the machines in the cluster. These machines should be able to communicate with each other. For `ssh`, passwordless authentication should be enabled. This file is only applicable and required when the launcher mode is `ssh` or `mpi`.
+  An example of the contents of the hosts file would be
+  ```
+  172.30.0.172
+  172.31.0.173
+  172.30.1.174
+  172.32.0.174
+  ```
+
+- `python train_mnist.py --network lenet --gpus 0,1 --kv-store dist_sync_device` is the command for the training job on each machine
+- Note the use of `dist_sync_device` for the kvstore used in the training script.
+
+If the script doesn't terminate successfully on its own, process might continue to be running even if the launch script ends. In such cases, we can run this command to terminate all running processes across all machines.
+```
+while read -u 10 host; do ssh -o "StrictHostKeyChecking no" $host "pkill -f python" ; done 10<hosts
+```
 
 ## Environment variables
  - MXNET_KVSTORE_REDUCTION_NTHREADS
