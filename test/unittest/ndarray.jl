@@ -396,6 +396,19 @@ function test_div()
   t6, a6 = rand_tensors(Float16, dims)
   scalar_large = 1e4
   @test t6 ./ scalar_large ≈ copy(a6 ./ scalar_large)
+
+  info("NDArray::div::scalar::type convert")
+  let x = mx.NDArray([1, 2, 3])
+    y = x ./ 1.1
+    @test eltype(y) == Int
+    @test copy(y) == [1, 2, 3]
+
+    y = x ./ 2
+    @test eltype(y) == Int  # this differs from julia
+    @test copy(y) == [0, 1, 1]
+
+    @test_throws AssertionError x ./ 0.5
+  end
 end
 
 

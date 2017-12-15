@@ -669,13 +669,21 @@ Matrix (2D NDArray) multiplication.
 
 Elementwise divide a scalar or an `NDArray` of the same shape from `dst`. Inplace updating.
 """
-function div_from!(dst::NDArray{T}, arg::NDArrayOrReal) where {T}
+function div_from!(dst::NDArray, arg::NDArrayOrReal)
   @assert dst.writable
   if isa(arg, Real)
-    _div_scalar(dst, scalar = convert(T, arg), out = dst)
+    _div_scalar(dst, scalar = arg, out = dst)
   else
     _div(dst, arg, out = dst)
   end
+  dst
+end
+
+function div_from!(dst::NDArray{T}, arg::Real) where {T<:Integer}
+  @assert dst.writable
+  @assert(round(T, arg) != zero(T), "Integer divided by zero")
+  _div_scalar(dst, scalar = arg, out = dst)
+  dst
 end
 
 """
