@@ -417,7 +417,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
                 else:
                     val_nll += calc_nll(seq_label_probs, batch_size, batch_seq_length)
             else:
-                val_nll += sum([x.asscalar() for x in seq_loss]) / batch_size
+                val_nll += sum([x.sum().asscalar() for x in seq_loss]) / batch_size
             nbatch += batch_size
 
         perp = np.exp(val_nll / nbatch)
