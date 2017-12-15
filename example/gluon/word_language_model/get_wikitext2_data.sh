@@ -26,7 +26,7 @@ if [[ ! -d "${DATA_DIR}" ]]; then
   mkdir -p ${DATA_DIR}
 fi
 
-#wget -P ${DATA_DIR} https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip
+wget -P ${DATA_DIR} https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip
 cd ${DATA_DIR}
 unzip wikitext-2-v1.zip
 
