@@ -265,7 +265,7 @@ def convert_dense(net, node, module, builder):
     name = node['name']
 
     inputs = node['inputs']
-    param = node['attr']
+    param = node['attrs']
     if 'no_bias' in param.keys():
         has_bias = not literal_eval(param['no_bias'])
     else:
