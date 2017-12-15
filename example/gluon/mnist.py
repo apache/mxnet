@@ -40,7 +40,7 @@ def parse_cli_args():
                         help='SGD momentum (default: 0.9)')
     parser.add_argument('--cuda', action='store_true', default=False,
                         help='Train on GPU with CUDA')
-    parser.add_argument('--log-interval', type=int, default=100, metavar='N',
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
     parser.add_argument('--kv-store', type=str, default='device')
     return parser.parse_args()
@@ -118,13 +118,13 @@ def train(epochs, options):
 
             if i % options.log_interval == 0 and i > 0:
                 name, acc = metric.get()
-                print('[Epoch %d Batch %d] Training: %s=%f'%(epoch, i, name, acc))
+                logging.info('[Epoch %d Batch %d] Training: %s=%f'%(epoch, i, name, acc))
 
         name, acc = metric.get()
-        print('[Epoch %d] Training: %s=%f'%(epoch, name, acc))
+        logging.info('[Epoch %d] Training: %s=%f'%(epoch, name, acc))
 
         name, val_acc = test_validation(net, ctx, val_data)
-        print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
+        logging.info('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
 
     net.save_params('mnist.params')
 
