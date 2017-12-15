@@ -25,6 +25,7 @@
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../common/utils.h"
 
 namespace mxnet {
@@ -74,6 +75,25 @@ bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, -1);
 }
 
+#if MXNET_USE_MKLDNN == 1
+static inline bool SupportMKLDNN(const std::vector<NDArray>& inputs) {
+  for (auto &i : inputs) {
+    if (!SupportMKLDNN(i))
+      return false;
+  }
+  return true;
+}
+
+static inline bool SupportStorageMKLDNN(const std::vector<int> &inputs) {
+  for (int i : inputs) {
+    if (!mxnet::SupportStorageMKLDNN(i))
+      return false;
+  }
+  return true;
+}
+
+#endif
+
 bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                            const int dev_mask,
                                            DispatchMode* dispatch_mode,
@@ -82,8 +102,7 @@ bool ElementWiseSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
-      && common::ContainsStorage(*in_attrs, kMKLDNNStorage)) {
+  if (dev_mask == mshadow::cpu::kDevMask && SupportStorageMKLDNN(*in_attrs)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     (*out_attrs)[0] = kMKLDNNStorage;
     return true;
@@ -110,7 +129,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
-  } else if (common::ContainsStorage(inputs, kMKLDNNStorage)) {
+  } else if (SupportMKLDNN(inputs)) {
     MKLDNNSum_Forward(attrs, op_ctx, inputs, req[0], outputs[0]);
 #endif
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
