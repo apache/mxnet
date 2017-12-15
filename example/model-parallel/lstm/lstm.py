@@ -84,7 +84,7 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
 
     last_hidden = []
     for seqidx in range(seq_len):
-        # embeding layer
+        # embedding layer
         with mx.AttrScope(ctx_group='embed'):
             data = mx.sym.Variable("t%d_data" % seqidx)
             hidden = mx.sym.Embedding(data=data, weight=embed_weight,
@@ -220,7 +220,7 @@ def setup_rnn_model(default_ctx,
             if not name.startswith("t"):
                 print("%s group=%s, ctx=%s" % (name, group, str(ctx)))
 
-        #bind with shared executor
+        # bind with shared executor
         rnn_exec = None
         if max_len == bucket_key:
               rnn_exec = rnn_sym.bind(default_ctx, args=arg_arrays,
@@ -356,7 +356,7 @@ def train_lstm(model, X_train_batch, X_val_batch,
             # update epoch counter
             epoch_counter += 1
             if epoch_counter % update_period == 0:
-                # updare parameters
+                # update parameters
                 norm = 0.
                 for idx, weight, grad, name in m.param_blocks:
                     grad /= batch_size
