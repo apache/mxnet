@@ -29,6 +29,7 @@
 #include <utility>
 #include <vector>
 #include "mshadow/tensor.h"
+#include "../operator_common.h"
 #include "../c_lapack_api.h"
 
 
