@@ -59,19 +59,18 @@ def transformer(data, label):
     data = data.reshape((-1,)).astype(np.float32)/255
     return data, label
 
-def get_train_data():
+def get_train_data(batch_size):
     return gluon.data.DataLoader(
         gluon.data.vision.MNIST('./data', train=True, transform=transformer),
-        batch_size=opt.batch_size, shuffle=True, last_batch='discard')
+        batch_size=batch_size, shuffle=True, last_batch='discard')
 
-def get_val_data():
+def get_val_data(batch_size):
     return gluon.data.DataLoader(
         gluon.data.vision.MNIST('./data', train=False, transform=transformer),
-        batch_size=opt.batch_size, shuffle=False)
+        batch_size=batch_size, shuffle=False)
 
-def test_validation(net, ctx):
+def test_validation(net, ctx, val_data):
     metric = mx.metric.Accuracy()
-    val_data = get_val_data()
     for data, label in val_data:
         data = data.as_in_context(ctx)
         label = label.as_in_context(ctx)
@@ -96,7 +95,8 @@ def train(epochs, options):
 
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    train_data = get_train_data()
+    train_data = get_train_data(options.batch_size)
+    val_data = get_val_data(options.batch_size)
 
     for epoch in range(epochs):
         # reset data iterator and metric at begining of epoch.
@@ -123,7 +123,7 @@ def train(epochs, options):
         name, acc = metric.get()
         print('[Epoch %d] Training: %s=%f'%(epoch, name, acc))
 
-        name, val_acc = test_validation(ctx)
+        name, val_acc = test_validation(net, ctx, val_data)
         print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
 
     net.save_params('mnist.params')
