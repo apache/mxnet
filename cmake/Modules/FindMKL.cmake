@@ -35,6 +35,10 @@
 #
 # cjolivier01: Changed to also look for MKLML library (subset of mkl) instead of standard MKL package
 #
+# Note: MKL can be fetched with the script prepare_mkl.sh in mxnet root directory.
+# It can be run as `sh prepare_mkl.sh mkl_dir`
+# Then when running cmake, pass -DMKL_INCLUDE_DIR=/path/to/mkl_dir
+
 
 if(MKL_FOUND)
   return()
