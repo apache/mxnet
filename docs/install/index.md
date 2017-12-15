@@ -443,7 +443,7 @@ $ sudo apt-get install -y build-essential git
 **Step 2** Install BLAS.
 
 *MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl).
-To install OpenBLAS and LAPACK, run the following.
+To install OpenBLAS, run the following.
 ```bash
 $ sudo apt-get install -y libopenblas-dev liblapack-dev
 ```
