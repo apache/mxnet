@@ -121,12 +121,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                            name="t%d_cls" % seqidx)
                 label = mx.sym.Variable("t%d_label" % seqidx)
                 if use_loss:
+                    # Currently softmax_cross_entropy fails https://github.com/apache/incubator-mxnet/issues/6874
+                    # So, workaround for now to fix this example
                     out = mx.symbol.softmax(data=fc)
                     label = mx.sym.Reshape(label, shape=(-1,1))
                     ce = - mx.sym.broadcast_add(mx.sym.broadcast_mul(label, mx.sym.log(out)),
                                               mx.sym.broadcast_mul((1 - label), mx.sym.log(1 - out)))
                     sm = mx.sym.MakeLoss(ce,  name="t%d_sm" % seqidx)
-                    #sm = mx.sym.softmax_cross_entropy(fc, label, name="t%d_sm" % seqidx)
                 else:
                     sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="t%d_sm" % seqidx)
                 out_prob.append(sm)
@@ -139,12 +140,13 @@ def lstm_unroll(num_lstm_layer, seq_len, input_size,
                                        num_hidden=num_label)
             label = mx.sym.Variable("label")
             if use_loss:
+                # Currently softmax_cross_entropy fails https://github.com/apache/incubator-mxnet/issues/6874
+                # So, workaround for now to fix this example
                 out = mx.symbol.softmax(data=fc)
                 label = mx.sym.Reshape(label, shape=(-1, 1))
                 ce = mx.sym.broadcast_add(mx.sym.broadcast_mul(label, mx.sym.log(out)),
                                               mx.sym.broadcast_mul((1 - label), mx.sym.log(1 - out)))
                 sm = mx.sym.MakeLoss(ce,  name="sm")
-                #sm = mx.sym.softmax_cross_entropy(fc, label, name="sm")
             else:
                 sm = mx.sym.SoftmaxOutput(data=fc, label=label, name="sm")
             out_prob = [sm]
