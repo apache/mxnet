@@ -13,7 +13,7 @@ In the following example `y` can be a `Real` value or another `NDArray`
 | `^` | `x .^ y` | Elementwise power          |
 
 
-## Trigonometric functions
+## Trigonometric Functions
 
 | API            | Example    |                             |
 |----------------|------------|-----------------------------|
@@ -23,6 +23,18 @@ In the following example `y` can be a `Real` value or another `NDArray`
 | [`asin`](@ref) | `asin.(x)` | Elementwise inverse sine    |
 | [`acos`](@ref) | `acos.(x)` | Elementwise inverse cosine  |
 | [`atan`](@ref) | `atan.(x)` | Elementwise inverse tangent |
+
+
+## Hyperbolic Functions
+
+| API             | Example     |                                        |
+|-----------------|-------------|----------------------------------------|
+| [`sinh`](@ref)  | `sinh.(x)`  | Elementwise hyperbolic sine            |
+| [`cosh`](@ref)  | `cosh.(x)`  | Elementwise hyperbolic cosine          |
+| [`tanh`](@ref)  | `tanh.(x)`  | Elementwise hyperbolic tangent         |
+| [`asinh`](@ref) | `asinh.(x)` | Elementwise inverse hyperbolic sine    |
+| [`acosh`](@ref) | `acosh.(x)` | Elementwise inverse hyperbolic cosine  |
+| [`atanh`](@ref) | `atanh.(x)` | Elementwise inverse hyperbolic tangent |
 
 
 ## Reference
