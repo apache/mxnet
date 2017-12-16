@@ -3,6 +3,8 @@ struct MXError <: Exception
   msg :: AbstractString
 end
 
+Base.show(io::IO, e::MXError) = print(io, e.msg)
+
 ################################################################################
 # Common types used in MXNet API
 ################################################################################
