@@ -333,12 +333,6 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=1e-4)
 
 
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
-
-
 def test_softmax_cross_entropy():
     batch_size = 16
     num_class = 20
