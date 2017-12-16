@@ -402,6 +402,17 @@ static inline bool same_shape(const TShape &shape, mkldnn_dims_t dims, int ndims
   return true;
 }
 
+bool NDArray::IsMKLDNNDefault() const {
+  // If we don't have mkldnn memory yet, we just assume it's not the default
+  // format.
+  if (storage_type() == kMKLDNNStorage && ptr_->Mkl_mem_ != nullptr) {
+    auto desc = ptr_->Mkl_mem_->get_primitive_desc().desc();
+    return desc.data.format == GetDefaultFormat(desc);
+  } else {
+    return false;
+  }
+}
+
 void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   // The shape of the array and the one of the MKL memory may mismatch.
   // For example, if the array stores parameters, the MKL memory may store data
