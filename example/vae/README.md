@@ -16,6 +16,6 @@ MXNet-based VAE class(from VAE.py) to do the training directly.
 
 - **VAE.py** : Contains class which implements the Variational Auto Encoder. This is used in the above tutorial.
 
-In VAE, the encoder becomes a variational inference network that maps the data to the a distribution
+In VAE, the encoder becomes a variational inference network that maps the data to a distribution
 for the hidden variables, and the decoder becomes a generative network that maps the latent variables back to the data.
 The network architecture shown in the tutorial uses Gaussian MLP as an encoder and Bernoulli MLP as a decoder.

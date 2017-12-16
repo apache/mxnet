@@ -3,7 +3,8 @@ Model Parallel Matrix Factorization
 
 The example walks you through a matrix factorization algorithm for recommendations and also
 demonstrates the basic usage of `group2ctxs` in `Module`, which allows one part of the model to be
-trained on cpu and the other on gpu.
+trained on cpu and the other on gpu. So, it is necessary to have GPUs available on the machine
+to run this example.
 
 To run this example, first make sure you download a dataset of 10 million movie ratings available
 from [the MovieLens project](http://files.grouplens.org/datasets/movielens/) by running following command:

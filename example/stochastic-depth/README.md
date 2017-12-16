@@ -5,8 +5,7 @@ This folder contains examples showing implementation of the stochastic depth alg
 Huang, Gao, et al. ["Deep networks with stochastic depth."](https://arxiv.org/abs/1603.09382)
 arXiv preprint arXiv:1603.09382 (2016). This paper introduces a new way to perturb networks during training
 in order to improve their performance. Stochastic Depth (SD) is a method for residual networks,
-which randomly removes/deactivates residual blocks
-during training.
+which randomly removes/deactivates residual blocks during training.
 
 The paper talks about constructing the network of residual blocks which are basically a set of
 convolution layers and a bypass that passes the information from the previous layer through without any change.

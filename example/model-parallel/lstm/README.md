@@ -3,8 +3,8 @@ Model Parallel LSTM
 
 This is an example showing how to do model parallel LSTM in MXNet.
 
-To run this example, first make sure you download a dataset of PenTreeBank available
-[here](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/) by running following command:
+We use [the PenTreeBank dataset](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/)
+in this example. Download the dataset with below command:
 
 `bash get_ptb_data.sh`
 
