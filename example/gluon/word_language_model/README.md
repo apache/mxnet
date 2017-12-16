@@ -3,6 +3,7 @@
 This example trains a multi-layer RNN (Elman, GRU, or LSTM) on Penn Treebank (PTB) language modeling benchmark.
 
 The model obtains the state-of-the-art result on PTB using LSTM, getting a test perplexity of ~72.
+And ~97 ppl in WikiText-2, outperform than basic LSTM(99.3) and reach Variational LSTM(96.3).
 
 The following techniques have been adopted for SOTA results: 
 - [LSTM for LM](https://arxiv.org/pdf/1409.2329.pdf)
@@ -36,6 +37,11 @@ Example runs and the results:
 python train.py -data ./data/ptb. --cuda --tied --nhid 650 --emsize 650 --dropout 0.5        # Test ppl of 75.3 in ptb
 python train.py -data ./data/ptb. --cuda --tied --nhid 1500 --emsize 1500 --dropout 0.65      # Test ppl of 72.0 in ptb
 ```
+
+```
+python train.py -data ./data/wikitext-2/wiki. --cuda --tied --nhid 256 --emsize 256          # Test ppl of 97.07 in wikitext-2 
+```
+
 
 <br>
 
