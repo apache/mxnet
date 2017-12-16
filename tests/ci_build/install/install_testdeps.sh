@@ -35,6 +35,6 @@ cp libgtest.a /usr/local/gtest/lib
 cp -r include/ /usr/local/gtest/
 export LD_LIBRARY_PATH=/usr/local/gtest/lib:$LD_LIBRARY_PATH
 
-pip3 install nose
+pip3 install nose flaky
 ln -s -f /opt/bin/nosetests /usr/local/bin/nosetests3
 ln -s -f /opt/bin/nosetests-3.4 /usr/local/bin/nosetests-3.4

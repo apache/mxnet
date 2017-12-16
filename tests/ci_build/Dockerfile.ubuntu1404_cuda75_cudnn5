@@ -11,16 +11,16 @@ RUN apt-get install -y libatlas-base-dev
 
 # PYTHON2
 RUN apt-get install -y python-setuptools python-pip python-dev unzip gfortran
-RUN pip install numpy nose scipy
+RUN pip install numpy nose flaky scipy
 
 # PYTHON3
 RUN apt-get install -y python3-setuptools python3-pip
-RUN pip3 install numpy nose scipy && ln -s -f /usr/local/bin/nosetests-3.4 /usr/local/bin/nosetests3
+RUN pip3 install numpy nose flaky scipy && ln -s -f /usr/local/bin/nosetests-3.4 /usr/local/bin/nosetests3
 
 # TESTDEPS
 RUN apt-get install -y libgtest-dev cmake wget
 RUN cd /usr/src/gtest && cmake CMakeLists.txt && make && cp *.a /usr/lib
-RUN pip install nose cpplint 'pylint==1.4.4' 'astroid==1.3.6'
+RUN pip install nose flaky cpplint 'pylint==1.4.4' 'astroid==1.3.6'
 
 # MAVEN
 RUN apt-get install -y software-properties-common
