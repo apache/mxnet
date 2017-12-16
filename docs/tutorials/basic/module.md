@@ -175,6 +175,7 @@ It can be used as follows:
 ```python
 score = mod.score(val_iter, ['acc'])
 print("Accuracy score is %f" % (score[0][1]))
+assert score[0][1] > 0.77, "Achieved accuracy (%f) is less than expected (0.77)" % score[0][1]
 ```
 
 Some of the other metrics which can be used are `top_k_acc`(top-k-accuracy),
@@ -218,10 +219,11 @@ initializing randomly from scratch. We also set the `begin_epoch` parameter so t
 ```python
 mod = mx.mod.Module(symbol=sym)
 mod.fit(train_iter,
-        num_epoch=8,
+        num_epoch=20,
         arg_params=arg_params,
         aux_params=aux_params,
         begin_epoch=3)
+assert score[0][1] > 0.77, "Achieved accuracy (%f) is less than expected (0.77)" % score[0][1]        
 ```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
