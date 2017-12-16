@@ -33,7 +33,7 @@
 namespace mxnet {
 namespace op {
 
-// return a shape of scalar
+// return a shape of batch_size
 inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
                                      std::vector<TShape> *in_attrs,
                                      std::vector<TShape> *out_attrs) {
@@ -66,18 +66,17 @@ void SoftmaxCrossEntropyForward(const nnvm::NodeAttrs& attrs,
     mshadow::Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>(
         mshadow::Shape1(mdata.shape_.Size() + mlabel.size(0)), s);
     mshadow::Tensor<xpu, 2, DType> temp1(workspace.dptr_, mdata.shape_, s);
-    mshadow::Tensor<xpu, 2, DType> temp2(workspace.dptr_ + mdata.shape_.Size(),
-        mshadow::Shape2(1, mlabel.size(0)), s);
+    mshadow::Tensor<xpu, 1, DType> temp2(workspace.dptr_ + mdata.shape_.Size(),
+        mshadow::Shape1(mlabel.size(0)), s);
     // calculate softmax on temp
     // TODO(tqchen): change to SoftmaxLog later
     mshadow::Softmax(temp1, mdata);
     // choose the softmax rows
-    mshadow::Tensor<xpu, 1, DType> tdst = temp2[0];
-    tdst = F<mshadow_op::negation>(
+    temp2 = F<mshadow_op::negation>(
         F<mshadow_op::log>(
             F<mshadow_op::maximum>(mat_choose_row_element(temp1, mlabel),
                                    scalar<DType>(1e-8f))));
-    ASSIGN_DISPATCH(out, req[0], tdst);
+    ASSIGN_DISPATCH(out, req[0], F<mshadow_op::identity>(temp2));
   });
 }
 

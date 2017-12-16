@@ -342,30 +342,35 @@ def test_softmax():
 def test_softmax_cross_entropy():
     batch_size = 16
     num_class = 20
-    num_filter = 5
 
-    data = mx.sym.Variable("data")
-    label = mx.sym.Variable("softmax_label")
-    conv = mx.sym.Convolution(data=data, kernel=(2, 2), num_filter=num_filter)
-    flatten = mx.sym.Flatten(data=conv)
-    fc = mx.sym.FullyConnected(data=flatten, num_hidden=num_class)
-    ce = mx.sym.softmax_cross_entropy(data=fc, label=label)
-    out = mx.sym.make_loss(ce)
+    data = mx.sym.Variable('data')
+    label = mx.sym.Variable('softmax_label')
 
-    data_shape = (batch_size, 3, 64, 64)
+    ce = mx.sym.softmax_cross_entropy(data=data, label=label)
+    out = mx.sym.make_loss(ce, name='softmax')
+
+    data_shape = (batch_size, num_class)
     label_shape = (batch_size,)
     mod = mx.mod.Module(symbol=out)
     mod.bind(data_shapes=[('data', data_shape)],
-             label_shapes=[('softmax_label', label_shape)])
+             label_shapes=[('softmax_label', label_shape)],
+             inputs_need_grad=True)
     mod.init_params()
     mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
-    mod.forward(mx.io.DataBatch(data=[mx.ndarray.normal(0, 255, shape=data_shape)],
-                                label=[mx.ndarray.arange(0, batch_size)]))
+
+    data_array = mx.nd.random.uniform(0, 10, shape=data_shape)
+    label_array = mx.nd.array([i for i in range(batch_size)])
+
+    mod.forward(mx.io.DataBatch(data=[data_array],
+                                label=[label_array]))
     assert mod.get_outputs()[0].shape == (data_shape[0],)
+    expected_out = -mx.nd.pick(mx.nd.log_softmax(data_array), label_array, axis=1)
+    assert_almost_equal(mod.get_outputs()[0].asnumpy(), expected_out.asnumpy())
 
     mod.backward()
-    grad_dict = mod._exec_group.execs[0].grad_dict
-    assert grad_dict['convolution0_bias'].shape == (num_filter,)
+    grad = mod.get_input_grads()
+    expected_grad = mx.nd.softmax(data_array) - mx.nd.one_hot(label_array, depth=num_class)
+    assert_almost_equal(grad[0].asnumpy(), expected_grad.asnumpy())
 
 
 def test_python_op():
