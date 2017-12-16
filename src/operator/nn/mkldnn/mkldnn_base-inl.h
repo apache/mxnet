@@ -122,18 +122,13 @@ static inline bool SupportMKLDNNArray(int dtype, const TShape &shape) {
   return support;
 }
 
-static inline bool SupportStorageMKLDNN(int stype) {
-  return stype == kMKLDNNStorage || stype == kDefaultStorage;
-}
-
 static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
   int ndim = shape.ndim();
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNN(const NDArray &input) {
-  return SupportMKLDNN(input.dtype(), input.shape())
-          && SupportStorageMKLDNN(input.storage_type());
+  return SupportMKLDNN(input.dtype(), input.shape());
 }
 
 static inline bool SupportMKLDNNConv(const NDArray &input) {
