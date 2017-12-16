@@ -43,7 +43,7 @@ inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
       << "SoftmaxCrossEntropy only accept 1D label";
   CHECK_EQ((*in_attrs)[0][0], (*in_attrs)[1][0])
       << "SoftmaxCrossEntropy: data label shape mismatch";
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(1));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(mshadow::Shape1((*in_attrs)[0][0])));
   return true;
 }
 
@@ -77,7 +77,7 @@ void SoftmaxCrossEntropyForward(const nnvm::NodeAttrs& attrs,
         F<mshadow_op::log>(
             F<mshadow_op::maximum>(mat_choose_row_element(temp1, mlabel),
                                    scalar<DType>(1e-8f))));
-    ASSIGN_DISPATCH(out, req[0], sumall_except_dim<0>(temp2));
+    ASSIGN_DISPATCH(out, req[0], tdst);
   });
 }
 
@@ -100,7 +100,7 @@ void SoftmaxCrossEntropyBackward(const nnvm::NodeAttrs& attrs,
         mdata.shape_, s);
     mshadow::Softmax(temp, mdata);
     mshadow::SoftmaxGrad(temp, temp, mlabel);
-    ASSIGN_DISPATCH(mdata_grad, req[0], broadcast_scalar(mscale, temp.shape_) * temp);
+    ASSIGN_DISPATCH(mdata_grad, req[0], broadcast<0>(mscale, temp.shape_) * temp);
   });
 }
 

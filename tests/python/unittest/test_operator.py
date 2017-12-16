@@ -340,26 +340,32 @@ def test_softmax():
 
 
 def test_softmax_cross_entropy():
-    batch_size = 32
+    batch_size = 16
     num_class = 20
+    num_filter = 5
 
     data = mx.sym.Variable("data")
     label = mx.sym.Variable("softmax_label")
-    conv = mx.sym.Convolution(data=data, kernel=(2, 2), num_filter=5)
+    conv = mx.sym.Convolution(data=data, kernel=(2, 2), num_filter=num_filter)
     flatten = mx.sym.Flatten(data=conv)
     fc = mx.sym.FullyConnected(data=flatten, num_hidden=num_class)
-    out = mx.sym.softmax_cross_entropy(data=fc, label=label)
+    ce = mx.sym.softmax_cross_entropy(data=fc, label=label)
+    out = mx.sym.make_loss(ce)
 
-    data_shape = (batch_size , 3, 64, 64)
+    data_shape = (batch_size, 3, 64, 64)
     label_shape = (batch_size,)
     mod = mx.mod.Module(symbol=out)
     mod.bind(data_shapes=[('data', data_shape)],
              label_shapes=[('softmax_label', label_shape)])
     mod.init_params()
     mod.init_optimizer(optimizer_params={'learning_rate': 0.01})
-    mod.forward(mx.io.DataBatch(data=[mx.ndarray.normal(0, 10, shape=data_shape)],
+    mod.forward(mx.io.DataBatch(data=[mx.ndarray.normal(0, 255, shape=data_shape)],
                                 label=[mx.ndarray.arange(0, batch_size)]))
-    assert mod.get_outputs()[0].shape == (1,)
+    assert mod.get_outputs()[0].shape == (data_shape[0],)
+
+    mod.backward()
+    grad_dict = mod._exec_group.execs[0].grad_dict
+    assert grad_dict['convolution0_bias'].shape == (num_filter,)
 
 
 def test_python_op():
