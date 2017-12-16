@@ -244,6 +244,7 @@ for epoch in range(10):
         mod.backward()                          # compute gradients
         mod.update()                            # update parameters
     print('Epoch %d, Metric = %s' % (epoch, metric.get()))
+assert metric.get()[1] < 1, "Achieved MSE (%f) is larger than expected (1.0)" % metric.get()[1]    
 ```
 
 
