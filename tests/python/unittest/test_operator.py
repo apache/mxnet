@@ -1414,7 +1414,7 @@ def test_run_convolution_dilated_impulse_response(dil=(1,1), kernel_shape=(3,3),
     # Input for spike response
     data_size = 33
     data_shape = (1, 1) + (data_size,) * dim
-    center = (0,0) + (data_size/2,) * dim
+    center = (0,0) + (data_size // 2,) * dim
     spike_imgs = np.zeros(shape=data_shape, dtype=np.float32)
     spike_imgs[center] = 1.0
     spike_img = mx.nd.array(spike_imgs)
