@@ -628,10 +628,36 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, def_mem->get_data_handle()));
     stream->RegisterMem(tmp_mem);
     stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->Mkl_mem_));
-  } else {
+  } else if (mem.get_primitive_desc() == ptr_->Mkl_mem_->get_primitive_desc()) {
+    // If the layout is the same, we can just copy data.
     stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
+  } else {
+    auto src_def = GetDefaultFormat(mem.get_primitive_desc().desc());
+    auto dst_def = GetDefaultFormat(ptr_->Mkl_mem_->get_primitive_desc().desc());
+    // If both are not using the default layouts. There isn't much we can do,
+    // other than reorder data layout directly.
+    if (dst_def != ptr_->Mkl_mem_->get_primitive_desc().desc().data.format
+        && src_def != mem.get_primitive_desc().desc().data.format) {
+      stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->Mkl_mem_));
+    } else if (dst_def == ptr_->Mkl_mem_->get_primitive_desc().desc().data.format) {
+      // If the dest mem uses the default memory layout, we can simply use
+      // the default format of the source memory to improve perf of reorder.
+      auto pd = GetPrimitiveDesc(ptr_->Mkl_mem_->get_primitive_desc(), src_def);
+      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, ptr_->Mkl_mem_->get_data_handle()));
+      stream->RegisterMem(tmp_mem);
+      stream->RegisterPrim(mkldnn::reorder(mem, *tmp_mem));
+    } else {
+      // If the src mem uses the default memory layout, we can use
+      // the default format of the source memory to improve perf.
+      auto pd = GetPrimitiveDesc(mem.get_primitive_desc(), dst_def);
+      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
+      stream->RegisterMem(tmp_mem);
+      stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->Mkl_mem_));
+    }
   }
 }
+mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
+                                                mkldnn_memory_format_t format);
 
 mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &desc) {
   mkldnn::memory::primitive_desc _desc = desc;
