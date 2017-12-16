@@ -1,7 +1,7 @@
 Model Parallel Matrix Factorization
 ===================================
 
-The example walks you through a matrix factorization algorithm for recommendations and also
+This example walks you through a matrix factorization algorithm for recommendations and also
 demonstrates the basic usage of `group2ctxs` in `Module`, which allows one part of the model to be
 trained on cpu and the other on gpu. So, it is necessary to have GPUs available on the machine
 to run this example.
