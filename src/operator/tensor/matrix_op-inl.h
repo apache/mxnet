@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file matrix_op-inl.h
  * \brief Function definition of matrix related operators
  */
@@ -502,7 +503,7 @@ struct SliceDimTwoCsrAssign {
   /*!
    * \brief This function slices a CSRNDArray on axis one between begin_col and end_col
    * \param i           loop index
-   * \param out_idx     output csr ndarray column indices    
+   * \param out_idx     output csr ndarray column indices
    * \param out_data    output csr ndarray data
    * \param out_indptr  output csr ndarray row index pointer
    * \param in_idx      input csr ndarray column indices

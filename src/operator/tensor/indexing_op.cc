@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.cc
  * \brief
  * \author Siyi Li, Chi Zhang
@@ -28,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 template<>
-void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
+void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
                                           const TBlob& data,
                                           const NDArray& weight,
                                           const OpReqType req,
@@ -36,6 +37,7 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(mshadow::Stream<cpu>* s,
   if (req == kNullOp) return;
   using namespace rowsparse;
   using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   // zeros weight
   if (req == kWriteTo && !weight.storage_initialized()) {
     size_t out_size = output.shape_.Size();

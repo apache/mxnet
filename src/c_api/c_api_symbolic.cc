@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file c_api_symbolic.cc
  * \brief C API of mxnet
  */
@@ -307,6 +308,11 @@ int MXSymbolListOutputs(SymbolHandle symbol,
                         mx_uint *out_size,
                         const char ***out_str_array) {
   return NNSymbolListOutputNames(symbol, out_size, out_str_array);
+}
+
+int MXSymbolGetNumOutputs(SymbolHandle symbol,
+                           mx_uint *output_count) {
+  return NNSymbolGetNumOutputs(symbol, output_count);
 }
 
 int MXSymbolCompose(SymbolHandle sym,

@@ -15,15 +15,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
 import mxnet as mx
 import numpy as np
+import os
 import pickle as pkl
 import unittest
 from nose.tools import raises
-from mxnet.test_utils import *
+from mxnet.test_utils import almost_equal
+from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import default_context
+from mxnet.test_utils import np_reduce
+from mxnet.test_utils import same
 from numpy.testing import assert_allclose
-import unittest
 import mxnet.autograd
 
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
@@ -586,7 +589,7 @@ def test_order(ctx=default_context()):
     nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
     gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=5*5*5*5, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
-    
+
     # test topk with a big shape
     a = mx.nd.arange(0, 54686454, step=1, repeat=1)
     assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
@@ -924,6 +927,16 @@ def test_ndarray_indexing():
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])
+
+
+def test_assign_float_value_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/8668"""
+    a = np.array([47.844944], dtype=np.float32)
+    b = mx.nd.zeros(1, dtype=np.float32)
+    b[0] = a
+    assert same(a, b.asnumpy())
+    b[0] = a[0]
+    assert same(a, b.asnumpy())
 
 
 if __name__ == '__main__':

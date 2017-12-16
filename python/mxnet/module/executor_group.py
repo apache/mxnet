@@ -95,6 +95,35 @@ def _merge_multi_context(outputs, major_axis):
             rets.append(tensors[0])
     return rets
 
+def _prepare_group2ctxs(group2ctxs, ctx_len):
+    """Prepare the group2contexts, will duplicate the context
+    if some ctx_group map to only one context.
+    """
+    if group2ctxs is None:
+        return [None] * ctx_len
+    elif isinstance(group2ctxs, list):
+        assert(len(group2ctxs) == ctx_len), "length of group2ctxs\
+            should be %d" % ctx_len
+        return group2ctxs
+    elif isinstance(group2ctxs, dict):
+        ret = [{} for i in range(ctx_len)]
+        for k, v in group2ctxs.items():
+            ctxs = None
+            if isinstance(v, ctx.Context):
+                ctxs = [v] * ctx_len
+            else:
+                if len(v) == 1:
+                    ctxs = v * ctx_len
+                else:
+                    assert(len(v) == ctx_len), "length of group2ctxs[%s]\
+                        should be %d or 1" % (k, ctx_len)
+                    ctxs = v
+            for i in range(ctx_len):
+                ret[i][k] = ctxs[i]
+        return ret
+    else:
+        assert(False), "group2ctxs should be list of dict of str to context,\
+            or dict of str to context or list of context"
 
 class DataParallelExecutorGroup(object):
     """A group of executors that lives on a group of devices.
@@ -139,7 +168,8 @@ class DataParallelExecutorGroup(object):
         Requirement for gradient accumulation. Can be 'write', 'add', or 'null'
         (default to 'write').
         Can be specified globally (str) or for each argument (list, dict).
-    group2ctxs : list of dict of str to context
+    group2ctxs : dict of str to context or list of context,
+                 or list of dict of str to context
         Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     """
     def __init__(self, symbol, contexts, workload, data_shapes, label_shapes, param_names,
@@ -152,10 +182,7 @@ class DataParallelExecutorGroup(object):
         self.symbol = symbol
         self.contexts = contexts
         self.workload = workload
-        if group2ctxs is None:
-            group2ctxs = [None] * len(self.contexts)
-        assert len(group2ctxs) == len(self.contexts)
-        self.group2ctxs = group2ctxs
+        self.group2ctxs = _prepare_group2ctxs(group2ctxs, len(contexts))
 
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad

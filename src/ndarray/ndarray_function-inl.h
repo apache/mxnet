@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2015 by Contributors
  * \file ndarray_function-inl.h
  * \brief The real implementation of NDArray functions.
  */
@@ -413,7 +414,7 @@ void ElementwiseSum<DEVICE>(const std::vector<TBlob> source,
       }
       default: {
         Tensor<xpu, 2, DType> in_0 = source[0].FlatTo2D<xpu, DType>(s);
-        out = F<mshadow::op::identity>(in_0);
+        out = F<op::mshadow_op::identity>(in_0);
         for (size_t i = 1; i < source.size(); ++i) {
           out += source[i].FlatTo2D<xpu, DType>(s);
         }

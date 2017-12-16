@@ -33,7 +33,7 @@ DEBUG = 0
 # whether compile with profiler
 USE_PROFILER =
 
-# whether to turn on signal handler (e.g. segfault logger)
+# whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER =
 
 # the additional link flags you want to add
@@ -56,6 +56,11 @@ USE_CUDA_PATH = NONE
 
 # whether use CuDNN R3 library
 USE_CUDNN = 0
+
+#whether to use NCCL library
+USE_NCCL = 0
+#add the path to NCCL library
+USE_NCCL_PATH = NONE
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -153,6 +158,12 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 # sudo apt-get install -y libcurl4-openssl-dev
 USE_S3 = 0
 
+#----------------------------
+# performance settings
+#----------------------------
+# Use operator tuning
+USE_OPERATOR_TUNING = 1
+
 # Use gperftools if found
 USE_GPERFTOOLS = 1
 
@@ -181,11 +192,6 @@ USE_CPP_PACKAGE = 0
 # You also need to add CAFFE_PATH/build/lib to your LD_LIBRARY_PATH
 # CAFFE_PATH = $(HOME)/caffe
 # MXNET_PLUGINS += plugin/caffe/caffe.mk
-
-# whether to use torch integration. This requires installing torch.
-# You also need to add TORCH_PATH/install/lib to your LD_LIBRARY_PATH
-# TORCH_PATH = $(HOME)/torch
-# MXNET_PLUGINS += plugin/torch/torch.mk
 
 # WARPCTC_PATH = $(HOME)/warp-ctc
 # MXNET_PLUGINS += plugin/warpctc/warpctc.mk

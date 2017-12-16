@@ -18,6 +18,7 @@
  */
 
 /*!
+ *  Copyright (c) 2016 by Contributors
  * \file init_op.cu
  * \brief GPU Implementation of init op
  */
@@ -41,6 +42,7 @@ void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst) {
       s, indptr_data.Size(), indptr_data.dptr<IType>());
   });
 }
+
 
 NNVM_REGISTER_OP(_zeros)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>)

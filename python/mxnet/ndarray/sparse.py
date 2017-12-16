@@ -658,8 +658,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                 if value.handle is not self.handle:
                     value.copyto(self)
             elif isinstance(value, numeric_types):
-                raise ValueError("Assigning numeric types to RowSparseNDArray " \
-                                 "is not implemented yet.")
+                _internal._set_value(float(value), out=self)
             elif isinstance(value, (np.ndarray, np.generic)):
                 warnings.warn('Assigning non-NDArray object to RowSparseNDArray is not efficient',
                               RuntimeWarning)
@@ -747,6 +746,13 @@ class RowSparseNDArray(BaseSparseNDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def retain(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`retain`.
+
+        The arguments are the same as for :py:func:`retain`, with
+        this array as data.
+        """
+        return retain(self, *args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file test_util.h
  * \brief unit test performance analysis functions
  * \author Chris Olivier
@@ -31,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <random>
 
 #if MXNET_USE_VTUNE
 #include <ittnotify.h>
@@ -43,6 +45,7 @@ extern bool unitTestsWithCuda;
 extern bool debug_output;
 extern bool quick_test;
 extern bool performance_run;
+extern bool csv;
 
 /*! \brief Pause VTune analysis */
 struct VTunePause {
@@ -510,12 +513,16 @@ inline void print(const RunContext& ctx,
 }
 
 inline std::string demangle(const char *name) {
+#if defined(__GLIBCXX__) || defined(_LIBCPP_VERSION)
   int status = -4;  // some arbitrary value to eliminate the compiler warning
   std::unique_ptr<char, void(*)(void*)> res {
     abi::__cxa_demangle(name, nullptr, nullptr, &status),
     &std::free
   };
   return status ? name : res.get();
+#else
+  return name;
+#endif
 }
 
 template<typename T>
@@ -603,7 +610,7 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
     defect   = num_rand % num_bins;
   ScalarType x;
   do {
-    x = random();
+    x = std::rand();
   } while (num_rand - defect <= (uint64_t)x);
 
   return static_cast<ScalarType>(x / bin_size + min);
@@ -671,16 +678,20 @@ struct less_shapevect {
 };
 
 inline std::string pretty_num(uint64_t val) {
-  std::string res, s = std::to_string(val);
-  size_t ctr = 0;
-  for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
-    if (ctr && (ctr % 3) == 0) {
-      res += ",";
+  if (!test::csv) {
+    std::string res, s = std::to_string(val);
+    size_t ctr = 0;
+    for (int i = static_cast<int>(s.size()) - 1; i >= 0; --i, ++ctr) {
+      if (ctr && (ctr % 3) == 0) {
+        res += ",";
+      }
+      res.push_back(s[i]);
     }
-    res.push_back(s[i]);
+    std::reverse(res.begin(), res.end());
+    return res;
+  } else {
+    return std::to_string(val);
   }
-  std::reverse(res.begin(), res.end());
-  return res;
 }
 
 /*! \brief Change a value during the scope of this declaration */

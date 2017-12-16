@@ -44,8 +44,24 @@ def test_aux_init():
     assert (mod.get_params()[1]['bn_moving_var'].asnumpy() == 1).all()
     assert (mod.get_params()[1]['bn_moving_mean'].asnumpy() == 0).all()
 
+def test_rsp_const_init():
+    def check_rsp_const_init(init, val):
+        shape = (10, 10)
+        x = mx.symbol.Variable("data", stype='csr')
+        weight = mx.symbol.Variable("weight", shape=(shape[1], 2),
+                                    init=init, stype='row_sparse')
+        dot = mx.symbol.sparse.dot(x, weight)
+        mod = mx.mod.Module(dot, label_names=None)
+        mod.bind(data_shapes=[('data', shape)])
+        mod.init_params()
+        assert (list(mod.get_params()[0].values())[0].asnumpy() == val).all()
+
+    check_rsp_const_init(mx.initializer.Constant(value=2.), 2.)
+    check_rsp_const_init(mx.initializer.Zero(), 0.)
+    check_rsp_const_init(mx.initializer.One(), 1.)
 
 if __name__ == '__main__':
     test_variable_init()
     test_default_init()
     test_aux_init()
+    test_rsp_const_init()

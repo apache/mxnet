@@ -36,15 +36,15 @@ namespace op {
 #define COREOP_BWD_OP_NAME_VALUE_NONE   "[none]"
 
 enum TimingDirection {
-  Forward,
-  Backward
+  kForward,
+  kBackward
 };
 
 inline const char *TimingDirectionAsString(const TimingDirection td) {
   switch (td) {
-    case Forward:
+    case kForward:
       return "Forward";
-    case Backward:
+    case kBackward:
       return "Backward";
     default:
       CHECK(false) << "Unknown timing direction: " << static_cast<int>(td);
@@ -138,7 +138,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     AccessAsCPU(array, ctx_.run_ctx, [this](const NDArray &arr) {
       test::op::OperatorDataInitializer<DType>::FillRandom(arr.data());
     });
-    return std::move(array);
+    return array;
   }
 
   /*!
@@ -154,7 +154,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     AccessAsCPU(array, ctx_.run_ctx, [this](const NDArray &arr) {
       test::op::OperatorDataInitializer<DType>::FillZero(arr.data());
     });
-    return std::move(array);
+    return array;
   }
 
   nnvm::NodePtr MakeNode() const {
@@ -426,7 +426,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   inline bool initBackward(const OpProp &opProp, std::vector<int> *in_type) { return true; }
 
   inline void forward(const size_t count) {
-    perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), Forward, "Forward", count);
+    perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), kForward, "Forward", count);
     VTuneResume profile;
     for (size_t i = 0; i < count; ++i) {
       Execute();
@@ -435,7 +435,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
   inline void backward(const size_t count) {
     CHECK(HasBackward());
-    perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), Backward, "Backward", count);
+    perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), kBackward, "Backward", count);
     VTuneResume profile;
     for (size_t i = 0; i < count; ++i) {
       ExecuteBackward();

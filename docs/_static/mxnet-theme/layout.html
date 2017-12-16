@@ -56,12 +56,12 @@
       };
     </script>
 
-    <script type="text/javascript" src="{{ pathto('_static/jquery-1.11.1.js', 1) }}"></script>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
     {% for name in ['underscore.js', 'searchtools_custom.js', 'doctools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
 
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript"> jQuery(function() { Search.loadIndex("{{ pathto('/searchindex.js', 1) }}"); Search.init();}); </script>
 
     <script>
@@ -152,7 +152,6 @@
     <div class='content-block'>
     {%- include "navbar.html" %}
     
-
     {% if pagename != 'index' %}
     <script type="text/javascript">
         $('body').css('background', 'white');

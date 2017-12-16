@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file ndarray_op.cc
  * \brief
  * \author Junyuan Xie

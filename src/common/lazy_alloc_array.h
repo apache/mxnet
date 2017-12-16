@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file lazy_alloc_array.h
  * \brief An array that lazily allocate elements as
  *   First time the cell get visited.

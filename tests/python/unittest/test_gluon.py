@@ -23,6 +23,7 @@ import numpy as np
 from nose.tools import raises
 from copy import deepcopy
 import warnings
+import json
 
 
 def test_parameter():
@@ -67,6 +68,23 @@ def test_parameter_sharing():
 
     net3 = Net(prefix='net3_')
     net3.load_params('net1.params', mx.cpu())
+
+
+def test_parameter_str():
+    class Net(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.dense0 = nn.Dense(10, in_units=5, use_bias=False)
+
+    net = Net(prefix='net1_')
+    lines = str(net.collect_params()).splitlines()
+
+    assert lines[0] == 'net1_ ('
+    assert 'net1_dense0_weight' in lines[1]
+    assert '(10, 5)' in lines[1]
+    assert 'numpy.float32' in lines[1]
+    assert lines[2] == ')'
 
 
 def test_basic():
@@ -254,7 +272,6 @@ def test_deconv():
     #
     # layer = nn.Conv3DTranspose(16, (3, 3, 3), layout='NDHWC', in_channels=4)
     # # check_layer_forward(layer, (1, 10, 10, 10, 4))
-
 
 
 def test_pool():
@@ -570,12 +587,20 @@ def test_fill_shape_deferred():
 def test_dtype():
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+    net.cast('float64')
+    with mx.autograd.record():
+        y = net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+        y.backward()
 
     net = mx.gluon.model_zoo.vision.resnet18_v1()
     net.initialize()
     net.hybridize()
-    net(mx.nd.ones((16, 3, 32, 32), dtype='float64')).wait_to_read()
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float32'))
+
+    net.cast('float64')
+    net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
+
+    mx.nd.waitall()
 
 
 def test_fill_shape_load():
@@ -601,6 +626,31 @@ def test_fill_shape_load():
     assert net2[0].weight.shape[1] == 3, net2[0].weight.shape[1]
     assert net2[1].gamma.shape[0] == 64, net2[1].gamma.shape[0]
     assert net2[2].weight.shape[1] == 3072, net2[2].weight.shape[1]
+
+
+def test_inline():
+    net = mx.gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(mx.gluon.nn.Dense(10))
+        net.add(mx.gluon.nn.Dense(10))
+        net.add(mx.gluon.nn.Dense(10))
+
+    net.initialize()
+    net.hybridize(inline_limit=3)
+    with mx.autograd.record():
+        y = net(mx.nd.zeros((1,10)))
+
+    len_1 = len(json.loads(mx.autograd.get_symbol(y).tojson())['nodes'])
+    y.backward()
+
+    net.hybridize(inline_limit=0)
+    with mx.autograd.record():
+        y = net(mx.nd.zeros((1,10)))
+
+    len_2 = len(json.loads(mx.autograd.get_symbol(y).tojson())['nodes'])
+    y.backward()
+
+    assert len_1 == len_2 + 2
 
 
 if __name__ == '__main__':

@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file  operator_common.h
  * \brief common internal header of most operators
  *   this header includes utility functions operator can use
@@ -206,6 +207,10 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   }
   return true;
 }
+
+/*! \brief Register op name as an alias */
+#define MXNET_ADD_SPARSE_OP_ALIAS(__name$) \
+  .add_alias("_sparse_" #__name$)
 
 /*!
  * \brief macro assign shape to out if out is unknown otherwise check consistency

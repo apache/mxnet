@@ -26,7 +26,7 @@
 #include <string>
 #include <utility>
 #include "../operator_common.h"
-#include "../pooling-inl.h"
+#include "../nn/pooling-inl.h"
 #include "./mkl_util-inl.h"
 
 namespace mxnet {

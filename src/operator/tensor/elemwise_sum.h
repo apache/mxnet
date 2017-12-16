@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.h
  * \brief elementwise sum
  * \author Bing Xu

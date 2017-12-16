@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file batchnorm_test.cc
  * \brief batchnorm operator unit test utility functions
  * \author Chris Olivier
@@ -25,7 +26,7 @@
 
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
-#include "../../src/operator/batch_norm-inl.h"
+#include "../../src/operator/nn/batch_norm-inl.h"
 #include "../../src/operator/batch_norm_v1-inl.h"
 #include "./test_legacy_op.h"
 #include "executor/exec_pass.h"
@@ -844,6 +845,7 @@ TEST(BATCH_NORM, TestStochasticTiming_2D) {
 }
 
 /*! \brief Performance tests */
+#ifndef _WIN32
 TEST(BATCH_NORM, TestTiming_2D) {
 #ifdef NDEBUG
   size_t THISCOUNT = 10;
@@ -860,7 +862,7 @@ MSHADOW_REAL_TYPE_SWITCH_EX(
     false, false,
     blank_kwargs,
     2, THISCOUNT);
-#if MXNET_USE_MKL2017 == 1
+#if defined(MXNET_USE_MKL2017) && (MXNET_USE_MKL2017 == 1)
   timingTest<op::BatchNormProp, BNOperatorExecutor<DType, AccReal>>(
     "MKL BatchNormProp<cpu> 2D",
     false, false,
@@ -896,6 +898,7 @@ MSHADOW_REAL_TYPE_SWITCH_EX(
 #endif
 });
 }
+#endif  // _WIN32
 
 /**
  * Backward tests (generally include forward tests as well)
@@ -1149,6 +1152,8 @@ void compare(const bool isGPU,
     typename OperatorExecutor::AccRealType>::compare(object, info_checkLoad);
 }
 
+
+#ifndef _WIN32
 TEST(BATCH_NORM, TestBackward1D_Simple) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DTypeX, AccReal,
@@ -1194,7 +1199,9 @@ TEST(BATCH_NORM, TestBackward1D_Simple) {
       compare(false, info, ___BN_TestBackward1D_Simple_data_shape_1_1_2___);
     });
 }
+#endif  // _WIN32
 
+#ifndef _WIN32
 TEST(BATCH_NORM, TestBackward3D) {
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
@@ -1210,6 +1217,7 @@ TEST(BATCH_NORM, TestBackward3D) {
 #endif
     });
 }
+#endif  // _WIN32
 
 // nonfixgamma_kwargs
 TEST(BATCH_NORM, Test2DBackwardMixed_cpu_cpu_nfg) {
@@ -1342,6 +1350,7 @@ static void compare(const TBlob& blob, const std::vector<DType>& vals) {
   }
 }
 
+#ifndef _WIN32
 template<typename DType, typename AccReal>
 static void compare(const std::vector<std::vector<float>>& d1,
                     const std::vector<std::vector<float>>& d2) {
@@ -1433,6 +1442,7 @@ static TShape MakeShape(const std::vector<index_t>& shape,
   }
   return newShape;
 }
+
 
 /*! \brief Create and arrange equivalent data with different channel axes, then compare
  * normalized results */
@@ -1625,6 +1635,7 @@ TEST(BATCH_NORM, TestChannelAxis) {
     kwargs.pop_back();
   }
 }
+#endif
 
 #if MXNET_USE_CUDA
 

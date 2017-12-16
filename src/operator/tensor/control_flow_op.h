@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file control_flow.h
  * \brief Function definitions of operators for controlling flow
  */

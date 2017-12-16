@@ -18,6 +18,7 @@
  */
 
 /*!
+ * Copyright (c) 2017 by Contributors
  * \file indexing_op.cu
  * \brief
  * \author Siyi Li, Chi Zhang
@@ -60,7 +61,7 @@ struct AddTakeGradRspGPUKernel {
 };
 
 template<>
-void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
+void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
                                           const NDArray& weight,
                                           const OpReqType req,
@@ -68,6 +69,7 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
   if (req == kNullOp) return;
   using namespace rowsparse;
   using namespace mxnet_op;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   // zeros weight
   if (req == kWriteTo && !weight.storage_initialized()) {
     size_t out_size = output.shape_.Size();
@@ -84,8 +86,9 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(mshadow::Stream<gpu>* s,
     DType max = static_cast<DType>(weight.shape()[0] - 1);
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
-    int32_t* is_valid_ptr = NULL;
-    CUDA_CALL(cudaMalloc(&is_valid_ptr, sizeof(int32_t)));
+    Tensor<gpu, 1, char> workspace = ctx.requested[0]
+        .get_space_typed<gpu, 1, char>(Shape1(sizeof(int32_t)), s);
+    int32_t* is_valid_ptr = reinterpret_cast<int32_t*>(workspace.dptr_);
     Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
     Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
     CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(int32_t),
