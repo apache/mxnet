@@ -4,11 +4,21 @@ MXNet supports distributed training enabling you to take advantage of multiple n
 In this tutorial we describe how it works, instructions on how to launch a distributed training job and
 some environment variables which provide finer control.
 
+## Type of parallelism
+
+There are two ways in which we can distribute the workload of training a neural network across multiple devices (which can be GPU or CPU).
+The first way *data parallelism* refers to the case where each device stores a complete copy of the model.
+The samples in a batch are divided across the available devices, and the devices collectively update a shared model.
+These devices can be located in a single machine or across multiple machines.
+In this document we describe how to train a model with devices distributed across machines in a data parallel way.
+
+When models are so large that they don't fit into device memory, then a second way called *model parallelism* is useful.
+Here, different devices are assigned the task of learning different parts of the model.
+Currently MXNet supports Model parallelism in a single machine only. Refer to docs/faq/model_parallel_lstm.md for more on this.
+
 ## How it works?
 
-Distributed training requires synchronization of parameters across different machines after each batch.
-The architecture MXNet uses is as follows.
-
+The architecture of distributed training in MXNet is as follows.
 #### Types of processes
 MXNet has three types of processes communication between each other to accomplish training of a model together.
 - Worker: A worker node actually performs training on a batch of training samples.
@@ -16,11 +26,17 @@ Before processing each batch, the workers pull weights from servers.
 The workers also send gradients to the servers after each batch.
 - Server: There can be multiple servers which store the model's parameters, and communicate with workers.
 - Scheduler: There is only one scheduler.
-The role of the scheduler is to wait for messages that each node has come up and is ready.
-At which point, it lets all processes know about every other node in the cluster, so that they can communicate with each other.
+The role of the scheduler is to set up the cluster.
+This includes waiting for messages that each node has come up and which port the node is listening on.
+The scheduler then lets all processes know about every other node in the cluster, so that they can communicate with each other.
+
+#### Batch sizes
+Note that during distributed training, batch size refers to the batch size on one machine.
+If there are `n` machines, and batch size is `b`, then distributed training behaves like single node training with batch size `n*b`.
+Also note that if there are g gpus on a single machine, then the batch size on each gpu would be `b/g`
 
 #### Flow of distributed training
-The mode used here is data paralleltraining data is divided into equal parts for each machine in the cluster. For the first batch,
+Say
 
 #### Different modes of distributed training
 KVStore objects handle the communication underneath to provide a simple API to push and pull the parameters of the model.
@@ -45,11 +61,6 @@ this mode aggregates gradients and updates weights on GPU while dist_sync does s
 This is faster than `dist_sync' because it reduces expensive communication between GPU and CPU, but it increases memory usage on GPU.
 
 - `dist_async_device` : The analogue of `dist_sync_device` but in asynchronous mode.
-
-#### Batch sizes
-Note that during distributed training, batch size refers to the batch size on one machine.
-If there are `n` machines, and batch size is `b`, then distributed training behaves like single node training with batch size `n*b`.
-Also note that if there are g gpus on a single machine, then the batch size on each gpu would be `b/g`
 
 #### Distribution of parameter arrays
 Each server doesn't necessarily store all the parameter arrays.
@@ -84,7 +95,7 @@ On a single machine we can run this script as
 python mnist.py --batch-size 100
 ```
 
-If the mxnet directory which contains launch.py and train_mnist.py are accessible to all machines in the cluster (for example if they are on a network file system), we can run the following
+If the mxnet directory which contains the script mnist.py is accessible to all machines in the cluster (for example if they are on a network file system), we can run the following
 ```
 ../../tools/launch.py -n 4 --launcher ssh -H hosts python train_mnist.py --network lenet --gpus 0,1 --kv-store dist_sync_device
 ```
@@ -127,7 +138,7 @@ If for some reason, you do not want to use the script above to start distributed
 
 Below is an example to start all jobs locally on Linux or Mac. Note that starting all jobs on the same machine is not a good idea. This is only to make the usage clear.
 ```
-export COMMAND=python example/image-classification/train_mnist.py --kv-store dist_async --num-epoch 1
+export COMMAND=python example/gluon/mnist.py --kv-store dist_async
 DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
 DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
 DMLC_ROLE=scheduler DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
@@ -136,7 +147,7 @@ DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERV
 ```
 For an in-depth discussion of how the cluster is set up, you can go [here](https://blog.kovalevskyi.com/mxnet-distributed-training-explained-in-depth-part-1-b90c84bda725)
 ## Environment variables
-#### For tweaking performance
+#### For tuning performance
  - `MXNET_KVSTORE_REDUCTION_NTHREADS`
   Values: Int
   Default=4
