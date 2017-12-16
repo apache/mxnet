@@ -179,6 +179,67 @@ function test_endof()
   end
 end  # function test_endof
 
+function test_cat()
+  function check_cat(f, A, B = 2A)
+    C = [A B]
+    D = [A; B]
+    x = NDArray(A)
+    y = NDArray(B)
+    z = NDArray(C)
+    d = NDArray(D)
+
+    if f == :hcat
+      @test copy([x y]) == [A B]
+      @test copy([x y 3y x]) == [A B 3B A]
+      @test copy([z y x]) == [C B A]
+    elseif f == :vcat
+      @test copy([x; y]) == [A; B]
+      @test copy([x; y; 3y; x]) == [A; B; 3B; A]
+      @test copy([x; d]) == [A; D]
+      @test copy([d; x]) == [D; A]
+    else
+      @assert false
+    end
+  end
+
+  let A = [1, 2, 3, 4]
+    info("NDArray::hcat::1D")
+    check_cat(:hcat, A)
+
+    info("NDArray::vcat::1D")
+    check_cat(:vcat, A)
+  end
+
+  let A = [1 2; 3 4]
+    info("NDArray::hcat::2D")
+    check_cat(:hcat, A)
+
+    info("NDArray::vcat::2D")
+    check_cat(:vcat, A)
+  end
+
+  let A = rand(4, 3, 2)
+    info("NDArray::hcat::3D")
+    check_cat(:hcat, A)
+
+    info("NDArray::vcat::3D")
+    check_cat(:vcat, A)
+  end
+
+  let A = rand(4, 3, 2, 2)
+    info("NDArray::hcat::4D")
+    check_cat(:hcat, A)
+
+    info("NDArray::vcat::4D")
+    check_cat(:vcat, A)
+  end
+
+  let A = [1, 2, 3, 4]
+    info("NDArray::cat::3D/1D")
+    check_cat(:vcat, reshape(A, 4, 1, 1), 2A)
+  end
+end  # function test_cat
+
 function test_plus()
   dims   = rand_dims()
   t1, a1 = rand_tensors(dims)
@@ -927,6 +988,7 @@ end  # function test_hyperbolic
   test_linear_idx()
   test_first()
   test_endof()
+  test_cat()
   test_plus()
   test_minus()
   test_mul()

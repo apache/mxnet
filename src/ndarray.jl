@@ -523,6 +523,32 @@ function deepcopy(arr::NDArray)
 end
 
 """
+    hcat(x::NDArray...)
+"""
+Base.hcat(xs::NDArray{T}...) where T = cat(2, xs...)
+
+"""
+    vcat(x::NDArray...)
+"""
+Base.vcat(xs::NDArray{T}...) where T = cat(1, xs...)
+
+"""
+    cat(dim, xs::NDArray...)
+
+Concate the `NDArray`s which have the same element type along the `dim`.
+Building a diagonal matrix is not supported yet.
+"""
+function Base.cat(dim::Int, xs::NDArray{T}...) where T
+  ns = ndims.(xs)
+  d = Base.max(dim, maximum(ns))
+  xs′ = map(zip(ns, xs)) do i
+    n, x = i
+    (d > n) ? reshape(x, -2, Base.ones(Int, d - n)...) : x
+  end
+  concat(xs′..., dim = d - dim)
+end
+
+"""
     @inplace
 
 Julia does not support re-definiton of `+=` operator (like `__iadd__` in python),

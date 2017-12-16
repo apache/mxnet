@@ -117,7 +117,33 @@
   x .% 2
   2 .% x
   ```
-  
+
+* `cat`, `vcat`, `hcat` is implemented. (#TBD)
+
+  E.g. `hcat`
+  ```julia
+  julia> x
+  4 mx.NDArray{Float64,1} @ CPU0:
+   1.0
+   2.0
+   3.0
+   4.0
+
+  julia> y
+  4 mx.NDArray{Float64,1} @ CPU0:
+   2.0
+   4.0
+   6.0
+   8.0
+
+  julia> [x y]
+  4×2 mx.NDArray{Float64,2} @ CPU0:
+   1.0  2.0
+   2.0  4.0
+   3.0  6.0
+   4.0  8.0
+  ```
+
 * Transposing a column `NDArray` to a row `NDArray` is supported now. (#TBD)
 
   ```julia
