@@ -26,7 +26,9 @@
 
 #set -ex
 
-export MXNET_GITPATH="https://github.com/dmlc/mxnet.git"
+export MXNET_GITPATH="https://github.com/apache/incubator-mxnet"
+
+
 if [ -z ${MXNET_TAG} ];
 then
     export MXNET_BRANCH_TAG=""
@@ -77,7 +79,7 @@ print_intro_msg() {
 	echo "This script has been tested on: MacOS El Capitan (10.11) and Sierra (10.12)"
 	echo " "
 	echo "If you face any problems with this script, please let us know at:"
-	echo "    https://stackoverflow.com/questions/tagged/mxnet"
+	echo "    https://discuss.mxnet.io/"
 	echo " "
 	echo "Typical run-time for this script is around 10 minutes."
 	echo "If your environment has never been setup for development (e.g. gcc), "
@@ -87,8 +89,42 @@ print_intro_msg() {
 	echo "Your macOS version is: $MACOS_VERSION"
 	echo " "
 	echo $LINE
+	read -p "Do you want to continue? (y/n): " response
 	echo " "
-	sleep ${SLEEP_TIME}
+	while true; do
+		case $response in
+			[Yy]* ) break;;
+			[Nn]* ) exit;;
+			* ) echo "Please answer yes or no.";;
+		esac
+	done
+	echo " "
+	echo " "
+	echo "MXNET GIT Path = ${MXNET_GITPATH}"
+	echo "MXNET Tag = ${MXNET_TAG}"
+	echo "You can set \$MXNET_TAG to the appropriate github repo tag"
+	echo "If not set, the default value used is the latest version on master"
+	read -p "Do you want to get a list of available tags? (y/n): " response
+	while true; do
+		case $response in
+			[Yy]* ) 
+				echo "Available tags are:"
+				git ls-remote --tags ${MXNET_GITPATH} | sed 's/refs\/tags\///' | grep -v v | grep -v 201 \
+				    | grep -v "{}" | awk '{ print "   ", $2 }'; 
+				break;;
+			[Nn]* ) break;;
+			* ) echo "Please answer yes or no.";;
+		esac
+	done
+	read -p "Do you want to continue? (y/n): " response
+	echo " "
+	while true; do
+		case $response in
+			[Yy]* ) break;;
+			[Nn]* ) exit;;
+			* ) echo "Please answer yes or no.";;
+		esac
+	done
 } # print_intro_msg()
 
 # wrapper routine to stop the script if the command invoked returns error
@@ -358,15 +394,8 @@ download_mxnet() {
 		sleep ${SLEEP_TIME}
 	fi
 
-	echo " "
-	echo "MXNET GIT Path = ${MXNET_GITPATH}"
-	echo "MXNET Tag = ${MXNET_TAG}"
-    	echo "You can set \$MXNET_TAG to the appropriate github repo tag"
-    	echo "If not set, the default value used is the latest version on master"
-    	echo " "
-	sleep ${SLEEP_TIME}
-
-	chkret git clone ${MXNET_BRANCH_TAG} ${MXNET_GITPATH} ${MXNET_HOME} --recursive
+	
+	chkret git clone ${MXNET_BRANCH_TAG} ${MXNET_GITPATH}.git ${MXNET_HOME} --recursive
 	sleep ${SLEEP_TIME}
 	cd ${MXNET_HOME}
 	echo " "
