@@ -47,6 +47,7 @@ mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
+mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
 
 
@@ -314,6 +315,15 @@ if(USE_JEMALLOC)
 endif()
 
 include(CTest)
+set(GTEST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/googletest/googletest")
+set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
+#set(GTEST_BOTH_LIBRARIES gtest gtest_main)
+set(GTEST_LIBRARIES gtest gtest_main)
+set(GTEST_MAIN_LIBRARY gtest_main)
+set(GTEST_LIBRARY gtest)
+
+add_subdirectory(${GTEST_ROOT})
+find_package(GTest REQUIRED)
 
 # cudnn detection
 if(USE_CUDNN AND USE_CUDA)
@@ -572,6 +582,10 @@ install(TARGETS ${MXNET_INSTALL_TARGETS}
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if (INSTALL_EXAMPLES)
   install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
+endif()
+
+if (USE_SIGNAL_HANDLER)
+	add_definitions(-DMXNET_USE_SIGNAL_HANDLER=1)
 endif()
 
 # AUTO_INSTALL_DIR -> Optional: specify post-build install direcory
