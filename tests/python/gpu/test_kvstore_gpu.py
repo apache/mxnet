@@ -85,5 +85,4 @@ def test_rsp_push_pull():
 
 
 if __name__ == '__main__':
-    for i in range(10):
-        test_rsp_push_pull()
+    test_rsp_push_pull()
