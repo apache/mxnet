@@ -25,6 +25,7 @@
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -37,8 +38,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (inputs[0].storage_type() == kMKLDNNStorage
-      || inputs[1].storage_type() == kMKLDNNStorage) {
+  if (SupportMKLDNN(inputs[0]) && SupportMKLDNN(inputs[1])) {
     MKLDNNSum_Forward(attrs, ctx, inputs, req[0], outputs[0]);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage
@@ -68,9 +68,15 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
 #if MXNET_USE_MKLDNN == 1
-  if ((in_attrs->at(0) == kMKLDNNStorage || in_attrs->at(1) == kMKLDNNStorage)
-      && dev_mask == mshadow::cpu::kDevMask) {
-    out_attrs->at(0) = kMKLDNNStorage;
+  // If both inputs can be used by MKLDNN, we want to use MKLDNN.
+  auto support_mkldnn = SupportStorageMKLDNN(in_attrs->at(0))
+      && SupportStorageMKLDNN(in_attrs->at(1));
+  if (support_mkldnn && dev_mask == mshadow::cpu::kDevMask) {
+    // However, we only want the output uses mkldnn storage if one of the inputs
+    // is in mkldnn storage.
+    auto has_mkldnn = in_attrs->at(0) == kMKLDNNStorage
+        || in_attrs->at(1) == kMKLDNNStorage;
+    out_attrs->at(0) = has_mkldnn ?  kMKLDNNStorage : kDefaultStorage;
     *dispatch_mode = DispatchMode::kFComputeEx;
     return true;
   }
