@@ -103,7 +103,7 @@ def batchify(data, batch_size):
 
 class CorpusIter(mx.io.DataIter):
     "An iterator that returns the a batch of sequence each time"
-    def __init__(self, source, batch_size, bptt, k, unigram):
+    def __init__(self, source, batch_size, bptt):
         super(CorpusIter, self).__init__()
         self.batch_size = batch_size
         self.provide_data = [('data', (bptt, batch_size), np.int32)]
@@ -111,8 +111,6 @@ class CorpusIter(mx.io.DataIter):
         self._index = 0
         self._bptt = bptt
         self._source = batchify(source, batch_size)
-        self._unigram = unigram
-        self._k = k
 
     def iter_next(self):
         i = self._index
@@ -120,9 +118,6 @@ class CorpusIter(mx.io.DataIter):
             return False
         self._next_data = self._source[i:i+self._bptt]
         self._next_label = self._source[i+1:i+1+self._bptt].astype(np.float32)
-        self._next_sample, self._expected_sample_count = mx.nd.random.multinomial(self._unigram, shape=(self._bptt * self.batch_size, self._k), get_prob=True)
-        #self._expected_true_count = mx.nd.ones_like(self._next_label)
-        #self._unigram[self._next_label]
         self._index += self._bptt
         return True
 
@@ -138,7 +133,7 @@ class CorpusIter(mx.io.DataIter):
         self._next_label = None
 
     def getdata(self):
-        return [self._next_data, self._next_sample]
+        return [self._next_data]
 
     def getlabel(self):
         return [self._next_label]

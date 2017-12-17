@@ -854,9 +854,9 @@ class Module(BaseModule):
             >>> net.update()
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
-        grad_array = []
-        for grad in self._exec_group.grad_arrays:
-            grad_array += grad
+        #grad_array = []
+        #for grad in self._exec_group.grad_arrays:
+        #    grad_array += grad
         #gluon.utils.clip_global_norm(grad_array, max_norm)
         norm_val = self.global_grad_norm()
         if norm_val > max_norm:
@@ -864,7 +864,6 @@ class Module(BaseModule):
             for grads in self._exec_group.grad_arrays:
                 for grad in grads:
                     grad *= ratio
-       
         return None
 
     def global_grad_norm(self):

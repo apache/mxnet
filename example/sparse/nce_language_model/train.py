@@ -19,7 +19,8 @@ import numpy as np
 import mxnet as mx
 import argparse
 from data import Corpus, CorpusIter, DummyIter
-from model import rnn, nce_loss, ce_loss
+from model import *
+from sampler import *
 import os, math
 
 parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model with Noice Contrastive Estimation')
@@ -33,6 +34,10 @@ parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
 parser.add_argument('--lr', type=float, default=0.1,
                     help='initial learning rate')
+parser.add_argument('--mom', type=float, default=0.0,
+                    help='mom')
+parser.add_argument('--wd', type=float, default=0.0,
+                    help='wd')
 parser.add_argument('--clip', type=float, default=0.2,
                     help='gradient clipping by global norm')
 parser.add_argument('--epochs', type=int, default=40,
@@ -61,8 +66,12 @@ parser.add_argument('--lr-decay', type=float, default=0.25,
                     help='learning rate decay')
 parser.add_argument('--num-gpus', type=int, default=1,
                     help='number of gpus to use')
+parser.add_argument('--rescale-grad', type=float, default=1,
+                    help='rescale grad')
 parser.add_argument('--gpu', type=int, default=1,
                     help='which gpu')
+parser.add_argument('--Z', type=int, default=1,
+                    help='Z')
 parser.add_argument('--profile', action='store_true',
                     help='whether to use profiler')
 parser.add_argument('--kvstore', type=str, default=None,
@@ -88,41 +97,47 @@ if __name__ == '__main__':
     corpus = Corpus(args.data)
     ntokens = len(corpus.dictionary) / args.scale
     # TODO dict should be the unigram for train?
-    train_data = CorpusIter(corpus.train, batch_size, args.bptt, args.k, corpus.dictionary.unigram())
-    eval_data = CorpusIter(corpus.valid, batch_size, args.bptt, args.k, corpus.dictionary.unigram())
-    test_data = CorpusIter(corpus.test, batch_size, args.bptt, args.k, corpus.dictionary.unigram())
+    train_data = CorpusIter(corpus.train, batch_size, args.bptt)
+    eval_data = CorpusIter(corpus.valid, batch_size, args.bptt)
+    test_data = CorpusIter(corpus.test, batch_size, args.bptt)
+    unigram = corpus.dictionary.unigram()
+    sampler = AliasMethod(unigram)
+    # TODO serialize sampler table
 
     if args.dummy_iter:
         train_data = DummyIter(train_data)
-        eval_data = DummyIter(eval_data)
+        eval_data = DummyIter(train_data)
+        test_data = DummyIter(train_data)
     #val_data = mx.io.PrefetchingIter(CorpusIter(corpus.valid, batch_size, args.bptt, args.k))
     # model
     on_cpu = False
     #group2ctxs={'cpu_dev':[mx.cpu(0) for i in range(args.num_gpus)], 'gpu_dev':ctx} if on_cpu else None
     rnn_out, weight, last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                          args.nlayers, args.dropout, args.use_dense, on_cpu, batch_size)
+                                       args.nlayers, args.dropout, args.use_dense, on_cpu, batch_size)
     logging.debug(str(last_states))
     if full_softmax:
-        model = ce_loss(rnn_out, ntokens, args.tied, weight)
+        model = ce_loss(rnn_out, ntokens, args.tied, args.use_dense, weight)
     else:
-        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu, batch_size, args.bptt, decoder_w=weight)
-    state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1']
+        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu, batch_size, args.bptt, args.use_dense, decoder_w=weight if args.tied else None)
+    state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
     # module
     last_states.append(model)
-    module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx, state_names=(state_names + ['sample']) if not full_softmax else state_names,
+    extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
+    module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx, state_names=(state_names + extra_states) if not full_softmax else state_names,
                            data_names=['data'], label_names=['label'])#, group2ctxs=group2ctxs)
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier())
 
     kvstore = None #if args.kvstore is None else mx.kv.create(args.kvstore)
-    optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=1.0/batch_size)
+    #optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=1.0/batch_size)
+    optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=args.rescale_grad, wd=args.wd, momentum=args.mom)
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(batch_size, args.log_interval)
 
     ############### eval model ####################
     eval_rnn_out, eval_weight, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
                                                       args.nlayers, 0, args.use_dense, on_cpu, batch_size)
-    eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, eval_weight)
+    eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, args.use_dense, eval_weight)
     eval_last_states.append(eval_model)
     ############### eval module ####################
     eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data'],
@@ -160,7 +175,7 @@ if __name__ == '__main__':
             nbatch += 1
         data_iter.reset()
         loss = total_L / args.bptt / batch_size / nbatch
-        print('[Epoch %d] valid loss %.7f, %s ppl %.7f'%(epoch, loss, mode, math.exp(loss)))
+        logging.info('Iter[%d] %s\t\tloss %.7f, ppl %.7f'%(epoch, mode, loss, math.exp(loss)))
         return loss
 
     # train
@@ -169,11 +184,14 @@ if __name__ == '__main__':
         total_L = 0.0
         nbatch = 0
         module.set_states(value=0)
-        state_cache = module.get_states(merge_multi_context=False)[:-1]
+        state_cache = module.get_states(merge_multi_context=False)[:-len(extra_states)]
         for batch in train_data:
             if not full_softmax:
-                samples = batch.data[1]
-                state_cache.append([samples.astype(np.float32)])
+                label = batch.label[0]
+                samples = sampler.draw(args.bptt * batch_size * args.k).reshape((args.bptt * batch_size, args.k))
+                p_noise_sample = unigram[samples].reshape((args.bptt * batch_size, args.k))
+                p_noise_target = unigram[label].reshape((args.bptt * batch_size, 1))
+                state_cache += [[samples.astype(np.float32)], [p_noise_sample], [p_noise_target]]
                 module.set_states(states=state_cache)
             '''
             if kvstore:
@@ -191,30 +209,28 @@ if __name__ == '__main__':
             '''
             module.forward(batch)
             outputs = module.get_outputs(merge_multi_context=False)
-            state_cache = (outputs[:-1])
+            state_cache = outputs[:-1]
             module.backward()
             total_L += mx.nd.sum(outputs[-1][0]).asscalar()
             # update all parameters (including the weight parameter)
-            module.clip_by_global_norm(max_norm=args.clip * args.bptt * batch_size)
+            module.clip_by_global_norm(max_norm=args.clip)
             module.update()
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=None, locals=locals())
-            #speedometer(speedometer_param)
+            speedometer(speedometer_param)
             # update training metric
             if nbatch % args.log_interval == 0 and nbatch > 0:
-                cur_L = total_L / args.bptt / batch_size / args.log_interval
-                print('[Epoch %d Batch %d] loss %.7f, ppl %.7f'%(
+                cur_L = total_L / args.log_interval
+                logging.info('Iter[%d] Batch [%d] \tloss %.7f, ppl %.7f'%(
                     epoch, nbatch, cur_L, math.exp(cur_L)))
                 total_L = 0.0
             nbatch += 1
         if kvstore:
             assert(False)
-        val_L = evaluate(eval_module, eval_data, epoch, 'eval')
+        val_L = evaluate(eval_module, eval_data, epoch, 'Valid')
         if val_L < best_val:
             best_val = val_L
-            test_L = evaluate(eval_module, test_data, epoch, 'test')
-            #model.collect_params().save(args.save)
-            #print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
+            test_L = evaluate(eval_module, test_data, epoch, 'Test')
         else:
             optimizer.lr *= args.lr_decay
             logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))
