@@ -52,7 +52,7 @@ def test_rsp_push_pull():
                 row_id = np.random.randint(num_rows, size=num_rows)
                 row_ids = [mx.nd.array(row_id, dtype='int64')] * count
             elif use_slice:
-                total_row_ids = mx.nd.array(np.random.randint(num_rows, size=count*num_rows))
+                total_row_ids = mx.nd.array(np.random.randint(num_rows, size=count*num_rows), dtype='int64')
                 row_ids = [total_row_ids[i*num_rows : (i+1)*num_rows] for i in range(count)]
             else:
                 for i in range(count):
@@ -85,4 +85,5 @@ def test_rsp_push_pull():
 
 
 if __name__ == '__main__':
-    test_rsp_push_pull()
+    for i in range(10):
+        test_rsp_push_pull()

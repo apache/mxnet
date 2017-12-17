@@ -18,28 +18,17 @@
  */
 
 /*!
- * \file utils.h
- * \brief Basic utilility functions.
+ * \file utils.cc
+ * \brief cpu implementation of util functions
  */
-#ifndef MXNET_KVSTORE_UTILS_H_
-#define MXNET_KVSTORE_UTILS_H_
 
-#include <dmlc/logging.h>
-#include <utility>
-#include <vector>
-#include "mxnet/ndarray.h"
+#include "./utils.h"
 
 namespace mxnet {
 namespace kvstore {
 
-void Unique(NDArray *out, int priority = 0);
-
-/*! \brief Check whether the indices is the same.
- */
 bool CheckSameRowid(
-    const std::vector<std::pair<NDArray*, NDArray>>& val_rowids);
-/*
-{
+    const std::vector<std::pair<NDArray*, NDArray>>& val_rowids) {
   bool is_same_rowid = true;
   MSHADOW_TYPE_SWITCH(val_rowids[0].second.dtype(), IType, {
     const TBlob& rowid_first = val_rowids[0].second.data();
@@ -55,8 +44,6 @@ bool CheckSameRowid(
   });
   return is_same_rowid;
 }
-*/
+
 }  // namespace kvstore
 }  // namespace mxnet
-
-#endif  // MXNET_KVSTORE_UTILS_H_

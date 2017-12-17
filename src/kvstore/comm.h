@@ -639,7 +639,6 @@ class CommDevice : public Comm {
 
     // whether the indices are the same
     const bool is_same_rowid = CheckSameRowid(dst);
-
     for (size_t i = 0; i < dst.size(); ++i) {
       // the result can be copied to other devices without invoking sparse retain operator
       // if the indices are the same
@@ -660,8 +659,10 @@ class CommDevice : public Comm {
         NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
             src.ctx(), true, out->dtype(), out->aux_types()) : *out;
 
-        NDArray row_id_gpu = NDArray(row_id.shape(), src.ctx(), false, mshadow::kInt64);
-        CopyFromTo(row_id, &row_id_gpu, priority);
+        CHECK_EQ(row_id.ctx(), src.ctx()) << " diff ctx";
+        //NDArray row_id_gpu = NDArray(row_id.shape(), src.ctx(), false, mshadow::kInt64);
+        //CopyFromTo(row_id, &row_id_gpu, priority);
+        NDArray row_id_gpu = row_id;
 
         Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
             NDArray temp = out_gpu;
