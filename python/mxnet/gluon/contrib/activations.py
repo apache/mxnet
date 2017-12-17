@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 # -*- coding: utf-8 -*-
 ''' This file contains definitions of advanced activation functions
 for neural networks'''
@@ -9,8 +26,7 @@ from mxnet import nd
 class ELU(gluon.Block):
     '''
     Exponential Linear Unit (ELU)
-    ... "Fast and Accurate Deep Network Learning by Exponential Linear Units"
-    ... Djork-Arné Clevert, Thomas Unterthiner, Sepp Hochreiter
+    ... "Fast and Accurate Deep Network Learning by Exponential Linear Units", Clevert et al, 2016
     ... https://arxiv.org/abs/1511.07289
     ... Published as a conference paper at ICLR 2016
 
@@ -30,8 +46,7 @@ class ELU(gluon.Block):
 class SELU(gluon.Block):
     '''
     Scaled Exponential Linear Unit (SELU)
-    ... "Self-Normalizing Neural Networks"
-    ... Günter Klambauer, Thomas Unterthiner, Andreas Mayr, Sepp Hochreiter
+    ... "Self-Normalizing Neural Networks", Klambauer et al, 2017
     ... https://arxiv.org/abs/1706.02515
     '''
     def __init__(self):
