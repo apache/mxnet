@@ -361,30 +361,42 @@ class KVStoreLocal : public KVStore {
   }
 
   /**
-   * \brief sort and get unique values. Output is expected to be on cpu_pinned context
+   * \brief sort and get unique values.
    */
-  /*
-  void Unique(NDArray *out, int priority = 0) {
-    CHECK_EQ(out->ctx().dev_mask(), pinned_ctx_.dev_mask())
-             << "Unique expects input with `pinned_ctx_`";
+  void Unique(NDArray *out, int priority) {
+    Resource rsc = ResourceManager::Get()->Request(out->ctx(),
+      ResourceRequest(ResourceRequest::kTempSpace));
     Engine::Get()->PushAsync(
-      [out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+      [rsc, out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         NDArray *output = out;
         CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
-        const auto size = out->shape()[0];
+        auto size = out->shape()[0];
         auto out_data = output->data();
         MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, IType, {
-          auto dptr = output->data().dptr<IType>();
-          common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
-          auto num_unique_idx = std::unique(dptr, dptr + size) - dptr;
-          *output = output->Reshape(mshadow::Shape1(num_unique_idx));
+          IType *dptr = output->data().dptr<IType>();
+          switch (out->ctx().dev_mask()) {
+            case cpu::kDevMask: {
+              mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
+              UniqueImpl(rsc, s, output, size);
+              break;
+            }
+  #if MXNET_USE_CUDA
+            case gpu::kDevMask: {
+              mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
+              UniqueImpl(rsc, s, output, size);
+              break;
+            }
+  #endif
+            default:
+              LOG(FATAL) << "GPU not enabled.";
+          }
         });
         on_complete();
-      }, pinned_ctx_, {}, {out->var()},
-      FnProperty::kCPUPrioritized, priority, PROFILER_MESSAGE("KVStoreUnique"));
+      }, out->ctx(), {}, {out->var(), rsc.var},
+      FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));
     out->WaitToRead();
   }
- */
+
 
   /// reducer and broadcaster
   Comm* comm_;

@@ -23,9 +23,22 @@
  */
 
 #include "./utils.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 namespace kvstore {
+
+
+template<>
+void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
+                     NDArray *out, nnvm::dim_t size) {
+  MSHADOW_IDX_TYPE_SWITCH(out->data().type_flag_, IType, {
+    IType *dptr = out->data().dptr<IType>();
+    common::ParallelSort(dptr, dptr + size, omp_get_max_threads());
+    size_t num_unique_idx = std::unique(dptr, dptr + size) - dptr;
+    *out = out->Reshape(mshadow::Shape1(num_unique_idx));
+  });
+}
 
 bool CheckSameRowid(
     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids) {

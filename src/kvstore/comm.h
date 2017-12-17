@@ -659,14 +659,12 @@ class CommDevice : public Comm {
         NDArray out_gpu = is_diff_ctx? NDArray(kRowSparseStorage, out->shape(),
             src.ctx(), true, out->dtype(), out->aux_types()) : *out;
 
-        CHECK_EQ(row_id.ctx(), src.ctx()) << " diff ctx";
-        //NDArray row_id_gpu = NDArray(row_id.shape(), src.ctx(), false, mshadow::kInt64);
-        //CopyFromTo(row_id, &row_id_gpu, priority);
-        NDArray row_id_gpu = row_id;
+        CHECK_EQ(row_id.ctx(), src.ctx())
+                << "row_id and src are expected to be on the same context";
 
         Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
             NDArray temp = out_gpu;
-            const TBlob& indices = row_id_gpu.data();
+            const TBlob& indices = row_id.data();
             switch (temp.ctx().dev_mask()) {
               case cpu::kDevMask: {
                 mxnet::common::SparseRetainOpForwardRspWrapper<cpu>(rctx.get_stream<cpu>(),
@@ -685,7 +683,7 @@ class CommDevice : public Comm {
               default: LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
             }
             on_complete();
-          }, out_gpu.ctx(), {src.var(), row_id_gpu.var()}, {out_gpu.var()},
+          }, out_gpu.ctx(), {src.var(), row_id.var()}, {out_gpu.var()},
         FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreSparseRetain"));
         if (is_diff_ctx) {
           CopyFromTo(out_gpu, out, priority);

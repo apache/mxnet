@@ -25,37 +25,29 @@
 #define MXNET_KVSTORE_UTILS_H_
 
 #include <dmlc/logging.h>
+#include <mxnet/ndarray.h>
+#include <mxnet/resource.h>
 #include <utility>
 #include <vector>
-#include "mxnet/ndarray.h"
 
 namespace mxnet {
 namespace kvstore {
 
-void Unique(NDArray *out, int priority = 0);
 
-/*! \brief Check whether the indices is the same.
+/*!
+ * \brief sort and get unique values.
+ */
+template<typename xpu>
+void UniqueImpl(const Resource& rsc, mshadow::Stream<xpu> *s,
+                NDArray *out, nnvm::dim_t size);
+
+/*!
+ * \brief Check whether the indices is the same.
  */
 bool CheckSameRowid(
     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids);
-/*
-{
-  bool is_same_rowid = true;
-  MSHADOW_TYPE_SWITCH(val_rowids[0].second.dtype(), IType, {
-    const TBlob& rowid_first = val_rowids[0].second.data();
-    const IType *first_dptr = rowid_first.dptr<IType>();
-    const index_t first_size = rowid_first.Size();
-    for (size_t i = 1; i < val_rowids.size(); ++i) {
-      const TBlob& rowid_i = val_rowids[i].second.data();
-      if (rowid_i.dptr<IType>() != first_dptr
-          || rowid_i.Size() != first_size) {
-        is_same_rowid = false;
-      }
-    }
-  });
-  return is_same_rowid;
-}
-*/
+
+
 }  // namespace kvstore
 }  // namespace mxnet
 
