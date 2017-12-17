@@ -92,8 +92,9 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     fi 
     echo "Building MKLDNN ..." >&2
     cd $MXNET_ROOTDIR
+	g++ --version
     cmake $MKLDNN_SRCDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR
-    make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l)
+    make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1
     make -C $MKLDNN_BUILDDIR install
     rm -rf $MKLDNN_BUILDDIR
 fi
