@@ -313,7 +313,7 @@ static void DeconvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNNConv(inputs[0])) {
-    MKLDNNDeconvolution_Forward(attrs, ctx, inputs, req, outputs);
+    MKLDNNDeconvolutionForward(attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
@@ -331,7 +331,7 @@ static void DeconvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNNConv(inputs[0])) {
-    MKLDNNDeconvolution_Backward(attrs, ctx, inputs, req, outputs);
+    MKLDNNDeconvolutionBackward(attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif

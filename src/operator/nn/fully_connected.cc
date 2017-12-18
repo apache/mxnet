@@ -78,7 +78,7 @@ void FullyConnectedCompute_CPU(const nnvm::NodeAttrs& attrs, const OpContext &ct
     const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNFC_Forward(attrs, ctx, inputs, req, outputs);
+    MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
@@ -96,7 +96,7 @@ void FullyConnectedGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     const std::vector<OpReqType> &req, const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNFC_Backward(attrs, ctx, inputs, req, outputs);
+    MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif

@@ -111,7 +111,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
   } else if (common::ContainsStorage(inputs, kMKLDNNStorage)) {
-    MKLDNNSum_Forward(attrs, op_ctx, inputs, req[0], outputs[0]);
+    MKLDNNSumForward(attrs, op_ctx, inputs, req[0], outputs[0]);
 #endif
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     // This case happens when we want to create an MKLDNN NDArray but the type

@@ -119,9 +119,9 @@ inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
   return param.pool_type != pool_enum::kAvgPooling;
 }
 
-void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
-                           const NDArray &in_data, const OpReqType &req,
-                           const NDArray &out_data, const NDArray *workspace) {
+void MKLDNNPoolingForward(const OpContext &ctx, const PoolingParam &param,
+                          const NDArray &in_data, const OpReqType &req,
+                          const NDArray &out_data, const NDArray *workspace) {
   auto input_mem = in_data.GetMKLDNNData();
   auto data_mpd = input_mem->get_primitive_desc();
   auto data_md = data_mpd.desc();
@@ -150,10 +150,10 @@ void MKLDNNPooling_Forward(const OpContext &ctx, const PoolingParam &param,
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNPooling_Backward(const OpContext &ctx, const PoolingParam &param,
-                            const NDArray &out_grad, const NDArray &in_data,
-                            const NDArray *workspace, const OpReqType &req,
-                            const NDArray &in_grad) {
+void MKLDNNPoolingBackward(const OpContext &ctx, const PoolingParam &param,
+                           const NDArray &out_grad, const NDArray &in_data,
+                           const NDArray *workspace, const OpReqType &req,
+                           const NDArray &in_grad) {
   if (req == kNullOp) {
     return;
   }

@@ -30,9 +30,10 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNConcat_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
-    const std::vector<NDArray> &out_data) {
+void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                         const std::vector<NDArray> &in_data,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   int num_in_data = param.num_args;
@@ -54,9 +55,10 @@ void MKLDNNConcat_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNConcat_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& outputs) {
+void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                          const std::vector<NDArray>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   int num_in_data = param.num_args;

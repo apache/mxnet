@@ -39,7 +39,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0]) && SupportMKLDNN(inputs[1])) {
-    MKLDNNSum_Forward(attrs, ctx, inputs, req[0], outputs[0]);
+    MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage
              || inputs[1].storage_type() == kDefaultStorage) {
