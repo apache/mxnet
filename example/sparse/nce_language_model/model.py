@@ -16,7 +16,6 @@
 # under the License.
 
 import mxnet as mx
-from op import *
 
 def nce_criterion(p_target, p_sample, bptt, batch_size, k):
     p_noise_sample = mx.sym.var("p_noise_sample", shape=(bptt*batch_size, k))

@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     # data
     corpus = Corpus(args.data)
-    ntokens = len(corpus.dictionary) / args.scale
+    ntokens = len(corpus.dictionary) * args.scale
     # TODO dict should be the unigram for train?
     train_data = CorpusIter(corpus.train, batch_size, args.bptt)
     eval_data = CorpusIter(corpus.valid, batch_size, args.bptt)
