@@ -62,6 +62,7 @@ MKLDNN_TMPDIR="$MKLDNN_ROOTDIR/tmp"
 MKLDNN_SRCDIR="$MKLDNN_ROOTDIR/src"
 MKLDNN_BUILDDIR="$MKLDNN_ROOTDIR/build"
 MKLDNN_INSTALLDIR="$MKLDNN_ROOTDIR/install"
+MKLDNN_LIBDIR="$MXNET_ROOTDIR/lib"
 
 # MKL DNN release tag, or commit.
 MKLDNN_COMMIT="v0.11"
@@ -96,6 +97,8 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l)
     make -C $MKLDNN_BUILDDIR install
     rm -rf $MKLDNN_BUILDDIR
+    mkdir -p $MKLDNN_LIBDIR
+    cp $MKLDNN_INSTALLDIR/lib/* $MKLDNN_LIBDIR
 fi
 MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
