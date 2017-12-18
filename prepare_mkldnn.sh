@@ -60,6 +60,7 @@ MKLDNN_ROOTDIR="$MXNET_ROOTDIR/3rdparty/mkldnn/"
 MKLDNN_SRCDIR="$MKLDNN_ROOTDIR/src"
 MKLDNN_BUILDDIR="$MKLDNN_ROOTDIR/build"
 MKLDNN_INSTALLDIR="$MKLDNN_ROOTDIR/install"
+MKLDNN_LIBDIR="$MXNET_ROOTDIR/lib"
 
 # MKLDNN install destination
 HOME_MKLDNN=$1
@@ -86,6 +87,8 @@ if [ ! -f "$MKLDNN_INSTALLDIR/lib/libmkldnn.so" ]; then
     make -C $MKLDNN_BUILDDIR -j$(cat /proc/cpuinfo | grep processor | wc -l) VERBOSE=1 >&2
     make -C $MKLDNN_BUILDDIR install
     rm -rf $MKLDNN_BUILDDIR
+    mkdir -p $MKLDNN_LIBDIR
+    cp $MKLDNN_INSTALLDIR/lib/* $MKLDNN_LIBDIR
 fi
 MKLDNNROOT=$MKLDNN_INSTALLDIR
 fi
