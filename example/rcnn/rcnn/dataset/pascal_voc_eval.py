@@ -22,8 +22,10 @@ given a pascal voc imdb, compute mAP
 from ..logger import logger
 import numpy as np
 import os
-import cPickle
-
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 def parse_voc_rec(filename):
     """
@@ -106,10 +108,10 @@ def voc_eval(detpath, annopath, imageset_file, classname, annocache, ovthresh=0.
                 logger.info('reading annotations for %d/%d' % (ind + 1, len(image_filenames)))
         logger.info('saving annotations cache to %s' % annocache)
         with open(annocache, 'wb') as f:
-            cPickle.dump(recs, f, protocol=cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(recs, f, protocol=pickle.HIGHEST_PROTOCOL)
     else:
         with open(annocache, 'rb') as f:
-            recs = cPickle.load(f)
+            recs = pickle.load(f)
 
     # extract objects in :param classname:
     class_recs = {}
