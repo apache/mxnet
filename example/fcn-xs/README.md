@@ -24,7 +24,7 @@ The training dataset size is only 2027, and the validation dataset size is 462.
 
 - Install python package `Pillow` (required by `image_segment.py`).
 ```shell
-pip install Pillow
+pip install --upgrade Pillow
 ```
 - Setup your working directory. Assume your working directory is `~/train_fcn_xs`, and MXNet is built as `~/mxnet`. Copy example scripts into the working directory.
 ```shell
