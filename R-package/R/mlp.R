@@ -47,7 +47,7 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
       stop(paste("Length of activation should be",m))
     }
   }
-  for (i in 1:m) {
+  for (i in seq_len(m)) {
     fc <- mx.symbol.FullyConnected(act, num_hidden=hidden_node[i])
     act <- mx.symbol.Activation(fc, act_type=activation[i])
     if (i == m && !is.null(dropout)) {
@@ -55,15 +55,11 @@ mx.mlp <- function(data, label, hidden_node = 1, out_node, dropout = NULL,
     }
   }
   fc <- mx.symbol.FullyConnected(act, num_hidden=out_node)
-  if (out_activation == "rmse") {
-    out <- mx.symbol.LinearRegressionOutput(fc)
-  } else if (out_activation == "softmax") {
-    out <- mx.symbol.SoftmaxOutput(fc)
-  } else if (out_activation == "logistic") {
-    out <- mx.symbol.LogisticRegressionOutput(fc)
-  } else {
-    stop("Not supported yet.")
-  }
+  out <- switch(out_activation,
+                "rmse" = mx.symbol.LinearRegressionOutput(fc),
+                "softmax" = mx.symbol.SoftmaxOutput(fc),
+                "logistic" = mx.symbol.LogisticRegressionOutput(fc),
+                stop("Not supported yet."))
   model <- mx.model.FeedForward.create(out, X=data, y=label, ctx = ctx, ...)
   return(model)
 }

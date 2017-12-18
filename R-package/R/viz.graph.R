@@ -65,12 +65,14 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   
   model_list<- fromJSON(symbol$as.json())
   model_nodes<- model_list$nodes
-  model_nodes$id<- 1:nrow(model_nodes)-1
+  model_nodes$id<- seq_len(nrow(model_nodes))-1
   model_nodes$level<- model_nodes$ID
   
   # extract IDs from string list
-  tuple_str <- function(str) sapply(str_extract_all(str, "\\d+"), function(x) paste0(x, collapse="X"))
-  
+  tuple_str <- function(str) vapply(str_extract_all(str, "\\d+"),
+                                    function(x) paste0(x, collapse="X"),
+                                    character(1))
+
   ### substitute op for heads
   op_id<- sort(unique(model_list$heads[1,]+1))
   op_null<- which(model_nodes$op=="null")
@@ -104,23 +106,23 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
   
   ### remapping for DiagrammeR convention
   nodes_df$id<- nodes_df$id
-  nodes_df$id_graph<- 1:nrow(nodes_df)
+  nodes_df$id_graph<- seq_len(nrow(nodes_df))
   id_dic<- nodes_df$id_graph
   names(id_dic)<- as.character(nodes_df$id)
   
-  edges_id<- model_nodes$id[!sapply(model_nodes$inputs, length)==0 & !model_nodes$op=="null"]
+  edges_id<- model_nodes$id[lengths(model_nodes$inputs)!=0 & model_nodes$op!="null"]
   edges_id<- id_dic[as.character(edges_id)]
-  edges<- model_nodes$inputs[!sapply(model_nodes$inputs, length)==0 & !model_nodes$op=="null"]
-  edges<- sapply(edges, function(x)intersect(as.numeric(x[, 1]), id.to.keep), simplify = F)
+  edges<- model_nodes$inputs[lengths(model_nodes$inputs)!=0 & model_nodes$op!="null"]
+  edges<- sapply(edges, function(x)intersect(as.numeric(x[, 1]), id.to.keep), simplify = FALSE)
   names(edges)<- edges_id
   
   edges_df<- data.frame(
     from=unlist(edges),
-    to=rep(names(edges), time=sapply(edges, length)),
+    to=rep(names(edges), time=lengths(edges)),
     arrows = "to",
     color="black",
     from_name_output=paste0(model_nodes$name[unlist(edges)+1], "_output"), 
-    stringsAsFactors=F)
+    stringsAsFactors=FALSE)
   edges_df$from<- id_dic[as.character(edges_df$from)]
   
   nodes_df_new<- create_node_df(n = nrow(nodes_df), label=nodes_df$label, shape=nodes_df$shape, type="base", penwidth=2, color=nodes_df$color, style="filled", 
@@ -133,14 +135,14 @@ graph.viz <- function(symbol, shape=NULL, direction="TD", type="graph", graph.wi
     } else edges_labels_raw<- symbol$get.internals()$infer.shape(list(data=shape))$out.shapes
     if (!is.null(edges_labels_raw)){
       edge_label_str <- function(x) paste0(x, collapse="X")
-      edges_labels_raw<- sapply(edges_labels_raw, edge_label_str)
+      edges_labels_raw<- vapply(edges_labels_raw, edge_label_str, character(1))
       names(edges_labels_raw)[names(edges_labels_raw)=="data"]<- "data_output"
       edge_df_new$label<- edges_labels_raw[edges_df$from_name_output]
       edge_df_new$rel<- edge_df_new$label
     }
   }
   
-  graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = T) %>% 
+  graph<- create_graph(nodes_df = nodes_df_new, edges_df = edge_df_new, directed = TRUE) %>% 
     set_global_graph_attrs("layout", value = "dot", attr_type = "graph") %>% 
     add_global_graph_attrs("rankdir", value = direction, attr_type = "graph")
   

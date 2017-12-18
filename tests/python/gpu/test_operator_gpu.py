@@ -38,6 +38,7 @@ from test_sparse_ndarray import test_create_csr, test_create_row_sparse, test_sp
 from test_sparse_ndarray import test_create_sparse_nd_empty, test_create_sparse_nd_from_sparse
 from test_sparse_ndarray import test_create_sparse_nd_from_dense, test_create_sparse_nd_infer_shape
 from test_sparse_ndarray import test_sparse_nd_check_format, test_sparse_nd_copy
+from test_sparse_ndarray import test_sparse_nd_setitem
 from test_sparse_operator import *
 from test_ndarray import *
 
@@ -989,6 +990,7 @@ def test_embedding_with_type():
     weight_types = [np.float16, np.float32, np.float64]
     test_embedding_helper(data_types, weight_types, 0, 5)
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8288")
 def test_svmoutput_with_type():
     sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
     ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
