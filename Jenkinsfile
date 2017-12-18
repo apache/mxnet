@@ -3,7 +3,8 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // mxnet libraries
-mx_lib = 'lib/*.so*, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_gnu.so, lib/libmkldnn.so, lib/libmklml_intel.so, dmlc-core/libdmlc.a, nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -217,7 +218,7 @@ try {
             -j\$(nproc)
             """
           make("cpu_mkldnn", flag)
-          pack_lib('mkldnn_cpu')
+          pack_lib('mkldnn_cpu', mx_mkldnn_lib)
         }
       }
     },
@@ -237,7 +238,7 @@ try {
             -j\$(nproc)
             """
           make("build_cuda", flag)
-          pack_lib('mkldnn_gpu')
+          pack_lib('mkldnn_gpu', mx_mkldnn_lib)
         }
       }
     },
@@ -388,7 +389,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-python2-mkldnn-cpu') {
           init_git()
-          unpack_lib('mkldnn_cpu')
+          unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
           python2_ut('cpu_mkldnn')
           python2_mkldnn_ut('cpu_mkldnn')
         }
@@ -398,7 +399,7 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-python2-mkldnn-gpu') {
           init_git()
-          unpack_lib('mkldnn_gpu')
+          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
           python2_gpu_ut('gpu_mkldnn')
           python2_mkldnn_ut('gpu_mkldnn')
         }
@@ -408,7 +409,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-python3-mkldnn-cpu') {
           init_git()
-          unpack_lib('mkldnn_cpu')
+          unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
           python3_ut('cpu_mkldnn')
           python3_mkldnn_ut('cpu_mkldnn')
         }
@@ -418,7 +419,7 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-python3-mkldnn-gpu') {
           init_git()
-          unpack_lib('mkldnn_gpu')
+          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
           python3_gpu_ut('gpu_mkldnn')
           python3_mkldnn_ut('gpu_mkldnn')
         }
