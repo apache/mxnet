@@ -55,8 +55,8 @@ class ArrayDataset(Dataset):
         self._data = []
         for i, data in enumerate(args):
             assert len(data) == self._length, \
-                "All arrays must have the same length. But the first has %s " \
-                "while the %d-th has %d."%(length, i+1, len(data))
+                "All arrays must have the same length; array[0] has length %d " \
+                "while array[%d] has %d." % (self._length, i+1, len(data))
             if isinstance(data, ndarray.NDArray) and len(data.shape) == 1:
                 data = data.asnumpy()
             self._data.append(data)
