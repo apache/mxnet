@@ -101,6 +101,8 @@ class OperatorDataInitializer {
    * \param blob Blob which to fill with random values
    */
   void FillRandom(const TBlob& blob) const {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
     std::uniform_real_distribution<> dis_real(-5.0, 5.0);
     std::uniform_int_distribution<> dis_int(-128, 127);
     test::patternFill<DType>(&blob, [this, &dis_real, &dis_int]() -> DType {
@@ -108,7 +110,7 @@ class OperatorDataInitializer {
         DType val;
         do {
           val = static_cast<DType>(dis_real(this->generator()));
-        } while (fabs(val) < 1e-5);  // If too close to zero, try again
+        } while (std::abs(val) < 1e-5);  // If too close to zero, try again
         return val;
       } else {
         DType val;
@@ -118,6 +120,7 @@ class OperatorDataInitializer {
         return val;
       }
     });
+#pragma clang diagnostic pop
   }
 
   void FillZero(const TBlob& blob) const {

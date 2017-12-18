@@ -76,9 +76,13 @@ train, val = MNISTIterator(batch_size=100, input_shape = (784,))
 
 logging.basicConfig(level=logging.DEBUG)
 
-model = mx.model.FeedForward(
-    ctx = mx.cpu(), symbol = mlp, num_epoch = 20,
-    learning_rate = 0.1, momentum = 0.9, wd = 0.00001)
+# MXNET_CPU_WORKER_NTHREADS must be greater than 1 for custom op to work on CPU
+context=mx.cpu()
+# Uncomment this line to train on GPU instead of CPU
+# context=mx.gpu(0)
 
-model.fit(X=train, eval_data=val)
+mod = mx.mod.Module(mlp, context=context)
 
+mod.fit(train_data=train, eval_data=val, optimizer='sgd',
+    optimizer_params={'learning_rate':0.1, 'momentum': 0.9, 'wd': 0.00001},
+    num_epoch=10, batch_end_callback=mx.callback.Speedometer(100, 100))
