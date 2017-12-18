@@ -49,12 +49,42 @@ enum SequenceLastOpOutputs { kOut };
 
 struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
   bool use_sequence_length;
+  uint32_t axis;
   DMLC_DECLARE_PARAMETER(SequenceLastParam) {
     DMLC_DECLARE_FIELD(use_sequence_length)
         .set_default(false)
         .describe(
-            "If set to true, this layer takes in an extra input parameter `sequence_length` "
+            "If set to true, this layer takes in an extra input parameter "
+            "`sequence_length` "
             "to specify variable length sequence");
+    DMLC_DECLARE_FIELD(axis).set_default(0).describe(
+        "The sequence axis. Only values of 0 and 1 are current supported.");
+  }
+};
+
+template <int req>
+struct SequenceLastTimewiseKernel {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+                                  const DType *idx, int maxseqlen,
+                                  mshadow::Shape<2> oshape) {
+    auto opos = mxnet_op::unravel(i, oshape);
+    int seqpos = static_cast<int>(idx[opos[0]]) - 1;
+    int ipos = seqpos * (oshape[0] * oshape[1]) + opos[0] * oshape[1] + opos[1];
+    KERNEL_ASSIGN(out[i], req, in[ipos]);
+  }
+};
+
+template <int req>
+struct SequenceLastBatchwiseKernel {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+                                  const DType *idx, int maxseqlen,
+                                  mshadow::Shape<2> oshape) {
+    auto opos = mxnet_op::unravel(i, oshape);
+    int seqpos = static_cast<int>(idx[opos[0]]) - 1;
+    int ipos = opos[0] * (maxseqlen * oshape[1]) + seqpos * oshape[1] + opos[1];
+    KERNEL_ASSIGN(out[i], req, in[ipos]);
   }
 };
 
@@ -62,6 +92,28 @@ template <typename xpu, typename DType>
 class SequenceLastOp : public Operator {
  public:
   explicit SequenceLastOp(SequenceLastParam p) { this->param_ = p; }
+
+  void sequence_last(const mshadow::Tensor<xpu, 3, DType> &data,
+                     const mshadow::Tensor<xpu, 2, DType> &out,
+                     const mshadow::Tensor<xpu, 1, DType> &indices,
+                     const OpReqType req, mshadow::Stream<xpu> *const s) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+
+    int out_size = out.size(0) * out.size(1);
+    int max_seq_len = data.size(param_.axis);
+
+    MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+      if (param_.axis == 1)
+        mxnet_op::Kernel<SequenceLastBatchwiseKernel<req_type>, xpu>::Launch(
+            s, out_size, out.dptr_, data.dptr_, indices.dptr_, max_seq_len,
+            out.shape_);
+      else
+        mxnet_op::Kernel<SequenceLastTimewiseKernel<req_type>, xpu>::Launch(
+            s, out_size, out.dptr_, data.dptr_, indices.dptr_, max_seq_len,
+            out.shape_);
+    });
+  }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
@@ -74,29 +126,29 @@ class SequenceLastOp : public Operator {
     CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
+    // only support axis of 0 or 1 for now
+    bool axis = static_cast<bool>(param_.axis);
+
     // Get any size input + output into required form
-    index_t n = in_data[seq_last::kData].size(1);
-    int max_seq_len = in_data[seq_last::kData].size(0);
-    int total_size = in_data[seq_last::kData].Size();
-    Shape<2> s2 = Shape2(n, static_cast<int>(total_size / n / max_seq_len));
-    Shape<3> s3 =
-        Shape3(max_seq_len, n, static_cast<int>(total_size / n / max_seq_len));
+    index_t d0 = in_data[seq_last::kData].size(0);
+    index_t d1 = in_data[seq_last::kData].size(1);
+    int dsize = in_data[seq_last::kData].Size();
+
+    int batch = axis ? d0 : d1;
+    int max_seq_len = axis ? d1 : d0;
+    int rest_size = dsize / (d0 * d1);
+
     Tensor<xpu, 3, DType> data =
-        in_data[seq_last::kData].get_with_shape<xpu, 3, DType>(s3, s);
+        in_data[seq_last::kData].get_with_shape<xpu, 3, DType>(
+            Shape3(d0, d1, rest_size), s);
     Tensor<xpu, 2, DType> out =
-        out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(s2, s);
+        out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(
+            Shape2(batch, rest_size), s);
 
     if (param_.use_sequence_length) {
-      std::vector<index_t> indices_vec(n, max_seq_len);
-      IndexTensorToVector(
-          in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s),
-          &indices_vec);
-      if (req[seq_last::kOut] == kWriteTo) out = 0.0f;
-      index_t seq_ind;
-      for (index_t i = 0; i < n; ++i) {
-        seq_ind = indices_vec[i] - 1;  // 1-indexing
-        out[i] += data[seq_ind][i];
-      }
+      sequence_last(data, out,
+                    in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s),
+                    req[seq_last::kOut], s);
     } else {
       Assign(out, req[seq_last::kOut],
              F<mshadow_op::identity>(data[max_seq_len - 1]));
@@ -184,17 +236,23 @@ class SequenceLastProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
 
+    if ((param_.axis != 0) && (param_.axis != 1)) {
+      LOG(FATAL) << "Current implementation expects axis to be 0 or 1.";
+    }
+
     const TShape &dshape = (*in_shape)[seq_last::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
+    int batchdim = param_.axis ? 0 : 1;
     if (param_.use_sequence_length)
       SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength,
-                         Shape1(dshape[1]));
+                         Shape1(dshape[batchdim]));
 
     // calculate output size
     TShape shape_o(dshape.ndim() - 1);
-    for (index_t i = 0; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
+    shape_o[0] = dshape[batchdim];
+    for (index_t i = 1; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
 
     const TShape &oshape = shape_o;
     out_shape->clear();
