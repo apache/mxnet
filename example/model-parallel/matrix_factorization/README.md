@@ -13,7 +13,7 @@ from [the MovieLens project](http://files.grouplens.org/datasets/movielens/) by 
 
 This will download MovieLens 10M dataset under ml-10M100K folder. Now, you can run the training as follows:
 
-`python train.py --num-gpus 2`
+`python train.py --num-gpus 1`
 
 You can also specify other attributes such as num-epoch, batch-size,
 factor-size(output dim of the embedding operation) to train.py.
