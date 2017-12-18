@@ -1098,7 +1098,7 @@ class Nadam(Optimizer):
         t = self._index_update_count[index]
 
         # preprocess grad
-        grad *= self.rescale_grad + wd * weight
+        grad = grad * self.rescale_grad + wd * weight
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
