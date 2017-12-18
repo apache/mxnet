@@ -8,10 +8,11 @@ libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
 curr_win = "20171019"  # v0.12.0
 
 if haskey(ENV, "MXNET_HOME")
-  info("MXNET_HOME environment detected: $(ENV["MXNET_HOME"])")
+  MXNET_HOME = ENV["MXNET_HOME"]
+  info("MXNET_HOME environment detected: $MXNET_HOME")
   info("Trying to load existing libmxnet...")
   lib = Libdl.find_library("libmxnet.$(Libdl.dlext)",
-                           ["$(ENV["MXNET_HOME"])/lib"])
+                           [joinpath(MXNET_HOME, "lib"), MXNET_HOME])
   if !isempty(lib)
     info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true

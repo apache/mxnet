@@ -32,6 +32,7 @@ const grad_req_map = Dict{Symbol,GRAD_REQ}(
 ################################################################################
 const MXNET_LIB = Libdl.find_library("libmxnet.$(Libdl.dlext)",
                                      [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
+                                      get(ENV, "MXNET_HOME", ""),
                                       Pkg.dir("MXNet", "deps", "usr", "lib")])
 if isempty(MXNET_LIB)
   # touch this file, so that after the user properly build libmxnet, the precompiled
