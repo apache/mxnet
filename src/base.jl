@@ -20,7 +20,7 @@ const char_pp = Ptr{char_p}
 ################################################################################
 # OpReqType in include/mxnet/op_attr_types.h
 @enum GRAD_REQ GRAD_NOP=0 GRAD_WRITE=1 GRAD_INPLACE=2 GRAD_ADD=3
-const grad_req_map = Dict{Symbol, GRAD_REQ}(
+const grad_req_map = Dict{Symbol,GRAD_REQ}(
     :nop     => GRAD_NOP,      # no operation, do not write anything
     :write   => GRAD_WRITE,    # write gradient to provided space
     :inplace => GRAD_INPLACE,  # perform an inplace write

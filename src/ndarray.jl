@@ -306,10 +306,10 @@ dimension. For example, given an `NDArray` of shape (2,3,4), `slice(array, 2:3)`
 a `NDArray` of shape (2,3,2), sharing the data with the original array. This operation is
 used in data parallelization to split mini-batch into sub-batches for different devices.
 """
-function slice(arr :: NDArray, ::Colon)
+function slice(arr::NDArray, ::Colon)
   arr
 end
-function slice(arr :: NDArray, slice::UnitRange{Int})
+function slice(arr::NDArray, slice::UnitRange{Int})
   dim1 = size(arr)[end]
   @assert(1 <= slice.start <= slice.stop <= dim1)
   if slice.start == 1 && slice.stop == dim1

@@ -502,7 +502,7 @@ function test_rdiv()
     @test copy(x) ≈ y
   end
 
-  info("NDArray:rdiv::type convert")
+  info("NDArray::rdiv::type convert")
   let x = mx.NDArray([1, 2, 3])
     y = 5.5 ./ x
     @test eltype(y) == Int  # this differs from julia

@@ -105,6 +105,7 @@ include("broadcast.jl")
 
 include("ndarray.jl")
 include("random.jl")
+include("autograd.jl")
 
 include("name.jl")
 include("symbolic-node.jl")
