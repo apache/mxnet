@@ -152,7 +152,7 @@ Note that here we
 - If the `-s` argument is not passed, it will keep the number of servers same as number of workers
 - The launch.py script tries to cycle through the hosts file to launch the servers and workers. For example,
   let's say you have `5` hosts in the hosts file and you passed n as `3`(and nothing for s).
-  The script will launch a total of `3` server processes, one server process for each of the first three hosts and
+  The script will launch a total of `3` server processes, one each for the first three hosts and
   launch a total of `3` worker processes, one each for the fourth, fifth and first host.
 - If the hosts file has exactly `n` number of worker nodes which is passed as an argument with `-n`, it will launch
   a server and worker process on each of the `n` hosts.
