@@ -3,7 +3,7 @@
 #'
 #' @param infer.data Data iterator created by mx.io.bucket.iter
 #' @param model Model used for inference
-#' @param ctx The element to mask
+#' @param ctx
 #'
 #' @export
 mx.infer.rnn <- function(infer.data, model, ctx = mx.cpu()) {
@@ -91,12 +91,18 @@ mx.infer.rnn <- function(infer.data, model, ctx = mx.cpu()) {
 #' Inference for one-to-one fusedRNN (CUDA) models
 #'
 #' @param infer.data Data iterator created by mx.io.bucket.iter
-#' @param model Model used for inference
-#' @param ctx The element to mask
+#' @param symbol Symbol used for inference
+#' @param arg.params
+#' @param aux.params
+#' @param input.params
+#' @param ctx
 #'
 #' @export
 mx.infer.rnn.one <- function(infer.data, 
-                             symbol, arg.params, aux.params, input.params = NULL, 
+                             symbol, 
+                             arg.params, 
+                             aux.params, 
+                             input.params = NULL, 
                              ctx = mx.cpu()) {
   
   ### Initialise the iterator
