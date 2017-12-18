@@ -80,9 +80,10 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
   }
 }
 
-void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
-    const std::vector<NDArray> &out_data) {
+void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                     const std::vector<NDArray> &in_data,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const TShape& ishape = in_data[fullc::kData].shape();
@@ -123,9 +124,10 @@ void MKLDNNFC_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNFC_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
-    const std::vector<NDArray> &outputs) {
+void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                      const std::vector<NDArray> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<NDArray> &outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);

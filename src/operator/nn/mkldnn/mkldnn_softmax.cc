@@ -31,8 +31,9 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNSoftmax_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const NDArray &in_data, const OpReqType &req, const NDArray &out_data) {
+void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                          const NDArray &in_data, const OpReqType &req,
+                          const NDArray &out_data) {
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();

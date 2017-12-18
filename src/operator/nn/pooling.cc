@@ -234,8 +234,8 @@ void PoolingCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
-    MKLDNNPooling_Forward(ctx, param, inputs[0], req[0], outputs[0],
-                          workspace);
+    MKLDNNPoolingForward(ctx, param, inputs[0], req[0], outputs[0],
+                         workspace);
     return;
   }
 #endif
@@ -270,8 +270,8 @@ void PoolingGradCompute_CPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   const NDArray &in_grad = outputs[0];
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
-    MKLDNNPooling_Backward(ctx, param, out_grad, *in_data, workspace,
-                           req[0], in_grad);
+    MKLDNNPoolingBackward(ctx, param, out_grad, *in_data, workspace,
+                          req[0], in_grad);
     return;
   }
 #endif

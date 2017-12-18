@@ -165,7 +165,7 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
   }
 }
 
-void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                                const std::vector<NDArray> &in_data,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &out_data) {
@@ -193,9 +193,10 @@ void MKLDNNConvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNConvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& outputs) {
+void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   auto engine = CpuEngine::Get()->get_engine();

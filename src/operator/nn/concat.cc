@@ -159,7 +159,7 @@ void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
   // MKLDNN support 2D and 4D concat
   if (inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4) {
     if (inputs[0].dtype() == mshadow::kFloat32) {
-      MKLDNNConcat_Forward(attrs, op_ctx, inputs, req, outputs);
+      MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
     }
   } else {
     std::vector<TBlob> in_blobs(inputs.size());
@@ -179,7 +179,7 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4) {
     if (inputs[0].dtype() == mshadow::kFloat32) {
-      MKLDNNConcat_Backward(attrs, ctx, inputs, req, outputs);
+      MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
     }
   } else {
     std::vector<TBlob> in_blobs(1);

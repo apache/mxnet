@@ -151,9 +151,10 @@ static mkldnn::convolution_backward_weights::primitive_desc GetDeconvBwdWeights(
   }
 }
 
-void MKLDNNDeconvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
-    const std::vector<NDArray> &out_data) {
+void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                                const std::vector<NDArray> &in_data,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
 
@@ -185,9 +186,10 @@ void MKLDNNDeconvolution_Forward(const nnvm::NodeAttrs& attrs, const OpContext &
   }
 }
 
-void MKLDNNDeconvolution_Backward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
-    const std::vector<NDArray>& outputs) {
+void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);

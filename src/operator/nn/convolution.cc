@@ -53,7 +53,7 @@ static void ConvolutionCompute_CPU(const nnvm::NodeAttrs& attrs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNNConv(inputs[0])) {
-    MKLDNNConvolution_Forward(attrs, ctx, inputs, req, outputs);
+    MKLDNNConvolutionForward(attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
@@ -71,7 +71,7 @@ static void ConvolutionGradCompute_CPU(const nnvm::NodeAttrs& attrs,
     const std::vector<OpReqType>& req, const std::vector<NDArray>& outputs) {
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNNConv(inputs[0])) {
-    MKLDNNConvolution_Backward(attrs, ctx, inputs, req, outputs);
+    MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif

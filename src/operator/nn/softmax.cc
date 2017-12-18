@@ -40,7 +40,7 @@ static void SoftmaxCompute_CPU(const nnvm::NodeAttrs& attrs,
   // It seems MKLDNN softmax doesn't support training.
   // and it only supports non-negative axis.
   if (SupportMKLDNN(inputs[0]) && !ctx.is_train && param.axis >= 0) {
-    MKLDNNSoftmax_Forward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNSoftmaxForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
 #endif

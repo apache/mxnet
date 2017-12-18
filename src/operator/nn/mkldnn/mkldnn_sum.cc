@@ -48,9 +48,9 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
   MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
 }
 
-void MKLDNNSum_Forward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                       const std::vector<NDArray> &inputs, const OpReqType &req,
-                       const NDArray &out_data) {
+void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                      const std::vector<NDArray> &inputs, const OpReqType &req,
+                      const NDArray &out_data) {
   std::vector<mkldnn::primitive::at> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size());
