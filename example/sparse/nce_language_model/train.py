@@ -70,6 +70,8 @@ parser.add_argument('--rescale-grad', type=float, default=1,
                     help='rescale grad')
 parser.add_argument('--gpu', type=int, default=1,
                     help='which gpu')
+parser.add_argument('--optimizer', type=str, default='sgd',
+                    help='which optimizer to use')
 parser.add_argument('--Z', type=int, default=1,
                     help='Z')
 parser.add_argument('--profile', action='store_true',
@@ -118,19 +120,28 @@ if __name__ == '__main__':
     if full_softmax:
         model = ce_loss(rnn_out, ntokens, args.tied, args.use_dense, weight)
     else:
-        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu, batch_size, args.bptt, args.use_dense, decoder_w=weight if args.tied else None)
+        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu, batch_size, args.bptt,
+                         args.use_dense, decoder_w=weight if args.tied else None)
     state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
     # module
     last_states.append(model)
     extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
-    module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx, state_names=(state_names + extra_states) if not full_softmax else state_names,
+    module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx,
+                           state_names=(state_names + extra_states) if not full_softmax else state_names,
                            data_names=['data'], label_names=['label'])#, group2ctxs=group2ctxs)
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier())
 
     kvstore = None #if args.kvstore is None else mx.kv.create(args.kvstore)
     #optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=1.0/batch_size)
-    optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=args.rescale_grad, wd=args.wd, momentum=args.mom)
+    if args.optimizer == 'sgd':
+        optimizer = mx.optimizer.create('sgd', learning_rate=args.lr,
+                                    rescale_grad=args.rescale_grad, wd=args.wd, momentum=args.mom)
+    elif args.optimizer == 'adam':
+        optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=args.rescale_grad)
+    else:
+         raise NotImplementedError()
+
     module.init_optimizer(optimizer=optimizer, kvstore=kvstore)
     speedometer = mx.callback.Speedometer(batch_size, args.log_interval)
 

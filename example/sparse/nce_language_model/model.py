@@ -29,7 +29,6 @@ def nce_criterion(p_target, p_sample, bptt, batch_size, k):
     loss = mx.sym.sum(rnn_loss) + mx.sym.sum(noise_loss)
     return mx.sym.make_loss(-loss / (bptt * batch_size))
 
-
 def nce_decoder_weights_block(vocab_size, nhid, k, batch_size, bptt, use_dense, decoder_w=None):
     '''
     inputs:
@@ -144,6 +143,7 @@ def ce_decoder_block(pred, vocab_size, tied, use_dense, weight=None):
     loss = -mx.sym.pick(pred, target, axis=-1, keepdims=True)
     loss = mx.sym.make_loss(mx.sym.mean(loss, axis=0, exclude=True), name="nll")
     return loss
+
 
 def encoder_block(bptt, vocab_size, num_embed, nhid,
                   num_layers, dropout, use_dense_embedding):
