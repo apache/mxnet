@@ -36,6 +36,8 @@ parser.add_argument('--lr', type=float, default=0.1,
                     help='initial learning rate')
 parser.add_argument('--mom', type=float, default=0.0,
                     help='mom')
+parser.add_argument('--beta1', type=float, default=0.9,
+                    help='beta1')
 parser.add_argument('--wd', type=float, default=0.0,
                     help='wd')
 parser.add_argument('--clip', type=float, default=0.2,
@@ -138,7 +140,7 @@ if __name__ == '__main__':
         optimizer = mx.optimizer.create('sgd', learning_rate=args.lr,
                                     rescale_grad=args.rescale_grad, wd=args.wd, momentum=args.mom)
     elif args.optimizer == 'adam':
-        optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=args.rescale_grad)
+        optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=args.rescale_grad, beta1=args.beta1)
     else:
          raise NotImplementedError()
 

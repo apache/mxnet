@@ -59,3 +59,19 @@ python train.py --nhid 200 --emsize 200  --lr=0.001  --num-gpus=1 --batch_size=3
 2017-12-18 01:26:52,263 Iter[39] Valid          loss 4.6713136, ppl 106.8379974
 2017-12-18 01:26:54,714 Iter[39] Test           loss 4.6128478, ppl 100.7707179
 ```
+
+### medium, 85.4
+
+```
+python train.py --nhid 650 --emsize 650  --lr=0.001  --num-gpus=1 --batch_size=32 --bptt=35 --k=60  --gpu=2  --dropout=0.5 --rescale-grad=1 --mom=0.9  --tied --lr-decay=0.25 --optimizer=adam --beta1=0.9
+
+2017-12-18 01:37:12,134 Namespace(Z=1, batch_size=32, beta1=0.9, bptt=35, clip=0.2, data='./data/ptb.', dropout=0.5, dummy_iter=False, emsize=650, epochs=80, gpu=4, k=60, kvstore=None, log_interval=999999, lr=0.001, lr_decay=0.25, mom=0.9, nhid=650, nlayers=2, num_gpus=1, optimizer='adam', profile=False, rescale_grad=1, scale=1, tied=True, use_dense=False, use_full_softmax=False, use_gpu=0, wd=0.0)
+
+2017-12-18 01:45:47,279 Iter[0] Valid           loss 5.3994027, ppl 221.2742098
+2017-12-18 01:45:51,965 Iter[0] Test            loss 5.3544731, ppl 211.5524713
+2017-12-18 01:54:10,130 Iter[1] Valid           loss 5.1103995, ppl 165.7365554
+2017-12-18 01:54:14,891 Iter[1] Test            loss 5.0659444, ppl 158.5300903
+...
+2017-12-18 05:48:45,774 Iter[29] Valid          loss 4.5050545, ppl 90.4732749
+2017-12-18 05:48:50,254 Iter[29] Test           loss 4.4478014, ppl 85.4388916
+```
