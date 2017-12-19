@@ -442,7 +442,8 @@ The storage type of ``rint`` output depends upon the input storage type:
    - rint(default) = default
    - rint(row_sparse) = row_sparse
 
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(ceil, cpu, mshadow_op::ceil)
@@ -460,7 +461,8 @@ The storage type of ``ceil`` output depends upon the input storage type:
    - ceil(default) = default
    - ceil(row_sparse) = row_sparse
 
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // floor
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(floor, cpu, mshadow_op::floor)
@@ -478,7 +480,8 @@ The storage type of ``floor`` output depends upon the input storage type:
    - floor(default) = default
    - floor(row_sparse) = row_sparse
 
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // trunc
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(trunc, cpu, mshadow_op::trunc)
@@ -497,7 +500,8 @@ The storage type of ``trunc`` output depends upon the input storage type:
    - trunc(default) = default
    - trunc(row_sparse) = row_sparse
 
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(fix, cpu, mshadow_op::fix)
@@ -514,7 +518,8 @@ The storage type of ``fix`` output depends upon the input storage type:
    - fix(default) = default
    - fix(row_sparse) = row_sparse
 
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // square
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square)
