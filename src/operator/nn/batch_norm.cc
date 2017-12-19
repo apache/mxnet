@@ -500,7 +500,7 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   if (dev_mask == mshadow::cpu::kDevMask && (*in_attrs)[0] == kMKLDNNStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (int& v : *in_attrs) {
-      if (v == - 1) v = kDefaultStorage;
+      if (v == kUndefinedStorage) v = kDefaultStorage;
     }
     (*out_attrs)[0] = kMKLDNNStorage;
     (*out_attrs)[1] = kDefaultStorage;
@@ -508,7 +508,10 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
     return true;
   }
 #endif
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (int& v : *in_attrs) {
+    if (v == - 1) v = kDefaultStorage;
+  }
   for (size_t i = 0; i < out_attrs->size(); i++) {
     (*out_attrs)[i] = kDefaultStorage;
   }
@@ -526,7 +529,7 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   if (dev_mask == mshadow::cpu::kDevMask && (*in_attrs)[0] == kMKLDNNStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (int& v : *in_attrs) {
-      if (v == - 1) v = kDefaultStorage;
+      if (v == kUndefinedStorage) v = kDefaultStorage;
     }
     (*out_attrs)[0] = kMKLDNNStorage;
     (*out_attrs)[1] = kDefaultStorage;
@@ -536,7 +539,10 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
     return true;
   }
 #endif
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (int& v : *in_attrs) {
+    if (v == - 1) v = kDefaultStorage;
+  }
   for (size_t i = 0; i < out_attrs->size(); i++) {
     (*out_attrs)[i] = kDefaultStorage;
   }
