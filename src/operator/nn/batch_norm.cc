@@ -399,42 +399,6 @@ static inline bool similar_array(const mxnet::NDArray &arr1,
   return true;
 }
 
-static inline mxnet::NDArray copy_arr(const mxnet::NDArray &arr) {
-  if (arr.storage_type() == mxnet::kMKLDNNStorage) {
-    auto mklmem = arr.GetMKLDNNData();
-    mxnet::NDArray new_arr(arr.shape(), arr.ctx(), false, arr.dtype());
-    auto p = new_arr.data().dptr<float>();
-
-    mxnet::TShape sh = arr.shape();
-    CHECK_EQ(sh.ndim(), 4U);
-    memory::dims _dim = {static_cast<int>(sh[0]),
-                         static_cast<int>(sh[1]),
-                         static_cast<int>(sh[2]),
-                         static_cast<int>(sh[3])};
-    auto user_desc = mkldnn::memory::desc({_dim}, memory::data_type::f32, memory::format::nchw);
-    auto user_pd = mkldnn::memory::primitive_desc(user_desc, CpuEngine::Get()->get_engine());
-    auto user_mem = mkldnn::memory(user_pd);
-    user_mem.set_data_handle(new_arr.data().dptr_);
-    std::vector<mkldnn::primitive> net;
-    if (user_pd != mklmem->get_primitive_desc()) {
-        auto re = mkldnn::reorder(*mklmem, user_mem);
-        net.push_back(re);
-        mkldnn::stream(mkldnn::stream::kind::eager).submit(net).wait();
-    } else {
-        memcpy(p, mklmem->get_data_handle(),
-            arr.shape().Size() * 4);
-    }
-    return new_arr;
-  } else if (arr.storage_type() == mxnet::kDefaultStorage) {
-    mxnet::NDArray new_arr(arr.shape(), arr.ctx(), false, arr.dtype());
-    memcpy(new_arr.data().dptr_, arr.data().dptr_,
-            arr.shape().Size() * 4);
-    return new_arr;
-  } else {
-    LOG(FATAL) << "copy_arr: storage type is not supported";
-  }
-}
-
 void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
                           const OpContext &ctx,
                           const std::vector<NDArray> &inputs,
@@ -449,34 +413,7 @@ void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
 
     switch (inputs[0].dtype()) {
       case mshadow::kFloat32:
-#if MXNET_BN_DEBUG == 1
-        std::cout << "BatchNorm runs into MKLDNN debug" << std::endl;
-        std::vector<mxnet::NDArray> inp;
-        for (size_t i = 0; i < in_data.size(); i++) {
-          inp.push_back(copy_arr(in_data[i]));
-        }
-
-        std::vector<mxnet::NDArray> out;
-        out.push_back(outputs[0]);
-        out.push_back(copy_arr(outputs[1]));
-        out.push_back(copy_arr(outputs[2]));
-        MKLDNNBatchNorm_Forward<float>(ctx, param, inp, req, out, aux_states);
-        auto temp_output = copy_arr(out[0]);
-
-        // Run with original path
-        std::vector<TBlob> in_blobs(inputs.size());
-        for (size_t i = 0; i < in_blobs.size(); i++) {
-          in_blobs[i] = inputs[i].data();
-        }
-        std::vector<TBlob> out_blobs(outputs.size());
-        for (size_t i = 0; i < out_blobs.size(); i++) {
-          out_blobs[i] = outputs[i].data();
-        }
-        BatchNormCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
-        CHECK_EQ(similar_array(temp_output, outputs[0], 1e-8), true);
-#else
         MKLDNNBatchNorm_Forward<float>(ctx, param, in_data, req, outputs, aux_states);
-#endif
         return;
     }
   }
@@ -502,45 +439,23 @@ void BatchNormGradCompute_CPU(const nnvm::NodeAttrs &attrs,
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
     const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-    std::vector<NDArray> out_grad(inputs.begin(),
-                                  inputs.begin() + (param.output_mean_var ? 3U : 1U));
-    std::vector<NDArray> in_data(inputs.begin() + 3U, inputs.begin() + 6U);
-    std::vector<NDArray> aux_states(inputs.begin() + 6U, inputs.begin() + 8U);
-    std::vector<NDArray> out_data(inputs.begin() + 8U, inputs.end());
-    std::vector<NDArray> in_grad(outputs.begin(), outputs.begin() + 3U);
+    int num_out_grads = param.output_mean_var ? 3U : 1U;
+    int in_data_start = 3;
+    int aux_states_start = in_data_start + batchnorm::kInMovingMean;
+    int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
+
+    std::vector<NDArray> out_grad(inputs.begin(), inputs.begin() + num_out_grads);
+    std::vector<NDArray> in_data(inputs.begin() + in_data_start,
+                                 inputs.begin() + aux_states_start);
+    std::vector<NDArray> aux_states(inputs.begin() + aux_states_start,
+                                    inputs.begin() + out_data_start);
+    std::vector<NDArray> out_data(inputs.begin() + out_data_start, inputs.end());
+    std::vector<NDArray> in_grad(outputs.begin(), outputs.begin() + 3);
 
     switch (inputs[0].dtype()) {
       case mshadow::kFloat32:
-#if MXNET_BN_DEBUG == 1
-        std::cout << "BatchNorm backward runs into MKLDNN debug" << std::endl;
-        std::vector<mxnet::NDArray> inp;
-        for (size_t i = 0; i < in_data.size(); i++) {
-          inp.push_back(copy_arr(in_data[i]));
-        }
-
-        std::vector<mxnet::NDArray> out;
-        out.push_back(in_grad[0]);
-        out.push_back(copy_arr(in_grad[1]));
-        out.push_back(copy_arr(in_grad[2]));
-
-        MKLDNNBatchNorm_Backward<float>(ctx, param, out_grad, in_data,
-                                        out_data, req, out, aux_states);
-        auto temp_output = copy_arr(out[0]);
-        std::vector<TBlob> in_blobs(inputs.size());
-        for (size_t i = 0; i < in_blobs.size(); i++) {
-          in_blobs[i] = inputs[i].data();
-        }
-
-        std::vector<TBlob> out_blobs(outputs.size());
-        for (size_t i = 0; i < out_blobs.size(); i++) {
-          out_blobs[i] = outputs[i].data();
-        }
-        BatchNormGradCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
-        CHECK_EQ(similar_array(temp_output, in_grad[0], 1e-8), true);
-#else
         MKLDNNBatchNorm_Backward<float>(ctx, param, out_grad, in_data,
                                         out_data, req, in_grad, aux_states);
-#endif
         return;
       }
   }
@@ -683,6 +598,11 @@ then set ``gamma`` to 1 and its gradient to 0.
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormCompute_CPU)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_BatchNorm"})
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
 .add_argument("beta", "NDArray-or-Symbol", "beta array")
@@ -704,6 +624,11 @@ NNVM_REGISTER_OP(_backward_BatchNorm)
 .set_num_outputs(5)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", backward_BatchNormStorageType)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
 .set_attr_parser(ParamParser<BatchNormParam>)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormGradCompute_CPU);

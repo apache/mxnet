@@ -50,6 +50,7 @@ namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta, kInMovingMean,
   kInMovingVar};  // kGamma: weights, kBeta: biases
 enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
+enum BatchNormOpResource {kTempSpace};
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 
 /*! \brief Default channel axis if none specified int he params */
