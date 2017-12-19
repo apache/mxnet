@@ -94,6 +94,11 @@ inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     return true;
   }
 #endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    (*out_attrs)[i] = kDefaultStorage;
+  }
+  return true;
 }
 
 inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -110,6 +115,11 @@ inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     return true;
   }
 #endif
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    (*out_attrs)[i] = kDefaultStorage;
+  }
+  return true;
 }
 
 void LRNCompute_CPU(const nnvm::NodeAttrs &attrs,
