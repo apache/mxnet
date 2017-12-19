@@ -203,7 +203,7 @@ If the hosts file has exactly `n` number of worker nodes, it will launch a serve
 This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync before the job is launched.  
 If you have not installed MXNet system-wide
 then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`.
-For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`
+For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`. This would work if your `lib` folder contains `libmxnet.so`, as would be the case when you use make. If you use CMake, this file would be in your `build` directory.
 
 - `python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync`
 is the command for the training job on each machine. Note the use of `dist_sync` for the kvstore used in the script.
