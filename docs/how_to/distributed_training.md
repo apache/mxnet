@@ -6,7 +6,7 @@ some environment variables which provide more control.
 ## Type of parallelism
 
 There are two ways in which we can distribute the workload of training a neural network across multiple devices (can be either GPU or CPU).
-The first way *data parallelism* refers to the case where each device stores a complete copy of the model.
+The first way is *data parallelism*, which refers to the case where each device stores a complete copy of the model.
 Each device works with a different part of the dataset, and the devices collectively update a shared model.
 These devices can be located in a single machine or across multiple machines.
 In this document, we describe how to train a model with devices distributed across machines in a data parallel way.
@@ -34,27 +34,27 @@ The scheduler then lets all processes know about every other node in the cluster
 MXNet provides a key-value store, which is a critical component used for multi-device and distributed training.
 It provides a push and pull API for workers to communicate the parameters of the models. It stores a parameter value for each key.
 Workers `push` gradients after processing a batch, and `pull` updated weights before processing a new batch.
-We can also pass in optimizers for the KVStore to use while updating each weight. Optimizers like Stochastic Gradient Descent define update rules,
+We can also pass in optimizers for the KVStore to use while updating each weight. Optimizers like Stochastic Gradient Descent define an update rule,
 essentially a mathematical formula to compute the new weight based on the old weight, gradient, and some parameters.
 
 If you are using a Gluon Trainer object or the Module API,
-it uses a kvstore object internally to aggregate gradients from multiple devices on the same machine as well as different machines.
+it uses a kvstore object internally to aggregate gradients from multiple devices on the same machine as well as communication across different machines.
 
 Although the API remains the same whether or not multiple machines are being used,
 the notion of kvstore server exists only during distributed training.
 In this case, each `push` and `pull` involves communication with the kvstore servers.
 Note that we need to compile MXNet with the build flag `USE_DIST_KVSTORE=1` to use distributed training.
 
-KVStore can be started in distributed mode, by passing a create string which contains the word `dist`
+The distributed mode of KVStore is enabled by passing a create string which contains the word `dist`
 > kv = mxnet.kvstore.create('dist')
 
-Apart from push and pull, kvstore also allows us to fetch the number of workers and the rank of the current worker.
+Apart from push and pull, kvstore also allows us to retrieve the number of workers and the rank of the current worker which can be useful as the below example shows. 
 Refer [KVStore API](https://mxnet.incubator.apache.org/versions/master/api/python/kvstore/kvstore.html) for more.
 
 #### Data iterators
 When running distributed training,
 we want the data iterators on each machine to be working on different parts of the dataset.
-You can look at the example in [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py) to understand how this is done.
+
 For data parallel training on a single worker,
 we can use `mxnet.gluon.utils.split_and_load` to split a batch of samples provided by the data iterator, and then load each part of the batch on the device which will process it.
 In the case of distributed training, one way to ensure that different workers
@@ -67,9 +67,11 @@ on passing the number of parts and the index of parts to iterate over.
 Some iterators in MXNet that support this feature are `mxnet.io.MNISTIterator` and `mxnet.io.ImageRecordIter`.
 If you are using a different iterator, you can look at how the above iterators implement this.
 
+You can look at the example in [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py) to understand how this is done.
+
 #### Different modes of distributed training
 Different modes of distributed training can be enabled by using different types of kvstore.
-Distributed training itself is enabled when kvstore contains the word `dist`.
+Distributed training itself is enabled when kvstore creation string contains the word `dist`.
 
 - `dist_sync`: In synchronous distributed training, all workers use the same synchronized set of model parameters at the start of every batch.
 This means that after each batch, the server waits to receive gradients from each worker before it updates the model parameters.
@@ -91,7 +93,7 @@ This is faster than `dist_sync' because it reduces expensive communication betwe
 
 #### Distribution of parameter arrays
 Each server doesn't necessarily store all the parameter arrays.
-Arrays are distributed across different servers, the decision on which server stores a particular array is picked at random.
+Arrays are distributed across different servers. The decision of which server stores a particular array is made by picking a server at random.
 The worker processes are unaware of this distribution because kvstore ensures that when a particular key is being pulled, this request is sent to the server which has the corresponding value.
 If the value of some key is very large, it may be sharded across different servers.
 Again, this is handled internally, so that the worker does not have to do anything different.
