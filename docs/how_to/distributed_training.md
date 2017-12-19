@@ -15,7 +15,7 @@ When models are so large that they don't fit into device memory, then a second w
 Here, different devices are assigned the task of learning different parts of the model.
 Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](https://mxnet.incubator.apache.org/versions/master/how_to/model_parallel_lstm.html) for more on this.
 
-## How it works?
+## How does distributed training work?
 The architecture of distributed training in MXNet is as follows.
 #### Types of processes
 MXNet has three types of processes which communicate with each other to together accomplish training of a model.
