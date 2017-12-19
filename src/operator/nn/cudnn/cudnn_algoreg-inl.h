@@ -109,7 +109,7 @@ class CuDNNAlgoReg {
                    "this can take a while... (setting env variable "
                    "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
       if (reg_.size() >= 1000) {
-        //Many people are very concerned about this warning, so change the warning once.
+        // Many people are very concerned about this warning, so change the warning once.
         if (!is_warning_autotune_) {
           LOG(INFO)
             << "If you see this message in the middle of training, you are "
