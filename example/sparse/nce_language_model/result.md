@@ -94,3 +94,37 @@ logs-sparse/tune--bptt-35---k-60---dropout-0.5---clip-0.2---lr-1---lr-decay-0.5-
 2017-12-18 14:25:38,000 Iter[60] Test           loss 4.3396959, ppl 76.6842160
 ```
 
+### medium, 79.9
+
+```
+python train.py --nhid 650 --emsize 650  --lr=1  --num-gpus=1 --batch_size=32 --bptt=35
+--k=60  --gpu=2  --dropout=0.5 --rescale-grad=1 --mom=0.95  --tied --lr-decay=0.5 --optimizer=sgd --scale=1 --epochs=60  --vocab=./data/ptb_vocab.txt
+
+2017-12-19 19:07:42,968 Namespace(Z=1, batch_size=32, beta1=0.9, bptt=35, clip=0.2, data='./data/ptb.', dropout=0.5, dummy_iter=False, emsize=650, epochs=60, gpu=2, k=60, kvstore=No
+ne, log_interval=200, lr=1.0, lr_decay=0.5, mom=0.95, nhid=650, nlayers=2, num_gpus=1, optimizer='sgd', profile=False, rescale_grad=1.0, scale=1, tied=True, use_dense=False, use_ful
+l_softmax=False, use_gpu=0, vocab='./data/ptb_vocab.txt', wd=0.0)
+
+2017-12-19 20:00:00,995 Iter[47] Batch [200]    Speed: 413.10 samples/sec
+2017-12-19 20:00:00,995 Iter[47] Batch [200]    loss 3.0320832, ppl 20.7403940
+2017-12-19 20:00:16,531 Iter[47] Batch [400]    Speed: 411.95 samples/sec
+2017-12-19 20:00:16,531 Iter[47] Batch [400]    loss 3.0018570, ppl 20.1228697
+2017-12-19 20:00:32,031 Iter[47] Batch [600]    Speed: 412.90 samples/sec
+2017-12-19 20:00:32,031 Iter[47] Batch [600]    loss 2.9770472, ppl 19.6297673
+2017-12-19 20:00:47,547 Iter[47] Batch [800]    Speed: 412.47 samples/sec
+2017-12-19 20:00:47,547 Iter[47] Batch [800]    loss 2.9659209, ppl 19.4125728
+2017-12-19 20:00:50,612 Iter[47] Valid          loss 4.4260471, ppl 83.6002969
+Processing file: ./data/ptb.valid.txt
+Finished processing!
+2017-12-19 20:00:51,428 Iter[47] Test           loss 4.3810878, ppl 79.9249280
+```
+
+### large, 77.1
+
+```
+2017-12-19 20:22:36,123 Namespace(Z=1, batch_size=32, beta1=0.9, bptt=35, clip=0.2, data='./data/ptb.', dropout=0.65, dummy_iter=False, emsize=1500, epochs=60, gpu=2, k=60, kvstore=None, log_interval=999999, lr=1.0, lr_decay=0.25, mom=0.95, nhid=1500, nlayers=2, num_gpus=1, optimizer='sgd', profile=False, rescale_grad=1, scale=1, tied=True, use_dense=False, use_full_softmax=False, use_gpu=0, vocab='./data/ptb_vocab.txt', wd=0.0)
+
+2017-12-19 21:46:59,664 Iter[33] Valid          loss 4.3890658, ppl 80.5651174
+2017-12-19 21:46:59,664 epoch 33 with lr decay, lr = 0.0039
+2017-12-19 21:49:27,396 Iter[34] Valid          loss 4.3886497, ppl 80.5316033
+2017-12-19 21:49:28,822 Iter[34] Test           loss 4.3453491, ppl 77.1189524
+```
