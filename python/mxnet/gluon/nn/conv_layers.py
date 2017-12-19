@@ -1016,8 +1016,9 @@ class ReflectionPad2D(HybridBlock):
 
     Parameters
     ----------
-        pad_width int: the size of the padding. If is int, uses the same
-            padding in all boundaries. 
+        `padding` is a tuple of integer padding widths for each axis of the format
+``(before_1, after_1, ... , before_N, after_N)``. The `padding` should be of length ``2*N``
+where ``N`` is the number of dimensions of the array.
 
     Shape:
         - Input: :math:`(N, C, H_{in}, W_{in})`
@@ -1027,14 +1028,14 @@ class ReflectionPad2D(HybridBlock):
 
     Examples
     --------
-    >>> m = nn.ReflectionPad(3)
-    >>> input = mx.nd.random_normal(shape=(16, 3, 224, 224))
+    >>> m = nn.ReflectionPad2D(3)
+    >>> input = mx.nd.random.normal(shape=(16, 3, 224, 224))
     >>> output = m(input)
     """
-    def __init__(self, pad_width=0, **kwargs):
+    def __init__(self, padding=0, **kwargs):
         super(ReflectionPad2D(, self).__init__(**kwargs)
-        self._pad_width = pad_width
+        self._padding = padding
         
     def forward(self, x):
-        return F.pad(x, mode='reflect', pad_width=self._pad_width)
+        return F.pad(x, mode='reflect', padding=self._padding)
 

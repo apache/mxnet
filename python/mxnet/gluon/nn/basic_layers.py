@@ -490,9 +490,10 @@ class InstanceNorm(HybridBlock):
     Output shape:
         Same shape as input.
 
-       This implementation is based on paper:
-    .. [1] Instance Normalization: The Missing Ingredient for Fast Stylization,
-       D. Ulyanov, A. Vedaldi, V. Lempitsky, 2016 (arXiv:1607.08022v2).
+    References
+    ----------
+        `Instance Normalization: The Missing Ingredient for Fast Stylization`
+        <https://arxiv.org/abs/1607.08022>_
 
     Examples
     --------
