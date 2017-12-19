@@ -1450,8 +1450,8 @@ def get_mnist_pkl():
         download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
                  dirname='data')
 
-# download ubyte version of mnist and untar
-def GetMNIST_ubyte():
+# download ubyte version of mnist and extract
+def get_mnist_ubyte():
     if not os.path.isdir("data"):
         os.makedirs('data')
     if (not os.path.exists('data/train-images-idx3-ubyte')) or \
@@ -1464,7 +1464,7 @@ def GetMNIST_ubyte():
             zf.extractall('data')
 
 # download cifar
-def GetCifar10():
+def get_cifar10():
     if not os.path.isdir("data"):
         os.makedirs('data')
     if (not os.path.exists('data/cifar/train.rec')) or \
@@ -1476,10 +1476,10 @@ def GetCifar10():
         with zipfile.ZipFile(zip_file_path) as zf:
             zf.extractall('data')
 
-def MNISTIterator(batch_size, input_shape, num_parts=1, part_index=0):
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """return train and val iterators for mnist"""
     # download data
-    GetMNIST_ubyte()
+    get_mnist_ubyte()
     flat = False if len(input_shape) == 3 else True
 
     train_dataiter = mx.io.MNISTIter(

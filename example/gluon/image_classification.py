@@ -26,6 +26,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
+from mxnet.test_utils import get_mnist_iterator
 
 from data import *
 
@@ -94,7 +95,7 @@ net = models.get_model(opt.model, **kwargs)
 
 # get dataset iterators
 if dataset == 'mnist':
-    train_data, val_data = mnist_iterator(batch_size, (1, 28, 28))
+    train_data, val_data = get_mnist_iterator(batch_size, (1, 28, 28))
 elif dataset == 'cifar10':
     train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
 elif dataset == 'imagenet':

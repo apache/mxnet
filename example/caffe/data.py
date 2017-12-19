@@ -16,13 +16,13 @@
 # under the License.
 
 import mxnet as mx
-from mx.test_utils import GetMNIST_ubyte
+from mxnet.test_utils import get_mnist_ubyte
 
 def get_iterator(data_shape, use_caffe_data):
     def get_iterator_impl_mnist(args, kv):
         """return train and val iterators for mnist"""
         # download data
-        GetMNIST_ubyte()
+        get_mnist_ubyte()
         flat = False if len(data_shape) != 1 else True
 
         train           = mx.io.MNISTIter(

@@ -16,9 +16,8 @@
 # under the License.
 
 # pylint: skip-file
-
 import mxnet as mx
-from mx.test_utils import MNISTIterator
+from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 
@@ -43,7 +42,7 @@ else:
 
 # data
 
-train, val = MNISTIterator(batch_size=100, input_shape = (784,))
+train, val = get_mnist_iterator(batch_size=100, input_shape = (784,))
 
 # train
 

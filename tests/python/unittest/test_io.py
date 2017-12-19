@@ -32,7 +32,7 @@ import unittest
 
 def test_MNISTIter():
     # prepare data
-    GetMNIST_ubyte()
+    get_mnist_ubyte()
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(
@@ -60,7 +60,7 @@ def test_MNISTIter():
     assert(sum(label_0 - label_1) == 0)
 
 def test_Cifar10Rec():
-    GetCifar10()
+    get_cifar10()
     dataiter = mx.io.ImageRecordIter(
             path_imgrec="data/cifar/train.rec",
             mean_img="data/cifar/cifar10_mean.bin",

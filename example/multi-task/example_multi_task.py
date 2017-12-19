@@ -17,7 +17,7 @@
 
 # pylint: skip-file
 import mxnet as mx
-from mx.test_utils import MNISTIterator
+from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 import time
@@ -138,7 +138,7 @@ device = mx.gpu(0)
 lr = 0.01
 
 network = build_network()
-train, val = MNISTIterator(batch_size=batch_size, input_shape = (784,))
+train, val = get_mnist_iterator(batch_size=batch_size, input_shape = (784,))
 train = Multi_mnist_iterator(train)
 val = Multi_mnist_iterator(val)
 
