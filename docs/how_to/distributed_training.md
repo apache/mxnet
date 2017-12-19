@@ -16,7 +16,7 @@ Here, different devices are assigned the task of learning different parts of the
 Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](https://mxnet.incubator.apache.org/versions/master/how_to/model_parallel_lstm.html) for more on this.
 
 ## How does distributed training work?
-The architecture of distributed training in MXNet is as follows.
+The architecture of distributed training in MXNet is as follows:
 #### Types of processes
 MXNet has three types of processes which communicate with each other to together accomplish training of a model.
 - Worker: A worker node actually performs training on a batch of training samples.
@@ -49,7 +49,7 @@ The distributed mode of KVStore is enabled by passing a create string which cont
 > kv = mxnet.kvstore.create('dist')
 
 Apart from push and pull, kvstore also allows us to retrieve the number of workers and the rank of the current worker which can be useful as the below example shows. 
-Refer [KVStore API](https://mxnet.incubator.apache.org/versions/master/api/python/kvstore/kvstore.html) for more.
+Refer [KVStore API](https://mxnet.incubator.apache.org/versions/master/api/python/kvstore/kvstore.html) for more information about KVStore.
 
 #### Data iterators
 When running distributed training,
@@ -64,10 +64,10 @@ Within the part of the dataset each worker has, we can continue to split as befo
 
 Typically, this split of data for each worker happens through the data iterator,
 on passing the number of parts and the index of parts to iterate over.
-Some iterators in MXNet that support this feature are `mxnet.io.MNISTIterator` and `mxnet.io.ImageRecordIter`.
+Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.MNISTIter) and [mxnet.io.ImageRecordIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.ImageRecordIter).
 If you are using a different iterator, you can look at how the above iterators implement this.
 
-You can look at the example in [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py) to understand how this is done.
+You can look at the example in [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py) to understand how this iterator is used.
 
 #### Different modes of distributed training
 Different modes of distributed training can be enabled by using different types of kvstore.
@@ -85,20 +85,20 @@ This is faster than `dist_sync` but can take more epochs to converge.
 In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode.
 The update of weights is atomic, meaning no two updates happen on the same weight at the same time. However, the order  of updates is not guaranteed.
 
-- `dist_sync_device`: Same as dist_sync except that when there are multiple GPUs being used on each node,
+- `dist_sync_device`: Same as `dist_sync` except that when there are multiple GPUs being used on each node,
 this mode aggregates gradients and updates weights on GPU while dist_sync does so on CPU memory.
-This is faster than `dist_sync' because it reduces expensive communication between GPU and CPU, but it increases memory usage on GPU.
+This is faster than `dist_sync` because it reduces expensive communication between GPU and CPU, but it increases memory usage on GPU.
 
 - `dist_async_device` : The analogue of `dist_sync_device` but in asynchronous mode.
 
 #### Distribution of parameter arrays
 Each server doesn't necessarily store all the parameter arrays.
-Arrays are distributed across different servers. The decision of which server stores a particular array is made by picking a server at random.
+Arrays are distributed across different servers. The decision of which server stores a particular array is made at random.
 The worker processes are unaware of this distribution because kvstore ensures that when a particular key is being pulled, this request is sent to the server which has the corresponding value.
 If the value of some key is very large, it may be sharded across different servers.
-Again, this is handled internally, so that the worker does not have to do anything different.
+Again, this is handled internally, so that the worker does not have to do anything differently.
 The threshold for this sharding can be controlled with the environment variable `MXNET_KVSTORE_BIGARRAY_BOUND`.
-See environment variables section below for more details.
+See [environment variables](#environment-variables) for more details.
 
 #### Gradient compression
 When communication cost is expensive, and the ratio of computation time to communication time is low, communication can become a bottleneck.
@@ -114,15 +114,15 @@ If you already have one of these clusters setup, you can skip the next section o
 If you want to use a type of cluster not mentioned above, skip ahead to Manually launching jobs section.
 
 ### Setting up the cluster
-An easy way to set up a cluster of EC2 instances for distributed deep learning is using an [AWS CloudFormation template](https://github.com/awslabs/deeplearning-cfn).
+An easy way to set up a cluster of EC2 instances for distributed deep learning is by using the [AWS CloudFormation template](https://github.com/awslabs/deeplearning-cfn).
 If you can not use the above, this section will help you manually set up a cluster of instances
 to enable you to use `ssh` for launching a distributed training job.
 Let us denote one machine as the `master` of the cluster, through which we will launch and monitor the distributed training on all machines.
 
 If the machines in your cluster are a part of a cloud computing platform like AWS EC2, then your instances should be using key-based authentication already.
-Ensure you create all instances using the same key, say `mxnet-key` and in the same security group.
-Then we need to ensure that master has access to all other machines in the cluster through `ssh` by
-adding this key to ssh-agent and forwarding it to master when we log in. This will make mxnet-key the default key on master.
+Ensure that you create all instances using the same key, say `mxnet-key` and in the same security group.
+Next, we need to ensure that master has access to all other machines in the cluster through `ssh` by
+adding this key to [ssh-agent](https://en.wikipedia.org/wiki/Ssh-agent) and forwarding it to master when we log in. This will make `mxnet-key` the default key on master.
 
 ```
 ssh-add .ssh/mxnet-key
@@ -134,40 +134,40 @@ If your machines use passwords for authentication, see [here](https://help.ubunt
 
 
 It is easier if all these machines have a shared file system so that they can access the training script. One way is to use Amazon Elastic File System to create your network file system.
-The options in the next command are the recommended options for loading AWS EFS.
+The options in the following command are the recommended options when mounting an AWS Elastic File System.
 
 ```
 sudo mkdir efs && sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 NETWORK_FILE_SYSTEM_IP:/ efs
 ```
 
-Note: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training](https://mxnet.incubator.apache.org/versions/master/how_to/s3_integration.html) for more information.
+Tip: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training](https://mxnet.incubator.apache.org/versions/master/how_to/s3_integration.html) for more information.
 
 ### Using launch.py
 MXNet provides a script [tools/launch.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py) to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`.
-Fetch this script by cloning the mxnet repository.
+You can fetch this script by cloning the mxnet repository.
 
 ```
 git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 ##### Example
-Let's start with an example on how to use this. Let us consider training a VGG11 model on the CIFAR10 dataset using the image classification example for gluon.
+Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py).
 ```
 cd example/gluon/
 ```
-On a single machine, we can run this script as
+On a single machine, we can run this script as follows:
 ```
 python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1
 ```
 
-For distributed training of this example, we would do the following.
+For distributed training of this example, we would do the following:
 
 If the mxnet directory which contains the script `image_classification.py` is accessible to all machines in the cluster (for example if they are on a network file system), we can run:
 ```
 ../../tools/launch.py -n 3 -H hosts --launcher ssh python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
 ```
 
-If the directory with the script is not accessible from the other machines in the cluster then we can synchronize the current directory to all machines.
+If the directory with the script is not accessible from the other machines in the cluster, then we can synchronize the current directory to all machines.
 ```
 ../../tools/launch.py -n 3 -H hosts --launcher ssh --sync-dst-dir /tmp/mxnet_job/ python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
 ```
@@ -175,8 +175,8 @@ If the directory with the script is not accessible from the other machines in th
 > Tip: If you don't have a cluster ready and still want to try this out, pass the option `--launcher local` instead of `ssh`
 
 #### Options
-Here, launch.py is used to submit the distributed training job. It takes the following options
-- `-n` denotes the number of worker nodes to be launched
+Here, launch.py is used to submit the distributed training job. It takes the following options:
+- `-n` denotes the number of worker nodes to be launched.
 - `-s` denotes the number of server nodes to be launched.
 If it is not specified, it is taken to be equal to the number of worker nodes.
 The script tries to cycle through the hosts file to launch the servers and workers.
@@ -184,7 +184,7 @@ For example, if you have 5 hosts in the hosts file and you passed `n` as 3 (and 
 The script will launch a total of 3 server processes,
 one each for the first three hosts and launch a total of 3 worker processes, one each for the fourth, fifth and first host.
 If the hosts file has exactly `n` number of worker nodes, it will launch a server and worker process on each of the `n` hosts.
-- `--launcher` denotes the mode of communication. The options are
+- `--launcher` denotes the mode of communication. The options are:
     - `ssh` if machines can communicate through ssh without passwords. This is the default launcher mode.
     - `mpi` if Open MPI is available
     - `sge` for Sun Grid Engine
@@ -193,17 +193,17 @@ If the hosts file has exactly `n` number of worker nodes, it will launch a serve
 - `-H` requires the path of the hosts file
   This file contains IPs of the machines in the cluster. These machines should be able to communicate with each other without using passwords.
   This file is only applicable and required when the launcher mode is `ssh` or `mpi`.
-  An example of the contents of the hosts file would be
+  An example of the contents of the hosts file would be:
   ```
   172.30.0.172
   172.31.0.173
   172.30.1.174
   ```
 - `--sync-dst-dir` takes the path of a directory on all hosts to which the current working directory will be synchronized. This only supports `ssh` launcher mode.
-This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync, before the job is launched.
+This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync before the job is launched.
 
 If you have not installed MXNet system-wide
-then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`,
+then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`.
 For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`
 
 - `python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync`
@@ -220,7 +220,7 @@ while read -u 10 host; do ssh -o "StrictHostKeyChecking no" $host "pkill -f pyth
 ### Manually launching jobs
 If for some reason, you do not want to use the script above to start distributed training, then this section will be helpful.
 MXNet uses environment variables to assign roles to different processes and to let different processes find the scheduler.
-The environment variables are required to be set correctly for the training to start:
+The environment variables are required to be set correctly as follows for the training to start:
 - `DMLC_ROLE`: Specifies the role of the process. This can be `server`, `worker` or `scheduler`. Note that there should only be one `scheduler`.
 When `DMLC_ROLE` is set to `server` or `scheduler`, these processes start when mxnet is imported.
 - `DMLC_PS_ROOT_URI`: Specifies the IP of the scheduler
@@ -250,12 +250,11 @@ For an in-depth discussion of how the scheduler sets up the cluster, you can go 
 - `MXNET_KVSTORE_BIGARRAY_BOUND`
   Value type: Integer
   Default value: 1000000
-  The minimum size of a “big array”.
+  The minimum size of a *big array*.
   When the array size is bigger than this threshold, `MXNET_KVSTORE_REDUCTION_NTHREADS` threads are used for reduction.
   This parameter is also used as a load balancer in kvstore.
   It controls when to partition a single weight to all the servers.
-  If the size of a single weight is less than this bound then it is sent to a single randomly picked server
-  otherwise it is partitioned to all the servers.
+  If the size of a single weight is less than this bound, then it is sent to a single randomly picked server; otherwise, it is partitioned to all the servers.
 
 - `MXNET_ENABLE_GPU_P2P` GPU Peer-to-Peer communication
   Value type: 0(false) or 1(true)
