@@ -35,7 +35,7 @@ namespace op {
 
 static inline algorithm GetMKLDNNLRNAlgo(const LRNParam &param) {
   // TODO(Patric): lrn_within_channel will cause core dump in MKLDNN backward
-  //       Need to fix from MKLDNN
+  //               Need to confirm with MKLDNN team and fix later
   return algorithm::lrn_across_channels;
 }
 
@@ -75,8 +75,8 @@ inline static mkldnn::lrn_backward::primitive_desc GetLRNBwd(
 }
 
 void MKLDNNLRN_Forward(const OpContext &ctx, const LRNParam &param,
-                           const NDArray &in_data, const OpReqType &req,
-                           const NDArray &out_data) {
+                       const NDArray &in_data, const OpReqType &req,
+                       const NDArray &out_data) {
   auto src_mem = in_data.GetMKLDNNData();
   auto src_md =  src_mem->get_primitive_desc().desc();
   auto pdesc = GetLRNFwd(param, ctx.is_train, src_md);
@@ -87,7 +87,7 @@ void MKLDNNLRN_Forward(const OpContext &ctx, const LRNParam &param,
             new mkldnn::memory(pdesc.workspace_primitive_desc()));
     MKLDNNStream::Get()->RegisterPrim(
         lrn_forward(pdesc, mkldnn::primitive::at(*src_mem),
-            *ws_mem, *dst_mem));
+        *ws_mem, *dst_mem));
     MKLDNNStream::Get()->Submit();
   } else {
     MKLDNNStream::Get()->RegisterPrim(
@@ -109,7 +109,10 @@ void MKLDNNLRN_Backward(const OpContext &ctx, const LRNParam &param,
   auto data_md = data_mem->get_primitive_desc().desc();
   auto pdesc_fwd = GetLRNFwd(param, ctx.is_train, data_md);
 
-  // workspace to share
+  // TODO(Patric): To keep the function stateless, we can't pass workspace
+  //               from LRN forward to backward. We have to re-compute
+  //               LRN forward to get the workspace.
+  //               Will refine this code later.
   std::shared_ptr<const mkldnn::memory> ws_mem(
           new mkldnn::memory(pdesc_fwd.workspace_primitive_desc()));
   std::shared_ptr<const mkldnn::memory> dst_temp(
@@ -122,7 +125,6 @@ void MKLDNNLRN_Backward(const OpContext &ctx, const LRNParam &param,
   auto diff_mem = out_grad.GetMKLDNNData();
   auto diff_md = diff_mem->get_primitive_desc().desc();
   auto pdesc_bwd = GetLRNBwd(param, data_in_md, diff_md, pdesc_fwd);
-
   auto diff_src_mem = CreateMKLDNNMem(in_grad,
           pdesc_bwd.diff_src_primitive_desc(), req);
 

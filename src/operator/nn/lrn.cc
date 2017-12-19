@@ -25,9 +25,6 @@
 */
 
 #include "./lrn-inl.h"
-#if MXNET_USE_CUDNN == 1
-#include "./cudnn/cudnn_lrn-inl.h"
-#endif
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_lrn-inl.h"
 #endif
@@ -84,13 +81,12 @@ struct LRNGrad {
 };
 
 inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
-  CHECK(!in_attrs->empty());
-
+                                              const int dev_mask,
+                                              DispatchMode* dispatch_mode,
+                                              std::vector<int> *in_attrs,
+                                              std::vector<int> *out_attrs) {
 #if MXNET_USE_MKLDNN == 1
+  CHECK(!in_attrs->empty());
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
@@ -98,19 +94,15 @@ inline static bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     return true;
   }
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
-  return true;
 }
 
 inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
-  CHECK(!in_attrs->empty());
+                                               const int dev_mask,
+                                               DispatchMode* dispatch_mode,
+                                               std::vector<int> *in_attrs,
+                                               std::vector<int> *out_attrs) {
 #if MXNET_USE_MKLDNN == 1
+  CHECK(!in_attrs->empty());
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (size_t i = 0; i < out_attrs->size(); i++)
@@ -118,17 +110,13 @@ inline static bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     return true;
   }
 #endif
-  *dispatch_mode = DispatchMode::kFCompute;
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
-  return true;
 }
 
 void LRNCompute_CPU(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const std::vector<NDArray> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<NDArray> &outputs) {
+                    const OpContext &ctx,
+                    const std::vector<NDArray> &inputs,
+                    const std::vector<OpReqType> &req,
+                    const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])) {
@@ -147,10 +135,10 @@ void LRNCompute_CPU(const nnvm::NodeAttrs &attrs,
 }
 
 void LRNGradCompute_CPU(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const std::vector<NDArray> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<NDArray> &outputs) {
+                        const OpContext &ctx,
+                        const std::vector<NDArray> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<NDArray> &outputs) {
 #if MXNET_USE_MKLDNN == 1
   const LRNParam &param = nnvm::get<LRNParam>(attrs.parsed);
   const NDArray &out_grad = inputs[0];
