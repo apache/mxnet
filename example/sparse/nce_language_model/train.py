@@ -55,13 +55,12 @@ parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--scale', type=int, default=1,
-                    help='scaling factor for vocab size')
 parser.add_argument('--k', type=int, default=15,
                     help='number of noise samples to estimate')
-parser.add_argument('--use-gpu', type=int, default=0,
-                    help='which gpu to use')
-parser.add_argument('--use-dense', action='store_true',
+parser.add_argument('--gpus', type=str,
+                    help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. ' \
+                         'Increase batch size when using multiple gpus for best performance.')
+parser.add_argument('--dense', action='store_true',
                     help='use dense embedding instead of sparse embedding')
 parser.add_argument('--use-full-softmax', action='store_true',
                     help='use full softmax ce loss instead of noise contrastive estimation')
@@ -73,12 +72,8 @@ parser.add_argument('--num-gpus', type=int, default=1,
                     help='number of gpus to use')
 parser.add_argument('--rescale-grad', type=float, default=1,
                     help='rescale grad')
-parser.add_argument('--gpu', type=int, default=1,
-                    help='which gpu')
 parser.add_argument('--optimizer', type=str, default='sgd',
                     help='which optimizer to use')
-parser.add_argument('--Z', type=int, default=1,
-                    help='Z')
 parser.add_argument('--profile', action='store_true',
                     help='whether to use profiler')
 parser.add_argument('--kvstore', type=str, default=None,
@@ -96,14 +91,14 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format=head)
     args = parser.parse_args()
     logging.info(args)
-    ctx = [mx.gpu(args.gpu) for i in range(args.num_gpus)] if args.num_gpus > 0 else mx.cpu()
+    ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else mx.cpu()
     full_softmax = args.use_full_softmax
     batch_size = args.batch_size if args.num_gpus == 0 else args.batch_size * args.num_gpus
 
     # data
     vocab = data_utils.Vocabulary.from_file(args.vocab)
     unigram = vocab.unigram()
-    ntokens = unigram.size * args.scale
+    ntokens = unigram.size
     sampler = AliasMethod(unigram)
     # TODO serialize sampler table
     train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "train.txt", vocab,
@@ -119,28 +114,24 @@ if __name__ == '__main__':
         test_data = DummyIter(train_data)
 
     # model
-    on_cpu = False
-    #group2ctxs={'cpu_dev':[mx.cpu(0) for i in range(args.num_gpus)], 'gpu_dev':ctx} if on_cpu else None
     rnn_out, weight, last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                                       args.nlayers, args.dropout, args.use_dense, on_cpu, batch_size)
-    logging.debug(str(last_states))
+                                       args.nlayers, args.dropout, args.dense, batch_size)
     if full_softmax:
-        model = ce_loss(rnn_out, ntokens, args.tied, args.use_dense, weight)
+        model = ce_loss(rnn_out, ntokens, args.tied, args.dense, weight)
     else:
-        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, on_cpu, batch_size, args.bptt,
-                         args.use_dense, decoder_w=weight if args.tied else None)
+        model = nce_loss(rnn_out, ntokens, args.nhid, args.k, batch_size, args.bptt,
+                         args.dense, decoder_w=weight if args.tied else None)
     state_names = ['lstm_l0_0', 'lstm_l0_1', 'lstm_l1_0', 'lstm_l1_1'] if args.nlayers == 2 else ['lstm_l0_0', 'lstm_l0_1']
     # module
     last_states.append(model)
     extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
     module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx,
                            state_names=(state_names + extra_states) if not full_softmax else state_names,
-                           data_names=['data', 'mask'], label_names=['label'])#, group2ctxs=group2ctxs)
+                           data_names=['data', 'mask'], label_names=['label'])
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier())
 
     kvstore = None #if args.kvstore is None else mx.kv.create(args.kvstore)
-    #optimizer = mx.optimizer.create('sgd', learning_rate=args.lr, rescale_grad=1.0/batch_size)
     if args.optimizer == 'sgd':
         optimizer = mx.optimizer.create('sgd', learning_rate=args.lr,
                                     rescale_grad=args.rescale_grad, wd=args.wd, momentum=args.mom)
@@ -154,8 +145,8 @@ if __name__ == '__main__':
 
     ############### eval model ####################
     eval_rnn_out, eval_weight, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                                                      args.nlayers, 0, args.use_dense, on_cpu, batch_size)
-    eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, args.use_dense, eval_weight)
+                                                      args.nlayers, 0, args.dense, batch_size)
+    eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, args.dense, eval_weight)
     eval_last_states.append(eval_model)
     ############### eval module ####################
     eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data', 'mask'],
@@ -173,8 +164,8 @@ if __name__ == '__main__':
             decoder_w_param = module._exec_group.param_arrays[decoder_w_index]
 
     if args.profile:
-        config = ['scale', args.scale, 'nhid', args.nhid, 'k', args.k, 'nlayers', args.nlayers,
-                  'use_dense', args.use_dense, 'use_full_softmax', args.use_full_softmax, 'ngpu', args.num_gpus]
+        config = ['nhid', args.nhid, 'k', args.k, 'nlayers', args.nlayers,
+                  'dense', args.dense, 'use_full_softmax', args.use_full_softmax, 'ngpu', args.num_gpus]
         config_str = map(lambda x: str(x), config)
         filename = '-'.join(config_str) + '.json'
         mx.profiler.profiler_set_config(mode='all', filename=filename)

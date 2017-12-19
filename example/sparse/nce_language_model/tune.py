@@ -48,9 +48,9 @@ for lr in LR:
                                                   '--clip', str(clip), '--lr', str(lr), '--lr-decay', str(lr_decay), \
                                                   '--mom', str(mom), '--wd', str(wd), '--optimizer', str(OPTIM), '--beta1', str(beta1)]
                                         if USE_DENSE:
-                                            config += ['--use-dense']
+                                            config += ['--dense']
                                         cmd = ["python", "train.py", "--nhid", str(HID), "--emsize", str(HID), "--log-interval=999999", \
-                                               "--num-gpus=1", "--gpu=%d" % gpu, '--epoch=80', '--tied'] + config
+                                               "--gpus=%d" % gpu, '--epoch=80', '--tied'] + config
                                         filename = 'logs-sparse/tune' + '-'.join(config) + ".tunelog"
                                         with open(filename, "w") as outfile:
                                             subprocess.check_call(cmd, stderr=outfile, env=my_env)
