@@ -200,8 +200,7 @@ If the hosts file has exactly `n` number of worker nodes, it will launch a serve
   172.30.1.174
   ```
 - `--sync-dst-dir` takes the path of a directory on all hosts to which the current working directory will be synchronized. This only supports `ssh` launcher mode.
-This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync before the job is launched.
-
+This is necessary when the working directory is not accessible to all machines in the cluster. Setting this option synchronizes the current directory using rsync before the job is launched.  
 If you have not installed MXNet system-wide
 then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`.
 For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`
