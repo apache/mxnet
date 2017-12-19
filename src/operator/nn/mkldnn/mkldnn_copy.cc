@@ -34,6 +34,7 @@ namespace op {
 void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                 const NDArray &in_data, const OpReqType &req,
                 const NDArray &out_data) {
+  TmpMemMgr::Get()->Init(ctx.requested[0]);
   auto in_mem = in_data.GetMKLDNNData();
   if (req == kAddTo) {
     TmpMemMgr::Get()->Init(ctx.requested[0]);
