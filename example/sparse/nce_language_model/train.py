@@ -18,14 +18,17 @@
 import numpy as np
 import mxnet as mx
 import argparse
-from data import Corpus, CorpusIter, DummyIter
+from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter
 from model import *
 from sampler import *
 import os, math
+import data_utils
 
 parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model with Noice Contrastive Estimation')
 parser.add_argument('--data', type=str, default='./data/ptb.',
                     help='location of the data corpus')
+parser.add_argument('--vocab', type=str, default='./data/ptb_vocab.txt',
+                    help='location of the corpus vocab')
 parser.add_argument('--emsize', type=int, default=1500,
                     help='size of word embeddings')
 parser.add_argument('--nhid', type=int, default=1500,
@@ -98,21 +101,23 @@ if __name__ == '__main__':
     batch_size = args.batch_size if args.num_gpus == 0 else args.batch_size * args.num_gpus
 
     # data
-    corpus = Corpus(args.data)
-    ntokens = len(corpus.dictionary) * args.scale
-    # TODO dict should be the unigram for train?
-    train_data = CorpusIter(corpus.train, batch_size, args.bptt)
-    eval_data = CorpusIter(corpus.valid, batch_size, args.bptt)
-    test_data = CorpusIter(corpus.test, batch_size, args.bptt)
-    unigram = corpus.dictionary.unigram()
+    vocab = data_utils.Vocabulary.from_file(args.vocab)
+    unigram = vocab.unigram()
+    ntokens = unigram.size * args.scale
     sampler = AliasMethod(unigram)
     # TODO serialize sampler table
+    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "train.txt", vocab,
+                                       batch_size, args.bptt))
+    eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "valid.txt", vocab,
+                                      batch_size, args.bptt))
+    test_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "test.txt", vocab,
+                                      batch_size, args.bptt))
 
     if args.dummy_iter:
         train_data = DummyIter(train_data)
         eval_data = DummyIter(train_data)
         test_data = DummyIter(train_data)
-    #val_data = mx.io.PrefetchingIter(CorpusIter(corpus.valid, batch_size, args.bptt, args.k))
+
     # model
     on_cpu = False
     #group2ctxs={'cpu_dev':[mx.cpu(0) for i in range(args.num_gpus)], 'gpu_dev':ctx} if on_cpu else None
@@ -130,7 +135,7 @@ if __name__ == '__main__':
     extra_states = ['sample', 'p_noise_sample', 'p_noise_target']
     module = mx.mod.Module(symbol=mx.sym.Group(last_states), context=ctx,
                            state_names=(state_names + extra_states) if not full_softmax else state_names,
-                           data_names=['data'], label_names=['label'])#, group2ctxs=group2ctxs)
+                           data_names=['data', 'mask'], label_names=['label'])#, group2ctxs=group2ctxs)
     module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     module.init_params(initializer=mx.init.Xavier())
 
@@ -153,7 +158,7 @@ if __name__ == '__main__':
     eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, args.use_dense, eval_weight)
     eval_last_states.append(eval_model)
     ############### eval module ####################
-    eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data'],
+    eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data', 'mask'],
                                 label_names=['label'], state_names=state_names)
     eval_module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label, shared_module=module, for_training=False)
     ############### eval module ####################

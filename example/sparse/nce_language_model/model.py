@@ -20,10 +20,12 @@ import mxnet as mx
 def nce_criterion(p_target, p_sample, bptt, batch_size, k):
     p_noise_sample = mx.sym.var("p_noise_sample", shape=(bptt*batch_size, k))
     p_noise_target = mx.sym.var("p_noise_target", shape=(bptt*batch_size, 1))
+    mask = mx.sym.var("mask", shape=(bptt, batch_size))
+    mask = mx.sym.reshape(mask, shape=(bptt*batch_size, 1))
     eps = 1e-7
     # equation 5 in ref. A
     # eq 5.1 : P(origin=model) = Pmt / (Pmt + k*Pnt)
-    rnn_loss = mx.sym.log(p_target / (p_target + k * p_noise_target + eps))
+    rnn_loss = mx.sym.log(p_target / (p_target + k * p_noise_target + eps)) * mask
     noise_loss = mx.sym.log(k * p_noise_sample / (p_sample + k * p_noise_sample + eps))
     loss = mx.sym.sum(rnn_loss) + mx.sym.sum(noise_loss)
     return mx.sym.make_loss(-loss / (bptt * batch_size))
@@ -140,6 +142,9 @@ def ce_decoder_block(pred, vocab_size, tied, use_dense, weight=None):
     pred = mx.sym.log_softmax(logits, axis=-1)
     # 700 X 1
     loss = -mx.sym.pick(pred, target, axis=-1, keepdims=True)
+    mask = mx.sym.var("mask")
+    mask = mx.sym.reshape(mask, shape=(-1, 1))
+    loss = loss * mask
     loss = mx.sym.make_loss(mx.sym.mean(loss, axis=0, exclude=True), name="nll")
     return loss
 

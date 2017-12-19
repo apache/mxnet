@@ -15,10 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os, gzip
-import sys
+import os, gzip, sys
 import mxnet as mx
 import numpy as np
+import data_utils
 
 class DummyIter(mx.io.DataIter):
     "A dummy iterator that always returns the same batch, used for speed testing"
@@ -62,22 +62,30 @@ class Dictionary(object):
         total_count = mx.nd.sum(prob)
         return prob / total_count
 
+    def save(self, path, replace_unk=True):
+        f = open(path, "w")
+        for idx, word in enumerate(self.idx2word):
+            count = self.word_count[idx]
+            if replace_unk and word == '<unk>':
+                word = '<UNK>'
+            f.write("%s %d\n" %(word, count))
+        f.close()
 
 class Corpus(object):
-    def __init__(self, path):
+    def __init__(self, path, prepend=False):
         self.dictionary = Dictionary()
-        self.train = self.tokenize(path + 'train.txt')
-        self.valid = self.tokenize(path + 'valid.txt')
-        self.test = self.tokenize(path + 'test.txt')
+        self.train = self.tokenize(path + 'train.txt', prepend)
+        self.valid = self.tokenize(path + 'valid.txt', prepend)
+        self.test = self.tokenize(path + 'test.txt', prepend)
 
-    def tokenize(self, path):
+    def tokenize(self, path, prepend):
         """Tokenizes a text file."""
         assert os.path.exists(path)
         # Add words to the dictionary
         with open(path, 'r') as f:
             tokens = 0
             for line in f:
-                words = line.split() + ['<eos>']
+                words = ['<S>'] + line.split() + ['<S>'] if prepend else line.split() + ['<S>']
                 tokens += len(words)
                 for word in words:
                     self.dictionary.add_word(word)
@@ -87,7 +95,7 @@ class Corpus(object):
             ids = np.zeros((tokens,), dtype='int32')
             token = 0
             for line in f:
-                words = line.split() + ['<eos>']
+                words = ['<S>'] + line.split() + ['<S>'] if prepend else line.split() + ['<S>']
                 for word in words:
                     ids[token] = self.dictionary.word2idx[word]
                     token += 1
@@ -134,6 +142,45 @@ class CorpusIter(mx.io.DataIter):
 
     def getdata(self):
         return [self._next_data]
+
+    def getlabel(self):
+        return [self._next_label]
+
+class MultiSentenceIter(mx.io.DataIter):
+    "An iterator that returns the a batch of sequence each time"
+    def __init__(self, data_file, vocab, batch_size, bptt):
+        super(MultiSentenceIter, self).__init__()
+        self.batch_size = batch_size
+        self.bptt = bptt
+        self.provide_data = [('data', (bptt, batch_size), np.int32), ('mask', (bptt, batch_size))]
+        self.provide_label = [('label', (bptt, batch_size))]
+        self.vocab = vocab
+        self._dataset = data_utils.Dataset(self.vocab, data_file, deterministic=True)
+        self._iter = self._dataset.iterate_once(batch_size, bptt)
+
+    def iter_next(self):
+        data = self._iter.next()
+        if data is None:
+            return False
+        self._next_data = mx.nd.array(data[0], dtype=np.int32).T
+        self._next_label = mx.nd.array(data[1]).T
+        self._next_mask = mx.nd.array(data[2]).T
+        return True
+
+    def next(self):
+        if self.iter_next():
+            return mx.io.DataBatch(data=self.getdata(), label=self.getlabel())
+        else:
+            raise StopIteration
+
+    def reset(self):
+        self._iter = self._dataset.iterate_once(self.batch_size, self.bptt)
+        self._next_data = None
+        self._next_label = None
+        self._next_mask = None
+
+    def getdata(self):
+        return [self._next_data, self._next_mask]
 
     def getlabel(self):
         return [self._next_label]

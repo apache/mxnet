@@ -15,18 +15,18 @@ args = parser.parse_args()
 gpu = args.gpu
 print("total num gpus = %d, current gpu = %d" % (num_gpus, gpu))
 
-LR = [0.001, 0.0005]
+LR = [1]
 LR_DECAY = [0.25, 0.5]
 BPTT = [35]
-K = [20, 60]
+K = [60]
 CLIP = [0.2]
 DROPOUT = [0.5]
-MOM = [0.9]
-BETA1 = [0.9, 0.95]
-WD = [0]
+MOM = [0.9, 0.95]
+BETA1 = [0.9]
+WD = [0, 1e-5]
 HID = 650
 USE_DENSE = False
-OPTIM = 'adam'
+OPTIM = 'sgd'
 
 niter = 0
 total_iter = len(LR) * len(LR_DECAY) * len(BPTT) * len(K) * len(CLIP) * len(DROPOUT) * len(MOM) * len(WD)
