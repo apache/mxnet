@@ -4,11 +4,10 @@ In this document, we describe how it works, how to launch a distributed training
 some environment variables which provide more control.
 
 ## Type of parallelism
-
 There are two ways in which we can distribute the workload of training a neural network across multiple devices (can be either GPU or CPU).
 The first way is *data parallelism*, which refers to the case where each device stores a complete copy of the model.
 Each device works with a different part of the dataset, and the devices collectively update a shared model.
-These devices can be located in a single machine or across multiple machines.
+These devices can be located on a single machine or across multiple machines.
 In this document, we describe how to train a model with devices distributed across machines in a data parallel way.
 
 When models are so large that they don't fit into device memory, then a second way called *model parallelism* is useful.
@@ -18,7 +17,7 @@ Currently, MXNet supports Model parallelism in a single machine only. Refer [Tra
 ## How does distributed training work?
 The architecture of distributed training in MXNet is as follows:
 #### Types of processes
-MXNet has three types of processes which communicate with each other to together accomplish training of a model.
+MXNet has three types of processes which communicate with each other to accomplish training of a model.
 - Worker: A worker node actually performs training on a batch of training samples.
 Before processing each batch, the workers pull weights from servers.
 The workers also send gradients to the servers after each batch.
@@ -38,21 +37,21 @@ We can also pass in optimizers for the KVStore to use while updating each weight
 essentially a mathematical formula to compute the new weight based on the old weight, gradient, and some parameters.
 
 If you are using a Gluon Trainer object or the Module API,
-it uses a kvstore object internally to aggregate gradients from multiple devices on the same machine as well as communication across different machines.
+it uses a kvstore object internally to aggregate gradients from multiple devices on the same machine as well as to communicate across different machines.
 
 Although the API remains the same whether or not multiple machines are being used,
 the notion of kvstore server exists only during distributed training.
 In this case, each `push` and `pull` involves communication with the kvstore servers.
 Note that we need to compile MXNet with the build flag `USE_DIST_KVSTORE=1` to use distributed training.
 
-The distributed mode of KVStore is enabled by passing a create string which contains the word `dist`
-> kv = mxnet.kvstore.create('dist')
+The distributed mode of KVStore is enabled by calling `mxnet.kvstore.create` function
+with a string argument which contains the word `dist` as follows:
+> kv = mxnet.kvstore.create('dist_sync')
 
-Apart from push and pull, kvstore also allows us to retrieve the number of workers and the rank of the current worker which can be useful as the below example shows. 
 Refer [KVStore API](https://mxnet.incubator.apache.org/versions/master/api/python/kvstore/kvstore.html) for more information about KVStore.
 
 #### Data iterators
-When running distributed training,
+When running distributed training in data parallel mode,
 we want the data iterators on each machine to be working on different parts of the dataset.
 
 For data parallel training on a single worker,
@@ -61,13 +60,14 @@ In the case of distributed training, one way to ensure that different workers
 process different samples is to divide the dataset into `n` parts at the beginning, one for each worker.
 Within the part of the dataset each worker has, we can continue to split as before for each device on that worker.
 
-
 Typically, this split of data for each worker happens through the data iterator,
 on passing the number of parts and the index of parts to iterate over.
 Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.MNISTIter) and [mxnet.io.ImageRecordIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.ImageRecordIter).
 If you are using a different iterator, you can look at how the above iterators implement this.
-
-You can look at the example in [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py) to understand how this iterator is used.
+We can use the kvstore object to get the number of workers (`kv.num_workers`) and rank of the current worker (`kv.rank`).
+These can be passed as arguments to the iterator.
+You can look at [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)
+to see an example usage.
 
 #### Different modes of distributed training
 Different modes of distributed training can be enabled by using different types of kvstore.

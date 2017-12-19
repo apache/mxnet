@@ -1441,16 +1441,20 @@ def get_mnist():
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
-# download mnist.pkl.gz
 def get_mnist_pkl():
+    """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
+    with the name `data`
+    """
     if not os.path.isdir("data"):
         os.makedirs('data')
     if not os.path.exists('data/mnist.pkl.gz'):
         download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
                  dirname='data')
 
-# download ubyte version of mnist and extract
 def get_mnist_ubyte():
+    """Downloads ubyte version of the MNIST dataset into a directory in the current directory
+    with the name `data` and extracts all files in the zip archive to this directory.
+    """
     if not os.path.isdir("data"):
         os.makedirs('data')
     if (not os.path.exists('data/train-images-idx3-ubyte')) or \
@@ -1462,8 +1466,10 @@ def get_mnist_ubyte():
         with zipfile.ZipFile(zip_file_path) as zf:
             zf.extractall('data')
 
-# download cifar
 def get_cifar10():
+    """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
+    and then extracts all files into the directory `data/cifar`.
+    """
     if not os.path.isdir("data"):
         os.makedirs('data')
     if (not os.path.exists('data/cifar/train.rec')) or \
@@ -1476,8 +1482,9 @@ def get_cifar10():
             zf.extractall('data')
 
 def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
-    """return train and val iterators for mnist"""
-    # download data
+    """Returns training and validation iterators for MNIST dataset
+    """
+
     get_mnist_ubyte()
     flat = False if len(input_shape) == 3 else True
 
