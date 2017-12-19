@@ -399,6 +399,7 @@ static inline bool similar_array(const mxnet::NDArray &arr1,
   return true;
 }
 
+#if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
   TShape shape = input.shape();
   bool support = input.storage_type() == kMKLDNNStorage && shape.ndim() == 4
@@ -413,6 +414,7 @@ static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &p
   }
   return support;
 }
+#endif
 
 void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
                           const OpContext &ctx,
