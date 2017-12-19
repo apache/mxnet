@@ -19,17 +19,13 @@
 """ data iterator for mnist """
 import os
 import random
-import sys
-# code to automatically download dataset
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-import get_data
 import mxnet as mx
+from mxnet.test_utils import GetCifar10, GetMNIST_ubyte
 
 def mnist_iterator(batch_size, input_shape):
     """return train and val iterators for mnist"""
     # download data
-    get_data.GetMNIST_ubyte()
+    GetMNIST_ubyte()
     flat = False if len(input_shape) == 3 else True
 
     train_dataiter = mx.io.MNISTIter(
@@ -51,7 +47,7 @@ def mnist_iterator(batch_size, input_shape):
 
 
 def cifar10_iterator(batch_size, data_shape, resize=-1):
-    get_data.GetCifar10()
+    GetCifar10()
 
     train = mx.io.ImageRecordIter(
         path_imgrec = "data/cifar/train.rec",

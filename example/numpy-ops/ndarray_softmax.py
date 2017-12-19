@@ -16,15 +16,10 @@
 # under the License.
 
 # pylint: skip-file
-import os
-import sys
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
-from get_data import MNISTIterator
 import mxnet as mx
+from mx.test_utils import MNISTIterator
 import numpy as np
 import logging
-
 
 class NDArraySoftmax(mx.operator.NDArrayOp):
     def __init__(self):

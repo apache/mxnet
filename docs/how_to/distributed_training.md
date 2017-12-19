@@ -24,19 +24,48 @@ MXNet has three types of processes communication between each other to accomplis
 - Worker: A worker node actually performs training on a batch of training samples.
 Before processing each batch, the workers pull weights from servers.
 The workers also send gradients to the servers after each batch.
+Depending on the workload for training a model, it might not be a good idea to run multiple worker processes on the same machine.
 - Server: There can be multiple servers which store the model's parameters, and communicate with workers.
+A server may or may not be co-located with the worker processes.
 - Scheduler: There is only one scheduler.
 The role of the scheduler is to set up the cluster.
 This includes waiting for messages that each node has come up and which port the node is listening on.
 The scheduler then lets all processes know about every other node in the cluster, so that they can communicate with each other.
 
-#### Batch sizes
-Note that during distributed training, batch size refers to the batch size on one machine.
-If there are `n` machines, and batch size is `b`, then distributed training behaves like single node training with batch size `n*b`.
-Also note that if there are g gpus on a single machine, then the batch size on each gpu would be `b/g`
+#### KV Store
+MXNet provides a key value store, which is a critical component used for multi device and distributed training.
+It provides a push and pull API for workers to communicate the parameters of the models.
+Workers `push` gradients after processing a batch, and `pull` updated weights before processing a new batch.
+KVStore also updates the weights of the model with the optimizer passed.
+If you are using a Gluon Trainer object or the Module API,
+it uses a kvstore object internally to aggregate gradients from multiple devices on the same machine as well as different machines.
 
-#### Flow of distributed training
-Say
+Although the API remains the same whether or not multiple machines are being used,
+the notion of kvstore server exists only when the type of kvstore used has the word `dist`.
+This is required when we want to run distributed training.
+In this case, each `push` and `pull` involves communication with the kvstore server.
+Note that we need to compile MXNet with the build flag `USE_DIST_KVSTORE=1` to use distributed training.
+
+KVStore can be started in distributed mode, by passing a create string which contains the word `dist`
+> kv = mxnet.kvstore.create('dist')
+
+Apart from push and pull, kvstore also allows us to fetch the number of workers, and the rank of the current worker. Refer [this page](https://mxnet.incubator.apache.org/api/python/kvstore.html) for KVStore API.
+
+#### Data iterators
+When running distributed training,
+we want the data iterators on each machine to be working with different parts of the dataset.
+Let's look at the example in `example/gluon/image_classification.py` to understand how this is done.
+For data parallel training on a single worker,
+we can use `mxnet.gluon.utils.split_and_load` to split a batch of samples provided by the data iterator, and then load each part of the batch on the device which will process it.
+In the case of distributed training, one way to ensure that different workers
+process different samples is to divide the dataset into `n` parts at the beginning, one for each worker.
+Within the part of the dataset each worker has, we can continue to split as before for each device on that worker.
+
+
+Typically, this split of data for each worker happens through the data iterator,
+on passing the number of parts and the index of parts to iterate over.
+Some iterators in MXNet that support this feature are mxnet.io.MNISTIterator and mxnet.io.ImageRecordIter.
+If you are using a different iterator, you can look at how the above iterators implement this. Refer the example below.
 
 #### Different modes of distributed training
 KVStore objects handle the communication underneath to provide a simple API to push and pull the parameters of the model.
@@ -46,6 +75,8 @@ Distributed training itself is enabled when kvstore contains the word `dist`.
 
 - `dist_sync` : In synchronous distributed training, all workers use the same set of model parameters to start a particular batch.
 This means that after each batch, the server waits to receive gradients from each worker before it updates the model parameters.
+This update can use an optimizer if it has been passed. Optimizers like SGD define update rules,
+essentially a mathematical formula to compute the new weight based on the old weight, gradient and some parameters.
 This synchronization comes at a cost because the worker pulling parameters would have to wait till the server finishes this process.
 In this mode if a worker crashes, then it halts the progress of all workers.
 
@@ -73,54 +104,100 @@ See environment variables section for more details.
 
 ## Launching distributed training
 
-> Note that we need to compile MXNet with the build flag `USE_DIST_KVSTORE=1` to use distributed training.
-
 MXNet provides a script tools/launch.py to make it easy to launch a distributed training job. This supports various types of cluster resource managers like `ssh`, `mpirun`, `yarn` and `sge`.
-If you already have one of these clusters setup, you can skip ahead to Using launch.py section.
-If you want to use a different kind of cluster, skip ahead to Manually launching jobs section. We describe one way to setup a cluster of machines below which communicate with each other through ssh connections.
+If you already have one of these clusters setup, you can skip the next section on setting up a cluster.
+If you want to use a different kind of cluster, skip ahead to Manually launching jobs section.
+
 #### Setting up the cluster
+An easy way to set up a cluster of EC2 instances for distributed deep learning is using an [AWS CloudFormation template](https://github.com/awslabs/deeplearning-cfn).
+In this section we describe how to manually set up a cluster of instances which can communicate with each other using `ssh`, if you can not use the above.
+Let us denote one machine as the `master` of the cluster, through which we will launch and monitor the distributed training machine.
 
-In this section we describe instructions on how to set up a cluster of instances which can communicate with each other using `ssh`. You can also
+If the machines in your cluster are a part of a cloud computing platform like AWS EC2, then your instances should be using key based authentication already.
+In that case, each machine needs to have the key to access the other machines in the cluster as the default key `id_rsa` or `id_dsa`. This can be done as below.
+Ensure you create all instances using the same key, say `mxnet-key`.
+Now while logging into master, we can add this key to ssh-agent and have it forwarded into master.
+
+```
+ssh-add .ssh/mxnet-key
+ssh -A user@MASTER_IP_ADDRESS
+```
+
+If your machines use passwords for authentication, see [here](https://help.ubuntu.com/community/SSH/OpenSSH/Keys) on how to set up password-less authentication between machines.
 
 
+It is easier if all these machines have a shared file system so that they can access the training script. One way is to use Amazon Elastic File System to create your network file system.
+The options in the next command are the recommended options for loading AWS EFS.
 
-
-
+```
+sudo mkdir efs && sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 NETWORK_FILE_SYSTEM_IP:/ efs
+```
+With this, you have a cluster of machines which can communicate with each other
 #### Using launch.py
-MXNet provides a script tools/launch.py to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`. If you don't already have a cluster, an easy way to set up a cluster of EC2 instances for distributed deep learning is using an [AWS CloudFormation template](https://github.com/awslabs/deeplearning-cfn).
+MXNet provides a script tools/launch.py to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`.
+Fetch this script by cloning the mxnet repository.
+
+```
+git clone --recursive https://github.com/apache/incubator-mxnet
+```
+
 ##### Example usage
-Let's start with an example on how to use this. Assume we are in `mxnet/example/gluon` and want to train a multi layer perceptron to classify MNIST images with the script mnist.py.
+Let's start with an example on how to use this. Let us consider training a VGG11 model on the CIFAR10 dataset using the image classification example for gluon.
+```
+cd example/gluon/
+```
 On a single machine we can run this script as
 ```
-python mnist.py --batch-size 100
+python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1
 ```
 
-If the mxnet directory which contains the script mnist.py is accessible to all machines in the cluster (for example if they are on a network file system), we can run the following
+For distributed training of this example, we would do the following.
+
+If the mxnet directory which contains the script image_classification.py is accessible to all machines in the cluster (for example if they are on a network file system), we can run:
 ```
-../../tools/launch.py -n 4 --launcher ssh -H hosts python train_mnist.py --network lenet --gpus 0,1 --kv-store dist_sync_device
+../../tools/launch.py -n 3 -H hosts --launcher ssh python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
 ```
+
+If the directory with the script is not accessible from the other machines in the cluster then we can synchronize the current directory to all machines.
+```
+../../tools/launch.py -n 3 -H hosts --launcher ssh --sync-dst-dir /tmp/mxnet_job/ python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
+```
+
+> Tip: If you don't have a cluster ready and still want to try this out, pass the option `--launcher local` instead of `ssh`
+
 #### Options
 Here, launch.py is used to submit the distributed training job. It takes the following options
-- -n denotes number of worker nodes to be launched
-- -s denotes number of server nodes to be launched. If it is not specified, it is taken to be equal to the number of worker nodes.
-- --launcher denotes the mode of communication. The options are
-    - `ssh` if machines can communicate through ssh
+- `-n` denotes number of worker nodes to be launched
+- `-s` denotes number of server nodes to be launched.
+If it is not specified, it is taken to be equal to the number of worker nodes.
+The script tries to cycle through the hosts file to launch the servers and workers.
+For example, if you have 5 hosts in the hosts file and you passed `n` as 3 (and nothing for `s`).
+The script will launch a total of 3 server processes,
+one each for the first three hosts and launch a total of 3 worker processes, one each for the fourth, fifth and first host.
+If the hosts file has exactly `n` number of worker nodes, it will launch a server and worker process on each of the `n` hosts.
+- `--launcher` denotes the mode of communication. The options are
+    - `ssh` if machines can communicate through ssh without passwords. This is the default launcher mode.
     - `mpi` if Open MPI is available
     - `sge` for Sun Grid Engine
     - `yarn` for Apache Yarm
     - `local` for launching all processes on the same local machine. This can be used for debugging purposes.
-- -H requires the path of the hosts file<br/>
-  This file contains IPs of the machines in the cluster. These machines should be able to communicate with each other. For `ssh`, passwordless authentication should be enabled. This file is only applicable and required when the launcher mode is `ssh` or `mpi`.
+- `-H` requires the path of the hosts file
+  This file contains IPs of the machines in the cluster. These machines should be able to communicate with each other without using passwords.
+  This file is only applicable and required when the launcher mode is `ssh` or `mpi`.
   An example of the contents of the hosts file would be
   ```
   172.30.0.172
   172.31.0.173
   172.30.1.174
-  172.32.0.174
   ```
-- --sync-dst-dir takes the path of directory on all hosts to which the current working directory will be synchronized. This only supports `ssh` launcher mode. This is necessary when the working directory is not accessible to all machines in the cluster. If you have not installed mxnet on the system, or are running a custom build, then you might have to copy the folder mxnet/python/mxnet and the file mxnet/lib/libmxnet.so into the current directory before starting the launch script. <br/>
-For example if you are in mxnet/example/image-classification, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .` Then pass `--sync_dst_dir /tmp/mxnet_job/` to synchronize current directory to given folder and then start the job.
-- `python train_mnist.py --network lenet --gpus 0,1 --kv-store dist_sync_device` is the command for the training job on each machine. Note the use of `dist_sync_device` for the kvstore used in the training script.
+- `--sync-dst-dir` takes the path of directory on all hosts to which the current working directory will be synchronized. This only supports `ssh` launcher mode.
+This is necessary when the working directory is not accessible to all machines in the cluster.
+If you have not installed mxnet system wide,
+then you might have to copy the folder `mxnet/python/mxnet` and the file `mxnet/lib/libmxnet.so` into the current directory before starting the launch script.
+For example if you are in `mxnet/example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .` Then pass `--sync_dst_dir /tmp/mxnet_job/` to synchronize current directory to given folder and then start the job.
+- `python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync`
+is the command for the training job on each machine.
+Note the use of `dist_sync` for the kvstore used in the script.
 
 #### Terminating jobs
 If the training job crashes due to an error or we try to terminate the launch script while training is running, jobs on all machines might not have terminated and this would be need to be done manually. If we are using `ssh` launcher, this can be done by running the following command where `hosts` is the path of the hostfile.
@@ -130,7 +207,8 @@ while read -u 10 host; do ssh -o "StrictHostKeyChecking no" $host "pkill -f pyth
 
 ### Manually launching jobs
 If for some reason, you do not want to use the script above to start distributed training, then you can do so by keeping in mind the following. MXNet uses environment variables to assign roles to different processes, and to let different processes find the scheduler. The environment variables are required to be set correctly for the training to start:
-- `DMLC_ROLE` : Specifies the role of the process. This can be `server`, `worker` or `scheduler`. Note that there should only be one `scheduler`
+- `DMLC_ROLE` : Specifies the role of the process. This can be `server`, `worker` or `scheduler`. Note that there should only be one `scheduler`.
+When `DMLC_ROLE` is set to `server` or `scheduler`, these processes start when mxnet is imported.
 - `DMLC_PS_ROOT_URI` : Specifies the IP of the scheduler
 - `DMLC_PS_ROOT_PORT` : Specifies the port that the scheduler listens to
 - `DMLC_NUM_SERVER` : Specifies how many server nodes are in the cluster
@@ -138,14 +216,16 @@ If for some reason, you do not want to use the script above to start distributed
 
 Below is an example to start all jobs locally on Linux or Mac. Note that starting all jobs on the same machine is not a good idea. This is only to make the usage clear.
 ```
-export COMMAND=python example/gluon/mnist.py --kv-store dist_async
+export COMMAND=python example/gluon/mnist.py --dataset cifar10 --model vgg11 --num-epochs 1 --kv-store dist_async
 DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
 DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
 DMLC_ROLE=scheduler DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
 DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
 DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND
 ```
-For an in-depth discussion of how the cluster is set up, you can go [here](https://blog.kovalevskyi.com/mxnet-distributed-training-explained-in-depth-part-1-b90c84bda725)
+For an in-depth discussion of how the scheduler sets up the cluster, you can go [here](https://blog.kovalevskyi.com/mxnet-distributed-training-explained-in-depth-part-1-b90c84bda725).
+
+
 ## Environment variables
 #### For tuning performance
  - `MXNET_KVSTORE_REDUCTION_NTHREADS`
@@ -164,7 +244,6 @@ For an in-depth discussion of how the cluster is set up, you can go [here](https
   Values: 0(false) or 1(true)
   Default: 1
   If true, MXNet tries to use GPU peer-to-peer communication, if available on your device. This is used only when kvstore has the type `device` in it.
-
 #### Communication
 - `DMLC_INTERFACE` Using a particular network interface
   Values: Interface name.
