@@ -399,6 +399,21 @@ static inline bool similar_array(const mxnet::NDArray &arr1,
   return true;
 }
 
+static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
+  TShape shape = input.shape();
+  bool support = input.storage_type() == kMKLDNNStorage && shape.ndim() == 4
+      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
+      && shape[param.axis] % 8 == 0;
+  if (support) {
+    // We need to test its data layout. MKLDNN batchnorm doesn't work well on
+    // the default layout.
+    auto mem = input.GetMKLDNNData();
+    auto desc = mem->get_primitive_desc().desc();
+    support = desc.data.format != GetDefaultFormat(desc);
+  }
+  return support;
+}
+
 void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
                           const OpContext &ctx,
                           const std::vector<NDArray> &inputs,
@@ -406,8 +421,8 @@ void BatchNormCompute_CPU(const nnvm::NodeAttrs &attrs,
                           const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
 #if MXNET_USE_MKLDNN == 1
-  if (SupportMKLDNN(inputs[0])) {
-    const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  if (SupportMKLDNNBN(inputs[0], param)) {
     std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
     std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
 
@@ -436,14 +451,16 @@ void BatchNormGradCompute_CPU(const nnvm::NodeAttrs &attrs,
                               const std::vector<OpReqType> &req,
                               const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 11U);
-#if MXNET_USE_MKLDNN == 1
-  if (SupportMKLDNN(inputs[0])) {
-    const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-    int num_out_grads = param.output_mean_var ? 3U : 1U;
-    int in_data_start = 3;
-    int aux_states_start = in_data_start + batchnorm::kInMovingMean;
-    int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  int num_out_grads = param.output_mean_var ? 3U : 1U;
+  int in_data_start = 3;
+  int aux_states_start = in_data_start + batchnorm::kInMovingMean;
+  int out_data_start = in_data_start + batchnorm::kInMovingVar + 1;
 
+  TShape shape = inputs[0].shape();
+#if MXNET_USE_MKLDNN == 1
+  if (SupportMKLDNNBN(inputs[0], param)
+      && inputs[in_data_start].storage_type() == kMKLDNNStorage) {
     std::vector<NDArray> out_grad(inputs.begin(), inputs.begin() + num_out_grads);
     std::vector<NDArray> in_data(inputs.begin() + in_data_start,
                                  inputs.begin() + aux_states_start);
@@ -452,12 +469,11 @@ void BatchNormGradCompute_CPU(const nnvm::NodeAttrs &attrs,
     std::vector<NDArray> out_data(inputs.begin() + out_data_start, inputs.end());
     std::vector<NDArray> in_grad(outputs.begin(), outputs.begin() + 3);
 
-    switch (inputs[0].dtype()) {
-      case mshadow::kFloat32:
-        MKLDNNBatchNorm_Backward<float>(ctx, param, out_grad, in_data,
-                                        out_data, req, in_grad, aux_states);
-        return;
-      }
+    if (inputs[0].dtype() == mshadow::kFloat32) {
+      MKLDNNBatchNorm_Backward<float>(ctx, param, out_grad, in_data,
+                                      out_data, req, in_grad, aux_states);
+      return;
+    }
   }
 #endif
   // cast NDArray to TBlob, and call original implementation.
@@ -481,7 +497,7 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 5);
   CHECK_EQ(out_attrs->size(), 3);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask && (*in_attrs)[0] == kMKLDNNStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (int& v : *in_attrs) {
       if (v == - 1) v = kDefaultStorage;
@@ -507,7 +523,7 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 11);
   CHECK_EQ(out_attrs->size(), 5);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask && (*in_attrs)[0] == kMKLDNNStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
     for (int& v : *in_attrs) {
       if (v == - 1) v = kDefaultStorage;
