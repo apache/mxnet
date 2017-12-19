@@ -622,48 +622,141 @@ class CommDevice : public Comm {
                                   int priority) {
     InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
-    std::vector<NDArray> reduce(src.size());
-    if (buf.copy_buf.empty()) {
+    auto& stage = stage_buf_[key];
+    if (buf.merged.is_none() && stage.copy_buf.empty()) {
       // one buf for each context
-      buf.copy_buf.resize(src.size());
-      buf.compressed_recv_buf.resize(src.size());
-      buf.compressed_send_buf.resize(src.size());
-      buf.residual.resize(src.size());
+      stage.copy_buf.resize(src.size());
+      stage.compressed_recv_buf.resize(src.size());
+      stage.compressed_send_buf.resize(src.size());
+      stage.residual.resize(src.size());
 
       for (size_t i = 0; i < src.size(); ++i) {
-        buf.copy_buf[i] = NDArray(buf.merged.shape(), buf.merged.ctx(), false,
-                                  buf.merged.dtype());
-        buf.residual[i] = NDArray(buf.merged.shape(), src[i].ctx(), false,
-                                  buf.merged.dtype());
-        buf.residual[i] = 0;
+        stage.copy_buf[i] = NDArray(stage.merged.shape(), stage.merged.ctx(),
+                                    false, stage.merged.dtype());
+        stage.residual[i] = NDArray(stage.merged.shape(), src[i].ctx(), false,
+                                    stage.merged.dtype());
+        stage.residual[i] = 0;
+        int64_t small_size =
+            gc_->GetCompressedSize(stage.merged.shape().Size());
+        stage.compressed_recv_buf[i] =
+            NDArray(TShape{small_size}, stage.merged.ctx(), false,
+                    stage.merged.dtype());
+        stage.compressed_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
+                                               false, stage.merged.dtype());
+      }
+    } else if (!buf.merged.is_none()) {
+      if (buf.copy_buf.empty() && stage.copy_buf.empty()) {
+        buf.copy_buf.resize(g1.size() + 1);
+        buf.compressed_recv_buf.resize(g1.size() + 1);
+        buf.compressed_send_buf.resize(g1.size() + 1);
+        buf.residual.resize(g1.size() + 1);
+        stage.copy_buf.resize(g2.size());
+        stage.compressed_recv_buf.resize(g2.size());
+        stage.compressed_send_buf.resize(g2.size());
+        stage.residual.resize(g2.size());
+        for (size_t i = 0, j = 0, k = 0; i < src.size(); ++i) {
+          int id = src[i].ctx().dev_id;
+          if (id < NVLINK_SUPPORT) {
+            buf.copy_buf[j] = NDArray(buf.merged.shape(), buf.merged.ctx(),
+                                      false, buf.merged.dtype());
+            buf.residual[j] = NDArray(buf.merged.shape(), src[i].ctx(), false,
+                                      buf.merged.dtype());
+            buf.residual[j] = 0;
+            int64_t small_size =
+                gc_->GetCompressedSize(buf.merged.shape().Size());
+            buf.compressed_recv_buf[j] =
+                NDArray(TShape{small_size}, buf.merged.ctx(), false,
+                        buf.merged.dtype());
+            buf.compressed_send_buf[j] = NDArray(
+                TShape{small_size}, src[i].ctx(), false, buf.merged.dtype());
+            j++;
+          } else {
+            stage.copy_buf[k] =
+                NDArray(stage.merged.shape(), stage.merged.ctx(), false,
+                        stage.merged.dtype());
+            stage.residual[k] = NDArray(stage.merged.shape(), src[i].ctx(),
+                                        false, stage.merged.dtype());
+            stage.residual[k] = 0;
+            int64_t small_size =
+                gc_->GetCompressedSize(stage.merged.shape().Size());
+            stage.compressed_recv_buf[k] =
+                NDArray(TShape{small_size}, stage.merged.ctx(), false,
+                        stage.merged.dtype());
+            stage.compressed_send_buf[k] = NDArray(
+                TShape{small_size}, src[i].ctx(), false, stage.merged.dtype());
+            k++;
+          }
+        }
+        buf.copy_buf[g1.size()] = NDArray(buf.merged.shape(), buf.merged.ctx(),
+                                          false, buf.merged.dtype());
+        buf.residual[g1.size()] = NDArray(
+            buf.merged.shape(), stage.merged.ctx(), false, buf.merged.dtype());
+        buf.residual[g1.size()] = 0;
         int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
-        buf.compressed_recv_buf[i] = NDArray(
+        buf.compressed_recv_buf[g1.size()] = NDArray(
             TShape{small_size}, buf.merged.ctx(), false, buf.merged.dtype());
-        buf.compressed_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
-                                             false, buf.merged.dtype());
+        buf.compressed_send_buf[g1.size()] = NDArray(
+            TShape{small_size}, stage.merged.ctx(), false, buf.merged.dtype());
       }
     }
+    std::vector<NDArray> reduce_s(stage.copy_buf.size());
+    std::vector<NDArray> reduce(buf.copy_buf.size());
 
-    for (size_t i = 0; i < src.size(); ++i) {
-      // compress before copy
-      // this is done even if the data is on same context as copy_buf because
-      // we don't want the training to be biased towards data on this GPU
-      gc_->Quantize(src[i], &(buf.compressed_send_buf[i]), &(buf.residual[i]),
-                    priority);
+    for (size_t i = 0, j = 0, k = 0; i < src.size(); ++i) {
+      int id = src[i].ctx().dev_id;
+      if (id >= NVLINK_SUPPORT || buf.merged.is_none()) {
+        // compress before copy
+        // this is done even if the data is on same context as copy_buf because
+        // we don't want the training to be biased towards data on this GPU
+        gc_->Quantize(src[i], &(stage.compressed_send_buf[j]),
+                      &(stage.residual[j]), priority);
 
-      if (buf.compressed_send_buf[i].ctx() !=
-          buf.compressed_recv_buf[i].ctx()) {
-        CopyFromTo(buf.compressed_send_buf[i], &(buf.compressed_recv_buf[i]),
-                   priority);
+        if (stage.compressed_send_buf[j].ctx() !=
+            stage.compressed_recv_buf[j].ctx()) {
+          CopyFromTo(stage.compressed_send_buf[j],
+                     &(stage.compressed_recv_buf[j]), priority);
+        } else {
+          // avoid memory copy when they are on same context
+          stage.compressed_recv_buf[j] = stage.compressed_send_buf[j];
+        }
+
+        gc_->Dequantize(stage.compressed_recv_buf[j], &(stage.copy_buf[j]),
+                        priority);
+        reduce_s[j] = stage.copy_buf[j];
+        j++;
       } else {
-        // avoid memory copy when they are on same context
-        buf.compressed_recv_buf[i] = buf.compressed_send_buf[i];
-      }
+        gc_->Quantize(src[i], &(buf.compressed_send_buf[k]), &(buf.residual[k]),
+                      priority);
 
-      gc_->Dequantize(buf.compressed_recv_buf[i], &(buf.copy_buf[i]), priority);
-      reduce[i] = buf.copy_buf[i];
+        if (buf.compressed_send_buf[k].ctx() !=
+            buf.compressed_recv_buf[k].ctx()) {
+          CopyFromTo(buf.compressed_send_buf[k], &(buf.compressed_recv_buf[k]),
+                     priority);
+        } else {
+          // avoid memory copy when they are on same context
+          buf.compressed_recv_buf[k] = buf.compressed_send_buf[k];
+        }
+
+        gc_->Dequantize(buf.compressed_recv_buf[k], &(buf.copy_buf[k]),
+                        priority);
+        reduce[k] = buf.copy_buf[k];
+        k++;
+      }
     }
-    ElementwiseSum(reduce, &buf.merged);
+    ElementwiseSum(reduce_s, &stage.merged);
+    if (buf.merged.is_none()) {
+      return stage.merged;
+    } else {
+      gc_->Quantize(stage.merged, &buf.compressed_send_buf[g1.size()],
+                    &(buf.residual[g1.size()]), priority);
+      CopyFromTo(buf.compressed_send_buf[g1.size()],
+                 &(buf.compressed_recv_buf[g1.size()]), priority);
+      gc_->Dequantize(buf.compressed_recv_buf[g1.size()],
+                      &(buf.copy_buf[g1.size()]), priority);
+      reduce[reduce.size() - 1] = buf.copy_buf[g1.size()];
+      ElementwiseSum(reduce, &buf.merged);
+    }
+
     return buf.merged;
   }
 
@@ -684,7 +777,7 @@ class CommDevice : public Comm {
       if (!buf.merged.is_none()) CopyFromTo(src, &buf.merged, priority);
       CopyFromTo(src, &stage.merged, priority);
       for (auto d : dst) {
-        if (d->ctx().dev_id >= 4 || buf.merged.is_none())
+        if (d->ctx().dev_id >= NVLINK_SUPPORT || buf.merged.is_none())
           CopyFromTo(stage.merged, d, priority);
         else
           CopyFromTo(buf.merged, d, priority);
@@ -801,7 +894,6 @@ class CommDevice : public Comm {
                 return std::get<1>(a).Size() > std::get<1>(b).Size();
               });
 
-    std::vector<Context> g1, g2;
     for (auto& d : devs) {
       if (d.dev_id < 4)
         g1.push_back(d);
@@ -809,7 +901,7 @@ class CommDevice : public Comm {
         g2.push_back(d);
     }
     if (g1.empty() || g2.empty()) {
-      // 4 gpus are all connected by NVLinks: use all-to-all
+      // all gpus are all connected by NVLinks: use all-to-all
       std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
       for (auto d : devs) {
         ctx_info[d.dev_id] = std::make_pair(d, 0);
@@ -840,9 +932,9 @@ class CommDevice : public Comm {
       // QPI connections are included: use spanning tree
       size_t gpu0, gpu1;
       for (gpu0 = 0, gpu1 = 0; gpu0 < g1.size() && gpu1 < g2.size();) {
-        if (g2[gpu1].dev_id - g1[gpu0].dev_id == 4)
+        if (g2[gpu1].dev_id - g1[gpu0].dev_id == NVLINK_SUPPORT)
           break;
-        else if (g2[gpu1].dev_id - g1[gpu0].dev_id > 4)
+        else if (g2[gpu1].dev_id - g1[gpu0].dev_id > NVLINK_SUPPORT)
           gpu0++;
         else
           gpu1++;
@@ -895,6 +987,8 @@ class CommDevice : public Comm {
     inited_ = true;
   }
 
+  /// \brief the NVLinked connected gpu groups
+  std::vector<Context> g1, g2;
   std::vector<KeyAttrs> sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
