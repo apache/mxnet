@@ -125,9 +125,9 @@ void MKLDNNBatchNorm_Forward(const OpContext &ctx, const BatchNormParam &param,
 
     nnvm::dim_t channels_ = data.shape()[1];
     for (int i = 0; i < channels_; i++) {
-      if (!param.fix_gamma)
+      if (!param.fix_gamma) {
         weight_buf[i] = (gamma.data().dptr<DType>())[i];   // weight
-      else {
+      } else {
         weight_buf[i] = (DType)1.0f;
         if (IsBNWriting(req[batchnorm::kGamma]))
           (gamma.data().dptr<DType>())[i] = (DType)1.0f;
@@ -237,7 +237,6 @@ void MKLDNNBatchNorm_Backward(const OpContext &ctx, const BatchNormParam &param,
                     new mkldnn::memory(bwd_pd.weights_primitive_desc()));
 
     DType* weight_buf = reinterpret_cast<DType *>(weight_mem->get_data_handle());
-    // TODO does batch norm only work on 4D array?
     nnvm::dim_t channels_ = data.shape()[1];
     for (int i = 0; i < channels_; i++) {
       if (!param.fix_gamma)
