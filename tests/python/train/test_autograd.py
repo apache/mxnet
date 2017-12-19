@@ -21,9 +21,9 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.test_utils import get_mnist_ubyte
 import numpy as np
 import logging
-from common import get_data
 from mxnet import autograd
 logging.basicConfig(level=logging.DEBUG)
 
@@ -36,7 +36,7 @@ def get_net():
     net.add(nn.Dense(10, prefix='fc3_'))
     return net
 
-get_data.GetMNIST_ubyte()
+get_mnist_ubyte()
 
 batch_size = 100
 train_data = mx.io.MNISTIter(

@@ -39,6 +39,7 @@ try:
 except ImportError:
     # in rare cases requests may be not installed
     pass
+import zipfile
 import mxnet as mx
 from .context import Context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
@@ -1440,6 +1441,67 @@ def get_mnist():
         path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
+
+# download mnist.pkl.gz
+def get_mnist_pkl():
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if not os.path.exists('data/mnist.pkl.gz'):
+        download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
+                 dirname='data')
+
+# download ubyte version of mnist and extract
+def get_mnist_ubyte():
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/train-images-idx3-ubyte')) or \
+            (not os.path.exists('data/train-labels-idx1-ubyte')) or \
+            (not os.path.exists('data/t10k-images-idx3-ubyte')) or \
+            (not os.path.exists('data/t10k-labels-idx1-ubyte')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+# download cifar
+def get_cifar10():
+    if not os.path.isdir("data"):
+        os.makedirs('data')
+    if (not os.path.exists('data/cifar/train.rec')) or \
+            (not os.path.exists('data/cifar/test.rec')) or \
+            (not os.path.exists('data/cifar/train.lst')) or \
+            (not os.path.exists('data/cifar/test.lst')):
+        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
+                                 dirname='data')
+        with zipfile.ZipFile(zip_file_path) as zf:
+            zf.extractall('data')
+
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
+    """return train and val iterators for mnist"""
+    # download data
+    get_mnist_ubyte()
+    flat = False if len(input_shape) == 3 else True
+
+    train_dataiter = mx.io.MNISTIter(
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        shuffle=True,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    val_dataiter = mx.io.MNISTIter(
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        flat=flat,
+        num_parts=num_parts,
+        part_index=part_index)
+
+    return (train_dataiter, val_dataiter)
 
 def get_zip_data(data_dir, url, data_origin_name):
     """Download and extract zip data.

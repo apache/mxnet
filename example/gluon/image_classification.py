@@ -26,12 +26,13 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
+from mxnet.test_utils import get_mnist_iterator
 
 from data import *
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
-parser.add_argument('--dataset', type=str, default='mnist',
+parser.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, and dummy.')
 parser.add_argument('--train-data', type=str, default='',
                     help='training record file to use, required for imagenet.')
@@ -94,7 +95,7 @@ net = models.get_model(opt.model, **kwargs)
 
 # get dataset iterators
 if dataset == 'mnist':
-    train_data, val_data = mnist_iterator(batch_size, (1, 32, 32))
+    train_data, val_data = get_mnist_iterator(batch_size, (1, 28, 28))
 elif dataset == 'cifar10':
     train_data, val_data = cifar10_iterator(batch_size, (3, 32, 32))
 elif dataset == 'imagenet':
