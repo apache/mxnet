@@ -370,27 +370,25 @@ class KVStoreLocal : public KVStore {
       [rsc, out](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         NDArray *output = out;
         CHECK_EQ(out->shape().ndim(), 1) << "Unique expects 1D inputs";
-        auto size = out->shape()[0];
-        auto out_data = output->data();
-        MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, IType, {
-          IType *dptr = output->data().dptr<IType>();
-          switch (out->ctx().dev_mask()) {
-            case cpu::kDevMask: {
-              mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
-              UniqueImpl(rsc, s, output, size);
-              break;
-            }
-  #if MXNET_USE_CUDA
-            case gpu::kDevMask: {
-              mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
-              UniqueImpl(rsc, s, output, size);
-              break;
-            }
-  #endif
-            default:
-              LOG(FATAL) << "GPU not enabled.";
+        nnvm::dim_t size = out->shape()[0];
+        switch (out->ctx().dev_mask()) {
+          case cpu::kDevMask: {
+            mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
+            UniqueImpl(rsc, s, output, size);
+            break;
           }
-        });
+  #if MXNET_USE_CUDA
+          case gpu::kDevMask: {
+            mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
+            UniqueImpl(rsc, s, output, size);
+            // wait for GPU operations to complete
+            s->Wait();
+            break;
+          }
+  #endif
+          default:
+            LOG(FATAL) << "GPU not enabled.";
+        }
         on_complete();
       }, out->ctx(), {}, {out->var(), rsc.var},
       FnProperty::kNormal, priority, PROFILER_MESSAGE("KVStoreUnique"));

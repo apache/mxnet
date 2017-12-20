@@ -42,7 +42,6 @@ void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
 
 bool CheckSameRowid(
     const std::vector<std::pair<NDArray*, NDArray>>& val_rowids) {
-  bool is_same_rowid = true;
   MSHADOW_TYPE_SWITCH(val_rowids[0].second.dtype(), IType, {
     const TBlob& rowid_first = val_rowids[0].second.data();
     const IType *first_dptr = rowid_first.dptr<IType>();
@@ -51,11 +50,11 @@ bool CheckSameRowid(
       const TBlob& rowid_i = val_rowids[i].second.data();
       if (rowid_i.dptr<IType>() != first_dptr
           || rowid_i.Size() != first_size) {
-        is_same_rowid = false;
+        return false;
       }
     }
   });
-  return is_same_rowid;
+  return true;
 }
 
 }  // namespace kvstore
