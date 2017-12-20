@@ -21,8 +21,6 @@ sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 
 import models
-import get_data
-
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
