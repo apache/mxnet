@@ -15,21 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script will check if MXNet is built/installed correctly 
-# when compiling with Intel MKLML library
+"""
+MKLML related test cases
+"""
+
 import logging
 import os
 
 def test_mklml_install():
+    """
+    This function will check if MXNet is built/installed correctly
+    when compiling with Intel MKLML library, the method is try
+    to import mxnet module and see if correct mklml library is
+    mapped to this process's address space
+    """
     logging.basicConfig(level=logging.INFO)
     try:
+        #pylint: disable=unused-variable
         import mxnet as mx
     except (ImportError, OSError) as e:
         assert 0, "Import mxnet error: %s. Please double check your build/" \
                "install steps or environment variable settings" % str(e)
-    
+
     pid = os.getpid()
-    rc = os.system("cat /proc/" + str(pid) + 
+    rc = os.system("cat /proc/" + str(pid) + \
                        "/maps | grep libmklml_ > /dev/null")
 
     if rc == 0:
