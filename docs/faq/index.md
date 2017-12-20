@@ -17,8 +17,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 ## Scale
 * [How can I train with multiple CPU/GPUs with data parallelism?](http://mxnet.io/how_to/multi_devices.html)
 
-* [How can I train using multiple machines?](http://mxnet.io/how_to/distributed_training.html)
-
 * [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/how_to/model_parallel_lstm.html)
 
 
