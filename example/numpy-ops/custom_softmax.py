@@ -16,8 +16,12 @@
 # under the License.
 
 # pylint: skip-file
+import sys
+import os
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
+from get_data import MNISTIterator
 import mxnet as mx
-from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 
@@ -71,7 +75,7 @@ mlp = mx.symbol.Custom(data=fc3, name='softmax', op_type='softmax')
 
 # data
 
-train, val = get_mnist_iterator(batch_size=100, input_shape = (784,))
+train, val = MNISTIterator(batch_size=100, input_shape = (784,))
 
 # train
 

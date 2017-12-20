@@ -21,7 +21,7 @@ import numpy as np
 import os, sys
 import pickle as pickle
 import logging
-from mxnet.test_utils import get_mnist_ubyte
+from common import get_data
 
 # symbol net
 batch_size = 100
@@ -41,7 +41,7 @@ num_epoch = 4
 prefix = './mlp'
 
 #check data
-get_mnist_ubyte()
+get_data.GetMNIST_ubyte()
 
 train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",

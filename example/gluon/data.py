@@ -19,11 +19,39 @@
 """ data iterator for mnist """
 import os
 import random
+import sys
+# code to automatically download dataset
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../tests/python/common"))
+import get_data
 import mxnet as mx
-from mxnet.test_utils import get_cifar10
 
-def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
-    get_cifar10()
+def mnist_iterator(batch_size, input_shape):
+    """return train and val iterators for mnist"""
+    # download data
+    get_data.GetMNIST_ubyte()
+    flat = False if len(input_shape) == 3 else True
+
+    train_dataiter = mx.io.MNISTIter(
+        image="data/train-images-idx3-ubyte",
+        label="data/train-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        shuffle=True,
+        flat=flat)
+
+    val_dataiter = mx.io.MNISTIter(
+        image="data/t10k-images-idx3-ubyte",
+        label="data/t10k-labels-idx1-ubyte",
+        input_shape=input_shape,
+        batch_size=batch_size,
+        flat=flat)
+
+    return (train_dataiter, val_dataiter)
+
+
+def cifar10_iterator(batch_size, data_shape, resize=-1):
+    get_data.GetCifar10()
 
     train = mx.io.ImageRecordIter(
         path_imgrec = "data/cifar/train.rec",
@@ -32,9 +60,7 @@ def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_in
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
-        rand_mirror = True,
-        num_parts=num_parts,
-        part_index=part_index)
+        rand_mirror = True)
 
     val = mx.io.ImageRecordIter(
         path_imgrec = "data/cifar/test.rec",
@@ -43,14 +69,11 @@ def get_cifar10_iterator(batch_size, data_shape, resize=-1, num_parts=1, part_in
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
-        batch_size  = batch_size,
-        num_parts=num_parts,
-        part_index=part_index)
+        batch_size  = batch_size)
 
     return train, val
 
-
-def get_imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-1, num_parts=1, part_index=0):
+def imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-1):
     train = mx.io.ImageRecordIter(
         path_imgrec             = train_data,
         data_shape              = data_shape,
@@ -73,9 +96,7 @@ def get_imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-
         max_random_shear_ratio  = 0.1,
         max_random_aspect_ratio = 0.25,
         fill_value              = 127,
-        min_random_scale        = 0.533,
-        num_parts               = num_parts,
-        part_index              = part_index)
+        min_random_scale        = 0.533)
 
     val = mx.io.ImageRecordIter(
         path_imgrec        = val_data,
@@ -88,9 +109,7 @@ def get_imagenet_iterator(train_data, val_data, batch_size, data_shape, resize=-
         std_b              = 57.375,
         preprocess_threads = 32,
         batch_size         = batch_size,
-        resize             = resize,
-        num_parts          = num_parts,
-        part_index         = part_index)
+        resize             = resize)
 
     return train, val
 
