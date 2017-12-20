@@ -31,6 +31,7 @@ def nce_criterion(p_target, p_sample, bptt, batch_size, k):
     return mx.sym.make_loss(-loss / (bptt * batch_size))
 
 def nce_decoder_weights_block(vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=None):
+    EMBEDDING = mx.sym.Embedding if dense else mx.sym.contrib.SparseEmbedding
     # (bptt*batch_size, k)
     sample = mx.sym.Variable('sample', shape=(bptt*batch_size, k), dtype='float32')
     # (bptt*batch_size, 1)
@@ -48,22 +49,13 @@ def nce_decoder_weights_block(vocab_size, nhid, k, batch_size, bptt, dense, deco
 
     # lookup weights
     # (bptt*batch_size, k+1, nhid)
-    if dense:
-        sample_target_w = mx.sym.Embedding(data=sample_label, weight=decoder_w,
-                                       input_dim=vocab_size, output_dim=nhid)
-    else:
-        sample_target_w = mx.sym.contrib.SparseEmbedding(data=sample_label, weight=decoder_w,
-                                       input_dim=vocab_size, output_dim=nhid)
-
+    sample_target_w = EMBEDDING(data=sample_label, weight=decoder_w,
+                                   input_dim=vocab_size, output_dim=nhid)
     # lookup bias
     # (bptt*batch_size, k, 1)
-    # TODO use mx.sym.contrib.SparseEmbedding
-    if dense:
-        sample_target_b = mx.sym.Embedding(data=sample_label, weight=decoder_b,
-                                       input_dim=vocab_size, output_dim=1)
-    else:
-        sample_target_b = mx.sym.contrib.SparseEmbedding(data=sample_label, weight=decoder_b,
-                                       input_dim=vocab_size, output_dim=1)
+    sample_target_b = EMBEDDING(data=sample_label, weight=decoder_b,
+                                input_dim=vocab_size, output_dim=1)
+
     return sample_target_w, sample_target_b
 
 def nce_decoder_block(sample_target_w, sample_target_b, pred, nhid, k, bptt, batch_size):
@@ -106,20 +98,6 @@ def nce_loss(pred, vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=None)
 
 ########## COMMON BLOCKS ##########
 
-def encoder_block(bptt, vocab_size, num_embed, nhid,
-                  num_layers, dropout, dense_embedding):
-    data = mx.sym.Variable('data')
-    if dense_embedding:
-        weight = mx.sym.var("encoder_weight", init=mx.init.Uniform(0.1))
-        embed = mx.sym.Embedding(data=data, weight=weight, input_dim=vocab_size,
-                                 output_dim=num_embed, name='embed')
-    else:
-        weight = mx.sym.var("encoder_weight", init=mx.init.Uniform(0.1), stype='row_sparse')
-        embed = mx.sym.contrib.SparseEmbedding(data=data, weight=weight, input_dim=vocab_size,
-                                               output_dim=num_embed, name='embed')
-    return embed, weight
-
-# TODO put ce on cpu, too?
 def ce_loss(pred, vocab_size, tied, dense, weight):
     decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype='default' if dense else 'row_sparse')
     decoder_b = mx.sym.reshape(decoder_b, shape=(vocab_size,))
@@ -165,10 +143,13 @@ def rnn_block(embed, bptt, vocab_size, num_embed, nhid,
 
 # TODO check nhid & num_embed for weight tying
 def rnn(bptt, vocab_size, num_embed, nhid,
-        num_layers, dropout, dense_embedding, batch_size):
-    # embedding consumes lots of memory, stored on cpus
-    embed, weight = encoder_block(bptt, vocab_size, num_embed, nhid,
-                                  num_layers, dropout, dense_embedding)
+        num_layers, dropout, dense, batch_size):
+    data = mx.sym.Variable('data')
+    EMBEDDING = mx.sym.Embedding if dense else mx.sym.contrib.SparseEmbedding
+    stype = 'default' if dense else 'row_sparse'
+    weight = mx.sym.var("encoder_weight", init=mx.init.Uniform(0.1), stype=stype)
+    embed = EMBEDDING(data=data, weight=weight, input_dim=vocab_size,
+                      output_dim=num_embed, name='embed')
     output, states = rnn_block(embed, bptt, vocab_size, num_embed, nhid,
-                               num_layers, dropout, dense_embedding, batch_size)
+                               num_layers, dropout, dense, batch_size)
     return output, weight, states

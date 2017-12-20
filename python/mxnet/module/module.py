@@ -864,7 +864,7 @@ class Module(BaseModule):
             for grads in self._exec_group.grad_arrays:
                 for grad in grads:
                     grad *= ratio
-        return None
+        return norm_val
 
     def global_grad_norm(self):
         """Calculate global gradient norm.
