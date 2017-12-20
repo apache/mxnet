@@ -25,6 +25,8 @@
 #ifndef MXNET_OPERATOR_RANDOM_SAMPLER_H_
 #define MXNET_OPERATOR_RANDOM_SAMPLER_H_
 
+#include "../../engine/openmp.h"
+
 #ifdef __CUDACC__
 #include <curand.h>
 #include <curand_kernel.h>
@@ -89,8 +91,8 @@ class RandGenerator<gpu, double> {
 template<typename xpu>
 MSHADOW_XINLINE index_t OptSampleSeedNum(index_t N);
 template<>
-MSHADOW_XINLINE index_t OptSampleSeedNum<cpu>(index_t N) {
-  return omp_get_num_threads();
+MSHADOW_CINLINE index_t OptSampleSeedNum<cpu>(index_t N) {
+  return engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 }
 template<>
 MSHADOW_XINLINE index_t OptSampleSeedNum<gpu>(index_t N) {

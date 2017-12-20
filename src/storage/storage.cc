@@ -47,7 +47,6 @@ class StorageImpl : public Storage {
 
  private:
   static constexpr size_t kMaxNumberOfDevices = Context::kMaxDevType + 1;
-  static constexpr size_t kMaxNumberOfDeviceIDs = Context::kMaxDevID + 1;
 #if MXNET_USE_CUDA
   static int num_gpu_device;
 #endif  // MXNET_USE_CUDA

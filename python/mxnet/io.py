@@ -34,7 +34,7 @@ from .base import DataIterHandle, NDArrayHandle
 from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
-from .ndarray.sparse import CSRNDArray
+from .ndarray.sparse import CSRNDArray, RowSparseNDArray
 from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
@@ -537,8 +537,10 @@ def _shuffle(data, idx):
             shuffle_data.append((k, v))
         elif isinstance(v, CSRNDArray):
             shuffle_data.append((k, sparse_array(v.asscipy()[idx], v.context)))
-        else:
+        elif isinstance(v, RowSparseNDArray):
             shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
+        else:
+            shuffle_data.append((k, array(v[idx], v.context)))
 
     return shuffle_data
 

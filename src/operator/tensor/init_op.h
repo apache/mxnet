@@ -209,7 +209,7 @@ void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueTyp
     const size_t size = b.Size();
     if (val == 0) {
       if (req != kAddTo) {
-        if (b.dev_mask() == cpu::kDevMask) {
+        if (b.dev_mask() == cpu::kDevMask && size < 50000) {
           MSHADOW_TYPE_SWITCH(b.type_flag_, DType, {
             memset(b.dptr_, 0, size * sizeof(DType));
           });
