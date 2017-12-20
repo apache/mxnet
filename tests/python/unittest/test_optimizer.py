@@ -18,6 +18,7 @@
 import numpy as np
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
+from mxnet import gluon
 import unittest
 from nose.tools import raises
 import math
@@ -643,6 +644,33 @@ def test_ftrl():
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float32)
         compare_optimizer(opt1(sparse_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
+
+def test_nadam():
+
+    def get_net(num_hidden, flatten=True):
+        data = mx.symbol.Variable('data')
+        fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
+        act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+        fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
+        act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+        fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
+        return fc3
+    np.random.seed(1234)
+    N = 20
+    data = mx.random.uniform(-1, 1, shape=(N, 10))
+    label = mx.random.uniform(-1, 1, shape=(N, 1))
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=5, label_name='label', shuffle=True)
+    output = get_net(1)
+    l = mx.symbol.Variable('label')
+    Loss = gluon.loss.L1Loss()
+    loss = Loss(output, l)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=30, optimizer_params={'learning_rate': 0.005, 'wd': 0.0005},
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            optimizer='nadam')
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+
 
 if __name__ == '__main__':
     import nose
