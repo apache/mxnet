@@ -61,6 +61,10 @@ struct ActivationParam : public dmlc::Parameter<ActivationParam> {
     .add_enum("softrelu", activation::kSoftReLU)
     .describe("Activation function to be applied.");
   }
+
+  bool operator==(const ActivationParam& other) const {
+    return this->act_type == other.act_type;
+  }
 };
 
 template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>

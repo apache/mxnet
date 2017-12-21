@@ -69,12 +69,13 @@ static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   }
 }
 
+typedef std::shared_ptr<mkldnn::eltwise_forward::primitive_desc> mkldnn_act_pdesc_ptr;
+
 template<typename Dtype>
-void MKLDNNActivationForward(const OpContext &ctx, const ActivationParam& param,
-                             const NDArray &in_data, const OpReqType &req,
-                             const NDArray &out_data) {
-  auto input_mem = in_data.GetMKLDNNData();
-  mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
+mkldnn_act_pdesc_ptr GetActForwardDescImpl(const ActivationParam& param,
+                                           const OpContext &ctx,
+                                           const mkldnn::memory &input_mem) {
+  mkldnn::memory::primitive_desc data_mpd = input_mem.get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
   Dtype alpha = 0;
@@ -85,8 +86,39 @@ void MKLDNNActivationForward(const OpContext &ctx, const ActivationParam& param,
                                       alg, data_md, alpha)
       : mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
                                       alg, data_md, alpha);
-  mkldnn::eltwise_forward::primitive_desc pdesc(desc, cpu_engine);
+  return mkldnn_act_pdesc_ptr(new mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine));
+}
 
+typedef MKLDNNParamOpSign<ActivationParam> MKLDNNActSignature;
+
+template<typename Dtype>
+const mkldnn::eltwise_forward::primitive_desc &GetActForwardDesc(
+    const ActivationParam& param, const OpContext &ctx, const NDArray &in_data,
+    const mkldnn::memory &input_mem) {
+  static thread_local std::unordered_map<MKLDNNActSignature, mkldnn_act_pdesc_ptr, MKLDNNOpHash> descs;
+  MKLDNNActSignature key(param);
+  key.AddSign(ctx.is_train);
+  key.AddSign(param.act_type);
+  key.AddSign(in_data);
+
+  auto it = descs.find(key);
+  if (it == descs.end()) {
+    auto desc = GetActForwardDescImpl<Dtype>(param, ctx, input_mem);
+    auto ins_ret = descs.insert(
+        std::pair<MKLDNNActSignature, mkldnn_act_pdesc_ptr>(key, desc));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return *it->second;
+}
+
+template<typename Dtype>
+void MKLDNNActivationForward(const OpContext &ctx, const ActivationParam& param,
+                             const NDArray &in_data, const OpReqType &req,
+                             const NDArray &out_data) {
+  auto input_mem = in_data.GetMKLDNNData();
+  const mkldnn::eltwise_forward::primitive_desc &pdesc = GetActForwardDesc<Dtype>(
+      param, ctx, in_data, *input_mem);
   auto output_memory = const_cast<NDArray &>(out_data).CreateMKLDNNData(
       pdesc.dst_primitive_desc());
   MKLDNNStream *stream = MKLDNNStream::Get();
