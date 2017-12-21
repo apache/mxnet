@@ -39,8 +39,8 @@ class ELU(gluon.Block):
         super(ELU, self).__init__()
         self.alpha = alpha
 
-    def forward(self, x):
-        return - self.alpha * nd.relu(1.0 - nd.exp(x)) + nd.relu(x)
+    def forward(self, *args):
+        return (- self.alpha * nd.relu(1.0 - nd.exp(x)) + nd.relu(x) for x in args)
 
 
 class SELU(gluon.Block):
@@ -56,5 +56,5 @@ class SELU(gluon.Block):
         with self.name_scope():
             self.elu = ELU()
 
-    def forward(self, x):
-        return self.scale * nd.where(x >= 0, x, self.alpha * self.elu(x))
+    def forward(self, *args):
+        return (self.scale * nd.where(x >= 0, x, self.alpha * self.elu(x)) for x in args)
