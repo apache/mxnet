@@ -57,4 +57,4 @@ class SELU(gluon.Block):
             self.elu = ELU()
 
     def forward(self, *args):
-        return (self.scale * nd.where(x >= 0, x, self.alpha * self.elu(x)) for x in args) 
+        return (self.scale * nd.where(x >= 0, x, self.alpha * self.elu(x)) for x in args)
