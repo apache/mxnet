@@ -87,11 +87,30 @@ args = parser.parse_args()
 
 best_val = 100000
 
-def evaluate(mod, data_iter, epoch, mode):
+def evaluate(mod, data_iter, epoch, mode, kvstore, args, ctx):
+    import time
+    start = time.time()
     total_L = 0.0
     nbatch = 0
     mod.set_states(value=0)
+    encoder_w_index = mod._exec_group.param_names.index('encoder_weight')
+    encoder_w_param = mod._exec_group.param_arrays[encoder_w_index]
+    if kvstore and not args.dense:
+        if args.tied:
+            row_ids = mx.nd.arange(start=0, stop=encoder_w_param[0].shape[0])
+            kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
+                                    priority=-encoder_w_index)
+        else:
+            decoder_w_index = module._exec_group.param_names.index('decoder_weight')
+            decoder_w_param = module._exec_group.param_arrays[decoder_w_index]
+            row_ids = mx.nd.arange(start=0, stop=decoder_w_param[0].shape[0])
+            kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
+                                    priority=-decoder_w_index)
     for batch in data_iter:
+        if not args.tied:
+            row_ids = batch.data[0].reshape((-1,))
+            kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
+                                    priority=-encoder_w_index)
         mod.forward(batch, is_train=False)
         outputs = mod.get_outputs(merge_multi_context=False)
         state_cache = outputs[:-1]
@@ -100,7 +119,8 @@ def evaluate(mod, data_iter, epoch, mode):
         nbatch += 1
     data_iter.reset()
     loss = total_L / args.bptt / batch_size / nbatch
-    logging.info('Iter[%d] %s\t\tloss %.7f, ppl %.7f'%(epoch, mode, loss, math.exp(loss)))
+    end = time.time()
+    logging.info('Iter[%d] %s\t\tloss %.7f, ppl %.7f. Cost = %.2f'%(epoch, mode, loss, math.exp(loss), end - start))
     return loss
 
 if __name__ == '__main__':
@@ -112,7 +132,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     logging.info(args)
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus else mx.cpu()
-    batch_size = args.batch_size if args.num_gpus == 0 else args.batch_size * args.num_gpus
+    ngpus = len(ctx)
+    batch_size = args.batch_size
 
     # data
     vocab = data_utils.Vocabulary.from_file(args.vocab)
@@ -181,7 +202,7 @@ if __name__ == '__main__':
 
     if args.profile:
         config = ['nhid', args.nhid, 'k', args.k, 'nlayers', args.nlayers,
-                  'dense', args.dense, 'ngpu', args.num_gpus]
+                  'dense', args.dense, 'ngpus', ngpus]
         config_str = map(lambda x: str(x), config)
         filename = '-'.join(config_str) + '.json'
         mx.profiler.profiler_set_config(mode='all', filename=filename)
@@ -235,17 +256,10 @@ if __name__ == '__main__':
                     epoch, nbatch, cur_L, math.exp(cur_L)))
                 total_L = 0.0
             nbatch += 1
-        if kvstore and not args.dense:
-            row_ids = mx.nd.arange(start=0, stop=10000)
-            kvstore.row_sparse_pull('encoder_weight', encoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                    priority=-encoder_w_index)
-            if not args.tied:
-                kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
-                                        priority=-decoder_w_index)
-        val_L = evaluate(eval_module, eval_data, epoch, 'Valid')
+        val_L = evaluate(eval_module, eval_data, epoch, 'Valid', kvstore, args, ctx)
         if val_L < best_val:
             best_val = val_L
-            test_L = evaluate(eval_module, test_data, epoch, 'Test')
+            test_L = evaluate(eval_module, test_data, epoch, 'Test', kvstore, args, ctx)
         else:
             optimizer.lr *= args.lr_decay
             logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))

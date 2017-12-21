@@ -39,10 +39,10 @@ def nce_decoder_weights_block(vocab_size, nhid, k, batch_size, bptt, dense, deco
     label = mx.sym.reshape(label, shape=(-1, 1), name="label_reshape")
     sample_label = mx.sym.Concat(sample, label, dim=1)
     # (bptt*batch_size, )
-    assert(decoder_w is not None)
     # weight and bias
-    decoder_w = decoder_w if decoder_w is not None else mx.sym.var("decoder_weight")
-    decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype='row_sparse' if not dense else 'default')
+    stype = 'row_sparse' if not dense else 'default'
+    decoder_w = decoder_w if decoder_w is not None else mx.sym.var("decoder_weight", stype=stype)
+    decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype=stype)
     #decoder_b = mx.sym.reshape(decoder_b, shape=(vocab_size, 1))
     #if not dense:
     #    decoder_b = mx.sym.cast_storage(decoder_b, 'row_sparse')
@@ -99,13 +99,13 @@ def nce_loss(pred, vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=None)
 ########## COMMON BLOCKS ##########
 
 def ce_loss(pred, vocab_size, tied, dense, weight):
-    decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype='default' if dense else 'row_sparse')
+    stype = 'row_sparse' if not dense else 'default'
+    decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype=stype)
     decoder_b = mx.sym.reshape(decoder_b, shape=(vocab_size,))
     if tied:
         pred = mx.sym.FullyConnected(data=pred, weight=weight, bias=decoder_b, num_hidden=vocab_size, name='pred')
     else:
-        assert(dense)
-        decoder_w = mx.sym.var('decoder_weight')
+        decoder_w = mx.sym.var('decoder_weight', stype=stype)
         pred = mx.sym.FullyConnected(data=pred, weight=decoder_w, num_hidden=vocab_size, name='pred', bias=decoder_b)
     label = mx.sym.Variable('label')
     pred = mx.sym.reshape(pred, shape=(-1, vocab_size))

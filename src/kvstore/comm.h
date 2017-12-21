@@ -32,6 +32,7 @@
 #include <thread>
 #include "mxnet/ndarray.h"
 #include "gradient_compression.h"
+#include "utils.h"
 #include "../ndarray/ndarray_function.h"
 #include "../operator/tensor/sparse_retain-inl.h"
 namespace mxnet {
@@ -215,7 +216,14 @@ class CommCPU : public Comm {
       << "BroadcastRowSparse expects row-sparse src NDArray";
     CHECK_EQ(src.ctx().dev_mask(), Context::kCPU)
       << "BroadcastRowSparse with src on gpu context not supported";
+    const bool is_same_rowid = CheckSameRowid(dst);
     for (size_t i = 0; i < dst.size(); ++i) {
+      // the result can be copied to other devices without invoking sparse retain operator
+      // if the indices are the same
+      if (is_same_rowid && i != 0) {
+        CopyFromTo(*dst[0].first, dst[i].first, priority);
+        continue;
+      }
       NDArray* out = dst[i].first;
       NDArray row_id = dst[i].second;
       if (use_copy) {
@@ -491,11 +499,7 @@ class CommDevice : public Comm {
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
-    if (stype == kDefaultStorage) {
-      sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype));
-    } else {
-      LOG(FATAL) << "storage type " << stype << " not implemented for device yet";
-    }
+    sorted_key_attrs_.push_back(std::make_tuple(key, shape, dtype, stype));
   }
 
   void InitBuffersAndComm(const std::vector<NDArray>& src) {
@@ -524,30 +528,45 @@ class CommDevice : public Comm {
     if (src.size() == 1) {
       return src[0];
     }
-
     InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
     std::vector<NDArray> reduce(src.size());
-    CopyFromTo(src[0], &(buf.merged), priority);
-    reduce[0] = buf.merged;
 
-    if (buf.copy_buf.empty()) {
-      // TODO(mli) this results in large device memory usage for huge ndarray,
-      // such as the largest fullc in VGG. consider to do segment reduce with
-      // NDArray.Slice or gpu direct memory access. for the latter, we need to
-      // remove some ctx check, and also it reduces 20% perf
-      buf.copy_buf.resize(src.size()-1);
+    const NDArrayStorageType stype = buf.merged.storage_type();
+    if (stype == kDefaultStorage) {
+      CopyFromTo(src[0], &(buf.merged), priority);
+      reduce[0] = buf.merged;
+
+      if (buf.copy_buf.empty()) {
+        // TODO(mli) this results in large device memory usage for huge ndarray,
+        // such as the largest fullc in VGG. consider to do segment reduce with
+        // NDArray.Slice or gpu direct memory access. for the latter, we need to
+        // remove some ctx check, and also it reduces 20% perf
+        buf.copy_buf.resize(src.size()-1);
+        for (size_t i = 0; i < src.size()-1; ++i) {
+          buf.copy_buf[i] = NDArray(
+            buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        }
+      }
       for (size_t i = 0; i < src.size()-1; ++i) {
-        buf.copy_buf[i] = NDArray(
-          buf.merged.shape(), buf.merged.ctx(), false, buf.merged.dtype());
+        CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
+        reduce[i+1] = buf.copy_buf[i];
+      }
+    } else {
+      if (buf.copy_buf.empty()) {
+        buf.copy_buf.resize(src.size());
+        for (size_t j = 0; j < src.size(); ++j) {
+          buf.copy_buf[j] = NDArray(
+            buf.merged.storage_type(), buf.merged.shape(), buf.merged.ctx(),
+            true, buf.merged.dtype());
+        }
+      }
+      for (size_t i = 0; i < src.size(); ++i) {
+        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+        reduce[i] = buf.copy_buf[i];
       }
     }
-    for (size_t i = 0; i < src.size()-1; ++i) {
-      CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
-      reduce[i+1] = buf.copy_buf[i];
-    }
-
-    ElementwiseSum(reduce, &buf.merged);
+    ElementwiseSum(reduce, &buf.merged, priority);
     return buf.merged;
   }
 
@@ -667,7 +686,7 @@ class CommDevice : public Comm {
 #endif
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, TShape, int, NDArrayStorageType>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
     std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
@@ -683,6 +702,7 @@ class CommDevice : public Comm {
       int key  = std::get<0>(sorted_key_attrs_[i]);
       TShape s = std::get<1>(sorted_key_attrs_[i]);
       int type = std::get<2>(sorted_key_attrs_[i]);
+      const NDArrayStorageType stype = std::get<3>(sorted_key_attrs_[i]);
       auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
@@ -693,7 +713,11 @@ class CommDevice : public Comm {
           min_size = size;
         }
       }
-      buf.merged = NDArray(s, ctx, false, type);
+      if (stype == kDefaultStorage) {
+        buf.merged = NDArray(s, ctx, false, type);
+      } else {
+        buf.merged = NDArray(stype, s, ctx, true, type);
+      }
       ctx_info[ctx.dev_id].second += s.Size();
     }
     inited_ = true;

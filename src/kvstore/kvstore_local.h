@@ -34,6 +34,7 @@
 #include <functional>
 #include <algorithm>
 #include "./comm.h"
+#include "./utils.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -58,6 +59,7 @@ class KVStoreLocal : public KVStore {
     } else {
       comm_ = new CommCPU();
     }
+    comm_cpu_ = new CommCPU();
     pinned_ctx_ = comm_->pinned_ctx();
     gradient_compression_ = std::make_shared<GradientCompression>();
   }
@@ -163,14 +165,24 @@ class KVStoreLocal : public KVStore {
     GroupKVPairsPush(keys, values, &uniq_keys, &grouped_vals);
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
-      const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
+      NDArray merged = comm_->Reduce(key, grouped_vals[i], priority);
       NDArray& local = local_[key];
+      int64_t magic_dim = dmlc::GetEnv("MXNET_MAGIC_DIM", -1);
+      bool magic_weight = local.shape()[0] == magic_dim || local.shape()[1] == magic_dim;
       if (updater_ != nullptr) {
         CHECK(!local.is_none()) << "key " << key << " has not been inited";
         // if merged is on gpu, we may need copy weight from cpu to gpu
-        if (merged.ctx().dev_mask() != cpu::kDevMask &&
-            local.ctx().dev_mask() == cpu::kDevMask) {
-          local = local.Copy(merged.ctx());
+
+        if (!magic_weight) {
+          if (merged.ctx().dev_mask() != cpu::kDevMask &&
+              local.ctx().dev_mask() == cpu::kDevMask) {
+            local = local.Copy(merged.ctx());
+          }
+        } else {
+          if (merged.ctx().dev_mask() != cpu::kDevMask &&
+              local.ctx().dev_mask() == cpu::kDevMask) {
+            merged = merged.Copy(local.ctx());
+          }
         }
         // call the updater with string keys
         // if string keys are used and str_updater_ is available
@@ -185,10 +197,15 @@ class KVStoreLocal : public KVStore {
           updater_(key, merged,  &local);
         }
       } else {
+        // no updater yet
         if (merged.storage_type() != local.storage_type()) {
           local = merged.Copy(local.ctx());
         } else {
-          local = merged;
+          if (!magic_weight) {
+            local = merged;
+          } else {
+            local = merged.Copy(local.ctx());
+          }
         }
       }
     }
@@ -223,14 +240,27 @@ class KVStoreLocal : public KVStore {
                << "PullRowSparse expects row_sparse src NDArray";
       auto &target_val_rowids = grouped_val_rowids[i];
       const size_t num_vals = target_val_rowids.size();
-      for (size_t i = 0; i < num_vals; i++) {
-        auto &row_id = target_val_rowids[i].second;
-        NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
-        CopyFromTo(row_id, &indices, 0);
-        Unique(&indices, priority);
-        target_val_rowids[i].second = indices;
+
+      // whether the indices are the same
+      const bool is_same_rowid = CheckSameRowid(target_val_rowids);
+      for (size_t j = 0; j < num_vals; j++) {
+        if (is_same_rowid && j != 0) {
+          target_val_rowids[j].second = target_val_rowids[0].second;
+        } else {
+          auto &row_id = target_val_rowids[j].second;
+          NDArray indices(row_id.shape(), pinned_ctx_, false, mshadow::kInt64);
+          CopyFromTo(row_id, &indices, 0);
+          Unique(&indices, priority);
+          target_val_rowids[j].second = indices;
+        }
       }
-      comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
+      // TODO another comm
+      int64_t magic_dim = dmlc::GetEnv("MXNET_MAGIC_DIM", -1);
+      if (local.shape()[0] == magic_dim || local.shape()[1] == magic_dim) {
+        comm_cpu_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
+      } else {
+        comm_->BroadcastRowSparse(key, local, grouped_val_rowids[i], false, priority);
+      }
     }
   }
 
@@ -379,6 +409,7 @@ class KVStoreLocal : public KVStore {
 
   /// reducer and broadcaster
   Comm* comm_;
+  Comm* comm_cpu_;
   /// pinned context
   Context pinned_ctx_;
   /// \brief buffer for storing local values
