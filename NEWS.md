@@ -50,6 +50,8 @@ MXNet Change Log
   - Links for viewing source.
  
  For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.0+Release+Notes)
+
+
 ## 0.12.1
 ### Bug-fixes
   - Added GPU support for the `syevd` operator which ensures that there is GPU support for all linalg-operators.
