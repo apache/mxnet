@@ -208,6 +208,32 @@
     * `arccosh(x)` -> `acosh.(x)`
     * `arctanh(x)` -> `atanh.(x)`
 
+* `rand`, `rand!`, `randn`, `randn!` is more Base-like now (#TBD).
+
+  ```julia
+  julia> mx.rand(2, 3)
+  2×3 mx.NDArray{Float32,2} @ CPU0:
+   0.631961  0.324175  0.0762663
+   0.285366  0.395292  0.074995
+
+  julia> mx.rand(2, 3; low = 1, high = 10)
+  2×3 mx.NDArray{Float32,2} @ CPU0:
+   7.83884  7.85793  7.64791
+   7.68646  8.56082  8.42189
+  ```
+
+  ```julia
+  julia> mx.randn(2, 3)
+  2×3 mx.NDArray{Float32,2} @ CPU0:
+   0.962853  0.424535  -0.320123
+   0.478113  1.72886    1.72287
+
+  julia> mx.randn(2, 3, μ = 100)
+  2×3 mx.NDArray{Float32,2} @ CPU0:
+   99.5635  100.483   99.888
+   99.9889  100.533  100.072
+  ```
+
 # v0.3.0 (2017.11.16)
 
 * Update `libmxnet` to

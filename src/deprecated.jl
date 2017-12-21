@@ -23,3 +23,29 @@
 @deprecate arcsinh(x::NDArray) asinh.(x)
 @deprecate arccosh(x::NDArray) acosh.(x)
 @deprecate arctanh(x::NDArray) atanh.(x)
+
+# @deprecate make `randn` exported accidentially
+# so we make the depwarn manually
+function randn(μ, σ, dims::NTuple{N,Int}, ctx::Context = cpu()) where N
+  warn("mx.randn(μ, σ, dims, ctx = cpu()) is deprecated, use " *
+       "mx.randn(dims...; μ = μ, σ = σ, context = ctx) instead.")
+  mx.randn(dims...; μ = μ, σ = σ, context = ctx)
+end
+
+function randn!(μ, σ, x::NDArray)
+  warn("mx.randn!(μ, σ, x::NDArray) is deprecated, use " *
+       "mx.randn!(x; μ = μ, σ = σ) instead.")
+  randn!(x; μ = μ, σ = σ)
+end
+
+function rand!(low::Real, high::Real, x::NDArray)
+  warn("rand!(low, high, x::NDArray) is deprecated, use " *
+       "rand!(x, low = low, high = high) instead.")
+  rand!(x, low = low, high = high)
+end
+
+function rand(low::Real, high::Real, dims::NTuple{N,Int}, context::Context = cpu()) where N
+  warn("rand!(low, high, dims, x::NDArray, context = cpu()) is deprecated, use " *
+       "rand!(dims..., x; low = low, high = high, context = cpu()) instead.")
+  rand(dims...; low = low, high = high, context = context)
+end

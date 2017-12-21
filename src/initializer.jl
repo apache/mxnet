@@ -104,9 +104,8 @@ Construct a `UniformInitializer` with the specified scale.
 """
 UniformInitializer() = UniformInitializer(0.07)
 
-function _init_weight(self :: UniformInitializer, name :: Base.Symbol, array :: NDArray)
-  rand!(-self.scale, self.scale, array)
-end
+_init_weight(i::UniformInitializer, name::Symbol, x::NDArray) =
+  rand!(x, low = -i.scale, high = i.scale)
 
 """
     NormalInitializer
@@ -124,9 +123,8 @@ Construct a `NormalInitializer` with mean `mu` and variance `sigma`.
 """
 NormalInitializer(; mu=0, sigma=0.01) = NormalInitializer(mu, sigma)
 
-function _init_weight(self :: NormalInitializer, name :: Base.Symbol, array :: NDArray)
-  randn!(self.μ, self.σ, array)
-end
+_init_weight(i::NormalInitializer, name::Symbol, x::NDArray) =
+  randn!(x, μ = i.μ, σ = i.σ)
 
 """
     XavierInitializer
@@ -175,8 +173,8 @@ function _init_weight(self :: XavierInitializer, name :: Base.Symbol, array :: N
   σ = √(self.magnitude / factor)
 
   if self.distribution == xv_uniform
-    rand!(-σ, σ, array)
+    rand!(array, low = -σ, high = σ)
   elseif self.distribution == xv_normal
-    randn!(0.0, σ, array)
+    randn!(array; μ = 0.0, σ = σ)
   end
 end
