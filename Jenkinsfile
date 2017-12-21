@@ -230,31 +230,10 @@ try {
     'Build CPU windows':{
       node('mxnetwindows-cpu') {
         ws('workspace/build-cpu') {
-          withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
-            init_git_win()
-            bat """mkdir build_vc14_cpu
-              call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
-              cd build_vc14_cpu
-              cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 ${env.WORKSPACE}"""
-            bat 'C:\\mxnet\\build_vc14_cpu.bat'
-
-            bat '''rmdir /s/q pkg_vc14_cpu
-              mkdir pkg_vc14_cpu\\lib
-              mkdir pkg_vc14_cpu\\python
-              mkdir pkg_vc14_cpu\\include
-              mkdir pkg_vc14_cpu\\build
-              copy build_vc14_cpu\\Release\\libmxnet.lib pkg_vc14_cpu\\lib
-              copy build_vc14_cpu\\Release\\libmxnet.dll pkg_vc14_cpu\\build
-              xcopy python pkg_vc14_cpu\\python /E /I /Y
-              xcopy include pkg_vc14_cpu\\include /E /I /Y
-              xcopy dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
-              xcopy mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
-              xcopy nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
-              del /Q *.7z
-              7z.exe a vc14_cpu.7z pkg_vc14_cpu\\
-              '''
-            stash includes: 'vc14_cpu.7z', name: 'vc14_cpu'
-          }
+          init_git_win()
+          bat '''
+            python build.py
+          '''
         }
       }
     },
