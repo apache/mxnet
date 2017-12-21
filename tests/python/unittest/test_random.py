@@ -222,7 +222,6 @@ def test_sample_multinomial():
 
 # Test the generators with the chi-square testing
 def test_normal_generator():
-    print("Normal Distribution Test:")
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for mu, sigma in [(0.0, 1.0), (1.0, 5.0)]:
@@ -232,7 +231,6 @@ def test_normal_generator():
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
 def test_uniform_generator():
-    print("Uniform Distribution Test:")
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for low, high in [(-1.0, 1.0), (1.0, 3.0)]:
@@ -242,7 +240,6 @@ def test_uniform_generator():
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
 def test_gamma_generator():
-    print("Gamma Distribution Test:")
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for kappa, theta in [(0.5, 1.0), (1.0, 5.0)]:
@@ -252,7 +249,6 @@ def test_gamma_generator():
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
 def test_exponential_generator():
-    print("Exponential Distribution Test:")
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for scale in [0.1, 1.0]:
@@ -262,7 +258,6 @@ def test_exponential_generator():
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
 def test_poisson_generator():
-    print("Poisson Distribution Test:")
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for lam in [1, 10]:
@@ -273,7 +268,6 @@ def test_poisson_generator():
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
 def test_negative_binomial_generator():
-    print('Negative Binomial Distribution Test:')
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         success_num = 2
@@ -294,7 +288,6 @@ def test_negative_binomial_generator():
         verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
 
 def test_multinomial_generator():
-    print('Multinomial Distribution Test:')
     ctx = mx.context.current_context()
     probs = [0.1, 0.2, 0.3, 0.05, 0.15, 0.2]
     sample_num = 1000000
