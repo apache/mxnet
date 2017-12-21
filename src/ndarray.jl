@@ -1045,7 +1045,8 @@ end
 # Mapping NDArray functions to Base-like API
 ################################################################################
 
-const _mxsig = Dict{Symbol,Expr}()
+const _ndsig = Dict{Symbol,Expr}()
+const _nddoc = Dict{Symbol,Any}()
 
 function _autoimport(name::Symbol, sig::Expr)
   if name == :broadcast_
@@ -1074,6 +1075,9 @@ _broadcast_target(sig::Expr) = sig.args[2].args[].args[end]
 Generate docstring from function signature
 """
 function _docsig(fname::Symbol, sig::Expr)
+  s = get(_nddoc, fname, "")
+  !isempty(s) && return s
+
   if fname !== :broadcast_
     "    $sig"
   else
@@ -1141,14 +1145,14 @@ macro _remap(sig::Expr, imp::Expr)
 end
 
 macro _remap(sig::Expr, imp::Symbol)
-  imp = _mxsig[imp]
+  imp = _ndsig[imp]
 
   esc(quote
     @_remap($sig, $imp)
   end)
 end
 
-_mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
+_ndsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap reshape(arr::NDArray, dim...; reverse = false) reshape
 @_remap reshape(arr::NDArray, dim; reverse = false)    reshape
 
@@ -1174,6 +1178,34 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 
 @_remap prod(arr::NDArray)       prod(arr)
 @_remap prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
+
+_nddoc[:expand_dims] =
+"""
+    expand_dims(x::NDArray, dim)
+
+Insert a new axis into `dim`.
+
+```julia
+julia> x
+4 mx.NDArray{Float64,1} @ CPU0:
+ 1.0
+ 2.0
+ 3.0
+ 4.0
+
+julia> mx.expand_dims(x, 1)
+1×4 mx.NDArray{Float64,2} @ CPU0:
+ 1.0  2.0  3.0  4.0
+
+julia> mx.expand_dims(x, 2)
+4×1 mx.NDArray{Float64,2} @ CPU0:
+ 1.0
+ 2.0
+ 3.0
+ 4.0
+```
+"""
+@_remap expand_dims(x::NDArray, dim) expand_dims(x; axis = -dim)
 
 # trigonometric functions, remap to keep consistent with Base
 @_remap broadcast_(::typeof(sin),  x::NDArray) sin(x)
@@ -1318,6 +1350,7 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "_full",   # we already have `mx.fill`
     "_ones",   # we already have `mx.ones`
     "_zeros",  # we already have `mx.zeros`
+    "expand_dims",
 
     # arithmetic
     "_plus",

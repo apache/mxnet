@@ -32,7 +32,8 @@ export SymbolicNode,
 # ndarray.jl
 export NDArray,
        context,
-       empty
+       empty,
+       expand_dims
 
 # executor.jl
 export Executor,

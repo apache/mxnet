@@ -779,26 +779,52 @@ function test_eltype()
 end
 
 function test_reshape()
-    info("NDArray::reshape")
-    A = rand(2, 3, 4)
+  info("NDArray::reshape")
+  A = rand(2, 3, 4)
 
-    B = reshape(mx.NDArray(A), 4, 3, 2)
-    @test size(B) == (4, 3, 2)
-    @test copy(B)[3, 1, 1] == A[1, 2, 1]
+  B = reshape(NDArray(A), 4, 3, 2)
+  @test size(B) == (4, 3, 2)
+  @test copy(B)[3, 1, 1] == A[1, 2, 1]
 
-    C = reshape(mx.NDArray(A), (4, 3, 2))
-    @test size(C) == (4, 3, 2)
-    @test copy(C)[3, 1, 1] == A[1, 2, 1]
+  C = reshape(NDArray(A), (4, 3, 2))
+  @test size(C) == (4, 3, 2)
+  @test copy(C)[3, 1, 1] == A[1, 2, 1]
 
-    info("NDArray::reshape::reverse")
-    A = mx.zeros(10, 5, 4)
+  info("NDArray::reshape::reverse")
+  A = mx.zeros(10, 5, 4)
 
-    B = reshape(A, -1, 0)
-    @test size(B) == (40, 5)
+  B = reshape(A, -1, 0)
+  @test size(B) == (40, 5)
 
-    C = reshape(A, -1, 0, reverse=true)
-    @test size(C) == (50, 4)
+  C = reshape(A, -1, 0, reverse=true)
+  @test size(C) == (50, 4)
 end
+
+function test_expand_dims()
+  info("NDArray::expand_dims")
+  let A = [1, 2, 3, 4], x = NDArray(A)
+    @test size(x) == (4,)
+
+    y = expand_dims(x, 1)
+    @test size(y) == (1, 4)
+
+    y = expand_dims(x, 2)
+    @test size(y) == (4, 1)
+  end
+
+  let A = [1 2; 3 4; 5 6], x = NDArray(A)
+    @test size(x) == (3, 2)
+
+    y = expand_dims(x, 1)
+    @test size(y) == (1, 3, 2)
+
+    y = expand_dims(x, 2)
+    @test size(y) == (3, 1, 2)
+
+    y = expand_dims(x, 3)
+    @test size(y) == (3, 2, 1)
+  end
+end  # test_expand_dims
 
 function test_sum()
   info("NDArray::sum")
@@ -1025,6 +1051,7 @@ end  # function test_hyperbolic
   test_nd_as_jl()
   test_dot()
   test_reshape()
+  test_expand_dims()
   test_sum()
   test_mean()
   test_maximum()

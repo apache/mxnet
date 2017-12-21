@@ -4,6 +4,7 @@
     * `NDArray`
         * `context()`
         * `empty()`
+        * `expand_dims()`
 
     * `SymbolicNode`
         * `Variable`
