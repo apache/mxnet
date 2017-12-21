@@ -58,7 +58,7 @@ class SELU(gluon.HybridBlock):
     def hybrid_forward(self, F, x, *args, **kwargs):
         return self.scale * F.where(x >= 0, x, self.alpha * self.elu(x))
 
-    
+
 class Swish(gluon.HybridBlock):
     r'''
     Swish Activation function
