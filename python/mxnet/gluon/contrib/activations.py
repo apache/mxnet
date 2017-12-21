@@ -32,13 +32,13 @@ class ELU(gluon.HybridBlock):
     Parameters
     ----------
     alpha : float
-        The alpha parameter as described by Clevert et Al 2016
+        The alpha parameter as described by Clevert et al, 2016
     '''
     def __init__(self, alpha=1.0, **kwargs):
         super(ELU, self).__init__(**kwargs)
         self.alpha = alpha
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args, **kwargs):
         return - self.alpha * F.relu(1.0 - F.exp(x)) + F.relu(x)
 
 
@@ -55,9 +55,10 @@ class SELU(gluon.HybridBlock):
         with self.name_scope():
             self.elu = ELU()
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args, **kwargs):
         return self.scale * F.where(x >= 0, x, self.alpha * self.elu(x))
 
+    
 class Swish(gluon.HybridBlock):
     r'''
     Swish Activation function
@@ -73,5 +74,5 @@ class Swish(gluon.HybridBlock):
         super(Swish, self).__init__(**kwargs)
         self.beta = beta
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args, **kwargs):
         return x * F.Activation(self.beta * x, act_type='sigmoid', name='fwd')
