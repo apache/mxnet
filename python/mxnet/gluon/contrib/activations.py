@@ -26,8 +26,7 @@ from mxnet import nd
 class ELU(gluon.Block):
     '''
     Exponential Linear Unit (ELU)
-    ... "Fast and Accurate Deep Network Learning by Exponential Linear Units"
-    ... Djork-Arné Clevert, Thomas Unterthiner, Sepp Hochreiter
+    ... "Fast and Accurate Deep Network Learning by Exponential Linear Units", Clevert et al, 2016
     ... https://arxiv.org/abs/1511.07289
     ... Published as a conference paper at ICLR 2016
 
@@ -47,8 +46,7 @@ class ELU(gluon.Block):
 class SELU(gluon.Block):
     '''
     Scaled Exponential Linear Unit (SELU)
-    ... "Self-Normalizing Neural Networks"
-    ... Günter Klambauer, Thomas Unterthiner, Andreas Mayr, Sepp Hochreiter
+    ... "Self-Normalizing Neural Networks", Klambauer et al, 2017
     ... https://arxiv.org/abs/1706.02515
     '''
     def __init__(self):
