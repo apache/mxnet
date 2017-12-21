@@ -740,7 +740,28 @@ function test_dot()
 
   x = mx.zeros(1, 2)
   y = mx.zeros(1, 2, 3)
-  @test_throws MethodError dot(x, y)
+  @test_throws mx.MXError dot(x, y)  # dimension mismatch
+
+  info("NDArray::matrix mul")
+  let
+    A = [1. 2 3; 4 5 6]
+    B = [-1., -2, -3]
+    x = NDArray(A)
+    y = NDArray(B)
+    z = x * y
+    @test copy(z) == A * B
+    @test size(z) == (2,)
+  end
+
+  let
+    A = [1. 2 3; 4 5 6]
+    B = [-1. -2; -3 -4; -5 -6]
+    x = NDArray(A)
+    y = NDArray(B)
+    z = x * y
+    @test copy(z) == A * B
+    @test size(z) == (2, 2)
+  end
 end
 
 function test_eltype()

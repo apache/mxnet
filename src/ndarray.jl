@@ -674,7 +674,7 @@ import Base: *
 """
     .*(x, y)
 
-Currently only multiplication a scalar with an `NDArray` is implemented.
+Elementwise multiplication for `NDArray`.
 """
 *(x::NDArray, y::Real)  = _mul_scalar(x, scalar = y)
 *(y::Real, x::NDArray)  = _mul_scalar(x, scalar = y)
@@ -686,9 +686,9 @@ broadcast_(::typeof(*), x::NDArray, y::NDArray) = _mul(x, y)
 """
     *(A::NDArray, B::NDArray)
 
-Matrix (2D NDArray) multiplication.
+Matrix/tensor multiplication.
 """
-*(x::NDArray{T,2}, y::NDArray{S,2}) where {T,S} = dot(x, y)
+*(x::NDArray{T}, y::NDArray{T}) where T = x ⋅ y
 
 """
     div_from!(dst::NDArray, arg::NDArrayOrReal)
@@ -1165,7 +1165,7 @@ _mxsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
 @_remap minimum(arr::NDArray, dims) min(arr; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
-@_remap dot(x::NDArray{T,N}, y::NDArray{S,N}) where {T,S,N} dot(y, x)
+@_remap dot(x::NDArray, y::NDArray) dot(y, x)
 
 # See https://github.com/dmlc/MXNet.jl/pull/123
 @_remap transpose(arr::NDArray{T,1}) where T reshape(arr; shape = (1, length(arr)), reverse = true)

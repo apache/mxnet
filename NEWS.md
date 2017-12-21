@@ -161,6 +161,26 @@
    1.0  2.0  3.0  4.0
   ```
 
+* Matrix/tensor multiplication is supported now. (#TBD)
+
+  ```julia
+  julia> x
+  2×3 mx.NDArray{Float32,2} @ CPU0:
+   1.0  2.0  3.0
+   4.0  5.0  6.0
+
+  julia> y
+  3 mx.NDArray{Float32,1} @ CPU0:
+   -1.0
+   -2.0
+   -3.0
+
+  julia> x * y
+  2 mx.NDArray{Float32,1} @ CPU0:
+   -14.0
+   -32.0
+  ```
+
 ## API Changes
 
 ### `NDArray`
