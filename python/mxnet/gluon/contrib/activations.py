@@ -20,11 +20,10 @@
 for neural networks'''
 
 import mxnet.gluon as gluon
-from mxnet import nd
 
 
-class ELU(gluon.Block):
-    '''
+class ELU(gluon.HybridBlock):
+    r'''
     Exponential Linear Unit (ELU)
     ... "Fast and Accurate Deep Network Learning by Exponential Linear Units", Clevert et al, 2016
     ... https://arxiv.org/abs/1511.07289
@@ -35,26 +34,44 @@ class ELU(gluon.Block):
     alpha : float
         The alpha parameter as described by Clevert et Al 2016
     '''
-    def __init__(self, alpha=1.0):
-        super(ELU, self).__init__()
+    def __init__(self, alpha=1.0, **kwargs):
+        super(ELU, self).__init__(**kwargs)
         self.alpha = alpha
 
-    def forward(self, *args):
-        return (- self.alpha * nd.relu(1.0 - nd.exp(x)) + nd.relu(x) for x in args)
+    def hybrid_forward(self, F, x):
+        return - self.alpha * F.relu(1.0 - F.exp(x)) + F.relu(x)
 
 
-class SELU(gluon.Block):
-    '''
+class SELU(gluon.HybridBlock):
+    r'''
     Scaled Exponential Linear Unit (SELU)
     ... "Self-Normalizing Neural Networks", Klambauer et al, 2017
     ... https://arxiv.org/abs/1706.02515
     '''
-    def __init__(self):
-        super(SELU, self).__init__()
+    def __init__(self, **kwargs):
+        super(SELU, self).__init__(**kwargs)
         self.scale = 1.0507009873554804934193349852946
         self.alpha = 1.6732632423543772848170429916717
         with self.name_scope():
             self.elu = ELU()
 
-    def forward(self, *args):
-        return (self.scale * nd.where(x >= 0, x, self.alpha * self.elu(x)) for x in args)
+    def hybrid_forward(self, F, x):
+        return self.scale * F.where(x >= 0, x, self.alpha * self.elu(x))
+
+class Swish(gluon.HybridBlock):
+    r'''
+    Swish Activation function
+    https://arxiv.org/pdf/1710.05941.pdf
+
+    Parameters
+    ----------
+    beta : float
+        swish(x) = x * sigmoid(beta*x)
+    '''
+
+    def __init__(self, beta=1.0, **kwargs):
+        super(Swish, self).__init__(**kwargs)
+        self.beta = beta
+
+    def hybrid_forward(self, F, x):
+        return x * F.Activation(self.beta * x, act_type='sigmoid', name='fwd')
