@@ -128,18 +128,27 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
     DType* weight_buf = reinterpret_cast<DType *>(weight_mem->get_data_handle());
 
     nnvm::dim_t channels_ = data.shape()[1];
-    for (int i = 0; i < channels_; i++) {
-      if (!param.fix_gamma) {
-        weight_buf[i] = (gamma.data().dptr<DType>())[i];   // weight
-      } else {
-        weight_buf[i] = (DType)1.0f;
-        if (IsBNWriting(req[batchnorm::kGamma]))
-          (gamma.data().dptr<DType>())[i] = (DType)1.0f;
+    DType* weight_ptr = gamma.data().dptr<DType>();
+    DType* bias_ptr = beta.data().dptr<DType>();
+    if (!param.fix_gamma) {
+#pragma omp parallel for simd
+      for (int i = 0; i < channels_; i++) {
+        weight_buf[i] = weight_ptr[i];
+        weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
-    }
-
-    for (int i = 0; i < channels_; i++) {
-      weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
+    } else if (IsBNWriting(req[batchnorm::kGamma])) {
+#pragma omp parallel for simd
+      for (int i = 0; i < channels_; i++) {
+        weight_buf[i] = (DType)1.0f;
+        weight_ptr[i] = (DType)1.0f;
+        weight_buf[channels_ + i] = bias_ptr[i];  // bias
+      }
+    } else {
+#pragma omp parallel for simd
+      for (int i = 0; i < channels_; i++) {
+        weight_buf[i] = (DType)1.0f;
+        weight_buf[channels_ + i] = bias_ptr[i];  // bias
+      }
     }
 
     if (!ctx.is_train) {
@@ -148,11 +157,12 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
       DType* invar    = aux_states[batchnorm::kMovingVar].data().dptr<DType>();
       // to align with origin implmentation: batch_norm.cc: L164
+#pragma omp parallel for simd
       for (int i = 0; i < channels_; i++) {
-        omean[i] = (aux_states[batchnorm::kMovingMean].data().dptr<DType>())[i];
-        ovar[i] = VARIANCE_TO_INVSTD(
-                    (aux_states[batchnorm::kMovingVar].data().dptr<DType>())[i], param.eps);
+        omean[i] = inmean[i];
+        ovar[i] = VARIANCE_TO_INVSTD(invar[i], param.eps);
       }
+
       std::shared_ptr<const mkldnn::memory> mean_m(
                       new mkldnn::memory(fwd_pd.mean_primitive_desc(), inmean));
       std::shared_ptr<const mkldnn::memory> var_m(
@@ -186,10 +196,12 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
                                                     *var_mem);
       MKLDNNStream::Get()->RegisterPrim(bn);
       MKLDNNStream::Get()->Submit();
+      DType* mean_mem_ptr = reinterpret_cast<DType*>(mean_mem->get_data_handle());
+      DType* var_mem_ptr  = reinterpret_cast<DType*>(var_mem->get_data_handle());
+#pragma omp parallel for simd
       for (int i = 0; i < channels_; i++) {
-        omean[i] = (reinterpret_cast<DType*>(mean_mem->get_data_handle()))[i];
-        ovar[i]  = VARIANCE_TO_INVSTD(
-                   (reinterpret_cast<DType*>(var_mem->get_data_handle()))[i], param.eps);
+        omean[i] = mean_mem_ptr[i];
+        ovar[i]  = VARIANCE_TO_INVSTD(var_mem_ptr[i], param.eps);
       }
     }
   } else {  // no input gamma and beta
