@@ -68,10 +68,14 @@ def nd_global_norm(t_list):
     ret = None
     for arr in t_list:
         if arr is not None:
-            if ret is None:
-                ret = nd.square(nd.norm(arr)).copyto(ctx.cpu())
+            if arr.stype == 'row_sparse':
+                norm = nd._internal._square_sum(arr.copyto(ctx.cpu()), axis=0, keepdims=False).sum().copyto(ctx.cpu())
             else:
-                ret += nd.square(nd.norm(arr)).copyto(ctx.cpu())
+                norm = nd.square(nd.norm(arr)).copyto(ctx.cpu())
+            if ret is None:
+                ret = norm
+            else:
+                ret += norm
     ret = nd.sqrt(ret)
     return ret
 

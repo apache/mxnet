@@ -175,6 +175,8 @@ if __name__ == '__main__':
                                         rescale_grad=args.rescale_grad, wd=args.wd, momentum=args.mom)
     elif args.optimizer == 'adam':
         optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=args.rescale_grad, beta1=args.beta1)
+    elif args.optimizer == 'adagrad':
+        optimizer = mx.optimizer.create('adam', learning_rate=args.lr, rescale_grad=args.rescale_grad, beta1=0, beta2=0)
     else:
          raise NotImplementedError()
 
