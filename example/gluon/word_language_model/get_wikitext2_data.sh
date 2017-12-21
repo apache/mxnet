@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,18 +17,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
-import mxnet as mx
-x = mx.th.randn(2, 2, ctx=mx.cpu(0))
-print(x.asnumpy())
-y = mx.th.abs(x)
-print(y.asnumpy())
 
-x = mx.th.randn(2, 2, ctx=mx.cpu(0))
-print(x.asnumpy())
-mx.th.abs(x, x) # in-place
-print(x.asnumpy())
+RNN_DIR=$(cd `dirname $0`; pwd)
+DATA_DIR="${RNN_DIR}/data/"
 
-x = mx.th.ones(2, 2, ctx=mx.cpu(0))
-y = mx.th.ones(2, 2, ctx=mx.cpu(0))*2
-print(mx.th.cdiv(x,y).asnumpy())
+if [[ ! -d "${DATA_DIR}" ]]; then
+  echo "${DATA_DIR} doesn't exist, will create one";
+  mkdir -p ${DATA_DIR}
+fi
+
+wget -P ${DATA_DIR} https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip
+cd ${DATA_DIR}
+unzip wikitext-2-v1.zip
+
+# rename
+mv ${DATA_DIR}/wikitext-2/wiki.test.tokens ${DATA_DIR}/wikitext-2/wiki.test.txt
+mv ${DATA_DIR}/wikitext-2/wiki.valid.tokens ${DATA_DIR}/wikitext-2/wiki.valid.txt
+mv ${DATA_DIR}/wikitext-2/wiki.train.tokens ${DATA_DIR}/wikitext-2/wiki.train.txt

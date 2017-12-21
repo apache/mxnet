@@ -156,9 +156,9 @@ parameters of the model to fit the training data. This is accomplished using the
 ```python
 model.fit(train_iter, eval_iter,
             optimizer_params={'learning_rate':0.005, 'momentum': 0.9},
-            num_epoch=50,
+            num_epoch=20,
             eval_metric='mse',
-            batch_end_callback = mx.callback.Speedometer(batch_size, 2))
+            batch_end_callback = mx.callback.Speedometer(batch_size, 2))	    
 ```
 
 ## Using a trained model: (Testing and Inference)
@@ -176,6 +176,7 @@ evaluating our model's mean squared error (MSE) on the evaluation data.
 ```python
 metric = mx.metric.MSE()
 model.score(eval_iter, metric)
+assert model.score(eval_iter, metric)[0][1] < 0.01001, "Achieved MSE (%f) is larger than expected (0.01001)" % model.score(eval_iter, metric)[0][1]
 ```
 
 Let us try and add some noise to the evaluation data and see how the MSE changes:

@@ -43,6 +43,7 @@ if platform.system() != 'Darwin':
 
 if platform.system() != 'Windows':
   blacklist.append('windows.h')
+  blacklist.append('process.h')
 
 def pprint(lst):
     for item in lst:

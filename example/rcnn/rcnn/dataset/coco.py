@@ -15,14 +15,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import cv2
 import os
 import json
 import numpy as np
+from builtins import range
 
 from ..logger import logger
-from imdb import IMDB
+from .imdb import IMDB
 
 # coco api
 from ..pycocotools.coco import COCO
@@ -47,7 +51,7 @@ class coco(IMDB):
         cats = [cat['name'] for cat in self.coco.loadCats(self.coco.getCatIds())]
         self.classes = ['__background__'] + cats
         self.num_classes = len(self.classes)
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+        self._class_to_ind = dict(zip(self.classes, range(self.num_classes)))
         self._class_to_coco_ind = dict(zip(cats, self.coco.getCatIds()))
         self._coco_ind_to_class_ind = dict([(self._class_to_coco_ind[cls], self._class_to_ind[cls])
                                             for cls in self.classes[1:]])
@@ -84,13 +88,13 @@ class coco(IMDB):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
+                roidb = pickle.load(fid)
             logger.info('%s gt roidb loaded from %s' % (self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_coco_annotation(index) for index in self.image_set_index]
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         logger.info('%s wrote gt roidb to %s' % (self.name, cache_file))
 
         return gt_roidb
@@ -193,7 +197,7 @@ class coco(IMDB):
             result = [{'image_id': index,
                        'category_id': cat_id,
                        'bbox': [xs[k], ys[k], ws[k], hs[k]],
-                       'score': scores[k]} for k in xrange(dets.shape[0])]
+                       'score': scores[k]} for k in range(dets.shape[0])]
             results.extend(result)
         return results
 
@@ -208,7 +212,7 @@ class coco(IMDB):
 
         eval_file = os.path.join(res_folder, 'detections_%s_results.pkl' % self.image_set)
         with open(eval_file, 'wb') as f:
-            cPickle.dump(coco_eval, f, cPickle.HIGHEST_PROTOCOL)
+            pickle.dump(coco_eval, f, pickle.HIGHEST_PROTOCOL)
         logger.info('eval results saved to %s' % eval_file)
 
     def _print_detection_metrics(self, coco_eval):

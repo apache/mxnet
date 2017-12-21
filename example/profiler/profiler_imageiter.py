@@ -15,16 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
 import os
 # uncomment to set the number of worker threads.
 # os.environ["MXNET_CPU_WORKER_NTHREADS"] = "4"
-from __future__ import print_function
 import time
 import mxnet as mx
-import numpy as np
 
 
-def run_imageiter(path_rec, n, batch_size = 32):
+def run_imageiter(path_rec, n, batch_size=32):
 
     data = mx.img.ImageIter(batch_size=batch_size,
                             data_shape=(3, 224, 224),
@@ -38,6 +37,7 @@ def run_imageiter(path_rec, n, batch_size = 32):
         data.next()
     mx.nd.waitall()
     print(batch_size*n/(time.time() - tic))
+
 
 if __name__ == '__main__':
     mx.profiler.profiler_set_config(mode='all', filename='profile_imageiter.json')
