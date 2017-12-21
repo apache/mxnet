@@ -21,15 +21,21 @@ MKLML related test cases
 
 import logging
 import os
+from sys import platform
 
 def test_mklml_install():
     """
-    This function will check if MXNet is built/installed correctly
-    when compiling with Intel MKLML library, the method is try
-    to import mxnet module and see if correct mklml library is
-    mapped to this process's address space
+    This test will verify that MXNet is built/installed correctly when 
+    compiled with Intel MKLML library. The method will try to import 
+    the mxnet module and see if the mklml library is mapped to this 
+    process's address space.
     """
     logging.basicConfig(level=logging.INFO)
+    
+    if not platform.startswith('linux'):
+        logging.info("Bypass mklml install test for non-Linux OS")
+        return
+
     try:
         #pylint: disable=unused-variable
         import mxnet as mx
