@@ -271,6 +271,70 @@ class MKLDNNStream {
   }
 };
 
+class MKLDNNOpSignature {
+  std::vector<int> eles;
+  uint64_t hash;
+ public:
+  void AddSign(const std::vector<NDArray> &arrs) {
+    for (auto &arr : arrs) {
+      AddSign(arr);
+    }
+  }
+
+  void AddSign(const NDArray &arr) {
+    hash = hash * 2 + arr.dtype();
+    eles.push_back(arr.dtype());
+    AddSign(arr.shape());
+  }
+
+  void AddSign(const TShape &shape) {
+    for (size_t i = 0; i < shape.ndim(); i++) {
+      hash = hash * 2 + shape[i];
+      eles.push_back(shape[i]);
+    }
+  }
+
+  void AddSign(int val) {
+    hash = hash * 2 + val;
+    eles.push_back(val);
+  }
+
+  bool operator==(const MKLDNNOpSignature &sign) const {
+    if (hash != sign.hash)
+      return false;
+    if (eles.size() != sign.eles.size())
+      return false;
+    for (size_t i = 0; i < eles.size(); i++)
+      if (eles[i] != sign.eles[i])
+        return false;
+    return true;
+  }
+
+  uint64_t GetHash() const {
+    return hash;
+  }
+};
+
+struct MKLDNNOpHash {
+  size_t operator()(const MKLDNNOpSignature &sign) const {
+    return sign.GetHash();
+  }
+};
+
+template<typename ParamType>
+class MKLDNNParamOpSign: public MKLDNNOpSignature {
+  const ParamType param;
+ public:
+  MKLDNNParamOpSign(const ParamType &_param): param(_param) {
+  }
+
+  bool operator==(const MKLDNNParamOpSign<ParamType> &sign) const {
+    const MKLDNNOpSignature &this_upper = *this;
+    const MKLDNNOpSignature &other_upper = sign;
+    return this_upper == other_upper && param == sign.param;
+  }
+};
+
 enum OutDataOp {
   Noop,
   CopyBack,
