@@ -35,8 +35,11 @@ namespace op {
 
 static inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2
-      && (param.pool_type == pool_enum::kMaxPooling
+      && (param.pool_type == pool_enum::kMaxPooling);
+#if 0
+      // It seems average pooling has precision problems.
           || param.pool_type == pool_enum::kAvgPooling);
+#endif
 }
 
 static inline bool SupportMKLDNNPooling(const PoolingParam &param,
