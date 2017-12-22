@@ -94,6 +94,13 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
   });
 }
 
+
+NNVM_REGISTER_OP(signsgd_update)
+.set_attr<FCompute>("FCompute<gpu>", SignSGDUpdate<gpu>);
+
+NNVM_REGISTER_OP(signum_update)
+.set_attr<FCompute>("FCompute<gpu>", SignumUpdate<gpu>);
+
 NNVM_REGISTER_OP(sgd_update)
 .set_attr<FCompute>("FCompute<gpu>", SGDUpdate<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", SGDUpdateEx<gpu>);
