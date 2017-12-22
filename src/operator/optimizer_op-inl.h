@@ -1291,7 +1291,7 @@ struct SignSGDParam : public dmlc::Parameter<SignSGDParam> {
   float wd;
   float rescale_grad;
   float clip_gradient;
-  DMLC_DECLARE_PARAMETER(SGDParam) {
+  DMLC_DECLARE_PARAMETER(SignSGDParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
     DMLC_DECLARE_FIELD(wd)
@@ -1346,15 +1346,6 @@ inline void SignSGDUpdate(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu>
-inline void SignSGDUpdateEx(const nnvm::NodeAttrs& attrs,
-                        const OpContext &ctx,
-                        const std::vector<NDArray> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs) {
-  // SPARSE MATRIX NOT IMPLEMENTED YET
-  SignSGDUpdate(attrs,ctx,inputs,req,outputs)
-}
 
 struct SignumParam : public dmlc::Parameter<SignumParam> {
   float lr;
@@ -1394,7 +1385,7 @@ struct SignumKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, DType* mom_data, const DType* weight_data,
     const DType* grad_data, const DType param_clip_gradient, const DType param_momentum,
-    const DType param_lr, const DType param_wd, const DType param_rescale_grad, const DType param_wd_lh
+    const DType param_lr, const DType param_wd, const DType param_rescale_grad, const DType param_wd_lh,
     const OpReqType req) {
     if (param_clip_gradient >= 0.0f) {
       mom_data[i] = param_momentum*mom_data[i]
@@ -1425,22 +1416,12 @@ inline void SignumUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> mom = inputs[2].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    Kernel<SGDMomKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mom.dptr_, weight.dptr_,
+    Kernel<SignumKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mom.dptr_, weight.dptr_,
       grad.dptr_, static_cast<DType>(param.clip_gradient), static_cast<DType>(param.momentum),
       static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.rescale_grad), static_cast<DType>(param.wd_lh), req[0]);
     });
 }
-template<typename xpu>
-inline void SignSGDUpdateEx(const nnvm::NodeAttrs& attrs,
-                        const OpContext &ctx,
-                        const std::vector<NDArray> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<NDArray> &outputs) {
-  // SPARSE MATRIX NOT IMPLEMENTED YET
-  SignumUpdate(attrs,ctx,inputs,req,outputs)
-};
-
 
 
 

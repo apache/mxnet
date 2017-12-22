@@ -39,9 +39,8 @@ DMLC_REGISTER_PARAMETER(FtrlParam);
 DMLC_REGISTER_PARAMETER(SignSGDParam);
 DMLC_REGISTER_PARAMETER(SignumParam);
 
-
 NNVM_REGISTER_OP(signsgd_update)
-MXNET_ADD_SPARSE_OP_ALIAS(signsgd_update)
+//MXNET_ADD_SPARSE_OP_ALIAS(signsgd_update)
 .describe(R"code(Update function for SignSGDoptimizer.
 It updates the weights using::
 
@@ -64,14 +63,14 @@ only the row slices whose indices appear in grad.indices are updated::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<2, 1, false, true, false>)
 .set_attr<FCompute>("FCompute<cpu>", SignSGDUpdate<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SignSGDUpdateEx<cpu>)
+//.set_attr<FComputeEx>("FComputeEx<cpu>", SignSGDUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_arguments(SignSGDParam::__FIELDS__());
 
 
 NNVM_REGISTER_OP(signum_update)
-MXNET_ADD_SPARSE_OP_ALIAS(signum_update)
+//MXNET_ADD_SPARSE_OP_ALIAS(signum_update)
 .describe(R"code(SIGN momentUM (Signum) optimizer.
 
  weight = weight - learning_rate * sign(momentum)
@@ -98,8 +97,8 @@ only the row slices whose indices appear in grad.indices are updated (for both w
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2};
   })
-.set_attr<FCompute>("FCompute<cpu>", SGDMomUpdate<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SGDMomUpdateEx<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SignumUpdate<cpu>)
+//.set_attr<FComputeEx>("FComputeEx<cpu>", SGDMomUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
