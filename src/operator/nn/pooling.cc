@@ -397,6 +397,10 @@ height, width)*.
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 #endif
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"output"};
+})
 .set_attr_parser(PoolingParamParser)
 .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
 .set_attr<nnvm::FInferType>("FInferType", PoolingType)
