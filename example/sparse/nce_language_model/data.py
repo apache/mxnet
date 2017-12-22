@@ -152,8 +152,8 @@ class MultiSentenceIter(mx.io.DataIter):
         super(MultiSentenceIter, self).__init__()
         self.batch_size = batch_size
         self.bptt = bptt
-        self.provide_data = [('data', (bptt, batch_size), np.int32), ('mask', (bptt, batch_size))]
-        self.provide_label = [('label', (bptt, batch_size))]
+        self.provide_data = [('data', (batch_size, bptt), np.int32), ('mask', (batch_size, bptt))]
+        self.provide_label = [('label', (batch_size, bptt))]
         self.vocab = vocab
         self._dataset = data_utils.Dataset(self.vocab, data_file, deterministic=True)
         self._iter = self._dataset.iterate_once(batch_size, bptt)
@@ -162,9 +162,9 @@ class MultiSentenceIter(mx.io.DataIter):
         data = self._iter.next()
         if data is None:
             return False
-        self._next_data = mx.nd.array(data[0], dtype=np.int32).T
-        self._next_label = mx.nd.array(data[1]).T
-        self._next_mask = mx.nd.array(data[2]).T
+        self._next_data = mx.nd.array(data[0], dtype=np.int32)
+        self._next_label = mx.nd.array(data[1])
+        self._next_mask = mx.nd.array(data[2])
         return True
 
     def next(self):

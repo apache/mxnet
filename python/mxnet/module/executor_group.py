@@ -412,7 +412,9 @@ class DataParallelExecutorGroup(object):
         - This function will inplace update the NDArrays in arg_params and aux_params.
         """
         for name, block in zip(self.param_names, self.param_arrays):
-            weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
+            # XXX temp hacks for avoid fallback
+            weight_cpu = [w.copyto(ctx.cpu()) for w in block]
+            weight = nd.add_n(*weight_cpu) / len(block)
             weight.astype(arg_params[name].dtype).copyto(arg_params[name])
         for name, block in zip(self.aux_names, self.aux_arrays):
             weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)

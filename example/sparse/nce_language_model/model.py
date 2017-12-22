@@ -17,83 +17,78 @@
 
 import mxnet as mx
 
-def nce_criterion(p_target, p_sample, bptt, batch_size, k):
-    p_noise_sample = mx.sym.var("p_noise_sample", shape=(bptt*batch_size, k))
-    p_noise_target = mx.sym.var("p_noise_target", shape=(bptt*batch_size, 1))
-    mask = mx.sym.var("mask", shape=(bptt, batch_size))
-    mask = mx.sym.reshape(mask, shape=(bptt*batch_size, 1))
+def nce_criterion(p_target, p_sample, n, k):
+    p_noise_sample = mx.sym.var("p_noise_sample", shape=(n, k))
+    p_noise_target = mx.sym.var("p_noise_target", shape=(n, 1))
+    mask = mx.sym.var("mask")
+    mask = mx.sym.reshape(mask, shape=(n, 1))
     eps = 1e-7
     # equation 5 in ref. A
     # eq 5.1 : P(origin=model) = Pmt / (Pmt + k*Pnt)
     rnn_loss = mx.sym.log(p_target / (p_target + k * p_noise_target + eps)) * mask
     noise_loss = mx.sym.log(k * p_noise_sample / (p_sample + k * p_noise_sample + eps))
     loss = mx.sym.sum(rnn_loss) + mx.sym.sum(noise_loss)
-    return mx.sym.make_loss(-loss / (bptt * batch_size))
+    return mx.sym.make_loss(-loss / n)
 
-def nce_decoder_weights_block(vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=None):
+def nce_decoder_weights(vocab_size, nhid, k, n, dense, decoder_w=None):
     EMBEDDING = mx.sym.Embedding if dense else mx.sym.contrib.SparseEmbedding
-    # (bptt*batch_size, k)
-    sample = mx.sym.Variable('sample', shape=(bptt*batch_size, k), dtype='float32')
-    # (bptt*batch_size, 1)
+    # (n, k)
+    sample = mx.sym.Variable('sample', shape=(n, k), dtype='float32')
+    # (n, 1)
     label = mx.sym.Variable('label')
     label = mx.sym.reshape(label, shape=(-1, 1), name="label_reshape")
     sample_label = mx.sym.Concat(sample, label, dim=1)
-    # (bptt*batch_size, )
     # weight and bias
     stype = 'row_sparse' if not dense else 'default'
     decoder_w = decoder_w if decoder_w is not None else mx.sym.var("decoder_weight", stype=stype)
     decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype=stype)
-    #decoder_b = mx.sym.reshape(decoder_b, shape=(vocab_size, 1))
-    #if not dense:
-    #    decoder_b = mx.sym.cast_storage(decoder_b, 'row_sparse')
-
     # lookup weights
-    # (bptt*batch_size, k+1, nhid)
+    # (n, k+1, nhid)
     sample_target_w = EMBEDDING(data=sample_label, weight=decoder_w,
                                    input_dim=vocab_size, output_dim=nhid)
     # lookup bias
-    # (bptt*batch_size, k, 1)
+    # (n, k, 1)
     sample_target_b = EMBEDDING(data=sample_label, weight=decoder_b,
                                 input_dim=vocab_size, output_dim=1)
 
     return sample_target_w, sample_target_b
 
-def nce_decoder_block(sample_target_w, sample_target_b, pred, nhid, k, bptt, batch_size):
+def nce_decoder(sample_target_w, sample_target_b, pred, nhid, k, n):
     '''
     inputs:
-    target_w: (bptt*batch_size, nhid)
-    target_b: (bptt*batch_size, 1)
-    sample_w: (bptt*batch_size, k, nhid)
-    sample_b: (bptt*batch_size, k, 1)
-    pred: (bptt*batch_size, nhid)
+    target_w: (n, nhid)
+    sample_w: (n, k, nhid)
+    sample_b: (n, k, 1)
+    pred: (n, nhid)
     outputs: 
     '''
-    sample_w = mx.sym.slice(sample_target_w, begin=(0, 0, 0), end=(bptt*batch_size, k, nhid))
-    target_w = mx.sym.slice(sample_target_w, begin=(0, k, 0), end=(bptt*batch_size, k+1, nhid))
-    sample_b = mx.sym.slice(sample_target_b, begin=(0, 0, 0), end=(bptt*batch_size, k, 1))
-    target_b = mx.sym.slice(sample_target_b, begin=(0, k, 0), end=(bptt*batch_size, k+1, 1))
+    sample_w = mx.sym.slice(sample_target_w, begin=(0, 0, 0), end=(n, k, nhid))
+    target_w = mx.sym.slice(sample_target_w, begin=(0, k, 0), end=(n, k+1, nhid))
+    sample_b = mx.sym.slice(sample_target_b, begin=(0, 0, 0), end=(n, k, 1))
+    # (n, 1)
+    target_b = mx.sym.slice(sample_target_b, begin=(0, k, 0), end=(n, k+1, 1))
 
-    target_w = mx.sym.reshape(target_w, shape=(bptt*batch_size, nhid))
-    target_b = mx.sym.reshape(target_b, shape=(bptt*batch_size, 1))
+    target_w = mx.sym.reshape(target_w, shape=(n, nhid))
+    target_b = mx.sym.reshape(target_b, shape=(n, 1))
     true_pred = mx.sym.sum(target_w * pred, axis=1, keepdims=True) + target_b
 
     # noise samples
-    # (bptt*batch_size, nhid, 1)
+    # (n, nhid, 1)
     pred_3d_s = mx.sym.reshape(pred, (-1, nhid, 1), name='pred_reshape_s')
-    # (bptt*batch_size, k, 1)
+    # (n, k, 1)
     sample_pred = mx.sym.batch_dot(sample_w, pred_3d_s)
-    # (bptt*batch_size, k)
+    # (n, k)
     sample_pred = mx.sym.reshape(sample_pred, (-1, k), name='sample_pred_reshape')
-    # (bptt*batch_size, k)
+    # (n, k)
     sample_b = mx.sym.reshape(sample_b, (-1, k), name='sample_b_reshape')
     sample_pred = sample_pred + sample_b
     p_target = mx.sym.exp(true_pred - 9)
     p_sample = mx.sym.exp(sample_pred - 9)
-    return nce_criterion(p_target, p_sample, bptt, batch_size, k)
+    return nce_criterion(p_target, p_sample, n, k)
 
 def nce_loss(pred, vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=None):
-    sample_target_w, sample_target_b = nce_decoder_weights_block(vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=decoder_w)
-    output = nce_decoder_block(sample_target_w, sample_target_b, pred, nhid, k, bptt, batch_size)
+    sample_target_w, sample_target_b = nce_decoder_weights(vocab_size, nhid, k, batch_size * bptt, dense, decoder_w=decoder_w)
+    output = nce_decoder(sample_target_w, sample_target_b, pred, nhid, k, batch_size * bptt)
     return output
 
 ########## COMMON BLOCKS ##########
@@ -101,7 +96,6 @@ def nce_loss(pred, vocab_size, nhid, k, batch_size, bptt, dense, decoder_w=None)
 def ce_loss(pred, vocab_size, tied, dense, weight):
     stype = 'row_sparse' if not dense else 'default'
     decoder_b = mx.sym.var("decoder_bias", shape=(vocab_size, 1), stype=stype)
-    decoder_b = mx.sym.reshape(decoder_b, shape=(vocab_size,))
     if tied:
         pred = mx.sym.FullyConnected(data=pred, weight=weight, bias=decoder_b, num_hidden=vocab_size, name='pred')
     else:
@@ -110,10 +104,8 @@ def ce_loss(pred, vocab_size, tied, dense, weight):
     label = mx.sym.Variable('label')
     pred = mx.sym.reshape(pred, shape=(-1, vocab_size))
     label = mx.sym.reshape(label, shape=(-1,))
-    logits = pred
-    target = label
-    pred = mx.sym.log_softmax(logits, axis=-1)
-    loss = -mx.sym.pick(pred, target, axis=-1, keepdims=True)
+    pred = mx.sym.log_softmax(pred, axis=-1)
+    loss = -mx.sym.pick(pred, label, axis=-1, keepdims=True)
     mask = mx.sym.var("mask")
     mask = mx.sym.reshape(mask, shape=(-1, 1))
     loss = loss * mask
@@ -128,16 +120,14 @@ def rnn_block(embed, bptt, vocab_size, num_embed, nhid,
     states_list = []
     for i in range(num_layers):
         prefix = 'lstm_l%d_' % i
-        cell = mx.rnn.FusedRNNCell(num_hidden=nhid, prefix=prefix, num_layers=1, get_next_state=True, forget_bias=0.0, dropout=dropout)
-        state_shape = (1, batch_size, nhid)
+        cell = mx.rnn.LSTMCell(num_hidden=nhid, prefix=prefix, forget_bias=0.0)
+        state_shape = (batch_size, nhid)
         state0 = mx.sym.var(prefix + str(0), shape=state_shape)
         state1 = mx.sym.var(prefix + str(1), shape=state_shape)
-        outputs, next_states = cell.unroll(bptt, inputs=outputs, begin_state=[state0, state1], merge_outputs=True, layout='TNC')
+        outputs, next_states = cell.unroll(bptt, inputs=outputs, begin_state=[state0, state1], merge_outputs=True, layout='NTC')
         outputs = mx.sym.Dropout(outputs, p=dropout)
         states_list += next_states
-
-    # TODO block graph is not required
-    states = [mx.sym.BlockGrad(s) for s in states_list]
+    states = [mx.sym.stop_gradient(s) for s in states_list]
     pred = mx.sym.reshape(outputs, shape=(-1, nhid))
     return pred, states
 
