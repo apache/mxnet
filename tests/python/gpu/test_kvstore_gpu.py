@@ -58,7 +58,7 @@ def test_rsp_push_pull():
                 for i in range(count):
                     row_id = np.random.randint(num_rows, size=num_rows)
                     row_ids.append(mx.nd.array(row_id, dtype='int64'))
-            row_ids_to_pull = row_ids[0] if len(row_ids) == 1 else row_ids
+            row_ids_to_pull = row_ids[0] if (len(row_ids) == 1 or is_same_rowid) else row_ids
             vals_to_pull = vals[0] if len(vals) == 1 else vals
 
             kv.row_sparse_pull('e', out=vals_to_pull, row_ids=row_ids_to_pull)
