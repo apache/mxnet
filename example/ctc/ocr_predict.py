@@ -21,8 +21,6 @@
 from __future__ import print_function
 import sys, os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append("../../amalgamation/python/")
-sys.path.append("../../python/")
 
 from mxnet_predict import Predictor
 import mxnet as mx
