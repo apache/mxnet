@@ -45,7 +45,7 @@ parser.add_argument('--wd', type=float, default=0.0,
                     help='wd')
 parser.add_argument('--clip', type=float, default=0.2,
                     help='gradient clipping by global norm')
-parser.add_argument('--epochs', type=int, default=40,
+parser.add_argument('--epochs', type=int, default=60,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=32,
                     help='batch size per gpu')
@@ -58,8 +58,7 @@ parser.add_argument('--bptt', type=int, default=35,
 parser.add_argument('--k', type=int, default=15,
                     help='number of noise samples to estimate')
 parser.add_argument('--gpus', type=str,
-                    help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu. ' \
-                         'Increase batch size when using multiple gpus for best performance.')
+                    help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu.')
 parser.add_argument('--dense', action='store_true',
                     help='use dense embedding instead of sparse embedding')
 parser.add_argument('--use-full-softmax', action='store_true',
@@ -82,8 +81,12 @@ parser.add_argument('--profile', action='store_true',
                     help='whether to use profiler')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='type of kv-store to use')
+parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint/',
+                    help='dir for checkpoint')
 parser.add_argument('--dummy-iter', action='store_true',
                     help='whether to dummy data iterator')
+parser.add_argument('--bench', action='store_true',
+                    help='whether to use tiny data')
 args = parser.parse_args()
 
 
@@ -143,9 +146,9 @@ if __name__ == '__main__':
     ntokens = unigram.size * args.scale
     sampler = AliasMethod(unigram)
     # TODO serialize sampler table
-    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "train.txt", vocab,
+    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + ("train.txt" if not args.bench else "tiny.txt"), vocab,
                                        batch_size, args.bptt))
-    eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "valid.txt", vocab,
+    eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + ("valid.txt" if not args.bench else "tiny.txt"), vocab,
                                       batch_size, args.bptt))
     test_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "test.txt", vocab,
                                       batch_size, args.bptt))
@@ -203,7 +206,6 @@ if __name__ == '__main__':
         filename = '-'.join(config_str) + '.json'
         mx.profiler.profiler_set_config(mode='all', filename=filename)
         mx.profiler.profiler_set_state('run')
-
 
     # train
     def listify(x):
@@ -270,26 +272,27 @@ if __name__ == '__main__':
                 kvstore.row_sparse_pull('decoder_weight', decoder_w_param, row_ids=[row_ids for i in range(len(ctx))],
                                         priority=-decoder_w_index)
 
-        module.save_checkpoint('checkpoint/checkpoint', epoch, save_optimizer_states=True)
-        nce_mod = mx.module.Module.load('checkpoint/checkpoint', epoch, state_names=(state_names + extra_states), data_names=['data', 'mask'], label_names=['label'])
+        module.save_checkpoint(args.checkpoint_dir, epoch, save_optimizer_states=True)
+        nce_mod = mx.module.Module.load(args.checkpoint_dir, epoch, context=ctx, state_names=(state_names + extra_states),
+                                        data_names=['data', 'mask'], label_names=['label'])
         nce_mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
         ############### eval model ####################
         eval_rnn_out, eval_weight, eval_last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
-                                                          args.nlayers, 0, args.dense, batch_size)
+                                                          args.nlayers, 0, args.dense, batch_size / ngpus)
         eval_model = ce_loss(eval_rnn_out, ntokens, args.tied, args.dense, eval_weight)
         eval_last_states.append(eval_model)
         ############### eval module ####################
-        eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=mx.cpu(), data_names=['data', 'mask'],
+        eval_module = mx.mod.Module(symbol=mx.sym.Group(eval_last_states), context=ctx, data_names=['data', 'mask'],
                                     label_names=['label'], state_names=state_names)
         eval_module.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label, shared_module=nce_mod, for_training=False)
         val_L = evaluate(eval_module, eval_data, epoch, 'Valid', None, args, ctx)
-        #if val_L < best_val:
-        #    best_val = val_L
-        #    test_L = evaluate(eval_module, test_data, epoch, 'Test', kvstore, args, ctx)
-        #else:
-        #    optimizer.lr *= args.lr_decay
-        #    logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))
-        #eval_data.reset()
+        if val_L < best_val:
+            best_val = val_L
+            test_L = evaluate(eval_module, test_data, epoch, 'Test', kvstore, args, ctx)
+        else:
+            optimizer.lr *= args.lr_decay
+            logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))
+        eval_data.reset()
         train_data.reset()
     logging.info("Training completed. ")
     if args.profile:
