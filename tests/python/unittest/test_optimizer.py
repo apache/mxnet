@@ -333,6 +333,29 @@ def test_sparse_sgd():
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
 
+def test_std_sparse_sgd():
+    mx.random.seed(0)
+    opt1 = PySGD
+    opt2 = mx.optimizer.SGD
+    shape = (3, 4, 5)
+    mom_options = [{'momentum': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    for dtype in [np.float32]:
+        for mom_option in mom_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        kwarg = {}
+                        kwarg.update(mom_option)
+                        kwarg.update(cg_option)
+                        kwarg.update(rg_option)
+                        kwarg.update(wd_option)
+                        compare_optimizer(opt1(**kwarg), opt2(lazy_update=False, **kwarg), shape, dtype,
+                                          w_stype='row_sparse', g_stype='row_sparse')
+
+
 # ADAM
 
 class PyAdam(mx.optimizer.Optimizer):
@@ -673,6 +696,6 @@ def test_nadam():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
-
+    #import nose
+    #nose.runmodule()
+    test_std_sparse_sgd()
