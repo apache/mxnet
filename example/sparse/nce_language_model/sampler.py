@@ -5,15 +5,15 @@ class AliasMethod(object):
     def __init__(self, weights):
         self.N = weights.size
         total_weights = weights.sum()
-        self.prob = weights * self.N / total_weights
-        self.alias = mx.nd.zeros((self.N,))
+        self.prob = (weights * self.N / total_weights).asnumpy().tolist()
+        self.alias = [0] * self.N
 
         # sort the data into the outcomes with probabilities
         # that are high and low than 1/N.
         low = []
         high = []
         for i in range(self.N):
-            if self.prob[i].asscalar() < 1.0:
+            if self.prob[i] < 1.0:
                 low.append(i)
             else:
                 high.append(i)
@@ -26,7 +26,7 @@ class AliasMethod(object):
             self.alias[l] = h
             self.prob[h] = self.prob[h] - (1.0 - self.prob[l])
 
-            if self.prob[h].asscalar() < 1.0:
+            if self.prob[h] < 1.0:
                 low.append(h)
             else:
                 high.append(h)
@@ -34,6 +34,10 @@ class AliasMethod(object):
         for i in low + high:
             self.prob[i] = 1
             self.alias[i] = i
+
+        # convert to ndarrays
+        self.prob = mx.nd.array(self.prob)
+        self.alias = mx.nd.array(self.alias)
 
     def draw(self, k):
         ''' Draw k samples from the distribution '''

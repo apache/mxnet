@@ -21,11 +21,13 @@ import argparse
 from data import Corpus, CorpusIter, DummyIter, MultiSentenceIter
 from model import *
 from sampler import *
-import os, math
+import os, math, logging, time, pickle
 import data_utils
 
 parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model with Noice Contrastive Estimation')
-parser.add_argument('--data', type=str, default='./data/ptb.',
+parser.add_argument('--train-data', type=str, default='./data/ptb.train.txt',
+                    help='location of the data corpus')
+parser.add_argument('--eval-data', type=str, default='./data/ptb.valid.txt',
                     help='location of the data corpus')
 parser.add_argument('--vocab', type=str, default='./data/ptb_vocab.txt',
                     help='location of the corpus vocab')
@@ -61,8 +63,8 @@ parser.add_argument('--gpus', type=str,
                     help='list of gpus to run, e.g. 0 or 0,2,5. empty means using cpu.')
 parser.add_argument('--dense', action='store_true',
                     help='use dense embedding instead of sparse embedding')
-parser.add_argument('--use-full-softmax', action='store_true',
-                    help='use full softmax ce loss instead of noise contrastive estimation')
+parser.add_argument('--sampler', type=str, default=None,
+                    help='the path to serialized sampler')
 parser.add_argument('--log-interval', type=int, default=200,
                     help='report interval')
 parser.add_argument('--lr-decay', type=float, default=0.25,
@@ -129,7 +131,6 @@ def evaluate(mod, data_iter, epoch, mode, kvstore, args, ctx):
     return loss
 
 if __name__ == '__main__':
-    import logging
     mx.random.seed(args.seed)
     np.random.seed(args.seed)
     head = '%(asctime)-15s %(message)s'
@@ -144,19 +145,19 @@ if __name__ == '__main__':
     vocab = data_utils.Vocabulary.from_file(args.vocab)
     unigram = vocab.unigram()
     ntokens = unigram.size * args.scale
+    os.environ["MXNET_MAGIC_DIM"] = str(ntokens)
     sampler = AliasMethod(unigram)
-    # TODO serialize sampler table
-    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + ("train.txt" if not args.bench else "tiny.txt"), vocab,
+    # serialize sampler table
+    # pickle.dump(sampler, open(args.checkpoint_dir + "sampler", "w"))
+
+    train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.train_data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                        batch_size, args.bptt))
-    eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + ("valid.txt" if not args.bench else "tiny.txt"), vocab,
-                                      batch_size, args.bptt))
-    test_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data + "test.txt", vocab,
+    eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.eval_data if not args.bench else "./data/ptb.tiny.txt", vocab,
                                       batch_size, args.bptt))
 
     if args.dummy_iter:
         train_data = DummyIter(train_data)
         eval_data = DummyIter(train_data)
-        test_data = DummyIter(train_data)
 
     # model
     rnn_out, weight, last_states = rnn(args.bptt, ntokens, args.emsize, args.nhid,
@@ -288,7 +289,6 @@ if __name__ == '__main__':
         val_L = evaluate(eval_module, eval_data, epoch, 'Valid', None, args, ctx)
         if val_L < best_val:
             best_val = val_L
-            test_L = evaluate(eval_module, test_data, epoch, 'Test', kvstore, args, ctx)
         else:
             optimizer.lr *= args.lr_decay
             logging.info("epoch %d with lr decay, lr = %.4f" % (epoch, optimizer.lr))
