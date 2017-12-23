@@ -231,20 +231,17 @@ NDArray NDArray::Reshape(const TShape &shape) const {
     return ret;
 #if MXNET_USE_MKLDNN == 1
   } else if (storage_type() == kMKLDNNStorage) {
-    NDArray ret(kMKLDNNStorage, shape, ctx(), ptr_->delay_alloc, dtype());
+    NDArray ret = this->Detach();
+    ret.shape_ = shape;
     // We need to convert the MKL memory to the default layout.
     Engine::Get()->PushSync([&](RunContext ctx) {
         if (this->ptr_->Mkl_mem_) {
           auto def_format = GetDefaultFormat(this->ptr_->Mkl_mem_->get_primitive_desc().desc());
           if (this->ptr_->Mkl_mem_->get_primitive_desc().desc().data.format != def_format) {
             ret.ptr_->Mkl_mem_ = Reorder2Default(this->ptr_->Mkl_mem_);
-          } else {
-            ret.ptr_->Mkl_mem_ = this->ptr_->Mkl_mem_;
           }
-          // We should make sure slice still works.
-          ret.byte_offset_ = this->byte_offset_;
         }
-    }, ctx(), {this->var()}, {ret.var()},
+    }, ctx(), {}, {ret.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncMKLDNN2Default"));
     ret.WaitToRead();
     return ret;
@@ -280,9 +277,8 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 #if MXNET_USE_MKLDNN == 1
   CHECK(storage_type() == kDefaultStorage || storage_type() == kMKLDNNStorage);
   if (storage_type() == kMKLDNNStorage) {
-    TShape new_shape = shape_;
-    new_shape[0] = end - begin;
-    NDArray ret(kMKLDNNStorage, new_shape, ctx(), ptr_->delay_alloc, dtype());
+    NDArray ret = this->Detach();
+    ret.shape_[0] = end - begin;
     size_t length = shape_.ProdShape(1, shape_.ndim());
     MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
         ret.byte_offset_ += begin * length * sizeof(DType);
@@ -293,10 +289,8 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
         auto def_format = GetDefaultFormat(this->ptr_->Mkl_mem_->get_primitive_desc().desc());
         if (this->ptr_->Mkl_mem_->get_primitive_desc().desc().data.format != def_format) {
           ret.ptr_->Mkl_mem_ = Reorder2Default(this->ptr_->Mkl_mem_);
-        } else {
-          ret.ptr_->Mkl_mem_ = this->ptr_->Mkl_mem_;
         }
-    }, ctx(), {this->var()}, {ret.var()},
+    }, ctx(), {}, {ret.var()},
     FnProperty::kNormal, 0, PROFILER_MESSAGE("SyncMKLDNN2Default"));
     ret.WaitToRead();
     return ret;
