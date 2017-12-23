@@ -696,6 +696,5 @@ def test_nadam():
 
 
 if __name__ == '__main__':
-    #import nose
-    #nose.runmodule()
-    test_std_sparse_sgd()
+    import nose
+    nose.runmodule()
