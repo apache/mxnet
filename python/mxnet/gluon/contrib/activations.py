@@ -19,8 +19,6 @@
 ''' This file contains definitions of advanced activation functions
 for neural networks'''
 
-import mxnet
-import mxnet as mx
 import mxnet.gluon as gluon
 
 
