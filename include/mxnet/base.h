@@ -113,7 +113,7 @@
 /*! \brief minor version */
 #define MXNET_MINOR 0
 /*! \brief patch version */
-#define MXNET_PATCH 0
+#define MXNET_PATCH 1
 /*! \brief mxnet version */
 #define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
 /*! \brief helper for making version number */
