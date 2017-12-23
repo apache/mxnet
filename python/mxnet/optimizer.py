@@ -433,7 +433,8 @@ register = Optimizer.register   # pylint: disable=invalid-name
 class SGD(Optimizer):
     """The SGD optimizer with momentum and weight decay.
 
-    The optimizer updates the weight by::
+    If any storage type of weight, state or grad is ``default``, \
+    **standard updates** are applied by::
 
         rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
         state = momentum * state + rescaled_grad
@@ -464,6 +465,8 @@ class SGD(Optimizer):
     ----------
     momentum : float, optional
        The momentum value.
+    lazy_update : bool, optional
+       If True, standard updates are applied.
     multi_precision: bool, optional
        Flag to control the internal precision of the optimizer.
        ``False`` results in using the same precision as the weights (default),
