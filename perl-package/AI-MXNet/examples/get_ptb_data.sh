@@ -17,11 +17,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-echo ""
-echo "NOTE: Please review the licensing of the datasets in this script before proceeding"
+echo
+echo "NOTE: To continue, you need to review the licensing of the data sets used by this script"
 echo "See https://catalog.ldc.upenn.edu/ldc99t42 for the licensing"
-echo "Once that is done, please uncomment the wget commands in this script"
-echo ""
+read -p "Please confirm you have reviewed the licensing [Y/n]:" -n 1 -r
+echo
+
+if [ $REPLY != "Y" ]
+then
+    echo "License was not reviewed, aborting script."
+    exit 1
+fi
 
 RNN_DIR=$(cd `dirname $0`; pwd)
 DATA_DIR="${RNN_DIR}/data/"
@@ -31,7 +37,7 @@ if [[ ! -d "${DATA_DIR}" ]]; then
   mkdir -p ${DATA_DIR}
 fi
 
-#wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.train.txt;
-#wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.valid.txt;
-#wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.test.txt;
-#wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tinyshakespeare/input.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.train.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.valid.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.test.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tinyshakespeare/input.txt;
