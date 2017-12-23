@@ -140,6 +140,11 @@ static inline bool SupportMKLDNNConv(const NDArray &input) {
   return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
 }
 
+namespace op {
+struct ActivationParam;
+bool SupportMKLDNNAct(const op::ActivationParam& param);
+}
+
 static int GetTypeSize(int dtype) {
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     return sizeof(DType);
@@ -275,6 +280,27 @@ class MKLDNNOpSignature {
   std::vector<int> eles;
   uint64_t hash;
  public:
+  /*
+   * We provide different methods to add signature to an op.
+   * For operations, such as convolutin and fully connected, which determines
+   * the optimal data layout for the op, we only need to use the shape and data
+   * type to sign the op. For other operations, such as activation, which uses
+   * whatever layout in the input array, we have to use the shape, the data type
+   * and the layout to sign the op.
+   */
+
+  void AddSign(const mkldnn::memory &mem) {
+    auto desc = mem.get_primitive_desc().desc();
+    hash = hash * 2 + desc.data.format;
+    eles.push_back(desc.data.format);
+    hash = hash * 2 + desc.data.data_type;
+    eles.push_back(desc.data.data_type);
+    for (int i = 0; i < desc.data.ndims; i++) {
+      hash = hash * 2 + desc.data.dims[i];
+      eles.push_back(desc.data.dims[i]);
+    }
+  }
+
   void AddSign(const std::vector<NDArray> &arrs) {
     for (auto &arr : arrs) {
       AddSign(arr);

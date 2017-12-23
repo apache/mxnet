@@ -28,7 +28,7 @@
 #include "../tensor/elemwise_unary_op.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_base-inl.h"
-#include "./mkldnn/mkldnn_act-inl.h"
+#include "./mkldnn/mkldnn_ops-inl.h"
 #endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
@@ -60,7 +60,7 @@ static void ActivationComputeEx_CPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNActivationForward<float>(ctx, param, inputs[0], req[0], outputs[0]);
+    MKLDNNActivationForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
 #endif
@@ -80,8 +80,8 @@ void ActivationGradComputeEx_CPU(const nnvm::NodeAttrs& attrs,
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if MXNET_USE_MKLDNN == 1
   if (SupportMKLDNN(inputs[0])) {
-    MKLDNNActivationBackward<float>(ctx, param, inputs[0], inputs[1], req[0],
-                                    outputs[0]);
+    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[1], req[0],
+                             outputs[0]);
     return;
   }
 #endif

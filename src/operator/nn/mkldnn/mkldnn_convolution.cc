@@ -236,6 +236,9 @@ static inline MKLDNNConvForward &GetConvFwd(
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   MKLDNNConvSignature key(param);
   key.AddSign(is_train);
+  // Here we can sign the conv op with NDArray because conv primitive will
+  // decide the right layout for the, so we only need to get the shape and the
+  // data type of the arrays.
   key.AddSign(data);
   key.AddSign(weights);
   key.AddSign(output);
