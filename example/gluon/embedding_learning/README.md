@@ -56,7 +56,7 @@ optional arguments:
 ## Learned embeddings
 The following visualizes the learned embeddings with t-SNE.
 
-![alt text](images/cub200_embedding.png)
+![alt text](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/embedding_learning/cub200_embedding.png)
 
 
 ## Citation
