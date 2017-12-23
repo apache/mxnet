@@ -137,6 +137,34 @@ def test_vardrop():
     check_vardrop(0.5, 0.5, 0.5)
     check_vardrop(0.5, 0, 0.5)
 
+def test_activations():
+    point_to_validate = mx.nd.array([-0.1, 0.1])
+
+    swish = contrib.activations.Swish()
+    def swish_test(x):
+        return x * mx.nd.sigmoid(x)
+
+    for test_point, ref_point in zip(swish_test(point_to_validate), swish(point_to_validate)):
+        assert test_point == ref_point
+
+    elu = contrib.activations.ELU()
+    def elu_test(x):
+        def elu(x):
+            return 1.0 * (mx.nd.exp(x) - 1) if x < 0 else x
+        return [elu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
+        assert test_point == ref_point
+
+    selu = contrib.activations.SELU()
+    def selu_test(x):
+        def selu(x):
+            scale, alpha = 1.0507009873554804934193349852946, 1.6732632423543772848170429916717    
+            return scale * x if x >= 0 else alpha * mx.nd.exp(x) - alpha
+        return [selu(x_i) for x_i in x]
+            
+    for test_point, ref_point in zip(selu(point_to_validate), selu(point_to_validate)):
+        assert test_point == ref_point
 
 if __name__ == '__main__':
     import nose
