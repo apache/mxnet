@@ -226,8 +226,7 @@ class DeconvolutionOp : public Operator {
     index_t o_pad[2], o_adj[2];
     if (param_.kernel.ndim() == 2) {
       param_.InferPad(TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
-    }
-    else {
+    } else {
       index_t o_pad_1D[1], o_adj_1D[1];
       param_.InferPad({in_data_shape[2]}, o_pad_1D, o_adj_1D);
       o_pad[0] = 0;
@@ -348,8 +347,7 @@ class DeconvolutionOp : public Operator {
     index_t o_pad[2], o_adj[2];
     if (param_.kernel.ndim() == 2) {
       param_.InferPad(TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
-    }
-    else {
+    } else {
       index_t o_pad_1D[1], o_adj_1D[1];
       param_.InferPad({in_data_shape[2]}, o_pad_1D, o_adj_1D);
       o_pad[0] = 0;
@@ -482,7 +480,7 @@ class DeconvolutionOp : public Operator {
     else
       return tb.get_with_shape<xpu, 4, DType>(
           Shape4(tb.shape_[0], tb.shape_[1], 1, tb.shape_[2]), s);
-  };
+  }
 
   DeconvolutionParam param_;
   mshadow::Shape<2> shape_colunit_;

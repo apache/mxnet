@@ -77,8 +77,9 @@ class CuDNNConvolutionOp : public Operator {
       format_ = LayoutType<Layout>::kCudnnFlag;
     });
 #else
-    CHECK(param_.layout.value() == kNCW || param_.layout.value() == kNCHW || param_.layout.value() == kNCDHW)
-      << "Need CuDNN > 5.0 for layout support";
+    CHECK(param_.layout.value() == kNCW ||
+          param_.layout.value() == kNCHW ||
+          param_.layout.value() == kNCDHW) << "Need CuDNN > 5.0 for layout support";
 #endif
     // Double check to make sure this class supports the operation
     if (!Supports(param, forward_compute_type, backward_compute_type, ctx))
@@ -397,8 +398,7 @@ class CuDNNConvolutionOp : public Operator {
         dshape = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW);
         ostride = ConvertLayout(Strides<4>(oshape), param_.layout.value(), kNCHW);
         oshape = ConvertLayout(oshape.get<4>(), param_.layout.value(), kNCHW);
-      }
-      else {
+      } else {
         wshape = ConvertLayout(wshape.get<3>(), param_.layout.value(), kNCW);
         wshape = TShape({wshape[0], wshape[1], 1, wshape[2]});
         dstride = ConvertLayout(Strides<3>(dshape), param_.layout.value(), kNCW);
@@ -798,18 +798,15 @@ class CuDNNConvolutionOp : public Operator {
       Tensor<gpu, 3, DType> data = tb.get<gpu, 3, DType>(s);
       CHECK_EQ(data.CheckContiguous(), true);
       data_ptr = data.dptr_;
-    }
-    else if (dim == 4) {
+    } else if (dim == 4) {
       Tensor<gpu, 4, DType> data = tb.get<gpu, 4, DType>(s);
       CHECK_EQ(data.CheckContiguous(), true);
       data_ptr = data.dptr_;
-    }
-    else if (dim == 5) {
+    } else if (dim == 5) {
       Tensor<gpu, 5, DType> data = tb.get<gpu, 5, DType>(s);
       CHECK_EQ(data.CheckContiguous(), true);
       data_ptr = data.dptr_;
-    }
-    else {
+    } else {
       LOG(FATAL) << "Unexpected Tensor size " << dim << ", supporting only 3, 4 or 5.";
     }
     return data_ptr;
@@ -822,7 +819,7 @@ class CuDNNConvolutionOp : public Operator {
     uint32_t ndim = s.ndim();
     TShape strides(ndim);
     for (uint32_t i = 0; i != ndim; ++i)
-      strides[i] = s.ProdShape(i+1,ndim);
+      strides[i] = s.ProdShape(i+1, ndim);
     return strides.get<dim>();
   }
 
