@@ -139,6 +139,12 @@ class NDArray {
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
   }
 
+  inline bool is_view() const {
+	// Sparse arrays don't have a view.
+	if (storage_type() == kRowSparseStorage || storage_type() == kCSRStorage)
+      return false;
+    return byte_offset_ > 0 || shape() != ptr_->storage_shape;
+  }
 
   /*!
    * \return the shape of current NDArray.

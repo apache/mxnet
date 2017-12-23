@@ -98,15 +98,16 @@ NDArray::NDArray(const NDArrayStorageType _stype, const TShape &shape, Context c
     }
   }
   if (storage_shape.Size() == 0
-#if MXNET_USE_MKLDNN == 1
-      && stype != kMKLDNNStorage
-#endif
       && stype != kDefaultStorage) {
     if (stype == kRowSparseStorage) {
       storage_shape = shape;
       storage_shape[0] = aux_shapes[rowsparse::kIdx][0];
     } else if (stype == kCSRStorage) {
       storage_shape = aux_shapes[csr::kIdx];
+#if MXNET_USE_MKLDNN == 1
+	} else if (stype == kMKLDNNStorage) {
+      storage_shape = shape;
+#endif
     } else {
       LOG(FATAL) << "Unknown storage type " << stype;
     }
@@ -193,8 +194,6 @@ NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
   } else if (storage_type() == kMKLDNNStorage) {
     NDArray ret(kMKLDNNStorage, shape, ctx(), ptr_->delay_alloc, dtype());
     CHECK(ptr_->Mkl_mem_ != nullptr);
-    // This doesn't work on sliced NDArray yet.
-    CHECK_EQ(byte_offset_, 0);
     // We shouldn't submit the reorder primitive here because submit will
     // be called in operators.
     auto format = GetDefaultFormat(ptr_->Mkl_mem_->get_primitive_desc().desc());
@@ -213,6 +212,7 @@ NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
       ret.ptr_->Mkl_mem_ = std::shared_ptr<mkldnn::memory>(def_mem,
                                                            EmptyMKLDNNDeleter());
     }
+    ret.byte_offset_ = byte_offset_;
     return ret;
   }
   LOG(FATAL) << "Reshape for storage type " << storage_type() << " is not implemented yet";
@@ -548,11 +548,12 @@ const mkldnn::memory *NDArray::GetMKLDNNData() const {
   ptr_->SetMKLMem(shape_, dtype_);
   CHECK(ptr_->Mkl_mem_ != nullptr);
   MKLDNNStream::Get()->RegisterMem(ptr_->Mkl_mem_);
-  if (byte_offset_ > 0) {
-    // Slice only works on the default layout and Slice() turns an array into
-    // the default layout.
-    auto pd = ptr_->Mkl_mem_->get_primitive_desc();
+  auto pd = ptr_->Mkl_mem_->get_primitive_desc();
+  if (is_view()) {
+    // Sliced array must use the default layout.
     CHECK_EQ(GetDefaultFormat(pd.desc()), pd.desc().data.format);
+  }
+  if (byte_offset_ > 0) {
     void *off_addr = static_cast<char *>(ptr_->Mkl_mem_->get_data_handle())
         + byte_offset_;
 
@@ -590,14 +591,16 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     return;
   }
 
-  // This doesn't work on sliced NDArray yet.
-  CHECK_EQ(byte_offset_, 0);
   MKLDNNStream *stream = MKLDNNStream::Get();
   ptr_->SetMKLMem(shape_, dtype_);
   stream->RegisterMem(ptr_->Mkl_mem_);
   auto from_desc = mem.get_primitive_desc().desc();
   auto this_desc = ptr_->Mkl_mem_->get_primitive_desc().desc();
   auto from_def_format = GetDefaultFormat(from_desc);
+  if (is_view()) {
+    // Sliced array must use the default layout.
+    CHECK_EQ(GetDefaultFormat(this_desc), this_desc.data.format);
+  }
   // It's possible that the memory and the NDArray don't have the same shape.
   if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)
       // If the source memory uses the default layout, we can reshape directly.
@@ -708,6 +711,7 @@ void NDArray::SetTBlob() const {
     else
       ptr_->SetMKLMem(shape_, dtype_);
     dptr = static_cast<char *>(ptr_->Mkl_mem_->get_data_handle());
+    dptr += byte_offset_;
 #endif
   } else {
     LOG(FATAL) << "unknown storage type " << stype;
