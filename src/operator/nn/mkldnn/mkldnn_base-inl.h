@@ -279,6 +279,7 @@ class MKLDNNStream {
 class MKLDNNOpSignature {
   std::vector<int> eles;
   uint64_t hash;
+
  public:
   /*
    * We provide different methods to add signature to an op.
@@ -350,8 +351,9 @@ struct MKLDNNOpHash {
 template<typename ParamType>
 class MKLDNNParamOpSign: public MKLDNNOpSignature {
   const ParamType param;
+
  public:
-  MKLDNNParamOpSign(const ParamType &_param): param(_param) {
+  explicit MKLDNNParamOpSign(const ParamType &_param): param(_param) {
   }
 
   bool operator==(const MKLDNNParamOpSign<ParamType> &sign) const {

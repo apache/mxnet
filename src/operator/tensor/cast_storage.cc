@@ -43,11 +43,11 @@ void CastStorageMKLDnsImpl(const OpContext& ctx, const NDArray& src, const NDArr
   CHECK(src.shape() == dns.shape_);
   if (src.dtype() != dns.type_flag_) {
     // If the input and output have different data types, we have to convert
-	// the source array into the default layout, cast the data type and copy
-	// data to the destination array.
+    // the source array into the default layout, cast the data type and copy
+    // data to the destination array.
     const TBlob &src_blob = src.data();
-	CHECK(src.ctx() == dst_arr.ctx());
-	ndarray::Copy<cpu, cpu>(src.data(), &dns, src.ctx(), dst_arr.ctx(), ctx.run_ctx);
+    CHECK(src.ctx() == dst_arr.ctx());
+    ndarray::Copy<cpu, cpu>(src.data(), &dns, src.ctx(), dst_arr.ctx(), ctx.run_ctx);
   } else {
     // This converts the source data to the default format and write the data to
     // the destination directly.
