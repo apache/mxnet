@@ -77,9 +77,9 @@ static mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
 
+  auto alg = GetMKLDNNActAlgo(param);
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     DType alpha = 0;
-    auto alg = GetMKLDNNActAlgo(param);
     mkldnn::eltwise_forward::desc desc = is_train
         ? mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_training,
                                         alg, data_md, alpha)
@@ -87,6 +87,10 @@ static mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
                                         alg, data_md, alpha);
     return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
   });
+  LOG(INFO) << "Unsupported data type for MKLDNN activation";
+  mkldnn::eltwise_forward::desc desc = mkldnn::eltwise_forward::desc(
+      mkldnn::prop_kind::forward_training, alg, data_md, 0.0);
+  return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
 }
 
 typedef MKLDNNParamOpSign<ActivationParam> MKLDNNActSignature;
