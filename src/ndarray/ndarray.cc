@@ -122,7 +122,9 @@ NDArray::NDArray(const NDArrayStorageType _stype, const TShape &shape, Context c
 struct ChunkMem {
   Storage::Handle h;
   std::vector<Storage::Handle> aux_h;
+#if MXNET_USE_MKLDNN == 1
   std::shared_ptr<mkldnn::memory> mem;
+#endif
 };
 
 NDArray::Chunk::~Chunk() {
@@ -130,8 +132,10 @@ NDArray::Chunk::~Chunk() {
   ChunkMem mem;
   mem.h = this->shandle;
   mem.aux_h = this->aux_handles;
+#if MXNET_USE_MKLDNN == 1
   // We want to delete mkldnn memory after deleting the variable.
   mem.mem = this->Mkl_mem_;
+#endif
   Engine::Get()->DeleteVariable([mem, skip_free](RunContext s) {
     if (skip_free == false) {
       if (mem.h.size > 0) Storage::Get()->Free(mem.h);
