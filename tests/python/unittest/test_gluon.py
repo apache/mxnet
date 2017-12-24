@@ -652,8 +652,6 @@ def test_inline():
 
     assert len_1 == len_2 + 2
 
-def test_activations():
-    from mxnet.contrib.
 
 if __name__ == '__main__':
     import nose
