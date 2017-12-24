@@ -19,7 +19,7 @@
 ''' This file contains definitions of advanced activation functions
 for neural networks'''
 
-import mxnet.gluon as gluon
+from mxnet import gluon
 
 
 class ELU(gluon.HybridBlock):
