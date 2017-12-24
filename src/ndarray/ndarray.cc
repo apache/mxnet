@@ -105,7 +105,7 @@ NDArray::NDArray(const NDArrayStorageType _stype, const TShape &shape, Context c
     } else if (stype == kCSRStorage) {
       storage_shape = aux_shapes[csr::kIdx];
 #if MXNET_USE_MKLDNN == 1
-	} else if (stype == kMKLDNNStorage) {
+    } else if (stype == kMKLDNNStorage) {
       storage_shape = shape;
 #endif
     } else {
@@ -117,6 +117,29 @@ NDArray::NDArray(const NDArrayStorageType _stype, const TShape &shape, Context c
   else
     ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
         dtype, aux_types, aux_shapes);
+}
+
+struct ChunkMem {
+  Storage::Handle h;
+  std::vector<Storage::Handle> aux_h;
+  std::shared_ptr<mkldnn::memory> mem;
+};
+
+NDArray::Chunk::~Chunk() {
+  bool skip_free = static_data || delay_alloc;
+  ChunkMem mem;
+  mem.h = this->shandle;
+  mem.aux_h = this->aux_handles;
+  // We want to delete mkldnn memory after deleting the variable.
+  mem.mem = this->Mkl_mem_;
+  Engine::Get()->DeleteVariable([mem, skip_free](RunContext s) {
+    if (skip_free == false) {
+      if (mem.h.size > 0) Storage::Get()->Free(mem.h);
+      for (size_t i = 0; i < mem.aux_h.size(); i++) {
+        if (mem.aux_h[i].size > 0) Storage::Get()->Free(mem.aux_h[i]);
+      }
+    }
+  }, shandle.ctx, var);
 }
 
 void NDArray::Chunk::CheckAndAllocData(const TShape &shape, int dtype) {
