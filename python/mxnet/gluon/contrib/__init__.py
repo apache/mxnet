@@ -19,3 +19,4 @@
 """Contrib neural network module."""
 
 from . import rnn
+from . import activations
