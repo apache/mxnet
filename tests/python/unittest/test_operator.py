@@ -4315,21 +4315,23 @@ def test_scatter_gather_nd():
         npdata = np.zeros_like(data.asnumpy())
         npdata[npidx] = y.asnumpy()
         assert (npdata == data.grad.asnumpy()).all()
-        assert (mx.nd.scatter_nd(y, idx, shape=data.shape).asnumpy() == data.grad.asnumpy()).all()
+        assert (mx.nd.scatter_nd_acc(y, idx, shape=data.shape).asnumpy() == data.grad.asnumpy()).all()
+    for dtype in ['int32', 'float16', 'float32', 'float64']:
+        data = mx.nd.arange(360, dtype=dtype).reshape((3,4,5,6))
+        idx = mx.nd.array([[1,1,2], [3, 3, 0], [3,2,1]], dtype='int32')
+        check(data, idx)
 
-    data = mx.nd.arange(360, dtype='int32').reshape((3,4,5,6))
-    idx = mx.nd.array([[1,1,2], [3, 3, 0], [3,2,1]], dtype='int32')
+        idx = mx.nd.array([[1,1,2], [3,3,0], [3,2,1], [5,2,4]], dtype='int32')
 
-    check(data, idx)
+        check(data, idx)
 
-    idx = mx.nd.array([[1,1,2], [3,3,0], [3,2,1], [5,2,4]], dtype='int32')
+        data = mx.nd.array([2, 3, 0])
+        idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
+        assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
-    check(data, idx)
-
-    data = mx.nd.array([2, 3, 0])
-    idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
-
-    assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
+        data = mx.nd.array([2, 3, 0])
+        idx = mx.nd.array([[1, 1, 0], [1, 1, 0]])
+        assert (mx.nd.scatter_nd_acc(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [0, 5]]).all()
 
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,

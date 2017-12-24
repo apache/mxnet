@@ -179,6 +179,37 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const OpContext& ctx,
   });
 }
 
+template<typename DType, typename IType>
+__global__ void ScatterNDAccForwardImplKernel(int N, int M, int K,
+                                         const mshadow::Shape<10> strides,
+                                         DType* out,
+                                         const DType* data,
+                                         const IType* indices) {
+  for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
+    int offset = 0;
+    for (int j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    }
+    for (int j = 0; j < K; ++j) {
+      atomicAdd(out + (offset + j), data[i * K + j]);
+    }
+  }
+}
+
+template<typename DType, typename IType>
+inline void ScatterNDAccForwardImpl(int N, int M, int K,
+                                    const mshadow::Shape<10> strides,
+                                    DType* out,
+                                    const DType* data,
+                                    const IType* indices,
+                                    mshadow::Stream<gpu> *s) {
+  using namespace mshadow::cuda;
+  int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+  ScatterNDAccForwardImplKernel
+    <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s) >>>(
+      N, M, K, strides, out, data, indices);
+}
+
 NNVM_REGISTER_OP(Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
 
@@ -208,6 +239,9 @@ NNVM_REGISTER_OP(gather_nd)
 
 NNVM_REGISTER_OP(scatter_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);
+
+NNVM_REGISTER_OP(scatter_nd_acc)
+.set_attr<FCompute>("FCompute<gpu>", ScatterNDAccForward<gpu>);
 
 NNVM_REGISTER_OP(_scatter_set_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterSetNDForward<gpu>);
