@@ -146,18 +146,20 @@ void NDArray::Chunk::CheckAndAllocData(const TShape &shape, int dtype) {
 #if MXNET_USE_MKLDNN == 1
   if (storage_type == kMKLDNNStorage) {
     SetMKLMem(shape, dtype);
-    return;
+  } else {
+#endif
+    CHECK_NE(aux_shapes.size(), 0)
+        << "data is expected to be allocated after aux_data";
+    auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
+    if (shandle.size < dbytes) {
+      // free storage if necessary and alloc again
+      if (shandle.size > 0) Storage::Get()->Free(shandle);
+      // init storage
+      shandle = Storage::Get()->Alloc(dbytes, ctx);
+    }
+#if MXNET_USE_MKLDNN == 1
   }
 #endif
-  CHECK_NE(aux_shapes.size(), 0)
-    << "data is expected to be allocated after aux_data";
-  auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
-  if (shandle.size < dbytes) {
-    // free storage if necessary and alloc again
-    if (shandle.size > 0) Storage::Get()->Free(shandle);
-    // init storage
-    shandle = Storage::Get()->Alloc(dbytes, ctx);
-  }
   // init shape
   storage_shape = shape;
   // delay_alloc is only set when data storage handle is present
@@ -215,7 +217,7 @@ NDArray NDArray::ReshapeMKLDNN(const TShape &shape) const {
     ret.shape_ = shape;
     return ret;
   } else if (storage_type() == kMKLDNNStorage) {
-    NDArray ret(kMKLDNNStorage, shape, ctx(), ptr_->delay_alloc, dtype());
+    NDArray ret(kMKLDNNStorage, shape, ctx(), true, dtype());
     CHECK(ptr_->Mkl_mem_ != nullptr);
     // We shouldn't submit the reorder primitive here because submit will
     // be called in operators.
