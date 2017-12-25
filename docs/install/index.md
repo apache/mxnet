@@ -240,10 +240,10 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 
 **Build the MXNet Python binding**
 
-**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and libfortran (required for Numpy).
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
+$ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 ```
 
 **Step 2** Install the MXNet Python binding.
@@ -468,10 +468,10 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 
 **Install the MXNet Python binding**
 
-**Step 1** Install prerequisites - python, setup-tools, python-pip and numpy.
+**Step 1** Install prerequisites - python, setup-tools, python-pip and libfortran (required for Numpy)..
 
 ```bash
-$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
+$ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 ```
 
 **Step 2** Install the MXNet Python binding.
