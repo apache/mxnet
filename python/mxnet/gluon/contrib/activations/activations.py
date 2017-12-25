@@ -19,9 +19,9 @@
 ''' This file contains definitions of advanced activation functions
 for neural networks'''
 
-from mxnet import gluon
+from ...gluon import HybridBlock
 
-class ELU(gluon.HybridBlock):
+class ELU(HybridBlock):
     r'''
     Exponential Linear Unit (ELU)
     ... "Fast and Accurate Deep Network Learning by Exponential Linear Units", Clevert et al, 2016
@@ -41,7 +41,7 @@ class ELU(gluon.HybridBlock):
         return - self.alpha * F.relu(1.0 - F.exp(x)) + F.relu(x)
 
 
-class SELU(gluon.HybridBlock):
+class SELU(HybridBlock):
     r'''
     Scaled Exponential Linear Unit (SELU)
     ... "Self-Normalizing Neural Networks", Klambauer et al, 2017
@@ -58,7 +58,7 @@ class SELU(gluon.HybridBlock):
         return self.scale * F.where(x >= 0, x, self.alpha * self.elu(x))
 
 
-class Swish(gluon.HybridBlock):
+class Swish(HybridBlock):
     r'''
     Swish Activation function
     https://arxiv.org/pdf/1710.05941.pdf
