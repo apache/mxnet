@@ -18,9 +18,11 @@
 # coding: utf-8
 # pylint: disable=
 """Dataset sampler."""
-__all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler']
+__all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler', 'AliasMethodSampler']
 
 import random
+import numpy as np
+
 
 class Sampler(object):
     """Base class for samplers.
@@ -136,3 +138,71 @@ class BatchSampler(Sampler):
         raise ValueError(
             "last_batch must be one of 'keep', 'discard', or 'rollover', " \
             "but got %s"%self._last_batch)
+
+
+class AliasMethodSampler(object):
+    """ The Alias Method: Efficient Sampling with Many Discrete Outcomes.
+    Can be use in NCELoss.
+
+    Parameters
+    ----------
+    K : int
+        Number of events.
+    probs : array
+        Probability of each events, corresponds to K.
+
+    References
+    -----------
+        https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
+    """
+    def __init__(self, K, probs):
+        if K != len(probs):
+            raise ValueError("K should be equal to len(probs). K:%d, len(probs):%d" % (K, len(probs)))
+        self.K = K
+        self.prob = np.zeros(K)
+        self.alias = np.zeors(K, dtype=np.int)
+
+        # Sort the data into the outcomes with probabilities
+        # that are larger and smaller than 1/K.
+        smaller = []
+        larger = []
+        for kk, prob in enumerate(probs):
+            self.prob[kk] = K*prob
+            if self.prob[kk] < 1.0:
+                smaller.append(kk)
+            else:
+                larger.append(kk)
+
+        # Loop though and create little binary mixtures that
+        # appropriately allocate the larger outcomes over the
+        # overall uniform mixture.
+        while len(smaller) > 0 and len(larger) > 0:
+            small = smaller.pop()
+            large = larger.pop()
+
+            self.alias[small] = large
+            self.prob[large] = (self.prob[large] - 1.0) + self.prob[small]
+
+            if self.prob[large] < 1.0:
+                smaller.append(large)
+            else:
+                larger.append(large)
+
+        for last_one in smaller+larger:
+            self.prob[last_one] = 1
+
+    def draw(self, n):
+        """Draw N samples from multinomial
+        """
+        samples = np.zeros(n)
+        for i in xrange(n):
+            # Draw from the overall uniform mixture.
+            kk = int(np.floor(np.random.rand() * self.K))
+
+            # Draw from the binary mixture, either keeping the
+            # small one, or choosing the associated larger one.
+            if np.random.rand() < self.prob[kk]:
+                samples[i] = kk
+            else:
+                samples[i] = self.alias[kk]
+        return samples
