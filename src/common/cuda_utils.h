@@ -481,7 +481,7 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
 
 // Overload atomicAdd to work for signed int64 on all architectures
 static inline  __device__  void atomicAdd(int64_t *address, int64_t val) {
-  atomicAdd(reinterpret_cast<unsigned int64_t*>(address), static_cast<unsigned int64_t>(val));
+  atomicAdd(reinterpret_cast<unsigned long long*>(address), static_cast<unsigned long long>(val));
 }
 
 template <typename DType>
