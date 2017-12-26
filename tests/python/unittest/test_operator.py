@@ -161,7 +161,8 @@ def test_concat():
                     shapes.append((a,b,c,merge[i]))
             check_concat_with_shape(shapes,dimension,True)
             check_concat_with_shape(shapes,dimension,False)
-
+    check_concat_with_shape([(5, 3), (5, 4), (5, 13)], -1, True)
+    check_concat_with_shape([(2, 5, 3), (2, 5, 4), (2, 5, 13)], -1, False)
 
 def test_slice_channel():
     def check_slice_channel(data_ndim, axis, num_outputs, squeeze_axis):
