@@ -173,7 +173,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
 
             code.append("""
     name = NameManager.current.get(name, '%s')
-    return _symbol_creator(%d, None, sym_kwargs, keys, vals, name)"""%(
+    return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name)"""%(
         func_name.lower(), handle.value))
 
     if signature_only:
