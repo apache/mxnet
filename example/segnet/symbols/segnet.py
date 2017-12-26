@@ -173,8 +173,7 @@ def vgg_conv_deconv(input_data, num_classes, fix_gamma=False, eps=0.00002,
     bn_conv1_2_d = mx.symbol.BatchNorm(data=conv1_2_d, fix_gamma=fix_gamma, eps=eps,
                                        momentum=bn_mom, name='bn_conv1_2_d')
     relu1_2_d = mx.symbol.Activation(data=bn_conv1_2_d, act_type="relu", name="relu1_2_d")
-    drop = mx.symbol.Dropout(data=relu1_2_d, p=0.5, name="drop")
-    conv1_1_d = mx.symbol.Convolution(data=drop, kernel=(3, 3), pad=(1, 1), num_filter=num_classes,
+    conv1_1_d = mx.symbol.Convolution(data=relu1_2_d, kernel=(3, 3), pad=(1, 1), num_filter=num_classes,
                                       name="conv1_1_d")
     return conv1_1_d
 
