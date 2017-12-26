@@ -4325,13 +4325,13 @@ def test_scatter_gather_nd():
 
         check(data, idx)
 
-        data = mx.nd.array([2, 3, 0])
-        idx = mx.nd.array([[1, 1, 0], [0, 1, 0]])
+        data = mx.nd.array([2, 3, 0], dtype=dtype)
+        idx = mx.nd.array([[1, 1, 0], [0, 1, 0]], dtype=dtype)
         assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
 
-        data = mx.nd.array([2, 3, 0])
-        idx = mx.nd.array([[1, 1, 0], [1, 1, 0]])
-        assert (mx.nd.scatter_nd_acc(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [0, 5]]).all()
+        data = mx.nd.array([2, -3, 0], dtype=dtype)
+        idx = mx.nd.array([[1, 1, 0], [1, 1, 0]], dtype=dtype)
+        assert (mx.nd.scatter_nd_acc(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [0, -1]]).all()
 
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
