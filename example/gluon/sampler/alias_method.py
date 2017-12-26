@@ -20,6 +20,7 @@
 
 import numpy as np
 import numpy.random as npr
+from collections import Counter
 
 import mxnet.gluon as gluon
 
@@ -33,10 +34,11 @@ probs = npr.dirichlet(np.ones(K), 1).ravel()
 alias_method_sampler = gluon.data.AliasMethodSampler(K, probs)
 
 # Generate variates.
-X = alias_method_sampler.draw(N)
+X = alias_method_sampler.draw(N).asnumpy()
+c = Counter(X)
 
 # check sampled probabilities
-sampled_probs = [float(x)/N for x in X]
+sampled_probs = [float(x)/N for x in c.values()]
 
 print(probs)
 print(sampled_probs)

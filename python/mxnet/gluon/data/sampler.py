@@ -21,7 +21,7 @@
 __all__ = ['Sampler', 'SequentialSampler', 'RandomSampler', 'BatchSampler', 'AliasMethodSampler']
 
 import random
-import numpy as np
+from ... import nd
 
 
 class Sampler(object):
@@ -159,8 +159,8 @@ class AliasMethodSampler(object):
         if K != len(probs):
             raise ValueError("K should be equal to len(probs). K:%d, len(probs):%d" % (K, len(probs)))
         self.K = K
-        self.prob = np.zeros(K)
-        self.alias = np.zeors(K, dtype=np.int)
+        self.prob = nd.zeros(K)
+        self.alias = nd.zeros(K, dtype='int32')
 
         # Sort the data into the outcomes with probabilities
         # that are larger and smaller than 1/K.
@@ -194,15 +194,18 @@ class AliasMethodSampler(object):
     def draw(self, n):
         """Draw N samples from multinomial
         """
-        samples = np.zeros(n)
-        for i in xrange(n):
-            # Draw from the overall uniform mixture.
-            kk = int(np.floor(np.random.rand() * self.K))
+        samples = nd.zeros(n, dtype='int32')
 
-            # Draw from the binary mixture, either keeping the
-            # small one, or choosing the associated larger one.
-            if np.random.rand() < self.prob[kk]:
-                samples[i] = kk
+        kk = nd.floor(nd.random.uniform(0, self.K, shape=n), dtype='int32')
+        rand = nd.random.uniform(shape=n)
+
+        prob = self.prob[kk]
+        alias = self.alias[kk]
+
+        for i in xrange(n):
+            if rand[i] < prob[i]:
+                samples[i] = kk[i]
             else:
-                samples[i] = self.alias[kk]
+                samples[i] = alias[i]
         return samples
+
