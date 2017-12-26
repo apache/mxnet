@@ -64,6 +64,11 @@ _WHITE_LIST = ['R-package/',
                '3rdparty',   
                'ps-lite',
                'src/operator/mkl/',
+               'src/operator/special_functions-inl.h',
+               'src/operator/nn/pool.h',
+               'src/operator/contrib/psroi_pooling-inl.h',
+               'src/operator/contrib/nn/deformable_im2col.h',
+               'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/']
 
 # language extensions and the according commment mark

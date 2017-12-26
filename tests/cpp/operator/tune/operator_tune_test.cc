@@ -18,6 +18,7 @@
  */
 #include <gtest/gtest.h>
 #include <mxnet/tensor_blob.h>
+#include <numeric>
 #include "../../src/operator/nn/activation-inl.h"
 #include "../../src/operator/operator_tune-inl.h"
 #include "../include/test_op_runner.h"

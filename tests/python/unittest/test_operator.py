@@ -4668,6 +4668,14 @@ def test_slice():
     check_numeric_gradient(slice_sym, [in_data])
 
 
+def test_float16_min_max():
+    """Test for issue: https://github.com/apache/incubator-mxnet/issues/9007"""
+    a = mx.nd.array([np.finfo('float16').min, np.finfo('float16').max], dtype='float16')
+    assert a.dtype == np.float16
+    assert np.finfo('float16').min == mx.nd.min(a).asscalar()
+    assert np.finfo('float16').max == mx.nd.max(a).asscalar()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

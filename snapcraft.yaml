@@ -1,5 +1,5 @@
 name: mxnet
-version: '1.0.0'
+version: '1.0.1'
 summary: MXNet is a deep learning framework designed for efficiency and flexibility.
 description: |
   MXNet is a deep learning framework designed for both efficiency and 

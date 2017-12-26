@@ -16,7 +16,9 @@ def init_git() {
   deleteDir()
   retry(5) {
     try {
-      timeout(time: 2, unit: 'MINUTES') {
+      // Make sure wait long enough for quote. Important: Don't increase the amount of 
+      // retries as this will increase the amount of requests and worsen the throttling
+      timeout(time: 15, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init'
         sh 'git clean -d -f'        
@@ -114,6 +116,22 @@ def python3_gpu_ut(docker_type) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
     sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/gpu"
+  }
+}
+
+// Python 2
+def python2_mklml_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-2.7 --with-timer --verbose tests/python/cpu"
+  }
+}
+
+// Python 3
+def python3_mklml_ut(docker_type) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    sh "${docker_run} ${docker_type} find . -name '*.pyc' -type f -delete"
+    sh "${docker_run} ${docker_type} PYTHONPATH=./python/ nosetests-3.4 --with-timer --verbose tests/python/cpu"
   }
 }
 
@@ -332,6 +350,7 @@ try {
           init_git()
           unpack_lib('mklml_cpu')
           python2_ut('cpu_mklml')
+          python2_mklml_ut('cpu_mklml')
         }
       }
     },
@@ -341,6 +360,7 @@ try {
           init_git()
           unpack_lib('mklml_gpu')
           python2_gpu_ut('gpu_mklml')
+          python2_mklml_ut('gpu_mklml')
         }
       }
     },
@@ -350,6 +370,7 @@ try {
           init_git()
           unpack_lib('mklml_cpu')
           python3_ut('cpu_mklml')
+          python3_mklml_ut('cpu_mklml')
         }
       }
     },
@@ -359,6 +380,7 @@ try {
           init_git()
           unpack_lib('mklml_gpu')
           python3_gpu_ut('gpu_mklml')
+          python3_mklml_ut('gpu_mklml')
         }
       }
     },

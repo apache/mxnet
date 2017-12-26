@@ -17,11 +17,11 @@
 
 import argparse
 import logging
-import time
 import mxnet as mx
 import numpy as np
 from data import get_movielens_iter, get_movielens_data
 from model import matrix_fact_net
+import os
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -44,8 +44,8 @@ parser.add_argument('--dummy-iter', action='store_true',
 
 MOVIELENS = {
     'dataset': 'ml-10m',
-    'train': './ml-10M100K/r1.train',
-    'val': './ml-10M100K/r1.test',
+    'train': './data/ml-10M100K/r1.train',
+    'val': './data/ml-10M100K/r1.test',
     'max_user': 71569,
     'max_movie': 65135,
 }
@@ -72,7 +72,8 @@ if __name__ == '__main__':
     # prepare dataset and iterators
     max_user = MOVIELENS['max_user']
     max_movies = MOVIELENS['max_movie']
-    get_movielens_data(MOVIELENS['dataset'])
+    data_dir = os.path.join(os.getcwd(), 'data')
+    get_movielens_data(data_dir, MOVIELENS['dataset'])
     train_iter = get_movielens_iter(MOVIELENS['train'], batch_size, dummy_iter)
     val_iter = get_movielens_iter(MOVIELENS['val'], batch_size, dummy_iter)
 
