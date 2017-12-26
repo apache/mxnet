@@ -161,7 +161,7 @@ class ConcatProp : public OperatorProperty {
     TShape dshape;
     index_t size = 0;
     bool has_zero = false;
-    int axis;
+    int axis = -1;
     for (int i = 0; i < param_.num_args; ++i) {
       TShape tmp = (*in_shape)[i];
       if (tmp.ndim()) {
