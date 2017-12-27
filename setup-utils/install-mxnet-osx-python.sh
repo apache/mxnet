@@ -382,6 +382,39 @@ install_dep_pip_for_mxnet() {
 	echo " "
 } # install_dep_pip_for_mxnet()
 
+# check if mxnet is already installed through other means
+chk_mxnet_installed() {
+	mxnet_installed=`pip list --format=columns | grep mxnet`
+	if [ "$mxnet_installed" != "" ]
+	then
+		mxnet_version=`echo $mxnet_installed | awk '{print $2}'`
+		echo "MXNet ${mxnet_version} is already installed."
+		echo "This installation might interfere with current installation attempt."
+		read -p "Do you want to remove installed version? (y/n): " response
+		while true; do
+			case $response in
+            	[Yy]* ) 
+					sudo -H pip uninstall mxnet
+					chk_mxnet_installed
+					break
+					;;
+            	[Nn]* ) 
+					while true; do
+						read -p "Do you want to continue? (y/n): " response1
+        				echo " "
+        				case $response1 in
+            				[Yy]* ) break 2;; # break out of nested loop
+            				[Nn]* ) exit;;
+            				* ) echo "Please answer yes or no.";;
+        				esac
+					done
+					;;
+            	* ) echo "Please answer yes or no.";;
+        	esac
+		done
+	fi
+} # chk_mxnet
+
 download_mxnet() {
 	echo " "
 	echo "BEGIN: Download MXNet"
@@ -489,13 +522,12 @@ END
 		echo "FYI : You can fine-tune MXNet run-time behavior using environment variables described at:"
 		echo "      http://mxnet.io/how_to/env_var.html"
 		echo " "
-		echo "NEXT: Try the MNIST tutorial at: http://mxnet.io/tutorials/python/mnist.html"
-		echo "      Try other tutorials at   : http://mxnet.io/tutorials"
+		echo "NEXT: Try the tutorials at: http://mxnet.io/tutorials"
 		echo " "
 		echo $LINE
 		echo " "
 		rm -f mxnet_test.log mxnet_test.expected
-		exit 0
+		return 0
 	else
 		echo " "
 		echo "ERROR: Following files differ: mxnet_test.log mxnet_test.expected"
@@ -512,6 +544,7 @@ main() {
 	chk_mac_vers
 	install_mac_pkg_manager
 	install_dep_pip_for_mxnet
+	chk_mxnet_installed
 	download_mxnet
 	compile_mxnet
 	install_mxnet_python
