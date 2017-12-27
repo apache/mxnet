@@ -36,7 +36,7 @@ import numpy.testing as npt
 import numpy.random as rnd
 try:
     import scipy.stats as ss
-except:
+except ImportError:
     ss = None
 try:
     import requests
@@ -1742,6 +1742,9 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
     expected_freq : list
         The expected (ground-truth) frequency of the buckets
     """
+    if not ss:
+        raise ImportError("scipy is not available."
+                          " Please check if the scipy python bindings are installed.")
     assert isinstance(buckets, list)
     samples = generator(nsamples)
     assert len(probs) == len(buckets)
