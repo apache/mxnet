@@ -69,7 +69,7 @@ mx.viz.plot_network(net)
 
 
 
-![svg](https://raw.githubusercontent.com/eric-haibin-lin/web-data/eric-haibin-lin-patch-1/mxnet/doc/tutorials/basic/module/output_3_0.svg?sanitize=true)
+![svg](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/module/output_3_0.svg?sanitize=true)
 
 
 
