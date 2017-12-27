@@ -34,7 +34,10 @@ from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
-import scipy.stats as ss
+try:
+    import scipy.stats as ss
+except:
+    ss = None
 try:
     import requests
 except ImportError:
