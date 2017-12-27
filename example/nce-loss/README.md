@@ -63,9 +63,9 @@ The motivation is to design a more robust and scalable word vector system, by re
 
 ### Basics
 
-<img src="https://github.com/zihaolucky/mxnet/blob/example/word2vec-nce-loss-with-subword-representations/example/nce-loss-subword-repr/slide1.png" width="700">
+<img src="https://github.com/dmlc/web-data/blob/master/mxnet/example/nce-loss/images/slide1.png" width="700">
 
-<img src="https://github.com/zihaolucky/mxnet/blob/example/word2vec-nce-loss-with-subword-representations/example/nce-loss-subword-repr/slide2.png" width="700">
+<img src="https://github.com/dmlc/web-data/blob/master/mxnet/example/nce-loss/images/slide2.png" width="700">
 
 Note that this word embedding method uses sub-word units to represent a word, while we still train word2vec model in its original way, the only difference is the vector representation of a word is no longer the word itself, but use several sub-word units' addition.
 
