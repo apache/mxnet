@@ -125,7 +125,7 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
-        case ResourceRequest::kNativeRandom: return cpu_native_rand_->GetNext();
+        case ResourceRequest::kParallelRandom: return cpu_native_rand_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
@@ -142,7 +142,7 @@ class ResourceManagerImpl : public ResourceManager {
               return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
             })->GetNext();
         }
-        case ResourceRequest::kNativeRandom: {
+        case ResourceRequest::kParallelRandom: {
           return gpu_native_rand_.Get(ctx.dev_id, [ctx, this]() {
             return new ResourceNativeRandom<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
           })->GetNext();
@@ -278,6 +278,7 @@ class ResourceManagerImpl : public ResourceManager {
         const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
         resource[i].var = Engine::Get()->NewVariable();
         common::random::RandGenerator<xpu> *r = new common::random::RandGenerator<xpu>();
+        common::random::RandGenerator<xpu>::AllocState(r);
         Engine::Get()->PushSync(
         [r, seed](RunContext rctx) {
           r->Seed(rctx.get_stream<xpu>(), seed);
@@ -285,7 +286,7 @@ class ResourceManagerImpl : public ResourceManager {
         FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
         sampler[i] = r;
         resource[i].ptr_ = sampler[i];
-        resource[i].req = ResourceRequest(ResourceRequest::kNativeRandom);
+        resource[i].req = ResourceRequest(ResourceRequest::kParallelRandom);
       }
     }
     ~ResourceNativeRandom() {
@@ -293,7 +294,7 @@ class ResourceManagerImpl : public ResourceManager {
         common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
-          MSHADOW_CATCH_ERROR(r->dispose());
+          MSHADOW_CATCH_ERROR(common::random::RandGenerator<xpu>::FreeState(r));
           MSHADOW_CATCH_ERROR(delete r);
         }, ctx, resource[i].var);
       }

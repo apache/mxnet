@@ -43,7 +43,7 @@ struct ResourceRequest {
     /*! \brief A dynamic temp space that can be arbitrary size */
     kTempSpace,
     /*! \brief common::RandGenerator<xpu> object, which can be used in GPU kernel functions */
-    kNativeRandom
+    kParallelRandom
   };
   /*! \brief type of resources */
   Type type;
@@ -101,7 +101,7 @@ struct Resource {
    */
   template<typename xpu, typename DType>
   inline common::random::RandGenerator<xpu, DType>* get_native_random() const {
-    CHECK_EQ(req.type, ResourceRequest::kNativeRandom);
+    CHECK_EQ(req.type, ResourceRequest::kParallelRandom);
     return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
   }
 

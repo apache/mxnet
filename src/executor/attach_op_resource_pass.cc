@@ -61,7 +61,7 @@ Graph AttachOpResources(Graph g) {
           }
         } else if (req.type == ResourceRequest::kRandom) {
           requested.push_back(ResourceManager::Get()->Request(ctx, req));
-        } else if (req.type == ResourceRequest::kNativeRandom) {
+        } else if (req.type == ResourceRequest::kParallelRandom) {
           requested.push_back(ResourceManager::Get()->Request(ctx, req));
         } else {
           LOG(FATAL) << "resource type not yet supported";
