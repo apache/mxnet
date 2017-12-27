@@ -89,14 +89,11 @@ class Solver(object):
 
         output_names = sym.list_outputs()
         if debug:
-            sym = sym.get_internals()
-            blob_names = sym.list_outputs()
             sym_group = []
-            for i, _ in enumerate(blob_names):
-                if blob_names[i] not in args:
-                    x = sym[i]
-                    if blob_names[i] not in output_names:
-                        x = mx.symbol.BlockGrad(x, name=blob_names[i])
+            for x in sym.get_internals():
+                if x.name not in args:
+                    if x.name not in output_names:
+                        x = mx.symbol.BlockGrad(x, name=x.name)
                     sym_group.append(x)
             sym = mx.symbol.Group(sym_group)
         exe = sym.bind(xpu, args=args, args_grad=args_grad, aux_states=auxs)
