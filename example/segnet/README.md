@@ -68,8 +68,9 @@ Epoch[132] Validation-accuracy=0.819186
   It load parameters from model_prefix and load_epoch as normal.
 
   We can also load convolution parameters from vgg16 model by use model_prefix_for_vgg16 and load_epoch_for_vgg16.
-- The accuracy can reach 0.84 with segnet_basic. When train segnet with vgg pre-trained parameters, the accuracy will reach about 0.89 .  
-
+- The accuracy can reach 0.84 with segnet_basic. When train segnet with vgg pre-trained parameters, the accuracy will reach about 0.89 .
+- Use bayesian+segnet+vgg_pretrained to train the model in the first 290 epoch and use segnet to train the last 
+10 epoch, the accuracy can reach 0.91 .
 ## Score
 
 - score the model
