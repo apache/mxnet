@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,38 +17,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNetCAPI;
-use base qw(DynaLoader);
-bootstrap AI::MXNetCAPI;
-our $VERSION = '1.1';
-1;
-__END__
 
-=head1 NAME
+RNN_DIR=$(cd `dirname $0`; pwd)
+DATA_DIR="${RNN_DIR}/data/"
 
-AI::MXNetCAPI - Swig interface to mxnet c api
+if [[ ! -d "${DATA_DIR}" ]]; then
+  echo "${DATA_DIR} doesn't exist, will create one";
+  mkdir -p ${DATA_DIR}
+fi
 
-=head1 SYNOPSIS
+wget -P ${DATA_DIR} https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-2-v1.zip
+cd ${DATA_DIR}
+unzip wikitext-2-v1.zip
 
- use AI::MXNetCAPI;
-
-=head1 DESCRIPTION
-
-This module provides interface to mxnet
-via its api.
-
-=head1 SEE ALSO
-
-L<AI::MXNet>
-
-=head1 AUTHOR
-
-Sergey Kolychev, <sergeykolychev.github@gmail.com>
-
-=head1 COPYRIGHT & LICENSE
-
-This library is licensed under Apache 2.0 license.
-
-See https://www.apache.org/licenses/LICENSE-2.0 for more information.
-
-=cut
+# rename
+mv ${DATA_DIR}/wikitext-2/wiki.test.tokens ${DATA_DIR}/wikitext-2/wiki.test.txt
+mv ${DATA_DIR}/wikitext-2/wiki.valid.tokens ${DATA_DIR}/wikitext-2/wiki.valid.txt
+mv ${DATA_DIR}/wikitext-2/wiki.train.tokens ${DATA_DIR}/wikitext-2/wiki.train.txt

@@ -67,8 +67,8 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
         train.execs <- lapply(seq_len(ndevice), function(i) {
           s <- slices[[i]]
           mx.symbol.bind(symbol = symbol[[names(train.data$bucketID)]], 
-                                 arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
-                                 aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
+                         arg.arrays = c(s, train.execs[[i]]$arg.arrays[arg.params.names])[arg.update.idx],
+                         aux.arrays = train.execs[[i]]$aux.arrays, ctx = ctx[[i]], grad.req = grad.req)
         })
       } else {
         for (i in seq_len(ndevice)) {

@@ -24,7 +24,7 @@ import model
 import data
 
 parser = argparse.ArgumentParser(description='MXNet Autograd PennTreeBank RNN/LSTM Language Model')
-parser.add_argument('--data', type=str, default='./data/ptb.',
+parser.add_argument('--data', type=str, default='./data/wikitext-2/wiki.',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='lstm',
                     help='type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)')
