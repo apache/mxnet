@@ -94,13 +94,13 @@ struct Resource {
   }
 
   /*!
-   * \brief Get native random number generator.
+   * \brief Get parallel random number generator.
    * \tparam xpu the device type of random number generator.
    * \tparam DType the return type.
    * \return the native random number generator. for gpu, it is allocated on global memory.
    */
   template<typename xpu, typename DType>
-  inline common::random::RandGenerator<xpu, DType>* get_native_random() const {
+  inline common::random::RandGenerator<xpu, DType>* get_parallel_random() const {
     CHECK_EQ(req.type, ResourceRequest::kParallelRandom);
     return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
   }

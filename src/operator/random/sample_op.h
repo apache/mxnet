@@ -279,7 +279,7 @@ struct SampleMaster<xpu, UniformSampler<xpu>> {
                                     &low, &high);
     UniformSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(low, high, out, pgen, s);
     });
@@ -299,7 +299,7 @@ struct SampleMaster<xpu, NormalSampler<xpu>> {
     GetSamplingTempData<xpu, float>(param.loc, param.scale, ctx, &loc, &scale);
     NormalSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(loc, scale, out, pgen, s);
     });
@@ -320,7 +320,7 @@ struct SampleMaster<xpu, GammaSampler<xpu>> {
     GetSamplingTempData<xpu, float>(param.alpha, param.beta, ctx, &alpha, &beta);
     GammaSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(alpha, beta, out, pgen, s);
     });
@@ -340,7 +340,7 @@ struct SampleMaster<xpu, ExponentialSampler<xpu>> {
     GetSamplingTempData<xpu, float>(param.lam, 0, ctx, &lam, &dummy);
     ExponentialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(lam, out, pgen, s);
     });
@@ -360,7 +360,7 @@ struct SampleMaster<xpu, PoissonSampler<xpu>> {
     GetSamplingTempData<xpu, float>(param.lam, 0, ctx, &lam, &dummy);
     PoissonSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(lam, out, pgen, s);
     });
@@ -381,7 +381,7 @@ struct SampleMaster<xpu, NegativeBinomialSampler<xpu>> {
     GetSamplingTempData<xpu, float>(param.k, param.p, ctx, &k, &p);
     NegativeBinomialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(k, p, out, pgen, s);
     });
@@ -404,7 +404,7 @@ struct SampleMaster<xpu, GeneralizedNegativeBinomialSampler<xpu>> {
     GetSamplingTempData<xpu, float>(param.mu, param.alpha, ctx, &mu, &alpha);
     GeneralizedNegativeBinomialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(mu, alpha, out, pgen, s);
     });

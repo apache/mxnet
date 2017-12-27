@@ -181,7 +181,7 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_native_random<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
       SamplerCaller<xpu, IType, OType, Sampler, inum>::op(inputs, outputs, pgen, s);
     });
   });
