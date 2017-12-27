@@ -144,14 +144,12 @@ inline void ScatterNDAccForwardImpl(int N, int M, int K,
                                     const DType* data,
                                     const IType* indices,
                                     mshadow::Stream<cpu> *s) {
-#pragma omp parallel for
   for (int i = 0; i < N; i++) {
     int offset = 0;
     for (int j = 0; j < M; ++j) {
       offset += strides[j] * static_cast<int>(indices[j*N + i]);
     }
     for (int j = 0; j < K; ++j) {
-#pragma omp atomic
       out[offset + j] += data[i * K + j];
     }
   }
