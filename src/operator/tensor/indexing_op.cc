@@ -136,25 +136,6 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const OpContext& ctx,
   });
 }
 
-
-template<typename DType, typename IType>
-inline void ScatterNDAccForwardImpl(int N, int M, int K,
-                                    const mshadow::Shape<10> strides,
-                                    DType* out,
-                                    const DType* data,
-                                    const IType* indices,
-                                    mshadow::Stream<cpu> *s) {
-  for (int i = 0; i < N; i++) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
-    }
-    for (int j = 0; j < K; ++j) {
-      out[offset + j] += data[i * K + j];
-    }
-  }
-}
-
 DMLC_REGISTER_PARAMETER(EmbeddingParam);
 DMLC_REGISTER_PARAMETER(TakeParam);
 DMLC_REGISTER_PARAMETER(OneHotParam);
