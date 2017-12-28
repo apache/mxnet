@@ -339,6 +339,21 @@ inline std::string stype_string(const int x) {
   return "unknown";
 }
 
+/*! \brief get string representation of device type */
+inline std::string dev_type_string(const int dev_type) {
+  switch (dev_type) {
+    case Context::kCPU:
+      return "cpu";
+    case Context::kGPU:
+      return "gpu";
+    case Context::kCPUPinned:
+      return "cpu_pinned";
+    case Context::kCPUShared:
+      return "cpu_shared";
+  }
+  return "unknown";
+}
+
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
   // This is resource efficient option.

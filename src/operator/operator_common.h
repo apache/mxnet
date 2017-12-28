@@ -223,7 +223,7 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   {                                                                         \
     if (!shape_assign(&(shape_array)[index], TShape(shape))) {              \
       std::ostringstream os;                                                \
-      os << "Shape inconsistent, Provided=" << (shape_array)[index] << ','  \
+      os << "Shape inconsistent, Provided = " << (shape_array)[index] << ','\
          << " inferred shape=" << shape;                                    \
       throw ::mxnet::op::InferShapeError(os.str(), index);                  \
     }                                                                       \
@@ -240,9 +240,9 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   {                                                                         \
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Type inconsistent, Provided="                                  \
+      os << "Type inconsistent, Provided = "                                \
          << type_string((type_array)[index]) << ','                         \
-         << " inferred type=" << type_string(type);                         \
+         << " inferred type = " << type_string(type);                       \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -258,9 +258,9 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
   {                                                                         \
     if (!type_assign(&(type_array)[index], type)) {                         \
       std::ostringstream os;                                                \
-      os << "Storage type inconsistent, Provided="                          \
+      os << "Storage type inconsistent, Provided = "                        \
          << common::stype_string((type_array)[index]) << ','                \
-         << " inferred storage type=" << common::stype_string(type);        \
+         << " inferred storage type = " << common::stype_string(type);      \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -274,11 +274,11 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
   {                                                                         \
-    if (!dispatch_mode_assign(&(type_array)[index], type)) {                         \
+    if (!dispatch_mode_assign(&(type_array)[index], type)) {                \
       std::ostringstream os;                                                \
-      os << "Dispatch mode inconsistent, Provided="                         \
+      os << "Dispatch mode inconsistent, Provided = "                       \
          << common::dispatch_mode_string((type_array)[index]) << ','        \
-         << " inferred mode=" << common::dispatch_mode_string(type);        \
+         << " inferred mode = " << common::dispatch_mode_string(type);      \
       throw ::mxnet::op::InferStorageTypeError(os.str(), index);            \
     }                                                                       \
   }
@@ -501,7 +501,7 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
     result += "\"" + kv.first + "\" : " + kv.second + ", ";
   }
   result += "}\n";
-  result += "context.dev_mask = " + std::to_string(dev_mask);
+  result += "context.dev_mask = " + common::dev_type_string(dev_mask);
   return result;
 }
 
@@ -528,19 +528,29 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
-  auto warning_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
+  auto op_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
   static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
-  if (log_verbose) {
-    std::string warning = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
-    if (warning_printed->find(warning) == warning_printed->end()) {
-      LOG(INFO) << "\nStorage fallback detected:\n" << warning
-                << "\nThe operator with default storage type will be dispatched for execution. "
-                << "You're seeing this warning message because the operator above is unable to "
-                << "process the given ndarrays with specified storage types and parameter. "
-                << "Temporary dense ndarrays are generated in order to execute the operator. "
-                << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
-                << "to 0 to suppress the warnings.";
-      warning_printed->insert(warning);
+  const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
+  std::ostringstream os;
+  os << "\nStorage fallback detected:\n" << op_str
+     << "\nThe operator with default storage type will be dispatched for execution. "
+     << "You're seeing this warning message because the operator above is unable to "
+     << "process the given ndarrays with specified storage types, context and parameter. "
+     << "Temporary dense ndarrays are generated in order to execute the operator. "
+     << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
+     << "to 0 to suppress the warnings. If you do not know what caused this error, "
+     << "you can try set environment variable MXNET_STORAGE_FALLBACK_DEBUG to 1. "
+     << "This will give you the series of calls that lead "
+     << "to this error. Remember to set MXNET_STORAGE_FALLBACK_DEBUG back to "
+     << "empty after debugging.";
+  std::string warning = os.str();
+  static bool debug = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_DEBUG", false);
+  if (debug) {
+    throw ::mxnet::op::InferStorageTypeError(warning, -1);
+  } else if (log_verbose) {
+    if (op_printed->find(op_str) == op_printed->end()) {
+      LOG(INFO) << warning;
+      op_printed->insert(op_str);
     }
   }
 }
