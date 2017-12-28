@@ -4329,8 +4329,8 @@ def test_scatter_gather_nd():
         idx = mx.nd.array([[1, 1, 0], [0, 1, 0]], dtype='int32')
         assert (mx.nd.scatter_nd(data, idx, shape=(2, 2)).asnumpy() == [[0, 0], [2, 3]]).all()
         if dtype == 'int64':
-            data = mx.nd.array([2123162361283621, -31231236374787,
-                                -112372937128970, -1378278798172378], dtype=dtype)
+            data = mx.nd.array([212316236123621, -31231236374787,
+                                -112372937128970, -13782787981728], dtype=dtype)
             idx = mx.nd.array([[0, 0, 0, 0]], dtype='int32')
             assert (mx.nd.scatter_nd_acc(data, idx, shape=(1,)).asnumpy()[0] == data.asnumpy().sum())
 
