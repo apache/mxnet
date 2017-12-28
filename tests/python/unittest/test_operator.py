@@ -4332,7 +4332,9 @@ def test_scatter_gather_nd():
             data = mx.nd.array([212316236123621, -31231236374787,
                                 -112372937128970, -13782787981728], dtype=dtype)
             idx = mx.nd.array([[0, 0, 0, 0]], dtype='int32')
-            assert (mx.nd.scatter_nd_acc(data, idx, shape=(1,)).asnumpy()[0] == data.asnumpy().sum())
+            scatter_nd_ret = mx.nd.scatter_nd_acc(data, idx, shape=(1,)).asscalar()
+            npy_ret = data.asnumpy().sum()
+            assert (scatter_nd_ret == npy_ret), "scatter_nd_acc={}, npy={}".format(scatter_nd_ret, npy_ret)
 
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
