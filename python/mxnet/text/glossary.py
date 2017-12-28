@@ -709,8 +709,8 @@ class Glossary(TextEmbed):
                 'to the indexed tokens from keys of `counter`.'
 
             assert self.unknown_token == embed.unknown_token, \
-                'The `unknown_token` of the mxnet.text.glossary.TextEmbed instance %s must be the same'
-
+                'The `unknown_token` of the mxnet.text.glossary.TextEmbed ' \
+                'instance %s must be the same'
 
         self._vec_len = sum(embed.vec_len for embed in embeds)
         self._idx_to_vec = nd.zeros(shape=(len(self), self.vec_len))
