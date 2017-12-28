@@ -26,7 +26,7 @@ from .base import py_str
 from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
-                      signsgd_update,signum_update)
+                      signsgd_update, signum_update)
 from .ndarray import _internal
 from .ndarray import op
 from .ndarray import sparse
@@ -537,13 +537,15 @@ class SGD(Optimizer):
 
 @register
 class Signum(Optimizer):
-    """The SGD optimizer with momentum and weight decay.
+    """The Signum optimizer that takes the sign of gradient or momentum.
 
-    The optimizer updates the weight by::
+    The optimizer updates the weight by:
 
-        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
         state = momentum * state + (1-momentum)*rescaled_grad
-        weight = weight - sign(state) - wd_lh * weight
+        weight = (1 - lr * wd_lh) * weight - lr * sign(state)
+
+    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
@@ -555,11 +557,11 @@ class Signum(Optimizer):
     ----------
     momentum : float, optional
        The momentum value.
-    wd_lh : float, optitional
+    wd_lh : float, optional
        The amount of decoupled weight decay regularization.
     """
-    def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh = 0.0, **kwargs):
-        super(Signum, self).__init__(learning_rate=learning_rate,**kwargs)
+    def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh=0.0, **kwargs):
+        super(Signum, self).__init__(learning_rate=learning_rate, **kwargs)
         self.momentum = momentum
         self.wd_lh = wd_lh
 
@@ -569,7 +571,7 @@ class Signum(Optimizer):
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=weight.stype)
         return momentum
 
-    def _update_impl(self, index, weight, grad, state, multi_precision=False):
+    def _update_impl(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
@@ -586,13 +588,13 @@ class Signum(Optimizer):
 
         if state is not None:
             signum_update(weight, grad, state, out=weight,
-                               lr=lr, wd=wd, **kwargs)
+                          lr=lr, wd=wd, **kwargs)
         else:
             signsgd_update(weight, grad, out=weight,
                            lr=lr, wd=wd, **kwargs)
 
     def update(self, index, weight, grad, state):
-        self._update_impl(index, weight, grad, state, multi_precision=False)
+        self._update_impl(index, weight, grad, state)
 
 @register
 class FTML(Optimizer):

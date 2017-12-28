@@ -1352,7 +1352,7 @@ struct SignumParam : public dmlc::Parameter<SignumParam> {
   float wd;
   float rescale_grad;
   float clip_gradient;
-  float wd_lh;  // the amount of algorithmic weight decay by Loshchilov and Frank Hutter 
+  float wd_lh;  // the amount of algorithmic weight decay by Loshchilov and Frank Hutter
   DMLC_DECLARE_PARAMETER(SignumParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");

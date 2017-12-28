@@ -527,13 +527,15 @@ def test_adam():
 
 # Signum
 class PySignum(mx.optimizer.Optimizer):
-    """The SGD optimizer with momentum and weight decay.
+    """The Signum optimizer that takes the sign of gradient or momentum.
 
-    The optimizer updates the weight by::
+    The optimizer updates the weight by:
 
-        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
         state = momentum * state + (1-momentum)*rescaled_grad
-        weight = weight - sign(state) - wd_lh * weight
+        weight = (1 - lr * wd_lh) * weight - lr * sign(state)
+
+    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
@@ -593,7 +595,6 @@ def test_signum():
                     for mp_option in wd_lh_options:
                         for lr_option in lr_options:
                             for mom_option in mom_options:
-                                print [cg_option,rg_option, wd_option,mp_option]
                                 kwarg = {}
                                 kwarg.update(cg_option)
                                 kwarg.update(rg_option)
