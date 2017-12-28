@@ -78,12 +78,6 @@ class CustomOperator {
     std::unique_lock<std::mutex> lock(mutex_);
     q_.push(
       [=]() mutable {
-        std::vector<Engine::VarHandle> vars;
-        for (const auto& i : arrs) {
-          vars.push_back(i.var());
-          i.set_var(Engine::Get()->NewVariable());
-        }
-
         bool prev_recording = Imperative::Get()->set_is_recording(recording);
         bool prev_training = Imperative::Get()->set_is_training(training);
 
@@ -92,20 +86,12 @@ class CustomOperator {
         Imperative::Get()->set_is_training(prev_training);
         Imperative::Get()->set_is_recording(prev_recording);
 
-        for (int i = 0; i < vars.size(); ++i) {
-          Engine::VarHandle tmp = arrs[i].var();
-          arrs[i].set_var(vars[i]);
-          vars[i] = tmp;
-        }
-
+        std::vector<Engine::VarHandle> vars;
+        for (const auto& i : arrs) vars.push_back(i.var());
         Engine::Get()->PushSync([=](RunContext rctx) {
             ctx.async_on_complete();
           }, ctx.run_ctx.ctx, vars, {},
           FnProperty::kNormal, 0, PROFILER_MESSAGE("CustomOperator"));
-
-        for (auto i : vars) {
-          Engine::Get()->DeleteVariable([](RunContext s) {}, ctx.run_ctx.ctx, i);
-        }
       });
     cv_.notify_all();
   }
@@ -133,7 +119,10 @@ class CustomOperator {
           while (!q_.empty() || !destructing_) {
             cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
             while (!q_.empty()) {
-              q_.front()();
+              auto fn = q_.front();
+              lock.unlock();
+              fn();
+              lock.lock();
               q_.pop();
             }
           }

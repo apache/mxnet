@@ -268,30 +268,32 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
 
 void Forward(const OpStatePtr& state,
              const OpContext& ctx,
-             const std::vector<NDArray>& inputs,
+             const std::vector<TBlob>& inputs,
              const std::vector<OpReqType>& req,
-             const std::vector<NDArray>& outputs) {
+             const std::vector<TBlob>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
   std::vector<void*> ptrs;
   std::vector<int> tags;
   std::vector<NDArray> cpys;
 
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
+
   for (size_t i = 0; i < params.num_args; ++i) {
-    NDArray *nd = new NDArray(inputs[i].Detach());
+    NDArray *nd = new NDArray(inputs[i], dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(0);
   }
 
   for (size_t i = 0; i < params.num_outs; ++i) {
-    NDArray *nd = new NDArray(outputs[i].Detach());
+    NDArray *nd = new NDArray(outputs[i], dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(1);
   }
 
   for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray *nd = new NDArray(inputs[i+params.num_args].Detach());
+    NDArray *nd = new NDArray(inputs[i+params.num_args], dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
@@ -309,9 +311,9 @@ void Forward(const OpStatePtr& state,
 
 void Backward(const OpStatePtr& state,
               const OpContext& ctx,
-              const std::vector<NDArray>& inputs,
+              const std::vector<TBlob>& inputs,
               const std::vector<OpReqType>& req,
-              const std::vector<NDArray>& outputs) {
+              const std::vector<TBlob>& outputs) {
   const CustomParam& params = state.get_state<CustomParam>();
 
   size_t total = 2*params.num_args + 2*params.num_outs + params.num_auxs;
@@ -325,8 +327,10 @@ void Backward(const OpStatePtr& state,
   for (size_t i = 0; i < params.num_args; ++i) tags.push_back(0);
   for (size_t i = 0; i < params.num_outs; ++i) tags.push_back(1);
 
+  auto dev_id = ctx.run_ctx.ctx.dev_id;
+
   for (size_t i = 0; i < params.bwd_idx.size(); ++i) {
-    NDArray *nd = new NDArray(inputs[i].Detach());
+    NDArray *nd = new NDArray(inputs[i], dev_id);
     cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
@@ -334,13 +338,13 @@ void Backward(const OpStatePtr& state,
     if (ptrs[i] == nullptr) ptrs[i] = reinterpret_cast<void*>(new NDArray());
   }
   for (const auto& i : outputs) {
-    NDArray* nd = new NDArray(i.Detach());
+    NDArray* nd = new NDArray(i, dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(2);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
-    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i].Detach());
+    NDArray* nd = new NDArray(inputs[inputs.size()-params.num_auxs+i], dev_id);
     cpys.push_back(*nd);
     ptrs.push_back(reinterpret_cast<void*>(nd));
     tags.push_back(4);
@@ -353,23 +357,6 @@ void Backward(const OpStatePtr& state,
         reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpBackward]));
     }, ctx, false, ctx.is_train, cpys);
-}
-
-// infer storage function for custom op, which assigns kDefaultStorage for
-// all undefined stypes, and dispatch on DispatchMode::kFComputeEx.
-inline bool InferStorageType(const nnvm::NodeAttrs& attrs,
-                             const int dev_mask,
-                             DispatchMode* dispatch_mode,
-                             std::vector<int> *iattr,
-                             std::vector<int> *oattr) {
-  for (int& v : *oattr) {
-    if (v == -1) v = kDefaultStorage;
-  }
-  for (int& v : *iattr) {
-    if (v == -1) v = kDefaultStorage;
-  }
-  dispatch_mode_assign(dispatch_mode, DispatchMode::kFComputeEx);
-  return true;
 }
 
 NNVM_REGISTER_OP(Custom)
@@ -409,9 +396,8 @@ Please check the tutorial here: http://mxnet.io/how_to/new_op.html.
   })
 .set_attr<nnvm::FGradient>("FGradient", Gradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateState)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Forward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Forward)
-.set_attr<FInferStorageType>("FInferStorageType", InferStorageType)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Forward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Forward)
 .add_argument("data", "NDArray-or-Symbol[]", "Input data for the custom operator.")
 .add_argument("op_type", "string", "Name of the custom operator. "
               "This is the name that is passed to `mx.operator.register` "
@@ -432,9 +418,8 @@ NNVM_REGISTER_OP(_backward_Custom)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
     return ExecType::kAsync;
   })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
-.set_attr<FInferStorageType>("FInferStorageType", InferStorageType);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", Backward)
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", Backward);
 
 }  // namespace custom
 }  // namespace op
