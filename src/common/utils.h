@@ -354,6 +354,17 @@ inline std::string dev_type_string(const int dev_type) {
   return "unknown";
 }
 
+/*! \brief log message once. Intended for storage fallback warning messages. */
+inline void LogOnce(const std::string& message) {
+  typedef dmlc::ThreadLocalStore<std::unordered_set<std::string>> LogStore;
+  auto log_store = LogStore::Get();
+  if (log_store->find(message) == log_store->end()) {
+    LOG(INFO) << message;
+    log_store->insert(message);
+  }
+}
+
+
 // heuristic to dermine number of threads per GPU
 inline int GetNumThreadPerGPU() {
   // This is resource efficient option.
