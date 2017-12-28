@@ -1143,25 +1143,21 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-struct scatter_nd_acc {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, int N, int M, int K,
-                                  const mshadow::Shape<10> strides,
-                                  DType* out, const DType* data,
-                                  const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
-    }
-    for (int j = 0; j < K; ++j) {
-#if __CUDA__ 
-      atomicAdd(out + (offset + j), data[i * K + j]);
-#else
-      out[offset + j] += data[i * K + j];
-#endif
-    }
-  }
-};
+template<typename DType, typename IType>
+inline void ScatterNDAccForwardImpl(int N, int M, int K,
+                                    const mshadow::Shape<10> strides,
+                                    DType* out,
+                                    const DType* data,
+                                    const IType* indices,
+                                    mshadow::Stream<cpu> *s);
+
+template<typename DType, typename IType>
+inline void ScatterNDAccForwardImpl(int N, int M, int K,
+                                    const mshadow::Shape<10> strides,
+                                    DType* out,
+                                    const DType* data,
+                                    const IType* indices,
+                                    mshadow::Stream<gpu> *s);
 
 template<typename xpu>
 void ScatterNDAccForward(const nnvm::NodeAttrs& attrs,
@@ -1186,10 +1182,11 @@ void ScatterNDAccForward(const nnvm::NodeAttrs& attrs,
   }
   MXNET_NO_INT8_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
-      mxnet_op::Kernel<scatter_nd_acc, xpu>::Launch(s, N, N, M, K, strides,
-                                                    outputs[0].dptr<DType>(),
-                                                    inputs[0].dptr<DType>(),
-                                                    inputs[1].dptr<IType>());
+      ScatterNDAccForwardImpl(N, M, K, strides,
+                              outputs[0].dptr<DType>(),
+                              inputs[0].dptr<DType>(),
+                              inputs[1].dptr<IType>(),
+                              s);
     });
   });
 }
