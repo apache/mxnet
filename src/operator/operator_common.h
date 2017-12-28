@@ -528,7 +528,8 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
                                const std::vector<int>* in_attrs,
                                const std::vector<int>* out_attrs) {
   using namespace op;
-  auto op_printed = dmlc::ThreadLocalStore<std::unordered_set<std::string>>::Get();
+  typedef dmlc::ThreadLocalStore<std::unordered_set<std::string>> LogStore;
+  auto log_store = LogStore::Get();
   static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
   const std::string op_str = operator_stype_string(attrs, dev_mask, *in_attrs, *out_attrs);
   std::ostringstream os;
@@ -538,7 +539,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
      << "process the given ndarrays with specified storage types, context and parameter. "
      << "Temporary dense ndarrays are generated in order to execute the operator. "
      << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
-     << "to 0 to suppress the warnings. If you do not know what caused this error, "
+     << "to 0 to suppress this warning. If you do not know what caused this error, "
      << "you can try set environment variable MXNET_STORAGE_FALLBACK_DEBUG to 1. "
      << "This will give you the series of calls that lead "
      << "to this error. Remember to set MXNET_STORAGE_FALLBACK_DEBUG back to "
@@ -548,9 +549,9 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   if (debug) {
     throw ::mxnet::op::InferStorageTypeError(warning, -1);
   } else if (log_verbose) {
-    if (op_printed->find(op_str) == op_printed->end()) {
+    if (log_store->find(op_str) == log_store->end()) {
       LOG(INFO) << warning;
-      op_printed->insert(op_str);
+      log_store->insert(op_str);
     }
   }
 }

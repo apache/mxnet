@@ -531,11 +531,42 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority) {
   std::vector<Engine::VarHandle> mutable_vars(1, to.var());
 
   std::vector<Resource> requested;
-  if (a == gpu::kDevMask && from_stype != to_stype) {
-    Resource rsc = ResourceManager::Get()->Request(from_ctx,
-        ResourceRequest(ResourceRequest::kTempSpace));
-    requested.push_back(rsc);
-    mutable_vars.push_back(rsc.var);
+  if (from_stype != to_stype) {
+    using namespace common;
+    typedef dmlc::ThreadLocalStore<std::unordered_set<std::string>> LogStore;
+    auto log_store = LogStore::Get();
+    static bool log_verbose = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_LOG_VERBOSE", true);
+    std::ostringstream op_os;
+    op_os << "Copy from " << stype_string(from_stype) << " storage type on " << dev_type_string(a)
+            << " to " << stype_string(to_stype) << " storage type on " << dev_type_string(b);
+    std::string op_str = op_os.str();
+    std::ostringstream warning_os;
+    warning_os << "\nStorage fallback detected:\n" << op_str
+       << "\nA temporary ndarray with " << stype_string(to_stype)
+       << " storage type will be generated in order to perform the copy. "
+       << "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE "
+       << "to 0 to suppress this warning. If you do not know what caused this error, "
+       << "you can try set environment variable MXNET_STORAGE_FALLBACK_DEBUG to 1. "
+       << "This will give you the series of calls that lead "
+       << "to this error. Remember to set MXNET_STORAGE_FALLBACK_DEBUG back to "
+       << "empty after debugging.";
+    std::string warning = warning_os.str();
+    static bool debug = dmlc::GetEnv("MXNET_STORAGE_FALLBACK_DEBUG", false);
+    if (debug) {
+      throw ::mxnet::op::InferStorageTypeError(warning, -1);
+    } else if (log_verbose) {
+      if (log_store->find(op_str) == log_store->end()) {
+        LOG(INFO) << warning;
+        log_store->insert(op_str);
+      }
+    }
+    // request temp resource if cast_storage performs on GPU
+    if (a == gpu::kDevMask) {
+      Resource rsc = ResourceManager::Get()->Request(from_ctx,
+          ResourceRequest(ResourceRequest::kTempSpace));
+      requested.push_back(rsc);
+      mutable_vars.push_back(rsc.var);
+    }
   }
 
   if (a == cpu::kDevMask && b == cpu::kDevMask) {
