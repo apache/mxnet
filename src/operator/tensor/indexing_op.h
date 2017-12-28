@@ -1144,7 +1144,7 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename DType, typename IType>
-inline typename std::enable_if<(not std::is_same<DType, mshadow::half::half_t>::value), void>::type
+inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
 ScatterNDAccForwardImpl(int N, int M, int K,
                         const mshadow::Shape<10> strides,
                         DType* out,
