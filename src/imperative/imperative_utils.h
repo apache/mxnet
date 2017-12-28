@@ -203,6 +203,10 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
         requested.push_back(ResourceManager::Get()->Request(ctx, req));
         write_vars.push_back(requested.back().var);
         break;
+       case ResourceRequest::kParallelRandom:
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        write_vars.push_back(requested.back().var);
+        break;
        default:
         LOG(FATAL) << "resource type not yet supported";
       }
