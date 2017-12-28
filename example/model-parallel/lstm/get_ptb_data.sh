@@ -17,6 +17,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
+echo
+echo "NOTE: To continue, you need to review the licensing of the data sets used by this script"
+echo "See https://catalog.ldc.upenn.edu/ldc99t42 for the licensing"
+read -p "Please confirm you have reviewed the licensing [Y/n]:" -n 1 -r
+echo
+
+if [ $REPLY != "Y" ]
+then
+    echo "License was not reviewed, aborting script."
+    exit 1
+fi
 
 RNN_DIR=$(cd `dirname $0`; pwd)
 DATA_DIR="${RNN_DIR}/data/"
