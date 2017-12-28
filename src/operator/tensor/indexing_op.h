@@ -1154,7 +1154,7 @@ struct scatter_nd_acc {
       offset += strides[j] * static_cast<int>(indices[j*N + i]);
     }
     for (int j = 0; j < K; ++j) {
-#if __CUDA__ 
+#ifdef __CUDACC__
       atomicAdd(out + (offset + j), data[i * K + j]);
 #else
       out[offset + j] += data[i * K + j];
