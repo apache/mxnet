@@ -1024,6 +1024,73 @@ function test_hyperbolic()
   end
 end  # function test_hyperbolic
 
+function test_act_funcs()
+  info("NDArray::σ/sigmoid")
+  let
+    A = Float32[.1, .2, -.3, -.4]
+    B = @. 1 / (1 + e^(-A))
+    x = NDArray(A)
+    y = σ.(x)
+    @test copy(y) ≈ B
+
+    z = sigmoid.(x)
+    @test copy(z) ≈ B
+  end
+
+  info("NDArray::relu")
+  let
+    A = [1, 2, -3, -4]
+    B = max.(A, 0)
+    x = NDArray(A)
+    y = relu.(x)
+    @test copy(y) ≈ B
+  end
+
+  info("NDArray::softmax::1D")
+  let
+    A = Float32[1, 2, 3, 4]
+    B = exp.(A) ./ sum(exp.(A))
+    x = NDArray(A)
+    y = softmax.(x)
+    @test copy(y) ≈ B
+  end
+
+  info("NDArray::softmax::2D")
+  let
+    A = Float32[1 2; 3 4]
+    B = exp.(A) ./ sum(exp.(A), 1)
+    x = NDArray(A)
+    y = softmax.(x, 1)
+    @test copy(y) ≈ B
+
+    C = exp.(A) ./ sum(exp.(A), 2)
+    z = softmax.(x, 2)
+    @test copy(z) ≈ C
+  end
+
+  info("NDArray::log_softmax::1D")
+  let
+    A = Float32[1, 2, 3, 4]
+    B = log.(exp.(A) ./ sum(exp.(A)))
+    x = NDArray(A)
+    y = log_softmax.(x)
+    @test copy(y) ≈ B
+  end
+
+  info("NDArray::log_softmax::2D")
+  let
+    A = Float32[1 2; 3 4]
+    B = log.(exp.(A) ./ sum(exp.(A), 1))
+    x = NDArray(A)
+    y = log_softmax.(x, 1)
+    @test copy(y) ≈ B
+
+    C = log.(exp.(A) ./ sum(exp.(A), 2))
+    z = log_softmax.(x, 2)
+    @test copy(z) ≈ C
+  end
+end  # function test_act_funcs
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -1063,6 +1130,7 @@ end  # function test_hyperbolic
   test_size()
   test_trigonometric()
   test_hyperbolic()
+  test_act_funcs()
 end
 
 end

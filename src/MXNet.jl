@@ -33,7 +33,13 @@ export SymbolicNode,
 export NDArray,
        context,
        empty,
-       expand_dims
+       expand_dims,
+       # activation funcs
+       σ,
+       sigmoid,
+       relu,
+       softmax,
+       log_softmax
 
 # executor.jl
 export Executor,

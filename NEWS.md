@@ -5,6 +5,11 @@
         * `context()`
         * `empty()`
         * `expand_dims()`
+        * `σ()`
+        * `sigmoid()`
+        * `relu()`
+        * `softmax()`
+        * `log_softmax()`
 
     * `SymbolicNode`
         * `Variable`
@@ -207,6 +212,16 @@
     * `arcsinh(x)` -> `asinh.(x)`
     * `arccosh(x)` -> `acosh.(x)`
     * `arctanh(x)` -> `atanh.(x)`
+
+* Please use dot-call on following activation functions.
+  And the `dim` of `softmax` and `log_softmax` has been fixed
+  as Julia column-based style.
+  (#TBD)
+
+    * `σ.(x)`
+    * `relu.(x)`
+    * `softmax.(x, [dim = ndims(x)])`
+    * `log_softmax.(x, [dim = ndims(x)])`
 
 * `rand`, `rand!`, `randn`, `randn!` is more Base-like now (#TBD).
 

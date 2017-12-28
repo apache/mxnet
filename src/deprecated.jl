@@ -49,3 +49,8 @@ function rand(low::Real, high::Real, dims::NTuple{N,Int}, context::Context = cpu
        "rand!(dims..., x; low = low, high = high, context = cpu()) instead.")
   rand(dims...; low = low, high = high, context = context)
 end
+
+@deprecate sigmoid(x::NDArray)                      sigmoid.(x)
+@deprecate relu(x::NDArray)                         relu.(x)
+@deprecate softmax(x::NDArray; axis = ndims(x))     softmax.(x, axis)
+@deprecate log_softmax(x::NDArray; axis = ndims(x)) log_softmax.(x, axis)

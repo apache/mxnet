@@ -37,6 +37,17 @@ In the following example `y` can be a `Real` value or another `NDArray`
 | [`atanh`](@ref) | `atanh.(x)` | Elementwise inverse hyperbolic tangent |
 
 
+## Activation Functions
+
+| API                   | Example           |                         |
+|-----------------------|-------------------|-------------------------|
+| [`σ`](@ref)           | `σ.(x)`           | Sigmoid function        |
+| [`sigmoid`](@ref)     | `sigmoid.(x)`     | Sigmoid function        |
+| [`relu`](@ref)        | `relu.(x)`        | ReLU function           |
+| [`softmax`](@ref)     | `softmax.(x)`     | Softmax function        |
+| [`log_softmax`](@ref) | `log_softmax.(x)` | Softmax followed by log |
+
+
 ## Reference
 
 ```@autodocs
