@@ -16,5 +16,4 @@ Installation
 
 License
 -------
-Copyright (C) 2017 by Sergey Kolychev <sergeykolychev.github@gmail.com>
 This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0

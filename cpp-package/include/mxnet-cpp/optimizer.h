@@ -130,10 +130,8 @@ class OptimizerRegistry {
   OptimizerRegistry() = delete;
   ~OptimizerRegistry() = delete;
 };
-
-#define MXNETCPP_REGISTER_OPTIMIZER(Name, OptimizerType)          \
-  static int __make_ ## OptimizerType ## _ ## Name ## __ = \
-       OptimizerRegistry::__REGISTER__(#Name, [](){return new OptimizerType();})
+#define MXNETCPP_REGISTER_OPTIMIZER(Name, OptimizerType)\
+  OptimizerRegistry::__REGISTER__(#Name, [](){return new OptimizerType();})
 
 class SGDOptimizer : public Optimizer {
  public:

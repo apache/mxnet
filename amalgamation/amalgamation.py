@@ -21,7 +21,7 @@ import platform
 
 blacklist = [
     'Windows.h', 'cublas_v2.h', 'cuda/tensor_gpu-inl.cuh',
-    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h',
+    'cuda_runtime.h', 'cudnn.h', 'cudnn_lrn-inl.h', 'curand.h', 'curand_kernel.h',
     'glog/logging.h', 'io/azure_filesys.h', 'io/hdfs_filesys.h', 'io/s3_filesys.h',
     'kvstore_dist.h', 'mach/clock.h', 'mach/mach.h',
     'malloc.h', 'mkl.h', 'mkl_cblas.h', 'mkl_vsl.h', 'mkl_vsl_functions.h',
@@ -43,6 +43,7 @@ if platform.system() != 'Darwin':
 
 if platform.system() != 'Windows':
   blacklist.append('windows.h')
+  blacklist.append('process.h')
 
 def pprint(lst):
     for item in lst:

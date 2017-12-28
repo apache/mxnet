@@ -7,9 +7,9 @@ iterators to process image data.
 
 There are mainly three ways of loading image data in MXNet:
 
-- [NEW] `mx.img.ImageIter`: implemented in python, easily customizable, can load
+- [NEW] [mx.img.ImageIter](https://mxnet.incubator.apache.org/versions/master/api/python/image/image.html#mxnet.image.ImageIter): implemented in python, easily customizable, can load
   from both .rec files and raw image files.
-- [OLD] `mx.io.ImageRecordIter`: implemented in backend (C++), less customizable
+- [OLD] [mx.io.ImageRecordIter](https://mxnet.incubator.apache.org/versions/master/api/python/io.html#mxnet.io.ImageRecordIter): implemented in backend (C++), less customizable
   but can be used in all language bindings, load from .rec files
 - Custom iterator by inheriting mx.io.DataIter
 
@@ -17,7 +17,7 @@ First, we explain the record io file format used by mxnet:
 
 ## RecordIO
 
-Record IO is the main file format used by MXNet for data IO. It supports reading
+[Record IO](https://mxnet.incubator.apache.org/architecture/note_data_loading.html#data-format) is the main file format used by MXNet for data IO. It supports reading
 and writing on various file systems including distributed file systems like
 Hadoop HDFS and AWS S3.  First, we download the Caltech 101 dataset that
 contains 101 classes of objects and convert them into record io format:
@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 MXNET_HOME = '/scratch/mxnet'
 ```
 
-Download and unzip:
+Download and unzip the dataset. The dataset is about ~126MB and may take some time:
 
 ```python
 os.system('wget http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz -P data/')
@@ -43,15 +43,18 @@ os.system('tar -xf 101_ObjectCategories.tar.gz')
 os.chdir('../')
 ```
 
-Let's take a look at the data. As you can see, under the
-[root folder](./data/101_ObjectCategories) every category has a
-[subfolder](./data/101_ObjectCategories/yin_yang).
+Let's take a look at the data. 
+
+As you can see, under the
+root folder (data/101_ObjectCategories) every category has a
+subfolder (e.g. data/101_ObjectCategories/yin_yang).
 
 Now let's convert them into record io format. First we need to make a list that
 contains all the image files and their categories:
 
 
 ```python
+assert(MXNET_HOME != '/scratch/mxnet'), "Please update your MXNet location"
 os.system('python %s/tools/im2rec.py --list=1 --recursive=1 --shuffle=1 --test-ratio=0.2 data/caltech data/101_ObjectCategories'%MXNET_HOME)
 ```
 
@@ -66,7 +69,7 @@ Then we can use this list to create our record io file:
 os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through=1 data/caltech data/101_ObjectCategories"%MXNET_HOME)
 ```
 
-The record io files are now saved at [here](./data)
+The record io files are now saved in the "data" directory.
 
 ## ImageRecordIter
 
