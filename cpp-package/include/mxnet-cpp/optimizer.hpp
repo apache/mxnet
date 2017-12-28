@@ -168,7 +168,18 @@ inline void SGDOptimizer::Update(int index, NDArray weight, NDArray grad) {
   params_["lr"] = std::to_string(GetLR_(index));
   params_["wd"] = std::to_string(GetWD_(index));
   UpdateCount_(index);
-  auto keys = GetParamKeys_();num
+  auto keys = GetParamKeys_();
+  auto values = GetParamValues_();
+  CHECK_EQ(keys.size(), values.size());
+
+  NDArrayHandle inputs[3];
+  inputs[0] = weight.GetHandle();
+  inputs[1] = grad.GetHandle();
+
+  int num_outputs = 1;
+  NDArrayHandle output = weight.GetHandle();
+  NDArrayHandle *outputs = &output;
+
   if (states_[index] == nullptr) {
     MXImperativeInvoke(update_handle_, 2, inputs,
         &num_outputs, &outputs,

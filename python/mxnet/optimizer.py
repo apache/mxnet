@@ -558,10 +558,10 @@ class Signum(Optimizer):
     wd_lh : float, optitional
        The amount of decoupled weight decay regularization.
     """
-    def __init__(self, momentum=0.0, wd_lh = 0.0, **kwargs):
-        super(Signum, self).__init__(**kwargs)
+    def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh = 0.0, **kwargs):
+        super(Signum, self).__init__(learning_rate=learning_rate,**kwargs)
         self.momentum = momentum
-        self.wd_lh = 0.0
+        self.wd_lh = wd_lh
 
     def create_state(self, index, weight):
         momentum = None
