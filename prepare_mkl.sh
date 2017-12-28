@@ -82,9 +82,9 @@ if [ $PLATFORM == "Darwin" ]; then
 elif [ $PLATFORM == "Linux" ]; then
     INFIX=lnx
 fi
-ARCHIVE_BASENAME=mklml_${INFIX}_2018.0.20171227.tgz
+ARCHIVE_BASENAME=mklml_${INFIX}_2018.0.1.20171227.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
-MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.10/$ARCHIVE_BASENAME"
+MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.11/$ARCHIVE_BASENAME"
 # there are diffrent MKL lib to be used for GCC and for ICC
 reg='^[0-9]+$'
 VERSION_LINE=`GetVersionName $MKLROOT`
