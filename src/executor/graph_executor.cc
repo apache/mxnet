@@ -1473,9 +1473,6 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
-    } else if (opnode.exec->exec_type() == ExecType::kLocal) {
-      bool is_gpu = opnode.ctx.dev_mask() == gpu::kDevMask;
-      opnode.exec->Run(RunContext{opnode.ctx, nullptr}, is_gpu);
     } else if (opnode.cached_opr != nullptr) {
 #if MXNET_USE_PROFILER
       bool profiling = engine::Profiler::Get()->GetState() == engine::Profiler::kRunning;

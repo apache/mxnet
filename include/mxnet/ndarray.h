@@ -361,6 +361,10 @@ class NDArray {
   inline Engine::VarHandle var() const {
     return ptr_->var;
   }
+  /*! \return the associated variable of the ndarray.*/
+  inline void set_var(Engine::VarHandle var) const {
+    ptr_->var = var;
+  }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream

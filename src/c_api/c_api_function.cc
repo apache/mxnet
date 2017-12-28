@@ -167,7 +167,7 @@ NNVM_REGISTER_OP(_backward_CustomFunction)
 .set_attr<bool>("TIsBackward", true)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kLocal;
+    return ExecType::kAsync;
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", Backward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", Backward)
